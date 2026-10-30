@@ -1,0 +1,493 @@
+// DealFlow database schema.
+// Conventions:
+//   * Every tenant-owned table has a non-null tenant_id and is protected by PostgreSQL
+//     row-level security (see migrations/*/migration.sql and docs/SECURITY_MODEL.md).
+//   * Global tables (users, sessions, plans) are only touched by the auth and billing services.
+//   * Soft deletion uses deleted_at; hard deletion is reserved for data-deletion workflows.
+//   * Money is stored as NUMERIC(18,2) alongside an ISO-4217 currency code.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("MIGRATION_DATABASE_URL")
+}
+
+// ───────────────────────────── Platform (global) ─────────────────────────────
+
+model Plan {
+  code                     String   @id
+  name                     String
+  monthlyPriceCents        Int?     @map("monthly_price_cents")
+  annualMonthlyPriceCents  Int?     @map("annual_monthly_price_cents")
+  entitlements             Json
+  isPublic                 Boolean  @default(true) @map("is_public")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model User {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String     @unique
+  name            String
+  passwordHash    String     @map("password_hash")
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  lastLoginAt     DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions    Session[]
+  memberships Membership[]
+
+  @@map("users")
+}
+
+/// Refresh-token sessions. Tokens are stored as SHA-256 hashes and rotated on every refresh.
+model Session {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  activeTenantId   String    @map("active_tenant_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedById     String?   @map("replaced_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ───────────────────────────── Tenancy ─────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_DELETION
+}
+
+model Tenant {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  slug            String       @unique
+  status          TenantStatus @default(ACTIVE)
+  brandColor      String?      @map("brand_color")
+  defaultCurrency String       @default("USD") @map("default_currency") @db.Char(3)
+  defaultTimezone String       @default("UTC") @map("default_timezone")
+  defaultLocale   String       @default("en-US") @map("default_locale")
+  /// True only for development/demo workspaces populated by the seed script.
+  isDemo          Boolean      @default(false) @map("is_demo")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  subscription  Subscription?
+  roles         Role[]
+  memberships   Membership[]
+  teams         Team[]
+  auditLogs     AuditLog[]
+  companies     Company[]
+  contacts      Contact[]
+  leads         Lead[]
+  pipelines     Pipeline[]
+  stages        PipelineStage[]
+  opportunities Opportunity[]
+  activities    Activity[]
+  tasks         Task[]
+
+  @@map("tenants")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+model Subscription {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String             @unique @map("tenant_id") @db.Uuid
+  planCode           String             @map("plan_code")
+  status             SubscriptionStatus @default(ACTIVE)
+  billingInterval    BillingInterval    @default(MONTH) @map("billing_interval")
+  seats              Int                @default(1)
+  currentPeriodStart DateTime           @default(now()) @map("current_period_start") @db.Timestamptz(3)
+  currentPeriodEnd   DateTime?          @map("current_period_end") @db.Timestamptz(3)
+  trialEndsAt        DateTime?          @map("trial_ends_at") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planCode], references: [code])
+
+  @@map("subscriptions")
+}
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  key         String
+  name        String
+  description String?
+  permissions String[]
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@unique([tenantId, key])
+  @@map("roles")
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Membership {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  roleId    String           @map("role_id") @db.Uuid
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role         @relation(fields: [roleId], references: [id])
+  teamMembers TeamMember[]
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Team {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members TeamMember[]
+
+  @@unique([tenantId, name])
+  @@map("teams")
+}
+
+model TeamMember {
+  tenantId     String @map("tenant_id") @db.Uuid
+  teamId       String @map("team_id") @db.Uuid
+  membershipId String @map("membership_id") @db.Uuid
+
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, membershipId])
+  @@index([tenantId])
+  @@map("team_members")
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  AI_AGENT
+  PLATFORM_ADMIN
+}
+
+/// Append-only. The application role is granted INSERT and SELECT only.
+model AuditLog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  actorType   ActorType @default(USER) @map("actor_type")
+  actorUserId String?   @map("actor_user_id") @db.Uuid
+  action      String
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  metadata    Json      @default("{}")
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  requestId   String?   @map("request_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ───────────────────────────── Core CRM ─────────────────────────────
+
+model Company {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String
+  domain          String?
+  industry        String?
+  country         String?   @db.Char(2)
+  ownerId         String?   @map("owner_id") @db.Uuid
+  parentCompanyId String?   @map("parent_company_id") @db.Uuid
+  customFields    Json      @default("{}") @map("custom_fields")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent        Company?      @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
+  children      Company[]     @relation("CompanyHierarchy")
+  contacts      Contact[]
+  opportunities Opportunity[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, domain])
+  @@map("companies")
+}
+
+model Contact {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  companyId    String?   @map("company_id") @db.Uuid
+  firstName    String    @map("first_name")
+  lastName     String?   @map("last_name")
+  email        String?
+  phone        String?
+  jobTitle     String?   @map("job_title")
+  country      String?   @db.Char(2)
+  timezone     String?
+  ownerId      String?   @map("owner_id") @db.Uuid
+  customFields Json      @default("{}") @map("custom_fields")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company?      @relation(fields: [companyId], references: [id])
+  opportunities Opportunity[]
+
+  @@index([tenantId, email])
+  @@index([tenantId, lastName, firstName])
+  @@map("contacts")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+}
+
+model Lead {
+  id                     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String     @map("tenant_id") @db.Uuid
+  fullName               String     @map("full_name")
+  companyName            String?    @map("company_name")
+  jobTitle               String?    @map("job_title")
+  industry               String?
+  email                  String?
+  phone                  String?
+  country                String?    @db.Char(2)
+  city                   String?
+  timezone               String?
+  website                String?
+  source                 String?
+  campaignSource         String?    @map("campaign_source")
+  estimatedValue         Decimal?   @map("estimated_value") @db.Decimal(18, 2)
+  currency               String?    @db.Char(3)
+  status                 LeadStatus @default(NEW)
+  engagementScore        Int?       @map("engagement_score")
+  aiScore                Int?       @map("ai_score")
+  tags                   String[]
+  customFields           Json       @default("{}") @map("custom_fields")
+  ownerId                String?    @map("owner_id") @db.Uuid
+  convertedAt            DateTime?  @map("converted_at") @db.Timestamptz(3)
+  convertedContactId     String?    @map("converted_contact_id") @db.Uuid
+  convertedOpportunityId String?    @map("converted_opportunity_id") @db.Uuid
+  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?  @map("deleted_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, email])
+  @@index([tenantId, ownerId])
+  @@map("leads")
+}
+
+model Pipeline {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  name      String
+  isDefault Boolean   @default(false) @map("is_default")
+  position  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages        PipelineStage[]
+  opportunities Opportunity[]
+
+  @@unique([tenantId, name])
+  @@map("pipelines")
+}
+
+enum StageCategory {
+  OPEN
+  WON
+  LOST
+}
+
+model PipelineStage {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  pipelineId  String        @map("pipeline_id") @db.Uuid
+  name        String
+  position    Int
+  /// Default win probability (0-100) used for weighted pipeline value.
+  probability Int
+  category    StageCategory @default(OPEN)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline      Pipeline      @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+
+  @@unique([pipelineId, position])
+  @@index([tenantId])
+  @@map("pipeline_stages")
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+}
+
+model Opportunity {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String            @map("tenant_id") @db.Uuid
+  pipelineId        String            @map("pipeline_id") @db.Uuid
+  stageId           String            @map("stage_id") @db.Uuid
+  name              String
+  amount            Decimal           @default(0) @db.Decimal(18, 2)
+  currency          String            @db.Char(3)
+  /// Overrides the stage probability when set.
+  probability       Int?
+  status            OpportunityStatus @default(OPEN)
+  expectedCloseDate DateTime?         @map("expected_close_date") @db.Date
+  closedAt          DateTime?         @map("closed_at") @db.Timestamptz(3)
+  lossReason        String?           @map("loss_reason")
+  ownerId           String?           @map("owner_id") @db.Uuid
+  companyId         String?           @map("company_id") @db.Uuid
+  contactId         String?           @map("contact_id") @db.Uuid
+  sourceLeadId      String?           @map("source_lead_id") @db.Uuid
+  customFields      Json              @default("{}") @map("custom_fields")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage    PipelineStage @relation(fields: [stageId], references: [id])
+  company  Company?      @relation(fields: [companyId], references: [id])
+  contact  Contact?      @relation(fields: [contactId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, stageId])
+  @@index([tenantId, closedAt])
+  @@index([tenantId, ownerId])
+  @@map("opportunities")
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+}
+
+model Activity {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  type          ActivityType
+  subject       String
+  body          String?
+  occurredAt    DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  ownerId       String?      @map("owner_id") @db.Uuid
+  /// Set when an AI agent drafted or performed the activity (with human approval where required).
+  aiAssisted    Boolean      @default(false) @map("ai_assisted")
+  leadId        String?      @map("lead_id") @db.Uuid
+  contactId     String?      @map("contact_id") @db.Uuid
+  companyId     String?      @map("company_id") @db.Uuid
+  opportunityId String?      @map("opportunity_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, opportunityId])
+  @@map("activities")
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+  CANCELED
+}
+
+model Task {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String     @map("tenant_id") @db.Uuid
+  title         String
+  description   String?
+  status        TaskStatus @default(OPEN)
+  dueAt         DateTime?  @map("due_at") @db.Timestamptz(3)
+  completedAt   DateTime?  @map("completed_at") @db.Timestamptz(3)
+  assigneeId    String?    @map("assignee_id") @db.Uuid
+  leadId        String?    @map("lead_id") @db.Uuid
+  contactId     String?    @map("contact_id") @db.Uuid
+  opportunityId String?    @map("opportunity_id") @db.Uuid
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, dueAt])
+  @@index([tenantId, assigneeId])
+  @@map("tasks")
+}

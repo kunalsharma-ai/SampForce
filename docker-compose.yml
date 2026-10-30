@@ -1,0 +1,54 @@
+# Local stack. `docker compose up -d postgres redis` gives you the databases for `pnpm dev`;
+# `docker compose up --build` runs everything in containers.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports: ['5432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/db-setup.sh:/docker-entrypoint-initdb.d/10-dealflow.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+
+  migrate:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: build }
+    command: pnpm --filter @dealflow/database migrate:deploy
+    environment:
+      DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@postgres:5432/dealflow
+      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@postgres:5432/dealflow
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@postgres:5432/dealflow
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      # Local stack runs over http://localhost. Never set ALLOW_INSECURE_COOKIES in a real deployment.
+      COOKIE_SECURE: 'false'
+      ALLOW_INSECURE_COOKIES: 'true'
+      WEB_ORIGINS: http://localhost:3000
+    ports: ['4000:4000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args: { API_INTERNAL_URL: http://api:4000 }
+    ports: ['3000:3000']
+    depends_on: [api]
+
+volumes:
+  pgdata:

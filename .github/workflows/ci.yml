@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow_test
+      DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow_test
+      E2E_DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create database roles and databases
+        run: bash scripts/db-setup.sh dealflow dealflow_test
+      - name: Apply migrations
+        run: |
+          pnpm --filter @dealflow/database migrate:deploy
+          MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
+            pnpm --filter @dealflow/database migrate:deploy
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: Unit and API integration tests (incl. tenant isolation)
+        run: pnpm test
+      - name: Install Playwright browser
+        run: pnpm --filter @dealflow/web exec playwright install --with-deps chromium
+      - name: End-to-end and accessibility tests
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
