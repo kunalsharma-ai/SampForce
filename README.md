@@ -1,0 +1,76 @@
+# DealFlow by Sampledge
+
+**The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
+
+AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
+TypeScript. This repository is at the end of **Phase 1 (Product Foundation)**. See
+[docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
+
+## What works today
+
+- Sign up → a workspace is provisioned with five roles, a default sales pipeline and the Free plan
+- Sign in/out, rotating refresh sessions with theft detection, multiple workspaces per user
+- Tenant isolation enforced by PostgreSQL row-level security, with tests
+- Role-based permissions on every endpoint; append-only audit log with UI
+- Command Center with 15 KPIs computed from live data (formulas shown, no placeholder numbers)
+- Dark/light themes, tenant brand colour, motion controls (system/full/reduced/off), low-power mode
+- 26-module navigation; unshipped modules show their roadmap instead of dead ends
+- OpenAPI 3.1 at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`
+
+## Quick start
+
+Requirements: Node 22, pnpm 10, PostgreSQL 16 (or Docker).
+
+```bash
+pnpm install
+cp .env.example .env                      # then set JWT_ACCESS_SECRET (openssl rand -base64 48)
+
+# Databases: either use Docker…
+docker compose up -d postgres redis       # runs scripts/db-setup.sh on first start
+# …or a local Postgres superuser:
+PGUSER=postgres pnpm db:setup
+
+pnpm build                                # builds packages and generates the Prisma client
+MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
+DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow pnpm db:migrate
+pnpm db:seed                              # optional: labelled demo workspace (demo@dealflow.local)
+pnpm dev                                  # web on :3000, API on :4000
+```
+
+## Quality gates
+
+```bash
+pnpm lint && pnpm typecheck
+pnpm test        # unit + API integration (needs the dealflow_test database migrated)
+pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
+```
+
+## Repository map
+
+| Path | What |
+|---|---|
+| `apps/api` | NestJS REST API |
+| `apps/web` | Next.js CRM application |
+| `packages/types` | Zod schemas, permissions, plans, shared types |
+| `packages/database` | Prisma schema, migrations (RLS), tenant-context helper |
+| `packages/ui` | Design tokens, Tailwind preset, accessible components |
+| `packages/config` | Validated environment configuration |
+| `docs/` | PRD, architecture, ERD, AI/automation, security, tests, UI spec, pricing, feature matrix, ADRs |
+
+## Documentation
+
+- [Product requirements](docs/PRODUCT_REQUIREMENTS.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Database & ERD](docs/DATABASE.md) · [ADRs](docs/adr)
+- [AI agents & automation](docs/AI_AND_AUTOMATION.md)
+- [Security model](docs/SECURITY_MODEL.md) · [Test strategy](docs/TEST_STRATEGY.md)
+- [UI/UX design system](docs/UI_DESIGN_SYSTEM.md)
+- [Competitive feature matrix](docs/FEATURE_MATRIX.md) · [Pricing & unit economics](docs/PRICING_STRATEGY.md)
+- [Implementation plan & feature status](docs/IMPLEMENTATION_PLAN.md)
+
+## Credentials required for live integrations
+
+None are configured. Each needs provider credentials and, in some cases, provider review before it can be
+enabled: Google Workspace, Microsoft 365, Slack, Zoom, Twilio, WhatsApp Business, Stripe, Razorpay,
+DocuSign, and AI providers (Anthropic, OpenAI, Google). See [docs/FEATURE_MATRIX.md](docs/FEATURE_MATRIX.md) §2E.
+
+© Sampledge. All rights reserved.
