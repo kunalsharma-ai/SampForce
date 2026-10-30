@@ -93,7 +93,7 @@ for (const theme of ['dark', 'light'] as const) {
       expect(r.violations, `${path}: ${r.violations.map((v) => v.id).join(', ')}`).toEqual([]);
     }
     await signUp(page);
-    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads', '/app/deals', '/app/contacts', '/app/activities', '/app/pipelines', '/app/settings/import', '/app/settings/custom-fields', '/app/billing']) {
+    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads', '/app/deals', '/app/contacts', '/app/activities', '/app/pipelines', '/app/settings/import', '/app/settings/custom-fields', '/app/billing', '/app/reports', '/app/reports/dashboards', '/app/reports/flow', '/app/reports/replay']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await page.waitForLoadState('networkidle');

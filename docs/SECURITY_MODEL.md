@@ -40,7 +40,8 @@ before any compliance statement is made.
 | At rest | Managed Postgres and object storage encryption; integration credentials envelope-encrypted with per-tenant keys (Phase 3) |
 | Secrets | Environment / secret manager only; `.env.example` holds placeholders; JWT secret ≥ 32 chars enforced |
 | Backups | Daily snapshots + PITR, encrypted, restore drills (Phase 8) |
-| Export controls | Exports require `data:export`, are audited, and are rate-limited; AI agents cannot export |
+| Export controls | Exports require `data:export`, are audited, and are rate-limited; AI agents cannot export. Report CSV exports follow the same rule (Phase 7) |
+| Report builder | Definitions are validated against a fixed field catalogue and compiled with bound parameters only; runs need the entity's read permission, stay inside RLS with an explicit tenant filter, and time out after 10 s (ADR 0011) |
 
 ## 4. Privacy operations (Phases 2–8)
 

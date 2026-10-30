@@ -72,7 +72,7 @@ Status key: ✅ shipped · 🟡 schema only · ⏳ planned (phase).
 | Pipeline-by-stage chart with table alternative | ✅ |
 | Audited activity stream | ✅ |
 | AI Opportunity Radar, next-best actions, pending approvals | ⏳ P4 |
-| Revenue Globe, spatial dashboards | ⏳ P7 |
+| Revenue Globe (✅ P7); spatial dashboards (not built, see ADR 0011) | ✅ / — |
 | Customisable layouts | ⏳ P5 |
 
 ### 6.3 Leads (P2)

@@ -13,7 +13,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | **Complete (2026-10-30)**, with the deferrals listed below. Evals not yet run against the real model |
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | **Complete (2026-10-30)**, with the deferrals listed below (no email sending, no e-signature provider, no territories or localisation yet) |
 | **6. Commercialization** | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | **Complete (2026-10-30)**, with the deferrals listed below. Payment providers tested against local fixtures only |
-| 7. Immersive Experience | Report builder and custom dashboards (moved from Phase 6), Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | Planned |
+| **7. Immersive Experience** | Report builder and custom dashboards (moved from Phase 6), Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | **Complete (2026-10-30)**, with the deferrals listed below. Fallbacks pass axe; 60 FPS not measurable here (software renderer only) |
 | 8. Enterprise Readiness | SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, perf tuning, pen-test prep, prod runbooks | Security review, load test targets | Planned |
 
 ## Feature status (Phase 1 close)
@@ -224,7 +224,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 
 ### Deferred from the Phase 6 scope (not built)
 
-- Report builder and custom dashboards (moved to Phase 7; ready-made analytics remain in Revenue Intelligence).
+- Report builder and custom dashboards (moved to Phase 7, now built).
 - AI credit packs and other add-on purchases. When an allowance is used up the feature pauses; nothing is billed for overage.
 - Coupons managed inside DealFlow. Promotion codes work only through Stripe Checkout.
 - API keys for the `apiAccess` entitlement: there is no public API key feature yet, so the entitlement is not enforced anywhere.
@@ -242,7 +242,48 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 4. The pricing page is rendered on the server and cached for 5 minutes; it falls back to the built-in catalogue (marked as a preview) if the API is unreachable.
 5. AI credits are counted per active member; seats paid for but unused do not add credits.
 
-## Continuation instructions (Phase 7)
+## Feature status (Phase 7 close)
+
+| Feature | Status |
+|---|---|
+| Report builder over eight record types (deals, leads, contacts, companies, activities, tasks, latest quotes, contracts): count, sum, average, min, max; grouping with day/week/month/quarter/year buckets in the workspace time zone; up to 10 typed filters; table, bar, line, pie or single number; live preview | Implemented, tested (unit + API + e2e) |
+| Report SQL built only from a fixed field catalogue with bound parameters, escaped `LIKE`, re-validated stored definitions, RLS plus explicit tenant filter, 10 s statement timeout | Implemented, tested (injection-shaped values, unknown fields, wrong operators rejected) |
+| Money metrics in the workspace currency with the latest manual rate; records without a rate excluded and counted | Implemented, tested |
+| Private and shared reports and dashboards; `reports:read/write/manage` permissions; entity read permission required to run; shared dashboards hold only shared reports; deleted reports leave dashboards | Implemented, tested |
+| Report CSV export (`data:export`, audited) | Implemented, tested |
+| Dashboards: ordered grid of saved reports, three widget sizes, reorder, add and remove, every widget with a table view | Implemented, tested (e2e + axe) |
+| Stage history (`deal_stage_events`): written on create, move, clone and lead conversion; append-only for the app role; back-filled from the audit log and marked reconstructed | Implemented, tested (API; back-fill checked against recorded history) |
+| Relationship Galaxy: companies, contacts and deals as a 3D force-directed network (layout in a Web Worker), parent links, selection details, filters, search; 2D view and searchable account list | Implemented, tested (e2e in 2D; 3D rendered and screenshotted in a software renderer) |
+| Revenue Globe: open pipeline, 12-month wins, open deals or companies by country on a 3D globe with Natural Earth borders; flat 2D map; table; counts of what cannot be placed | Implemented, tested (API + e2e) |
+| Pipeline flow: stage boxes with open deals, value and median days in stage; moves drawn as arcs with animated flow lines (static under reduced motion); tables | Implemented, tested (API + e2e + axe) |
+| Pipeline replay: play, pause, speed and a keyboard-operable date slider over 30 to 365 days; live summary; per-day stage table | Implemented, tested (unit + e2e + axe) |
+| Fallbacks: low-power and no-WebGL use 2D automatically; lost GPU context drops to 2D; a slow device (under 24 fps at the lowest quality) is offered 2D; reduced motion stops auto-rotation and animated lines | Implemented, tested (low-power and no-WebGL paths in e2e) |
+| Performance: instanced meshes (one draw call per layer), on-demand rendering, pixel ratio capped at 2 and adaptive, 3D code loaded only on 3D pages (about 250 KB gzipped), optional frame-rate readout | Implemented. **60 FPS not verified on real hardware** (see ADR 0011) |
+
+### Deferred from the Phase 7 scope (not built)
+
+- Spatial dashboards (dashboards arranged in 3D). The 2D dashboard grid covers the need; see ADR 0011.
+- Scheduled report delivery by email (no email sending exists yet, see Phase 5).
+- Reports across two entities (for example deals grouped by contact job title), custom-field columns in reports, and a second grouping (stacked or multi-series charts).
+- Measuring the 60 FPS budget on real devices (needs physical hardware; the readout is in place).
+
+### Known limits
+
+1. Replays use each deal's current amount, and a deal moved to another pipeline keeps its history in the old one.
+2. Back-filled history can only include moves whose stage names were unchanged and unique within the pipeline; earlier moves are dropped, and creation events use the deal's creation time.
+3. The galaxy shows at most 150 companies (by open pipeline), 600 contacts and 800 deals; the replay at most 400 deals. Both say when they are cut.
+4. Countries are placed at the centre of their largest landmass, from the company's country only; contacts' and leads' countries are not used on the globe.
+5. Charts use the shared palette of six colours; pies fold groups beyond six into "Other".
+6. Report results are computed on every open (no caching); a very large workspace may hit the 10 s timeout, which the API reports as an error.
+
+## Continuation instructions (Phase 8)
+
+Follow the roadmap row for Phase 8 (SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, performance tuning,
+pen-test preparation, production runbooks). Include a real-device check of the Phase 7 frame-rate budget using the
+readout on the Galaxy and Globe pages, load tests for the report endpoints at the documented record counts, and the
+outstanding provider test-mode runs (Stripe, Razorpay, Google, Microsoft, Anthropic evals).
+
+## Original continuation instructions (Phase 7, done)
 
 Follow the roadmap row for Phase 7 (report builder and custom dashboards, then the immersive views: Relationship Galaxy,
 Revenue Globe, animated pipeline intelligence, time-based replays) with a 60 FPS budget and accessible 2D fallbacks.

@@ -96,7 +96,7 @@ to individual vendors beyond that file.
 | Digital Sales Team | 12 agents with tool allowlists, cost caps, audit trails and kill switches | 4 |
 | AI workflow builder | Prompt → editable visual workflow, simulated before activation | 4 |
 | Revenue Time Machine | Compare historical pipeline snapshots with clearly labelled scenario projections | 5 |
-| Relationship Galaxy | 3D account network with accessible graph and table alternatives | 7 |
+| Relationship Galaxy | 3D account network with accessible graph and table alternatives | 7 (✅ shipped) |
 | Transparent AI metering | Per-tenant AI usage, cost and allowance visible to admins in real time | 4 |
 
 ### Category E: needs licensing, infrastructure, third-party APIs or legal review

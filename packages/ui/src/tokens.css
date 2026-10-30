@@ -26,6 +26,13 @@
   --critical-foreground: 0 0% 100%;
   --popover: 0 0% 100%;
   --popover-foreground: 228 45% 10%;
+  /* Categorical chart series (reports, pie slices). Ordered for contrast between neighbours. */
+  --chart-1: 191 100% 30%;
+  --chart-2: 254 80% 55%;
+  --chart-3: 163 100% 26%;
+  --chart-4: 32 100% 38%;
+  --chart-5: 351 75% 45%;
+  --chart-6: 215 70% 45%;
 }
 
 .dark {
@@ -48,6 +55,12 @@
   --critical-foreground: 230 58% 7%;
   --popover: 226 48% 12%;
   --popover-foreground: 223 100% 98%;
+  --chart-1: 189 100% 50%;
+  --chart-2: 254 100% 67%;
+  --chart-3: 163 100% 42%;
+  --chart-4: 36 100% 64%;
+  --chart-5: 351 100% 69%;
+  --chart-6: 215 90% 65%;
 }
 
 /* Motion preferences: "off" removes all transitions and animations app-wide. */

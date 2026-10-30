@@ -124,6 +124,9 @@ erDiagram
 | SupportGrant | An owner's time-boxed permission for platform support, with reason | Yes | 6 |
 | PlatformOperator, PlatformAuditLog | Platform staff accounts and their append-only action log (global, no tenant) | No | 6 |
 | UsageRecord | Not built: usage is counted from the source tables (AI usage, workflow executions) | — | later |
+| Report | Saved report definition (catalogue field keys only, never SQL), `PRIVATE` or `WORKSPACE` | Yes | 7 |
+| Dashboard | Ordered widgets `[{ reportId, size }]` over saved reports, `PRIVATE` or `WORKSPACE` | Yes | 7 |
+| DealStageEvent | Every stage a deal enters, with time, actor and `from_stage_id`; append-only for the app role; `reconstructed` rows back-filled from the audit log | Yes | 7 |
 
 ## Row-level security
 
@@ -158,6 +161,11 @@ policy and FORCE RLS, and adds:
 
 `apps/api/test/operator.e2e.test.ts` checks that the operator scan returns no CRM rows and that the platform log
 cannot be changed.
+
+Migration `20261030060000_reports_immersive` puts `reports`, `dashboards` and `deal_stage_events` under the tenant
+policy and FORCE RLS, revokes `UPDATE` on `deal_stage_events` from the app role, back-fills stage history from
+`deal.stage_changed` audit entries (lifting FORCE RLS on the source tables for the duration of the migration only),
+and adds `reports:read` to every system role, `reports:write` from member up and `reports:manage` from manager up.
 
 Tests in `apps/api/test/tenancy.e2e.test.ts` prove: no context → no rows; context A cannot read, update or
 insert B's rows; context does not leak across pooled transactions; audit logs cannot be altered.

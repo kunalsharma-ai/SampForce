@@ -10,6 +10,10 @@ import {
   campaignInputSchema,
   changePlanSchema,
   checkoutSchema,
+  dashboardInputSchema,
+  immersiveQuerySchema,
+  reportDefinitionSchema,
+  reportInputSchema,
   operatorLoginSchema,
   operatorPlanSchema,
   operatorStatusSchema,
@@ -348,6 +352,25 @@ export function buildOpenApiDocument(): object {
   op('post', '/tenants/{id}/plan', 'override plan, seats and status (ADMIN)', operatorPlanSchema);
   op('post', '/tenants/{id}/status', 'suspend or reactivate (ADMIN)', operatorStatusSchema);
   op('get', '/audit-log', 'platform audit log');
+
+  // Phase 7: report builder, dashboards and the data behind the visual explorers.
+  action('get', '/reports', 'Reports', 'Saved reports the caller may see: their own and shared ones (reports:read)');
+  action('post', '/reports/run', 'Reports', 'Run an unsaved definition; needs read access to its records too (reports:read)', z.object({ definition: reportDefinitionSchema }));
+  action('post', '/reports', 'Reports', 'Save a report (reports:write)', reportInputSchema);
+  action('get', '/reports/{id}', 'Reports', 'One saved report (reports:read)');
+  action('get', '/reports/{id}/result', 'Reports', 'Run a saved report (reports:read)');
+  action('get', '/reports/{id}/export', 'Reports', 'CSV of the result; audited (reports:read, data:export)');
+  action('put', '/reports/{id}', 'Reports', 'Edit: the author, or reports:manage for shared reports', reportInputSchema);
+  action('delete', '/reports/{id}', 'Reports', 'Delete and remove from dashboards (reports:write; reports:manage for others’ shared reports)');
+  action('get', '/dashboards', 'Reports', 'Dashboards the caller may see (reports:read)');
+  action('post', '/dashboards', 'Reports', 'Create a dashboard of saved reports (reports:write)', dashboardInputSchema);
+  action('get', '/dashboards/{id}', 'Reports', 'One dashboard (reports:read)');
+  action('put', '/dashboards/{id}', 'Reports', 'Edit name, sharing and widgets (reports:write)', dashboardInputSchema);
+  action('delete', '/dashboards/{id}', 'Reports', 'Delete a dashboard; its reports are kept (reports:write)');
+  action('get', '/insights/galaxy', 'Reports', 'Companies, contacts and deals as a graph (companies:read; contacts and deals when readable)');
+  action('get', '/insights/globe', 'Reports', 'Companies, open pipeline and recent wins by country (companies:read, deals:read)');
+  action('get', '/insights/flow', 'Reports', 'Stage-to-stage moves and median time in stage (deals:read, pipelines:read)', undefined, { query: immersiveQuerySchema });
+  action('get', '/insights/replay', 'Reports', 'Stage history for a time-based replay (deals:read, pipelines:read)', undefined, { query: immersiveQuerySchema });
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

@@ -101,3 +101,16 @@ export async function assertCampaign(tx: TenantTx, tenantId: string, campaignId:
   const row = await tx.campaign.findFirst({ where: { id: campaignId, tenantId }, select: { id: true } });
   if (!row) throw badRef('campaignId');
 }
+
+/** Appends to a deal's stage history (flow and replay views). Call on create and whenever the stage changes. */
+export async function recordStageEvent(
+  tx: TenantTx,
+  e: { tenantId: string; opportunityId: string; pipelineId: string; fromStageId: string | null; toStageId: string; actorUserId: string | null; at?: Date },
+): Promise<void> {
+  await tx.dealStageEvent.create({
+    data: {
+      tenantId: e.tenantId, opportunityId: e.opportunityId, pipelineId: e.pipelineId, fromStageId: e.fromStageId,
+      toStageId: e.toStageId, actorUserId: e.actorUserId, ...(e.at ? { occurredAt: e.at } : {}),
+    },
+  });
+}

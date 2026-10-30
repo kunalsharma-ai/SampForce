@@ -3,7 +3,7 @@
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
 AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
-TypeScript. This repository is at the end of **Phase 6 (SaaS Commercialization)**. See
+TypeScript. This repository is at the end of **Phase 7 (Reports and Immersive Views)**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
 
 ## What works today
@@ -23,7 +23,9 @@ TypeScript. This repository is at the end of **Phase 6 (SaaS Commercialization)*
 - Custom roles (Professional and above), onboarding checklist, owner-granted support access
 - Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`)
 - Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true`
-- 26-module navigation; unshipped modules (Reports, Marketplace) show their roadmap instead of dead ends
+- Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
+- Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
+- 26-module navigation; unshipped modules (Marketplace) show their roadmap instead of dead ends
 - OpenAPI 3.1 at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`
 
 ## Quick start

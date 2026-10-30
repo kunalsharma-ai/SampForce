@@ -92,6 +92,18 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 | Payment providers in test mode | **Not run** (no Stripe or Razorpay accounts). Adapters are exercised over HTTP against `apps/api/test/fixtures/billing-fixture.ts` |
 | Eval suites against the real model | Still **not run** (no API key in this environment) |
 
+## Phase 7 results (2026-10-30)
+
+| Suite | Result |
+|---|---|
+| `packages/types` unit | 29 passed. New: every report template validates; fields, operators, values, groupings and chart types checked against the catalogue |
+| `apps/api` unit + integration | 225 passed in 30 files. New: `report-sql` unit (3: every user value bound as a parameter, `LIKE` escaping, bucket and enum labels) and `reports.e2e` (10: open pipeline by stage with FX conversion and excluded records, counts by owner, month buckets, countries, max; injection-shaped and wildcard filter values treated as data; definitions outside the catalogue rejected; private and shared reports with author and manager rights; CSV export needs `data:export` and is audited; entity read permission required to run; dashboards with visibility rules and clean-up on report delete; stage history feeding flow, replay, galaxy and globe with no cross-workspace leak; stage history append-only) |
+| `apps/web` unit | 8 passed. New: galaxy layout (deterministic, bounded, flat in 2D, linked records closer) and replay timeline |
+| `apps/web` Playwright e2e + accessibility | 35 passed. New: report from a template to a saved, filtered report and a dashboard; Galaxy, Globe, flow and replay in low-power 2D with keyboard use of the replay slider; 3D canvas or no-WebGL fallback with switch to 2D; axe on every new page and on `/app/reports`, dashboards, flow and replay in both themes |
+| Stage-history back-fill | Checked by rebuilding `deal_stage_events` from the audit log in a rolled-back transaction: 8 of 8 recorded events reproduced |
+| Frame rate | Measured only in headless Chromium with SwiftShader (no GPU, 4 cores) on 47 companies, 100 contacts, 95 deals: galaxy about 7 to 10 fps, globe 10 to 17 fps, both at 1× pixels after adaptive quality stepped down. **Not a real-device result**; the 60 FPS target is unverified |
+| `scripts/check-rls.sql` | Passes on both databases (3 new tenant tables) |
+
 ## Critical acceptance tests (from the brief) and where they live
 
 | # | Acceptance criterion | Status | Test |
@@ -109,7 +121,7 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 | 11 | API endpoints enforce permissions | **Pass** | `rbac-audit.e2e.test.ts`, `auth.e2e.test.ts` unauthenticated checks |
 | 12 | Sensitive actions generate audit logs | **Pass (Phase 1 actions)** | `rbac-audit.e2e.test.ts` |
 | 13 | Failed integrations recover safely | **Pass** | `webhooks-notifications.e2e.test.ts` (retry, backoff, auto-disable), `integrations.e2e.test.ts` (revoked access marks the connection for reconnection) |
-| 14 | Application works without optional 3D effects | **Pass** (no 3D yet; low-power and motion-off paths tested) | e2e preferences test |
+| 14 | Application works without optional 3D effects | **Pass** (every 3D view has a 2D view and table; low-power, no-WebGL and lost-context paths fall back) | e2e preferences test, `reports.spec.ts` |
 | 15 | Application works on mobile devices | **Pass** | `mobile.spec.ts` (drawer nav, no horizontal overflow) |
 
 ## Running locally

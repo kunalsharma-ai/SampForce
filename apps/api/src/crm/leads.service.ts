@@ -12,7 +12,7 @@ import type {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { assertRefs, badRef, diff, iso, notFound, num, orderBy, ownerRefs, paging, consentFields, assertCampaign } from './crm-helpers';
+import { assertRefs, badRef, diff, iso, notFound, num, orderBy, ownerRefs, paging, consentFields, assertCampaign, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
 const SORTABLE = ['fullName', 'companyName', 'status', 'createdAt', 'updatedAt', 'estimatedValue'] as const;
@@ -223,6 +223,7 @@ export class LeadsService {
             sourceLeadId: lead.id,
           },
         });
+        await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: deal.id, pipelineId: pipeline.id, fromStageId: null, toStageId: deal.stageId, actorUserId: auth.userId });
         opportunityId = deal.id;
       }
 

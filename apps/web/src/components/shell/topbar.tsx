@@ -116,7 +116,7 @@ export function Topbar() {
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
 
       <div className="ml-auto flex items-center gap-1">
-        <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 text-accent hover:bg-accent/10" onClick={() => setCopilotOpen(true)}>
+        <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => setCopilotOpen(true)}>
           <Bot aria-hidden />
           <span className="hidden sm:inline">Copilot</span>
         </Button>

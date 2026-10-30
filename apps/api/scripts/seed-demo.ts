@@ -80,7 +80,7 @@ async function main(): Promise<void> {
         ['Usage & attitudes study', 21_000, 5, 'LOST', 6],
       ];
       for (const [i, [name, amount, stageIdx, status, daysAgo]] of deals.entries()) {
-        await tx.opportunity.create({
+        const deal = await tx.opportunity.create({
           data: {
             tenantId,
             pipelineId: pipeline.id,
@@ -97,6 +97,19 @@ async function main(): Promise<void> {
             lossReason: status === 'LOST' ? 'Budget moved to next fiscal year' : null,
           },
         });
+        // Demo stage history: the deal walks through the open stages, evenly spaced, to where it stands today.
+        // Lost deals leave from stage 2.
+        const path = status === 'LOST' ? [0, 1, 2, stageIdx] : status === 'WON' ? [0, 1, 2, 3, stageIdx] : Array.from({ length: stageIdx + 1 }, (_, k) => k);
+        const start = now - (daysAgo + 30) * DAY;
+        const end = status === 'OPEN' ? now - Math.min(daysAgo, 5) * DAY : now - daysAgo * DAY;
+        for (const [k, idx] of path.entries()) {
+          await tx.dealStageEvent.create({
+            data: {
+              tenantId, opportunityId: deal.id, pipelineId: pipeline.id, fromStageId: k === 0 ? null : stage(path[k - 1]!),
+              toStageId: stage(idx), actorUserId: user.id, occurredAt: new Date(path.length === 1 ? start : start + ((end - start) * k) / (path.length - 1)),
+            },
+          });
+        }
       }
 
       await tx.activity.createMany({

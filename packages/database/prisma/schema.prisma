@@ -150,6 +150,9 @@ model Tenant {
   invoices               Invoice[]
   billingEvents          BillingEvent[]
   supportGrants          SupportGrant[]
+  reports                Report[]
+  dashboards             Dashboard[]
+  dealStageEvents        DealStageEvent[]
 
   @@map("tenants")
 }
@@ -494,15 +497,16 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
-  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pipeline   Pipeline      @relation(fields: [pipelineId], references: [id])
-  stage      PipelineStage @relation(fields: [stageId], references: [id])
-  company    Company?      @relation(fields: [companyId], references: [id])
-  contact    Contact?      @relation(fields: [contactId], references: [id])
-  activities Activity[]
-  tasks      Task[]
-  quotes     Quote[]
-  contracts  Contract[]
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline    Pipeline         @relation(fields: [pipelineId], references: [id])
+  stage       PipelineStage    @relation(fields: [stageId], references: [id])
+  company     Company?         @relation(fields: [companyId], references: [id])
+  contact     Contact?         @relation(fields: [contactId], references: [id])
+  activities  Activity[]
+  tasks       Task[]
+  quotes      Quote[]
+  contracts   Contract[]
+  stageEvents DealStageEvent[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -1612,4 +1616,68 @@ model PlatformAuditLog {
   @@index([targetTenantId, createdAt])
   @@index([createdAt])
   @@map("platform_audit_logs")
+}
+
+// ───────────────────────────── Reports and immersive views (Phase 7) ─────────────────────────────
+
+enum ReportVisibility {
+  PRIVATE
+  WORKSPACE
+}
+
+/// A saved report definition (see reportDefinitionSchema). Only catalogue field keys are stored, never SQL.
+model Report {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  visibility  ReportVisibility @default(PRIVATE)
+  definition  Json
+  createdById String?          @map("created_by_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdById])
+  @@map("reports")
+}
+
+/// An ordered grid of report widgets: [{ reportId, size }]. Widgets whose report is gone or hidden are skipped.
+model Dashboard {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  visibility  ReportVisibility @default(PRIVATE)
+  widgets     Json             @default("[]")
+  createdById String?          @map("created_by_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdById])
+  @@map("dashboards")
+}
+
+/// Every stage a deal enters, with when. Written on create and on each move; the source of flow and replay views.
+/// `reconstructed` rows were back-filled from the audit log when the table was introduced.
+model DealStageEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  opportunityId String   @map("opportunity_id") @db.Uuid
+  pipelineId    String   @map("pipeline_id") @db.Uuid
+  fromStageId   String?  @map("from_stage_id") @db.Uuid
+  toStageId     String   @map("to_stage_id") @db.Uuid
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  reconstructed Boolean  @default(false)
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, pipelineId, occurredAt])
+  @@index([opportunityId, occurredAt])
+  @@map("deal_stage_events")
 }

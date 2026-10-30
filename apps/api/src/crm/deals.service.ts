@@ -4,7 +4,7 @@ import type { DealInput, DealMoveInput, DealRow, ListQuery, Page, PipelineRow } 
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging } from './crm-helpers';
+import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
 const SORTABLE = ['name', 'amount', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
@@ -134,6 +134,7 @@ export class DealsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.created', entityType: 'deal', entityId: row.id,
         metadata: { amount: input.amount, stage: stage.name }, meta,
       });
+      await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: row.id, pipelineId, fromStageId: null, toStageId: stage.id, actorUserId: auth.userId });
       return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
     });
   }
@@ -199,6 +200,7 @@ export class DealsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.stage_changed', entityType: 'deal', entityId: id,
         metadata: { from: before.stage.name, to: stage.name, status: stage.category }, meta,
       });
+      await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: id, pipelineId: before.pipelineId, fromStageId: before.stageId, toStageId: stage.id, actorUserId: auth.userId });
     }
     return row;
   }
@@ -238,6 +240,7 @@ export class DealsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.cloned', entityType: 'deal', entityId: row.id,
         metadata: { sourceId: id }, meta,
       });
+      await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: row.id, pipelineId: src.pipelineId, fromStageId: null, toStageId: first.id, actorUserId: auth.userId });
       return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
     });
   }
