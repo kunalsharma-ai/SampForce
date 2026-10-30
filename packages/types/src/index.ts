@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './crm';
 export * from './dashboard';
 export * from './errors';
 export * from './pagination';

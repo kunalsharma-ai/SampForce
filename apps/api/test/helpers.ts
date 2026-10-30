@@ -40,3 +40,15 @@ export async function registerUser(app: INestApplication, org = 'Org'): Promise<
     .expect(201);
   return { agent, email, password, tenantId: res.body.tenantId as string };
 }
+
+/** Thin wrapper that adds the Origin header (CSRF guard) to every unsafe request. */
+export function api(user: TestUser) {
+  const a = user.agent;
+  return {
+    get: (url: string) => a.get(`/api/v1${url}`),
+    post: (url: string, body?: object) => a.post(`/api/v1${url}`).set('origin', ORIGIN).send(body ?? {}),
+    patch: (url: string, body: object) => a.patch(`/api/v1${url}`).set('origin', ORIGIN).send(body),
+    put: (url: string, body: object) => a.put(`/api/v1${url}`).set('origin', ORIGIN).send(body),
+    del: (url: string) => a.delete(`/api/v1${url}`).set('origin', ORIGIN),
+  };
+}

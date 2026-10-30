@@ -9,8 +9,8 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
   }
 
   /** Runs `fn` with row-level security scoped to the given tenant and user. */
-  run<T>(ctx: DbContext, fn: (tx: TenantTx) => Promise<T>): Promise<T> {
-    return withDbContext(this, ctx, fn);
+  run<T>(ctx: DbContext, fn: (tx: TenantTx) => Promise<T>, options?: { timeoutMs?: number }): Promise<T> {
+    return withDbContext(this, ctx, fn, options);
   }
 
   async onModuleDestroy(): Promise<void> {

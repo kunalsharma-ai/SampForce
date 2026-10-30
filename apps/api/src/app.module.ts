@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
+import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { OriginGuard } from './common/origin.guard';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -37,6 +38,7 @@ import { TenantsModule } from './tenants/tenants.module';
     AuthModule,
     TenantsModule,
     DashboardModule,
+    CrmModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -11,7 +11,7 @@ export default async function setup(): Promise<void> {
     await prisma.$executeRawUnsafe(`
       TRUNCATE users, sessions, tenants, subscriptions, roles, memberships, teams, team_members,
                audit_logs, companies, contacts, leads, pipelines, pipeline_stages, opportunities,
-               activities, tasks CASCADE`);
+               activities, tasks, custom_fields, invitations CASCADE`);
   } finally {
     await prisma.$disconnect();
   }

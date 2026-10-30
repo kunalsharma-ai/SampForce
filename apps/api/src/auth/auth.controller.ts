@@ -1,7 +1,10 @@
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
+  type AcceptInvitationInput,
+  acceptInvitationSchema,
+  type InvitationPreview,
   type LoginInput,
   loginSchema,
   type MeResponse,
@@ -77,6 +80,27 @@ export class AuthController {
   async logout(@Req() req: AuthedRequest, @Meta() meta: RequestMeta, @Res({ passthrough: true }) res: Response) {
     await this.auth.logout(this.refreshCookie(req), req.auth, meta);
     clearAuthCookies(res, this.env);
+  }
+
+  @Public()
+  @Throttle(AUTH_LIMIT)
+  @Get('invitations/:token')
+  previewInvitation(@Param('token') token: string): Promise<InvitationPreview> {
+    return this.auth.previewInvitation(token.slice(0, 200));
+  }
+
+  @Public()
+  @Throttle(AUTH_LIMIT)
+  @HttpCode(200)
+  @Post('invitations/accept')
+  async acceptInvitation(
+    @Body(new ZodPipe(acceptInvitationSchema)) body: AcceptInvitationInput,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ tenantId: string }> {
+    const tokens = await this.auth.acceptInvitation(body, meta);
+    setAuthCookies(res, this.env, tokens);
+    return { tenantId: tokens.tenantId };
   }
 
   @Get('me')

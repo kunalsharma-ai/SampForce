@@ -125,6 +125,9 @@ describe('authentication', () => {
     await request(app.getHttpServer()).get('/api/v1/health/ready').expect(200, { status: 'ok', checks: { database: 'ok' } });
     const doc = await request(app.getHttpServer()).get('/api/v1/openapi.json').expect(200);
     expect(doc.body.openapi).toBe('3.1.0');
+    for (const path of ['/leads', '/leads/{id}/convert', '/deals/board', '/deals/{id}/move', '/pipelines', '/imports', '/exports/{entity}', '/tasks/{id}', '/auth/invitations/accept']) {
+      expect(doc.body.paths).toHaveProperty([path]);
+    }
     expect(Object.keys(doc.body.paths)).toContain('/dashboard/summary');
   });
 });

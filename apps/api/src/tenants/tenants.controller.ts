@@ -1,5 +1,7 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import {
+  type InvitationInput,
+  invitationInputSchema,
   type UpdateMemberRoleInput,
   updateMemberRoleSchema,
   type UpdateTenantInput,
@@ -7,11 +9,15 @@ import {
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { InvitationsService } from './invitations.service';
 import { TenantsService } from './tenants.service';
 
 @Controller('tenants/current')
 export class TenantsController {
-  constructor(private readonly tenants: TenantsService) {}
+  constructor(
+    private readonly tenants: TenantsService,
+    private readonly invitations: InvitationsService,
+  ) {}
 
   @Get()
   @RequirePermissions('tenant:read')
@@ -50,5 +56,24 @@ export class TenantsController {
     @Meta() meta: RequestMeta,
   ) {
     return this.tenants.changeMemberRole(auth, membershipId, body.roleKey, meta);
+  }
+
+  @Get('invitations')
+  @RequirePermissions('members:read')
+  listInvitations(@Auth() auth: AuthContext) {
+    return this.invitations.list(auth);
+  }
+
+  @Post('invitations')
+  @RequirePermissions('members:manage')
+  invite(@Auth() auth: AuthContext, @Body(new ZodPipe(invitationInputSchema)) body: InvitationInput, @Meta() meta: RequestMeta) {
+    return this.invitations.create(auth, body, meta);
+  }
+
+  @Delete('invitations/:id')
+  @HttpCode(204)
+  @RequirePermissions('members:manage')
+  revokeInvitation(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.invitations.revoke(auth, id, meta);
   }
 }

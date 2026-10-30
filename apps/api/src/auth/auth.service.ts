@@ -1,13 +1,23 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, provisionTenant, slugify } from '@dealflow/database';
-import type { LoginInput, MeResponse, MembershipSummary, RegisterInput } from '@dealflow/types';
+import {
+  type AcceptInvitationInput,
+  type InvitationPreview,
+  type LoginInput,
+  type MeResponse,
+  type MembershipSummary,
+  passwordSchema,
+  type RegisterInput,
+} from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -20,6 +30,11 @@ export interface IssuedTokens {
   tenantId: string;
   userId: string;
 }
+
+const INVITATION_INVALID = {
+  code: 'INVITATION_INVALID',
+  message: 'This invitation link is invalid, has expired or was already used. Ask for a new invitation.',
+};
 
 const INVALID_CREDENTIALS = {
   code: 'INVALID_CREDENTIALS',
@@ -223,6 +238,75 @@ export class AuthService {
       permissions: auth.permissions,
       memberships,
     };
+  }
+
+  /** Resolves a pending invitation's tenant without a tenant context (SECURITY DEFINER lookup by token hash). */
+  private async invitationTenant(token: string): Promise<string> {
+    const rows = await this.prisma.$queryRaw<{ t: string | null }[]>`SELECT app_invitation_tenant(${TokenService.hashRefresh(token)})::text AS t`;
+    const tenantId = rows[0]?.t;
+    if (!tenantId) throw new NotFoundException(INVITATION_INVALID);
+    return tenantId;
+  }
+
+  async previewInvitation(token: string): Promise<InvitationPreview> {
+    const tenantId = await this.invitationTenant(token);
+    const inv = await this.prisma.run({ tenantId }, (tx) =>
+      tx.invitation.findUniqueOrThrow({ where: { tokenHash: TokenService.hashRefresh(token) }, include: { role: true, tenant: true } }),
+    );
+    const user = await this.prisma.user.findUnique({ where: { email: inv.email }, select: { id: true } });
+    return { tenantName: inv.tenant.name, email: inv.email, roleName: inv.role.name, hasAccount: !!user };
+  }
+
+  /**
+   * Accepts an invitation. An invitee who already has an account must confirm their password, so a
+   * leaked link alone cannot open a session for an existing user. New invitees choose a name and password.
+   */
+  async acceptInvitation(input: AcceptInvitationInput, meta: RequestMeta): Promise<IssuedTokens> {
+    const tenantId = await this.invitationTenant(input.token);
+    const tokenHash = TokenService.hashRefresh(input.token);
+    const inv = await this.prisma.run({ tenantId }, (tx) => tx.invitation.findUniqueOrThrow({ where: { tokenHash } }));
+
+    let user = await this.prisma.user.findUnique({ where: { email: inv.email } });
+    if (user) {
+      const valid = await this.passwords.verify(user.passwordHash, input.password ?? '');
+      if (!valid || user.status !== 'ACTIVE') throw new UnauthorizedException(INVALID_CREDENTIALS);
+    } else {
+      const password = passwordSchema.safeParse(input.password ?? '');
+      if (!input.name || !password.success) {
+        throw new BadRequestException({
+          code: 'VALIDATION_FAILED',
+          message: 'Enter your name and a password to create your account.',
+          details: [
+            ...(!input.name ? [{ path: 'name', message: 'Enter your name' }] : []),
+            ...(!password.success ? password.error.issues.map((i) => ({ path: 'password', message: i.message })) : []),
+          ],
+        });
+      }
+      user = await this.prisma.user.create({
+        data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data) },
+      });
+    }
+    const userId = user.id;
+
+    await this.prisma.run({ tenantId, userId }, async (tx) => {
+      // Conditional update: two concurrent accepts of the same link cannot both succeed.
+      const { count } = await tx.invitation.updateMany({
+        where: { id: inv.id, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+        data: { acceptedAt: new Date() },
+      });
+      if (count !== 1) throw new NotFoundException(INVITATION_INVALID);
+      await tx.membership.upsert({
+        where: { tenantId_userId: { tenantId, userId } },
+        create: { tenantId, userId, roleId: inv.roleId },
+        update: { roleId: inv.roleId, status: 'ACTIVE' },
+      });
+      await this.audit.record(tx, {
+        tenantId, actorUserId: userId, action: 'member.joined', entityType: 'invitation', entityId: inv.id,
+        metadata: { email: inv.email, invitedById: inv.invitedById }, meta,
+      });
+    });
+    await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+    return this.startSession(userId, tenantId, meta);
   }
 
   /** Active memberships of a user across tenants, visible through the membership_read policy. */

@@ -19,14 +19,14 @@ datasource db {
 // ───────────────────────────── Platform (global) ─────────────────────────────
 
 model Plan {
-  code                     String   @id
-  name                     String
-  monthlyPriceCents        Int?     @map("monthly_price_cents")
-  annualMonthlyPriceCents  Int?     @map("annual_monthly_price_cents")
-  entitlements             Json
-  isPublic                 Boolean  @default(true) @map("is_public")
-  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  code                    String   @id
+  name                    String
+  monthlyPriceCents       Int?     @map("monthly_price_cents")
+  annualMonthlyPriceCents Int?     @map("annual_monthly_price_cents")
+  entitlements            Json
+  isPublic                Boolean  @default(true) @map("is_public")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   subscriptions Subscription[]
 
@@ -110,6 +110,8 @@ model Tenant {
   opportunities Opportunity[]
   activities    Activity[]
   tasks         Task[]
+  customFields  CustomField[]
+  invitations   Invitation[]
 
   @@map("tenants")
 }
@@ -158,6 +160,7 @@ model Role {
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   memberships Membership[]
+  invitations Invitation[]
 
   @@unique([tenantId, key])
   @@map("roles")
@@ -265,6 +268,7 @@ model Company {
   children      Company[]     @relation("CompanyHierarchy")
   contacts      Contact[]
   opportunities Opportunity[]
+  activities    Activity[]
 
   @@index([tenantId, name])
   @@index([tenantId, domain])
@@ -291,6 +295,8 @@ model Contact {
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   company       Company?      @relation(fields: [companyId], references: [id])
   opportunities Opportunity[]
+  activities    Activity[]
+  tasks         Task[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -335,7 +341,9 @@ model Lead {
   updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt              DateTime?  @map("deleted_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activities Activity[]
+  tasks      Task[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -418,11 +426,13 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pipeline Pipeline      @relation(fields: [pipelineId], references: [id])
-  stage    PipelineStage @relation(fields: [stageId], references: [id])
-  company  Company?      @relation(fields: [companyId], references: [id])
-  contact  Contact?      @relation(fields: [contactId], references: [id])
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline   Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage      PipelineStage @relation(fields: [stageId], references: [id])
+  company    Company?      @relation(fields: [companyId], references: [id])
+  contact    Contact?      @relation(fields: [contactId], references: [id])
+  activities Activity[]
+  tasks      Task[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -456,9 +466,16 @@ model Activity {
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, occurredAt])
+  @@index([tenantId, leadId])
+  @@index([tenantId, contactId])
+  @@index([tenantId, companyId])
   @@index([tenantId, opportunityId])
   @@map("activities")
 }
@@ -485,9 +502,70 @@ model Task {
   updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status, dueAt])
   @@index([tenantId, assigneeId])
   @@map("tasks")
+}
+
+// ───────────────────────────── Extensibility & onboarding ─────────────────────────────
+
+enum CustomFieldEntity {
+  LEAD
+  CONTACT
+  COMPANY
+  OPPORTUNITY
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+}
+
+/// Typed definition for values stored in a record's custom_fields JSON under `key`.
+model CustomField {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String            @map("tenant_id") @db.Uuid
+  entity     CustomFieldEntity
+  key        String
+  label      String
+  type       CustomFieldType
+  options    String[]
+  required   Boolean           @default(false)
+  position   Int               @default(0)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt DateTime?         @map("archived_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entity, key])
+  @@map("custom_fields")
+}
+
+/// Workspace invitation. Only the SHA-256 of the token is stored.
+model Invitation {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  email       String
+  roleId      String    @map("role_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  invitedById String    @map("invited_by_id") @db.Uuid
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  acceptedAt  DateTime? @map("accepted_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@index([tenantId, email])
+  @@map("invitations")
 }

@@ -44,6 +44,11 @@ jobs:
           pnpm --filter @dealflow/database migrate:deploy
           MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
             pnpm --filter @dealflow/database migrate:deploy
+      - name: Every tenant table has forced row-level security
+        run: |
+          for db in dealflow dealflow_test; do
+            psql "postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/$db" -v ON_ERROR_STOP=1 -f scripts/check-rls.sql
+          done
       - run: pnpm build
       - run: pnpm lint
       - run: pnpm typecheck
