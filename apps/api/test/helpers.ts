@@ -52,3 +52,26 @@ export function api(user: TestUser) {
     del: (url: string) => a.delete(`/api/v1${url}`).set('origin', ORIGIN),
   };
 }
+
+/** Invites a new person into the owner's workspace with `roleKey` and signs them in there. */
+export async function inviteMember(app: INestApplication, owner: TestUser, roleKey: string): Promise<TestUser & { userId: string }> {
+  const email = `m-${randomUUID().slice(0, 8)}@example.com`;
+  const password = 'a-long-password-1';
+  const inv = (await api(owner).post('/tenants/current/invitations', { email, roleKey }).expect(201)).body as { inviteUrl: string };
+  const token = inv.inviteUrl.split('/invite/')[1]!;
+  const agent = request.agent(app.getHttpServer());
+  await agent.post('/api/v1/auth/invitations/accept').set('origin', ORIGIN).send({ token, name: `Member ${roleKey}`, password }).expect(200);
+  const me = (await agent.get('/api/v1/auth/me').expect(200)).body as { user: { id: string } };
+  return { agent, email, password, tenantId: owner.tenantId, userId: me.user.id };
+}
+
+/** Runs `fn` against the runtime role inside one tenant's RLS context (for arranging test state). */
+export async function asTenant<T>(tenantId: string, fn: (tx: import('@dealflow/database').TenantTx) => Promise<T>): Promise<T> {
+  const { withDbContext } = await import('@dealflow/database');
+  const db = appClient();
+  try {
+    return await withDbContext(db, { tenantId }, fn);
+  } finally {
+    await db.$disconnect();
+  }
+}

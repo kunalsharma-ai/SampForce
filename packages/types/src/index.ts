@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './automation';
 export * from './crm';
 export * from './csv';
 export * from './dashboard';

@@ -37,6 +37,7 @@ import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 import { Logo } from '../logo';
 import { CommandPalette } from './command-palette';
 import { CopilotPanel } from './copilot-panel';
+import { NotificationsMenu } from './notifications-menu';
 import { SidebarNav } from './sidebar';
 
 const QUICK_CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
@@ -138,23 +139,11 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <p className="px-2 pb-3 text-sm text-muted-foreground">
-              You&apos;re all caught up. Assignment, approval and automation alerts will appear here.
-            </p>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationsMenu />
 
         <IconLink href="/app/activities" label="Tasks" icon={ListTodo} />
         <IconLink href="/app/meetings" label="Calendar" icon={CalendarDays} />
-        <IconLink href="/app/integrations" label="Integration status" icon={Plug} />
+        <IconLink href="/app/integrations" label="Integrations" icon={Plug} />
         <IconLink href="/app/help" label="Help center" icon={CircleHelp} />
 
         <DropdownMenu>

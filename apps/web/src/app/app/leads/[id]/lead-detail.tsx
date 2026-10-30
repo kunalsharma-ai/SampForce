@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowRightLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { RecordEmails } from '@/components/crm/record-emails';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
@@ -81,6 +82,7 @@ export function LeadDetail({ id }: { id: string }) {
               />
             </CardContent>
           </Card>
+          <RecordEmails leadId={id} email={l.email} />
           <ActivityTimeline related={{ leadId: id }} />
         </div>
         <div className="space-y-4">

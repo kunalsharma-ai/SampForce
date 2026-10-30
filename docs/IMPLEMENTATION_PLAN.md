@@ -9,7 +9,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 |---|---|---|---|
 | **1. Product Foundation** | Monorepo, Next.js web, NestJS API, schema + RLS, auth, tenant isolation, RBAC, audit log, design system, navigation, Command Center foundation, CI, Docker, env config | Acceptance tests 1, 2, 8, 9, 11, 12, 14, 15 pass | **Complete (2026-10-30)** |
 | 2. Core CRM | Leads, contacts, companies, accounts, deals, pipelines (Kanban/list/table), activities, tasks, search, custom fields, CSV/Excel import/export, duplicate detection, invitations | Tests 3, 4; RLS CI guard for new tables | **Complete (2026-10-30)**, with the deferrals listed below |
-| 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | Planned |
+| 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | **Complete (2026-10-30)**, with the deferrals listed below |
 | 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | Planned |
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | Planned |
 | 6. Commercialization | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | Planned |
@@ -93,9 +93,46 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 - `invitations` uses a narrow `invitation_token_lookup` RLS policy (migration `20261030010100`), because FORCE RLS also applies to SECURITY DEFINER functions owned by the table owner.
 - Page transitions are enter-only: an exit animation remounted the new route and discarded typed input.
 
-## Continuation instructions (Phase 3)
+## Feature status (Phase 3 close)
 
-Follow the roadmap row for Phase 3 (outbox + worker, workflow engine, notifications, email and calendar adapters behind credentials). Pick up the Phase 2 deferrals above where they fit.
+| Feature | Status |
+|---|---|
+| Transactional outbox (domain events written in the same transaction as the audit entry) | Implemented, tested |
+| Postgres job queue worker (`SKIP LOCKED` leases; in-process or `node dist/worker.js`), ADR 0007 | Implemented, tested |
+| Workflow engine: conditions, actions, delays, approvals, versioning, loop protection (depth 5, no self-trigger) | Implemented, tested |
+| Actions: create task, assign owner (fixed or round robin), update field, add tag, notify, log note | Implemented, tested |
+| External actions (send webhook, send email) always pause for a human approval | Implemented, tested |
+| Automation Studio: builder, templates, simulation against a real record, run history with step detail | Implemented, tested (e2e + axe) |
+| Approvals inbox with expiry | Implemented, tested |
+| In-app notifications (personal by RLS) and bell menu | Implemented, tested |
+| Signed outbound webhooks (HMAC), retries with backoff, auto-disable, SSRF guard | Implemented, tested |
+| Plan limit on automation runs per month | Implemented, tested |
+| Google (Gmail + Calendar) and Microsoft 365 (Outlook Inbox + Calendar) adapters, OAuth, encrypted tokens | Implemented, tested **against a local provider fixture only**. Not verified with real Google or Microsoft credentials |
+| Email sync, matching to contacts and leads, send from the owner’s mailbox with a daily cap | Implemented, tested against the fixture |
+| Meetings sync for contacts | Implemented, tested against the fixture |
+| Integrations page that states when a provider is not configured | Implemented, tested |
+
+### Deferred from the Phase 3 scope (not built)
+
+- Sequences (multi-step outreach cadences) move to Phase 5 with marketing automation.
+- Slack, Teams and Zoom are listed on the integrations page as planned only.
+- Invitation email delivery is still not configured (the mailbox integration is per user, not a system sender).
+- Web-form lead capture.
+- Webhooks are not plan-gated yet (Phase 6 entitlements).
+
+### Known limits
+
+1. The SSRF guard checks resolved addresses before each request but does not pin them, so DNS rebinding is not mitigated.
+2. Microsoft sync reads the Inbox folder only; sent mail is recorded when sent from DealFlow.
+3. `ALLOW_PRIVATE_NETWORK_TARGETS` exists for tests and is refused when `NODE_ENV=production`.
+4. Production requires `ENCRYPTION_KEY`; development derives a key from the JWT secret.
+
+## Continuation instructions (Phase 4)
+
+Follow the roadmap row for Phase 4 (AI gateway with metering, Copilot, agents, forecasting snapshots, AI workflow builder).
+AI agents must reuse the workflow approval path for anything external, and must never send mass communications,
+change prices, export sensitive data or modify security settings. The AI workflow builder should emit the same
+`WorkflowDefinition` the Studio edits, validated by the shared Zod schema.
 
 ## Original continuation instructions (Phase 2, done)
 

@@ -85,8 +85,11 @@ test('moves a deal on the board with the keyboard', async ({ page }) => {
   // Each step is confirmed through the screen-reader announcements.
   await page.keyboard.press('Space');
   await expect(page.getByText('Keyboard deal is over Qualification.')).toBeAttached();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByText('Keyboard deal is over Discovery.')).toBeAttached();
+  // dnd-kit binds its keyboard listeners a frame after activation; retry the move until it registers.
+  await expect(async () => {
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByText('Keyboard deal is over Discovery.')).toBeAttached({ timeout: 1000 });
+  }).toPass({ timeout: 8000 });
   await page.keyboard.press('Space');
   const second = page.getByRole('list', { name: 'Deals in Discovery' });
   await expect(second.getByRole('link', { name: 'Keyboard deal' })).toBeVisible();

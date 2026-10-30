@@ -15,7 +15,7 @@ export interface PickerValue {
 
 interface Props {
   id?: string;
-  entity: 'companies' | 'contacts';
+  entity: 'companies' | 'contacts' | 'leads' | 'deals';
   value: PickerValue | null;
   onChange: (v: PickerValue | null) => void;
   placeholder?: string;
@@ -25,7 +25,7 @@ interface Props {
 
 type Option = { id: string; name?: string; fullName?: string; email?: string | null; domain?: string | null };
 
-/** ARIA combobox that searches companies or contacts as you type. */
+/** ARIA combobox that searches records of one type as you type. */
 export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria }: Props) {
   const listId = useId();
   const [text, setText] = useState(value?.name ?? '');

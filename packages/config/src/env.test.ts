@@ -19,6 +19,15 @@ describe('loadApiEnv', () => {
 
   it('requires secure cookies in production', () => {
     expect(() => loadApiEnv({ ...base, NODE_ENV: 'production' })).toThrow(/COOKIE_SECURE/);
-    expect(loadApiEnv({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true' }).COOKIE_SECURE).toBe(true);
+    const prod = { ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', ENCRYPTION_KEY: 'k'.repeat(44) };
+    expect(loadApiEnv(prod).COOKIE_SECURE).toBe(true);
+  });
+
+  it('requires an encryption key and refuses private network targets in production', () => {
+    const prod = { ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true' };
+    expect(() => loadApiEnv(prod)).toThrow(/ENCRYPTION_KEY/);
+    expect(() => loadApiEnv({ ...prod, ENCRYPTION_KEY: 'k'.repeat(44), ALLOW_PRIVATE_NETWORK_TARGETS: 'true' })).toThrow(
+      /ALLOW_PRIVATE_NETWORK_TARGETS/,
+    );
   });
 });

@@ -19,6 +19,9 @@ export default defineConfig({
       JWT_ACCESS_SECRET: 'test-secret-that-is-at-least-32-characters-long',
       WEB_ORIGINS: 'http://localhost:3000',
       AUTH_RATE_LIMIT_PER_MINUTE: '1000',
+      // Webhook and adapter tests talk to local fixture servers.
+      ALLOW_PRIVATE_NETWORK_TARGETS: 'true',
+      WEBHOOK_DISABLE_AFTER_FAILURES: '3',
     },
     hookTimeout: 30_000,
   },

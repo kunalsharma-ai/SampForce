@@ -2,6 +2,11 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@ast
 import {
   acceptInvitationSchema,
   activityInputSchema,
+  approvalDecisionSchema,
+  sendEmailSchema,
+  simulateSchema,
+  webhookInputSchema,
+  workflowInputSchema,
   assignSchema,
   bulkDealUpdateSchema,
   companyInputSchema,
@@ -148,6 +153,39 @@ export function buildOpenApiDocument(): object {
   action('delete', '/tenants/current/invitations/{id}', 'Tenants', 'Revoke (members:manage)');
   r.registerPath({ method: 'get', path: '/auth/invitations/{token}', tags: ['Auth'], summary: 'Preview an invitation', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Workspace, email and role'), ...notFound } });
   r.registerPath({ method: 'post', path: '/auth/invitations/accept', tags: ['Auth'], summary: 'Accept; existing accounts confirm their password', request: body(acceptInvitationSchema), responses: { 200: json(tenantRef, 'Joined; auth cookies set'), ...notFound, ...errors } });
+
+  action('get', '/workflows', 'Automation', 'Workflows with 30-day run stats (automation:manage)');
+  action('post', '/workflows', 'Automation', 'Create a draft workflow (automation:manage)', workflowInputSchema);
+  action('get', '/workflows/{id}', 'Automation', 'Workflow with its latest version (automation:manage)');
+  action('put', '/workflows/{id}', 'Automation', 'Save a new immutable version (automation:manage)', workflowInputSchema);
+  r.registerPath({ method: 'patch', path: '/workflows/{id}/status', tags: ['Automation'], summary: 'Activate or pause (automation:manage)', security: secured,
+    request: { params: idParam, ...body(z.object({ status: z.enum(['ACTIVE', 'PAUSED']) })) }, responses: { 200: ok('Updated'), ...notFound, ...errors } });
+  action('get', '/workflows/{id}/versions', 'Automation', 'Version history (automation:manage)');
+  action('delete', '/workflows/{id}', 'Automation', 'Delete; cancels unfinished runs (automation:manage)');
+  action('post', '/workflows/simulate', 'Automation', 'Dry run against a record; nothing is written (automation:manage)', simulateSchema);
+  action('get', '/workflows/executions', 'Automation', 'Run history with steps (automation:manage)', undefined, { query: z.object({ workflowId: z.string().uuid().optional(), status: z.string().optional(), limit: z.number().int().optional() }) });
+  action('get', '/approvals', 'Automation', 'Approval requests (automation:manage)', undefined, { query: z.object({ status: z.enum(['PENDING', 'DECIDED']).optional() }) });
+  action('post', '/approvals/{id}/decision', 'Automation', 'Approve or reject (automation:manage)', approvalDecisionSchema);
+  action('get', '/notifications', 'Notifications', "The caller's notifications and unread count");
+  action('post', '/notifications/read', 'Notifications', 'Mark some or all as read', z.object({ ids: z.union([z.literal('all'), z.array(z.string().uuid())]) }));
+  action('get', '/webhooks', 'Webhooks', 'Endpoints with recent deliveries (integrations:manage)');
+  action('post', '/webhooks', 'Webhooks', 'Create; returns the signing secret once (integrations:manage)', webhookInputSchema);
+  r.registerPath({ method: 'patch', path: '/webhooks/{id}', tags: ['Webhooks'], summary: 'Change URL or events, or switch on and off (integrations:manage)', security: secured,
+    request: { params: idParam, ...body(webhookInputSchema.partial().extend({ active: z.boolean().optional() })) }, responses: { 200: ok('Updated'), ...notFound, ...errors } });
+  action('delete', '/webhooks/{id}', 'Webhooks', 'Delete (integrations:manage)');
+  r.registerPath({ method: 'post', path: '/webhooks/{id}/deliveries/{deliveryId}/redeliver', tags: ['Webhooks'], summary: 'Queue a failed delivery again (integrations:manage)', security: secured,
+    request: { params: z.object({ id: z.string().uuid(), deliveryId: z.string().uuid() }) }, responses: { 202: ok('Queued'), ...notFound, ...errors } });
+  action('get', '/integrations', 'Integrations', "Provider set-up and the caller's connections (activities:read)");
+  r.registerPath({ method: 'post', path: '/integrations/{provider}/connect', tags: ['Integrations'], summary: 'Start OAuth; 409 when the provider is not configured (activities:write)', security: secured,
+    request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Authorization URL'), ...errors } });
+  r.registerPath({ method: 'post', path: '/integrations/{provider}/sync', tags: ['Integrations'], summary: 'Sync now (activities:write)', security: secured,
+    request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
+  r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
+    request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
+  action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
+  action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
+  action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies (activities:write)", sendEmailSchema);
+  action('get', '/meetings', 'Communication', 'Synced meetings with known contacts (activities:read)', undefined, { query: z.object({ from: z.string().optional(), to: z.string().optional(), contactId: z.string().uuid().optional() }) });
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

@@ -35,6 +35,10 @@ export default defineConfig({
         WEB_ORIGINS: 'http://localhost:3000',
         LOG_LEVEL: 'warn',
         AUTH_RATE_LIMIT_PER_MINUTE: '1000',
+        // The worker runs inside the API for e2e so workflows, webhooks and notifications progress.
+        RUN_WORKER_IN_PROCESS: 'true',
+        WORKER_POLL_MS: '500',
+        ALLOW_PRIVATE_NETWORK_TARGETS: 'true',
       },
     },
     {

@@ -4,6 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { AuditModule } from './audit/audit.module';
+import { AutomationModule } from './automation/automation.module';
 import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
@@ -39,6 +40,7 @@ import { TenantsModule } from './tenants/tenants.module';
     TenantsModule,
     DashboardModule,
     CrmModule,
+    AutomationModule,
   ],
   controllers: [HealthController],
   providers: [

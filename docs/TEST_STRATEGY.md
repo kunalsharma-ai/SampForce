@@ -15,7 +15,7 @@
 | Performance | k6 API load tests; Lighthouse CI budgets | Phase 2+ | Nightly |
 | Security | CodeQL, dependency audit, ZAP baseline | Phase 2/8 | Nightly |
 | AI evaluation | Golden datasets per prompt, scored offline | Phase 4 | On prompt change |
-| Workflow execution | Engine tests with simulated clocks and stubbed providers | Phase 3 | Every push |
+| Workflow execution | Pure engine unit tests; API tests drive the worker with `WorkerService.drain()`; providers replaced by a local HTTP fixture | `apps/api/src/automation/*.test.ts`, `apps/api/test/automation*.e2e.test.ts` | Every push |
 | Billing | Provider sandbox + webhook fixtures, proration math unit tests | Phase 6 | Every push |
 | Backup restore | Restore latest snapshot into a scratch DB and run smoke tests | Phase 8 | Weekly |
 
@@ -40,6 +40,19 @@
 | `apps/web` Playwright e2e + accessibility | 19 passed (8 new CRM flows; axe on CRM lists, record pages, board) |
 | `scripts/check-rls.sql` | Passes on both databases |
 
+## Phase 3 results (2026-10-30)
+
+| Suite | Result |
+|---|---|
+| `packages/types` unit | 7 passed |
+| `packages/config` unit | 4 passed |
+| `apps/api` unit + integration | 112 passed in 16 files (engine, domain events, SSRF guard, workflows, approvals, webhooks, notifications, integrations, RLS for every Phase 3 table) |
+| `apps/web` unit | 5 passed |
+| `apps/web` Playwright e2e + accessibility | 22 passed (3 new automation and integration flows with axe) |
+
+Provider tests use `apps/api/test/fixtures/provider-fixture.ts`, a local server that imitates the Google and
+Microsoft OAuth, mail and calendar endpoints. They prove our code paths, not the real providers.
+
 ## Critical acceptance tests (from the brief) and where they live
 
 | # | Acceptance criterion | Status | Test |
@@ -48,15 +61,15 @@
 | 2 | Tenant data cannot be accessed by another tenant | **Pass** | `tenancy.e2e.test.ts` (API, forged token, RLS read/write/leak) |
 | 3 | Leads created, updated, assigned, converted | **Pass** | `crm.e2e.test.ts` (leads), `crm-isolation.e2e.test.ts`, e2e `crm.spec.ts` "works a lead…" |
 | 4 | Pipelines support functional deal movement | **Pass** | `crm.e2e.test.ts` (pipelines and deals), e2e "moves a deal on the board with the keyboard" |
-| 5 | Automation triggers execute correctly | Phase 3 | — |
+| 5 | Automation triggers execute correctly | **Pass** | `automation.e2e.test.ts`, `engine.test.ts`, e2e `automation.spec.ts` |
 | 6 | AI actions respect authorization | Phase 4 | — |
-| 7 | Email integrations synchronize when configured | Phase 3 | — |
+| 7 | Email integrations synchronize when configured | **Pass against a provider fixture** (real credentials untested) | `integrations.e2e.test.ts` |
 | 8 | Dashboards display real data | **Pass** | `dashboard.e2e.test.ts` (exact KPI values from fixtures), e2e KPI check |
 | 9 | Forecast calculations are reproducible | **Pass (rule-based quarter forecast)** | `dashboard.e2e.test.ts` "is reproducible"; model forecasts in Phase 4 |
 | 10 | Billing enforces plan entitlements | Phase 6 | — |
 | 11 | API endpoints enforce permissions | **Pass** | `rbac-audit.e2e.test.ts`, `auth.e2e.test.ts` unauthenticated checks |
 | 12 | Sensitive actions generate audit logs | **Pass (Phase 1 actions)** | `rbac-audit.e2e.test.ts` |
-| 13 | Failed integrations recover safely | Phase 3 | — |
+| 13 | Failed integrations recover safely | **Pass** | `webhooks-notifications.e2e.test.ts` (retry, backoff, auto-disable), `integrations.e2e.test.ts` (revoked access marks the connection for reconnection) |
 | 14 | Application works without optional 3D effects | **Pass** (no 3D yet; low-power and motion-off paths tested) | e2e preferences test |
 | 15 | Application works on mobile devices | **Pass** | `mobile.spec.ts` (drawer nav, no horizontal overflow) |
 

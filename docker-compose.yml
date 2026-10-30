@@ -38,7 +38,24 @@ services:
       COOKIE_SECURE: 'false'
       ALLOW_INSECURE_COOKIES: 'true'
       WEB_ORIGINS: http://localhost:3000
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      PUBLIC_WEB_URL: http://localhost:3000
     ports: ['4000:4000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # Background worker: outbox relay, workflow runs, webhooks, approval expiry, mailbox sync.
+  worker:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ['node', 'dist/worker.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@postgres:5432/dealflow
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      COOKIE_SECURE: 'false'
+      ALLOW_INSECURE_COOKIES: 'true'
+      PUBLIC_WEB_URL: http://localhost:3000
     depends_on:
       migrate: { condition: service_completed_successfully }
 

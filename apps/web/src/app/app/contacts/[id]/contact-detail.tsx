@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { ContactRow } from '@dealflow/types';
 import Link from 'next/link';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
+import { RecordEmails } from '@/components/crm/record-emails';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { formatDate, useRecord } from '@/lib/crm';
@@ -44,6 +45,7 @@ export function ContactDetail({ id }: { id: string }) {
             </CardContent>
           </Card>
           <RelatedDeals filter={{ contactId: id }} />
+          <RecordEmails contactId={id} email={c.email} />
           <ActivityTimeline related={{ contactId: id }} />
         </div>
         <div className="space-y-4">
