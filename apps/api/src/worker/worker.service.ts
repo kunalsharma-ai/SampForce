@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
+import { AiRunner } from '../ai/ai-runner.service';
 import { ApprovalsService } from '../automation/approvals.service';
 import { EventRelay } from '../automation/event-relay.service';
 import { WorkflowExecutor } from '../automation/executor.service';
@@ -13,11 +14,12 @@ export interface WorkerTick {
   deliveries: number;
   approvalsExpired: number;
   syncs: number;
+  aiRuns: number;
 }
 
 /**
  * The background worker: one loop that drains the Postgres-backed queues (outbox, workflow runs,
- * webhook deliveries, approval expiry, mailbox sync). Safe to run several copies; every claim uses
+ * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs). Safe to run several copies; every claim uses
  * FOR UPDATE SKIP LOCKED with a lease.
  */
 @Injectable()
@@ -33,6 +35,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly deliverer: WebhookDeliverer,
     private readonly approvals: ApprovalsService,
     private readonly integrations: IntegrationsService,
+    private readonly aiRunner: AiRunner,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -61,7 +64,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const deliveries = await this.deliverer.deliverDue();
     const approvalsExpired = await this.approvals.expireDue();
     const syncs = await this.integrations.syncDue();
-    return { events, executions, deliveries, approvalsExpired, syncs };
+    const aiRuns = await this.aiRunner.runDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
@@ -70,7 +74,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     for (let i = 0; i < maxTicks; i++) {
       const t = await this.tick();
       ticks.push(t);
-      if (t.events + t.executions + t.deliveries + t.approvalsExpired + t.syncs === 0) break;
+      if (t.events + t.executions + t.deliveries + t.approvalsExpired + t.syncs + t.aiRuns === 0) break;
     }
     return ticks;
   }

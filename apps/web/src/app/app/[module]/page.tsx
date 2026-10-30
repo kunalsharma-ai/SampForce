@@ -53,7 +53,7 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
           </ul>
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
             <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
-            Live today: the Command Center, leads, contacts, companies, accounts, deals and pipelines, tasks and activities, search, custom fields, CSV import and export, team invitations, roles and the audit log.
+            Live today: the Command Center, CRM records and pipelines, tasks and activities, email and calendar sync, the Automation Studio and approvals, Copilot and the AI agents, forecasting, team roles and the audit log.
           </div>
           <Button asChild variant="outline">
             <Link href="/app">Back to the Command Center</Link>

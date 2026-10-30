@@ -24,7 +24,8 @@ test('validates the sign-up form before calling the API', async ({ page }) => {
 test('signs up and shows Command Center KPIs from the API', async ({ page }) => {
   await signUp(page);
   await expect(page.getByTestId('kpi-totalLeads')).toContainText('0');
-  await expect(page.getByTestId('kpi-aiAssistedActivities')).toContainText('Available with Phase 4');
+  await expect(page.getByTestId('kpi-aiAssistedActivities')).toContainText('0');
+  await expect(page.getByTestId('kpi-automationSuccessRate')).toContainText('Not enough data yet');
   await expect(page.getByText('created the workspace')).toBeVisible();
   // Accessible table alternative to the chart.
   await page.getByRole('button', { name: 'Show as table' }).click();

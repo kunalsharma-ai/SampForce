@@ -49,6 +49,11 @@ export class DashboardService {
       const tid = auth.tenantId;
       const leadBase = { tenantId: tid, deletedAt: null };
 
+      const [aiAssisted, runsFinished, runsSucceeded] = await Promise.all([
+        tx.activity.count({ where: { tenantId: tid, deletedAt: null, aiAssisted: true, occurredAt: { gte: periodStart, lte: now } } }),
+        tx.workflowExecution.count({ where: { tenantId: tid, status: { in: ['SUCCEEDED', 'FAILED'] }, finishedAt: { gte: periodStart } } }),
+        tx.workflowExecution.count({ where: { tenantId: tid, status: 'SUCCEEDED', finishedAt: { gte: periodStart } } }),
+      ]);
       const [totalLeads, newLeads, qualifiedLeads, convertedInPeriod, activitiesCompleted] = await Promise.all([
         tx.lead.count({ where: leadBase }),
         tx.lead.count({ where: { ...leadBase, createdAt: { gte: periodStart } } }),
@@ -98,8 +103,8 @@ export class DashboardService {
         { key: 'forecastRevenue', label: 'Quarter forecast', value: round(forecast), format: 'currency', definition: `Won this quarter plus weighted open deals expected to close this quarter. A rule-based projection, not a guarantee. ${money_note}` },
         { key: 'revenueGrowth', label: 'Revenue growth', value: round(growth(wonValue, n(money?.won_prev_value)), 4), format: 'percent', definition: `Closed-won revenue vs the previous ${PERIOD_DAYS} days.` },
         { key: 'activitiesCompleted', label: 'Team activities', value: activitiesCompleted, format: 'number', definition: `Calls, emails, meetings and notes logged in the last ${PERIOD_DAYS} days.` },
-        { key: 'aiAssistedActivities', label: 'AI-assisted activities', value: null, format: 'number', definition: 'Activities drafted or performed with AI assistance.', availableFrom: 'Phase 4 (AI gateway)' },
-        { key: 'automationSuccessRate', label: 'Automation success rate', value: null, format: 'percent', definition: 'Successful workflow executions ÷ all executions.', availableFrom: 'Phase 3 (workflow engine)' },
+        { key: 'aiAssistedActivities', label: 'AI-assisted activities', value: aiAssisted, format: 'number', definition: `Activities in the last ${PERIOD_DAYS} days that an AI agent drafted and a person confirmed.` },
+        { key: 'automationSuccessRate', label: 'Automation success rate', value: round(ratio(runsSucceeded, runsFinished), 4), format: 'percent', definition: `Workflow runs that succeeded ÷ runs that finished (succeeded or failed) in the last ${PERIOD_DAYS} days. Empty until a run finishes.` },
       ];
 
       const pipeline = await tx.pipeline.findFirst({

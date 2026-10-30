@@ -3,6 +3,7 @@
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
 import type { MeetingRow } from '@dealflow/types';
 import Link from 'next/link';
+import { MeetingNotesButton } from '@/components/ai/record-ai';
 import { useIntegrations, useMeetings } from '@/lib/automation';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -27,12 +28,12 @@ export function MeetingsList() {
         </p>
       )}
       <Section title="Upcoming" items={upcoming} empty="No upcoming meetings with contacts." />
-      <Section title="Past 30 days" items={past} empty="No recent meetings with contacts." />
+      <Section title="Past 30 days" items={past} empty="No recent meetings with contacts." summarise />
     </div>
   );
 }
 
-function Section({ title, items, empty }: { title: string; items: MeetingRow[]; empty: string }) {
+function Section({ title, items, empty, summarise }: { title: string; items: MeetingRow[]; empty: string; summarise?: boolean }) {
   return (
     <Card>
       <CardHeader>
@@ -47,6 +48,11 @@ function Section({ title, items, empty }: { title: string; items: MeetingRow[]; 
               <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
                 <span className={`text-sm font-medium ${m.canceled ? 'line-through text-muted-foreground' : ''}`}>{m.title}</span>
                 {m.canceled && <Badge tone="neutral">Canceled</Badge>}
+                {summarise && !m.canceled && m.contactIds.length > 0 && (
+                  <span className="ml-auto">
+                    <MeetingNotesButton target={{ meetingId: m.id }} label="Summarise notes" />
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {fmt(m.startsAt)}
                   {m.location && ` · ${m.location}`}

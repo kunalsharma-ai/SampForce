@@ -1,12 +1,19 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
-import { TRIGGER_EVENTS } from '@dealflow/types';
-import { Plus, ShieldCheck } from 'lucide-react';
+import { TRIGGER_EVENTS, type WorkflowDefinition } from '@dealflow/types';
+import { useMutation } from '@tanstack/react-query';
+import { Plus, ShieldCheck, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { Textarea } from '@/components/crm/select';
+import { agentReason, aiErrorMessage, useAiStatus } from '@/lib/ai';
+import { api } from '@/lib/api';
 import { useApprovals, useWorkflows } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
-import { TEMPLATES } from './workflow-model';
+import { useCan } from '@/lib/session';
+import { AI_DRAFT_KEY, type AiWorkflowDraft, TEMPLATES } from './workflow-model';
 
 export function WorkflowList() {
   const workflows = useWorkflows();
@@ -54,6 +61,8 @@ export function WorkflowList() {
         </Card>
       )}
 
+      <DescribeWithAi />
+
       <section aria-labelledby="templates-heading" className="space-y-3">
         <h2 id="templates-heading" className="text-sm font-semibold">
           Start from a template
@@ -77,5 +86,66 @@ export function WorkflowList() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** The AI workflow builder: a plain-language description becomes a validated draft that opens in the editor. */
+function DescribeWithAi() {
+  const canUse = useCan('ai:use');
+  const status = useAiStatus();
+  const router = useRouter();
+  const [text, setText] = useState('');
+  const draft = useMutation({
+    mutationFn: () => api<{ runId: string; name: string; definition: WorkflowDefinition; notes: string }>('/ai/workflows/draft', { method: 'POST', json: { description: text } }),
+    onSuccess: (d) => {
+      const stored: AiWorkflowDraft = { prompt: text.trim(), name: d.name, notes: d.notes, definition: d.definition };
+      try {
+        sessionStorage.setItem(AI_DRAFT_KEY, JSON.stringify(stored));
+      } catch {
+        return;
+      }
+      router.push('/app/automation/new?draft=ai');
+    },
+  });
+  if (!canUse) return null;
+  const reason = agentReason(status.data, 'workflow_builder');
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Sparkles className="size-4 text-accent" aria-hidden /> Describe it with AI
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          className="space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            draft.mutate();
+          }}
+        >
+          <label htmlFor="ai-workflow" className="sr-only">
+            Describe the workflow
+          </label>
+          <Textarea
+            id="ai-workflow"
+            value={text}
+            maxLength={2000}
+            disabled={!!reason}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="When a lead from the website is worth more than 50,000, assign it to the sales lead and create a call task due tomorrow."
+            className="min-h-[72px]"
+          />
+          {reason && <p className="text-xs text-warning">{reason}</p>}
+          {draft.error && <p role="alert" className="text-sm text-critical">{aiErrorMessage(draft.error)}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" size="sm" disabled={text.trim().length < 10 || draft.isPending || !!reason}>
+              {draft.isPending ? 'Drafting…' : 'Draft workflow'}
+            </Button>
+            <span className="text-xs text-muted-foreground">The draft opens in the editor. Nothing is saved or activated until you do it.</span>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

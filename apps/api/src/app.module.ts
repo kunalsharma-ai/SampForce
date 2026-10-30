@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
+import { AiModule } from './ai/ai.module';
 import { AuditModule } from './audit/audit.module';
 import { AutomationModule } from './automation/automation.module';
 import { AuthGuard } from './auth/auth.guard';
@@ -14,6 +15,7 @@ import { OriginGuard } from './common/origin.guard';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthController } from './health/health.controller';
 import { TenantsModule } from './tenants/tenants.module';
+import { WorkerModule } from './worker/worker.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { TenantsModule } from './tenants/tenants.module';
     DashboardModule,
     CrmModule,
     AutomationModule,
+    AiModule,
+    WorkerModule,
   ],
   controllers: [HealthController],
   providers: [

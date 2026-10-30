@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowRightLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LeadQualificationCard, MeetingNotesButton } from '@/components/ai/record-ai';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
@@ -86,7 +87,11 @@ export function LeadDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ leadId: id }} />
         </div>
         <div className="space-y-4">
+          <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
+          <div className="flex flex-wrap gap-2">
+            <MeetingNotesButton target={{ leadId: id }} />
+          </div>
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />
         </div>

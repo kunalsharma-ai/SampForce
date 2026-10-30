@@ -7,6 +7,7 @@ import { Check, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { DealIntelligenceCard, MeetingNotesButton, ProposalButton } from '@/components/ai/record-ai';
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
@@ -51,11 +52,15 @@ export function DealDetail({ id }: { id: string }) {
         row={d as unknown as Record<string, unknown>}
         badges={<Badge tone={DEAL_STATUS_TONE[d.status]}>{titleCase(d.status)}</Badge>}
         actions={
-          canWrite ? (
-            <Button variant="outline" size="sm" onClick={() => clone.mutate()} disabled={clone.isPending}>
-              <Copy aria-hidden /> Clone
-            </Button>
-          ) : null
+          <>
+            <ProposalButton dealId={id} />
+            <MeetingNotesButton target={{ dealId: id }} label="Meeting notes" />
+            {canWrite && (
+              <Button variant="outline" size="sm" onClick={() => clone.mutate()} disabled={clone.isPending}>
+                <Copy aria-hidden /> Clone
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -127,6 +132,7 @@ export function DealDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ opportunityId: id }} />
         </div>
         <div className="space-y-4">
+          <DealIntelligenceCard dealId={id} />
           <RecordTasks related={{ opportunityId: id }} />
           <CustomFieldList entity="deals" values={d.customFields} />
         </div>

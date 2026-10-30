@@ -1,0 +1,12 @@
+{
+  "prompt": "workflowBuilder",
+  "description": "Drafts must pass the shared workflow schema and use the trigger and step types the description implies.",
+  "threshold": 0.8,
+  "cases": [
+    { "id": "lead-task", "description": "When a new lead comes in, create a task for the owner to call them the same day", "expectTrigger": "lead.created", "expectActions": ["create_task"] },
+    { "id": "won-notify", "description": "When a deal is won, notify the owner and create a hand-over task due in two days", "expectTrigger": "deal.won", "expectActions": ["notify", "create_task"] },
+    { "id": "big-lead-tag", "description": "If a new lead's estimated value is at least 50000, tag it hot", "expectTrigger": "lead.created", "expectActions": ["add_tag"], "expectCondition": true },
+    { "id": "welcome-email", "description": "When a contact is created, send them a welcome email", "expectTrigger": "contact.created", "expectActions": ["send_email"] },
+    { "id": "delay", "description": "Two days after a lead is created, if it is still NEW, remind the owner", "expectTrigger": "lead.created", "expectActions": ["notify"], "expectDelay": true }
+  ]
+}

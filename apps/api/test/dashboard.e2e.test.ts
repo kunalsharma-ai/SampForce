@@ -67,11 +67,11 @@ describe('Command Center KPIs', () => {
     expect(kpi(body, 'activitiesCompleted')).toBe(1);
   });
 
-  it('reports modules that have not shipped as unavailable rather than zero', async () => {
+  it('counts AI-assisted activities and leaves the automation rate empty until a run finishes', async () => {
     const { body } = await u.agent.get('/api/v1/dashboard/summary').expect(200);
-    const ai = body.kpis.find((k: { key: string }) => k.key === 'aiAssistedActivities');
-    expect(ai.value).toBeNull();
-    expect(ai.availableFrom).toMatch(/Phase 4/);
+    expect(kpi(body, 'aiAssistedActivities')).toBe(0);
+    expect(kpi(body, 'automationSuccessRate')).toBeNull();
+    expect(body.kpis.some((k: { availableFrom?: string }) => k.availableFrom)).toBe(false);
   });
 
   it('summarises the default pipeline by stage', async () => {

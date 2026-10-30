@@ -124,6 +124,11 @@ model Tenant {
   integrationConnections IntegrationConnection[]
   emailMessages          EmailMessage[]
   meetings               Meeting[]
+  aiSettings             AiSettings?
+  aiRuns                 AiRun[]
+  aiUsage                AiUsage[]
+  aiRecommendations      AiRecommendation[]
+  forecastSnapshots      ForecastSnapshot[]
 
   @@map("tenants")
 }
@@ -909,4 +914,134 @@ model Meeting {
   @@unique([connectionId, providerEventId])
   @@index([tenantId, startsAt])
   @@map("meetings")
+}
+
+// ───────────── Phase 4: AI intelligence ─────────────
+
+/// Tenant AI policy: the tenant-wide kill switch, per-agent switches, redaction and an optional credit cap.
+model AiSettings {
+  tenantId         String   @id @map("tenant_id") @db.Uuid
+  enabled          Boolean  @default(true)
+  disabledAgents   String[] @default([]) @map("disabled_agents")
+  autoQualifyLeads Boolean  @default(false) @map("auto_qualify_leads")
+  redactPii        Boolean  @default(false) @map("redact_pii")
+  /// Optional tenant-set ceiling below the plan allowance.
+  monthlyCreditCap Int?     @map("monthly_credit_cap")
+  updatedById      String?  @map("updated_by_id") @db.Uuid
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_settings")
+}
+
+enum AiRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  BLOCKED
+}
+
+/// One Copilot turn or agent run, with every model call and tool call in `trace`.
+model AiRun {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String      @map("tenant_id") @db.Uuid
+  /// Requesting user; null for automatic runs (they act with no user and can only propose).
+  userId         String?     @map("user_id") @db.Uuid
+  agent          String
+  status         AiRunStatus @default(QUEUED)
+  entityType     String?     @map("entity_type")
+  entityId       String?     @map("entity_id") @db.Uuid
+  conversationId String?     @map("conversation_id") @db.Uuid
+  input          Json        @default("{}")
+  output         Json?
+  trace          Json        @default("[]")
+  promptVersion  String      @map("prompt_version")
+  model          String?
+  creditsUsed    Int         @default(0) @map("credits_used")
+  error          String?
+  attempts       Int         @default(0)
+  runAt          DateTime    @default(now()) @map("run_at") @db.Timestamptz(3)
+  leaseUntil     DateTime?   @map("lease_until") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  finishedAt     DateTime?   @map("finished_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, conversationId, createdAt])
+  @@index([status, runAt])
+  @@map("ai_runs")
+}
+
+/// Metering: one row per model call, converted to DealFlow AI credits.
+model AiUsage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid
+  runId         String?  @map("run_id") @db.Uuid
+  agent         String
+  provider      String
+  model         String
+  inputTokens   Int      @map("input_tokens")
+  outputTokens  Int      @map("output_tokens")
+  credits       Int
+  status        String
+  latencyMs     Int      @map("latency_ms")
+  promptVersion String   @map("prompt_version")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("ai_usage")
+}
+
+enum RecommendationStatus {
+  PROPOSED
+  ACCEPTED
+  DISMISSED
+}
+
+/// A stored, explainable agent result: the signals and prompt version that produced it.
+model AiRecommendation {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  runId         String?              @map("run_id") @db.Uuid
+  agent         String
+  kind          String
+  entityType    String               @map("entity_type")
+  entityId      String               @map("entity_id") @db.Uuid
+  payload       Json
+  promptVersion String               @map("prompt_version")
+  status        RecommendationStatus @default(PROPOSED)
+  decidedById   String?              @map("decided_by_id") @db.Uuid
+  decidedAt     DateTime?            @map("decided_at") @db.Timestamptz(3)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType, entityId, createdAt(sort: Desc)])
+  @@map("ai_recommendations")
+}
+
+/// A frozen copy of the forecast inputs and totals, so a past forecast can be recomputed exactly.
+model ForecastSnapshot {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  label       String?
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  currency    String   @db.Char(3)
+  method      String
+  totals      Json
+  lines       Json
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, periodStart, createdAt(sort: Desc)])
+  @@map("forecast_snapshots")
 }

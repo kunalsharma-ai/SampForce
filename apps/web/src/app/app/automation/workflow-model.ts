@@ -248,3 +248,13 @@ export const TEMPLATES: Template[] = [
     },
   },
 ];
+
+/** sessionStorage key for a workflow drafted by the AI workflow builder, read once by the editor. */
+export const AI_DRAFT_KEY = 'dealflow.ai-workflow-draft';
+
+export interface AiWorkflowDraft {
+  prompt: string;
+  name: string;
+  notes: string;
+  definition: WorkflowDefinition;
+}

@@ -10,7 +10,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | **1. Product Foundation** | Monorepo, Next.js web, NestJS API, schema + RLS, auth, tenant isolation, RBAC, audit log, design system, navigation, Command Center foundation, CI, Docker, env config | Acceptance tests 1, 2, 8, 9, 11, 12, 14, 15 pass | **Complete (2026-10-30)** |
 | 2. Core CRM | Leads, contacts, companies, accounts, deals, pipelines (Kanban/list/table), activities, tasks, search, custom fields, CSV/Excel import/export, duplicate detection, invitations | Tests 3, 4; RLS CI guard for new tables | **Complete (2026-10-30)**, with the deferrals listed below |
 | 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | **Complete (2026-10-30)**, with the deferrals listed below |
-| 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | Planned |
+| 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | **Complete (2026-10-30)**, with the deferrals listed below. Evals not yet run against the real model |
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | Planned |
 | 6. Commercialization | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | Planned |
 | 7. Immersive Experience | Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | Planned |
@@ -35,7 +35,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Team management: members, role change | Tested (API); UI covered by smoke navigation |
 | 26-module navigation, roadmap pages for unshipped modules | Tested |
 | Global search palette (navigation) | Tested |
-| Copilot panel (explains Phase 4; no fake answers) | Implemented |
+| Copilot panel (explains Phase 4; no fake answers) | Implemented; replaced by the working Copilot in Phase 4 |
 | Billing page (read-only plan + proposed rate card) | Implemented |
 | Integrations status board (all "Not connected") | Implemented |
 | OpenAPI 3.1 spec + Swagger UI | Tested |
@@ -127,7 +127,49 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 3. `ALLOW_PRIVATE_NETWORK_TARGETS` exists for tests and is refused when `NODE_ENV=production`.
 4. Production requires `ENCRYPTION_KEY`; development derives a key from the JWT secret.
 
-## Continuation instructions (Phase 4)
+## Feature status (Phase 4 close)
+
+| Feature | Status |
+|---|---|
+| AI gateway (ADR 0008): Claude through the official SDK, effort tiers, structured outputs, server-side model fallbacks, timeouts and retries | Implemented, tested **against a local Claude fixture only**. Not verified with a real Anthropic API key |
+| Metering: credits per call from tokens and tier, plan allowance × active seats, optional admin cap, usage log that cannot be edited | Implemented, tested |
+| Governance: workspace kill switch, per-agent switches, per-user rate limit, optional redaction of email, phone and card numbers, audit entries | Implemented, tested |
+| Copilot: answers from permission-filtered read tools with citations; tasks, notes and stage moves are proposals the asker confirms; permission re-checked on confirm; warning when external content was read | Implemented, tested (API + e2e + axe) |
+| Lead Qualification: rule-based score with explained signals, AI summary and next step; optional auto-qualify on new leads via the worker | Implemented, tested |
+| Deal Intelligence: health and risk from activity, stage age, tasks and dates; recommended next step accepted as a task | Implemented, tested |
+| Meeting notes: summary, decisions, action items to tasks, follow-up email draft (never sent automatically) from pasted notes | Implemented, tested |
+| Proposal draft from deal data, with the facts it relies on and open questions | Implemented, tested |
+| AI workflow builder: description to a validated `WorkflowDefinition` that opens in the Studio as an unsaved draft | Implemented, tested |
+| Forecasting: weighted quarter forecast, categories, worst/base/best scenarios, by owner, exclusions stated | Implemented, tested (exact totals) |
+| Forecast snapshots: immutable, store their lines, recompute check (acceptance test 9 for forecasts), deal-level comparison, AI explanation of the change | Implemented, tested |
+| AI Agents page: provider status, credits, controls, per-agent can/cannot, usage and recent runs | Implemented, tested (e2e + axe) |
+| Eval suites (Copilot tool choice and refusals, lead summary, workflow builder, meeting notes) with deterministic scorers | Harness implemented and tested against the fixture. **Not yet run against the real model** (`pnpm --filter @dealflow/api eval` with a key) |
+
+### Deferred from the Phase 4 scope (not built)
+
+- Streaming Copilot answers (answers arrive whole).
+- Scheduled agents: nightly deal analysis and a weekly automatic forecast snapshot (both run on demand today).
+- Retrieval over documents and email bodies (pgvector); Copilot reads structured records and email metadata only.
+- Meeting recording and transcription; the meeting agent works from notes the person pastes.
+- Proposal templates, product catalogue and pricing (Phase 5 quotes); drafts never change prices.
+- A second model provider adapter; the gateway has a provider interface but only Anthropic is implemented.
+- Historical (non-weighted) forecast methods and confidence intervals.
+
+### Known limits
+
+1. The per-user AI rate limit counts rows in Postgres, not a shared in-memory store; it is accurate but adds a query per call.
+2. Credits are DealFlow's own unit for plan limits, not a statement of provider cost.
+3. Redaction is pattern-based and optional; it does not catch names or free-text identifiers.
+4. The fixture proves plumbing and safety rules. Answer quality depends on the real model and is what the evals measure.
+
+## Continuation instructions (Phase 5)
+
+Follow the roadmap row for Phase 5 (marketing automation, revenue analytics, customer success, quotes/proposals/contracts,
+multi-currency/FX, territories, localisation). Before starting, run `pnpm --filter @dealflow/api eval` with a real key and
+record the results in TEST_STRATEGY.md. The proposal agent should move onto the quote catalogue, and any price it
+mentions must come from a price book, never from the model.
+
+## Original continuation instructions (Phase 4, done)
 
 Follow the roadmap row for Phase 4 (AI gateway with metering, Copilot, agents, forecasting snapshots, AI workflow builder).
 AI agents must reuse the workflow approval path for anything external, and must never send mass communications,

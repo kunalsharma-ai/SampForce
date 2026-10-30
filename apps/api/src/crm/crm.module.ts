@@ -44,6 +44,6 @@ import {
     SearchService,
     ImportExportService,
   ],
-  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService],
+  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService],
 })
 export class CrmModule {}

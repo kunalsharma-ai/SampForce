@@ -24,6 +24,14 @@ export default defineConfig({
   ],
   webServer: [
     {
+      // Local stand-in for the Claude Messages API, so AI screens run end to end without a real key.
+      command: 'npx tsx test/fixtures/ai-fixture-server.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4100/health',
+      reuseExistingServer: !process.env.CI,
+      env: { AI_FIXTURE_PORT: '4100' },
+    },
+    {
       command: 'node dist/main.js',
       cwd: '../api',
       url: 'http://localhost:4000/api/v1/health/ready',
@@ -39,6 +47,9 @@ export default defineConfig({
         RUN_WORKER_IN_PROCESS: 'true',
         WORKER_POLL_MS: '500',
         ALLOW_PRIVATE_NETWORK_TARGETS: 'true',
+        // Not a real key: requests go to the fixture above, never to Anthropic.
+        ANTHROPIC_API_KEY: 'test-key-not-real',
+        AI_API_BASE_URL: 'http://127.0.0.1:4100',
       },
     },
     {

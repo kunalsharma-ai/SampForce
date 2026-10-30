@@ -1,6 +1,15 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
   acceptInvitationSchema,
+  acceptNextStepSchema,
+  actionDecisionSchema,
+  aiSettingsUpdateSchema,
+  copilotRequestSchema,
+  createActionItemsSchema,
+  forecastQuerySchema,
+  meetingNotesRequestSchema,
+  snapshotInputSchema,
+  workflowDraftRequestSchema,
   activityInputSchema,
   approvalDecisionSchema,
   sendEmailSchema,
@@ -186,6 +195,34 @@ export function buildOpenApiDocument(): object {
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies (activities:write)", sendEmailSchema);
   action('get', '/meetings', 'Communication', 'Synced meetings with known contacts (activities:read)', undefined, { query: z.object({ from: z.string().optional(), to: z.string().optional(), contactId: z.string().uuid().optional() }) });
+
+  // AI: every route also needs ai:use; model calls are metered in credits and can return 402/409/429/503.
+  action('get', '/ai/status', 'AI', 'Provider, settings, credits and per-agent availability (ai:use)');
+  r.registerPath({ method: 'patch', path: '/ai/settings', tags: ['AI'], summary: 'Kill switch, agent switches, auto-qualify, redaction, credit cap; audited (ai:manage)', security: secured,
+    request: body(aiSettingsUpdateSchema), responses: { 200: ok('Updated status'), ...errors } });
+  action('get', '/ai/usage', 'AI', 'Usage by agent this month and recent runs (ai:manage)');
+  action('get', '/ai/runs/{id}', 'AI', 'One agent run (ai:manage)');
+  action('post', '/ai/copilot', 'AI', 'Ask Copilot; changes come back as proposals (ai:use)', copilotRequestSchema);
+  action('get', '/ai/copilot/conversations/{id}', 'AI', "The caller's turns in a conversation (ai:use)");
+  r.registerPath({ method: 'post', path: '/ai/copilot/runs/{runId}/actions/{actionId}', tags: ['AI'], summary: 'Confirm or dismiss a proposed change; permission re-checked (ai:use, asker only)', security: secured,
+    request: { params: z.object({ runId: z.string().uuid(), actionId: z.string().uuid() }), ...body(actionDecisionSchema) }, responses: { 200: ok('The action with its outcome'), ...notFound, ...errors } });
+  action('post', '/ai/leads/{id}/qualify', 'AI', 'Score a lead from explainable signals, with an AI summary when available (ai:use, leads:write)');
+  action('post', '/ai/deals/{id}/analyse', 'AI', 'Deal health and a recommended next step (ai:use, deals:read)');
+  action('post', '/ai/deals/{id}/proposal', 'AI', 'Draft a proposal outline from the deal; nothing is sent (ai:use, deals:read)');
+  action('post', '/ai/meeting-notes', 'AI', 'Summarise pasted notes into decisions, action items and a follow-up draft (ai:use, activities:write)', meetingNotesRequestSchema);
+  action('post', '/ai/workflows/draft', 'AI', 'Turn a description into a validated workflow definition; not saved (ai:use, automation:manage)', workflowDraftRequestSchema);
+  action('get', '/ai/recommendations', 'AI', 'Agent results for a record (ai:use)', undefined, { query: z.object({ entityType: z.enum(['lead', 'contact', 'deal']), entityId: z.string().uuid() }) });
+  action('post', '/ai/recommendations/{id}/accept', 'AI', 'Accept: creates the task or note as the caller (ai:use)', acceptNextStepSchema);
+  action('post', '/ai/recommendations/{id}/dismiss', 'AI', 'Dismiss (ai:use)');
+  action('post', '/ai/recommendations/{id}/tasks', 'AI', 'Create tasks from chosen meeting action items (ai:use, activities:write)', createActionItemsSchema);
+  action('post', '/ai/forecast/explain', 'AI', 'Snapshot comparison with a written explanation (ai:use, dashboard:read, deals:read)', z.object({ from: z.string().uuid(), to: z.string().uuid() }));
+  action('get', '/forecast', 'Forecasting', 'Weighted forecast for a quarter; rule-based, no AI (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
+  action('get', '/forecast/snapshots', 'Forecasting', 'Snapshots for a quarter (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
+  r.registerPath({ method: 'post', path: '/forecast/snapshots', tags: ['Forecasting'], summary: 'Store an immutable snapshot with its lines (dashboard:read, deals:read)', security: secured,
+    request: body(snapshotInputSchema), responses: { 201: ok('Snapshot'), ...errors } });
+  r.registerPath({ method: 'get', path: '/forecast/snapshots/{id}/verify', tags: ['Forecasting'], summary: 'Recompute totals from the stored lines (dashboard:read, deals:read)', security: secured,
+    request: { params: idParam }, responses: { 200: ok('Stored and recomputed totals'), ...notFound, ...errors } });
+  action('get', '/forecast/compare', 'Forecasting', 'Deal-level changes between two snapshots (dashboard:read, deals:read)', undefined, { query: z.object({ from: z.string().uuid(), to: z.string().uuid() }) });
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

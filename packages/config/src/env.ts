@@ -46,6 +46,16 @@ export const apiEnvSchema = z.object({
   GMAIL_API_BASE_URL: z.string().url().default('https://gmail.googleapis.com'),
   MICROSOFT_LOGIN_BASE_URL: z.string().url().default('https://login.microsoftonline.com'),
   MICROSOFT_GRAPH_BASE_URL: z.string().url().default('https://graph.microsoft.com'),
+  /** Claude API key for the AI gateway. Empty or missing means AI features say they are not configured. */
+  ANTHROPIC_API_KEY: z.string().optional().transform((v) => v || undefined),
+  /** Claude API endpoint (tests point this at a local fixture). Deliberately not ANTHROPIC_BASE_URL. */
+  AI_API_BASE_URL: z.string().url().default('https://api.anthropic.com'),
+  AI_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
+  /** Ask the Claude API to re-run a declined request on its recommended fallback model. */
+  AI_SERVER_FALLBACKS: bool.default('true'),
+  /** Model calls one user may make per minute. */
+  AI_USER_CALLS_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(30),
 });
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 

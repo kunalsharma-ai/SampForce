@@ -49,7 +49,8 @@ export class ActivitiesService {
   }
 
   /** Logs an activity. The actor is always the owner; AI-assisted activities are created by the agent layer, not here. */
-  create(auth: AuthContext, input: ActivityInput, meta: RequestMeta): Promise<ActivityRow> {
+  /** `aiAssisted` marks activities an AI agent drafted and a person confirmed. */
+  create(auth: AuthContext, input: ActivityInput, meta: RequestMeta, opts: { aiAssisted?: boolean } = {}): Promise<ActivityRow> {
     if (!input.leadId && !input.contactId && !input.companyId && !input.opportunityId) {
       throw new BadRequestException({
         code: 'VALIDATION_FAILED',
@@ -72,6 +73,7 @@ export class ActivitiesService {
           body: input.body ?? null,
           occurredAt: input.occurredAt ? new Date(input.occurredAt) : new Date(),
           ownerId: auth.userId,
+          aiAssisted: opts.aiAssisted ?? false,
           leadId: input.leadId ?? null,
           contactId: input.contactId ?? null,
           companyId: input.companyId ?? null,
@@ -80,7 +82,7 @@ export class ActivitiesService {
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'activity.logged', entityType: 'activity', entityId: row.id,
-        metadata: { type: row.type }, meta,
+        metadata: { type: row.type, aiAssisted: row.aiAssisted }, meta,
       });
       return toActivityRow(row, await ownerRefs(tx, [row.ownerId]));
     });

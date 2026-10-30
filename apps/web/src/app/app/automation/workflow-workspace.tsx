@@ -21,7 +21,7 @@ import { EXECUTION_LABEL, EXECUTION_TONE, useExecutions, useVersions, useWorkflo
 import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { WorkflowEditor } from './workflow-editor';
-import { emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
+import { AI_DRAFT_KEY, type AiWorkflowDraft, emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
 
 type Tab = 'builder' | 'simulate' | 'runs' | 'versions';
 const TABS: { key: Tab; label: string }[] = [
@@ -42,6 +42,26 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
   const [definition, setDefinition] = useState<WorkflowDefinition>(template?.definition ?? emptyDefinition());
   const [dirty, setDirty] = useState(!id);
   const [tab, setTab] = useState<Tab>(params.get('run') ? 'runs' : 'builder');
+  const [aiDraft, setAiDraft] = useState<{ prompt: string; notes: string } | null>(null);
+
+  // A draft from "Describe it with AI" arrives through sessionStorage, so it never touches the URL or the server until saved.
+  useEffect(() => {
+    if (id || params.get('draft') !== 'ai') return;
+    try {
+      const raw = sessionStorage.getItem(AI_DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) as AiWorkflowDraft;
+      const parsed = workflowDefinitionSchema.safeParse(d.definition);
+      if (!parsed.success) return;
+      setName(d.name);
+      setDescription(d.prompt);
+      setDefinition(parsed.data);
+      setAiDraft({ prompt: d.prompt, notes: d.notes });
+      sessionStorage.removeItem(AI_DRAFT_KEY);
+    } catch {
+      // Storage unavailable or the draft is unreadable: start from an empty workflow.
+    }
+  }, [id, params]);
 
   useEffect(() => {
     if (workflow.data && !dirty) {
@@ -131,6 +151,13 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
           )}
         </div>
       </div>
+      {aiDraft && (
+        <div role="status" className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
+          <p className="font-medium">Drafted by AI from your description. Check every step before you save it.</p>
+          {aiDraft.notes && <p className="mt-1 text-muted-foreground">{aiDraft.notes}</p>}
+          <p className="mt-1 text-xs text-muted-foreground">It is saved as a draft and does nothing until you activate it. Emails and webhooks still wait for approval.</p>
+        </div>
+      )}
       {dirty && wf && <p className="text-xs text-muted-foreground">Unsaved changes. Saving creates version {wf.version + 1}; runs already in progress finish on the version they started with.</p>}
       {error && (
         <div role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">

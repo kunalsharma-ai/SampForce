@@ -1,0 +1,216 @@
+import { createServer, type IncomingMessage, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
+/**
+ * A local stand-in for the Claude Messages API (`POST /v1/messages`). It returns responses in the
+ * API's shape so the gateway, the SDK and the tool loop run end to end without a real key. The default
+ * handler is a small rule set; tests can replace it per case. Passing tests against this fixture shows
+ * DealFlow's plumbing and safety rules work. It says nothing about the quality of real model answers;
+ * that is what the eval suites in apps/api/evals measure with a real key.
+ */
+export interface FixtureRequest {
+  headers: IncomingMessage['headers'];
+  body: MessagesBody;
+}
+
+export interface MessagesBody {
+  model: string;
+  system?: string;
+  max_tokens: number;
+  messages: { role: string; content: string | Block[] }[];
+  tools?: { name: string }[];
+  output_config?: { effort?: string; format?: { type: string; schema: unknown } };
+  fallbacks?: unknown;
+}
+
+export interface Block {
+  type: string;
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  content?: string;
+  is_error?: boolean;
+}
+
+export interface FixtureReply {
+  content: Block[];
+  stop_reason?: 'end_turn' | 'tool_use' | 'max_tokens' | 'refusal';
+  status?: number;
+}
+
+export type Handler = (body: MessagesBody) => FixtureReply;
+
+export interface AiFixture {
+  url: string;
+  requests: FixtureRequest[];
+  /** Replace the handler (pass null to restore the rule set). */
+  use(handler: Handler | null): void;
+  close(): Promise<void>;
+}
+
+const read = (req: IncomingMessage) =>
+  new Promise<string>((resolve) => {
+    let data = '';
+    req.on('data', (c: Buffer) => (data += c.toString()));
+    req.on('end', () => resolve(data));
+  });
+
+let toolSeq = 0;
+export const text = (t: string): FixtureReply => ({ content: [{ type: 'text', text: t }], stop_reason: 'end_turn' });
+export const json = (v: unknown): FixtureReply => text(JSON.stringify(v));
+export const toolUse = (name: string, input: unknown): FixtureReply => ({
+  content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: `toolu_fixture_${++toolSeq}`, name, input }],
+  stop_reason: 'tool_use',
+});
+
+const lastMessage = (b: MessagesBody) => b.messages[b.messages.length - 1]!;
+const userText = (b: MessagesBody): string => {
+  const m = lastMessage(b);
+  return typeof m.content === 'string' ? m.content : (m.content.find((x) => x.type === 'text')?.text ?? '');
+};
+/** The tool call the latest tool results answer, with the result content. */
+export function lastToolResult(b: MessagesBody): { name: string; input: Record<string, unknown>; result: Record<string, unknown>; isError: boolean } | null {
+  const m = lastMessage(b);
+  if (typeof m.content === 'string') return null;
+  const res = m.content.find((x) => x.type === 'tool_result');
+  if (!res) return null;
+  const prev = b.messages[b.messages.length - 2];
+  const use = prev && typeof prev.content !== 'string' ? prev.content.find((x) => x.type === 'tool_use' && x.id === res.tool_use_id) : undefined;
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(res.content ?? '{}');
+  } catch {
+    parsed = { raw: res.content };
+  }
+  return { name: use?.name ?? '', input: (use?.input as Record<string, unknown>) ?? {}, result: parsed, isError: !!res.is_error };
+}
+
+/** Deterministic behaviour per prompt, recognised by the start of the system prompt. */
+export const rules: Handler = (b) => {
+  const system = b.system ?? '';
+  // The fixture reads loosely shaped prompt input; a full type for every agent's input adds nothing here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type Loose = Record<string, any>;
+  const input: Loose = (() => {
+    try {
+      return JSON.parse(userText(b)) as Loose;
+    } catch {
+      return {};
+    }
+  })();
+
+  if (system.startsWith('You are DealFlow Copilot')) {
+    const tr = lastToolResult(b);
+    if (!tr) {
+      const q = userText(b);
+      if (/pipeline|forecast|quarter/i.test(q)) return toolUse('pipeline_summary', {});
+      const who = /task (?:for|to call) ([A-Z][\w'-]+(?: [A-Z][\w'-]+)?)/.exec(q)?.[1];
+      if (who) return toolUse('search_records', { query: who, types: null });
+      const stalled = /stalled|no activity|stopped/i.test(q);
+      if (stalled) return toolUse('list_deals', { status: 'open', closing_within_days: null, stalled_days: 14, mine_only: false, min_amount: null, limit: 10 });
+      return text('I can answer questions about your leads, deals, tasks and pipeline. Try asking about this quarter’s pipeline.');
+    }
+    if (tr.isError) return text(`I couldn’t do that: ${String(tr.result.error ?? 'the tool failed')}`);
+    if (tr.name === 'pipeline_summary') {
+      const q = tr.result.quarter as Record<string, number | string>;
+      return text(`For ${q.period}: won ${q.won} ${tr.result.currency}, weighted open pipeline ${q.weighted}, base forecast ${q.base} (best case ${q.best}). This is a rule-based projection.`);
+    }
+    if (tr.name === 'list_deals') {
+      const deals = (tr.result.deals as { name: string; lastActivity: string | null }[]) ?? [];
+      return text(deals.length ? `Deals with no recent activity: ${deals.map((d) => d.name).join(', ')}.` : 'No open deals are stalled.');
+    }
+    if (tr.name === 'search_records') {
+      const hit = (tr.result.results as { type: string; id: string; name: string }[] | undefined)?.[0];
+      if (!hit) return text('I couldn’t find that record.');
+      return toolUse('propose_create_task', { title: `Call ${hit.name}`, due_in_days: 1, related_type: hit.type === 'company' ? null : hit.type, related_id: hit.type === 'company' ? null : hit.id });
+    }
+    if (tr.name.startsWith('propose_')) return text(`I proposed this: ${String(tr.result.proposed)}. It is waiting for your confirmation.`);
+    return text('Done.');
+  }
+  if (system.startsWith('You write short qualification notes')) {
+    return json({ summary: `Grade ${input.grade} lead scoring ${input.score} from ${(input.signals ?? []).length} signals.`, nextStep: 'Call this week to confirm budget and timing.' });
+  }
+  if (system.startsWith('You recommend the single most useful next step')) {
+    const first = (input.signals ?? [])[0]?.label ?? 'Keep momentum';
+    return json({ title: `Check in on ${input.deal?.name ?? 'the deal'}`, reason: `Signal: ${first}.`, dueInDays: 2 });
+  }
+  if (system.startsWith('You turn a sales rep')) {
+    const notes = String(input.notes ?? '').replace(/<\/?untrusted_data[^>]*>/g, '').trim();
+    const items = notes.split('\n').filter((l) => l.trim().startsWith('- ')).map((l) => ({ title: l.trim().slice(2), owner: 'me', dueInDays: 3 }));
+    return json({ summary: notes.split('\n')[0]!.slice(0, 200), decisions: [], actionItems: items, followUpEmail: { subject: 'Thanks for today', body: 'Hi,\n\nThank you for your time today. I will send the next steps shortly.\n' } });
+  }
+  if (system.startsWith('You draft a first outline of a sales proposal')) {
+    const d = input.deal ?? {};
+    return json({
+      title: `Proposal: ${d.name}`,
+      sections: [{ heading: 'Context', body: `${d.company ?? 'The customer'} is evaluating options.` }, { heading: 'Commercial summary', body: `${d.amount} ${d.currency}, as recorded on the deal. Final pricing is confirmed by the account owner.` }],
+      basedOn: [`Deal amount ${d.amount} ${d.currency}`, `Stage ${d.stage}`],
+      openQuestions: ['Confirm scope and start date'],
+    });
+  }
+  if (system.startsWith('You convert a plain-language description')) {
+    const desc = String(input.description ?? '');
+    const definition = {
+      trigger: { event: /deal/i.test(desc) ? 'deal.won' : 'lead.created', conditions: { match: 'all', rules: [] } },
+      start: 'action_1',
+      nodes: [{ id: 'action_1', type: 'action', action: { type: 'create_task', title: /deal/i.test(desc) ? 'Hand over {{record.name}}' : 'Call {{record.fullName}}', dueInDays: 1, assignTo: 'record_owner' }, next: null }],
+    };
+    return json({ name: /deal/i.test(desc) ? 'Hand over won deals' : 'Call new leads', definitionJson: JSON.stringify(definition), notes: '' });
+  }
+  if (system.startsWith('You explain to a sales manager')) {
+    return text(`- The base forecast moved by ${input.delta?.base} ${input.currency}.\n- ${(input.changes ?? []).length} deals changed.`);
+  }
+  return text('Unrecognised fixture prompt.');
+};
+
+export async function createAiFixture(port = 0): Promise<AiFixture> {
+  const requests: FixtureRequest[] = [];
+  let handler: Handler = rules;
+  const server: Server = createServer(async (req, res) => {
+    const raw = await read(req);
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
+      return;
+    }
+    if (req.method !== 'POST' || !req.url?.startsWith('/v1/messages')) {
+      res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ type: 'error', error: { type: 'not_found_error', message: 'not found' } }));
+      return;
+    }
+    const body = JSON.parse(raw) as MessagesBody;
+    requests.push({ headers: req.headers, body });
+    let reply: FixtureReply;
+    try {
+      reply = handler(body);
+    } catch (err) {
+      reply = { content: [], status: 500 };
+      void err;
+    }
+    if (reply.status && reply.status >= 400) {
+      res.writeHead(reply.status, { 'content-type': 'application/json' }).end(JSON.stringify({ type: 'error', error: { type: reply.status === 429 ? 'rate_limit_error' : 'api_error', message: 'fixture error' } }));
+      return;
+    }
+    const outText = reply.content.map((c) => c.text ?? JSON.stringify(c.input ?? '')).join('');
+    res.writeHead(200, { 'content-type': 'application/json', 'request-id': `req_fixture_${requests.length}` }).end(
+      JSON.stringify({
+        id: `msg_fixture_${requests.length}`,
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: reply.content,
+        stop_reason: reply.stop_reason ?? 'end_turn',
+        stop_sequence: null,
+        usage: { input_tokens: Math.ceil(raw.length / 4), output_tokens: Math.max(1, Math.ceil(outText.length / 4)) },
+      }),
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
+  const { port: actual } = server.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${actual}`,
+    requests,
+    use: (h) => (handler = h ?? rules),
+    close: () => new Promise((resolve) => server.close(() => resolve())),
+  };
+}

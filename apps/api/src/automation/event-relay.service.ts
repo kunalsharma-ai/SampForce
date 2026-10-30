@@ -93,6 +93,8 @@ export class EventRelay {
       }
     }
 
+    if (event.type === 'lead.created' && event.entityId) await this.queueLeadQualification(tx, event);
+
     const hooks = await tx.webhook.findMany({
       where: { tenantId: event.tenantId, active: true, deletedAt: null, events: { has: event.type } },
       select: { id: true },
@@ -106,6 +108,15 @@ export class EventRelay {
 
     await this.notify(tx, event, loadRecord);
     return note;
+  }
+
+  /** Automatic lead qualification, when the workspace turned it on. The AI runner picks the run up. */
+  private async queueLeadQualification(tx: TenantTx, event: DomainEvent): Promise<void> {
+    const s = await tx.aiSettings.findUnique({ where: { tenantId: event.tenantId } });
+    if (!s?.enabled || !s.autoQualifyLeads || s.disabledAgents.includes('lead_qualification')) return;
+    await tx.aiRun.createMany({
+      data: [{ tenantId: event.tenantId, agent: 'lead_qualification', status: 'QUEUED', entityType: 'lead', entityId: event.entityId, input: { eventId: event.id }, promptVersion: 'queued' }],
+    });
   }
 
   /** Personal notifications for people affected by someone else's change. */

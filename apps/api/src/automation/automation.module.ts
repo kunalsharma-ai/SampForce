@@ -8,7 +8,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { WebhooksController } from '../webhooks/webhooks.controller';
 import { WebhooksService } from '../webhooks/webhooks.service';
-import { WorkerService } from '../worker/worker.service';
 import { WorkflowActions } from './actions.service';
 import { ApprovalsService } from './approvals.service';
 import { ApprovalsController, WorkflowsController } from './automation.controller';
@@ -33,8 +32,7 @@ import { WorkflowsService } from './workflows.service';
     WebhookDeliverer,
     IntegrationsService,
     CommunicationService,
-    WorkerService,
   ],
-  exports: [WorkerService],
+  exports: [EventRelay, WorkflowExecutor, WebhookDeliverer, ApprovalsService, IntegrationsService],
 })
 export class AutomationModule {}
