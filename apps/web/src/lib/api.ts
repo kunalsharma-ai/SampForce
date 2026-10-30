@@ -54,3 +54,20 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   }
   return body as T;
 }
+
+/** Downloads a CSV export through the same refresh-aware path as JSON calls. */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  let res = await fetch(`/api/v1${path}`, { credentials: 'include' });
+  if (res.status === 401 && (await refreshSession())) res = await fetch(`/api/v1${path}`, { credentials: 'include' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    throw new ApiError(res.status, body?.error?.code ?? 'ERROR', body?.error?.message ?? 'Download failed.');
+  }
+  const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

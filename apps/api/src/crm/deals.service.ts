@@ -42,6 +42,7 @@ export class DealsService {
         ...(q.stageId ? { stageId: q.stageId } : {}),
         ...(q.ownerId ? { ownerId: q.ownerId } : {}),
         ...(q.companyId ? { companyId: q.companyId } : {}),
+        ...(q.contactId ? { contactId: q.contactId } : {}),
         ...(q.q ? { name: { contains: q.q, mode: 'insensitive' } } : {}),
       };
       const [rows, total] = await Promise.all([
@@ -63,12 +64,17 @@ export class DealsService {
       });
       if (!pipeline) throw notFound('Pipeline');
       const [deals, totals] = await Promise.all([
-        tx.opportunity.findMany({
-          where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null },
-          include,
-          orderBy: { updatedAt: 'desc' },
-          take: perStage * pipeline.stages.length,
-        }),
+        // One query per stage so a crowded stage cannot starve the others (pipelines have at most 20 stages).
+        Promise.all(
+          pipeline.stages.map((s) =>
+            tx.opportunity.findMany({
+              where: { tenantId: auth.tenantId, pipelineId: pipeline.id, stageId: s.id, deletedAt: null },
+              include,
+              orderBy: { updatedAt: 'desc' },
+              take: perStage,
+            }),
+          ),
+        ).then((perStageRows) => perStageRows.flat()),
         tx.opportunity.groupBy({
           by: ['stageId'],
           where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null },
@@ -82,7 +88,7 @@ export class DealsService {
         pipeline: { id: pipeline.id, name: pipeline.name },
         columns: pipeline.stages.map((s) => ({
           stage: { id: s.id, name: s.name, position: s.position, probability: s.probability, category: s.category },
-          deals: deals.filter((d) => d.stageId === s.id).slice(0, perStage).map((d) => toDealRow(d, owners)),
+          deals: deals.filter((d) => d.stageId === s.id).map((d) => toDealRow(d, owners)),
           total: byStage.get(s.id)?._count._all ?? 0,
           value: byStage.get(s.id)?._sum.amount?.toNumber() ?? 0,
         })),

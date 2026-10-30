@@ -16,6 +16,8 @@ import {
   type MeResponse,
   type MembershipSummary,
   passwordSchema,
+  PLAN_ENTITLEMENTS,
+  type PlanCode,
   type RegisterInput,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -295,6 +297,12 @@ export class AuthService {
         data: { acceptedAt: new Date() },
       });
       if (count !== 1) throw new NotFoundException(INVITATION_INVALID);
+      // The invitation itself held a seat until now; re-check in case the plan was downgraded meanwhile.
+      const sub = await tx.subscription.findUnique({ where: { tenantId } });
+      const limit = PLAN_ENTITLEMENTS[(sub?.planCode ?? 'free') as PlanCode]?.maxUsers ?? null;
+      if (limit !== null && (await tx.membership.count({ where: { tenantId, status: 'ACTIVE' } })) >= limit) {
+        throw new ForbiddenException({ code: 'PLAN_LIMIT', message: 'This workspace has no free seats. Ask an admin to upgrade the plan.' });
+      }
       await tx.membership.upsert({
         where: { tenantId_userId: { tenantId, userId } },
         create: { tenantId, userId, roleId: inv.roleId },

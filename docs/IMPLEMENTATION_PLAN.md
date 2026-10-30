@@ -8,7 +8,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Phase | Scope | Exit criteria | Status |
 |---|---|---|---|
 | **1. Product Foundation** | Monorepo, Next.js web, NestJS API, schema + RLS, auth, tenant isolation, RBAC, audit log, design system, navigation, Command Center foundation, CI, Docker, env config | Acceptance tests 1, 2, 8, 9, 11, 12, 14, 15 pass | **Complete (2026-10-30)** |
-| 2. Core CRM | Leads, contacts, companies, accounts, deals, pipelines (Kanban/list/table), activities, tasks, search, custom fields, CSV/Excel import/export, duplicate detection, invitations | Tests 3, 4; RLS CI guard for new tables | Next |
+| 2. Core CRM | Leads, contacts, companies, accounts, deals, pipelines (Kanban/list/table), activities, tasks, search, custom fields, CSV/Excel import/export, duplicate detection, invitations | Tests 3, 4; RLS CI guard for new tables | **Complete (2026-10-30)**, with the deferrals listed below |
 | 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | Planned |
 | 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | Planned |
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | Planned |
@@ -47,9 +47,39 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Every third-party integration | Requires credentials (none connected) |
 | Marketing claims, competitor comparisons, compliance statements | Requires legal review |
 
+## Feature status (Phase 2 close)
+
+| Feature | Status |
+|---|---|
+| Leads: create, edit, assign, status, tags, owner, soft delete | Tested (API + e2e) |
+| Duplicate detection (email, phone digits, name + company) and merge | Tested (API + e2e) |
+| BANT / MEDDICC qualification checklist on leads | Tested (e2e) |
+| Lead conversion → contact, matched-or-new company, optional deal; activities and tasks move over | Tested (API + e2e) |
+| Contacts and companies (parent company, counts), Accounts view (companies with a won deal) | Tested (API + e2e) |
+| Pipelines: create (plan limit), edit stages, reorder, default, delete rules | Tested (API); UI covered by a11y scan |
+| Deals: list, Kanban board, stage path, move with loss reason, clone, bulk update | Tested (API + e2e) |
+| Kanban keyboard drag and drop with screen-reader announcements, plus a Move menu | Tested (e2e) |
+| Activities timeline (call, email, meeting, note) and tasks (mine/all, due, overdue, complete) | Tested (API + e2e) |
+| Record search (Postgres trigram) in the command palette, scoped to readable record types | Tested (API + e2e) |
+| Custom fields (text, number, date, yes/no, dropdown; required) in forms, pages, import, export | Tested (API + e2e) |
+| CSV import with mapping, dry run, row errors and duplicate skipping (≤ 2 MB / 5,000 rows, synchronous) | Tested (API + e2e) |
+| CSV export (data:export permission, audited, formula-injection safe) | Tested (API) |
+| Invitations: link-based, 7-day, single use, hashed token, existing users confirm password, plan seat limit | Tested (API + e2e) |
+| Quick create (lead, contact, company, deal, task) from the topbar and palette | Implemented; flows tested via list pages |
+| Cross-tenant tests for every new resource; CI fails if a tenant table lacks forced RLS | Tested |
+| Invitation **email delivery** | Not configured: the inviter copies the link. Needs an email provider (Phase 3) |
+
+### Deferred from the Phase 2 scope (not built)
+
+- Excel (.xlsx) import, and background import jobs for files over 5,000 rows.
+- Deal line items, multiple contacts per deal (buying committee) and file attachments.
+- Deal table, timeline and calendar views (list and Kanban ship); column chooser.
+- Lead routing rules (territory, round-robin) and web-form capture (Phase 3 with automation).
+- Moving display preferences from the device to the user profile.
+
 ## Known issues / follow-ups
 
-1. Preferences (theme, motion) persist per device; move to the user profile in Phase 2.
+1. Preferences (theme, motion) persist per device; moving them to the user profile was deferred again.
 2. Monetary KPIs include only deals in the workspace default currency until FX ships (Phase 5); the KPI
    tooltips say so.
 3. Rate limiting is in-memory per API instance; switch the throttler storage to Redis before running more
@@ -58,7 +88,16 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 5. pgvector is not used yet; the compose file already uses the pgvector Postgres image.
 6. Account lockout after repeated failures and MFA are Phase 8 (rate limiting applies now).
 
-## Continuation instructions (Phase 2)
+## Phase 2 notes
+
+- `invitations` uses a narrow `invitation_token_lookup` RLS policy (migration `20261030010100`), because FORCE RLS also applies to SECURITY DEFINER functions owned by the table owner.
+- Page transitions are enter-only: an exit animation remounted the new route and discarded typed input.
+
+## Continuation instructions (Phase 3)
+
+Follow the roadmap row for Phase 3 (outbox + worker, workflow engine, notifications, email and calendar adapters behind credentials). Pick up the Phase 2 deferrals above where they fit.
+
+## Original continuation instructions (Phase 2, done)
 
 1. Add Prisma models: `CustomField`, `FileAttachment`, `OpportunityContact`, `OpportunityLineItem`; migration
    with RLS blocks; add a CI SQL check that every table with `tenant_id` has `relforcerowsecurity = true`.

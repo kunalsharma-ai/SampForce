@@ -54,6 +54,7 @@ export const listQuerySchema = z.object({
   ownerId: z.string().uuid().optional(),
   status: z.string().max(40).optional(),
   companyId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
   pipelineId: z.string().uuid().optional(),
   stageId: z.string().uuid().optional(),
 });

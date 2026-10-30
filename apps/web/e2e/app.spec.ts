@@ -67,7 +67,7 @@ test('persists theme and motion preferences across reloads', async ({ page }) =>
 test('opens global search with the keyboard and navigates', async ({ page }) => {
   await signUp(page);
   await page.keyboard.press('Control+k');
-  await page.getByPlaceholder('Jump to a module or setting…').fill('billing');
+  await page.getByPlaceholder('Search leads, contacts, companies, deals or modules…').fill('billing');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/app\/billing/);
   await expect(page.getByText('Proposed launch pricing, not yet on sale')).toBeVisible();
@@ -92,7 +92,7 @@ for (const theme of ['dark', 'light'] as const) {
       expect(r.violations, `${path}: ${r.violations.map((v) => v.id).join(', ')}`).toEqual([]);
     }
     await signUp(page);
-    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads']) {
+    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads', '/app/deals', '/app/contacts', '/app/activities', '/app/pipelines', '/app/settings/import', '/app/settings/custom-fields']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await page.waitForLoadState('networkidle');

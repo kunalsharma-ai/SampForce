@@ -31,13 +31,21 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { Permission } from '@dealflow/types';
 import { useSession, useSignOut, useSwitchTenant } from '@/lib/session';
+import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 import { Logo } from '../logo';
 import { CommandPalette } from './command-palette';
 import { CopilotPanel } from './copilot-panel';
 import { SidebarNav } from './sidebar';
 
-const QUICK_CREATE = ['Lead', 'Contact', 'Company', 'Deal', 'Task'];
+const QUICK_CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
+  { kind: 'leads', label: 'Lead', permission: 'leads:write' },
+  { kind: 'contacts', label: 'Contact', permission: 'contacts:write' },
+  { kind: 'companies', label: 'Company', permission: 'companies:write' },
+  { kind: 'deals', label: 'Deal', permission: 'deals:write' },
+  { kind: 'task', label: 'Task', permission: 'activities:write' },
+];
 
 function IconLink({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Bell }) {
   return (
@@ -56,6 +64,7 @@ function IconLink({ href, label, icon: Icon }: { href: string; label: string; ic
 
 export function Topbar() {
   const { data } = useSession();
+  const openCreate = useQuickCreate((s) => s.open);
   const signOut = useSignOut();
   const switchTenant = useSwitchTenant();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -120,10 +129,10 @@ export function Topbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Quick create · available in Phase 2</DropdownMenuLabel>
+            <DropdownMenuLabel>Quick create</DropdownMenuLabel>
             {QUICK_CREATE.map((item) => (
-              <DropdownMenuItem key={item} disabled>
-                <Plus aria-hidden /> {item}
+              <DropdownMenuItem key={item.kind} disabled={!data?.permissions.includes(item.permission)} onSelect={() => openCreate(item.kind)}>
+                <Plus aria-hidden /> {item.label}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

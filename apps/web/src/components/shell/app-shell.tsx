@@ -1,10 +1,11 @@
 'use client';
 
 import { Skeleton } from '@dealflow/ui';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
 import { hexToHslTriplet, useSession } from '@/lib/session';
 import { AmbientBackground } from '../ambient-background';
+import { QuickCreateHost } from '../crm/quick-create';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 
@@ -38,20 +39,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               We couldn&apos;t load your workspace. Refresh to try again.
             </p>
           ) : (
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            // Enter-only transition. An exit animation (AnimatePresence) would briefly render the
+            // new route inside the old wrapper and then remount it, discarding anything typed.
+            <motion.div key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
+              {children}
+            </motion.div>
           )}
         </main>
       </div>
+      {data && <QuickCreateHost />}
     </div>
   );
 }

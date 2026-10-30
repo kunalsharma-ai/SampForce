@@ -73,6 +73,12 @@ describe('invitations', () => {
     app = await startApp();
     owner = await registerUser(app, 'Inviter');
     http = api(owner);
+    // The free plan includes 2 users; these tests invite more, so put the workspace on a per-seat plan.
+    const { withDbContext } = await import('@dealflow/database');
+    const { appClient } = await import('./helpers');
+    const db = appClient();
+    await withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await db.$disconnect();
   });
   afterAll(async () => {
     await app.close();
@@ -126,6 +132,15 @@ describe('invitations', () => {
 
     const outsider = api(await registerUser(app, 'Outsider'));
     await outsider.del(`/tenants/current/invitations/${inv.id}`).expect(404);
+  });
+
+  it('enforces the free plan user limit, counting pending invitations', async () => {
+    const free = api(await registerUser(app, 'Free Plan'));
+    await free.post('/tenants/current/invitations', { email: 'one@example.com', roleKey: 'member' }).expect(201);
+    const res = await free.post('/tenants/current/invitations', { email: 'two@example.com', roleKey: 'member' }).expect(403);
+    expect(res.body.error.code).toBe('PLAN_LIMIT');
+    // Re-inviting the same address replaces the pending invitation instead of taking another seat.
+    await free.post('/tenants/current/invitations', { email: 'one@example.com', roleKey: 'viewer' }).expect(201);
   });
 
   it('never stores the raw token', async () => {

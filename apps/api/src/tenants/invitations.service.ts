@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@dealflow/database';
-import type { InvitationCreated, InvitationRow } from '@dealflow/types';
+import type { Prisma, TenantTx } from '@dealflow/database';
+import { type InvitationCreated, type InvitationRow, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../auth/token.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -49,6 +49,7 @@ export class InvitationsService {
         select: { id: true },
       });
       if (member) throw new ConflictException({ code: 'ALREADY_MEMBER', message: 'That person is already a member of this workspace.' });
+      await assertSeatAvailable(tx, auth.tenantId, input.email);
 
       // A new invitation replaces any pending one for the same address.
       await tx.invitation.updateMany({
@@ -86,6 +87,28 @@ export class InvitationsService {
       });
       if (count === 0) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Pending invitation not found.' });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'member.invitation_revoked', entityType: 'invitation', entityId: id, meta });
+    });
+  }
+}
+
+/**
+ * Enforces the plan's user limit, counting active members plus other pending invitations, so a
+ * workspace cannot exceed it by sending many invitations at once. A null limit means per-seat billing.
+ */
+export async function assertSeatAvailable(tx: TenantTx, tenantId: string, replacingEmail?: string): Promise<void> {
+  const sub = await tx.subscription.findUnique({ where: { tenantId } });
+  const limit = PLAN_ENTITLEMENTS[(sub?.planCode ?? 'free') as PlanCode]?.maxUsers ?? null;
+  if (limit === null) return;
+  const [members, pending] = await Promise.all([
+    tx.membership.count({ where: { tenantId, status: 'ACTIVE' } }),
+    tx.invitation.count({
+      where: { tenantId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() }, ...(replacingEmail ? { NOT: { email: replacingEmail } } : {}) },
+    }),
+  ]);
+  if (members + pending >= limit) {
+    throw new ForbiddenException({
+      code: 'PLAN_LIMIT',
+      message: `Your plan includes ${limit} users, counting pending invitations. Upgrade or revoke an invitation to invite someone else.`,
     });
   }
 }

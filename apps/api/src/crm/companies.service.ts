@@ -28,6 +28,8 @@ export class CompaniesService {
         tenantId: auth.tenantId,
         deletedAt: null,
         ...(q.ownerId ? { ownerId: q.ownerId } : {}),
+        // "customer" powers the Accounts view: companies with at least one won deal.
+        ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
         ...(q.q
           ? { OR: [{ name: { contains: q.q, mode: 'insensitive' } }, { domain: { contains: q.q, mode: 'insensitive' } }] }
           : {}),

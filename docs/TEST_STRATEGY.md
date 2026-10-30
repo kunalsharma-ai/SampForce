@@ -29,14 +29,25 @@
 | `apps/web` unit | 2 passed |
 | `apps/web` Playwright e2e + accessibility | 11 passed |
 
+## Phase 2 results (2026-10-30)
+
+| Suite | Result |
+|---|---|
+| `packages/types` unit | 7 passed |
+| `packages/config` unit | 3 passed |
+| `apps/api` unit + integration | 67 passed (incl. CSV parser, cross-tenant checks for every CRM resource) |
+| `apps/web` unit | 2 passed |
+| `apps/web` Playwright e2e + accessibility | 19 passed (8 new CRM flows; axe on CRM lists, record pages, board) |
+| `scripts/check-rls.sql` | Passes on both databases |
+
 ## Critical acceptance tests (from the brief) and where they live
 
 | # | Acceptance criterion | Status | Test |
 |---|---|---|---|
 | 1 | Users can register and create organizations | **Pass** | `auth.e2e.test.ts` "registers a user…", e2e "signs up and shows…" |
 | 2 | Tenant data cannot be accessed by another tenant | **Pass** | `tenancy.e2e.test.ts` (API, forged token, RLS read/write/leak) |
-| 3 | Leads created, updated, assigned, converted | Phase 2 | — |
-| 4 | Pipelines support functional deal movement | Phase 2 | — |
+| 3 | Leads created, updated, assigned, converted | **Pass** | `crm.e2e.test.ts` (leads), `crm-isolation.e2e.test.ts`, e2e `crm.spec.ts` "works a lead…" |
+| 4 | Pipelines support functional deal movement | **Pass** | `crm.e2e.test.ts` (pipelines and deals), e2e "moves a deal on the board with the keyboard" |
 | 5 | Automation triggers execute correctly | Phase 3 | — |
 | 6 | AI actions respect authorization | Phase 4 | — |
 | 7 | Email integrations synchronize when configured | Phase 3 | — |
