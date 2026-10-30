@@ -11,6 +11,7 @@ import { DealIntelligenceCard, MeetingNotesButton, ProposalButton } from '@/comp
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
+import { DealQuotes } from '@/components/revenue/record-commercial';
 import { api } from '@/lib/api';
 import { DEAL_STATUS_TONE, formatDate, formatMoney, titleCase, usePipelines, useRecord } from '@/lib/crm';
 import { useCan } from '@/lib/session';
@@ -129,6 +130,7 @@ export function DealDetail({ id }: { id: string }) {
               />
             </CardContent>
           </Card>
+          <DealQuotes deal={{ id, name: d.name }} />
           <ActivityTimeline related={{ opportunityId: id }} />
         </div>
         <div className="space-y-4">

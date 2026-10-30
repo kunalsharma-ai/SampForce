@@ -88,3 +88,16 @@ export function diff(before: Record<string, unknown>, input: Record<string, unkn
   }
   return out;
 }
+
+/** Consent columns for a change of marketing consent; UNKNOWN or no value records nothing. */
+export function consentFields(consent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT' | undefined, source: string) {
+  if (!consent || consent === 'UNKNOWN') return {};
+  return { marketingConsent: consent, consentSource: source, consentUpdatedAt: new Date() };
+}
+
+/** Campaign references must belong to the tenant, like other references (see assertRefs). */
+export async function assertCampaign(tx: TenantTx, tenantId: string, campaignId: string | null | undefined): Promise<void> {
+  if (!campaignId) return;
+  const row = await tx.campaign.findFirst({ where: { id: campaignId, tenantId }, select: { id: true } });
+  if (!row) throw badRef('campaignId');
+}

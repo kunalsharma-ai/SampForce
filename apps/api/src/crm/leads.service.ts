@@ -12,7 +12,7 @@ import type {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { assertRefs, badRef, diff, iso, notFound, num, orderBy, ownerRefs, paging } from './crm-helpers';
+import { assertRefs, badRef, diff, iso, notFound, num, orderBy, ownerRefs, paging, consentFields, assertCampaign } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
 const SORTABLE = ['fullName', 'companyName', 'status', 'createdAt', 'updatedAt', 'estimatedValue'] as const;
@@ -75,10 +75,12 @@ export class LeadsService {
     return this.prisma.run(auth, async (tx) => {
       const ownerId = input.ownerId ?? auth.userId;
       await assertRefs(tx, auth.tenantId, { ownerId });
+      await assertCampaign(tx, auth.tenantId, input.campaignId);
       const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields);
       const row = await tx.lead.create({
         data: {
           ...input,
+          ...consentFields(input.marketingConsent, 'manual'),
           ownerId,
           tenantId: auth.tenantId,
           tags: input.tags ?? [],
@@ -101,11 +103,12 @@ export class LeadsService {
         throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted leads are read-only. Edit the contact or deal instead.' });
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId });
+      await assertCampaign(tx, auth.tenantId, input.campaignId);
       const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const row = await tx.lead.update({
         where: { id },
-        data: { ...rest, ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) },
+        data: { ...rest, ...(input.marketingConsent && input.marketingConsent !== before.marketingConsent ? consentFields(input.marketingConsent, 'manual') : {}), ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) },
       });
       const changes = diff(before, input);
       await this.audit.record(tx, {
@@ -190,6 +193,10 @@ export class LeadsService {
           timezone: lead.timezone,
           companyId,
           ownerId,
+          // Consent travels with the person; the original source and date are kept.
+          marketingConsent: lead.marketingConsent,
+          consentSource: lead.consentSource,
+          consentUpdatedAt: lead.consentUpdatedAt,
         },
       });
 
@@ -289,6 +296,10 @@ export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: 
     city: r.city,
     source: r.source,
     campaignSource: r.campaignSource,
+    campaignId: r.campaignId,
+    marketingConsent: r.marketingConsent,
+    consentSource: r.consentSource,
+    consentUpdatedAt: iso(r.consentUpdatedAt),
     estimatedValue: num(r.estimatedValue),
     currency: r.currency,
     status: r.status,

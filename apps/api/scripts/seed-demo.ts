@@ -4,8 +4,9 @@
  *
  *   pnpm db:seed           (uses DATABASE_URL and DEMO_USER_PASSWORD from .env)
  */
-import { randomUUID } from 'node:crypto';
-import { PrismaClient, provisionTenant, withDbContext } from '@dealflow/database';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { PrismaClient, provisionTenant, type TenantTx, withDbContext } from '@dealflow/database';
+import { quarterPeriod } from '@dealflow/types';
 import { PasswordService } from '../src/auth/password.service';
 
 const DEMO_EMAIL = 'demo@dealflow.local';
@@ -18,8 +19,13 @@ async function main(): Promise<void> {
 
   const prisma = new PrismaClient();
   try {
-    if (await prisma.user.findUnique({ where: { email: DEMO_EMAIL } })) {
-      console.warn(`Demo user ${DEMO_EMAIL} already exists; nothing to do.`);
+    const existing = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+    if (existing) {
+      // Older demo workspaces get the Phase 5 sample records added once.
+      const memberships = await withDbContext(prisma, { userId: existing.id }, (tx) => tx.membership.findMany({ where: { userId: existing.id }, select: { tenantId: true } }));
+      let added = false;
+      for (const m of memberships) added = (await withDbContext(prisma, { tenantId: m.tenantId, userId: existing.id }, (tx) => seedRevenue(tx, m.tenantId, existing.id))) || added;
+      console.warn(added ? 'Added sample quotes, contracts, campaigns and customer data to the demo workspace.' : `Demo user ${DEMO_EMAIL} already exists; nothing to do.`);
       return;
     }
     const passwordHash = await new PasswordService().hash(password);
@@ -103,6 +109,8 @@ async function main(): Promise<void> {
         })),
       });
 
+      await seedRevenue(tx, tenantId, user.id);
+
       await tx.auditLog.create({
         data: { tenantId, actorType: 'SYSTEM', action: 'tenant.created', entityType: 'tenant', entityId: tenantId, metadata: { seed: 'demo' } },
       });
@@ -111,6 +119,67 @@ async function main(): Promise<void> {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+/**
+ * Phase 5 sample records for the demo workspace only: a catalogue, a quote, contracts, a campaign with a
+ * hosted form, a target and an escalation. Every name is marked "(demo)". Returns false if already present.
+ */
+async function seedRevenue(tx: TenantTx, tenantId: string, userId: string): Promise<boolean> {
+  const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+  if (!tenant.isDemo || (await tx.product.count({ where: { tenantId } })) > 0) return false;
+  const now = Date.now();
+  const day = (offset: number) => new Date(new Date(now + offset * DAY).toISOString().slice(0, 10));
+  const products = await Promise.all(
+    [
+      ['Survey programme (demo)', 'DEMO-SURV', 'study', 9000],
+      ['Panel access, per month (demo)', 'DEMO-PANEL', 'month', 1500],
+      ['Analysis workshop (demo)', 'DEMO-WS', 'day', 1200],
+    ].map(async ([name, sku, unit, price]) => ({ product: await tx.product.create({ data: { tenantId, name: String(name), sku: String(sku), unit: String(unit) } }), price: Number(price) })),
+  );
+  const book = await tx.priceBook.create({ data: { tenantId, name: 'Demo list prices', currency: 'USD', isDefault: true } });
+  await tx.priceBookEntry.createMany({ data: products.map((p) => ({ tenantId, priceBookId: book.id, productId: p.product.id, unitPrice: p.price })) });
+  const tax = await tx.taxRate.create({ data: { tenantId, name: 'Sample tax 10% (demo)', rate: 10 } });
+
+  const won = await tx.opportunity.findFirst({ where: { tenantId, status: 'WON' }, orderBy: { closedAt: 'desc' } });
+  if (won) {
+    // 1 study at 9,000 with 5% off, plus 2 workshop days: net 8,550 + 2,400 = 10,950; tax 1,095.
+    await tx.quote.create({
+      data: {
+        tenantId, number: 1, opportunityId: won.id, priceBookId: book.id, title: `Quote for ${won.name}`, currency: 'USD', status: 'ACCEPTED', validUntil: day(20),
+        subtotal: 11400, discountTotal: 450, taxTotal: 1095, total: 12045, maxDiscountPercent: 5, createdById: userId, sentAt: day(-12), decidedAt: day(-10),
+        lines: {
+          create: [
+            { tenantId, productId: products[0]!.product.id, position: 0, name: products[0]!.product.name, quantity: 1, unitPrice: 9000, discountPercent: 5, taxRateId: tax.id, taxPercent: 10, netTotal: 8550, taxTotal: 855 },
+            { tenantId, productId: products[2]!.product.id, position: 1, name: products[2]!.product.name, quantity: 2, unitPrice: 1200, discountPercent: 0, taxRateId: tax.id, taxPercent: 10, netTotal: 2400, taxTotal: 240 },
+          ],
+        },
+      },
+    });
+  }
+  const companies = await tx.company.findMany({ where: { tenantId }, orderBy: { name: 'asc' }, take: 2 });
+  if (companies[0]) {
+    const c = await tx.contract.create({
+      data: { tenantId, number: 1, name: 'Annual panel agreement (demo)', companyId: companies[0].id, opportunityId: won?.id ?? null, ownerId: userId, status: 'ACTIVE', value: 18000, currency: 'USD', startDate: day(-340), endDate: day(25), renewalNoticeDays: 45, signatureMethod: 'wet_ink', signedBy: 'Demo signatory', signedAt: day(-340) },
+    });
+    await tx.escalation.create({ data: { tenantId, companyId: companies[0].id, contractId: c.id, title: 'Late fieldwork report (demo)', severity: 'MEDIUM', ownerId: userId, openedById: userId } });
+  }
+  if (companies[1]) {
+    await tx.contract.create({
+      data: { tenantId, number: 2, name: 'Tracker subscription (demo)', companyId: companies[1].id, ownerId: userId, status: 'ACTIVE', value: 9000, currency: 'USD', startDate: day(-60), endDate: day(305), autoRenew: true, signatureMethod: 'email_confirmation', signedBy: 'Demo signatory', signedAt: day(-60) },
+    });
+  }
+  const campaign = await tx.campaign.create({ data: { tenantId, name: 'Autumn webinar (demo)', channel: 'webinar', status: 'ACTIVE', startDate: day(-20), endDate: day(10), budget: 2000, currency: 'USD', utmCampaign: 'demo-autumn', ownerId: userId } });
+  await tx.leadForm.create({
+    data: {
+      tenantId, name: 'Webinar sign-up (demo)', publicToken: randomBytes(18).toString('base64url'), title: 'Join the demo webinar', ownerId: userId, campaignId: campaign.id,
+      fields: [{ key: 'fullName', label: 'Full name', required: true }, { key: 'email', label: 'Work email', required: true }, { key: 'companyName', label: 'Company', required: false }],
+      consentText: 'I would like to receive product news by email. I can unsubscribe at any time.', successMessage: 'Thank you. This is a demo form.',
+    },
+  });
+  await tx.lead.updateMany({ where: { tenantId, tags: { has: 'demo' } }, data: { campaignSource: 'demo-autumn' } });
+  await tx.salesTarget.create({ data: { tenantId, userId: null, period: quarterPeriod(undefined).label, amount: 60000 } });
+  return true;
 }
 
 main().catch((err: unknown) => {

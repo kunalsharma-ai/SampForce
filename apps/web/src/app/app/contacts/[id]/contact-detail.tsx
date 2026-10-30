@@ -1,5 +1,6 @@
 'use client';
 
+import { consentLabel } from '@/lib/crm-fields';
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { ContactRow } from '@dealflow/types';
 import Link from 'next/link';
@@ -38,6 +39,7 @@ export function ContactDetail({ id }: { id: string }) {
                   ['Job title', c.jobTitle],
                   ['Country', c.country],
                   ['Time zone', c.timezone],
+                  ['Marketing consent', consentLabel(c.marketingConsent, c.consentSource)],
                   ['Owner', c.owner?.name],
                   ['Created', formatDate(c.createdAt)],
                 ]}

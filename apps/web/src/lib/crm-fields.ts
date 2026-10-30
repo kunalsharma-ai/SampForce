@@ -28,6 +28,17 @@ export interface FieldSpec {
 }
 
 const owner: FieldSpec = { name: 'ownerId', label: 'Owner', type: 'owner', hint: 'Defaults to you' };
+const consent: FieldSpec = {
+  name: 'marketingConsent',
+  label: 'Marketing consent',
+  type: 'select',
+  hint: 'Record only what the person told you. Opted-out people are never exported for marketing.',
+  options: [
+    { value: 'UNKNOWN', label: 'Not asked' },
+    { value: 'OPTED_IN', label: 'Opted in' },
+    { value: 'OPTED_OUT', label: 'Opted out' },
+  ],
+};
 const country: FieldSpec = { name: 'country', label: 'Country', type: 'text', placeholder: 'US', hint: '2-letter ISO code' };
 
 export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
@@ -51,6 +62,7 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
     { name: 'city', label: 'City', type: 'text' },
     { name: 'website', label: 'Website', type: 'url' },
     { name: 'tags', label: 'Tags', type: 'tags', hint: 'Separate with commas', wide: true },
+    consent,
     owner,
   ],
   contacts: [
@@ -62,6 +74,7 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
     { name: 'companyId', label: 'Company', type: 'company' },
     country,
     { name: 'timezone', label: 'Time zone', type: 'text', placeholder: 'America/New_York' },
+    consent,
     owner,
   ],
   companies: [
@@ -162,4 +175,10 @@ export function toPayload(entity: CrmEntity, values: Record<string, unknown>, mo
   }
   out.customFields = custom;
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
+}
+
+/** "Opted in (form: Webinar sign-up)" for detail pages. */
+export function consentLabel(consent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT', source: string | null): string {
+  const label = consent === 'OPTED_IN' ? 'Opted in' : consent === 'OPTED_OUT' ? 'Opted out' : 'Not asked';
+  return source && consent !== 'UNKNOWN' ? `${label} (${source.replace(/^form:/, 'form: ')})` : label;
 }

@@ -162,8 +162,12 @@ describe('email and calendar integrations', () => {
     expect(status.connection).toMatchObject({ status: 'ERROR', lastError: expect.stringMatching(/Reconnect/) });
     const inbox = (await http.get('/notifications').expect(200)).body;
     expect(inbox.items.some((n: { type: string }) => n.type === 'integration.error')).toBe(true);
-    // The worker leaves a connection in error alone until the person reconnects.
-    expect((await app.get(WorkerService).tick()).syncs).toBe(0);
+    // The worker leaves a connection in error alone until the person reconnects. (Checked on this workspace's
+    // connection: the tick is global, so other test files running in parallel can have due syncs of their own.)
+    const before = await asTenant(user.tenantId, (tx) => tx.integrationConnection.findFirstOrThrow({ where: { provider: 'GOOGLE' } }));
+    await app.get(WorkerService).tick();
+    const after = await asTenant(user.tenantId, (tx) => tx.integrationConnection.findFirstOrThrow({ where: { provider: 'GOOGLE' } }));
+    expect(after).toMatchObject({ status: 'ERROR', lastSyncAt: before.lastSyncAt, updatedAt: before.updatedAt });
     fixture.state.revoked = false;
 
     await http.del('/integrations/google').expect(204);

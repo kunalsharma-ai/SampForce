@@ -11,7 +11,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | 2. Core CRM | Leads, contacts, companies, accounts, deals, pipelines (Kanban/list/table), activities, tasks, search, custom fields, CSV/Excel import/export, duplicate detection, invitations | Tests 3, 4; RLS CI guard for new tables | **Complete (2026-10-30)**, with the deferrals listed below |
 | 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | **Complete (2026-10-30)**, with the deferrals listed below |
 | 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | **Complete (2026-10-30)**, with the deferrals listed below. Evals not yet run against the real model |
-| 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | Planned |
+| 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | **Complete (2026-10-30)**, with the deferrals listed below (no email sending, no e-signature provider, no territories or localisation yet) |
 | 6. Commercialization | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | Planned |
 | 7. Immersive Experience | Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | Planned |
 | 8. Enterprise Readiness | SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, perf tuning, pen-test prep, prod runbooks | Security review, load test targets | Planned |
@@ -162,7 +162,57 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 3. Redaction is pattern-based and optional; it does not catch names or free-text identifiers.
 4. The fixture proves plumbing and safety rules. Answer quality depends on the real model and is what the evals measure.
 
-## Continuation instructions (Phase 5)
+## Feature status (Phase 5 close)
+
+| Feature | Status |
+|---|---|
+| Catalogue: products, price books per currency (one default each), tax rates, quote rules (discount approval threshold, validity) | Implemented, tested |
+| Quotes: unit prices always read from the price book (clients cannot send a price), per-line rounding to cents, exact totals, numbering `Q-0001 v2`, edit only while draft or rejected | Implemented, tested (exact totals in API and e2e) |
+| Discount approvals: any line discount above the threshold goes to the existing approvals inbox (`quote_discount`, `quotes:approve`), approvers notified, no self-approval, 7-day expiry returns the quote to draft | Implemented, tested |
+| Quote lifecycle: submit, mark sent, accept (optionally sets the deal amount, same currency only, audited), decline, revise into a new version at current prices; superseded versions are locked | Implemented, tested |
+| Quote PDF (pdfkit, Helvetica) | Implemented, tested (content type and PDF header). Latin-1 text only, see known limits |
+| Contracts: from an accepted quote (net value, quote currency) or by hand; recorded signature (who, when, how); signed value, terms and start date locked; terminate with reason; linked renewal; renewal reminder once per term and automatic expiry from the worker | Implemented, tested |
+| Marketing consent on leads and contacts (opted in, opted out, not asked; source and date recorded) | Implemented, tested |
+| Segments: rule builder over leads or contacts (all/any), validated per field, live preview with consent counts, CSV export that never includes opted-out people and is audited | Implemented, tested (API + e2e + axe) |
+| Hosted lead forms: public page `/f/:token`, embeddable (only route that allows framing), server validates exactly the fields asked, unticked box is not consent, consent text stored with the submission, honeypot, 5 submissions per address per 10 minutes (address stored as an HMAC), dedupe against open leads, message becomes a note | Implemented, tested (API + e2e + axe) |
+| Campaigns with first-touch attribution (form, manual link or UTM value), leads, conversions, pipeline, won, cost per lead, won ÷ budget; other-currency deals left out and counted | Implemented, tested |
+| Multi-currency: manually entered exchange rates (latest per currency), used by revenue analytics and the forecast; amounts with no rate are left out and counted | Implemented, tested |
+| Revenue analytics per quarter: won, win rate, average deal and cycle, by month, by owner with personal targets and attainment, by source, by product (accepted quotes), loss reasons, velocity, team target and coverage, lead funnel, forecast against actual from snapshots | Implemented, tested (exact numbers) |
+| Customer success: customers are companies with an active contract; rule-based health (activity, escalations, renewal window, overdue tasks) with every point explained; escalations; one churn alert per drop into "at risk"; hourly sweep in the worker | Implemented, tested |
+| Proposal agent uses the latest quote's lines and totals instead of only the deal amount | Implemented, tested against the fixture only (prompt `proposal-draft@1.1.0`) |
+| Deal page quotes section; company page contracts, health and escalations; approvals inbox shows quote discounts | Implemented, tested (e2e) |
+| Demo seed adds clearly marked sample catalogue, quote, contracts, campaign, form, target and escalation (development only) | Implemented |
+
+### Deferred from the Phase 5 scope (not built)
+
+- Sending marketing email, visual journeys, landing-page builder, A/B tests and surveys. DealFlow has no system email sender yet; segments export to CSV instead.
+- E-signature provider adapters (DocuSign and similar need provider accounts and credentials). Signatures are recorded by a person.
+- Contract documents and file attachments, clause libraries and redlining.
+- Territories and territory-based routing.
+- A localisation framework (UI strings are English only; dates and money use en-US formatting).
+- Automatic exchange-rate feeds; rates are entered by a person.
+- Report builder and custom dashboards (moved to Phase 6 with commercialisation, see the Reports module page).
+- Onboarding plans, success playbooks and upsell recommendations in customer success.
+- Quote templates and branded PDFs; usage-based or recurring price models.
+
+### Known limits
+
+1. The quote PDF uses a built-in PDF font, so characters outside Latin-1 (for example Hindi or Chinese product names) do not render. A Unicode font needs to be bundled before this is used with such data.
+2. A custom role that has `quotes:approve` but not `automation:manage` cannot open the approvals inbox; the system roles that approve quotes (owner, admin, manager) have both.
+3. Campaign attribution is first touch only; leads created before a campaign existed can be linked by UTM value but not by date range.
+4. Customer health is recomputed when the customer pages load and at most hourly by the worker, so a churn alert can lag a change by up to an hour.
+5. Analytics convert with the latest rate per currency, not the rate on the close date.
+6. Tax rates are whatever the workspace enters; DealFlow does not determine or validate tax for any country.
+
+## Continuation instructions (Phase 6)
+
+Follow the roadmap row for Phase 6 (billing engine with Stripe/Razorpay adapters, entitlement enforcement, usage
+metering, operator console, onboarding, marketing site, custom roles). Payment providers must be tested against their
+sandbox APIs before any claim that they work, card details must never touch DealFlow's database, and the rate card stays
+labelled as proposed until confirmed. Also in scope: the report builder deferred from Phase 5, and the custom-role editor
+(which should let a role hold `quotes:approve` without `automation:manage`, see Phase 5 known limit 2).
+
+## Original continuation instructions (Phase 5, done)
 
 Follow the roadmap row for Phase 5 (marketing automation, revenue analytics, customer success, quotes/proposals/contracts,
 multi-currency/FX, territories, localisation). Before starting, run `pnpm --filter @dealflow/api eval` with a real key and

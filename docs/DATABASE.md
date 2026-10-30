@@ -109,8 +109,15 @@ erDiagram
 | IntegrationConnection, Webhook | Provider connections (encrypted creds) and outbound subscriptions | Yes | 3 |
 | AIAgent, AIAgentExecution, AIConversation | Agent config, runs with tool calls, cost and approvals; chat history | Yes | 4 |
 | Forecast, ForecastSnapshot | Forecast definitions and immutable snapshots for the Time Machine | Yes | 4 |
-| Product, PriceBook, Quote, Proposal, Contract | Commercial documents | Yes | 5 |
-| CustomerSuccessPlan | Onboarding, health and renewal plans | Yes | 5 |
+| CommercialSettings | Discount approval threshold, quote validity, default terms (one row per tenant) | Yes | 5 |
+| Product, PriceBook, PriceBookEntry, TaxRate | Catalogue; one default price book per currency; prices per book | Yes | 5 |
+| Quote, QuoteLine | Versioned quotes (`number` + `version`, `is_latest`), lines snapshot the price, discount and tax used | Yes | 5 |
+| Contract | Contract register; `renewed_from_id` links a renewal (unique, so one renewal per contract) | Yes | 5 |
+| Segment | Saved audience rules over leads or contacts | Yes | 5 |
+| LeadForm, FormSubmission | Hosted forms (`public_token`) and their submissions with consent text; submissions are append-only | Yes | 5 |
+| ExchangeRate, SalesTarget | Manual FX rates per date; quarterly team or personal targets | Yes | 5 |
+| Escalation, CompanyHealth | Customer escalations; last computed health score, band and signals per company | Yes | 5 |
+| Proposal, CustomerSuccessPlan | Not built; proposals are AI drafts on the deal, plans are deferred | — | later |
 | Invoice, UsageRecord | Billing and metering | Yes | 6 |
 
 ## Row-level security
@@ -124,6 +131,13 @@ Migration `20261030000100_row_level_security`:
 - `tenants`: readable if active or a membership exists; insert/update only for the active tenant;
   `DELETE` revoked from the app role (deletion is a platform workflow).
 - `audit_logs`: `UPDATE` and `DELETE` revoked from the app role.
+
+Migration `20261030040000_advanced_revenue` puts all 16 Phase 5 tables under the same tenant policy and FORCE RLS,
+plus three narrow additions: `contracts` is readable under `app.worker_scan` (renewal reminders and health sweeps
+find due work across tenants, then act inside each tenant's context); `lead_forms` has a SELECT policy matching
+`app.form_token`, used only by `app_form_tenant(token)` to resolve the workspace behind a public form; and
+`UPDATE` on `form_submissions` is revoked from the app role. `apps/api/test/revenue-isolation.e2e.test.ts` checks
+each of these.
 
 Tests in `apps/api/test/tenancy.e2e.test.ts` prove: no context → no rows; context A cannot read, update or
 insert B's rows; context does not leak across pooled transactions; audit logs cannot be altered.

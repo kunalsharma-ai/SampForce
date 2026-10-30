@@ -129,6 +129,22 @@ model Tenant {
   aiUsage                AiUsage[]
   aiRecommendations      AiRecommendation[]
   forecastSnapshots      ForecastSnapshot[]
+  commercialSettings     CommercialSettings?
+  products               Product[]
+  priceBooks             PriceBook[]
+  priceBookEntries       PriceBookEntry[]
+  taxRates               TaxRate[]
+  quotes                 Quote[]
+  quoteLines             QuoteLine[]
+  contracts              Contract[]
+  campaigns              Campaign[]
+  segments               Segment[]
+  leadForms              LeadForm[]
+  formSubmissions        FormSubmission[]
+  exchangeRates          ExchangeRate[]
+  salesTargets           SalesTarget[]
+  escalations            Escalation[]
+  companyHealth          CompanyHealth[]
 
   @@map("tenants")
 }
@@ -280,12 +296,15 @@ model Company {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parent        Company?      @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
-  children      Company[]     @relation("CompanyHierarchy")
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent        Company?       @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
+  children      Company[]      @relation("CompanyHierarchy")
   contacts      Contact[]
   opportunities Opportunity[]
   activities    Activity[]
+  contracts     Contract[]
+  escalations   Escalation[]
+  health        CompanyHealth?
 
   @@index([tenantId, name])
   @@index([tenantId, domain])
@@ -293,21 +312,24 @@ model Company {
 }
 
 model Contact {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  companyId    String?   @map("company_id") @db.Uuid
-  firstName    String    @map("first_name")
-  lastName     String?   @map("last_name")
-  email        String?
-  phone        String?
-  jobTitle     String?   @map("job_title")
-  country      String?   @db.Char(2)
-  timezone     String?
-  ownerId      String?   @map("owner_id") @db.Uuid
-  customFields Json      @default("{}") @map("custom_fields")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String           @map("tenant_id") @db.Uuid
+  companyId        String?          @map("company_id") @db.Uuid
+  firstName        String           @map("first_name")
+  lastName         String?          @map("last_name")
+  email            String?
+  phone            String?
+  jobTitle         String?          @map("job_title")
+  country          String?          @db.Char(2)
+  timezone         String?
+  ownerId          String?          @map("owner_id") @db.Uuid
+  marketingConsent MarketingConsent @default(UNKNOWN) @map("marketing_consent")
+  consentSource    String?          @map("consent_source")
+  consentUpdatedAt DateTime?        @map("consent_updated_at") @db.Timestamptz(3)
+  customFields     Json             @default("{}") @map("custom_fields")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz(3)
 
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   company       Company?      @relation(fields: [companyId], references: [id])
@@ -329,40 +351,47 @@ enum LeadStatus {
 }
 
 model Lead {
-  id                     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId               String     @map("tenant_id") @db.Uuid
-  fullName               String     @map("full_name")
-  companyName            String?    @map("company_name")
-  jobTitle               String?    @map("job_title")
+  id                     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String           @map("tenant_id") @db.Uuid
+  fullName               String           @map("full_name")
+  companyName            String?          @map("company_name")
+  jobTitle               String?          @map("job_title")
   industry               String?
   email                  String?
   phone                  String?
-  country                String?    @db.Char(2)
+  country                String?          @db.Char(2)
   city                   String?
   timezone               String?
   website                String?
   source                 String?
-  campaignSource         String?    @map("campaign_source")
-  estimatedValue         Decimal?   @map("estimated_value") @db.Decimal(18, 2)
-  currency               String?    @db.Char(3)
-  status                 LeadStatus @default(NEW)
-  engagementScore        Int?       @map("engagement_score")
-  aiScore                Int?       @map("ai_score")
+  campaignSource         String?          @map("campaign_source")
+  /// First-touch campaign, set by hosted forms or by hand.
+  campaignId             String?          @map("campaign_id") @db.Uuid
+  marketingConsent       MarketingConsent @default(UNKNOWN) @map("marketing_consent")
+  consentSource          String?          @map("consent_source")
+  consentUpdatedAt       DateTime?        @map("consent_updated_at") @db.Timestamptz(3)
+  estimatedValue         Decimal?         @map("estimated_value") @db.Decimal(18, 2)
+  currency               String?          @db.Char(3)
+  status                 LeadStatus       @default(NEW)
+  engagementScore        Int?             @map("engagement_score")
+  aiScore                Int?             @map("ai_score")
   tags                   String[]
-  customFields           Json       @default("{}") @map("custom_fields")
-  ownerId                String?    @map("owner_id") @db.Uuid
-  convertedAt            DateTime?  @map("converted_at") @db.Timestamptz(3)
-  convertedContactId     String?    @map("converted_contact_id") @db.Uuid
-  convertedOpportunityId String?    @map("converted_opportunity_id") @db.Uuid
-  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt              DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  customFields           Json             @default("{}") @map("custom_fields")
+  ownerId                String?          @map("owner_id") @db.Uuid
+  convertedAt            DateTime?        @map("converted_at") @db.Timestamptz(3)
+  convertedContactId     String?          @map("converted_contact_id") @db.Uuid
+  convertedOpportunityId String?          @map("converted_opportunity_id") @db.Uuid
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?        @map("deleted_at") @db.Timestamptz(3)
 
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign   Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   activities Activity[]
   tasks      Task[]
 
   @@index([tenantId, status])
+  @@index([tenantId, campaignId])
   @@index([tenantId, createdAt])
   @@index([tenantId, email])
   @@index([tenantId, ownerId])
@@ -450,6 +479,8 @@ model Opportunity {
   contact    Contact?      @relation(fields: [contactId], references: [id])
   activities Activity[]
   tasks      Task[]
+  quotes     Quote[]
+  contracts  Contract[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -1044,4 +1075,405 @@ model ForecastSnapshot {
 
   @@index([tenantId, periodStart, createdAt(sort: Desc)])
   @@map("forecast_snapshots")
+}
+
+// ───────────── Phase 5: commercial documents ─────────────
+
+enum MarketingConsent {
+  UNKNOWN
+  OPTED_IN
+  OPTED_OUT
+}
+
+/// Workspace rules for quotes and reporting.
+model CommercialSettings {
+  tenantId                  String   @id @map("tenant_id") @db.Uuid
+  /// A quote with any discount above this percentage needs approval (quotes:approve).
+  discountApprovalThreshold Decimal  @default(10) @map("discount_approval_threshold") @db.Decimal(5, 2)
+  quoteValidityDays         Int      @default(30) @map("quote_validity_days")
+  quoteTerms                String?  @map("quote_terms")
+  updatedById               String?  @map("updated_by_id") @db.Uuid
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("commercial_settings")
+}
+
+model Product {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  sku         String?
+  name        String
+  description String?
+  unit        String   @default("unit")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  prices PriceBookEntry[]
+  lines  QuoteLine[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, name])
+  @@map("products")
+}
+
+/// A price list in one currency. Quotes take unit prices only from a price book.
+model PriceBook {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  currency  String   @db.Char(3)
+  isDefault Boolean  @default(false) @map("is_default")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries PriceBookEntry[]
+  quotes  Quote[]
+
+  @@unique([tenantId, name])
+  @@map("price_books")
+}
+
+model PriceBookEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  priceBookId String   @map("price_book_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(18, 2)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  priceBook PriceBook @relation(fields: [priceBookId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([priceBookId, productId])
+  @@map("price_book_entries")
+}
+
+model TaxRate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  /// Percentage, e.g. 18.000 for 18 %.
+  rate      Decimal  @db.Decimal(6, 3)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@map("tax_rates")
+}
+
+enum QuoteStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+  ACCEPTED
+  DECLINED
+}
+
+/// One version of a quote. Revising creates a new row with the same number and version + 1.
+model Quote {
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String      @map("tenant_id") @db.Uuid
+  number             Int
+  version            Int         @default(1)
+  isLatest           Boolean     @default(true) @map("is_latest")
+  opportunityId      String      @map("opportunity_id") @db.Uuid
+  priceBookId        String      @map("price_book_id") @db.Uuid
+  title              String
+  currency           String      @db.Char(3)
+  status             QuoteStatus @default(DRAFT)
+  validUntil         DateTime?   @map("valid_until") @db.Date
+  notes              String?
+  terms              String?
+  subtotal           Decimal     @default(0) @db.Decimal(18, 2)
+  discountTotal      Decimal     @default(0) @map("discount_total") @db.Decimal(18, 2)
+  taxTotal           Decimal     @default(0) @map("tax_total") @db.Decimal(18, 2)
+  total              Decimal     @default(0) @db.Decimal(18, 2)
+  maxDiscountPercent Decimal     @default(0) @map("max_discount_percent") @db.Decimal(5, 2)
+  approvalId         String?     @map("approval_id") @db.Uuid
+  createdById        String?     @map("created_by_id") @db.Uuid
+  sentAt             DateTime?   @map("sent_at") @db.Timestamptz(3)
+  decidedAt          DateTime?   @map("decided_at") @db.Timestamptz(3)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  priceBook   PriceBook   @relation(fields: [priceBookId], references: [id])
+  lines       QuoteLine[]
+  contracts   Contract[]
+
+  @@unique([tenantId, number, version])
+  @@index([tenantId, opportunityId])
+  @@index([tenantId, status, isLatest])
+  @@map("quotes")
+}
+
+model QuoteLine {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String  @map("tenant_id") @db.Uuid
+  quoteId         String  @map("quote_id") @db.Uuid
+  productId       String  @map("product_id") @db.Uuid
+  position        Int
+  name            String
+  description     String?
+  quantity        Decimal @db.Decimal(12, 2)
+  /// Copied from the price book when the line is saved; never typed in.
+  unitPrice       Decimal @map("unit_price") @db.Decimal(18, 2)
+  discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxRateId       String? @map("tax_rate_id") @db.Uuid
+  taxPercent      Decimal @default(0) @map("tax_percent") @db.Decimal(6, 3)
+  netTotal        Decimal @map("net_total") @db.Decimal(18, 2)
+  taxTotal        Decimal @map("tax_total") @db.Decimal(18, 2)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote   Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([quoteId, position])
+  @@map("quote_lines")
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  RENEWED
+}
+
+model Contract {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String         @map("tenant_id") @db.Uuid
+  number            Int
+  name              String
+  companyId         String?        @map("company_id") @db.Uuid
+  opportunityId     String?        @map("opportunity_id") @db.Uuid
+  quoteId           String?        @map("quote_id") @db.Uuid
+  ownerId           String?        @map("owner_id") @db.Uuid
+  status            ContractStatus @default(DRAFT)
+  value             Decimal        @default(0) @db.Decimal(18, 2)
+  currency          String         @db.Char(3)
+  startDate         DateTime       @map("start_date") @db.Date
+  endDate           DateTime?      @map("end_date") @db.Date
+  autoRenew         Boolean        @default(false) @map("auto_renew")
+  renewalNoticeDays Int            @default(30) @map("renewal_notice_days")
+  /// How the signature was captured. No e-signature provider is connected yet.
+  signatureMethod   String?        @map("signature_method")
+  signedBy          String?        @map("signed_by")
+  signedAt          DateTime?      @map("signed_at") @db.Date
+  terms             String?
+  renewedFromId     String?        @unique @map("renewed_from_id") @db.Uuid
+  reminderSentAt    DateTime?      @map("reminder_sent_at") @db.Timestamptz(3)
+  terminatedAt      DateTime?      @map("terminated_at") @db.Timestamptz(3)
+  terminationReason String?        @map("termination_reason")
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     Company?     @relation(fields: [companyId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  quote       Quote?       @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  renewedFrom Contract?    @relation("ContractRenewal", fields: [renewedFromId], references: [id], onDelete: SetNull)
+  renewal     Contract?    @relation("ContractRenewal")
+  escalations Escalation[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, endDate])
+  @@index([tenantId, companyId])
+  @@map("contracts")
+}
+
+// ───────────── Phase 5: marketing ─────────────
+
+enum CampaignStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+model Campaign {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  name        String
+  channel     String
+  status      CampaignStatus @default(PLANNED)
+  startDate   DateTime?      @map("start_date") @db.Date
+  endDate     DateTime?      @map("end_date") @db.Date
+  budget      Decimal?       @db.Decimal(18, 2)
+  currency    String         @db.Char(3)
+  /// Leads whose campaign source equals this value count towards the campaign too.
+  utmCampaign String?        @map("utm_campaign")
+  ownerId     String?        @map("owner_id") @db.Uuid
+  description String?
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads  Lead[]
+  forms  LeadForm[]
+
+  @@unique([tenantId, name])
+  @@map("campaigns")
+}
+
+/// A saved audience: rules over leads or contacts, evaluated when it is viewed or exported.
+model Segment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  entity      String
+  rules       Json
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@map("segments")
+}
+
+/// A hosted lead-capture form. Its public token is safe to embed in a website.
+model LeadForm {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  name           String
+  publicToken    String   @unique @map("public_token")
+  title          String
+  intro          String?
+  fields         Json
+  consentText    String?  @map("consent_text")
+  successMessage String   @map("success_message")
+  source         String   @default("web_form")
+  campaignId     String?  @map("campaign_id") @db.Uuid
+  ownerId        String   @map("owner_id") @db.Uuid
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  submissions FormSubmission[]
+
+  @@map("lead_forms")
+}
+
+model FormSubmission {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  formId    String   @map("form_id") @db.Uuid
+  leadId    String?  @map("lead_id") @db.Uuid
+  data      Json
+  consent   Boolean  @default(false)
+  /// SHA-256 of the client IP with a server secret; used for rate limiting, not tracking.
+  ipHash    String?  @map("ip_hash")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  form   LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId, createdAt(sort: Desc)])
+  @@index([tenantId, ipHash, createdAt])
+  @@map("form_submissions")
+}
+
+// ───────────── Phase 5: revenue and customer success ─────────────
+
+/// Manually maintained rate: 1 unit of `currency` = `rate` units of the workspace default currency.
+model ExchangeRate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  currency      String   @db.Char(3)
+  rate          Decimal  @db.Decimal(18, 8)
+  effectiveDate DateTime @map("effective_date") @db.Date
+  source        String   @default("manual")
+  createdById   String?  @map("created_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, currency, effectiveDate])
+  @@map("exchange_rates")
+}
+
+/// Revenue target for a quarter, for a person (userId) or the whole workspace (userId null).
+model SalesTarget {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  period    String
+  amount    Decimal  @db.Decimal(18, 2)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, period, userId])
+  @@map("sales_targets")
+}
+
+enum EscalationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EscalationStatus {
+  OPEN
+  RESOLVED
+}
+
+model Escalation {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String             @map("tenant_id") @db.Uuid
+  companyId   String             @map("company_id") @db.Uuid
+  contractId  String?            @map("contract_id") @db.Uuid
+  title       String
+  description String?
+  severity    EscalationSeverity @default(MEDIUM)
+  status      EscalationStatus   @default(OPEN)
+  ownerId     String?            @map("owner_id") @db.Uuid
+  openedById  String?            @map("opened_by_id") @db.Uuid
+  resolution  String?
+  resolvedAt  DateTime?          @map("resolved_at") @db.Timestamptz(3)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contract Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, severity])
+  @@index([tenantId, companyId])
+  @@map("escalations")
+}
+
+/// Latest rule-based health score per customer, kept so a drop can raise one churn alert.
+model CompanyHealth {
+  companyId  String    @id @map("company_id") @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  score      Int
+  band       String
+  signals    Json
+  computedAt DateTime  @map("computed_at") @db.Timestamptz(3)
+  alertedAt  DateTime? @map("alerted_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, band])
+  @@map("company_health")
 }

@@ -14,6 +14,7 @@ import { Select } from '@/components/crm/select';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
+import { consentLabel } from '@/lib/crm-fields';
 import { useCan } from '@/lib/session';
 
 export function LeadDetail({ id }: { id: string }) {
@@ -76,6 +77,7 @@ export function LeadDetail({ id }: { id: string }) {
                   ['Source', l.source],
                   ['Campaign', l.campaignSource],
                   ['Estimated value', l.estimatedValue !== null ? formatMoney(l.estimatedValue, l.currency ?? 'USD') : null],
+                  ['Marketing consent', consentLabel(l.marketingConsent, l.consentSource)],
                   ['Owner', l.owner?.name],
                   ['Tags', l.tags.length ? l.tags.map((t) => <Badge key={t} className="mr-1">{t}</Badge>) : null],
                   ['Created', formatDate(l.createdAt)],

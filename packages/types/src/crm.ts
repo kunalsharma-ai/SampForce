@@ -113,6 +113,7 @@ export const contactInputSchema = z.object({
   timezone: optionalText(64),
   companyId: uuidRef,
   ownerId: uuidRef,
+  marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
   customFields: customFieldValuesSchema,
 });
 export const contactUpdateSchema = contactInputSchema.partial();
@@ -130,6 +131,9 @@ export interface ContactRow {
   timezone: string | null;
   company: { id: string; name: string } | null;
   owner: OwnerRef | null;
+  marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
+  consentSource: string | null;
+  consentUpdatedAt: string | null;
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -159,6 +163,8 @@ export const leadInputSchema = z.object({
   website: optionalText(253),
   source: optionalText(120),
   campaignSource: optionalText(120),
+  campaignId: uuidRef,
+  marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
   estimatedValue: money.nullable().optional(),
   currency: currencyCode.nullable().optional(),
   status: z.enum(LEAD_STATUSES).exclude(['CONVERTED']).optional(),
@@ -193,6 +199,10 @@ export interface LeadRow {
   city: string | null;
   source: string | null;
   campaignSource: string | null;
+  campaignId: string | null;
+  marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
+  consentSource: string | null;
+  consentUpdatedAt: string | null;
   estimatedValue: number | null;
   currency: string | null;
   status: LeadStatus;

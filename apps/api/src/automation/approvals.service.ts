@@ -4,6 +4,7 @@ import { type ApprovalRow, workflowDefinitionSchema } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { applyQuoteDecision, assertCanDecideQuote, QUOTE_APPROVAL_KIND } from '../commercial/quote-approval';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
 import { claim } from '../worker/queue';
 import type { ExecutionContext } from './executor.service';
@@ -21,7 +22,7 @@ export class ApprovalsService {
   list(auth: AuthContext, status: 'PENDING' | 'DECIDED'): Promise<ApprovalRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.approvalRequest.findMany({
-        where: { tenantId: auth.tenantId, ...(status === 'PENDING' ? { status: 'PENDING' } : { status: { not: 'PENDING' } }) },
+        where: { tenantId: auth.tenantId, permission: { in: [...auth.permissions] }, ...(status === 'PENDING' ? { status: 'PENDING' } : { status: { not: 'PENDING' } }) },
         include,
         orderBy: { createdAt: 'desc' },
         take: 100,
@@ -43,6 +44,8 @@ export class ApprovalsService {
       if (!auth.permissions.includes(approval.permission)) {
         throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot decide this approval.' });
       }
+      const quoteId = approval.kind === QUOTE_APPROVAL_KIND ? String((approval.payload as { quoteId?: string }).quoteId ?? '') : null;
+      if (quoteId) await assertCanDecideQuote(tx, auth.tenantId, quoteId, auth.userId);
       // Conditional update: two people deciding at once cannot both win.
       const { count } = await tx.approvalRequest.updateMany({
         where: { id, status: 'PENDING', expiresAt: { gt: new Date() } },
@@ -53,6 +56,7 @@ export class ApprovalsService {
       if (approval.executionId && approval.nodeId) {
         await this.resumeExecution(tx, approval.executionId, approval.nodeId, decision, auth);
       }
+      if (quoteId) await applyQuoteDecision(tx, auth.tenantId, quoteId, decision === 'approve' ? 'APPROVED' : 'REJECTED');
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: decision === 'approve' ? 'approval.approved' : 'approval.rejected',
         entityType: 'approval', entityId: id, metadata: { kind: approval.kind, executionId: approval.executionId, note }, meta,
@@ -97,14 +101,18 @@ export class ApprovalsService {
 
   /** Expires stale requests and cancels the runs waiting on them. */
   async expireDue(): Promise<number> {
-    const rows = await claim<{ id: string; tenant_id: string; execution_id: string | null }>(
+    const rows = await claim<{ id: string; tenant_id: string; execution_id: string | null; kind: string; quote_id: string | null }>(
       this.prisma,
       Prisma.sql`
         UPDATE approval_requests SET status = 'EXPIRED'
         WHERE id IN (SELECT id FROM approval_requests WHERE status = 'PENDING' AND expires_at <= now() LIMIT 100 FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id, execution_id`,
+        RETURNING id, tenant_id, execution_id, kind, payload->>'quoteId' AS quote_id`,
     );
     for (const r of rows) {
+      if (r.kind === QUOTE_APPROVAL_KIND && r.quote_id) {
+        await this.prisma.run({ tenantId: r.tenant_id }, (tx) => applyQuoteDecision(tx, r.tenant_id, r.quote_id!, 'EXPIRED'));
+        continue;
+      }
       if (!r.execution_id) continue;
       await this.prisma.run({ tenantId: r.tenant_id }, (tx) =>
         tx.workflowExecution.updateMany({

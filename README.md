@@ -3,7 +3,7 @@
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
 AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
-TypeScript. This repository is at the end of **Phase 1 (Product Foundation)**. See
+TypeScript. This repository is at the end of **Phase 5 (Advanced Revenue Platform)**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
 
 ## What works today
@@ -14,7 +14,12 @@ TypeScript. This repository is at the end of **Phase 1 (Product Foundation)**. S
 - Role-based permissions on every endpoint; append-only audit log with UI
 - Command Center with 15 KPIs computed from live data (formulas shown, no placeholder numbers)
 - Dark/light themes, tenant brand colour, motion controls (system/full/reduced/off), low-power mode
-- 26-module navigation; unshipped modules show their roadmap instead of dead ends
+- Core CRM: leads, contacts, companies, deals with pipelines and Kanban, activities, tasks, custom fields, import/export
+- Automation Studio, approvals inbox, notifications, webhooks, Gmail/Microsoft 365 mail and calendar sync (needs OAuth app credentials)
+- AI agents and Copilot through Claude (needs `ANTHROPIC_API_KEY`; tested against a local fixture), rule-based forecasting with snapshots
+- Quotes priced from price books with discount approvals, versions and PDFs; contracts with renewals and reminders
+- Segments with consent-aware export, hosted lead forms, campaign attribution, revenue analytics, customer health
+- 26-module navigation; unshipped modules (Reports, Marketplace) show their roadmap instead of dead ends
 - OpenAPI 3.1 at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`
 
 ## Quick start

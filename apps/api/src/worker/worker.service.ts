@@ -3,8 +3,10 @@ import { AiRunner } from '../ai/ai-runner.service';
 import { ApprovalsService } from '../automation/approvals.service';
 import { EventRelay } from '../automation/event-relay.service';
 import { WorkflowExecutor } from '../automation/executor.service';
+import { ContractsService } from '../commercial/contracts.service';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
+import { SuccessService } from '../revenue/success.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { errorMessage } from './queue';
 
@@ -15,11 +17,13 @@ export interface WorkerTick {
   approvalsExpired: number;
   syncs: number;
   aiRuns: number;
+  contracts: number;
+  health: number;
 }
 
 /**
  * The background worker: one loop that drains the Postgres-backed queues (outbox, workflow runs,
- * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs). Safe to run several copies; every claim uses
+ * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health). Safe to run several copies; every claim uses
  * FOR UPDATE SKIP LOCKED with a lease.
  */
 @Injectable()
@@ -36,6 +40,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly approvals: ApprovalsService,
     private readonly integrations: IntegrationsService,
     private readonly aiRunner: AiRunner,
+    private readonly contracts: ContractsService,
+    private readonly success: SuccessService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -65,7 +71,9 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const approvalsExpired = await this.approvals.expireDue();
     const syncs = await this.integrations.syncDue();
     const aiRuns = await this.aiRunner.runDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns };
+    const contracts = await this.contracts.runDue();
+    const health = await this.success.sweep();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
@@ -74,7 +82,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     for (let i = 0; i < maxTicks; i++) {
       const t = await this.tick();
       ticks.push(t);
-      if (t.events + t.executions + t.deliveries + t.approvalsExpired + t.syncs + t.aiRuns === 0) break;
+      if (t.events + t.executions + t.deliveries + t.approvalsExpired + t.syncs + t.aiRuns + t.contracts === 0) break;
     }
     return ticks;
   }

@@ -69,6 +69,18 @@ Microsoft OAuth, mail and calendar endpoints. They prove our code paths, not the
 AI tests use `apps/api/test/fixtures/ai-fixture.ts`, a local server that returns responses in the Claude Messages API
 shape. They prove the gateway, tool loop, permissions and safety rules. They say nothing about answer quality.
 
+## Phase 5 results (2026-10-30)
+
+| Suite | Result |
+|---|---|
+| `packages/types` unit | 23 passed (forecast maths, quote totals and rounding, discount threshold, FX conversion, win rate, velocity, health scoring) |
+| `packages/config` unit | 4 passed |
+| `apps/api` unit + integration | 188 passed in 26 files. New: `commercial.e2e` (12: catalogue permissions, exact quote totals, price book enforcement, discount approval, self-approval block, expiry, versions, PDF, contracts, renewals, reminders, expiry), `marketing.e2e` (11: segment preview and validation, consent-safe export with audit, hosted forms with consent, dedupe, honeypot, rate limit, deactivation, append-only submissions, campaign attribution), `revenue.e2e` (7: exchange rates, targets, exact quarter analytics, isolation, health scoring, churn alert once, recovery), `revenue-isolation.e2e` (6: RLS for all 16 new tables, worker scan limited to contracts, form-token policy, cross-tenant writes refused, cross-tenant 404s, viewer read-only) |
+| `apps/web` unit | 5 passed |
+| `apps/web` Playwright e2e + accessibility | 29 passed. New: quote to signed contract, hosted form to segment (including framing headers), revenue and customer success pages; axe checks on every new screen |
+| `scripts/check-rls.sql` | Passes on both databases |
+| Eval suites against the real model | Still **not run** (no API key in this environment) |
+
 ## Critical acceptance tests (from the brief) and where they live
 
 | # | Acceptance criterion | Status | Test |

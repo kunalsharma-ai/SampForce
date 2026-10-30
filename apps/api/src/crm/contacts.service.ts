@@ -4,7 +4,7 @@ import type { ContactInput, ContactRow, ListQuery, Page } from '@dealflow/types'
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
-import { assertRefs, diff, notFound, orderBy, ownerRefs, paging } from './crm-helpers';
+import { assertRefs, diff, notFound, orderBy, ownerRefs, paging, consentFields } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
 const SORTABLE = ['firstName', 'lastName', 'email', 'createdAt', 'updatedAt'] as const;
@@ -59,7 +59,7 @@ export class ContactsService {
       await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId });
       const customFields = await this.fields.validate(tx, auth.tenantId, 'CONTACT', input.customFields);
       const row = await tx.contact.create({
-        data: { ...input, ownerId, tenantId: auth.tenantId, customFields: (customFields ?? {}) as Prisma.InputJsonValue },
+        data: { ...input, ...consentFields(input.marketingConsent, 'manual'), ownerId, tenantId: auth.tenantId, customFields: (customFields ?? {}) as Prisma.InputJsonValue },
         include,
       });
       await this.audit.record(tx, {
@@ -78,7 +78,11 @@ export class ContactsService {
       const { customFields: _cf, ...rest } = input;
       const row = await tx.contact.update({
         where: { id },
-        data: { ...rest, ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) },
+        data: {
+          ...rest,
+          ...(input.marketingConsent && input.marketingConsent !== before.marketingConsent ? consentFields(input.marketingConsent, 'manual') : {}),
+          ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}),
+        },
         include,
       });
       await this.audit.record(tx, {
@@ -111,6 +115,9 @@ export function toContactRow(r: ContactWith, owners: Map<string, { id: string; n
     timezone: r.timezone,
     company: r.company,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
+    marketingConsent: r.marketingConsent,
+    consentSource: r.consentSource,
+    consentUpdatedAt: r.consentUpdatedAt?.toISOString() ?? null,
     customFields: (r.customFields ?? {}) as Record<string, unknown>,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),

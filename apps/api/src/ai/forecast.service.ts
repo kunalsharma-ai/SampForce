@@ -11,12 +11,14 @@ import {
   type ForecastTotals,
   type ForecastView,
   quarterPeriod,
+  toBase,
   totalsByOwner,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
+import { loadRates } from '../revenue/fx';
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -51,6 +53,7 @@ export class ForecastService {
       orderBy: { id: 'asc' },
     });
     const owners = await ownerRefs(tx, deals.map((d) => d.ownerId));
+    const rates = await loadRates(tx, tenantId);
     const excluded = { otherCurrency: 0, noCloseDate: 0 };
     const lines: ForecastLine[] = [];
     for (const d of deals) {
@@ -60,14 +63,17 @@ export class ForecastService {
         continue;
       }
       if (!closeDate || closeDate < start || closeDate >= end) continue;
-      if (d.currency !== currency) {
+      // Other currencies count at the latest exchange rate; without a rate the deal is left out and reported.
+      const amount = toBase(Number(d.amount), d.currency, currency, rates);
+      if (amount === null) {
         excluded.otherCurrency++;
         continue;
       }
       lines.push({
         dealId: d.id,
         name: d.name,
-        amount: Number(d.amount),
+        amount,
+        ...(d.currency !== currency ? { originalAmount: Number(d.amount), originalCurrency: d.currency } : {}),
         probability: d.status === 'WON' ? 100 : (d.probability ?? d.stage.probability),
         status: d.status as 'OPEN' | 'WON',
         stage: d.stage.name,

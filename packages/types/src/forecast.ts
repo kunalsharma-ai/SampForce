@@ -19,6 +19,9 @@ export interface ForecastLine {
   owner: { id: string; name: string } | null;
   /** YYYY-MM-DD: expected close for open deals, close date for won deals. */
   closeDate: string;
+  /** Set when the deal is in another currency; `amount` is then converted at the latest exchange rate. */
+  originalAmount?: number;
+  originalCurrency?: string;
 }
 
 export interface ForecastTotals {
@@ -41,7 +44,7 @@ export interface ForecastView {
   totals: ForecastTotals;
   byOwner: { owner: { id: string; name: string } | null; totals: ForecastTotals }[];
   lines: (ForecastLine & { category: ForecastCategory })[];
-  /** Deals left out, and why, so the totals are never silently partial. */
+  /** Deals left out, and why, so the totals are never silently partial (otherCurrency: no exchange rate set). */
   excluded: { otherCurrency: number; noCloseDate: number };
 }
 

@@ -7,6 +7,25 @@ import {
   copilotRequestSchema,
   createActionItemsSchema,
   forecastQuerySchema,
+  campaignInputSchema,
+  commercialSettingsSchema,
+  contractInputSchema,
+  contractSignSchema,
+  contractTerminateSchema,
+  contractUpdateSchema,
+  escalationInputSchema,
+  escalationResolveSchema,
+  exchangeRateInputSchema,
+  leadFormInputSchema,
+  priceBookInputSchema,
+  productInputSchema,
+  quoteInputSchema,
+  quoteTransitionSchema,
+  quoteUpdateSchema,
+  salesTargetInputSchema,
+  segmentInputSchema,
+  segmentRulesSchema,
+  taxRateInputSchema,
   meetingNotesRequestSchema,
   snapshotInputSchema,
   workflowDraftRequestSchema,
@@ -223,6 +242,68 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'get', path: '/forecast/snapshots/{id}/verify', tags: ['Forecasting'], summary: 'Recompute totals from the stored lines (dashboard:read, deals:read)', security: secured,
     request: { params: idParam }, responses: { 200: ok('Stored and recomputed totals'), ...notFound, ...errors } });
   action('get', '/forecast/compare', 'Forecasting', 'Deal-level changes between two snapshots (dashboard:read, deals:read)', undefined, { query: z.object({ from: z.string().uuid(), to: z.string().uuid() }) });
+
+  // Phase 5: catalogue, quotes, contracts, marketing, revenue analytics and customer success.
+  action('get', '/catalog/products', 'Catalogue', 'Products with their prices per price book (quotes:read)');
+  action('post', '/catalog/products', 'Catalogue', 'Create a product (catalog:manage)', productInputSchema);
+  action('put', '/catalog/products/{id}', 'Catalogue', 'Update a product (catalog:manage)', productInputSchema);
+  action('get', '/catalog/price-books', 'Catalogue', 'Price books (quotes:read)');
+  action('post', '/catalog/price-books', 'Catalogue', 'Create a price book; one default per currency (catalog:manage)', priceBookInputSchema);
+  action('put', '/catalog/price-books/{id}', 'Catalogue', 'Update a price book (catalog:manage)', priceBookInputSchema);
+  r.registerPath({ method: 'put', path: '/catalog/price-books/{id}/prices/{productId}', tags: ['Catalogue'], summary: 'Set a unit price; audited as price.changed (catalog:manage)', security: secured,
+    request: { params: z.object({ id: z.string().uuid(), productId: z.string().uuid() }), ...body(z.object({ unitPrice: z.number().min(0) })) }, responses: { 204: ok('Saved'), ...notFound, ...errors } });
+  action('get', '/catalog/tax-rates', 'Catalogue', 'Tax rates (quotes:read)');
+  action('post', '/catalog/tax-rates', 'Catalogue', 'Create a tax rate (catalog:manage)', taxRateInputSchema);
+  action('put', '/catalog/tax-rates/{id}', 'Catalogue', 'Update a tax rate (catalog:manage)', taxRateInputSchema);
+  action('get', '/catalog/settings', 'Catalogue', 'Discount approval threshold and quote validity (quotes:read)');
+  r.registerPath({ method: 'patch', path: '/catalog/settings', tags: ['Catalogue'], summary: 'Update quote rules (catalog:manage)', security: secured, request: body(commercialSettingsSchema), responses: { 200: ok('Settings'), ...errors } });
+  action('get', '/quotes', 'Quotes', 'Latest version of each quote (quotes:read)', undefined, { query: z.object({ opportunityId: z.string().uuid().optional(), status: z.string().optional() }) });
+  r.registerPath({ method: 'post', path: '/quotes', tags: ['Quotes'], summary: 'Create a draft; prices come from the price book (quotes:write)', security: secured, request: body(quoteInputSchema), responses: { 201: ok('Quote'), ...errors } });
+  action('get', '/quotes/{id}', 'Quotes', 'Quote with lines and totals (quotes:read)');
+  action('get', '/quotes/{id}/versions', 'Quotes', 'Every version of this quote number (quotes:read)');
+  r.registerPath({ method: 'patch', path: '/quotes/{id}', tags: ['Quotes'], summary: 'Edit a draft or rejected quote (quotes:write)', security: secured, request: { params: idParam, ...body(quoteUpdateSchema) }, responses: { 200: ok('Quote'), ...notFound, ...errors } });
+  action('post', '/quotes/{id}/transition', 'Quotes', 'submit, mark_sent, accept, decline or revise; discounts above the threshold go to the approvals inbox (quotes:write)', quoteTransitionSchema);
+  r.registerPath({ method: 'delete', path: '/quotes/{id}', tags: ['Quotes'], summary: 'Delete a first-version draft (quotes:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  r.registerPath({ method: 'get', path: '/quotes/{id}/pdf', tags: ['Quotes'], summary: 'PDF of the quote (quotes:read)', security: secured, request: { params: idParam },
+    responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: z.string() } } }, ...notFound, ...errors } });
+  action('get', '/contracts', 'Contracts', 'Contracts (contracts:read)', undefined, { query: z.object({ status: z.string().optional(), companyId: z.string().uuid().optional(), renewalWithinDays: z.number().int().optional() }) });
+  r.registerPath({ method: 'post', path: '/contracts', tags: ['Contracts'], summary: 'Create a draft, optionally from an accepted quote (contracts:write)', security: secured, request: body(contractInputSchema), responses: { 201: ok('Contract'), ...errors } });
+  action('get', '/contracts/{id}', 'Contracts', 'Contract (contracts:read)');
+  r.registerPath({ method: 'patch', path: '/contracts/{id}', tags: ['Contracts'], summary: 'Update; signed value, terms and start date are fixed (contracts:write)', security: secured, request: { params: idParam, ...body(contractUpdateSchema) }, responses: { 200: ok('Contract'), ...notFound, ...errors } });
+  action('post', '/contracts/{id}/sign', 'Contracts', 'Record who signed, when and how; no e-signature provider is connected (contracts:write)', contractSignSchema);
+  action('post', '/contracts/{id}/terminate', 'Contracts', 'Terminate an active contract (contracts:write)', contractTerminateSchema);
+  action('post', '/contracts/{id}/renew', 'Contracts', 'Start a linked renewal for the next term (contracts:write)');
+  action('get', '/segments', 'Marketing', 'Saved segments (marketing:read)');
+  r.registerPath({ method: 'post', path: '/segments', tags: ['Marketing'], summary: 'Save a segment (marketing:manage)', security: secured, request: body(segmentInputSchema), responses: { 201: ok('Segment'), ...errors } });
+  action('put', '/segments/{id}', 'Marketing', 'Update a segment (marketing:manage)', segmentInputSchema);
+  r.registerPath({ method: 'delete', path: '/segments/{id}', tags: ['Marketing'], summary: 'Delete a segment (marketing:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('post', '/segments/preview', 'Marketing', 'Count and sample members with consent counts (marketing:read)', z.object({ entity: z.enum(['lead', 'contact']), rules: segmentRulesSchema }));
+  action('get', '/segments/{id}/preview', 'Marketing', 'Preview a saved segment (marketing:read)');
+  r.registerPath({ method: 'get', path: '/segments/{id}/export', tags: ['Marketing'], summary: 'CSV of members; never includes opted-out people; audited (marketing:read, data:export)', security: secured,
+    request: { params: idParam, query: z.object({ optedInOnly: z.enum(['true', 'false']).optional() }) }, responses: { 200: { description: 'CSV', content: { 'text/csv': { schema: z.string() } } }, ...notFound, ...errors } });
+  action('get', '/forms', 'Marketing', 'Hosted lead forms (marketing:read)');
+  r.registerPath({ method: 'post', path: '/forms', tags: ['Marketing'], summary: 'Create a hosted lead form (marketing:manage)', security: secured, request: body(leadFormInputSchema), responses: { 201: ok('Form'), ...errors } });
+  action('put', '/forms/{id}', 'Marketing', 'Update a form (marketing:manage)', leadFormInputSchema);
+  action('get', '/forms/{id}/submissions', 'Marketing', 'Latest 50 submissions (marketing:read, leads:read)');
+  r.registerPath({ method: 'get', path: '/public/forms/{token}', tags: ['Marketing'], summary: 'Public: what the hosted form page shows (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Form view'), 404: json(error, 'Not available') } });
+  r.registerPath({ method: 'post', path: '/public/forms/{token}', tags: ['Marketing'], summary: 'Public: submit a form; 5 per address per 10 minutes (no auth)', request: { params: z.object({ token: z.string() }), ...body(z.record(z.unknown())) },
+    responses: { 200: ok('Thank-you message'), 400: json(error, 'Validation failed'), 404: json(error, 'Not available'), 429: json(error, 'Rate limited') } });
+  action('get', '/campaigns', 'Marketing', 'Campaigns with first-touch results (marketing:read)');
+  action('get', '/campaigns/{id}', 'Marketing', 'Campaign with results (marketing:read)');
+  r.registerPath({ method: 'post', path: '/campaigns', tags: ['Marketing'], summary: 'Create a campaign (marketing:manage)', security: secured, request: body(campaignInputSchema), responses: { 201: ok('Campaign'), ...errors } });
+  action('put', '/campaigns/{id}', 'Marketing', 'Update a campaign (marketing:manage)', campaignInputSchema);
+  action('get', '/analytics/revenue', 'Revenue', 'Quarter revenue analytics in the workspace currency (dashboard:read, deals:read)', undefined, { query: z.object({ period: z.string().optional() }) });
+  action('get', '/analytics/exchange-rates', 'Revenue', 'Manually entered exchange rates (dashboard:read)');
+  action('put', '/analytics/exchange-rates', 'Revenue', 'Add a rate for a date (catalog:manage)', exchangeRateInputSchema);
+  action('get', '/analytics/targets', 'Revenue', 'Sales targets (dashboard:read)', undefined, { query: z.object({ period: z.string().optional() }) });
+  action('put', '/analytics/targets', 'Revenue', 'Set a team or personal target (pipelines:manage)', salesTargetInputSchema);
+  r.registerPath({ method: 'delete', path: '/analytics/targets/{id}', tags: ['Revenue'], summary: 'Remove a target (pipelines:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('get', '/success/customers', 'Customer success', 'Customers with explained health scores (success:read, companies:read)');
+  r.registerPath({ method: 'get', path: '/success/customers/{companyId}', tags: ['Customer success'], summary: 'One customer; 404 without an active contract (success:read, companies:read)', security: secured,
+    request: { params: z.object({ companyId: z.string().uuid() }) }, responses: { 200: ok('Customer'), ...notFound, ...errors } });
+  action('get', '/success/escalations', 'Customer success', 'Escalations (success:read)', undefined, { query: z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() }) });
+  r.registerPath({ method: 'post', path: '/success/escalations', tags: ['Customer success'], summary: 'Open an escalation (success:write)', security: secured, request: body(escalationInputSchema), responses: { 201: ok('Escalation'), ...errors } });
+  action('post', '/success/escalations/{id}/resolve', 'Customer success', 'Resolve with a note (success:write)', escalationResolveSchema);
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

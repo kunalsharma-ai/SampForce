@@ -191,7 +191,17 @@ export class AgentsService {
       });
       const company = extra.companyId && auth.permissions.includes('companies:read') ? (await this.records.load(auth, 'company', extra.companyId)).facts : null;
       const contact = extra.contactId && auth.permissions.includes('contacts:read') ? (await this.records.load(auth, 'contact', extra.contactId)).facts : null;
-      const out = await this.structured(auth, run, 'proposal_draft', 'proposalDraft', proposalSchema, { deal: deal.facts, company, contact });
+      // The latest quote supplies line items and prices from the price book; the model only restates them.
+      const quote = auth.permissions.includes('quotes:read')
+        ? await this.prisma.run(auth, (tx) =>
+            tx.quote.findFirst({ where: { tenantId: auth.tenantId, opportunityId: dealId, isLatest: true }, orderBy: { number: 'desc' }, include: { lines: { orderBy: { position: 'asc' } } } }),
+          )
+        : null;
+      const quoteFacts = quote && {
+        status: quote.status, currency: quote.currency, subtotal: quote.subtotal.toNumber(), discountTotal: quote.discountTotal.toNumber(), taxTotal: quote.taxTotal.toNumber(), total: quote.total.toNumber(),
+        lines: quote.lines.map((l) => ({ product: l.name, quantity: l.quantity.toNumber(), unitPrice: l.unitPrice.toNumber(), discountPercent: l.discountPercent.toNumber(), net: l.netTotal.toNumber() })),
+      };
+      const out = await this.structured(auth, run, 'proposal_draft', 'proposalDraft', proposalSchema, { deal: deal.facts, company, contact, quote: quoteFacts });
       const rec = await this.saveRec(auth, run.id, 'proposal_draft', 'proposal_draft', 'deal', dealId, out, PROMPTS.proposalDraft.version, meta);
       return { output: out, rec: toRec<ProposalDraft>(rec) };
     });

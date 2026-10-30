@@ -52,7 +52,7 @@ function ApprovalCard({ approval: a }: { approval: ApprovalRow }) {
   const [note, setNote] = useState('');
   const decide = useMutation({
     mutationFn: (decision: 'approve' | 'reject') => api(`/approvals/${a.id}/decision`, { method: 'POST', json: { decision, note: note || undefined } }),
-    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['approvals'] }), qc.invalidateQueries({ queryKey: ['executions'] })]),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['approvals'] }), qc.invalidateQueries({ queryKey: ['executions'] }), qc.invalidateQueries({ queryKey: ['quotes'] })]),
   });
   const action = a.payload.action as { type?: string; url?: string; subject?: string } | undefined;
   return (
@@ -62,12 +62,17 @@ function ApprovalCard({ approval: a }: { approval: ApprovalRow }) {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-semibold">{a.title}</h2>
             <Badge tone={STATUS_TONE[a.status]}>{a.status.charAt(0) + a.status.slice(1).toLowerCase()}</Badge>
-            {a.kind !== 'workflow.approval_step' && <Badge tone="accent">External action</Badge>}
+            {a.kind === 'quote_discount' ? <Badge tone="accent">Quote discount</Badge> : a.kind !== 'workflow.approval_step' && <Badge tone="accent">External action</Badge>}
             <span className="ml-auto text-xs text-muted-foreground">{relativeTime(a.createdAt)}</span>
           </div>
           {a.summary && <p className="text-sm text-muted-foreground">{a.summary}</p>}
           {action?.url && <p className="break-all text-xs">Endpoint: {action.url}</p>}
           {action?.subject && <p className="text-xs">Subject: {action.subject}</p>}
+          {a.kind === 'quote_discount' && typeof a.payload.quoteId === 'string' && (
+            <Link href={`/app/quotes/${a.payload.quoteId}`} className="text-xs text-primary hover:underline">
+              Open quote {String(a.payload.reference ?? '')}
+            </Link>
+          )}
           {a.workflow && (
             <Link href={`/app/automation/${a.workflow.id}${a.executionId ? `?run=${a.executionId}` : ''}`} className="text-xs text-primary hover:underline">
               Open workflow “{a.workflow.name}”
