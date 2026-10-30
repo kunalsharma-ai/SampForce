@@ -81,6 +81,17 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 | `scripts/check-rls.sql` | Passes on both databases |
 | Eval suites against the real model | Still **not run** (no API key in this environment) |
 
+## Phase 6 results (2026-10-30)
+
+| Suite | Result |
+|---|---|
+| `packages/types` unit | 27 passed. New: effective entitlements (Free, paid, trial, past due, unpaid, canceled, unknown plan) and downgrade blockers |
+| `apps/api` unit + integration | 214 passed in 28 files. New: `billing.e2e` (15: unconfigured deployment, public pricing preview, checkout permissions and parameters with no card fields, signed webhook activation once under redelivery, unsigned/tampered/stale webhooks rejected, invoices, payment failure and grace period, fall back to Free with data kept and restore on payment, seats with proration, downgrade guard, cancel/resume, portal, subscription end, unknown workspace ignored, Razorpay flow, one trial and expiry, custom roles with plan gate and no-escalation, discount approver without automation rights), `operator.e2e` (9: disabled without key, separate strict path-scoped cookie, failed sign-ins logged, realms kept apart, list without CRM data, operator scan cannot read CRM tables, support view only under a grant, ADMIN-only overrides logged in both audit logs, append-only platform log, suspend/reactivate) |
+| `apps/web` Playwright e2e + accessibility | 32 passed. New: landing and pricing pages, billing page with trial, onboarding checklist and custom role, operator console with support access and an audited override; axe on `/`, `/pricing`, `/app/billing`, team and operator pages |
+| `scripts/check-rls.sql` | Passes on both databases |
+| Payment providers in test mode | **Not run** (no Stripe or Razorpay accounts). Adapters are exercised over HTTP against `apps/api/test/fixtures/billing-fixture.ts` |
+| Eval suites against the real model | Still **not run** (no API key in this environment) |
+
 ## Critical acceptance tests (from the brief) and where they live
 
 | # | Acceptance criterion | Status | Test |

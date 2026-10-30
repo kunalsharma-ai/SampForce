@@ -31,7 +31,7 @@ describe('automation and communication tenant isolation', () => {
     app = await startApp();
     a = await registerUser(app, 'Iso A');
     b = await registerUser(app, 'Iso B');
-    await asTenant(a.tenantId, (tx) => tx.subscription.update({ where: { tenantId: a.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(a.tenantId, (tx) => tx.subscription.update({ where: { tenantId: a.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     // Give tenant A at least one row in every table.
     const h = api(a);
     const wf = (

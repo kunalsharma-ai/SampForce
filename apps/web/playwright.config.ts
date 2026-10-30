@@ -50,6 +50,8 @@ export default defineConfig({
         // Not a real key: requests go to the fixture above, never to Anthropic.
         ANTHROPIC_API_KEY: 'test-key-not-real',
         AI_API_BASE_URL: 'http://127.0.0.1:4100',
+        // Enables the operator console; e2e creates its own operator account.
+        OPERATOR_JWT_SECRET: 'e2e-operator-secret-at-least-32-characters',
       },
     },
     {

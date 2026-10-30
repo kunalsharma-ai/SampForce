@@ -1,6 +1,6 @@
 /**
  * Proposed launch plan catalogue (see docs/PRICING_STRATEGY.md). These are proposals, not
- * published prices, and entitlements are enforced by the billing module from Phase 6.
+ * published prices. Entitlements are enforced through `effectiveEntitlements` in billing.ts.
  */
 export const PLAN_CODES = [
   'free',
@@ -19,16 +19,18 @@ export interface PlanEntitlements {
   monthlyAiCredits: number;
   automationRunsPerMonth: number;
   apiAccess: boolean;
+  /** Workspace-defined roles beyond the five system roles. */
+  customRoles: boolean;
 }
 
 export const PLAN_ENTITLEMENTS: Record<PlanCode, PlanEntitlements> = {
-  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, apiAccess: false },
-  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, apiAccess: false },
-  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, apiAccess: true },
-  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, apiAccess: true },
-  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, apiAccess: true },
-  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, apiAccess: true },
-  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, apiAccess: true },
+  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, apiAccess: false, customRoles: false },
+  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, apiAccess: false, customRoles: false },
+  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, apiAccess: true, customRoles: false },
+  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, apiAccess: true, customRoles: true },
+  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, apiAccess: true, customRoles: true },
+  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, apiAccess: true, customRoles: true },
+  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, apiAccess: true, customRoles: true },
 };
 
 export interface PlanCatalogEntry {

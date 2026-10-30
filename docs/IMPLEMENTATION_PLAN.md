@@ -12,8 +12,8 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | 3. Automation & Communication | Outbox + worker, workflow engine, Automation Studio, approvals, notifications, Gmail/M365 + calendar adapters, sequences, webhooks | Tests 5, 7, 13 | **Complete (2026-10-30)**, with the deferrals listed below |
 | 4. AI Intelligence | AI gateway, metering, Copilot, lead-qualification, deal-intelligence, meeting, proposal agents, forecasting + snapshots, AI workflow builder | Test 6; eval suites | **Complete (2026-10-30)**, with the deferrals listed below. Evals not yet run against the real model |
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | **Complete (2026-10-30)**, with the deferrals listed below (no email sending, no e-signature provider, no territories or localisation yet) |
-| 6. Commercialization | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | Planned |
-| 7. Immersive Experience | Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | Planned |
+| **6. Commercialization** | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | **Complete (2026-10-30)**, with the deferrals listed below. Payment providers tested against local fixtures only |
+| 7. Immersive Experience | Report builder and custom dashboards (moved from Phase 6), Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | Planned |
 | 8. Enterprise Readiness | SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, perf tuning, pen-test prep, prod runbooks | Security review, load test targets | Planned |
 
 ## Feature status (Phase 1 close)
@@ -191,20 +191,65 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 - Territories and territory-based routing.
 - A localisation framework (UI strings are English only; dates and money use en-US formatting).
 - Automatic exchange-rate feeds; rates are entered by a person.
-- Report builder and custom dashboards (moved to Phase 6 with commercialisation, see the Reports module page).
+- Report builder and custom dashboards (moved to Phase 6, then to Phase 7).
 - Onboarding plans, success playbooks and upsell recommendations in customer success.
 - Quote templates and branded PDFs; usage-based or recurring price models.
 
 ### Known limits
 
 1. The quote PDF uses a built-in PDF font, so characters outside Latin-1 (for example Hindi or Chinese product names) do not render. A Unicode font needs to be bundled before this is used with such data.
-2. A custom role that has `quotes:approve` but not `automation:manage` cannot open the approvals inbox; the system roles that approve quotes (owner, admin, manager) have both.
+2. ~~A custom role that has `quotes:approve` but not `automation:manage` cannot open the approvals inbox.~~ Fixed in Phase 6.
 3. Campaign attribution is first touch only; leads created before a campaign existed can be linked by UTM value but not by date range.
 4. Customer health is recomputed when the customer pages load and at most hourly by the worker, so a churn alert can lag a change by up to an hour.
 5. Analytics convert with the latest rate per currency, not the rate on the close date.
 6. Tax rates are whatever the workspace enters; DealFlow does not determine or validate tax for any country.
 
-## Continuation instructions (Phase 6)
+## Feature status (Phase 6 close)
+
+| Feature | Status |
+|---|---|
+| Central entitlement rule (`effectiveEntitlements`): Free capped at 2 users; paid plans at seats bought; trials at 10 seats; unpaid or canceled falls back to Free allowances with no data deleted. Used by seat, pipeline, AI credit, automation run and custom-role checks | Implemented, tested (unit + API) |
+| Stripe adapter: hosted Checkout with seat quantity and promotion codes, optional Stripe Tax, Customer Portal, prorated seat and plan changes, cancel at period end and withdraw | Implemented, tested against a local fixture only. Not run against Stripe test mode |
+| Razorpay adapter: subscription payment link, seat and plan changes from the next cycle, cancel at cycle end | Implemented, tested against a local fixture only. Some request fields unconfirmed (see docs/BILLING.md) |
+| Signed webhooks (raw-body HMAC, Stripe timestamp tolerance), idempotent per event id, subscription re-read from the provider, invoices recorded, payment-failure notifications | Implemented, tested (bad, tampered, stale and duplicate deliveries) |
+| Dunning: grace period then Free allowances, restored on payment; trial expiry back to Free; both in the worker with notifications | Implemented, tested |
+| Downgrade guard: plan changes refused while members or pipelines exceed the target plan | Implemented, tested |
+| Billing page: plan and status, seats, usage meters, plan cards with interval toggle, checkout or trial, portal, cancel, invoices; says plainly when checkout is not configured | Implemented, tested (e2e + axe) |
+| Custom roles (Professional and above): create, edit, delete when unused; nobody can grant a permission they lack, also enforced on invitations and role changes; system roles fixed | Implemented, tested (API + e2e) |
+| Approvals inbox opens for anyone holding an approval's permission, so a discount approver no longer needs `automation:manage` (closes Phase 5 known limit 2) | Implemented, tested |
+| Onboarding checklist on the Command Center, computed from workspace data, dismissible | Implemented, tested (e2e) |
+| Operator console (`/operator`): separate sign-in realm, workspace list with plan and member counts, invoices, plan/seat/status override with reason, suspend and reactivate, platform audit log; SUPPORT vs ADMIN operator roles; disabled unless `OPERATOR_JWT_SECRET` is set; CLI to create operators | Implemented, tested (API + e2e + axe) |
+| Support access: owners grant 1 to 72 hours with a reason; only then can operators see members and the workspace audit log; never CRM records | Implemented, tested |
+| Public site: landing page at `/` for visitors without a session, `/pricing` with monthly/annual toggle and FAQ, labelled a preview until `PRICING_PUBLISHED=true`; no stats, logos or testimonials | Implemented, tested (e2e + axe) |
+
+### Deferred from the Phase 6 scope (not built)
+
+- Report builder and custom dashboards (moved to Phase 7; ready-made analytics remain in Revenue Intelligence).
+- AI credit packs and other add-on purchases. When an allowance is used up the feature pauses; nothing is billed for overage.
+- Coupons managed inside DealFlow. Promotion codes work only through Stripe Checkout.
+- API keys for the `apiAccess` entitlement: there is no public API key feature yet, so the entitlement is not enforced anywhere.
+- Running either payment provider in test mode (no accounts or keys in this environment).
+- Invoice PDFs generated by DealFlow; invoices link to the provider's copy.
+- A separate `apps/admin` deployable (the console is a route group in the web app, see ADR 0010).
+- Legal pages (terms, privacy policy, DPA). None exist; the site does not link to any. They need to be written by Sampledge's counsel.
+- Operator account management in the UI (MFA, disabling operators); operators are managed from the CLI for now.
+
+### Known limits
+
+1. An operator plan override on a workspace that pays through Stripe or Razorpay is overwritten by the provider's next webhook.
+2. Razorpay amounts are stored in the plan's currency (usually INR); the Billing page shows USD catalogue prices. The provider's checkout page shows what is actually charged.
+3. A workspace that falls back to Free keeps its existing members and pipelines; only new invitations and new pipelines above Free limits are refused. Existing custom roles keep working, but cannot be created or edited.
+4. The pricing page is rendered on the server and cached for 5 minutes; it falls back to the built-in catalogue (marked as a preview) if the API is unreachable.
+5. AI credits are counted per active member; seats paid for but unused do not add credits.
+
+## Continuation instructions (Phase 7)
+
+Follow the roadmap row for Phase 7 (report builder and custom dashboards, then the immersive views: Relationship Galaxy,
+Revenue Globe, animated pipeline intelligence, time-based replays) with a 60 FPS budget and accessible 2D fallbacks.
+Before any launch, run both payment providers in test mode per docs/BILLING.md, record the results, and keep the rate
+card labelled as a preview until Sampledge confirms it.
+
+## Original continuation instructions (Phase 6, done)
 
 Follow the roadmap row for Phase 6 (billing engine with Stripe/Razorpay adapters, entitlement enforcement, usage
 metering, operator console, onboarding, marketing site, custom roles). Payment providers must be tested against their

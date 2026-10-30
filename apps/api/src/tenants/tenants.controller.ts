@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
 import {
   type InvitationInput,
+  type RoleInput,
+  roleInputSchema,
   invitationInputSchema,
   type UpdateMemberRoleInput,
   updateMemberRoleSchema,
@@ -10,6 +12,7 @@ import {
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { InvitationsService } from './invitations.service';
+import { RolesService } from './roles.service';
 import { TenantsService } from './tenants.service';
 
 @Controller('tenants/current')
@@ -17,6 +20,7 @@ export class TenantsController {
   constructor(
     private readonly tenants: TenantsService,
     private readonly invitations: InvitationsService,
+    private readonly roleService: RolesService,
   ) {}
 
   @Get()
@@ -44,7 +48,26 @@ export class TenantsController {
   @Get('roles')
   @RequirePermissions('members:read')
   roles(@Auth() auth: AuthContext) {
-    return this.tenants.roles(auth);
+    return this.roleService.list(auth);
+  }
+
+  @Post('roles')
+  @RequirePermissions('members:manage')
+  createRole(@Auth() auth: AuthContext, @Body(new ZodPipe(roleInputSchema)) body: RoleInput, @Meta() meta: RequestMeta) {
+    return this.roleService.create(auth, body, meta);
+  }
+
+  @Put('roles/:id')
+  @RequirePermissions('members:manage')
+  updateRole(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(roleInputSchema)) body: RoleInput, @Meta() meta: RequestMeta) {
+    return this.roleService.update(auth, id, body, meta);
+  }
+
+  @Delete('roles/:id')
+  @HttpCode(204)
+  @RequirePermissions('members:manage')
+  deleteRole(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.roleService.remove(auth, id, meta);
   }
 
   @Patch('members/:membershipId/role')

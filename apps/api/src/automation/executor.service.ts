@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
-import { PLAN_ENTITLEMENTS, type PlanCode, type WorkflowAction, workflowDefinitionSchema } from '@dealflow/types';
+import { type WorkflowAction, workflowDefinitionSchema } from '@dealflow/types';
+import { entitlementsFor } from '../billing/entitlements';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -221,8 +222,7 @@ export class WorkflowExecutor {
       where: { tenantId: event.tenantId, status: 'ACTIVE', triggerType: event.type, deletedAt: null, activeVersionId: { not: null } },
     });
     if (workflows.length === 0) return 0;
-    const sub = await tx.subscription.findUnique({ where: { tenantId: event.tenantId } });
-    const runLimit = PLAN_ENTITLEMENTS[(sub?.planCode ?? 'free') as PlanCode]?.automationRunsPerMonth ?? 0;
+    const runLimit = (await entitlementsFor(tx, event.tenantId)).entitlements.automationRunsPerMonth;
     const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
     let used = await tx.workflowExecution.count({ where: { tenantId: event.tenantId, startedAt: { gte: monthStart } } });
     const payload = (event.payload ?? {}) as Record<string, unknown>;

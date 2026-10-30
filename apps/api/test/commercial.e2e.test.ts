@@ -18,7 +18,7 @@ describe('quotes and contracts', () => {
   beforeAll(async () => {
     app = await startApp();
     owner = await registerUser(app, 'Quote Co');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.updateMany({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.updateMany({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     member = await inviteMember(app, owner, 'member');
     manager = await inviteMember(app, owner, 'manager');
     const o = api(owner);
@@ -98,13 +98,14 @@ describe('quotes and contracts', () => {
     const submitted = (await api(member).post(`/quotes/${q.id}/transition`, { action: 'submit' }).expect(200)).body;
     expect(submitted.status).toBe('PENDING_APPROVAL');
     await api(member).post(`/quotes/${q.id}/transition`, { action: 'mark_sent' }).expect(409);
-    // Members cannot open the approvals inbox; managers see the request and are notified.
-    await api(member).get('/approvals').expect(403);
+    // Members see no requests (they cannot approve discounts); managers see the request and are notified.
+    expect((await api(member).get('/approvals').expect(200)).body).toEqual([]);
     const pending = (await api(manager).get('/approvals').expect(200)).body.filter((a: { kind: string }) => a.kind === 'quote_discount');
     expect(pending).toHaveLength(1);
     expect(pending[0].payload).toMatchObject({ quoteId: q.id, maxDiscountPercent: 25, threshold: 10 });
     const inbox = (await api(manager).get('/notifications').expect(200)).body;
     expect(inbox.items).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'quote.approval_requested' })]));
+    await api(member).post(`/approvals/${pending[0].id}/decision`, { decision: 'approve' }).expect(403);
     await api(manager).post(`/approvals/${pending[0].id}/decision`, { decision: 'approve' }).expect(200);
     expect((await api(member).get(`/quotes/${q.id}`).expect(200)).body.status).toBe('APPROVED');
   });

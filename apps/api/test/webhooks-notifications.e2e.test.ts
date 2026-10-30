@@ -143,7 +143,7 @@ describe('notifications', () => {
     app = await startApp();
     worker = app.get(WorkerService);
     owner = await registerUser(app, 'Notify');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
   });
   afterAll(async () => {
     await app.close();

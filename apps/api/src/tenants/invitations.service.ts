@@ -1,12 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Prisma, TenantTx } from '@dealflow/database';
-import { type InvitationCreated, type InvitationRow, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
+import type { InvitationCreated, InvitationRow } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../auth/token.service';
+import { entitlementsFor, planLimit } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { assertCanGrant } from './roles.service';
 
 export const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 type InvitationWithRole = Prisma.InvitationGetPayload<{ include: { role: true } }>;
@@ -44,6 +46,7 @@ export class InvitationsService {
       if (role.key === 'owner' && auth.roleKey !== 'owner') {
         throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only an owner can invite another owner.' });
       }
+      if (auth.roleKey !== 'owner') assertCanGrant(auth, role.permissions);
       const member = await tx.membership.findFirst({
         where: { tenantId: auth.tenantId, status: 'ACTIVE', user: { email: input.email } },
         select: { id: true },
@@ -92,12 +95,11 @@ export class InvitationsService {
 }
 
 /**
- * Enforces the plan's user limit, counting active members plus other pending invitations, so a
- * workspace cannot exceed it by sending many invitations at once. A null limit means per-seat billing.
+ * Enforces the seat limit (Free's user cap, or the seats paid for), counting active members plus
+ * other pending invitations, so a workspace cannot exceed it by sending many invitations at once.
  */
 export async function assertSeatAvailable(tx: TenantTx, tenantId: string, replacingEmail?: string): Promise<void> {
-  const sub = await tx.subscription.findUnique({ where: { tenantId } });
-  const limit = PLAN_ENTITLEMENTS[(sub?.planCode ?? 'free') as PlanCode]?.maxUsers ?? null;
+  const { seatLimit: limit, appliedPlan } = await entitlementsFor(tx, tenantId);
   if (limit === null) return;
   const [members, pending] = await Promise.all([
     tx.membership.count({ where: { tenantId, status: 'ACTIVE' } }),
@@ -106,10 +108,11 @@ export async function assertSeatAvailable(tx: TenantTx, tenantId: string, replac
     }),
   ]);
   if (members + pending >= limit) {
-    throw new ForbiddenException({
-      code: 'PLAN_LIMIT',
-      message: `Your plan includes ${limit} users, counting pending invitations. Upgrade or revoke an invitation to invite someone else.`,
-    });
+    throw planLimit(
+      appliedPlan === 'free'
+        ? `Your plan includes ${limit} users, counting pending invitations. Upgrade or revoke an invitation to invite someone else.`
+        : `All ${limit} paid seats are in use, counting pending invitations. Add seats on the Billing page or revoke an invitation.`,
+    );
   }
 }
 

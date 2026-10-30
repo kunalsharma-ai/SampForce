@@ -118,7 +118,12 @@ erDiagram
 | ExchangeRate, SalesTarget | Manual FX rates per date; quarterly team or personal targets | Yes | 5 |
 | Escalation, CompanyHealth | Customer escalations; last computed health score, band and signals per company | Yes | 5 |
 | Proposal, CustomerSuccessPlan | Not built; proposals are AI drafts on the deal, plans are deferred | — | later |
-| Invoice, UsageRecord | Billing and metering | Yes | 6 |
+| Subscription (Phase 6 columns) | Provider (`NONE`/`STRIPE`/`RAZORPAY`), provider customer and subscription ids, `cancel_at_period_end`, `past_due_since`, `trial_used_at`; status gains `UNPAID` | Yes | 6 |
+| Invoice | Invoices as the provider reports them (minor units, currency, hosted and PDF links); unique per provider invoice id | Yes | 6 |
+| BillingEvent | Provider event ids already processed (idempotency only; no payload stored) | Yes | 6 |
+| SupportGrant | An owner's time-boxed permission for platform support, with reason | Yes | 6 |
+| PlatformOperator, PlatformAuditLog | Platform staff accounts and their append-only action log (global, no tenant) | No | 6 |
+| UsageRecord | Not built: usage is counted from the source tables (AI usage, workflow executions) | — | later |
 
 ## Row-level security
 
@@ -138,6 +143,21 @@ find due work across tenants, then act inside each tenant's context); `lead_form
 `app.form_token`, used only by `app_form_tenant(token)` to resolve the workspace behind a public form; and
 `UPDATE` on `form_submissions` is revoked from the app role. `apps/api/test/revenue-isolation.e2e.test.ts` checks
 each of these.
+
+Migration `20261030050000_commercialization` puts `invoices`, `billing_events` and `support_grants` under the tenant
+policy and FORCE RLS, and adds:
+
+- `billing_ref_lookup` on `subscriptions` plus `app_billing_tenant(ref)`, which resolves the workspace behind a
+  provider customer or subscription id for webhooks (same pattern as form tokens).
+- `operator_scan` SELECT policies on `tenants`, `subscriptions`, `memberships`, `invoices` and `support_grants`,
+  active only under the transaction-local `app.operator_scan` flag. No CRM table has one.
+- `worker_scan` SELECT on `subscriptions` for trial expiry and dunning.
+- `UPDATE`/`DELETE` on `platform_audit_logs` revoked from the app role. `platform_operators` and
+  `platform_audit_logs` have no `tenant_id` and no RLS: they are platform rows reached only through the operator API.
+- `plans.entitlements` gains `customRoles`.
+
+`apps/api/test/operator.e2e.test.ts` checks that the operator scan returns no CRM rows and that the platform log
+cannot be changed.
 
 Tests in `apps/api/test/tenancy.e2e.test.ts` prove: no context → no rows; context A cannot read, update or
 insert B's rows; context does not leak across pooled transactions; audit logs cannot be altered.

@@ -83,19 +83,21 @@ enum TenantStatus {
 }
 
 model Tenant {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String
-  slug            String       @unique
-  status          TenantStatus @default(ACTIVE)
-  brandColor      String?      @map("brand_color")
-  defaultCurrency String       @default("USD") @map("default_currency") @db.Char(3)
-  defaultTimezone String       @default("UTC") @map("default_timezone")
-  defaultLocale   String       @default("en-US") @map("default_locale")
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String
+  slug                  String       @unique
+  status                TenantStatus @default(ACTIVE)
+  brandColor            String?      @map("brand_color")
+  defaultCurrency       String       @default("USD") @map("default_currency") @db.Char(3)
+  defaultTimezone       String       @default("UTC") @map("default_timezone")
+  defaultLocale         String       @default("en-US") @map("default_locale")
   /// True only for development/demo workspaces populated by the seed script.
-  isDemo          Boolean      @default(false) @map("is_demo")
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt       DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  isDemo                Boolean      @default(false) @map("is_demo")
+  /// Set when an owner hides the getting-started checklist.
+  onboardingDismissedAt DateTime?    @map("onboarding_dismissed_at") @db.Timestamptz(3)
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?    @map("deleted_at") @db.Timestamptz(3)
 
   subscription           Subscription?
   roles                  Role[]
@@ -145,6 +147,9 @@ model Tenant {
   salesTargets           SalesTarget[]
   escalations            Escalation[]
   companyHealth          CompanyHealth[]
+  invoices               Invoice[]
+  billingEvents          BillingEvent[]
+  supportGrants          SupportGrant[]
 
   @@map("tenants")
 }
@@ -154,6 +159,14 @@ enum SubscriptionStatus {
   ACTIVE
   PAST_DUE
   CANCELED
+  /// Payment failed and the grace period ended: paid allowances fall back to Free until paid.
+  UNPAID
+}
+
+enum BillingProvider {
+  NONE
+  STRIPE
+  RAZORPAY
 }
 
 enum BillingInterval {
@@ -162,21 +175,30 @@ enum BillingInterval {
 }
 
 model Subscription {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String             @unique @map("tenant_id") @db.Uuid
-  planCode           String             @map("plan_code")
-  status             SubscriptionStatus @default(ACTIVE)
-  billingInterval    BillingInterval    @default(MONTH) @map("billing_interval")
-  seats              Int                @default(1)
-  currentPeriodStart DateTime           @default(now()) @map("current_period_start") @db.Timestamptz(3)
-  currentPeriodEnd   DateTime?          @map("current_period_end") @db.Timestamptz(3)
-  trialEndsAt        DateTime?          @map("trial_ends_at") @db.Timestamptz(3)
-  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String             @unique @map("tenant_id") @db.Uuid
+  planCode               String             @map("plan_code")
+  status                 SubscriptionStatus @default(ACTIVE)
+  billingInterval        BillingInterval    @default(MONTH) @map("billing_interval")
+  seats                  Int                @default(1)
+  currentPeriodStart     DateTime           @default(now()) @map("current_period_start") @db.Timestamptz(3)
+  currentPeriodEnd       DateTime?          @map("current_period_end") @db.Timestamptz(3)
+  trialEndsAt            DateTime?          @map("trial_ends_at") @db.Timestamptz(3)
+  /// A workspace gets one free trial of a paid plan.
+  trialUsedAt            DateTime?          @map("trial_used_at") @db.Timestamptz(3)
+  provider               BillingProvider    @default(NONE)
+  /// Provider references only. Card and bank details stay with the provider and never reach DealFlow.
+  providerCustomerId     String?            @map("provider_customer_id")
+  providerSubscriptionId String?            @unique @map("provider_subscription_id")
+  cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+  pastDueSince           DateTime?          @map("past_due_since") @db.Timestamptz(3)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan   Plan   @relation(fields: [planCode], references: [code])
 
+  @@index([provider, providerCustomerId])
   @@map("subscriptions")
 }
 
@@ -1476,4 +1498,118 @@ model CompanyHealth {
 
   @@index([tenantId, band])
   @@map("company_health")
+}
+
+// ───────────── Phase 6: billing, operators, support access ─────────────
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+/// Invoices as reported by the billing provider. Amounts in the smallest currency unit.
+model Invoice {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  provider          BillingProvider
+  providerInvoiceId String          @map("provider_invoice_id")
+  number            String?
+  status            InvoiceStatus
+  currency          String          @db.Char(3)
+  subtotalCents     Int             @map("subtotal_cents")
+  taxCents          Int             @default(0) @map("tax_cents")
+  totalCents        Int             @map("total_cents")
+  amountPaidCents   Int             @default(0) @map("amount_paid_cents")
+  periodStart       DateTime?       @map("period_start") @db.Timestamptz(3)
+  periodEnd         DateTime?       @map("period_end") @db.Timestamptz(3)
+  hostedUrl         String?         @map("hosted_url")
+  pdfUrl            String?         @map("pdf_url")
+  issuedAt          DateTime        @map("issued_at") @db.Timestamptz(3)
+  paidAt            DateTime?       @map("paid_at") @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerInvoiceId])
+  @@index([tenantId, issuedAt])
+  @@map("invoices")
+}
+
+/// Provider webhook events already applied (idempotency). Stores the event type, not the payload.
+model BillingEvent {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String          @map("tenant_id") @db.Uuid
+  provider        BillingProvider
+  providerEventId String          @map("provider_event_id")
+  type            String
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerEventId])
+  @@map("billing_events")
+}
+
+/// A workspace owner's time-boxed permission for platform support to look inside the workspace.
+model SupportGrant {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  grantedById String    @map("granted_by_id") @db.Uuid
+  reason      String
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, expiresAt])
+  @@map("support_grants")
+}
+
+enum OperatorRole {
+  ADMIN
+  SUPPORT
+}
+
+enum OperatorStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// Platform staff. A separate realm from workspace users: own table, own sign-in, own token secret.
+model PlatformOperator {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String         @unique
+  name         String
+  passwordHash String         @map("password_hash")
+  role         OperatorRole   @default(SUPPORT)
+  status       OperatorStatus @default(ACTIVE)
+  lastLoginAt  DateTime?      @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  auditLogs PlatformAuditLog[]
+
+  @@map("platform_operators")
+}
+
+/// Append-only log of everything operators do. The application role may insert and read, never change.
+model PlatformAuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  operatorId     String?  @map("operator_id") @db.Uuid
+  action         String
+  targetTenantId String?  @map("target_tenant_id") @db.Uuid
+  metadata       Json     @default("{}")
+  ip             String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  operator PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([targetTenantId, createdAt])
+  @@index([createdAt])
+  @@map("platform_audit_logs")
 }

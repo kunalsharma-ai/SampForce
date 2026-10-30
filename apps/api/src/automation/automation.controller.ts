@@ -86,15 +86,14 @@ export class WorkflowsController {
 export class ApprovalsController {
   constructor(private readonly approvals: ApprovalsService) {}
 
+  /** No route-level permission: each request names the permission needed to see and decide it (automation:manage or quotes:approve). */
   @Get()
-  @RequirePermissions('automation:manage')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(approvalQuery)) q: z.infer<typeof approvalQuery>) {
     return this.approvals.list(auth, q.status);
   }
 
   @Post(':id/decision')
   @HttpCode(200)
-  @RequirePermissions('automation:manage')
   decide(
     @Auth() auth: AuthContext,
     @Param('id', uuid) id: string,

@@ -3,6 +3,7 @@ import type { MemberRow, TenantDetails, UpdateTenantInput } from '@dealflow/type
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { assertCanGrant } from './roles.service';
 
 @Injectable()
 export class TenantsService {
@@ -58,16 +59,6 @@ export class TenantsService {
     }));
   }
 
-  async roles(auth: AuthContext) {
-    return this.prisma.run(auth, (tx) =>
-      tx.role.findMany({
-        where: { tenantId: auth.tenantId },
-        select: { key: true, name: true, description: true, permissions: true, isSystem: true },
-        orderBy: { createdAt: 'asc' },
-      }),
-    );
-  }
-
   async changeMemberRole(auth: AuthContext, membershipId: string, roleKey: string, meta: RequestMeta): Promise<MemberRow> {
     return this.prisma.run(auth, async (tx) => {
       const membership = await tx.membership.findFirst({
@@ -78,6 +69,7 @@ export class TenantsService {
       const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId: auth.tenantId, key: roleKey } } });
       if (!role) throw new BadRequestException({ code: 'UNKNOWN_ROLE', message: 'That role does not exist.' });
 
+      if (auth.roleKey !== 'owner') assertCanGrant(auth, role.permissions);
       const touchesOwner = role.key === 'owner' || membership.role.key === 'owner';
       if (touchesOwner && auth.roleKey !== 'owner') {
         throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only an owner can grant or remove the owner role.' });

@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src test scripts evals",
     "test": "vitest run",
+    "operator:create": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/create-operator.ts",
     "seed:demo": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/seed-demo.ts",
     "openapi": "node -r @swc-node/register scripts/export-openapi.ts",
     "eval": "tsx evals/run-evals.ts"

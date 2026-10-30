@@ -37,7 +37,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     body: json !== undefined ? JSON.stringify(json) : rest.body,
   });
 
-  if (res.status === 401 && retry && !path.startsWith('/auth/')) {
+  // Operator sessions have no refresh token; only workspace sessions are refreshed.
+  if (res.status === 401 && retry && !path.startsWith('/auth/') && !path.startsWith('/operator/')) {
     if (await refreshSession()) return api<T>(path, init, false);
   }
   if (res.status === 204) return undefined as T;

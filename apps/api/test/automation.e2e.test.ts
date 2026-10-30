@@ -22,7 +22,7 @@ describe('automation workflows', () => {
     owner = await registerUser(app, 'Automators');
     http = api(owner);
     ownerId = (await http.get('/auth/me').expect(200)).body.user.id;
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     hookServer = createServer((req, res) => {
       let body = '';
       req.on('data', (c: Buffer) => (body += c.toString()));
@@ -269,7 +269,8 @@ describe('automation workflows', () => {
   it('requires automation permission and keeps workflows inside the tenant', async () => {
     const member = await inviteMember(app, owner, 'member');
     await api(member).get('/workflows').expect(403);
-    await api(member).get('/approvals').expect(403);
+    // Members hold neither approval permission, so the inbox is empty for them.
+    expect((await api(member).get('/approvals').expect(200)).body).toEqual([]);
 
     const other = await registerUser(app, 'Outsiders');
     const o = api(other);

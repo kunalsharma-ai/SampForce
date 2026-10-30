@@ -77,7 +77,7 @@ describe('invitations', () => {
     const { withDbContext } = await import('@dealflow/database');
     const { appClient } = await import('./helpers');
     const db = appClient();
-    await withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     await db.$disconnect();
   });
   afterAll(async () => {

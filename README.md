@@ -3,7 +3,7 @@
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
 AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
-TypeScript. This repository is at the end of **Phase 5 (Advanced Revenue Platform)**. See
+TypeScript. This repository is at the end of **Phase 6 (SaaS Commercialization)**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
 
 ## What works today
@@ -19,6 +19,10 @@ TypeScript. This repository is at the end of **Phase 5 (Advanced Revenue Platfor
 - AI agents and Copilot through Claude (needs `ANTHROPIC_API_KEY`; tested against a local fixture), rule-based forecasting with snapshots
 - Quotes priced from price books with discount approvals, versions and PDFs; contracts with renewals and reminders
 - Segments with consent-aware export, hosted lead forms, campaign attribution, revenue analytics, customer health
+- Billing: plans enforced through one entitlement rule, free trial, usage meters, Stripe and Razorpay hosted checkout and signed webhooks (needs provider keys and prices; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
+- Custom roles (Professional and above), onboarding checklist, owner-granted support access
+- Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`)
+- Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true`
 - 26-module navigation; unshipped modules (Reports, Marketplace) show their roadmap instead of dead ends
 - OpenAPI 3.1 at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`
 
@@ -70,7 +74,7 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 - [Security model](docs/SECURITY_MODEL.md) · [Test strategy](docs/TEST_STRATEGY.md)
 - [UI/UX design system](docs/UI_DESIGN_SYSTEM.md)
 - [Competitive feature matrix](docs/FEATURE_MATRIX.md) · [Pricing & unit economics](docs/PRICING_STRATEGY.md)
-- [Implementation plan & feature status](docs/IMPLEMENTATION_PLAN.md)
+- [Implementation plan & feature status](docs/IMPLEMENTATION_PLAN.md) · [Billing setup](docs/BILLING.md)
 
 ## Credentials required for live integrations
 

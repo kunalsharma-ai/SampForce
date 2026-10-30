@@ -29,7 +29,7 @@ describe('AI actions respect authorization', () => {
     app = await startApp();
     owner = await registerUser(app, 'Authz A');
     other = await registerUser(app, 'Authz B');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     rep = await inviteMember(app, owner, 'member');
     viewer = await inviteMember(app, owner, 'viewer');
     memberPermissions = await asTenant(owner.tenantId, async (tx) => (await tx.role.findFirstOrThrow({ where: { tenantId: owner.tenantId, key: 'member' } })).permissions);

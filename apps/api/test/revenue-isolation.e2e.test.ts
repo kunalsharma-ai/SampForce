@@ -98,7 +98,7 @@ describe('commercial, marketing and success tenant isolation', () => {
   });
 
   it('viewers can read commercial records but not change them', async () => {
-    await asTenant(a.tenantId, (tx) => tx.subscription.update({ where: { tenantId: a.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(a.tenantId, (tx) => tx.subscription.update({ where: { tenantId: a.tenantId }, data: { planCode: 'growth', seats: 10 } }));
     const viewer = await inviteMember(app, a, 'viewer');
     const v = api(viewer);
     const quote = (await v.get('/quotes').expect(200)).body[0];

@@ -47,7 +47,7 @@ describe('AI gateway, Copilot and agents (against the Claude API fixture)', () =
     process.env.AI_API_BASE_URL = fixture.url;
     app = await startApp();
     u = await registerUser(app, 'AI Co');
-    await asTenant(u.tenantId, (tx) => tx.subscription.update({ where: { tenantId: u.tenantId }, data: { planCode: 'growth' } }));
+    await asTenant(u.tenantId, (tx) => tx.subscription.update({ where: { tenantId: u.tenantId }, data: { planCode: 'growth', seats: 10 } }));
   });
   afterAll(async () => {
     await app.close();

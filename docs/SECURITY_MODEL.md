@@ -20,13 +20,14 @@ before any compliance statement is made.
 | Secrets leakage | Env-only secrets validated at boot; no secrets in repo; log redaction of cookies/auth headers | **Implemented** |
 | AI misuse / prompt injection | Tool allowlists, approval tiers, untrusted-content wrapping, cost caps | Designed (Phase 4) |
 | Malicious uploads | Signed uploads, type/size limits, malware scanning, tenant-prefixed keys | Designed (Phase 2) |
-| Platform operator overreach | Separate admin app and auth realm; no tenant data access without a logged, time-boxed support grant | Designed (Phase 6) |
+| Platform operator overreach | Separate auth realm (own accounts, key, cookie, guard); cross-tenant reads limited by RLS to tenants, subscriptions, memberships, invoices and support grants; members and audit log only under an owner's time-boxed grant; CRM records never; every action in an append-only platform log and the workspace audit log | **Implemented, tested** (Phase 6, ADR 0010) |
+| Payment fraud / forged billing events | Hosted checkout only (no card data in DealFlow); webhooks verified by HMAC over the raw body, Stripe timestamp tolerance, idempotent per event id, state re-read from the provider | **Implemented, tested against fixtures** |
 
 ## 2. Identity and access
 
 - **Roles:** Owner, Administrator, Sales Manager, Sales Representative, Viewer, each a list of
-  `resource:action` permissions (`packages/types/src/permissions.ts`). Custom roles (Phase 6) reuse the same
-  catalogue. Attribute-based rules (record ownership, territory, team) layer on top in Phase 2.
+  `resource:action` permissions (`packages/types/src/permissions.ts`). Custom roles (Phase 6, Professional and above) reuse the same
+  catalogue; nobody can create, assign or invite into a role with permissions they do not hold. Attribute-based rules (record ownership, territory, team) layer on top in Phase 2.
 - **Owner protections:** only owners can grant or remove the owner role; the last owner cannot be demoted.
 - **Planned:** MFA (TOTP, WebAuthn), SSO via SAML 2.0 / OIDC, SCIM provisioning, session management UI with
   device list and remote sign-out, IP allow-lists (Enterprise).

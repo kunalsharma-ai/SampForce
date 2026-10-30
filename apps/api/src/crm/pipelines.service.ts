@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import { PLAN_ENTITLEMENTS, type PipelineInput, type PipelineRow, type PlanCode } from '@dealflow/types';
+import type { PipelineInput, PipelineRow } from '@dealflow/types';
+import { entitlementsFor } from '../billing/entitlements';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -35,8 +36,7 @@ export class PipelinesService {
 
   create(auth: AuthContext, input: PipelineInput, meta: RequestMeta): Promise<PipelineRow> {
     return this.prisma.run(auth, async (tx) => {
-      const sub = await tx.subscription.findUnique({ where: { tenantId: auth.tenantId } });
-      const limit = PLAN_ENTITLEMENTS[(sub?.planCode ?? 'free') as PlanCode]?.maxPipelines ?? null;
+      const limit = (await entitlementsFor(tx, auth.tenantId)).entitlements.maxPipelines;
       const count = await tx.pipeline.count({ where: { tenantId: auth.tenantId, deletedAt: null } });
       if (limit !== null && count >= limit) {
         throw new ForbiddenException({

@@ -71,7 +71,7 @@ test('opens global search with the keyboard and navigates', async ({ page }) => 
   await page.getByPlaceholder('Search leads, contacts, companies, deals or modules…').fill('billing');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/app\/billing/);
-  await expect(page.getByText('Proposed launch pricing, not yet on sale')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
 });
 
 test('signs out', async ({ page }) => {
@@ -87,13 +87,13 @@ for (const theme of ['dark', 'light'] as const) {
   test(`has no WCAG 2.2 A/AA violations on key pages (${theme})`, async ({ page }) => {
     await page.goto('/login');
     await page.evaluate((t) => localStorage.setItem('dealflow:preferences', JSON.stringify({ state: { theme: t, motion: 'off' }, version: 0 })), theme);
-    for (const path of ['/login', '/signup']) {
+    for (const path of ['/', '/pricing', '/login', '/signup']) {
       await page.goto(path);
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
       expect(r.violations, `${path}: ${r.violations.map((v) => v.id).join(', ')}`).toEqual([]);
     }
     await signUp(page);
-    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads', '/app/deals', '/app/contacts', '/app/activities', '/app/pipelines', '/app/settings/import', '/app/settings/custom-fields']) {
+    for (const path of ['/app', '/app/settings', '/app/team', '/app/administration', '/app/leads', '/app/deals', '/app/contacts', '/app/activities', '/app/pipelines', '/app/settings/import', '/app/settings/custom-fields', '/app/billing']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await page.waitForLoadState('networkidle');

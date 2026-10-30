@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useCan, useSession } from '@/lib/session';
+import { RolesManager } from './roles-manager';
 
 interface RoleRow {
   key: string;
@@ -90,20 +91,7 @@ export function MembersTable() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Roles</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          {roles.data?.map((r) => (
-            <div key={r.key} className="rounded-md border border-border p-3">
-              <p className="font-medium">{r.name}</p>
-              <p className="text-sm text-muted-foreground">{r.description}</p>
-              <p className="mt-2 text-xs text-muted-foreground">{r.permissions.length} permissions</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <RolesManager />
     </div>
   );
 }

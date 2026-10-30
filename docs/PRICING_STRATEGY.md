@@ -3,6 +3,10 @@
 **Status:** proposal for Sampledge leadership, 2026-10-30. These are **proposed launch prices, not
 published prices.** Validate costs with real usage data from a beta before advertising them.
 
+**Phase 6 note:** the product now enforces these allowances and can sell them through Stripe or Razorpay once
+prices are created in those dashboards (docs/BILLING.md). The public `/pricing` page and the Billing page label the
+rate card a preview until `PRICING_PUBLISHED=true` is set, which should happen only after this proposal is approved.
+
 ## 1. Proposed rate card (from the master brief)
 
 | Plan | Monthly | Annual (per month) | Target |

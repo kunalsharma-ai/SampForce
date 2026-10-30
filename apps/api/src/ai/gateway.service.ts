@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
 import { AI_AGENTS, type AiAgentKey, type AiStatus, type AiTier, creditsFor, monthlyCreditAllowance } from '@dealflow/types';
+import { entitlementsFor } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { errorMessage } from '../worker/queue';
@@ -63,12 +64,12 @@ export class AiGateway {
   }
 
   async credits(tx: TenantTx, tenantId: string, cap: number | null) {
-    const [sub, seats, used] = await Promise.all([
-      tx.subscription.findUnique({ where: { tenantId } }),
+    const [ent, seats, used] = await Promise.all([
+      entitlementsFor(tx, tenantId),
       tx.membership.count({ where: { tenantId, status: 'ACTIVE' } }),
       tx.aiUsage.aggregate({ where: { tenantId, createdAt: { gte: monthStart() } }, _sum: { credits: true } }),
     ]);
-    const allowance = monthlyCreditAllowance(sub?.planCode ?? 'free', seats);
+    const allowance = monthlyCreditAllowance(ent.appliedPlan, seats);
     const limit = cap === null ? allowance : Math.min(allowance, cap);
     const usedCredits = used._sum.credits ?? 0;
     return { used: usedCredits, allowance, limit, remaining: Math.max(0, limit - usedCredits), seats };

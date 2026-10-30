@@ -56,6 +56,30 @@ export const apiEnvSchema = z.object({
   AI_SERVER_FALLBACKS: bool.default('true'),
   /** Model calls one user may make per minute. */
   AI_USER_CALLS_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(30),
+
+  // ───── Billing (Phase 6). With no provider keys, checkout says it is not configured. ─────
+  STRIPE_SECRET_KEY: z.string().optional().transform((v) => v || undefined),
+  STRIPE_WEBHOOK_SECRET: z.string().optional().transform((v) => v || undefined),
+  STRIPE_API_BASE_URL: z.string().url().default('https://api.stripe.com'),
+  /** Ask Stripe Tax to calculate tax at checkout. Needs Stripe Tax set up on the account. */
+  STRIPE_AUTOMATIC_TAX: bool.default('false'),
+  /** Price ids per plan and interval, e.g. `launch:MONTH=price_123,launch:YEAR=price_456`. Unlisted plans cannot be bought. */
+  STRIPE_PRICES: z.string().default(''),
+  RAZORPAY_KEY_ID: z.string().optional().transform((v) => v || undefined),
+  RAZORPAY_KEY_SECRET: z.string().optional().transform((v) => v || undefined),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional().transform((v) => v || undefined),
+  RAZORPAY_API_BASE_URL: z.string().url().default('https://api.razorpay.com'),
+  /** Razorpay plan ids per plan and interval, same format as STRIPE_PRICES. */
+  RAZORPAY_PLANS: z.string().default(''),
+  /** Days a past-due workspace keeps its paid allowances before falling back to Free. */
+  BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(60).default(14),
+  TRIAL_DAYS: z.coerce.number().int().min(1).max(60).default(14),
+  /** Set true only once the rate card is approved for publication; until then the site labels prices a preview. */
+  PRICING_PUBLISHED: bool.default('false'),
+  /** Shown for Enterprise Plus and custom quotes. Unset means no contact address is shown. */
+  SALES_CONTACT_EMAIL: z.string().email().optional().or(z.literal('').transform(() => undefined)),
+  /** Signs operator-console sessions. Unset disables the operator console entirely. */
+  OPERATOR_JWT_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
 });
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 
@@ -74,5 +98,10 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_NETWORK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_NETWORK_TARGETS is for tests only and cannot be used in production');
   }
-  return parsed.data;
+  const d = parsed.data;
+  if (d.STRIPE_SECRET_KEY && !d.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');
+  if (!!d.RAZORPAY_KEY_ID !== !!d.RAZORPAY_KEY_SECRET) throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set together');
+  if (d.RAZORPAY_KEY_ID && !d.RAZORPAY_WEBHOOK_SECRET) throw new Error('RAZORPAY_WEBHOOK_SECRET is required when Razorpay keys are set');
+  if (d.OPERATOR_JWT_SECRET && d.OPERATOR_JWT_SECRET === d.JWT_ACCESS_SECRET) throw new Error('OPERATOR_JWT_SECRET must differ from JWT_ACCESS_SECRET');
+  return d;
 }

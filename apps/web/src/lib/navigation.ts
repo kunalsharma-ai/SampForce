@@ -101,7 +101,7 @@ export const MODULES: ModuleDef[] = [
   { slug: 'customer-success', label: 'Customer Success', icon: HeartHandshake, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Explained health scores, escalations, renewals and churn-risk alerts.',
     capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'] },
-  { slug: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', status: 'planned', phase: 6,
+  { slug: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', status: 'planned', phase: 7,
     summary: 'Custom reports and dashboards. Ready-made revenue analytics are in Revenue Intelligence today.',
     capabilities: ['Report builder', 'Custom dashboards', 'Scheduled exports'] },
   { slug: 'team', label: 'Team Management', icon: Users, group: 'Organization', status: 'available', phase: 1,
@@ -112,11 +112,11 @@ export const MODULES: ModuleDef[] = [
     summary: 'Third-party apps and templates.',
     capabilities: ['Integration listings', 'Workflow and dashboard templates', 'Developer SDK'] },
   { slug: 'billing', label: 'Billing', icon: CreditCard, group: 'Organization', status: 'available', phase: 1,
-    summary: 'Your plan and the proposed DealFlow rate card.', capabilities: [] },
+    summary: 'Plan, seats, usage, checkout and invoices.', capabilities: [] },
   { slug: 'settings', label: 'Settings', icon: Settings, group: 'Organization', status: 'available', phase: 1,
     summary: 'Workspace and personal preferences.', capabilities: [] },
   { slug: 'administration', label: 'Administration', icon: ShieldCheck, group: 'Organization', status: 'available', phase: 1,
-    summary: 'Audit log and governance controls.', capabilities: [] },
+    summary: 'Audit log, support access and governance controls.', capabilities: [] },
 ];
 
 export const PHASE_NAMES: Record<number, string> = {

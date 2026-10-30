@@ -8,6 +8,15 @@ import {
   createActionItemsSchema,
   forecastQuerySchema,
   campaignInputSchema,
+  changePlanSchema,
+  checkoutSchema,
+  operatorLoginSchema,
+  operatorPlanSchema,
+  operatorStatusSchema,
+  roleInputSchema,
+  seatsSchema,
+  supportGrantSchema,
+  trialSchema,
   commercialSettingsSchema,
   contractInputSchema,
   contractSignSchema,
@@ -304,6 +313,41 @@ export function buildOpenApiDocument(): object {
   action('get', '/success/escalations', 'Customer success', 'Escalations (success:read)', undefined, { query: z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() }) });
   r.registerPath({ method: 'post', path: '/success/escalations', tags: ['Customer success'], summary: 'Open an escalation (success:write)', security: secured, request: body(escalationInputSchema), responses: { 201: ok('Escalation'), ...errors } });
   action('post', '/success/escalations/{id}/resolve', 'Customer success', 'Resolve with a note (success:write)', escalationResolveSchema);
+
+  // Phase 6: billing, custom roles, onboarding, support access and the operator console.
+  action('get', '/billing', 'Billing', 'Plan, seats, usage against allowances and what can be bought here (billing:read)');
+  action('get', '/billing/invoices', 'Billing', 'Invoices recorded from provider webhooks (billing:read)');
+  action('post', '/billing/checkout', 'Billing', 'Start hosted checkout; returns the provider URL (billing:manage)', checkoutSchema);
+  action('post', '/billing/portal', 'Billing', 'Stripe customer portal URL (billing:manage)');
+  action('post', '/billing/seats', 'Billing', 'Change seats; Stripe prorates now, Razorpay from the next cycle (billing:manage)', seatsSchema);
+  action('post', '/billing/plan', 'Billing', 'Change plan; refuses downgrades current usage does not fit (billing:manage)', changePlanSchema);
+  action('post', '/billing/cancel', 'Billing', 'Cancel at the end of the period (billing:manage)');
+  action('post', '/billing/resume', 'Billing', 'Withdraw a scheduled cancellation; Stripe only (billing:manage)');
+  action('post', '/billing/trial', 'Billing', 'Start the one free trial (billing:manage)', trialSchema);
+  for (const provider of ['stripe', 'razorpay']) {
+    r.registerPath({ method: 'post', path: `/billing/webhooks/${provider}`, tags: ['Billing'], summary: `Public: ${provider} webhook, verified by signature over the raw body; idempotent per event id`,
+      responses: { 200: ok('Received'), 400: json(error, 'Invalid signature'), 404: json(error, 'Provider not configured') } });
+  }
+  r.registerPath({ method: 'get', path: '/public/pricing', tags: ['Billing'], summary: 'Public: the rate card, labelled a preview until published (no auth)', responses: { 200: ok('Pricing') } });
+  r.registerPath({ method: 'post', path: '/tenants/current/roles', tags: ['Tenants'], summary: 'Create a custom role; plan-gated; only permissions you hold (members:manage)', security: secured, request: body(roleInputSchema), responses: { 201: ok('Role'), ...errors } });
+  action('put', '/tenants/current/roles/{id}', 'Tenants', 'Update a custom role (members:manage)', roleInputSchema);
+  r.registerPath({ method: 'delete', path: '/tenants/current/roles/{id}', tags: ['Tenants'], summary: 'Delete an unused custom role (members:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('get', '/onboarding', 'Tenants', 'Getting-started checklist derived from workspace data (dashboard:read)');
+  r.registerPath({ method: 'post', path: '/onboarding/dismiss', tags: ['Tenants'], summary: 'Hide or show the checklist (tenant:manage)', security: secured, request: body(z.object({ dismissed: z.boolean().optional() })), responses: { 204: ok('Saved'), ...errors } });
+  action('get', '/support-access', 'Tenants', 'Support access grants (tenant:manage)');
+  r.registerPath({ method: 'post', path: '/support-access', tags: ['Tenants'], summary: 'Let platform support see members and the audit log for 1 to 72 hours (tenant:manage)', security: secured, request: body(supportGrantSchema), responses: { 201: ok('Grant'), ...errors } });
+  r.registerPath({ method: 'delete', path: '/support-access/{id}', tags: ['Tenants'], summary: 'End support access now (tenant:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Ended'), ...notFound, ...errors } });
+  const op = (method: 'get' | 'post', path: string, summary: string, schema?: z.ZodTypeAny) =>
+    r.registerPath({ method, path: `/operator${path}`, tags: ['Operator'], summary: `Operator console: ${summary}. Separate df_op session; 404 when the console is disabled`,
+      request: { ...(path.includes('{id}') ? { params: idParam } : {}), ...(schema ? body(schema) : {}) }, responses: { 200: ok('OK'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled or not found') } });
+  op('post', '/login', 'sign in', operatorLoginSchema);
+  op('post', '/logout', 'sign out');
+  op('get', '/me', 'current operator');
+  op('get', '/tenants', 'workspaces with plan and member counts');
+  op('get', '/tenants/{id}', 'one workspace; members and audit log only under a support grant');
+  op('post', '/tenants/{id}/plan', 'override plan, seats and status (ADMIN)', operatorPlanSchema);
+  op('post', '/tenants/{id}/status', 'suspend or reactivate (ADMIN)', operatorStatusSchema);
+  op('get', '/audit-log', 'platform audit log');
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

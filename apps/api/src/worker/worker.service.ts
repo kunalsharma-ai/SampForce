@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
+import { BillingService } from '../billing/billing.service';
 import { ApprovalsService } from '../automation/approvals.service';
 import { EventRelay } from '../automation/event-relay.service';
 import { WorkflowExecutor } from '../automation/executor.service';
@@ -19,11 +20,12 @@ export interface WorkerTick {
   aiRuns: number;
   contracts: number;
   health: number;
+  billing: number;
 }
 
 /**
  * The background worker: one loop that drains the Postgres-backed queues (outbox, workflow runs,
- * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health). Safe to run several copies; every claim uses
+ * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health, trial expiry and dunning). Safe to run several copies; every claim uses
  * FOR UPDATE SKIP LOCKED with a lease.
  */
 @Injectable()
@@ -42,6 +44,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly aiRunner: AiRunner,
     private readonly contracts: ContractsService,
     private readonly success: SuccessService,
+    private readonly billing: BillingService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -73,7 +76,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const aiRuns = await this.aiRunner.runDue();
     const contracts = await this.contracts.runDue();
     const health = await this.success.sweep();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health };
+    const billing = await this.billing.runDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

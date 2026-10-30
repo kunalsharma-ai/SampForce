@@ -8,12 +8,14 @@ import { AuditModule } from './audit/audit.module';
 import { AutomationModule } from './automation/automation.module';
 import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { CommercialModule } from './commercial/commercial.module';
 import { CommonModule } from './common/common.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
+import { OperatorModule } from './operator/operator.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthController } from './health/health.controller';
 import { RevenueModule } from './revenue/revenue.module';
@@ -50,6 +52,8 @@ import { WorkerModule } from './worker/worker.module';
     CommercialModule,
     MarketingModule,
     RevenueModule,
+    BillingModule,
+    OperatorModule,
     WorkerModule,
   ],
   controllers: [HealthController],
