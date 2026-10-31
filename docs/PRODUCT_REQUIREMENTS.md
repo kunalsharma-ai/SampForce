@@ -63,7 +63,7 @@ Status key: ✅ shipped · 🟡 schema only · ⏳ planned (phase).
 | Member list and role management with owner protections | ✅ |
 | Append-only audit log with UI | ✅ |
 | Invitations, custom roles, teams UI | ⏳ P2/P6 |
-| MFA, SSO (SAML/OIDC), SCIM | ⏳ P8 |
+| MFA (TOTP), SSO (OIDC), SCIM 2.0, device sign-out | ✅ P8 (SAML and WebAuthn not built) |
 
 ### 6.2 Command Center
 | Feature | Status |

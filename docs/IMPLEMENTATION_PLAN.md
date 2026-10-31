@@ -14,7 +14,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | 5. Advanced Revenue | Marketing automation, revenue analytics, customer success, quotes/proposals/contracts, multi-currency/FX, territories, localisation | Module acceptance tests | **Complete (2026-10-30)**, with the deferrals listed below (no email sending, no e-signature provider, no territories or localisation yet) |
 | **6. Commercialization** | Billing engine (Stripe/Razorpay adapters), entitlements enforcement, usage metering, operator console, onboarding, marketing site, custom roles | Test 10 | **Complete (2026-10-30)**, with the deferrals listed below. Payment providers tested against local fixtures only |
 | **7. Immersive Experience** | Report builder and custom dashboards (moved from Phase 6), Relationship Galaxy, Revenue Globe, animated pipeline intelligence, time-based replays, spatial dashboards | 60 FPS budget, fallbacks pass a11y | **Complete (2026-10-30)**, with the deferrals listed below. Fallbacks pass axe; 60 FPS not measurable here (software renderer only) |
-| 8. Enterprise Readiness | SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, perf tuning, pen-test prep, prod runbooks | Security review, load test targets | Planned |
+| **8. Enterprise Readiness** | SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, perf tuning, pen-test prep, prod runbooks | Security review, load test targets | **Complete (2026-10-31)**, with the deferrals listed below. Helm chart checked in CI only (not installed on a cluster); no external pen test yet |
 
 ## Feature status (Phase 1 close)
 
@@ -84,9 +84,9 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
    tooltips say so.
 3. Rate limiting is in-memory per API instance; switch the throttler storage to Redis before running more
    than one instance.
-4. CSP is Helmet's default on the API; a strict CSP with nonces for the web app is a Phase 8 task.
+4. CSP is Helmet's default on the API; a strict CSP with nonces for the web app is a Phase 8 task (done in Phase 8).
 5. pgvector is not used yet; the compose file already uses the pgvector Postgres image.
-6. Account lockout after repeated failures and MFA are Phase 8 (rate limiting applies now).
+6. Account lockout after repeated failures and MFA are Phase 8 (rate limiting applies now; both done in Phase 8).
 
 ## Phase 2 notes
 
@@ -276,7 +276,53 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 5. Charts use the shared palette of six colours; pies fold groups beyond six into "Other".
 6. Report results are computed on every open (no caching); a very large workspace may hit the 10 s timeout, which the API reports as an error.
 
-## Continuation instructions (Phase 8)
+## Feature status (Phase 8 close)
+
+| Feature | Status |
+|---|---|
+| Two-step verification (TOTP, RFC 6238): enrolment with password and QR code, 10 single-use recovery codes, replay rejection, turn off, regenerate codes; sign-in challenge step | Implemented, tested (unit with RFC vectors + API + e2e + axe) |
+| Account lockout: 10 failures → 15 minutes, atomic, generic error | Implemented, tested (API) |
+| Workspace policy: require two-step verification for password sign-in (members are held on an enrolment screen) | Implemented, tested (API + e2e) |
+| Signed-in devices: list with method, device, IP and last use; sign out one or all others, effective immediately | Implemented, tested (API + e2e) |
+| Single sign-on with OpenID Connect: per-workspace connection, discovery check, PKCE, state, nonce, JWKS verification, allowed domains, invitations or just-in-time accounts with a default role, enforcement (owners exempt), sessions bound to the workspace | Implemented, tested against a local OIDC provider (9 API tests including wrong issuer, audience, nonce, signature and domain). **Not yet tried with Okta, Entra ID or Google** |
+| SCIM 2.0 Users: list/filter, get, create, replace, patch (Okta and Entra styles), delete; owner and cross-workspace protections; seat limits; hashed tokens | Implemented, tested (API). **Not yet tried with a real directory** |
+| SSO and SCIM limited to Enterprise plans | Implemented (decision to confirm) |
+| Content security policy with per-request nonces and `strict-dynamic`; HSTS; COOP | Implemented, tested (e2e fails on any violation, 3D pages included) |
+| Prometheus metrics (route-template labels), worker liveness, OpenTelemetry traces, log and trace redaction, `trace_id` in logs | Implemented, tested (API e2e + tracing check script) |
+| Helm chart: API, worker, web, migration Job, HPA, PDB, NetworkPolicy, ServiceMonitor, PrometheusRule (7 alerts), hardened pods | Implemented. **Checked by CI lint and schema validation only; not installed on a cluster** |
+| Backups (`dealflow_backup` role, checksum, manifest) and verified restore into a new database | Implemented, drilled (206k and 1.95M rows; docs/runbooks/database-restore.md) |
+| Encryption key rotation (`ENCRYPTION_KEY_PREVIOUS` + re-seal script) | Implemented, tested (unit) and drilled |
+| Load-test seed and runner; fixes for generic plans, JIT, globe and forecast | Done (docs/perf/README.md) |
+| Pen-test brief, STRIDE threat model, dependency audit (6 of 8 advisories fixed), secret scan | Done (docs/security/PENTEST_PREP.md) |
+| Runbooks: deploy and rollback, incident, alerts, restore, key rotation | Written; restore and key rotation drilled, the rest not |
+
+### Deferred from the Phase 8 scope (not built)
+
+- SAML 2.0 (OIDC only), WebAuthn/passkeys, SCIM Groups, IP allow-lists.
+- Password reset by email (no email sending exists yet).
+- Egress NetworkPolicies, a WAF configuration, and a point-in-time-recovery drill.
+- An external penetration test, and a real-device check of the Phase 7 60 FPS budget (no hardware or cluster here).
+- Provider test-mode runs (Stripe, Razorpay, Google, Microsoft) and AI evals against the real model: no keys exist in
+  this environment, so these integrations remain tested against local fixtures only.
+- Zod 4 upgrade (closes the last dependency advisory; mitigated, see the pen-test brief).
+
+### Known limits
+
+1. Access tokens issued before a refresh rotation remain valid until they expire (at most 15 minutes); explicit
+   sign-out and device sign-out are immediate.
+2. The JWKS fetch during SSO is not re-checked against DNS rebinding (discovery and token calls are).
+3. At ten times the load-test size (200,000 deals), the forecast takes about 2.6 s and pipeline flow about 1 s.
+4. Every page is rendered per request because of the CSP nonce; static caching of marketing pages is lost.
+5. The Marketplace module is not scheduled; it is labelled "After launch".
+
+## After Phase 8
+
+All eight roadmap phases are complete. Before general availability: install the chart on staging and run every
+runbook there; run Stripe and Razorpay in test mode (docs/BILLING.md); connect a real Okta or Entra tenant for SSO and
+SCIM; run the AI evals with a real key; measure the 3D views on real devices; commission the external pen test with
+docs/security/PENTEST_PREP.md; confirm the Enterprise-only SSO decision and the rate card.
+
+## Original continuation instructions (Phase 8, done)
 
 Follow the roadmap row for Phase 8 (SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, performance tuning,
 pen-test preparation, production runbooks). Include a real-device check of the Phase 7 frame-rate budget using the

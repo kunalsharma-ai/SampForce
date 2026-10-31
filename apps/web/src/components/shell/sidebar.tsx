@@ -5,7 +5,7 @@ import { ChevronsLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { type ModuleDef, moduleHref, MODULES } from '@/lib/navigation';
+import { type ModuleDef, moduleHref, MODULES, phaseLabel } from '@/lib/navigation';
 import { usePreferences } from '@/stores/preferences';
 import { Logo } from '../logo';
 
@@ -53,8 +53,8 @@ export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: bool
                     <>
                       <span className="relative flex-1 truncate">{m.label}</span>
                       {m.status === 'planned' && (
-                        <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned for Phase ${m.phase}`}>
-                          P{m.phase}
+                        <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
+                          {phaseLabel(m.phase, true)}
                         </Badge>
                       )}
                     </>

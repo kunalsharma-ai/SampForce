@@ -14,13 +14,13 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
     { name: 'Zoom', phase: 'Later phase', needs: 'Zoom OAuth app' },
   ] },
   { category: 'Communication', items: [
-    { name: 'Twilio (SMS, voice)', phase: 'Phase 5', needs: 'Twilio account and number registration' },
-    { name: 'WhatsApp Business Platform', phase: 'Phase 5', needs: 'Meta Business verification' },
+    { name: 'Twilio (SMS, voice)', phase: 'Later phase', needs: 'Twilio account and number registration' },
+    { name: 'WhatsApp Business Platform', phase: 'Later phase', needs: 'Meta Business verification' },
   ] },
   { category: 'Payments & documents', items: [
-    { name: 'Stripe', phase: 'Phase 6', needs: 'Stripe account and webhook secret' },
-    { name: 'Razorpay', phase: 'Phase 6', needs: 'Razorpay account' },
-    { name: 'DocuSign', phase: 'Phase 5', needs: 'DocuSign developer account' },
+    { name: 'Stripe (your own account)', phase: 'Later phase', needs: 'Stripe account and webhook secret' },
+    { name: 'Razorpay (your own account)', phase: 'Later phase', needs: 'Razorpay account' },
+    { name: 'DocuSign', phase: 'Later phase', needs: 'DocuSign developer account' },
   ] },
   { category: 'Automation & developer', items: [
     { name: 'Zapier / Make / n8n', phase: 'Later phase', needs: 'Partner app listing' },

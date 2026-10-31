@@ -12,13 +12,13 @@
 | End-to-end (production builds) | Playwright (Chromium desktop + Pixel 7) | `apps/web/e2e` | Every push |
 | Accessibility | axe-core via Playwright, WCAG 2.0/2.1/2.2 A+AA tags, light and dark | `apps/web/e2e/app.spec.ts` | Every push |
 | Migration | `prisma migrate deploy` on an empty DB | CI step | Every push |
-| Performance | k6 API load tests; Lighthouse CI budgets | Phase 2+ | Nightly |
-| Security | CodeQL, dependency audit, ZAP baseline | Phase 2/8 | Nightly |
+| Performance | `scripts/load/run.mjs` against a seeded workspace (`seed:load`); results in docs/perf | Phase 8 (manual; not in CI) | Before releases |
+| Security | `pnpm audit --prod`, secret scan, CSP-violation check in the browser suite; CodeQL and ZAP not set up | Phase 8 | Before releases |
 | AI evaluation | Golden datasets per prompt with deterministic scorers (`pnpm --filter @dealflow/api eval`, needs a real key; `--fixture` checks the harness only) | `apps/api/evals` | On prompt change |
 | AI plumbing | API and browser tests against a local Claude Messages API fixture | `apps/api/test/fixtures/ai-fixture.ts`, `apps/api/test/ai*.e2e.test.ts`, `apps/web/e2e/ai.spec.ts` | Every push |
 | Workflow execution | Pure engine unit tests; API tests drive the worker with `WorkerService.drain()`; providers replaced by a local HTTP fixture | `apps/api/src/automation/*.test.ts`, `apps/api/test/automation*.e2e.test.ts` | Every push |
 | Billing | Provider sandbox + webhook fixtures, proration math unit tests | Phase 6 | Every push |
-| Backup restore | Restore latest snapshot into a scratch DB and run smoke tests | Phase 8 | Weekly |
+| Backup restore | `scripts/backup.sh` then `scripts/restore.sh` into a new DB (checksum, RLS check, runtime-role check), row counts compared | Phase 8 (drilled manually) | Weekly on staging |
 
 ## Phase 1 results (2026-10-30)
 
@@ -103,6 +103,20 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 | Stage-history back-fill | Checked by rebuilding `deal_stage_events` from the audit log in a rolled-back transaction: 8 of 8 recorded events reproduced |
 | Frame rate | Measured only in headless Chromium with SwiftShader (no GPU, 4 cores) on 47 companies, 100 contacts, 95 deals: galaxy about 7 to 10 fps, globe 10 to 17 fps, both at 1× pixels after adaptive quality stepped down. **Not a real-device result**; the 60 FPS target is unverified |
 | `scripts/check-rls.sql` | Passes on both databases (3 new tenant tables) |
+
+## Phase 8 results (2026-10-31)
+
+| Suite | Result |
+|---|---|
+| `packages/config` / `packages/types` unit | 4 / 29 passed |
+| `apps/api` unit + integration | 248 passed in 35 files. New: TOTP against RFC 6238 and RFC 4226 vectors (5); URL redaction; key rotation in `SecretBox`; `mfa.e2e` (4: enrolment and sign-in with a code or a recovery code; lockout after ten failures without revealing it, counting failed codes too; workspace policy restricting members until they enrol; device list and signing out the others); `sso-scim.e2e` (9: Enterprise gate and provider check before enabling; uninvited people and other domains refused; invited sign-in bound to the workspace; tampered or mismatched responses refused, expired state, JIT into the default role; enforcement with owner break-glass and a downgrade lifting it; SCIM tokens on Enterprise only, shown once; SCIM create, find, update, deactivate and remove in Okta and Entra styles; owners and shared accounts untouched; discovery documents); `observability.e2e` (3: durations by route template only; worker liveness; readiness tied to the database) |
+| `apps/web` unit | 11 passed. New: CSP builder (nonce, `strict-dynamic`, HTTPS-only upgrade, embeddable forms) |
+| `apps/web` Playwright e2e + accessibility | 39 passed, twice in a row. New: two-step enrolment and sign-in with a code and a recovery code; workspace security page; SSO error page; zero CSP violations across pages including the 3D views; axe on the two security pages. The accessibility sweep's timeout was raised to 120 s because it now scans 22 pages; one run also showed a transient axe failure in `automation.spec.ts` that did not repeat in three further runs |
+| Tracing check (`scripts/verify-tracing.mjs`) | 45 spans (http, express, prisma), health checks untraced, no secrets in spans, `trace_id` in logs |
+| Load tests | docs/perf/README.md |
+| Backup and restore, key rotation | Drilled; docs/runbooks |
+| `scripts/check-rls.sql` | Passes on both databases (3 new tenant tables) |
+| Helm chart | Not rendered here (no Helm binary); CI runs `helm lint --strict` and kubeconform |
 
 ## Critical acceptance tests (from the brief) and where they live
 

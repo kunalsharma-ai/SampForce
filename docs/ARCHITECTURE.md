@@ -53,7 +53,7 @@ dealflow/
 │   ├── integrations/   (Phase 3) provider adapters with a common contract
 │   ├── analytics/      (Phase 5) metric definitions and forecast models
 │   └── billing/        (Phase 6) plans, entitlements, payment-provider adapters
-├── infrastructure/     (Phase 8) Kubernetes manifests / Helm, Terraform
+├── infrastructure/     docker/ and helm/dealflow (Phase 8 chart); no Terraform
 ├── docs/               This documentation
 ├── scripts/            db-setup.sh and operational scripts
 ├── docker-compose.yml  Local Postgres (pgvector), Redis, API, web
@@ -87,12 +87,16 @@ Packages are introduced when their first real consumer ships, so the tree never 
 - Refresh token: 256-bit random, only its SHA-256 stored, rotated on every refresh. Re-use of a rotated token
   revokes **all** the user's sessions (theft detection). Cookie path is limited to `/api/v1/auth`.
 - Multi-workspace users switch tenant with `POST /auth/switch-tenant`; membership is verified first.
-- Phase 8 adds MFA (TOTP/WebAuthn), SAML/OIDC SSO and SCIM.
+- Phase 8 added TOTP two-step verification, account lockout, OIDC single sign-on, SCIM 2.0 and a device list.
+  Access tokens also carry `amr` (password, mfa or sso) and, for SSO, `stid` (the workspace that signed the person in).
+  The guard checks the session row on every request. WebAuthn and SAML are not built (ADR 0012).
 
 ## 6. Data layer
 
 - PostgreSQL 16 with Prisma 6. Schema and ERD: [DATABASE.md](DATABASE.md).
-- Two roles: `dealflow_owner` (migrations) and `dealflow_app` (runtime, RLS enforced).
+- Three roles: `dealflow_owner` (migrations), `dealflow_app` (runtime, RLS enforced) and `dealflow_backup`
+  (read-only, BYPASSRLS, backups only).
+- Every tenant transaction sets `plan_cache_mode = force_custom_plan` and `jit = off` (docs/perf/README.md).
 - Hand-written SQL migrations add RLS policies, append-only grants on `audit_logs`, and reference data.
 - pgvector (Phase 4) holds embeddings in tenant-scoped tables under the same RLS policies, so retrieval for
   AI can never cross tenants.
@@ -134,9 +138,10 @@ successful health check with real credentials; in tests adapters run against rec
 
 - **Implemented:** Dockerfiles for API and web (standalone Next.js output), `docker-compose.yml` for a
   local stack, GitHub Actions CI with Postgres running migrations, all test suites and accessibility checks.
-- **Phase 8:** Kubernetes (Helm), managed Postgres with PITR, read replicas for analytics, Redis with
-  persistence, CDN in front of web, OpenTelemetry traces/metrics, centralized logs, backups with restore
-  drills, documented RTO/RPO, blue-green deploys with migration gates.
+- **Phase 8 (done):** Helm chart with a pre-upgrade migration Job, HPAs, PDBs, NetworkPolicies, ServiceMonitors
+  and alert rules (checked in CI, not yet installed on a cluster); Prometheus metrics and OpenTelemetry traces;
+  backup and restore scripts with measured drill times; runbooks. See [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Not done:** read replicas, Redis, CDN configuration, blue-green deploys, PITR drills.
 
 ## 11. Degradation matrix
 

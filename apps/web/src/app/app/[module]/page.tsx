@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
-import { findModule, MODULES, PHASE_NAMES } from '@/lib/navigation';
+import { findModule, LATER, MODULES, PHASE_NAMES } from '@/lib/navigation';
 
 export function generateStaticParams() {
   return MODULES.filter((m) => m.status === 'planned').map((m) => ({ module: m.slug }));
@@ -34,14 +34,19 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
           <div>
             <CardTitle>Not available yet</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Scheduled for <Badge tone="primary">Phase {m.phase}: {PHASE_NAMES[m.phase]}</Badge>
+              {m.phase >= LATER ? (
+                <>Planned <Badge tone="primary">after launch</Badge>, not yet scheduled</>
+              ) : (
+                <>Scheduled for <Badge tone="primary">Phase {m.phase}: {PHASE_NAMES[m.phase]}</Badge></>
+              )}
             </p>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            The data model for this module is designed and documented. Its screens, APIs and tests are built in the
-            phase above and will replace this page when they pass acceptance tests.
+            {m.phase >= LATER
+              ? 'Nothing in this module works yet. These are the capabilities under consideration; none has a date.'
+              : 'The data model for this module is designed and documented. Its screens, APIs and tests are built in the phase above and will replace this page when they pass acceptance tests.'}
           </p>
           <ul className="space-y-2">
             {m.capabilities.map((c) => (

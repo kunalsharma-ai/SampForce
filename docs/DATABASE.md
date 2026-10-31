@@ -180,7 +180,7 @@ insert B's rows; context does not leak across pooled transactions; audit logs ca
 4. Migrations run as `dealflow_owner` in a pre-deploy job; the app never has DDL rights.
 5. Migration tests: CI applies all migrations to an empty database on every run.
 
-## Retention (defaults, configurable per tenant in Phase 8)
+## Retention (defaults; per-tenant configuration was planned for Phase 8 and is not built)
 
 | Data | Default |
 |---|---|
@@ -189,3 +189,17 @@ insert B's rows; context does not leak across pooled transactions; audit logs ca
 | Revoked/expired sessions | Purged after 30 days |
 | AI conversation transcripts | 90 days unless the tenant opts for longer |
 | Tenant data after cancellation | Export window, then deletion per the data-deletion workflow |
+
+## Phase 8 tables
+
+| Table | Tenant-scoped | Purpose |
+|---|---|---|
+| `mfa_recovery_codes` | No (per user) | SHA-256 hashes of single-use recovery codes, `used_at` when spent |
+| `sso_connections` | Yes (one per workspace) | OIDC issuer, client id, sealed client secret, allowed domains, JIT and default role, enabled/enforced, `last_verified_at`; `login_slug` is globally unique and readable only through the narrow `sso_login_lookup` policy (`app.sso_login_slug`) |
+| `sso_identities` | Yes | Provider subject linked to a user, unique per connection |
+| `scim_tokens` | Yes | Hashed `dfscim_` tokens, prefix for display, `last_used_at`, `revoked_at`; looked up only through `scim_token_lookup` (`app.scim_token_hash`) |
+
+Columns added: `users` (`failed_login_count`, `locked_until`, `mfa_secret_enc`, `mfa_enabled_at`, `mfa_last_step`),
+`sessions` (`auth_method`, `sso_tenant_id`), `tenants` (`require_mfa`, `sso_enforced`), `memberships`
+(`external_id`, unique per workspace). Migrations: `20261031000000_enterprise_identity`,
+`20261031000100_sso_enforced_flag`. The plan catalogue gains the `sso` entitlement (Enterprise plans).

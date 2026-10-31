@@ -44,6 +44,9 @@ export interface ModuleDef {
 }
 
 /** The 26 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
+/** Phase number for work planned after the eight roadmap phases; it has no date. */
+export const LATER = 9;
+
 export const MODULES: ModuleDef[] = [
   { slug: '', label: 'Command Center', icon: LayoutDashboard, group: 'Workspace', status: 'available', phase: 1,
     summary: 'Live KPIs, pipeline health and team activity in one view.', capabilities: [] },
@@ -108,7 +111,7 @@ export const MODULES: ModuleDef[] = [
     summary: 'Members, roles and permissions.', capabilities: [] },
   { slug: 'integrations', label: 'Integrations', icon: Plug, group: 'Organization', status: 'available', phase: 1,
     summary: 'Connection status for every integration.', capabilities: [] },
-  { slug: 'marketplace', label: 'Marketplace', icon: Store, group: 'Organization', status: 'planned', phase: 8,
+  { slug: 'marketplace', label: 'Marketplace', icon: Store, group: 'Organization', status: 'planned', phase: LATER,
     summary: 'Third-party apps and templates.',
     capabilities: ['Integration listings', 'Workflow and dashboard templates', 'Developer SDK'] },
   { slug: 'billing', label: 'Billing', icon: CreditCard, group: 'Organization', status: 'available', phase: 1,
@@ -129,6 +132,12 @@ export const PHASE_NAMES: Record<number, string> = {
   7: 'Immersive Experience',
   8: 'Enterprise Readiness',
 };
+
+/** How a module's planned phase reads in badges: "Phase 5", or "After launch" for unscheduled work. */
+export function phaseLabel(phase: number, short = false): string {
+  if (phase >= LATER) return short ? 'Later' : 'After launch';
+  return short ? `P${phase}` : `Phase ${phase}`;
+}
 
 export function moduleHref(m: ModuleDef): string {
   return m.slug ? `/app/${m.slug}` : '/app';

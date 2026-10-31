@@ -3,7 +3,7 @@
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
 AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
-TypeScript. This repository is at the end of **Phase 7 (Reports and Immersive Views)**. See
+TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enterprise Readiness)**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
 
 ## What works today
@@ -25,7 +25,11 @@ TypeScript. This repository is at the end of **Phase 7 (Reports and Immersive Vi
 - Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true`
 - Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
 - Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
-- 26-module navigation; unshipped modules (Marketplace) show their roadmap instead of dead ends
+- Two-step verification (authenticator app, recovery codes), account lockout, signed-in device list with remote sign-out
+- Single sign-on with OpenID Connect and SCIM 2.0 provisioning on Enterprise plans (tested against a local provider only)
+- Strict content security policy with nonces; Prometheus metrics, OpenTelemetry traces, redacted logs
+- Helm chart (CI-checked, not yet installed on a cluster), backup/restore scripts with drilled times, runbooks in [docs/runbooks](docs/runbooks/README.md)
+- 26-module navigation; the one unscheduled module (Marketplace) says so instead of leading to a dead end
 - OpenAPI 3.1 at `/api/v1/openapi.json`, Swagger UI at `/api/v1/docs`
 
 ## Quick start
@@ -66,7 +70,9 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 | `packages/database` | Prisma schema, migrations (RLS), tenant-context helper |
 | `packages/ui` | Design tokens, Tailwind preset, accessible components |
 | `packages/config` | Validated environment configuration |
-| `docs/` | PRD, architecture, ERD, AI/automation, security, tests, UI spec, pricing, feature matrix, ADRs |
+| `infrastructure/helm/dealflow` | Helm chart (API, worker, web, migrations, autoscaling, policies, alerts) |
+| `scripts/` | Database setup, RLS check, backup, restore, load-test runner |
+| `docs/` | PRD, architecture, ERD, AI/automation, security, tests, UI spec, pricing, feature matrix, ADRs, deployment, runbooks |
 
 ## Documentation
 
@@ -77,6 +83,7 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 - [UI/UX design system](docs/UI_DESIGN_SYSTEM.md)
 - [Competitive feature matrix](docs/FEATURE_MATRIX.md) · [Pricing & unit economics](docs/PRICING_STRATEGY.md)
 - [Implementation plan & feature status](docs/IMPLEMENTATION_PLAN.md) · [Billing setup](docs/BILLING.md)
+- [Deployment](docs/DEPLOYMENT.md) · [Observability](docs/OBSERVABILITY.md) · [Runbooks](docs/runbooks/README.md) · [Performance](docs/perf/README.md) · [Pen-test brief](docs/security/PENTEST_PREP.md)
 
 ## Credentials required for live integrations
 

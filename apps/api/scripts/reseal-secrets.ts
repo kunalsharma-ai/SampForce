@@ -62,7 +62,7 @@ async function main(): Promise<void> {
       });
     }
     console.warn(`${dryRun ? 'Dry run, nothing written. ' : ''}${tenants.length} workspaces checked.`);
-    console.table(counts);
+    for (const [k, c] of Object.entries(counts)) console.warn(`${k}: ${c.checked} checked, ${c.resealed} re-sealed`);
   } finally {
     await prisma.$disconnect();
   }

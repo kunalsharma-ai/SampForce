@@ -1,5 +1,13 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  mfaDisableSchema,
+  mfaEnableSchema,
+  mfaPolicySchema,
+  mfaRegenerateSchema,
+  mfaSetupSchema,
+  mfaVerifySchema,
+  scimTokenCreateSchema,
+  ssoConnectionSchema,
   acceptInvitationSchema,
   acceptNextStepSchema,
   actionDecisionSchema,
@@ -374,6 +382,44 @@ export function buildOpenApiDocument(): object {
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });
+
+  // Phase 8: two-step verification, sessions, workspace security, single sign-on and SCIM.
+  r.registerPath({ method: 'post', path: '/auth/mfa/verify', tags: ['Auth'], summary: 'Finish sign-in with an authenticator or recovery code',
+    request: { body: { content: { 'application/json': { schema: mfaVerifySchema } } } },
+    responses: { 200: json(tenantRef, 'Signed in; auth cookies set'), ...errors } });
+  action('get', '/auth/mfa', 'Account security', 'Two-step verification status');
+  action('post', '/auth/mfa/setup', 'Account security', 'Start enrolment: returns a new secret and otpauth URI (needs the password)', mfaSetupSchema);
+  action('post', '/auth/mfa/enable', 'Account security', 'Confirm enrolment with a code; returns 10 recovery codes once and signs out other devices', mfaEnableSchema);
+  action('post', '/auth/mfa/disable', 'Account security', 'Turn off two-step verification (password and code)', mfaDisableSchema);
+  action('post', '/auth/mfa/recovery-codes', 'Account security', 'Replace the recovery codes (code required)', mfaRegenerateSchema);
+  action('get', '/auth/sessions', 'Account security', 'Signed-in devices for the current user');
+  action('post', '/auth/sessions/revoke-others', 'Account security', 'Sign out every other device');
+  action('delete', '/auth/sessions/{id}', 'Account security', 'Sign out one device');
+  action('get', '/security', 'Workspace security', 'Two-step policy, single sign-on and SCIM settings (tenant:manage)');
+  action('put', '/security/mfa-policy', 'Workspace security', 'Require two-step verification for password sign-in (tenant:manage)', mfaPolicySchema);
+  action('put', '/security/sso', 'Workspace security', 'Create or update the OIDC connection (tenant:manage; Enterprise plans)', ssoConnectionSchema);
+  action('delete', '/security/sso', 'Workspace security', 'Remove the OIDC connection (tenant:manage)');
+  action('post', '/security/scim-tokens', 'Workspace security', 'Create a SCIM token; the token is shown once (tenant:manage; Enterprise plans)', scimTokenCreateSchema);
+  action('delete', '/security/scim-tokens/{id}', 'Workspace security', 'Revoke a SCIM token (tenant:manage)');
+  r.registerPath({ method: 'get', path: '/auth/sso/start', tags: ['Single sign-on'], summary: 'Redirect to the workspace identity provider',
+    request: { query: z.object({ workspace: z.string().min(1).max(63) }) },
+    responses: { 302: { description: 'To the identity provider, or back to /login/sso with sso_error' } } });
+  r.registerPath({ method: 'get', path: '/auth/sso/callback', tags: ['Single sign-on'], summary: 'OIDC redirect URI (authorization code with PKCE)',
+    request: { query: z.object({ code: z.string().optional(), state: z.string().optional(), error: z.string().optional() }) },
+    responses: { 302: { description: 'To /app with auth cookies set, or to /login/sso with sso_error' } } });
+  r.registerComponent('securitySchemes', 'scimToken', { type: 'http', scheme: 'bearer', description: 'A dfscim_ token from Workspace security' });
+  const scim = (method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, summary: string) =>
+    r.registerPath({ method, path: `/scim/v2${path}`, tags: ['SCIM 2.0'], summary, security: [{ scimToken: [] }],
+      request: path.includes('{id}') ? { params: idParam } : {},
+      responses: { 200: { description: 'SCIM resource (application/scim+json)' }, 401: { description: 'SCIM error' } } });
+  scim('get', '/ServiceProviderConfig', 'Supported SCIM features');
+  scim('get', '/ResourceTypes', 'Resource types (User)');
+  scim('get', '/Users', 'List users (filter: userName, externalId, id or emails eq)');
+  scim('post', '/Users', 'Provision a user into the workspace');
+  scim('get', '/Users/{id}', 'Get a user');
+  scim('put', '/Users/{id}', 'Replace a user');
+  scim('patch', '/Users/{id}', 'Update a user (active, name, emails, externalId)');
+  scim('delete', '/Users/{id}', 'Remove a user from the workspace');
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: '3.1.0',

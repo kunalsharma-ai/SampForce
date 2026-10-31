@@ -8,7 +8,7 @@ import { Building2, ContactRound, Handshake, Plus, UserPlus } from 'lucide-react
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { moduleHref, MODULES } from '@/lib/navigation';
+import { moduleHref, MODULES, phaseLabel } from '@/lib/navigation';
 import { useSession } from '@/lib/session';
 import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 
@@ -119,7 +119,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 >
                   <m.icon className="size-4 text-muted-foreground" aria-hidden />
                   <span className="flex-1">{m.label}</span>
-                  {m.status === 'planned' && <span className="text-xs text-muted-foreground">Phase {m.phase}</span>}
+                  {m.status === 'planned' && <span className="text-xs text-muted-foreground">{phaseLabel(m.phase)}</span>}
                 </Command.Item>
               ))}
             </Command.Group>
