@@ -90,7 +90,23 @@ export class CommunicationService {
       }
       return c;
     });
-    const row = await this.deliver(auth, conn, { to: input.to, subject: input.subject, body: input.body }, { contactId: input.contactId, leadId: input.leadId }, meta);
+    // A reply inside an inbox conversation stays in it when the conversation is in the sender's own mailbox.
+    const thread = input.conversationId
+      ? await this.prisma.run(auth, (tx) => tx.emailThread.findFirst({ where: { id: input.conversationId, tenantId: auth.tenantId }, select: { connectionId: true, threadKey: true, contactId: true, leadId: true } }))
+      : null;
+    if (input.conversationId && !thread) throw notFound('Conversation');
+    const sameMailbox = thread?.connectionId === conn.id;
+    const row = await this.deliver(
+      auth,
+      conn,
+      { to: input.to, subject: input.subject, body: input.body },
+      {
+        contactId: input.contactId ?? (sameMailbox ? thread?.contactId : undefined),
+        leadId: input.leadId ?? (sameMailbox && !thread?.contactId ? thread?.leadId : undefined),
+        threadKey: sameMailbox ? thread!.threadKey : undefined,
+      },
+      meta,
+    );
     return toEmailRow(row);
   }
 
@@ -102,14 +118,15 @@ export class CommunicationService {
     auth: AuthContext,
     conn: IntegrationConnection,
     mail: { to: string; subject: string; body: string; html?: string; headers?: Record<string, string> },
-    links: { contactId?: string | null; leadId?: string | null },
+    links: { contactId?: string | null; leadId?: string | null; threadKey?: string },
     meta: RequestMeta,
     audit: { action: string; metadata?: Record<string, unknown> } = { action: 'email.sent' },
   ): Promise<WithProvider<EmailMessage>> {
     let result: { providerMessageId: string | null; threadId: string | null };
     try {
       const token = await this.prisma.run(auth, (tx) => this.integrations.accessToken(tx, conn));
-      result = await this.integrations.adapters[conn.provider].sendMail(token, { from: conn.accountEmail, ...mail });
+      const providerThread = links.threadKey && !links.threadKey.startsWith('msg:') ? links.threadKey : undefined;
+      result = await this.integrations.adapters[conn.provider].sendMail(token, { from: conn.accountEmail, ...mail, ...(providerThread ? { threadId: providerThread } : {}) });
     } catch (err) {
       if (err instanceof ReauthRequiredError) throw new ConflictException({ code: 'REAUTH_REQUIRED', message: 'Your mailbox sign-in expired. Reconnect it in Integrations.' });
       if (err instanceof ProviderError) throw new ConflictException({ code: 'PROVIDER_ERROR', message: err.message });
@@ -129,7 +146,8 @@ export class CommunicationService {
           tenantId: auth.tenantId,
           connectionId: conn.id,
           providerMessageId: result.providerMessageId ?? `dealflow:${randomUUID()}`,
-          threadId: result.threadId,
+          // Replies from an inbox conversation are stored in it even when the provider (Graph) cannot thread them.
+          threadId: links.threadKey ?? result.threadId,
           direction: 'OUTBOUND',
           fromAddress: conn.accountEmail,
           toAddresses: [mail.to],
@@ -186,6 +204,7 @@ export function toEmailRow(r: WithProvider<EmailMessage>): EmailRow {
     contactId: r.contactId,
     leadId: r.leadId,
     aiIntent: r.aiIntent,
+    conversationId: r.conversationId,
     provider: r.connection.provider,
   };
 }

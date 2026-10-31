@@ -347,6 +347,8 @@ export interface EmailRow {
   provider: IntegrationProviderKey;
   /** The Email Assistant's reading of a received email (an EMAIL_INTENTS key), when someone asked for it. */
   aiIntent: string | null;
+  /** The inbox conversation this message belongs to. */
+  conversationId: string | null;
 }
 
 export interface MeetingRow {
@@ -367,5 +369,110 @@ export const sendEmailSchema = z.object({
   body: z.string().min(1, 'Write a message').max(20_000),
   contactId: z.string().uuid().optional(),
   leadId: z.string().uuid().optional(),
+  /** Reply inside this inbox conversation (same mailbox only). */
+  conversationId: z.string().uuid().optional(),
 });
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
+
+// ───────────── Inbox (enhancement feature 8) ─────────────
+
+export const INBOX_STATUSES = ['OPEN', 'WAITING', 'CLOSED'] as const;
+export type InboxStatus = (typeof INBOX_STATUSES)[number];
+export const INBOX_STATUS_LABELS: Record<InboxStatus, string> = { OPEN: 'Open', WAITING: 'Waiting on them', CLOSED: 'Closed' };
+export const INBOX_CATEGORIES = ['sales', 'support', 'billing', 'partnership', 'other'] as const;
+export type InboxCategory = (typeof INBOX_CATEGORIES)[number];
+export const INBOX_CATEGORY_LABELS: Record<InboxCategory, string> = { sales: 'Sales', support: 'Support', billing: 'Billing', partnership: 'Partnership', other: 'Other' };
+
+export const inboxQuerySchema = z.object({
+  /** ACTIVE means open or waiting (not closed). */
+  status: z.enum([...INBOX_STATUSES, 'ACTIVE']).optional(),
+  category: z.enum(INBOX_CATEGORIES).optional(),
+  /** "me", "unassigned" or a user id. */
+  assigned: z.union([z.enum(['me', 'unassigned']), z.string().uuid()]).optional(),
+  /** Only conversations from my own mailboxes. */
+  mine: z.enum(['true', 'false']).optional(),
+  linked: z.enum(['deal', 'none']).optional(),
+  dealId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
+  q: z.string().trim().max(200).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  /** Pass the previous page's nextCursor. */
+  cursor: z.string().max(100).optional(),
+});
+export type InboxQuery = z.infer<typeof inboxQuerySchema>;
+
+export const inboxUpdateSchema = z.object({
+  status: z.enum(INBOX_STATUSES).optional(),
+  category: z.enum(INBOX_CATEGORIES).nullable().optional(),
+  assignedToId: z.string().uuid().nullable().optional(),
+  dealId: z.string().uuid().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
+  leadId: z.string().uuid().nullable().optional(),
+});
+export type InboxUpdate = z.infer<typeof inboxUpdateSchema>;
+
+export const inboxNoteSchema = z.object({ body: z.string().trim().min(1, 'Write a note').max(5000) });
+
+export interface InboxThreadRow {
+  id: string;
+  subject: string;
+  status: InboxStatus;
+  category: InboxCategory | null;
+  mailbox: { id: string; accountEmail: string; provider: IntegrationProviderKey; ownerId: string };
+  assignedTo: { id: string; name: string } | null;
+  contact: { id: string; name: string; companyId: string | null; companyName: string | null } | null;
+  lead: { id: string; name: string } | null;
+  deal: { id: string; name: string } | null;
+  messageCount: number;
+  lastMessageAt: string;
+  lastDirection: 'INBOUND' | 'OUTBOUND';
+  /** The latest message: who it is from and a short preview. */
+  preview: { from: string; snippet: string | null } | null;
+  /** The AI's reading of the latest analysed received email, if anyone asked. */
+  aiIntent: string | null;
+  noteCount: number;
+}
+
+/** What DealFlow observed for a sent message. Opens are estimates; "delivered" is not reported by Gmail or Outlook. */
+export interface InboxMessageTracking {
+  openedAt: string | null;
+  openCount: number;
+  clickedAt: string | null;
+  clickCount: number;
+  bouncedAt: string | null;
+  repliedAt: string | null;
+}
+
+export interface InboxMessage extends EmailRow {
+  cc: string[];
+  bodyText: string | null;
+  /** Present for sequence emails, which carry tracking. */
+  tracking: InboxMessageTracking | null;
+}
+
+export interface InboxNote {
+  id: string;
+  body: string;
+  author: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+export interface InboxThread extends InboxThreadRow {
+  messages: InboxMessage[];
+  notes: InboxNote[];
+  /** False when the conversation is in someone else's mailbox: a reply goes from your own and starts a new conversation. */
+  canReplyInThread: boolean;
+}
+
+export interface SyncLogRow {
+  id: string;
+  mailbox: { id: string; accountEmail: string; provider: IntegrationProviderKey };
+  trigger: 'manual' | 'scheduled';
+  ok: boolean;
+  emails: number;
+  meetings: number;
+  error: string | null;
+  startedAt: string;
+  finishedAt: string;
+}

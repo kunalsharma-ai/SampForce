@@ -44,6 +44,8 @@ export interface OutgoingEmail {
   html?: string;
   /** Extra headers, e.g. List-Unsubscribe. Microsoft Graph only accepts `X-` headers, so others are dropped there. */
   headers?: Record<string, string>;
+  /** The provider thread to reply in. Gmail files the message in that thread; Graph's sendMail cannot, so Outlook may show it separately. */
+  threadId?: string;
 }
 
 /** The access token was rejected or the refresh token revoked: the user must reconnect. */
@@ -288,7 +290,7 @@ export function googleAdapter(env: ApiEnv): ProviderAdapter {
         method: 'POST',
         token,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ raw: rfc2822(mail) }),
+        body: JSON.stringify({ raw: rfc2822(mail), ...(mail.threadId ? { threadId: mail.threadId } : {}) }),
       });
       return { providerMessageId: r.id ?? null, threadId: r.threadId ?? null };
     },

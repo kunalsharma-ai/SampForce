@@ -10,7 +10,15 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 
 /** Email history for one contact or lead, with a compose button when a mailbox is connected. */
-export function RecordEmails({ contactId, leadId, email }: { contactId?: string; leadId?: string; email: string | null }) {
+export function RecordEmails({
+  contactId,
+  leadId,
+  email,
+}: {
+  contactId?: string;
+  leadId?: string;
+  email: string | null;
+}) {
   const emails = useEmails({ contactId, leadId });
   const integrations = useIntegrations();
   const canSend = useCan('activities:write');
@@ -31,12 +39,29 @@ export function RecordEmails({ contactId, leadId, email }: { contactId?: string;
           <ul className="space-y-2">
             {emails.data.slice(0, 10).map((e) => (
               <li key={e.id} className="flex items-start gap-2 text-sm">
-                {e.direction === 'INBOUND' ? <ArrowDownLeft className="mt-0.5 size-4 text-primary" aria-label="Received" /> : <ArrowUpRight className="mt-0.5 size-4 text-accent" aria-label="Sent" />}
+                {e.direction === 'INBOUND' ? (
+                  <ArrowDownLeft className="mt-0.5 size-4 text-primary" aria-label="Received" />
+                ) : (
+                  <ArrowUpRight className="mt-0.5 size-4 text-accent" aria-label="Sent" />
+                )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">{e.subject}</span>
-                  {e.snippet && <span className="line-clamp-1 text-xs text-muted-foreground">{e.snippet}</span>}
+                  {e.conversationId ? (
+                    <Link
+                      href={`/app/communication?conversation=${e.conversationId}`}
+                      className="block truncate text-primary underline underline-offset-2"
+                    >
+                      {e.subject}
+                    </Link>
+                  ) : (
+                    <span className="block truncate">{e.subject}</span>
+                  )}
+                  {e.snippet && (
+                    <span className="line-clamp-1 text-xs text-muted-foreground">{e.snippet}</span>
+                  )}
                 </span>
-                <span className="shrink-0 text-xs text-muted-foreground">{relativeTime(e.sentAt)}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {relativeTime(e.sentAt)}
+                </span>
               </li>
             ))}
           </ul>
@@ -46,7 +71,10 @@ export function RecordEmails({ contactId, leadId, email }: { contactId?: string;
             {!connected && (
               <>
                 {' '}
-                <Link href="/app/integrations" className="text-primary underline underline-offset-2">
+                <Link
+                  href="/app/integrations"
+                  className="text-primary underline underline-offset-2"
+                >
                   Connect a mailbox
                 </Link>{' '}
                 to sync and send.
@@ -55,7 +83,15 @@ export function RecordEmails({ contactId, leadId, email }: { contactId?: string;
           </p>
         )}
       </CardContent>
-      {email && <ComposeDialog open={compose} onOpenChange={setCompose} to={email} contactId={contactId} leadId={leadId} />}
+      {email && (
+        <ComposeDialog
+          open={compose}
+          onOpenChange={setCompose}
+          to={email}
+          contactId={contactId}
+          leadId={leadId}
+        />
+      )}
     </Card>
   );
 }

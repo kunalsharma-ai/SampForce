@@ -158,7 +158,7 @@ export class IntegrationsService {
       tx.integrationConnection.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, provider, status: { not: 'DISCONNECTED' } } }),
     );
     if (!conn) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect this account first.' });
-    return this.sync(conn.id, conn.tenantId);
+    return this.sync(conn.id, conn.tenantId, 'manual');
   }
 
   /** Returns a valid access token for a connection, refreshing and re-sealing it when needed. */
@@ -177,8 +177,9 @@ export class IntegrationsService {
    * Pulls new mail and the calendar window for one connection. Only messages and meetings that
    * involve a known contact or lead are stored, so unrelated personal mail never enters the CRM.
    */
-  async sync(connectionId: string, tenantId: string): Promise<SyncResult> {
+  async sync(connectionId: string, tenantId: string, trigger: 'manual' | 'scheduled' = 'scheduled'): Promise<SyncResult> {
     const ctx = { tenantId };
+    const startedAt = new Date();
     const afterCommit: (() => Promise<void>)[] = [];
     try {
       const result = await this.prisma.run(
@@ -269,9 +270,14 @@ export class IntegrationsService {
         { timeoutMs: 120_000 },
       );
       for (const fn of afterCommit) await fn().catch((err) => this.log.error({ err: errorMessage(err) }, 'inbound mail hook failed'));
+      await this.logSync(connectionId, tenantId, { trigger, startedAt, ok: true, emails: result.emails, meetings: result.meetings });
       return result;
     } catch (err) {
       await this.recordFailure(connectionId, tenantId, err);
+      await this.logSync(connectionId, tenantId, {
+        trigger, startedAt, ok: false, emails: 0, meetings: 0,
+        error: err instanceof ReauthRequiredError ? 'The provider rejected the saved sign-in. Reconnect the account.' : errorMessage(err).slice(0, 500),
+      });
       if (err instanceof ReauthRequiredError) {
         throw new ConflictException({ code: 'REAUTH_REQUIRED', message: 'The provider rejected the saved sign-in. Reconnect the account.' });
       }
@@ -293,6 +299,18 @@ export class IntegrationsService {
     );
     for (const c of due) await this.sync(c.id, c.tenant_id).catch(() => undefined);
     return due.length;
+  }
+
+  /** One row per sync attempt for the mailbox connection log; the oldest rows beyond 200 per mailbox are dropped. */
+  private async logSync(connectionId: string, tenantId: string, entry: { trigger: 'manual' | 'scheduled'; startedAt: Date; ok: boolean; emails: number; meetings: number; error?: string }): Promise<void> {
+    await this.prisma
+      .run({ tenantId }, async (tx) => {
+        if (!(await tx.integrationConnection.findFirst({ where: { id: connectionId, tenantId }, select: { id: true } }))) return;
+        await tx.integrationSyncLog.create({ data: { tenantId, connectionId, ...entry, error: entry.error ?? null } });
+        const old = await tx.integrationSyncLog.findMany({ where: { connectionId }, orderBy: { startedAt: 'desc' }, skip: 200, select: { id: true } });
+        if (old.length) await tx.integrationSyncLog.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+      })
+      .catch((err) => this.log.warn({ connectionId, err: errorMessage(err) }, 'could not write the sync log'));
   }
 
   private async recordFailure(connectionId: string, tenantId: string, err: unknown): Promise<void> {
