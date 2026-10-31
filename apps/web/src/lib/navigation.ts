@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Store,
   TrendingUp,
+  Trophy,
   UserPlus,
   Users,
   Workflow,
@@ -46,7 +47,7 @@ export interface ModuleDef {
   capabilities: string[];
 }
 
-/** The 28 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
+/** The 29 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
 /** Phase number for work planned after the eight roadmap phases; it has no date. */
 export const LATER = 10;
 
@@ -119,6 +120,9 @@ export const MODULES: ModuleDef[] = [
   { slug: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', status: 'available', phase: 7,
     summary: 'Report builder, dashboards, Relationship Galaxy, Revenue Globe, pipeline flow and replays.',
     capabilities: ['Report builder over eight record types', 'Custom dashboards', 'CSV export (audited)', '3D views with 2D fallbacks', 'Scheduled exports (later phase)'] },
+  { slug: 'gamification', label: 'Sales Gamification', icon: Trophy, group: 'Intelligence', status: 'available', phase: 3,
+    summary: 'Configurable points, leaderboards, badges, competitions and team challenges from CRM records.',
+    capabilities: ['Admin-chosen scoring rules with daily limits', 'Personal and team leaderboards', 'Badges and target progress', 'Competitions and team challenges'] },
   { slug: 'team', label: 'Team Management', icon: Users, group: 'Organization', status: 'available', phase: 1,
     summary: 'Members, roles and permissions.', capabilities: [] },
   { slug: 'integrations', label: 'Integrations', icon: Plug, group: 'Organization', status: 'available', phase: 1,

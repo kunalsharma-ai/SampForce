@@ -2,6 +2,10 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@ast
 import {
   VOICE_RECORD_TYPES,
   customerFollowUpsSchema,
+  badgeInputSchema,
+  competitionInputSchema,
+  gamificationSettingsSchema,
+  teamInputSchema,
   voiceApplySchema,
   voiceInterpretSchema,
   voiceNoteCreateSchema,
@@ -512,6 +516,26 @@ export function buildOpenApiDocument(): object {
   action('get', '/success/escalations', 'Customer success', 'Escalations (success:read)', undefined, { query: z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() }) });
   r.registerPath({ method: 'post', path: '/success/escalations', tags: ['Customer success'], summary: 'Open an escalation (success:write)', security: secured, request: body(escalationInputSchema), responses: { 201: ok('Escalation'), ...errors } });
   action('post', '/success/escalations/{id}/resolve', 'Customer success', 'Resolve with a note (success:write)', escalationResolveSchema);
+
+  // Enhancement feature 14: sales gamification and sales teams.
+  action('get', '/gamification/me', 'Gamification', 'Your points this month, rank, target progress, badges and competitions; enabled:false while gamification is off (gamification:read)');
+  action('get', '/gamification/leaderboard', 'Gamification', 'People and teams ranked by points for a month, quarter or year (default this month), from CRM records under the workspace rules. 409 GAMIFICATION_OFF when off; managers-only visibility shows others just themselves (gamification:read)', undefined, { query: z.object({ period: z.string().optional() }) });
+  action('get', '/gamification/settings', 'Gamification', 'Whether gamification is on, who sees leaderboards, and the scoring rules with daily limits (gamification:read)');
+  action('put', '/gamification/settings', 'Gamification', 'Turn gamification on or off, set leaderboard visibility and the scoring rules; audited (gamification:manage)', gamificationSettingsSchema);
+  action('get', '/gamification/badges', 'Gamification', 'Badges with their rule and how often each was awarded (gamification:read)');
+  r.registerPath({ method: 'post', path: '/gamification/badges', tags: ['Gamification'], summary: 'Create a badge (gamification:manage)', security: secured, request: body(badgeInputSchema), responses: { 201: ok('Badge'), ...errors } });
+  r.registerPath({ method: 'post', path: '/gamification/badges/defaults', tags: ['Gamification'], summary: 'Add the suggested badges that are missing, matched by name (gamification:manage)', security: secured, responses: { 201: ok('Badges'), ...errors } });
+  action('post', '/gamification/badges/evaluate', 'Gamification', 'Award badges now instead of waiting for the hourly worker; returns how many were awarded (gamification:manage)');
+  action('put', '/gamification/badges/{id}', 'Gamification', 'Update a badge; awards already given are kept (gamification:manage)', badgeInputSchema);
+  r.registerPath({ method: 'delete', path: '/gamification/badges/{id}', tags: ['Gamification'], summary: 'Delete a badge and its awards (gamification:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('get', '/gamification/awards', 'Gamification', 'Recent badge awards; your own only when leaderboards are for managers (gamification:read)');
+  action('get', '/gamification/competitions', 'Gamification', 'Competitions and team challenges with standings, scored with the rules copied at creation (gamification:read)');
+  r.registerPath({ method: 'post', path: '/gamification/competitions', tags: ['Gamification'], summary: 'Start a competition or team challenge for a period or custom dates; participants are notified in DealFlow (gamification:manage)', security: secured, request: body(competitionInputSchema), responses: { 201: ok('Competition'), ...errors } });
+  action('post', '/gamification/competitions/{id}/cancel', 'Gamification', 'Cancel a competition (gamification:manage)');
+  action('get', '/tenants/current/teams', 'Tenants', 'Sales teams and their active members (members:read)');
+  r.registerPath({ method: 'post', path: '/tenants/current/teams', tags: ['Tenants'], summary: 'Create a sales team from active members (members:manage)', security: secured, request: body(teamInputSchema), responses: { 201: ok('Team'), ...errors } });
+  action('put', '/tenants/current/teams/{id}', 'Tenants', 'Rename a team and replace its members (members:manage)', teamInputSchema);
+  r.registerPath({ method: 'delete', path: '/tenants/current/teams/{id}', tags: ['Tenants'], summary: 'Delete a sales team (members:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
 
   // Phase 6: billing, custom roles, onboarding, support access and the operator console.
   action('get', '/billing', 'Billing', 'Plan, seats, usage against allowances and what can be bought here (billing:read)');

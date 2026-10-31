@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { PageHeader } from '@/components/page-header';
 import { Invitations } from './invitations';
 import { MembersTable } from './members-table';
+import { SalesTeams } from './sales-teams';
 
 export const metadata: Metadata = { title: 'Team Management' };
 
@@ -15,6 +16,7 @@ export default function TeamPage() {
       <div className="space-y-6">
         <Invitations />
         <MembersTable />
+        <SalesTeams />
       </div>
     </div>
   );

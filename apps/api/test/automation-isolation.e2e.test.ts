@@ -45,7 +45,12 @@ describe('automation and communication tenant isolation', () => {
     await h.patch(`/workflows/${wf.id}/status`, { status: 'ACTIVE' }).expect(200);
     await h.post('/webhooks', { url: 'http://127.0.0.1:9/never', events: ['lead.created'] }).expect(201);
     await h.post('/leads', { fullName: 'Iso Lead', email: 'iso@x.test' }).expect(201);
-    await app.get(WorkerService).tick();
+    // The relay takes the oldest 100 events across every workspace per tick, and other test files add events in
+    // parallel, so tick until this workspace's workflow has started.
+    for (let i = 0; i < 30; i++) {
+      await app.get(WorkerService).tick();
+      if (await asTenant(a.tenantId, (tx) => tx.workflowExecution.count({ where: { tenantId: a.tenantId } }))) break;
+    }
     await asTenant(a.tenantId, async (tx) => {
       const owner = await tx.membership.findFirstOrThrow({ where: { tenantId: a.tenantId } });
       const conn = await tx.integrationConnection.create({
