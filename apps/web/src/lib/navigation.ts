@@ -10,6 +10,7 @@ import {
   DoorOpen,
   FileSignature,
   FileText,
+  Globe,
   Handshake,
   HeartHandshake,
   KanbanSquare,
@@ -47,7 +48,7 @@ export interface ModuleDef {
   capabilities: string[];
 }
 
-/** The 29 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
+/** The 30 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
 /** Phase number for work planned after the eight roadmap phases; it has no date. */
 export const LATER = 10;
 
@@ -84,6 +85,9 @@ export const MODULES: ModuleDef[] = [
   { slug: 'finder', label: 'Email Finder', icon: MailSearch, group: 'Engage', status: 'available', phase: 9,
     summary: 'Find work email addresses for a company or a person from their public website, with an optional data provider.',
     capabilities: ['Company website lookup', 'Address pattern detection', 'Mail server check', 'Optional Hunter.io key'] },
+  { slug: 'website-visitors', label: 'Website Visitors', icon: Globe, group: 'Engage', status: 'available', phase: 3,
+    summary: 'Consent-aware website tracking: important pages, repeat visits, campaigns and enquiries linked to leads and contacts.',
+    capabilities: ['First-party tracking script with consent modes', 'Enquiries create or update leads', 'Intent signals and high-intent workflows', 'Retention controls'] },
   { slug: 'meetings', label: 'Meetings', icon: CalendarDays, group: 'Engage', status: 'available', phase: 3,
     summary: 'Customer meetings synced from Google Calendar or Outlook.',
     capabilities: ['Google and Microsoft calendar sync', 'Scheduling links (later phase)', 'AI summaries of pasted meeting notes'] },

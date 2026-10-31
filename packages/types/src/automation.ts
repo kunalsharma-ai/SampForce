@@ -27,6 +27,8 @@ export const TRIGGER_EVENTS = {
   'email.failed': { label: 'Sending to them fails', entity: 'person' },
   'sequence.enrolled': { label: 'They are added to a sequence', entity: 'person' },
   'sequence.removed': { label: 'They are removed from a sequence', entity: 'person' },
+  // Website visitor intelligence: a known visitor's intent score reaches the workspace threshold.
+  'visitor.high_intent': { label: 'They show high intent on your website', entity: 'person' },
 } as const;
 export type TriggerEvent = keyof typeof TRIGGER_EVENTS;
 export type TriggerEntity = (typeof TRIGGER_EVENTS)[TriggerEvent]['entity'];

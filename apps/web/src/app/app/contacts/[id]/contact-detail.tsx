@@ -12,6 +12,7 @@ import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
+import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { formatDate, useRecord } from '@/lib/crm';
 
@@ -57,6 +58,7 @@ export function ContactDetail({ id }: { id: string }) {
           <RecordEmails contactId={id} email={c.email} />
           <RecordMeetings target={{ contactId: id }} />
           <RecordVoiceNotes record={{ type: 'contact', id, name: c.fullName }} />
+          <RecordWebActivityCard type="contact" id={id} />
           <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />
         </div>
         <div className="space-y-4">
