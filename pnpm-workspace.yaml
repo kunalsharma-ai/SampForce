@@ -10,3 +10,9 @@ onlyBuiltDependencies:
   - "@node-rs/argon2"
   - sharp
   - "@nestjs/core"
+# Security overrides for transitive dependencies (Phase 8 audit, docs/security/PENTEST_PREP.md).
+# Versions are pinned and were at least two weeks old when chosen.
+overrides:
+  "next>postcss": "8.5.29"
+  "@nestjs/swagger>js-yaml": "5.4.3"
+  "@prisma/config>deepmerge-ts": "8.0.2"

@@ -23,6 +23,8 @@ export const apiEnvSchema = z.object({
   ALLOW_INSECURE_COOKIES: bool.default('false'),
   /** 32-byte key (base64 or hex) for encrypting webhook secrets and mailbox tokens. Required in production. */
   ENCRYPTION_KEY: z.string().min(32).optional(),
+  /** The key being rotated out; values sealed with it still open until they are re-sealed. */
+  ENCRYPTION_KEY_PREVIOUS: z.string().min(32).optional(),
   /** Public URL of the web app, used for OAuth redirect URIs and links in notifications. */
   PUBLIC_WEB_URL: z.string().url().default('http://localhost:3000'),
   /** Runs the background worker inside the API process (development and e2e only). */

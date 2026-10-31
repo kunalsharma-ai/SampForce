@@ -35,6 +35,19 @@ describe('SecretBox and signed tokens', () => {
     expect(() => new SecretBox({ ...env, ENCRYPTION_KEY: 'a'.repeat(64) }).open(sealed)).toThrow();
   });
 
+  it('opens values sealed with the previous key during a rotation', () => {
+    const oldKey = 'a'.repeat(64);
+    const newKey = 'b'.repeat(64);
+    const sealedOld = new SecretBox({ ...env, ENCRYPTION_KEY: oldKey }).seal('totp-secret');
+    const rotating = new SecretBox({ ...env, ENCRYPTION_KEY: newKey, ENCRYPTION_KEY_PREVIOUS: oldKey });
+    expect(rotating.open(sealedOld)).toBe('totp-secret');
+    expect(rotating.needsReseal(sealedOld)).toBe(true);
+    const resealed = rotating.seal('totp-secret');
+    expect(rotating.needsReseal(resealed)).toBe(false);
+    expect(new SecretBox({ ...env, ENCRYPTION_KEY: newKey }).open(resealed)).toBe('totp-secret');
+    expect(() => new SecretBox({ ...env, ENCRYPTION_KEY: newKey }).open(sealedOld)).toThrow();
+  });
+
   it('verifies signed state', () => {
     const t = signToken('secret', { u: 1 });
     expect(verifyToken('secret', t)).toEqual({ u: 1 });
