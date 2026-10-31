@@ -134,6 +134,15 @@ export const rules: Handler = (b) => {
     }
     return json({ summary: `Voice note with ${sentences.length} sentence${sentences.length === 1 ? '' : 's'}.`, actions, lastCallRequested, unsupported });
   }
+  if (system.startsWith('You brief an account manager on one customer')) {
+    const h = input.health as { score: number; risk: string; signals: { label: string; detail: string }[] };
+    const steps = (input.ruleBasedSteps as string[]).slice(0, 5).map((title, i) => ({ title, dueInDays: i * 2, why: h.signals[i]?.detail ?? 'From the health signals.' }));
+    return json({
+      summary: h.signals.length ? `${String(input.customer)} has ${h.risk.toLowerCase()} (${h.score}/100): ${h.signals.map((x) => x.label.toLowerCase()).join(', ')}.` : `${String(input.customer)} shows no risk signals.`,
+      talkingPoints: h.signals.slice(0, 3).map((x) => `Ask about: ${x.detail}`),
+      steps,
+    });
+  }
   if (system.startsWith('You are DealFlow Copilot')) {
     const tr = lastToolResult(b);
     if (!tr) {

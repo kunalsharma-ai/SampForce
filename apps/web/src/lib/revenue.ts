@@ -1,5 +1,7 @@
 import type {
   CampaignRow,
+  ChurnTrends,
+  HealthBand,
   CommercialSettingsRow,
   ContractRow,
   CustomerRow,
@@ -80,8 +82,13 @@ export function useTargets(period: string) {
   return useQuery({ queryKey: ['analytics', 'targets', period], queryFn: () => api<SalesTargetRow[]>(`/analytics/targets?period=${period}`) });
 }
 
-export function useCustomers() {
-  return useQuery({ queryKey: ['success', 'customers'], queryFn: () => api<CustomerRow[]>('/success/customers') });
+export function useCustomers(filter: { band?: HealthBand; ownerId?: string } = {}) {
+  return useQuery({ queryKey: ['success', 'customers', filter], queryFn: () => api<CustomerRow[]>(`/success/customers${toQuery(filter)}`) });
+}
+
+/** Feature 13: churn-risk counts per day and the biggest falls. */
+export function useChurnTrends(days: number) {
+  return useQuery({ queryKey: ['success', 'trends', days], queryFn: () => api<ChurnTrends>(`/success/trends?days=${days}`) });
 }
 
 export function useCustomer(companyId: string, enabled = true) {

@@ -1,6 +1,7 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
   VOICE_RECORD_TYPES,
+  customerFollowUpsSchema,
   voiceApplySchema,
   voiceInterpretSchema,
   voiceNoteCreateSchema,
@@ -502,7 +503,10 @@ export function buildOpenApiDocument(): object {
   action('get', '/analytics/targets', 'Revenue', 'Sales targets (dashboard:read)', undefined, { query: z.object({ period: z.string().optional() }) });
   action('put', '/analytics/targets', 'Revenue', 'Set a team or personal target (pipelines:manage)', salesTargetInputSchema);
   r.registerPath({ method: 'delete', path: '/analytics/targets/{id}', tags: ['Revenue'], summary: 'Remove a target (pipelines:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
-  action('get', '/success/customers', 'Customer success', 'Customers with explained health scores (success:read, companies:read)');
+  action('get', '/success/customers', 'Customer success', 'Customers with explained health scores, churn risk, engagement, deal history, score history and a rule-based retention plan; filter by band and owner (success:read, companies:read)', undefined, { query: z.object({ band: z.enum(['healthy', 'watch', 'at_risk']).optional(), ownerId: z.string().uuid().optional() }) });
+  action('get', '/success/trends', 'Customer success', 'Customers by churn risk per day and the biggest falls over 30, 90 or 180 days (success:read, companies:read)', undefined, { query: z.object({ days: z.enum(['30', '90', '180']).optional() }) });
+  action('post', '/success/customers/{companyId}/follow-ups', 'Customer success', 'Create the follow-up tasks the manager confirmed, due 09:00 their time, optionally on a contact at the customer (success:write, activities:write)', customerFollowUpsSchema);
+  action('post', '/success/customers/{companyId}/retention-brief', 'Customer success', 'Retention Advisor draft: summary, talking points and steps from the health facts. Creates nothing (success:read, companies:read, ai:use)');
   r.registerPath({ method: 'get', path: '/success/customers/{companyId}', tags: ['Customer success'], summary: 'One customer; 404 without an active contract (success:read, companies:read)', security: secured,
     request: { params: z.object({ companyId: z.string().uuid() }) }, responses: { 200: ok('Customer'), ...notFound, ...errors } });
   action('get', '/success/escalations', 'Customer success', 'Escalations (success:read)', undefined, { query: z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() }) });

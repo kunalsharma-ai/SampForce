@@ -124,7 +124,7 @@ test('shows revenue analytics and customer health from real records', async ({ p
 
   await page.goto('/app/customer-success');
   await expect(page.getByRole('link', { name: 'Healthy Co' })).toBeVisible();
-  await expect(page.getByText(/Watch · 45\/100/)).toBeVisible();
+  await expect(page.getByText(/Medium churn risk · health 45\/100/)).toBeVisible();
   await expect(page.getByText('Renewal within 30 days:')).toBeVisible();
   await expectNoA11yViolations(page);
   await page.getByRole('tab', { name: 'Escalations' }).click();

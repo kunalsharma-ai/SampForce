@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { daysBetween, formatReference, lineTotals, needsDiscountApproval, quoteTotals } from './commercial';
 import { campaignRatios, formSubmissionSchema, segmentInputSchema } from './marketing';
-import { customerHealth, salesVelocity, toBase, winRate } from './revenue';
+import { customerHealth, engagementTrend, followUpDates, retentionPlan, salesVelocity, toBase, winRate } from './revenue';
 
 describe('quote maths', () => {
   it('rounds per line and adds up exactly', () => {
@@ -72,5 +72,25 @@ describe('revenue and health', () => {
     expect(risky.signals.map((s) => s.key)).toEqual(['quiet_60', 'escalation_high', 'renewal_30', 'overdue_tasks']);
     expect(risky).toMatchObject({ score: 10, band: 'at_risk' });
     expect(customerHealth({ lastActivityDays: 5, openEscalations: [], daysToRenewal: 20, renewalInProgress: true, overdueTasks: 0 }).score).toBe(100);
+  });
+
+  it('adds churn signals for falling engagement, open portal requests and lost deals', () => {
+    const base = { lastActivityDays: 4, openEscalations: [], daysToRenewal: null, renewalInProgress: false, overdueTasks: 0 } as const;
+    expect(customerHealth({ ...base, engagement: { last30: 8, previous30: 9 } }).signals).toEqual([]);
+    const h = customerHealth({ ...base, engagement: { last30: 2, previous30: 9 }, openRequests: { count: 4, oldestDays: 12 }, lostDeals90: 1 });
+    expect(h.signals.map((s) => [s.key, s.points])).toEqual([['declining_engagement', 15], ['open_requests', 15], ['lost_deal', 10]]);
+    expect(h).toMatchObject({ score: 60, band: 'watch' });
+    expect(h.signals[0]!.detail).toBe('2 touches in the last 30 days, down from 9 the 30 days before.');
+    expect(engagementTrend({ last30: 0, previous30: 0 })).toBe('none');
+    expect(engagementTrend({ last30: 6, previous30: 2 })).toBe('rising');
+  });
+
+  it('suggests retention actions per signal, most urgent first, with a cadence by risk', () => {
+    const h = customerHealth({ lastActivityDays: 75, openEscalations: ['HIGH'], daysToRenewal: 20, renewalInProgress: false, overdueTasks: 1, lostDeals90: 1 });
+    const plan = retentionPlan(h.band, h.signals);
+    expect(plan.actions.map((a) => [a.key, a.dueInDays])).toEqual([['overdue', 0], ['escalation', 1], ['check_in', 1], ['renewal', 2], ['loss_review', 3]]);
+    expect(plan.cadence).toMatchObject({ everyDays: 7, touches: 4 });
+    expect(retentionPlan('healthy', []).actions).toEqual([]);
+    expect(followUpDates('2026-11-01', { everyDays: 7, touches: 3 })).toEqual(['2026-11-08', '2026-11-15', '2026-11-22']);
   });
 });
