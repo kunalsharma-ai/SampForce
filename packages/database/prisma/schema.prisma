@@ -1211,6 +1211,10 @@ model CommercialSettings {
   discountApprovalThreshold Decimal  @default(10) @map("discount_approval_threshold") @db.Decimal(5, 2)
   quoteValidityDays         Int      @default(30) @map("quote_validity_days")
   quoteTerms                String?  @map("quote_terms")
+  proposalHeader            String?  @map("proposal_header")
+  proposalFooter            String?  @map("proposal_footer")
+  /// Small PNG or JPEG data URL printed on proposals.
+  logoDataUrl               String?  @map("logo_data_url")
   updatedById               String?  @map("updated_by_id") @db.Uuid
   updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -1323,6 +1327,13 @@ model Quote {
   createdById        String?     @map("created_by_id") @db.Uuid
   sentAt             DateTime?   @map("sent_at") @db.Timestamptz(3)
   decidedAt          DateTime?   @map("decided_at") @db.Timestamptz(3)
+  /// Proposal sections ([{heading, body}]) shown above the price table.
+  sections           Json        @default("[]")
+  /// Whether the online proposal link works. Turning it off revokes every link to this version.
+  shareEnabled       Boolean     @default(false) @map("share_enabled")
+  firstViewedAt      DateTime?   @map("first_viewed_at") @db.Timestamptz(3)
+  lastViewedAt       DateTime?   @map("last_viewed_at") @db.Timestamptz(3)
+  viewCount          Int         @default(0) @map("view_count")
   createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 

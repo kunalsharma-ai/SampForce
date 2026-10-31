@@ -50,6 +50,7 @@ import {
   leadFormInputSchema,
   priceBookInputSchema,
   productInputSchema,
+  proposalSendSchema,
   quoteInputSchema,
   quoteTransitionSchema,
   quoteUpdateSchema,
@@ -325,6 +326,11 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'patch', path: '/quotes/{id}', tags: ['Quotes'], summary: 'Edit a draft or rejected quote (quotes:write)', security: secured, request: { params: idParam, ...body(quoteUpdateSchema) }, responses: { 200: ok('Quote'), ...notFound, ...errors } });
   action('post', '/quotes/{id}/transition', 'Quotes', 'submit, mark_sent, accept, decline or revise; discounts above the threshold go to the approvals inbox (quotes:write)', quoteTransitionSchema);
   r.registerPath({ method: 'delete', path: '/quotes/{id}', tags: ['Quotes'], summary: 'Delete a first-version draft (quotes:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('post', '/quotes/{id}/send', 'Quotes', 'Email an approved or sent proposal from your mailbox with its online link; marks an approved quote as sent (quotes:write, activities:write)', proposalSendSchema);
+  action('get', '/quotes/{id}/share', 'Quotes', 'Whether the online proposal link is live, and the link (quotes:read)');
+  action('post', '/quotes/{id}/share', 'Quotes', 'Turn the online proposal link on or off; only approved, sent, accepted or declined quotes (quotes:write)', z.object({ enabled: z.boolean() }));
+  r.registerPath({ method: 'get', path: '/proposals/view/{token}', tags: ['Quotes'], summary: 'Public: the online proposal; each load counts as a view unless preview=1 (no auth)', request: { params: z.object({ token: z.string() }), query: z.object({ preview: z.literal('1').optional() }) }, responses: { 200: ok('Proposal'), 404: json(error, 'Not shared or not valid') } });
+  r.registerPath({ method: 'get', path: '/proposals/view/{token}/pdf', tags: ['Quotes'], summary: 'Public: the proposal as a PDF; not counted as a view (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, 404: json(error, 'Not shared or not valid') } });
   r.registerPath({ method: 'get', path: '/quotes/{id}/pdf', tags: ['Quotes'], summary: 'PDF of the quote (quotes:read)', security: secured, request: { params: idParam },
     responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: z.string() } } }, ...notFound, ...errors } });
   action('get', '/contracts', 'Contracts', 'Contracts (contracts:read)', undefined, { query: z.object({ status: z.string().optional(), companyId: z.string().uuid().optional(), renewalWithinDays: z.number().int().optional() }) });

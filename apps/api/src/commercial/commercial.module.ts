@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
-import { NotificationsService } from '../notifications/notifications.service';
+import { AutomationModule } from '../automation/automation.module';
 import { CatalogService } from './catalog.service';
-import { CatalogController, ContractsController, QuotesController } from './commercial.controller';
+import { CatalogController, ContractsController, PublicProposalsController, QuotesController } from './commercial.controller';
 import { ContractsService } from './contracts.service';
+import { ProposalsService } from './proposals.service';
 import { QuotesService } from './quotes.service';
 
 @Module({
-  controllers: [CatalogController, QuotesController, ContractsController],
-  providers: [CatalogService, QuotesService, ContractsService, NotificationsService],
+  imports: [AutomationModule],
+  controllers: [CatalogController, QuotesController, ContractsController, PublicProposalsController],
+  providers: [CatalogService, QuotesService, ContractsService, ProposalsService],
   exports: [QuotesService, ContractsService],
 })
 export class CommercialModule {}

@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
   commercialSettingsSchema,
@@ -11,6 +12,8 @@ import {
   priceBookInputSchema,
   type ProductInput,
   productInputSchema,
+  proposalSendSchema,
+  type ProposalSendInput,
   type QuoteInput,
   quoteInputSchema,
   quoteTransitionSchema,
@@ -19,11 +22,12 @@ import {
   taxRateInputSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { ZodPipe } from '../common/zod.pipe';
 import { CatalogService } from './catalog.service';
 import { ContractsService } from './contracts.service';
+import { ProposalsService } from './proposals.service';
 import { renderQuotePdf } from './quote-pdf';
 import { QuotesService } from './quotes.service';
 
@@ -116,7 +120,31 @@ export class QuotesController {
   constructor(
     private readonly quotes: QuotesService,
     private readonly prisma: PrismaService,
+    private readonly proposals: ProposalsService,
   ) {}
+
+  /** Email the proposal with its online link from your mailbox; an approved quote becomes Sent. */
+  @Post(':id/send')
+  @HttpCode(200)
+  @RequirePermissions('quotes:write', 'activities:write')
+  send(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(proposalSendSchema)) body: ProposalSendInput, @Meta() meta: RequestMeta) {
+    return this.proposals.send(auth, id, body, meta);
+  }
+
+  @Get(':id/share')
+  @RequirePermissions('quotes:read')
+  async shareInfo(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    const q = await this.quotes.get(auth, id);
+    return { enabled: q.share.enabled, url: this.proposals.linkFor(auth, q) };
+  }
+
+  /** Turn the online link on or off; off revokes every copy of the link to this version. */
+  @Post(':id/share')
+  @HttpCode(200)
+  @RequirePermissions('quotes:write')
+  share(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(z.object({ enabled: z.boolean() }))) body: { enabled: boolean }, @Meta() meta: RequestMeta) {
+    return this.proposals.share(auth, id, body.enabled, meta);
+  }
 
   @Get()
   @RequirePermissions('quotes:read')
@@ -166,8 +194,10 @@ export class QuotesController {
   @RequirePermissions('quotes:read')
   async pdf(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Res() res: Response) {
     const quote = await this.quotes.get(auth, id);
-    const tenant = await this.prisma.run(auth, (tx) => tx.tenant.findFirstOrThrow({ where: { id: auth.tenantId }, select: { name: true } }));
-    const pdf = await renderQuotePdf(quote, tenant);
+    const [tenant, settings] = await this.prisma.run(auth, (tx) =>
+      Promise.all([tx.tenant.findFirstOrThrow({ where: { id: auth.tenantId }, select: { name: true } }), tx.commercialSettings.findUnique({ where: { tenantId: auth.tenantId } })]),
+    );
+    const pdf = await renderQuotePdf(quote, { name: tenant.name, logoDataUrl: settings?.logoDataUrl, header: settings?.proposalHeader, footer: settings?.proposalFooter });
     res.setHeader('content-type', 'application/pdf');
     res.setHeader('content-disposition', `attachment; filename="${quote.reference.replace(/\s+/g, '-')}.pdf"`);
     res.setHeader('cache-control', 'no-store');
@@ -222,5 +252,36 @@ export class ContractsController {
   @RequirePermissions('contracts:write')
   renew(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
     return this.contracts.renew(auth, id, meta);
+  }
+}
+
+/** The customer-facing proposal page reads these; the token is signed and works only while sharing is on. */
+@Controller('proposals')
+export class PublicProposalsController {
+  constructor(private readonly proposals: ProposalsService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Get('view/:token')
+  @Header('cache-control', 'no-store, private')
+  async view(@Param('token') token: string, @Query('preview') preview?: string) {
+    const p = await this.proposals.view(token, { count: preview !== '1' });
+    if (!p) throw new NotFoundException({ code: 'NOT_FOUND', message: 'This proposal link is not valid or is no longer shared.' });
+    return p;
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('view/:token/pdf')
+  async pdf(@Param('token') token: string, @Res() res: Response) {
+    const out = await this.proposals.publicPdf(token);
+    if (!out) {
+      res.status(404).type('text/plain').send('This proposal link is not valid or is no longer shared.');
+      return;
+    }
+    res.setHeader('content-type', 'application/pdf');
+    res.setHeader('content-disposition', `attachment; filename="${out.filename}"`);
+    res.setHeader('cache-control', 'no-store');
+    res.end(out.pdf);
   }
 }
