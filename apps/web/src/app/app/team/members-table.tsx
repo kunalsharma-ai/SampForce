@@ -61,6 +61,11 @@ export function MembersTable() {
                   <tr key={m.membershipId} className="border-t border-border">
                     <td className="py-2.5 font-medium">
                       {m.name} {m.userId === me?.user.id && <Badge className="ml-1">You</Badge>}
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {m.status === 'SUSPENDED' && <Badge tone="warning">Suspended</Badge>}
+                        {m.mfaEnabled ? <Badge tone="success">Two-step on</Badge> : <Badge>Two-step off</Badge>}
+                        {m.provisioned && <Badge tone="accent">SCIM</Badge>}
+                      </span>
                     </td>
                     <td className="py-2.5 text-muted-foreground">{m.email}</td>
                     <td className="py-2.5">

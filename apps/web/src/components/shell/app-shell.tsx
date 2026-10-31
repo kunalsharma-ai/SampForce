@@ -1,9 +1,10 @@
 'use client';
 
-import { Skeleton } from '@dealflow/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
-import { hexToHslTriplet, useSession } from '@/lib/session';
+import { hexToHslTriplet, useSession, useSignOut } from '@/lib/session';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { Sidebar } from './sidebar';
@@ -38,6 +39,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p role="alert" className="text-sm text-critical">
               We couldn&apos;t load your workspace. Refresh to try again.
             </p>
+          ) : data?.restriction && !(data.restriction === 'mfa_enrolment' && pathname === '/app/account/security') ? (
+            <PolicyGate restriction={data.restriction} />
           ) : (
             // Enter-only transition. An exit animation (AnimatePresence) would briefly render the
             // new route inside the old wrapper and then remount it, discarding anything typed.
@@ -49,5 +52,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {data && <QuickCreateHost />}
     </div>
+  );
+}
+
+/** Shown instead of the page while the workspace's security policy is not met (the API refuses the data anyway). */
+function PolicyGate({ restriction }: { restriction: 'mfa_enrolment' | 'sso_required' }) {
+  const signOut = useSignOut();
+  const mfa = restriction === 'mfa_enrolment';
+  return (
+    <Card className="mx-auto mt-8 max-w-lg">
+      <CardHeader>
+        <CardTitle>{mfa ? 'Turn on two-step verification' : 'Sign in with single sign-on'}</CardTitle>
+        <CardDescription>
+          {mfa
+            ? 'This workspace requires two-step verification. It takes about a minute with an authenticator app on your phone.'
+            : 'This workspace now requires single sign-on through your organization’s identity provider. Sign out, then choose “Sign in with SSO”.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {mfa ? (
+          <Button asChild>
+            <Link href="/app/account/security">Set it up</Link>
+          </Button>
+        ) : (
+          <Button onClick={() => void signOut().then(() => window.location.assign('/login/sso'))}>Sign out and use SSO</Button>
+        )}
+        <Button variant="outline" onClick={() => void signOut()}>
+          Sign out
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

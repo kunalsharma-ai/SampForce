@@ -28,6 +28,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -177,6 +178,11 @@ export function Topbar() {
                 <DropdownMenuSeparator />
               </>
             )}
+            <DropdownMenuItem asChild>
+              <Link href="/app/account/security">
+                <ShieldCheck aria-hidden /> Account security
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/app/settings">
                 <Settings aria-hidden /> Settings &amp; appearance

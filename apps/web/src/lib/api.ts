@@ -13,6 +13,9 @@ export class ApiError extends Error {
 
 let refreshing: Promise<boolean> | null = null;
 
+/** Sign-in steps answer 401 for wrong credentials; refreshing the session would not help them. */
+const NO_REFRESH = /^\/(operator\/|auth\/(login|register|refresh|logout|invitations|mfa\/verify))/;
+
 /** Single-flight refresh so parallel 401s trigger one token rotation, not many. */
 function refreshSession(): Promise<boolean> {
   refreshing ??= fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'include' })
@@ -38,7 +41,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   });
 
   // Operator sessions have no refresh token; only workspace sessions are refreshed.
-  if (res.status === 401 && retry && !path.startsWith('/auth/') && !path.startsWith('/operator/')) {
+  if (res.status === 401 && retry && !NO_REFRESH.test(path)) {
     if (await refreshSession()) return api<T>(path, init, false);
   }
   if (res.status === 204) return undefined as T;

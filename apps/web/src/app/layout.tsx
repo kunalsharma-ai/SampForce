@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
@@ -18,11 +19,13 @@ export const viewport: Viewport = {
 // Applies the saved theme and motion preference before first paint to avoid a flash.
 const preferenceBootstrap = `try{var p=JSON.parse(localStorage.getItem('dealflow:preferences')||'{}').state||{};var t=p.theme||'dark';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.dataset.motion=p.motion||'system';}catch(e){document.documentElement.classList.add('dark')}`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Reading the request makes every page render per request, so Next.js can put the CSP nonce on its scripts.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: preferenceBootstrap }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: preferenceBootstrap }} />
       </head>
       <body>
         <Providers>{children}</Providers>

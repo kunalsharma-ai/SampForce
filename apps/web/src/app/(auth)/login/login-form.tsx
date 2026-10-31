@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Field, Input } from '@dealflow/ui';
-import { type LoginInput, loginSchema } from '@dealflow/types';
+import { type LoginInput, type LoginResponse, loginSchema } from '@dealflow/types';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -18,17 +18,32 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<string | null>(null);
   const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
     try {
-      await api('/auth/login', { method: 'POST', json: values });
+      const res = await api<LoginResponse>('/auth/login', { method: 'POST', json: values });
+      if (res.mfaRequired && res.challenge) return setChallenge(res.challenge);
       router.replace(safeNext(params.get('next')));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reach DealFlow. Check your connection.');
     }
   });
+
+  if (challenge) {
+    return (
+      <SecondFactor
+        challenge={challenge}
+        onDone={() => router.replace(safeNext(params.get('next')))}
+        onRestart={() => {
+          setChallenge(null);
+          form.setValue('password', '');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,12 +67,86 @@ export function LoginForm() {
           {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <Link href="/login/sso" className="flex h-10 w-full items-center justify-center rounded-md border border-border text-sm font-medium hover:bg-muted">
+        Sign in with SSO
+      </Link>
       <p className="text-center text-sm text-muted-foreground">
         New to DealFlow?{' '}
         <Link href="/signup" className="font-medium text-primary hover:underline">
           Start free
         </Link>
       </p>
+    </div>
+  );
+}
+
+/** Second step for accounts with two-step verification: an authenticator code, or a recovery code. */
+function SecondFactor({ challenge, onDone, onRestart }: { challenge: string; onDone: () => void; onRestart: () => void }) {
+  const [useRecovery, setUseRecovery] = useState(false);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      await api('/auth/mfa/verify', { method: 'POST', json: { challenge, code } });
+      onDone();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'MFA_CHALLENGE_EXPIRED') return onRestart();
+      setError(err instanceof ApiError ? err.message : 'Could not reach DealFlow. Check your connection.');
+      setCode('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Two-step verification</h1>
+        <p className="text-sm text-muted-foreground">
+          {useRecovery ? 'Enter one of the recovery codes you saved when you turned on two-step verification. Each code works once.' : 'Enter the 6-digit code from your authenticator app.'}
+        </p>
+      </div>
+      <form onSubmit={submit} noValidate className="space-y-4">
+        <Field id="mfa-code" label={useRecovery ? 'Recovery code' : 'Authentication code'}>
+          <Input
+            key={useRecovery ? 'recovery' : 'totp'}
+            autoFocus
+            autoComplete="one-time-code"
+            inputMode={useRecovery ? 'text' : 'numeric'}
+            maxLength={useRecovery ? 16 : 6}
+            pattern={useRecovery ? undefined : '[0-9]*'}
+            placeholder={useRecovery ? 'xxxxx-xxxxx' : '123456'}
+            value={code}
+            onChange={(e) => setCode(useRecovery ? e.target.value : e.target.value.replace(/\D/g, ''))}
+          />
+        </Field>
+        {error && (
+          <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
+            {error}
+          </p>
+        )}
+        <Button type="submit" className="w-full" disabled={busy || code.length < 6}>
+          {busy ? 'Checking…' : 'Verify'}
+        </Button>
+      </form>
+      <div className="flex justify-between text-sm">
+        <button type="button" className="font-medium text-primary hover:underline" onClick={() => { setUseRecovery((v) => !v); setCode(''); setError(null); }}>
+          {useRecovery ? 'Use your authenticator app' : 'Use a recovery code'}
+        </button>
+        <button type="button" className="text-muted-foreground hover:underline" onClick={onRestart}>
+          Back
+        </button>
+      </div>
     </div>
   );
 }

@@ -74,7 +74,7 @@ test('captures a lead through a hosted form with consent and finds it in a segme
   const ctx = await browser.newContext();
   const visitor = await ctx.newPage();
   const res = await visitor.goto(href);
-  expect(res!.headers()['content-security-policy']).toBe('frame-ancestors *');
+  expect(res!.headers()['content-security-policy']).toMatch(/frame-ancestors \*(;|$)/);
   expect(res!.headers()['x-frame-options']).toBeUndefined();
   await expect(visitor.getByRole('heading', { name: 'Book a demo' })).toBeVisible();
   await expectNoA11yViolations(visitor);

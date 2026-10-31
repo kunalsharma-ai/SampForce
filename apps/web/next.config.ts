@@ -2,10 +2,14 @@ import type { NextConfig } from 'next';
 
 const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
 
+// The Content-Security-Policy (with a per-request script nonce) is set in src/middleware.ts.
 const baseHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
+  // Browsers ignore this over plain HTTP, so it is safe for local runs; behind TLS it pins HTTPS for a year.
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
 ];
 
 const config: NextConfig = {
@@ -22,9 +26,9 @@ const config: NextConfig = {
   async headers() {
     return [
       // Everything except hosted lead forms refuses to be framed.
-      { source: '/((?!f/).*)', headers: [...baseHeaders, { key: 'X-Frame-Options', value: 'DENY' }, { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" }] },
+      { source: '/((?!f/).*)', headers: [...baseHeaders, { key: 'X-Frame-Options', value: 'DENY' }] },
       // Hosted lead forms (/f/:token) are meant to be embedded on the customer's own site.
-      { source: '/f/:path*', headers: [...baseHeaders, { key: 'Content-Security-Policy', value: 'frame-ancestors *' }] },
+      { source: '/f/:path*', headers: baseHeaders },
     ];
   },
 };
