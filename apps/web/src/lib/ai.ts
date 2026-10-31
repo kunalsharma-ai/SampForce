@@ -1,4 +1,7 @@
 import type {
+  ForecastPlan,
+  ForecastTrends,
+  PeriodGranularity,
   AiAgentKey,
   AiSettingsUpdate,
   AiStatus,
@@ -45,6 +48,14 @@ export function useRecommendations(entityType: 'lead' | 'contact' | 'deal', enti
 
 export function useForecast(period: string) {
   return useQuery({ queryKey: ['forecast', period], queryFn: () => api<ForecastView>(`/forecast?period=${period}`) });
+}
+
+export function useForecastPlan(period: string) {
+  return useQuery({ queryKey: ['forecast', period, 'plan'], queryFn: () => api<ForecastPlan>(`/forecast/plan?period=${period}`) });
+}
+
+export function useForecastTrends(granularity: PeriodGranularity, count: number) {
+  return useQuery({ queryKey: ['forecast', 'trends', granularity, count], queryFn: () => api<ForecastTrends>(`/forecast/trends?granularity=${granularity}&count=${count}`) });
 }
 
 export function useSnapshots(period: string) {

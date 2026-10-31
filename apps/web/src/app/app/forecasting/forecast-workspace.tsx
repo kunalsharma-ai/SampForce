@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { type ForecastChange, type ForecastComparison, type ForecastView, quarterPeriod } from '@dealflow/types';
+import { type ForecastChange, type ForecastComparison, type ForecastView, type PeriodGranularity, periodLabelOf } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, CheckCircle2, Sparkles, XCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -11,6 +11,8 @@ import { aiErrorMessage, agentReason, type ForecastExplanation, useAiStatus, use
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
+import { Targets } from '../revenue/revenue-workspace';
+import { Assumptions, PlanSection, Trends } from './forecast-plan';
 import { useCan } from '@/lib/session';
 
 const CATEGORY = {
@@ -30,28 +32,51 @@ const CHANGE_LABEL: Record<ForecastChange['kind'], string> = {
   stage: 'Stage',
 };
 
-/** Two quarters back to two ahead of the current one. */
-function quarterOptions(): string[] {
+const RANGE: Record<PeriodGranularity, [number, number, number]> = { month: [-3, 3, 1], quarter: [-2, 2, 3], year: [-1, 1, 12] };
+const GRANULARITY_LABEL: Record<PeriodGranularity, string> = { month: 'Month', quarter: 'Quarter', year: 'Year' };
+
+/** A few periods back and ahead of the current one; the current one is in the middle. */
+function periodOptions(g: PeriodGranularity): string[] {
   const now = new Date();
+  const [from, to, months] = RANGE[g];
   const out: string[] = [];
-  for (let i = -2; i <= 2; i++) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i * 3, 1));
-    out.push(quarterPeriod(undefined, d).label);
-  }
+  for (let i = from; i <= to; i++) out.push(periodLabelOf(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i * months, 1)), g));
   return out;
 }
 
 export function ForecastWorkspace() {
-  const options = useMemo(quarterOptions, []);
-  const [period, setPeriod] = useState(options[2]!);
+  const [granularity, setGranularity] = useState<PeriodGranularity>('quarter');
+  const options = useMemo(() => periodOptions(granularity), [granularity]);
+  const [period, setPeriod] = useState(() => periodOptions('quarter')[2]!);
   const forecast = useForecast(period);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
+          <label htmlFor="forecast-granularity" className="text-sm font-medium">
+            Forecast by
+          </label>
+          <Select
+            id="forecast-granularity"
+            value={granularity}
+            className="w-32"
+            onChange={(e) => {
+              const g = e.target.value as PeriodGranularity;
+              setGranularity(g);
+              setPeriod(periodLabelOf(new Date(), g));
+            }}
+          >
+            {(Object.keys(GRANULARITY_LABEL) as PeriodGranularity[]).map((g) => (
+              <option key={g} value={g}>
+                {GRANULARITY_LABEL[g]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
           <label htmlFor="forecast-period" className="text-sm font-medium">
-            Quarter
+            {GRANULARITY_LABEL[granularity]}
           </label>
           <Select id="forecast-period" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-36">
             {options.map((o) => (
@@ -77,12 +102,15 @@ export function ForecastWorkspace() {
       ) : (
         <>
           <Summary view={forecast.data} />
+          <PlanSection period={period} />
+          <Lines view={forecast.data} />
           <div className="grid gap-4 lg:grid-cols-3">
+            <Targets period={period} />
             <div className="lg:col-span-2">
-              <Lines view={forecast.data} />
+              <Assumptions period={period} />
             </div>
-            <ByOwner view={forecast.data} />
           </div>
+          <Trends granularity={granularity} />
           <Snapshots period={period} currency={forecast.data.currency} />
         </>
       )}
@@ -94,10 +122,10 @@ function Summary({ view }: { view: ForecastView }) {
   const t = view.totals;
   const money = (v: number) => formatMoney(v, view.currency);
   const tiles: [string, number, string][] = [
-    ['Won', t.won, 'Closed won in the quarter'],
-    ['Commit', t.commit, 'Open deals at 70% or more'],
-    ['Best case', t.bestCase, 'Open deals at 30–69%'],
-    ['Pipeline', t.pipeline, 'Open deals under 30%'],
+    ['Won', t.won, 'Closed won in the period'],
+    ['Commit', t.commit, `Open deals at ${view.assumptions.commit}% or more`],
+    ['Best case', t.bestCase, `Open deals at ${view.assumptions.bestCase}–${view.assumptions.commit - 1}%`],
+    ['Pipeline', t.pipeline, `Open deals under ${view.assumptions.bestCase}%`],
     ['Weighted', t.weighted, 'Open amount × probability'],
   ];
   return (
@@ -160,7 +188,7 @@ function Lines({ view }: { view: ForecastView }) {
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {view.lines.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No open or won deals with a close date in this quarter.</p>
+          <p className="text-sm text-muted-foreground">No open or won deals with a close date in this period.</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
@@ -186,39 +214,16 @@ function Lines({ view }: { view: ForecastView }) {
                     <Badge tone={CATEGORY[l.category].tone}>{CATEGORY[l.category].label}</Badge>
                   </td>
                   <td className="py-2 text-right tabular-nums">{formatMoney(l.amount, view.currency)}</td>
-                  <td className="py-2 text-right tabular-nums">{l.status === 'WON' ? '—' : `${l.probability}%`}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {l.status === 'WON' ? '—' : `${l.probability}%`}
+                    {l.status === 'OPEN' && l.probabilitySource && <span className="block text-[11px] text-muted-foreground">{l.probabilitySource === 'deal' ? 'set on deal' : l.probabilitySource === 'history' ? 'win history' : 'stage'}</span>}
+                  </td>
                   <td className="py-2 pl-2">{formatDate(l.closeDate)}</td>
                   <td className="py-2">{l.owner?.name ?? 'Unassigned'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ByOwner({ view }: { view: ForecastView }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">By owner</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {view.byOwner.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing to split yet.</p>
-        ) : (
-          <ul className="divide-y divide-border text-sm">
-            {view.byOwner.map((o) => (
-              <li key={o.owner?.id ?? 'none'} className="py-2">
-                <p className="font-medium">{o.owner?.name ?? 'Unassigned'}</p>
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  Base {formatMoney(o.totals.base, view.currency)} · won {formatMoney(o.totals.won, view.currency)} · {o.totals.dealCount} deal{o.totals.dealCount === 1 ? '' : 's'}
-                </p>
-              </li>
-            ))}
-          </ul>
         )}
       </CardContent>
     </Card>

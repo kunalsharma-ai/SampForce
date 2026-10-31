@@ -15,6 +15,8 @@ async function apiPost(page: Page, path: string, data: object) {
 }
 
 async function expectNoA11yViolations(page: Page) {
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(300);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 }

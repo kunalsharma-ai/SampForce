@@ -131,25 +131,26 @@ enum TenantStatus {
 }
 
 model Tenant {
-  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  forecastSettings      ForecastSettings?
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String
-  slug                  String       @unique
-  status                TenantStatus @default(ACTIVE)
-  brandColor            String?      @map("brand_color")
-  defaultCurrency       String       @default("USD") @map("default_currency") @db.Char(3)
-  defaultTimezone       String       @default("UTC") @map("default_timezone")
-  defaultLocale         String       @default("en-US") @map("default_locale")
+  slug                  String            @unique
+  status                TenantStatus      @default(ACTIVE)
+  brandColor            String?           @map("brand_color")
+  defaultCurrency       String            @default("USD") @map("default_currency") @db.Char(3)
+  defaultTimezone       String            @default("UTC") @map("default_timezone")
+  defaultLocale         String            @default("en-US") @map("default_locale")
   /// True only for development/demo workspaces populated by the seed script.
-  isDemo                Boolean      @default(false) @map("is_demo")
+  isDemo                Boolean           @default(false) @map("is_demo")
   /// Set when an owner hides the getting-started checklist.
-  onboardingDismissedAt DateTime?    @map("onboarding_dismissed_at") @db.Timestamptz(3)
+  onboardingDismissedAt DateTime?         @map("onboarding_dismissed_at") @db.Timestamptz(3)
   /// Members must turn on two-step verification before they can use the workspace.
-  requireMfa            Boolean      @default(false) @map("require_mfa")
+  requireMfa            Boolean           @default(false) @map("require_mfa")
   /// Mirrors sso_connections.enabled AND enforced, readable wherever the tenant row is (sign-in, switcher).
-  ssoEnforced           Boolean      @default(false) @map("sso_enforced")
-  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt             DateTime?    @map("deleted_at") @db.Timestamptz(3)
+  ssoEnforced           Boolean           @default(false) @map("sso_enforced")
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
   subscription           Subscription?
   roles                  Role[]
@@ -1200,6 +1201,8 @@ model ForecastSnapshot {
   periodEnd   DateTime @map("period_end") @db.Date
   currency    String   @db.Char(3)
   method      String
+  /// Category thresholds used ({commit, bestCase}); null = the original 70/30.
+  assumptions Json?
   totals      Json
   lines       Json
   createdById String?  @map("created_by_id") @db.Uuid
@@ -1208,7 +1211,24 @@ model ForecastSnapshot {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, periodStart, createdAt(sort: Desc)])
+  @@index([tenantId, periodStart, periodEnd], map: "forecast_snapshots_period_idx")
   @@map("forecast_snapshots")
+}
+
+/// Enhancement feature 10: how a workspace's forecast works out probabilities and categories.
+model ForecastSettings {
+  tenantId          String   @id @map("tenant_id") @db.Uuid
+  method            String   @default("stage")
+  commitThreshold   Int      @default(70) @map("commit_threshold")
+  bestCaseThreshold Int      @default(30) @map("best_case_threshold")
+  historyMonths     Int      @default(12) @map("history_months")
+  minSample         Int      @default(10) @map("min_sample")
+  updatedById       String?  @map("updated_by_id") @db.Uuid
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("forecast_settings")
 }
 
 // ───────────── Phase 5: commercial documents ─────────────

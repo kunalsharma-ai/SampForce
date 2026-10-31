@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
-import { analyticsQuerySchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, salesTargetInputSchema, z } from '@dealflow/types';
+import { analyticsQuerySchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, forecastQuerySchema, salesTargetInputSchema, z } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AnalyticsService } from './analytics.service';
@@ -32,7 +32,7 @@ export class AnalyticsController {
 
   @Get('targets')
   @RequirePermissions('dashboard:read')
-  targets(@Auth() auth: AuthContext, @Query(new ZodPipe(analyticsQuerySchema)) q: z.infer<typeof analyticsQuerySchema>) {
+  targets(@Auth() auth: AuthContext, @Query(new ZodPipe(forecastQuerySchema)) q: z.infer<typeof forecastQuerySchema>) {
     return this.analytics.targets(auth, q.period);
   }
 

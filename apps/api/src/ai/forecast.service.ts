@@ -4,14 +4,20 @@ import {
   categoryOf,
   compareLines,
   computeTotals,
+  DEFAULT_FORECAST_SETTINGS,
   FORECAST_METHOD,
+  type ForecastSettings,
+  type ForecastSettingsInput,
+  type ForecastThresholds,
+  forecastPeriod,
+  type ProbabilitySource,
+  type StageWinRate,
   type ForecastComparison,
   type ForecastLine,
   type ForecastSnapshotRow,
   type ForecastTotals,
   FORECAST_MAX_LINES,
   type ForecastView,
-  quarterPeriod,
   toBase,
   totalsByOwner,
 } from '@dealflow/types';
@@ -22,6 +28,9 @@ import { notFound, ownerRefs } from '../crm/crm-helpers';
 import { loadRates } from '../revenue/fx';
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
+/** Method label stored on snapshots that used win history for some deals. */
+export const HISTORY_METHOD = 'historical-win-rate-v1';
+export const thresholdsOf = (s: ForecastSettingsInput): ForecastThresholds => ({ commit: s.commitThreshold, bestCase: s.bestCaseThreshold });
 
 /**
  * Quarter forecasts from deal data. The numbers come from the pure functions in @dealflow/types, and a
@@ -41,8 +50,70 @@ export class ForecastService {
     });
   }
 
-  private async build(tx: TenantTx, tenantId: string, period: string | undefined): Promise<ForecastView> {
-    const p = quarterPeriod(period);
+  async settings(tx: TenantTx, tenantId: string): Promise<ForecastSettings> {
+    const row = await tx.forecastSettings.findUnique({ where: { tenantId } });
+    if (!row) return { ...DEFAULT_FORECAST_SETTINGS, updatedBy: null, updatedAt: null };
+    const by = row.updatedById ? (await ownerRefs(tx, [row.updatedById])).get(row.updatedById) ?? null : null;
+    return {
+      method: row.method as ForecastSettings['method'],
+      commitThreshold: row.commitThreshold,
+      bestCaseThreshold: row.bestCaseThreshold,
+      historyMonths: row.historyMonths,
+      minSample: row.minSample,
+      updatedBy: by,
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  getSettings(auth: AuthContext): Promise<ForecastSettings> {
+    return this.prisma.run(auth, (tx) => this.settings(tx, auth.tenantId));
+  }
+
+  saveSettings(auth: AuthContext, input: ForecastSettingsInput, meta: RequestMeta): Promise<ForecastSettings> {
+    return this.prisma.run(auth, async (tx) => {
+      const before = await this.settings(tx, auth.tenantId);
+      const data = { ...input, updatedById: auth.userId, updatedAt: new Date() };
+      await tx.forecastSettings.upsert({ where: { tenantId: auth.tenantId }, create: { tenantId: auth.tenantId, ...data }, update: data });
+      const { updatedBy: _b, updatedAt: _a, ...prev } = before;
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'forecast.settings_changed', entityType: 'forecast_settings', entityId: auth.tenantId, metadata: { before: prev, after: input }, meta });
+      return this.settings(tx, auth.tenantId);
+    });
+  }
+
+  /**
+   * For each stage: of the deals closed in the history window that passed through it, how many were won.
+   * Uses the stage-change log, so a deal counts for every stage it reached.
+   */
+  async stageWinRates(tx: TenantTx, tenantId: string, s: ForecastSettingsInput): Promise<StageWinRate[]> {
+    const since = new Date(Date.now() - s.historyMonths * 30.44 * 86_400_000);
+    const counts = await tx.$queryRaw<{ stage_id: string; won: bigint; lost: bigint }[]>`
+      SELECT e.to_stage_id AS stage_id,
+             count(DISTINCT o.id) FILTER (WHERE o.status = 'WON') AS won,
+             count(DISTINCT o.id) FILTER (WHERE o.status = 'LOST') AS lost
+        FROM deal_stage_events e
+        JOIN opportunities o ON o.id = e.opportunity_id
+       WHERE e.tenant_id = ${tenantId}::uuid AND o.tenant_id = ${tenantId}::uuid AND o.deleted_at IS NULL
+         AND o.status IN ('WON', 'LOST') AND o.closed_at >= ${since}
+       GROUP BY e.to_stage_id`;
+    const byStage = new Map(counts.map((c) => [c.stage_id, { won: Number(c.won), lost: Number(c.lost) }]));
+    const stages = await tx.pipelineStage.findMany({
+      where: { tenantId, category: 'OPEN' },
+      select: { id: true, name: true, probability: true, position: true, pipeline: { select: { name: true } } },
+      orderBy: [{ pipelineId: 'asc' }, { position: 'asc' }],
+    });
+    return stages.map((st) => {
+      const c = byStage.get(st.id) ?? { won: 0, lost: 0 };
+      const n = c.won + c.lost;
+      return { stageId: st.id, stage: st.name, pipeline: st.pipeline.name, stageProbability: st.probability, won: c.won, lost: c.lost, rate: n ? Math.round((c.won / n) * 1000) / 10 : null, usable: n >= s.minSample };
+    });
+  }
+
+  async build(tx: TenantTx, tenantId: string, period: string | undefined, preloaded?: { settings: ForecastSettingsInput; rates?: StageWinRate[] }): Promise<ForecastView> {
+    const settings = preloaded?.settings ?? (await this.settings(tx, tenantId));
+    const thresholds = thresholdsOf(settings);
+    const history = settings.method === 'history' ? (preloaded?.rates ?? (await this.stageWinRates(tx, tenantId, settings))) : [];
+    const historyRate = new Map(history.filter((r) => r.usable && r.rate !== null).map((r) => [r.stageId, Math.round(r.rate!)]));
+    const p = forecastPeriod(period);
     const start = new Date(`${p.start}T00:00:00Z`);
     const end = new Date(`${p.end}T00:00:00Z`);
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { defaultCurrency: true } });
@@ -56,6 +127,7 @@ export class ForecastService {
       },
       select: {
         id: true, name: true, amount: true, currency: true, probability: true, status: true, closedAt: true, expectedCloseDate: true, ownerId: true,
+        stageId: true,
         stage: { select: { name: true, probability: true } },
       },
       orderBy: { id: 'asc' },
@@ -74,12 +146,19 @@ export class ForecastService {
         excluded.otherCurrency++;
         continue;
       }
+      let probability: number;
+      let probabilitySource: ProbabilitySource;
+      if (d.status === 'WON') [probability, probabilitySource] = [100, 'stage'];
+      else if (d.probability !== null) [probability, probabilitySource] = [d.probability, 'deal'];
+      else if (historyRate.has(d.stageId)) [probability, probabilitySource] = [historyRate.get(d.stageId)!, 'history'];
+      else [probability, probabilitySource] = [d.stage.probability, 'stage'];
       lines.push({
         dealId: d.id,
         name: d.name,
         amount,
         ...(d.currency !== currency ? { originalAmount: Number(d.amount), originalCurrency: d.currency } : {}),
-        probability: d.status === 'WON' ? 100 : (d.probability ?? d.stage.probability),
+        probability,
+        probabilitySource,
         status: d.status as 'OPEN' | 'WON',
         stage: d.stage.name,
         owner: d.ownerId ? (owners.get(d.ownerId) ?? null) : null,
@@ -87,12 +166,13 @@ export class ForecastService {
       });
     }
     return {
-      method: FORECAST_METHOD,
+      method: lines.some((l) => l.probabilitySource === 'history') ? HISTORY_METHOD : FORECAST_METHOD,
+      assumptions: thresholds,
       period: p,
       currency,
-      totals: computeTotals(lines),
-      byOwner: totalsByOwner(lines),
-      lines: lines.map((l) => ({ ...l, category: categoryOf(l) })).sort((a, b) => b.amount - a.amount),
+      totals: computeTotals(lines, thresholds),
+      byOwner: totalsByOwner(lines, thresholds),
+      lines: lines.map((l) => ({ ...l, category: categoryOf(l, thresholds) })).sort((a, b) => b.amount - a.amount),
       lineCount: lines.length,
       excluded,
     };
@@ -110,6 +190,7 @@ export class ForecastService {
           periodEnd: new Date(`${view.period.end}T00:00:00Z`),
           currency: view.currency,
           method: view.method,
+          assumptions: view.assumptions as object,
           totals: view.totals as object,
           lines: lines as object[],
           createdById: auth.userId,
@@ -124,10 +205,10 @@ export class ForecastService {
   }
 
   list(auth: AuthContext, period: string | undefined): Promise<ForecastSnapshotRow[]> {
-    const p = quarterPeriod(period);
+    const p = forecastPeriod(period);
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.forecastSnapshot.findMany({
-        where: { tenantId: auth.tenantId, periodStart: new Date(`${p.start}T00:00:00Z`) },
+        where: { tenantId: auth.tenantId, periodStart: new Date(`${p.start}T00:00:00Z`), periodEnd: new Date(`${p.end}T00:00:00Z`) },
         orderBy: { createdAt: 'desc' },
         take: 50,
       });
@@ -139,7 +220,7 @@ export class ForecastService {
   /** Reloads a snapshot and recomputes its totals from its stored lines (they must match). */
   async verify(auth: AuthContext, id: string): Promise<{ stored: ForecastTotals; recomputed: ForecastTotals; matches: boolean }> {
     const s = await this.load(auth, id);
-    const recomputed = computeTotals(s.lines);
+    const recomputed = computeTotals(s.lines, s.row.assumptions ?? undefined);
     const matches = (Object.keys(recomputed) as (keyof ForecastTotals)[]).every((k) => recomputed[k] === s.row.totals[k]);
     return { stored: s.row.totals, recomputed, matches };
   }
@@ -165,7 +246,7 @@ export class ForecastService {
 }
 
 function toRow(
-  r: { id: string; label: string | null; periodStart: Date; periodEnd: Date; currency: string; method: string; totals: unknown; createdById: string | null; createdAt: Date },
+  r: { id: string; label: string | null; periodStart: Date; periodEnd: Date; currency: string; method: string; assumptions: unknown; totals: unknown; createdById: string | null; createdAt: Date },
   names: Map<string, { id: string; name: string }>,
 ): ForecastSnapshotRow {
   return {
@@ -174,6 +255,7 @@ function toRow(
     period: { start: day(r.periodStart), end: day(r.periodEnd) },
     currency: r.currency,
     method: r.method,
+    assumptions: (r.assumptions as ForecastThresholds | null) ?? null,
     totals: r.totals as ForecastTotals,
     createdBy: r.createdById ? (names.get(r.createdById) ?? null) : null,
     createdAt: r.createdAt.toISOString(),
