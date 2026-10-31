@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { loadApiEnv } from '@dealflow/config';
 import { AppModule } from './app.module';
+import { httpMetricsMiddleware } from './observability/metrics';
 import { buildOpenApiDocument } from './openapi/document';
 
 export async function createApp(): Promise<INestApplication> {
@@ -15,6 +16,7 @@ export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api/v1');
+  app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   // Replaces Nest's default JSON parser so SCIM clients' application/scim+json bodies are parsed too.

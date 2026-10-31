@@ -23,6 +23,7 @@ import { entitlementsFor } from '../billing/entitlements';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { PasswordService } from './password.service';
 import { type AuthMethod, TokenService } from './token.service';
@@ -125,6 +126,7 @@ export class AuthService {
     const valid = await this.passwords.verify(locked ? null : (user?.passwordHash ?? null), input.password);
     if (!user || !valid || user.status !== 'ACTIVE') {
       if (user && !locked) await this.mfa.recordFailure(user.id, meta.requestId);
+      authEvents.inc({ event: 'login_failure' });
       this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress, locked }, 'Failed sign-in attempt');
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
@@ -143,6 +145,7 @@ export class AuthService {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (this.mfa.isLocked(user) || user.status !== 'ACTIVE' || !(await this.mfa.verifySecondFactor(userId, code))) {
       if (!this.mfa.isLocked(user)) await this.mfa.recordFailure(userId, meta.requestId);
+      authEvents.inc({ event: 'mfa_failure' });
       this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress }, 'Failed second-factor attempt');
       throw new UnauthorizedException({ code: 'INVALID_MFA_CODE', message: 'That code is not valid. Try again, or use a recovery code.' });
     }
@@ -162,6 +165,7 @@ export class AuthService {
       });
     }
 
+    authEvents.inc({ event: 'login_success' });
     await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
     await this.prisma.run({ tenantId: first.tenantId, userId }, (tx) =>
       this.audit.record(tx, {

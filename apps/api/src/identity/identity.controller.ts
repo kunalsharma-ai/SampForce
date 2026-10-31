@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Logger, Param, ParseUUIDPipe, Post, Put, Query, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
@@ -14,6 +14,7 @@ import { setAuthCookies } from '../auth/cookies';
 import { Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
+import { authEvents } from '../observability/metrics';
 import { SecurityService } from './security.service';
 import { SSO_STATE_TTL_MS, SsoFailure, SsoService } from './sso.service';
 
@@ -23,6 +24,8 @@ const SSO_COOKIE_PATH = '/api/v1/auth/sso';
 /** Single sign-on: browser redirects to and from the workspace's identity provider. */
 @Controller('auth/sso')
 export class SsoController {
+  private readonly logger = new Logger(SsoController.name);
+
   constructor(
     private readonly sso: SsoService,
     @Inject(API_ENV) private readonly env: ApiEnv,
@@ -54,9 +57,12 @@ export class SsoController {
     try {
       const tokens = await this.sso.callback({ code: query.code, state: query.state, error: query.error }, cookie, meta);
       setAuthCookies(res, this.env, tokens);
+      authEvents.inc({ event: 'sso_success' });
       res.redirect(302, this.web('/app'));
     } catch (e) {
       if (!(e instanceof SsoFailure)) throw e;
+      authEvents.inc({ event: 'sso_failure' });
+      this.logger.warn({ requestId: meta.requestId, reason: e.code, detail: e.message }, 'Single sign-on refused');
       res.redirect(302, this.web(`/login/sso?sso_error=${e.code}`));
     }
   }

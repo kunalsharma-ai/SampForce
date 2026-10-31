@@ -9,6 +9,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
+import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
 
 export interface WorkerTick {
@@ -34,6 +35,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   private timer: NodeJS.Timeout | null = null;
   private running: Promise<unknown> | null = null;
   private stopped = false;
+  private lastTickAt = Date.now();
 
   constructor(
     private readonly relay: EventRelay,
@@ -59,11 +61,27 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     this.log.log(`worker polling every ${this.env.WORKER_POLL_MS} ms`);
     const loop = async () => {
       if (this.stopped) return;
-      this.running = this.tick().catch((err) => this.log.error({ err: errorMessage(err) }, 'worker tick failed'));
+      this.running = this.tick().then(
+        (counts) => {
+          workerTicks.inc({ outcome: 'ok' });
+          for (const [queue, n] of Object.entries(counts)) if (n) workerItems.inc({ queue }, n);
+        },
+        (err) => {
+          workerTicks.inc({ outcome: 'error' });
+          this.log.error({ err: errorMessage(err) }, 'worker tick failed');
+        },
+      );
       await this.running;
+      this.lastTickAt = Date.now();
+      workerLastTick.set(this.lastTickAt / 1000);
       if (!this.stopped) this.timer = setTimeout(loop, this.env.WORKER_POLL_MS);
     };
     this.timer = setTimeout(loop, 0);
+  }
+
+  /** Healthy while passes keep finishing within five minutes (a failed pass still counts: the loop is alive and retries). */
+  isHealthy(): boolean {
+    return !this.stopped && Date.now() - this.lastTickAt < Math.max(300_000, this.env.WORKER_POLL_MS * 10);
   }
 
   /** One pass over every queue. Relays first so new events start their workflows in the same tick. */

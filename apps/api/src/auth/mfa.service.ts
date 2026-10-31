@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, Logger } fr
 import type { MfaEnableResponse, MfaSetupResponse, MfaStatus } from '@dealflow/types';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { PrismaService } from '../common/prisma.service';
+import { authEvents } from '../observability/metrics';
 import { PasswordService } from './password.service';
 import { generateRecoveryCodes, generateSecret, normaliseRecoveryCode, otpauthUri, verifyTotp } from './totp';
 
@@ -42,7 +43,10 @@ export class MfaService {
         failed_login_count = CASE WHEN failed_login_count + 1 >= ${MAX_FAILED_ATTEMPTS}::int THEN 0 ELSE failed_login_count + 1 END
       WHERE id = ${userId}::uuid
       RETURNING (locked_until > now()) AS locked`;
-    if (rows[0]?.locked) this.logger.warn({ userId, requestId }, 'Sign-in paused after repeated failures');
+    if (rows[0]?.locked) {
+      authEvents.inc({ event: 'lockout' });
+      this.logger.warn({ userId, requestId }, 'Sign-in paused after repeated failures');
+    }
   }
 
   async clearFailures(userId: string): Promise<void> {

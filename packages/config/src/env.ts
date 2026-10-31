@@ -27,6 +27,8 @@ export const apiEnvSchema = z.object({
   /** Runs the background worker inside the API process (development and e2e only). */
   RUN_WORKER_IN_PROCESS: bool.default('false'),
   WORKER_POLL_MS: z.coerce.number().int().min(100).default(2000),
+  /** Port for Prometheus metrics and the worker's health check, on a listener separate from the public API. Unset = off. */
+  METRICS_PORT: z.coerce.number().int().positive().optional(),
   /** Lets webhooks and adapters reach private network addresses. Test fixtures only; refused in production. */
   ALLOW_PRIVATE_NETWORK_TARGETS: bool.default('false'),
   WEBHOOK_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(6),

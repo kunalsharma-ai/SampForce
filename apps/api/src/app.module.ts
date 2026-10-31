@@ -23,6 +23,7 @@ import { HealthController } from './health/health.controller';
 import { RevenueModule } from './revenue/revenue.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { WorkerModule } from './worker/worker.module';
+import { redactUrl } from './observability/redact';
 
 @Module({
   imports: [
@@ -35,8 +36,10 @@ import { WorkerModule } from './worker/worker.module';
           res.setHeader('x-request-id', id);
           return id;
         },
+        // Credentials never reach the logs, even if a serializer above is widened later.
+        redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'], censor: '[redacted]' },
         serializers: {
-          req: (req: { id: string; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url }),
+          req: (req: { id: string; method: string; url: string }) => ({ id: req.id, method: req.method, url: redactUrl(req.url) }),
           res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
         },
         transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
