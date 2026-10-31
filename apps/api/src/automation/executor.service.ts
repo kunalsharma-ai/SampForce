@@ -208,7 +208,7 @@ export class WorkflowExecutor {
       }),
     );
     if (!m || !m.role.permissions.includes('automation:manage')) return null;
-    return { userId, tenantId, sessionId: 'automation', membershipId: m.id, roleKey: m.role.key, permissions: m.role.permissions };
+    return { userId, tenantId, sessionId: 'automation', membershipId: m.id, roleKey: m.role.key, permissions: m.role.permissions, authMethod: 'password' };
   }
 
   /** Starts executions for every active workflow whose trigger and conditions match an event. */

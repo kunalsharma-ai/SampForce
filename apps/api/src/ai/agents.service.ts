@@ -34,7 +34,7 @@ import { dealHealth, SCORING_VERSION, scoreLead } from './scoring';
 
 /** Identity for automatic runs: no user, read-only access to what the agent needs. */
 export const systemActor = (tenantId: string, permissions: Permission[]): AuthContext => ({
-  tenantId, userId: '', sessionId: 'ai-agent', membershipId: '', roleKey: 'system', permissions,
+  tenantId, userId: '', sessionId: 'ai-agent', membershipId: '', roleKey: 'system', permissions, authMethod: 'password',
 });
 
 const leadSummarySchema = z.object({ summary: z.string().min(1).max(1500), nextStep: z.string().min(1).max(300) });

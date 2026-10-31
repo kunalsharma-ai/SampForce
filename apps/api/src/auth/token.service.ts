@@ -3,14 +3,22 @@ import { Inject, Injectable } from '@nestjs/common';
 import { jwtVerify, SignJWT } from 'jose';
 import { API_ENV, type ApiEnv } from '../common/env';
 
+export type AuthMethod = 'password' | 'mfa' | 'sso';
+
 export interface AccessClaims {
   sub: string;
   tid: string;
   sid: string;
+  /** How the session was authenticated. */
+  amr: AuthMethod;
+  /** Single sign-on sessions are bound to the workspace that signed them in. */
+  stid?: string;
 }
 
 const ISSUER = 'dealflow-api';
 const AUDIENCE = 'dealflow';
+const MFA_AUDIENCE = 'dealflow-mfa-challenge';
+const METHODS: AuthMethod[] = ['password', 'mfa', 'sso'];
 
 @Injectable()
 export class TokenService {
@@ -29,7 +37,7 @@ export class TokenService {
   }
 
   signAccess(claims: AccessClaims): Promise<string> {
-    return new SignJWT({ tid: claims.tid, sid: claims.sid })
+    return new SignJWT({ tid: claims.tid, sid: claims.sid, amr: claims.amr, ...(claims.stid ? { stid: claims.stid } : {}) })
       .setProtectedHeader({ alg: 'HS256' })
       .setSubject(claims.sub)
       .setIssuer(ISSUER)
@@ -49,7 +57,30 @@ export class TokenService {
       if (typeof payload.sub !== 'string' || typeof payload.tid !== 'string' || typeof payload.sid !== 'string') {
         return null;
       }
-      return { sub: payload.sub, tid: payload.tid, sid: payload.sid };
+      const amr = METHODS.includes(payload.amr as AuthMethod) ? (payload.amr as AuthMethod) : 'password';
+      const stid = typeof payload.stid === 'string' ? payload.stid : undefined;
+      return { sub: payload.sub, tid: payload.tid, sid: payload.sid, amr, ...(stid ? { stid } : {}) };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Proof that the password was right, exchanged within five minutes for a session once the second factor checks out. */
+  signMfaChallenge(userId: string): Promise<string> {
+    return new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(userId)
+      .setIssuer(ISSUER)
+      .setAudience(MFA_AUDIENCE)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(this.key);
+  }
+
+  async verifyMfaChallenge(token: string): Promise<string | null> {
+    try {
+      const { payload } = await jwtVerify(token, this.key, { issuer: ISSUER, audience: MFA_AUDIENCE, algorithms: ['HS256'] });
+      return typeof payload.sub === 'string' ? payload.sub : null;
     } catch {
       return null;
     }

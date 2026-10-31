@@ -17,13 +17,15 @@ import {
   type MembershipSummary,
   passwordSchema,
   type RegisterInput,
+  type SessionSummary,
 } from '@dealflow/types';
 import { entitlementsFor } from '../billing/entitlements';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { MfaService } from './mfa.service';
 import { PasswordService } from './password.service';
-import { TokenService } from './token.service';
+import { type AuthMethod, TokenService } from './token.service';
 
 export interface IssuedTokens {
   accessToken: string;
@@ -31,6 +33,23 @@ export interface IssuedTokens {
   tenantId: string;
   userId: string;
 }
+
+/** Password sign-in found a second factor: no session yet, only a challenge for POST /auth/mfa/verify. */
+export interface MfaChallenge {
+  mfaRequired: true;
+  challenge: string;
+}
+
+/** How a session signed in decides which workspaces it may enter. */
+export interface SessionScope {
+  authMethod: AuthMethod;
+  ssoTenantId?: string | null;
+}
+
+const SSO_REQUIRED = {
+  code: 'SSO_REQUIRED',
+  message: 'Your workspace requires single sign-on. Use “Sign in with SSO” and your workspace’s sign-in name.',
+};
 
 const INVITATION_INVALID = {
   code: 'INVITATION_INVALID',
@@ -51,6 +70,7 @@ export class AuthService {
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
+    private readonly mfa: MfaService,
   ) {}
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<IssuedTokens> {
@@ -83,7 +103,7 @@ export class AuthService {
         });
         return user.id;
       });
-      return this.startSession(userId, tenantId, meta);
+      return this.startSession(userId, tenantId, meta, { authMethod: 'password' });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException({
@@ -95,35 +115,66 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginInput, meta: RequestMeta): Promise<IssuedTokens> {
+  /**
+   * Password sign-in. Ten failures in a row (password or second factor) pause sign-in for 15 minutes; while
+   * paused the answer is the same generic error, so it does not reveal whether the email has an account.
+   */
+  async login(input: LoginInput, meta: RequestMeta): Promise<IssuedTokens | MfaChallenge> {
     const user = await this.prisma.user.findUnique({ where: { email: input.email } });
-    const valid = await this.passwords.verify(user?.passwordHash ?? null, input.password);
+    const locked = !!user && this.mfa.isLocked(user);
+    const valid = await this.passwords.verify(locked ? null : (user?.passwordHash ?? null), input.password);
     if (!user || !valid || user.status !== 'ACTIVE') {
-      this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress }, 'Failed sign-in attempt');
+      if (user && !locked) await this.mfa.recordFailure(user.id, meta.requestId);
+      this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress, locked }, 'Failed sign-in attempt');
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
+    if (user.mfaEnabledAt) {
+      // The failure counter is only reset once the second factor also checks out.
+      return { mfaRequired: true, challenge: await this.tokens.signMfaChallenge(user.id) };
+    }
+    await this.mfa.clearFailures(user.id);
+    return this.completeSignIn(user.id, { authMethod: 'password' }, meta);
+  }
 
-    const memberships = await this.listMemberships(user.id);
+  /** Second step of a password sign-in: an authenticator code or a recovery code. */
+  async verifyMfa(challenge: string, code: string, meta: RequestMeta): Promise<IssuedTokens> {
+    const userId = await this.tokens.verifyMfaChallenge(challenge);
+    if (!userId) throw new UnauthorizedException({ code: 'MFA_CHALLENGE_EXPIRED', message: 'The sign-in took too long. Enter your password again.' });
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (this.mfa.isLocked(user) || user.status !== 'ACTIVE' || !(await this.mfa.verifySecondFactor(userId, code))) {
+      if (!this.mfa.isLocked(user)) await this.mfa.recordFailure(userId, meta.requestId);
+      this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress }, 'Failed second-factor attempt');
+      throw new UnauthorizedException({ code: 'INVALID_MFA_CODE', message: 'That code is not valid. Try again, or use a recovery code.' });
+    }
+    await this.mfa.clearFailures(userId);
+    return this.completeSignIn(userId, { authMethod: 'mfa' }, meta);
+  }
+
+  private async completeSignIn(userId: string, scope: SessionScope, meta: RequestMeta): Promise<IssuedTokens> {
+    const memberships = await this.listMemberships(userId, scope);
     const first = memberships[0];
     if (!first) {
+      const all = await this.listMemberships(userId);
+      if (all.length > 0) throw new ForbiddenException(SSO_REQUIRED);
       throw new ForbiddenException({
         code: 'NO_WORKSPACE',
         message: 'Your account is not a member of any active workspace.',
       });
     }
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    await this.prisma.run({ tenantId: first.tenantId, userId: user.id }, (tx) =>
+    await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+    await this.prisma.run({ tenantId: first.tenantId, userId }, (tx) =>
       this.audit.record(tx, {
         tenantId: first.tenantId,
-        actorUserId: user.id,
+        actorUserId: userId,
         action: 'auth.login',
         entityType: 'user',
-        entityId: user.id,
+        entityId: userId,
+        metadata: { method: scope.authMethod },
         meta,
       }),
     );
-    return this.startSession(user.id, first.tenantId, meta);
+    return this.startSession(userId, first.tenantId, meta, scope);
   }
 
   /** Rotates the refresh token. Reuse of an already-rotated token revokes every session of the user. */
@@ -135,7 +186,12 @@ export class AuthService {
     });
     if (!session) throw new UnauthorizedException({ code: 'NO_SESSION', message: 'Sign in to continue.' });
 
+    if (session.revokedAt && !session.replacedById) {
+      // Signed out (or ended by a security change): not a sign of theft, just no longer valid.
+      throw new UnauthorizedException({ code: 'SESSION_REVOKED', message: 'Your session has ended. Sign in again.' });
+    }
     if (session.revokedAt) {
+      // A rotated token came back: someone holds a copy. End every session of the user.
       await this.prisma.session.updateMany({
         where: { userId: session.userId, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -147,7 +203,8 @@ export class AuthService {
       throw new UnauthorizedException({ code: 'SESSION_EXPIRED', message: 'Your session has expired. Sign in again.' });
     }
 
-    const memberships = await this.listMemberships(session.userId);
+    const scope = { authMethod: session.authMethod as AuthMethod, ssoTenantId: session.ssoTenantId };
+    const memberships = await this.listMemberships(session.userId, scope);
     const tenantId = memberships.some((m) => m.tenantId === session.activeTenantId)
       ? session.activeTenantId
       : memberships[0]?.tenantId;
@@ -165,6 +222,8 @@ export class AuthService {
           userAgent: meta.userAgent,
           ipAddress: meta.ipAddress,
           expiresAt: session.expiresAt,
+          authMethod: session.authMethod,
+          ssoTenantId: session.ssoTenantId,
         },
       });
       // Conditional update guards against two concurrent refreshes both succeeding.
@@ -177,7 +236,7 @@ export class AuthService {
     });
 
     return {
-      accessToken: await this.tokens.signAccess({ sub: session.userId, tid: tenantId, sid: created.id }),
+      accessToken: await this.tokens.signAccess({ sub: session.userId, tid: tenantId, sid: created.id, ...this.claimsFor(scope) }),
       refreshToken: next.token,
       tenantId,
       userId: session.userId,
@@ -200,7 +259,7 @@ export class AuthService {
   }
 
   async switchTenant(auth: AuthContext, tenantId: string, meta: RequestMeta): Promise<string> {
-    const memberships = await this.listMemberships(auth.userId);
+    const memberships = await this.listMemberships(auth.userId, auth);
     if (!memberships.some((m) => m.tenantId === tenantId)) {
       throw new ForbiddenException({ code: 'NOT_A_MEMBER', message: 'You are not a member of that workspace.' });
     }
@@ -214,7 +273,7 @@ export class AuthService {
         meta,
       }),
     );
-    return this.tokens.signAccess({ sub: auth.userId, tid: tenantId, sid: auth.sessionId });
+    return this.tokens.signAccess({ sub: auth.userId, tid: tenantId, sid: auth.sessionId, ...this.claimsFor(auth) });
   }
 
   async me(auth: AuthContext): Promise<MeResponse> {
@@ -223,7 +282,7 @@ export class AuthService {
       this.prisma.run(auth, (tx) =>
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, include: { subscription: true } }),
       ),
-      this.listMemberships(auth.userId),
+      this.listMemberships(auth.userId, auth),
     ]);
     return {
       user: { id: user.id, name: user.name, email: user.email },
@@ -238,6 +297,9 @@ export class AuthService {
       role: auth.roleKey,
       permissions: auth.permissions,
       memberships,
+      authMethod: auth.authMethod,
+      mfaEnabled: !!user.mfaEnabledAt,
+      ...(auth.restriction ? { restriction: auth.restriction } : {}),
     };
   }
 
@@ -312,11 +374,16 @@ export class AuthService {
       });
     });
     await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
-    return this.startSession(userId, tenantId, meta);
+    // People with a second factor confirm it at their next sign-in; this session only proved the password.
+    return this.startSession(userId, tenantId, meta, { authMethod: 'password' });
   }
 
-  /** Active memberships of a user across tenants, visible through the membership_read policy. */
-  async listMemberships(userId: string): Promise<MembershipSummary[]> {
+  /**
+   * Active memberships of a user across tenants, visible through the membership_read policy. With a scope,
+   * only the workspaces that session may enter: a single sign-on session only its own workspace, other
+   * sessions every workspace except those requiring single sign-on (owners keep password access).
+   */
+  async listMemberships(userId: string, scope?: SessionScope): Promise<MembershipSummary[]> {
     const rows = await this.prisma.run({ userId }, (tx) =>
       tx.membership.findMany({
         where: { userId, status: 'ACTIVE', tenant: { status: 'ACTIVE', deletedAt: null } },
@@ -324,7 +391,16 @@ export class AuthService {
         orderBy: { createdAt: 'asc' },
       }),
     );
-    return rows.map((m) => ({
+    const blocked = new Set<string>();
+    if (scope && !scope.ssoTenantId) {
+      // Single sign-on enforcement only counts while the plan includes it (read in each tenant's own context).
+      for (const m of rows.filter((r) => r.tenant.ssoEnforced && r.role.key !== 'owner')) {
+        const ent = await this.prisma.run({ tenantId: m.tenantId }, (tx) => entitlementsFor(tx, m.tenantId));
+        if (ent.entitlements.sso) blocked.add(m.tenantId);
+      }
+    }
+    const allowed = rows.filter((m) => (scope?.ssoTenantId ? m.tenantId === scope.ssoTenantId : !blocked.has(m.tenantId)));
+    return allowed.map((m) => ({
       tenantId: m.tenantId,
       tenantName: m.tenant.name,
       tenantSlug: m.tenant.slug,
@@ -332,7 +408,7 @@ export class AuthService {
     }));
   }
 
-  private async startSession(userId: string, tenantId: string, meta: RequestMeta): Promise<IssuedTokens> {
+  async startSession(userId: string, tenantId: string, meta: RequestMeta, scope: SessionScope): Promise<IssuedTokens> {
     const refresh = this.tokens.newRefreshToken();
     const session = await this.prisma.session.create({
       data: {
@@ -342,13 +418,63 @@ export class AuthService {
         userAgent: meta.userAgent,
         ipAddress: meta.ipAddress,
         expiresAt: new Date(Date.now() + this.tokens.refreshTtlMs),
+        authMethod: scope.authMethod,
+        ssoTenantId: scope.ssoTenantId ?? null,
       },
     });
     return {
-      accessToken: await this.tokens.signAccess({ sub: userId, tid: tenantId, sid: session.id }),
+      accessToken: await this.tokens.signAccess({ sub: userId, tid: tenantId, sid: session.id, ...this.claimsFor(scope) }),
       refreshToken: refresh.token,
       tenantId,
       userId,
     };
+  }
+
+  private claimsFor(scope: SessionScope): { amr: AuthMethod; stid?: string } {
+    return { amr: scope.authMethod, ...(scope.ssoTenantId ? { stid: scope.ssoTenantId } : {}) };
+  }
+
+  async recordSecurityEvent(auth: AuthContext, action: string, meta: RequestMeta): Promise<void> {
+    await this.prisma.run(auth, (tx) => this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action, entityType: 'user', entityId: auth.userId, meta }));
+  }
+
+  // ───── Sessions ─────
+
+  /** The caller's signed-in devices: live refresh sessions (each rotation replaces the row, so createdAt is "last active"). */
+  async listSessions(auth: AuthContext): Promise<SessionSummary[]> {
+    const rows = await this.prisma.session.findMany({
+      where: { userId: auth.userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      current: r.id === auth.sessionId,
+      method: r.authMethod as SessionSummary['method'],
+      userAgent: r.userAgent,
+      ipAddress: r.ipAddress,
+      lastActiveAt: r.createdAt.toISOString(),
+      expiresAt: r.expiresAt.toISOString(),
+    }));
+  }
+
+  /** Signs out one device, or every device except this one. Access tokens already issued lapse within their short lifetime. */
+  async revokeSessions(auth: AuthContext, which: { id: string } | 'others', meta: RequestMeta): Promise<number> {
+    const where = which === 'others' ? { userId: auth.userId, revokedAt: null, id: { not: auth.sessionId } } : { userId: auth.userId, revokedAt: null, id: which.id };
+    const { count } = await this.prisma.session.updateMany({ where, data: { revokedAt: new Date() } });
+    if (which !== 'others' && count === 0) throw new NotFoundException({ code: 'NOT_FOUND', message: 'That session has already ended.' });
+    await this.prisma.run(auth, (tx) =>
+      this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'auth.sessions_revoked', metadata: { count, scope: which === 'others' ? 'others' : 'one' }, meta }),
+    );
+    return count;
+  }
+
+  /**
+   * After turning two-step verification on: every other session ends, and this one is replaced by a
+   * session that counts as verified with the second factor.
+   */
+  async upgradeAfterMfa(auth: AuthContext, meta: RequestMeta): Promise<IssuedTokens> {
+    await this.prisma.session.updateMany({ where: { userId: auth.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    return this.startSession(auth.userId, auth.tenantId, meta, { authMethod: auth.authMethod === 'sso' ? 'sso' : 'mfa', ssoTenantId: auth.ssoTenantId });
   }
 }

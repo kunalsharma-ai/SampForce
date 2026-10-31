@@ -38,4 +38,9 @@ export interface MemberRow {
   roleKey: string;
   roleName: string;
   joinedAt: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  /** Two-step verification is on for this person's account. */
+  mfaEnabled: boolean;
+  /** Managed by the workspace's identity provider through SCIM. */
+  provisioned: boolean;
 }

@@ -39,18 +39,27 @@ enum UserStatus {
 }
 
 model User {
-  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email           String     @unique
-  name            String
-  passwordHash    String     @map("password_hash")
-  status          UserStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
-  lastLoginAt     DateTime?  @map("last_login_at") @db.Timestamptz(3)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String     @unique
+  name             String
+  passwordHash     String     @map("password_hash")
+  status           UserStatus @default(ACTIVE)
+  emailVerifiedAt  DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  /// Consecutive failed sign-in attempts (password or second factor); reset on success.
+  failedLoginCount Int        @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?  @map("locked_until") @db.Timestamptz(3)
+  /// TOTP shared secret, sealed with SecretBox. Set during enrolment; active once mfaEnabledAt is set.
+  mfaSecretEnc     String?    @map("mfa_secret_enc")
+  mfaEnabledAt     DateTime?  @map("mfa_enabled_at") @db.Timestamptz(3)
+  /// Last accepted TOTP time step, so a code cannot be replayed.
+  mfaLastStep      BigInt?    @map("mfa_last_step")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sessions    Session[]
-  memberships Membership[]
+  sessions      Session[]
+  memberships   Membership[]
+  recoveryCodes MfaRecoveryCode[]
 
   @@map("users")
 }
@@ -66,12 +75,30 @@ model Session {
   expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
   revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
   replacedById     String?   @map("replaced_by_id") @db.Uuid
+  /// "password", "mfa" (password + second factor) or "sso".
+  authMethod       String    @default("password") @map("auth_method")
+  /// Set for single sign-on sessions: the session can only ever act in this workspace.
+  ssoTenantId      String?   @map("sso_tenant_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
+}
+
+/// One-time recovery codes for a user's second factor. Only SHA-256 hashes are stored.
+model MfaRecoveryCode {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@map("mfa_recovery_codes")
 }
 
 // ───────────────────────────── Tenancy ─────────────────────────────
@@ -95,6 +122,10 @@ model Tenant {
   isDemo                Boolean      @default(false) @map("is_demo")
   /// Set when an owner hides the getting-started checklist.
   onboardingDismissedAt DateTime?    @map("onboarding_dismissed_at") @db.Timestamptz(3)
+  /// Members must turn on two-step verification before they can use the workspace.
+  requireMfa            Boolean      @default(false) @map("require_mfa")
+  /// Mirrors sso_connections.enabled AND enforced, readable wherever the tenant row is (sign-in, switcher).
+  ssoEnforced           Boolean      @default(false) @map("sso_enforced")
   createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?    @map("deleted_at") @db.Timestamptz(3)
@@ -153,6 +184,9 @@ model Tenant {
   reports                Report[]
   dashboards             Dashboard[]
   dealStageEvents        DealStageEvent[]
+  ssoConnection          SsoConnection?
+  ssoIdentities          SsoIdentity[]
+  scimTokens             ScimToken[]
 
   @@map("tenants")
 }
@@ -230,13 +264,15 @@ enum MembershipStatus {
 }
 
 model Membership {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId  String           @map("tenant_id") @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  roleId    String           @map("role_id") @db.Uuid
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  roleId     String           @map("role_id") @db.Uuid
+  status     MembershipStatus @default(ACTIVE)
+  /// SCIM externalId from the workspace's identity provider, when provisioned through SCIM.
+  externalId String?          @map("external_id")
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -244,6 +280,7 @@ model Membership {
   teamMembers TeamMember[]
 
   @@unique([tenantId, userId])
+  @@unique([tenantId, externalId])
   @@index([userId])
   @@map("memberships")
 }
@@ -1680,4 +1717,71 @@ model DealStageEvent {
   @@index([tenantId, pipelineId, occurredAt])
   @@index([opportunityId, occurredAt])
   @@map("deal_stage_events")
+}
+
+// ───────────────────────────── Enterprise identity (Phase 8) ─────────────────────────────
+
+/// A workspace's OpenID Connect identity provider. One per workspace.
+model SsoConnection {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @unique @map("tenant_id") @db.Uuid
+  /// Globally unique name people type on the sign-in page ("Sign in with SSO").
+  loginSlug       String    @unique @map("login_slug")
+  issuer          String
+  clientId        String    @map("client_id")
+  clientSecretEnc String    @map("client_secret_enc")
+  /// Lower-case email domains the provider may sign in. Empty = any domain the provider asserts.
+  allowedDomains  String[]  @default([]) @map("allowed_domains")
+  /// Create a membership on first sign-in for people the workspace has not invited.
+  jitProvisioning Boolean   @default(false) @map("jit_provisioning")
+  defaultRoleId   String?   @map("default_role_id") @db.Uuid
+  enabled         Boolean   @default(false)
+  /// Password sign-in no longer opens this workspace (owners keep it as a break-glass route).
+  enforced        Boolean   @default(false)
+  /// Last successful test or sign-in, for the settings page.
+  lastVerifiedAt  DateTime? @map("last_verified_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  identities SsoIdentity[]
+
+  @@map("sso_connections")
+}
+
+/// Links an identity-provider subject to a DealFlow user, per workspace.
+model SsoIdentity {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  connectionId String   @map("connection_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  subject      String
+  lastLoginAt  DateTime @default(now()) @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection SsoConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, subject])
+  @@index([tenantId, userId])
+  @@map("sso_identities")
+}
+
+/// Bearer tokens for SCIM 2.0 provisioning. Only SHA-256 hashes are stored.
+model ScimToken {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String
+  tokenHash   String    @unique @map("token_hash")
+  /// First characters of the token, shown so admins can tell tokens apart.
+  prefix      String
+  createdById String?   @map("created_by_id") @db.Uuid
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("scim_tokens")
 }

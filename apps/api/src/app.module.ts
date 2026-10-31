@@ -16,6 +16,7 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
 import { OperatorModule } from './operator/operator.module';
+import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthController } from './health/health.controller';
@@ -56,6 +57,7 @@ import { WorkerModule } from './worker/worker.module';
     BillingModule,
     OperatorModule,
     ReportsModule,
+    IdentityModule,
     WorkerModule,
   ],
   controllers: [HealthController],

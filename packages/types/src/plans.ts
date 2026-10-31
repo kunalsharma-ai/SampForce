@@ -21,16 +21,18 @@ export interface PlanEntitlements {
   apiAccess: boolean;
   /** Workspace-defined roles beyond the five system roles. */
   customRoles: boolean;
+  /** OpenID Connect single sign-on and SCIM provisioning. */
+  sso: boolean;
 }
 
 export const PLAN_ENTITLEMENTS: Record<PlanCode, PlanEntitlements> = {
-  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, apiAccess: false, customRoles: false },
-  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, apiAccess: false, customRoles: false },
-  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, apiAccess: true, customRoles: false },
-  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, apiAccess: true, customRoles: true },
-  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, apiAccess: true, customRoles: true },
-  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, apiAccess: true, customRoles: true },
-  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, apiAccess: true, customRoles: true },
+  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, apiAccess: false, customRoles: false, sso: false },
+  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, apiAccess: false, customRoles: false, sso: false },
+  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, apiAccess: true, customRoles: false, sso: false },
+  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, apiAccess: true, customRoles: true, sso: false },
+  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, apiAccess: true, customRoles: true, sso: false },
+  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, apiAccess: true, customRoles: true, sso: true },
+  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, apiAccess: true, customRoles: true, sso: true },
 };
 
 export interface PlanCatalogEntry {

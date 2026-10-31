@@ -17,3 +17,4 @@ export * from './reports';
 export * from './tenant';
 /** Re-exported so consumers (e.g. OpenAPI generation) extend the same Zod instance the schemas use. */
 export { z } from 'zod';
+export * from './security';

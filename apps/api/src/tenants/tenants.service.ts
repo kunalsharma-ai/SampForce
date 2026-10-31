@@ -44,7 +44,7 @@ export class TenantsService {
     const rows = await this.prisma.run(auth, (tx) =>
       tx.membership.findMany({
         where: { tenantId: auth.tenantId },
-        include: { user: { select: { name: true, email: true } }, role: true },
+        include: { user: { select: { name: true, email: true, mfaEnabledAt: true } }, role: true },
         orderBy: { createdAt: 'asc' },
       }),
     );
@@ -56,6 +56,9 @@ export class TenantsService {
       roleKey: m.role.key,
       roleName: m.role.name,
       joinedAt: m.createdAt.toISOString(),
+      status: m.status,
+      mfaEnabled: !!m.user.mfaEnabledAt,
+      provisioned: !!m.externalId,
     }));
   }
 
@@ -86,7 +89,7 @@ export class TenantsService {
       const updated = await tx.membership.update({
         where: { id: membership.id },
         data: { roleId: role.id },
-        include: { user: { select: { name: true, email: true } }, role: true },
+        include: { user: { select: { name: true, email: true, mfaEnabledAt: true } }, role: true },
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
@@ -105,6 +108,9 @@ export class TenantsService {
         roleKey: updated.role.key,
         roleName: updated.role.name,
         joinedAt: updated.createdAt.toISOString(),
+        status: updated.status,
+        mfaEnabled: !!updated.user.mfaEnabledAt,
+        provisioned: !!updated.externalId,
       };
     });
   }

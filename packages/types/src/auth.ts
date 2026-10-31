@@ -46,4 +46,9 @@ export interface MeResponse {
   role: string;
   permissions: string[];
   memberships: MembershipSummary[];
+  /** How this session signed in. */
+  authMethod: 'password' | 'mfa' | 'sso';
+  mfaEnabled: boolean;
+  /** The workspace's policy is not met yet: only setup screens work until it is. */
+  restriction?: 'mfa_enrolment' | 'sso_required';
 }
