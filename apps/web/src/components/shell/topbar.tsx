@@ -144,7 +144,7 @@ export function Topbar() {
         </DropdownMenu>
 
         <span className="hidden md:inline-flex">
-          <VoiceNoteButton record={null} variant="ghost" iconOnly label="New voice note" />
+          <VoiceNoteButton record={null} variant="ghost" iconOnly label="Quick voice note" />
         </span>
 
         <NotificationsMenu />

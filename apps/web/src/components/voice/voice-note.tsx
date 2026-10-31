@@ -314,7 +314,8 @@ function clean(a: VoiceAction): VoiceAction {
 
 function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n: VoiceNote) => void; onEdit: () => void; onClose: () => void }) {
   const [drafts, setDrafts] = useState<VoiceAction[]>(() => note.actions.map((a) => a.action));
-  const [picked, setPicked] = useState<boolean[]>(() => note.actions.map((a) => a.status === 'proposed'));
+  // A note on no record cannot be saved, so it starts unticked; the warning on it says why.
+  const [picked, setPicked] = useState<boolean[]>(() => note.actions.map((a) => a.status === 'proposed' && !(a.action.type === 'add_note' && !note.record)));
   const [errors, setErrors] = useState<Record<number, string>>({});
   const apply = useVoiceMutation((items: { index: number; action: VoiceAction }[]) => voiceApi.apply(note.id, items), (n) => {
     onNote(n);
