@@ -25,6 +25,15 @@ export const apiEnvSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32).optional(),
   /** The key being rotated out; values sealed with it still open until they are re-sealed. */
   ENCRYPTION_KEY_PREVIOUS: z.string().min(32).optional(),
+  /**
+   * The email service DealFlow sends its own emails through (password resets), as an SMTP URL such as
+   * smtps://user:password@smtp.example.com:465 or smtp://user:password@smtp.example.com:587 (STARTTLS).
+   * Unset = DealFlow sends no system email, and password reset says to ask an administrator.
+   */
+  SMTP_URL: z.string().regex(/^smtps?:\/\//, 'SMTP_URL must start with smtp:// or smtps://').optional().or(z.literal('').transform(() => undefined)),
+  /** Sender of system emails, for example "DealFlow <no-reply@example.com>". Required with SMTP_URL. */
+  MAIL_FROM: z.string().min(3).max(200).optional().or(z.literal('').transform(() => undefined)),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(240).default(30),
   /** Public URL of the web app, used for OAuth redirect URIs and links in notifications. */
   PUBLIC_WEB_URL: z.string().url().default('http://localhost:3000'),
   /** Runs the background worker inside the API process (development and e2e only). */
@@ -126,6 +135,9 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_NETWORK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_NETWORK_TARGETS is for tests only and cannot be used in production');
+  }
+  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) {
+    throw new Error('MAIL_FROM must be set when SMTP_URL is set');
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.FINDER_FIXTURE_URL) {
     throw new Error('FINDER_FIXTURE_URL is for tests only and cannot be used in production');

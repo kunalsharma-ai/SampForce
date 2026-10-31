@@ -42,6 +42,7 @@ Create one Secret (or sync it from your secret manager) and name it in `secrets.
 | `JWT_ACCESS_SECRET` | yes | ≥ 32 random characters |
 | `ENCRYPTION_KEY` | yes | 32 random bytes, base64 or hex. Losing it makes MFA secrets, SSO client secrets, webhook secrets and mailbox tokens unreadable |
 | `OPERATOR_JWT_SECRET` | no | Enables the operator console |
+| `SMTP_URL` | no | Account email (password reset). `smtps://user:pass@host:465`. Set `config.MAIL_FROM` with it. Without it, reset requests answer that email is not set up |
 | `ANTHROPIC_API_KEY`, `STRIPE_*`, `RAZORPAY_*`, `GOOGLE_*`, `MICROSOFT_*` | no | Features stay "not configured" without them |
 
 The chart never writes secrets into ConfigMaps or values. Back up `ENCRYPTION_KEY` separately from database backups.

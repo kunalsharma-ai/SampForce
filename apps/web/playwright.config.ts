@@ -40,6 +40,14 @@ export default defineConfig({
       env: { FINDER_FIXTURE_PORT: '4300' },
     },
     {
+      // Local stand-in for an email service: catches password-reset emails so tests can read the link.
+      command: 'npx tsx test/fixtures/smtp-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4401/health',
+      reuseExistingServer: !process.env.CI,
+      env: { SMTP_FIXTURE_PORT: '4400' },
+    },
+    {
       command: 'node dist/main.js',
       cwd: '../api',
       url: 'http://localhost:4000/api/v1/health/ready',
@@ -62,6 +70,10 @@ export default defineConfig({
         FINDER_FIXTURE_URL: 'http://127.0.0.1:4300',
         // Enables the operator console; e2e creates its own operator account.
         OPERATOR_JWT_SECRET: 'e2e-operator-secret-at-least-32-characters',
+        // Email goes to the stand-in above, never to a real mail server.
+        SMTP_URL: 'smtp://127.0.0.1:4400',
+        MAIL_FROM: 'DealFlow <no-reply@dealflow.test>',
+        PUBLIC_WEB_URL: 'http://localhost:3000',
       },
     },
     {
