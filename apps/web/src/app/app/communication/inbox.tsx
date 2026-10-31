@@ -151,7 +151,7 @@ export function Inbox() {
           aria-label="Status"
           value={filters.status ?? ''}
           onChange={(e) => set({ status: e.target.value || undefined })}
-          className="h-9"
+          className="h-9 w-auto"
         >
           <option value="ACTIVE">Open or waiting</option>
           <option value="">Any status</option>
@@ -165,7 +165,7 @@ export function Inbox() {
           aria-label="Category"
           value={filters.category ?? ''}
           onChange={(e) => set({ category: e.target.value || undefined })}
-          className="h-9"
+          className="h-9 w-auto"
         >
           <option value="">Any category</option>
           {INBOX_CATEGORIES.map((c) => (
@@ -178,7 +178,7 @@ export function Inbox() {
           aria-label="Assigned to"
           value={filters.assigned ?? ''}
           onChange={(e) => set({ assigned: e.target.value || undefined })}
-          className="h-9"
+          className="h-9 w-auto"
         >
           <option value="">Anyone</option>
           <option value="me">Assigned to me</option>
@@ -188,7 +188,7 @@ export function Inbox() {
           aria-label="Mailbox"
           value={filters.mine ?? ''}
           onChange={(e) => set({ mine: e.target.value || undefined })}
-          className="h-9"
+          className="h-9 w-auto"
         >
           <option value="">All mailboxes</option>
           <option value="true">My mailboxes</option>
@@ -197,7 +197,7 @@ export function Inbox() {
           aria-label="Linked records"
           value={filters.linked ?? ''}
           onChange={(e) => set({ linked: e.target.value || undefined })}
-          className="h-9"
+          className="h-9 w-auto"
         >
           <option value="">Any link</option>
           <option value="deal">Linked to a deal</option>
