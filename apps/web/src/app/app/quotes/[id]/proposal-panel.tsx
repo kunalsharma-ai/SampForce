@@ -321,12 +321,12 @@ export function ProposalSharing({
           )}
         </div>
         {url && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               readOnly
               aria-label="Proposal link"
               value={url}
-              className="h-9 min-w-0 flex-1 text-xs"
+              className="h-9 w-full text-xs"
               onFocus={(e) => e.target.select()}
             />
             <Button
