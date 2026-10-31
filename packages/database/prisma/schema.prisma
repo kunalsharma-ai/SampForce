@@ -57,10 +57,11 @@ model User {
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sessions      Session[]
-  memberships   Membership[]
-  recoveryCodes MfaRecoveryCode[]
-  resetTokens   PasswordResetToken[]
+  sessions           Session[]
+  memberships        Membership[]
+  recoveryCodes      MfaRecoveryCode[]
+  resetTokens        PasswordResetToken[]
+  gamificationAwards GamificationAward[]
 
   @@map("users")
 }
@@ -203,6 +204,10 @@ model Tenant {
   salesTargets           SalesTarget[]
   escalations            Escalation[]
   companyHealth          CompanyHealth[]
+  gamificationSettings   GamificationSettings?
+  gamificationBadges     GamificationBadge[]
+  gamificationAwards     GamificationAward[]
+  gamificationContests   GamificationCompetition[]
   companyHealthDays      CompanyHealthDaily[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
@@ -403,9 +408,9 @@ model Company {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parent        Company?       @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
-  children      Company[]      @relation("CompanyHierarchy")
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent        Company?             @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
+  children      Company[]            @relation("CompanyHierarchy")
   contacts      Contact[]
   opportunities Opportunity[]
   activities    Activity[]
@@ -2497,4 +2502,78 @@ model VoiceNote {
   @@index([tenantId, userId, createdAt(sort: Desc)], map: "voice_notes_user_idx")
   @@index([tenantId, leadId, contactId, dealId, companyId], map: "voice_notes_record_idx")
   @@map("voice_notes")
+}
+
+/// Enhancement feature 14: how points are earned, and who sees leaderboards.
+model GamificationSettings {
+  tenantId    String   @id @map("tenant_id") @db.Uuid
+  enabled     Boolean  @default(false)
+  visibility  String   @default("everyone")
+  rules       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("gamification_settings")
+}
+
+model GamificationBadge {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  icon        String   @default("medal")
+  metric      String
+  threshold   Decimal  @db.Decimal(18, 2)
+  window      String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  awards GamificationAward[]
+
+  @@unique([tenantId, name])
+  @@map("gamification_badges")
+}
+
+model GamificationAward {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  badgeId   String   @map("badge_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  period    String
+  value     Decimal  @db.Decimal(18, 2)
+  awardedAt DateTime @default(now()) @map("awarded_at") @db.Timestamptz(3)
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  badge  GamificationBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([badgeId, userId, period])
+  @@index([tenantId, userId])
+  @@map("gamification_awards")
+}
+
+model GamificationCompetition {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  kind        String
+  metric      String
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime  @map("end_date") @db.Date
+  goal        Decimal?  @db.Decimal(18, 2)
+  reward      String?
+  teamIds     String[]  @default([]) @map("team_ids") @db.Uuid
+  rules       Json
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, endDate])
+  @@map("gamification_competitions")
 }

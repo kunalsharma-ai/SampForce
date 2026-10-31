@@ -6,7 +6,7 @@ const SIDEBAR = [
   'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Client Portal', 'Customer Success',
-  'Reports & Analytics', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
+  'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
 ];
 
 test('redirects visitors without a session to sign-in', async ({ page }) => {

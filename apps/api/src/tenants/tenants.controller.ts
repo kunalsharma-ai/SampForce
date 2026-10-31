@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import {
   type InvitationInput,
   type RoleInput,
+  type TeamInput,
+  teamInputSchema,
   roleInputSchema,
   invitationInputSchema,
   type UpdateMemberRoleInput,
@@ -13,6 +15,7 @@ import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } fr
 import { ZodPipe } from '../common/zod.pipe';
 import { InvitationsService } from './invitations.service';
 import { RolesService } from './roles.service';
+import { TeamsService } from './teams.service';
 import { TenantsService } from './tenants.service';
 
 @Controller('tenants/current')
@@ -21,7 +24,33 @@ export class TenantsController {
     private readonly tenants: TenantsService,
     private readonly invitations: InvitationsService,
     private readonly roleService: RolesService,
+    private readonly teams: TeamsService,
   ) {}
+
+  @Get('teams')
+  @RequirePermissions('members:read')
+  listTeams(@Auth() auth: AuthContext) {
+    return this.teams.list(auth);
+  }
+
+  @Post('teams')
+  @RequirePermissions('members:manage')
+  createTeam(@Auth() auth: AuthContext, @Body(new ZodPipe(teamInputSchema)) body: TeamInput, @Meta() meta: RequestMeta) {
+    return this.teams.create(auth, body, meta);
+  }
+
+  @Put('teams/:id')
+  @RequirePermissions('members:manage')
+  updateTeam(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(teamInputSchema)) body: TeamInput, @Meta() meta: RequestMeta) {
+    return this.teams.update(auth, id, body, meta);
+  }
+
+  @Delete('teams/:id')
+  @HttpCode(204)
+  @RequirePermissions('members:manage')
+  removeTeam(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.teams.remove(auth, id, meta);
+  }
 
   @Get()
   @RequirePermissions('tenant:read')

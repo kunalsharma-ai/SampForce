@@ -8,6 +8,7 @@ import { ContractsService } from '../commercial/contracts.service';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
+import { GamificationService } from '../gamification/gamification.service';
 import { DealHealthService } from '../intelligence/deal-health.service';
 import { SequenceRunner } from '../sequences/sequence-runner.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
@@ -25,6 +26,8 @@ export interface WorkerTick {
   health: number;
   billing: number;
   sequences: number;
+  /** Badges awarded by the hourly gamification sweep. */
+  badges: number;
 }
 
 /**
@@ -52,6 +55,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly dealHealth: DealHealthService,
     private readonly billing: BillingService,
     private readonly sequences: SequenceRunner,
+    private readonly gamification: GamificationService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -101,7 +105,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const health = (await this.success.sweep()) + (await this.dealHealth.sweep());
     const billing = await this.billing.runDue();
     const sequences = await this.sequences.runDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences };
+    const badges = await this.gamification.sweep();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

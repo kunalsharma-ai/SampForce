@@ -25,3 +25,4 @@ export * from './intelligence';
 export * from './meetings';
 export * from './portal';
 export * from './voice';
+export * from './gamification';

@@ -43,6 +43,8 @@ export const PERMISSIONS = [
   'reports:manage',
   'sequences:read',
   'sequences:write',
+  'gamification:read',
+  'gamification:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -67,7 +69,7 @@ const MEMBER: Permission[] = [
   'sequences:write',
 ];
 
-const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage'];
+const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage', 'gamification:manage'];
 
 const ADMIN: Permission[] = PERMISSIONS.filter((p) => p !== 'billing:manage');
 
