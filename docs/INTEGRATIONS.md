@@ -7,6 +7,8 @@
 | Google (Gmail read and send, Google Calendar read) | **Implemented, tested against a local fixture of the Google APIs.** Not yet tested against Google with real credentials. | Needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` |
 | Microsoft 365 (Outlook inbox read and send, calendar read via Microsoft Graph) | **Implemented, tested against a local fixture of Microsoft Graph.** Not yet tested against Microsoft with real credentials. | Needs `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, optional `MICROSOFT_TENANT` |
 | Deepgram (meeting and voice note transcription) | **Pending Configuration.** Implemented and tested against a local stand-in only. Not yet tested against Deepgram with a real key. The app shows Pending Configuration until a key is set, and Verified only after a successful transcription. | Needs `DEEPGRAM_API_KEY` (server secret). Optional `MEETING_UPLOAD_MAX_MB` |
+| Apollo.io (people search and email reveal for Prospect Lists and the extension) | **Mock Mode** without a key: search returns labelled sample people on `.example` domains that can never reach the CRM, exports or sequences. With a key it is **Pending Configuration** until the first successful call, then Connected. Tested against a local stand-in only; the request and response shapes follow Apollo's published docs and have not been checked against Apollo with a real key. | Needs `APOLLO_API_KEY` (server secret, a master key for `people/bulk_match`). Optional `APOLLO_API_BASE_URL`, `PROSPECT_DAILY_LIMIT` (provider calls per person per 24 hours, default 100) |
+| Hunter.io email verification (Prospect Lists) | **Pending Configuration** without a key: the Verify button explains it needs one and no status is ever guessed. Tested against a local stand-in only. | Needs `HUNTER_API_KEY` (the same key as the Email Finder) |
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
 | Slack, Teams, Zoom, Twilio, WhatsApp, Stripe, Razorpay, DocuSign, Zapier | Not built | Shown as "Not available yet" in the app |
 
@@ -61,6 +63,11 @@ people up, save leads and enrol them, within what the person's role allows. Conn
 signed-in devices and end with any "sign out other devices". Automatic capture is off by default and only saves
 addresses at the website's own domain, never personal mailboxes. It is not in the Chrome Web Store yet: load
 `apps/extension/dist` unpacked (see `apps/extension/README.md`).
+
+From version 0.2.0 people can also sign in from the extension with their DealFlow email and password (and their
+second-factor code), which creates the same kind of connection; workspaces that enforce single sign-on still use a
+connection code. "Find prospects" shows people at the company whose website is open, from Apollo.io through the API
+(Mock Mode sample people without a key), and imports the chosen people to a prospect list or the CRM (ADR 0030).
 
 ## Email finder
 

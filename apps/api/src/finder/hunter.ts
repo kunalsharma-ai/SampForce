@@ -48,4 +48,25 @@ export class HunterClient {
     const data = await this.get<{ email?: string | null; score?: number | null; position?: string | null }>('/email-finder', { domain, first_name: firstName, last_name: lastName });
     return data.email ? { email: data.email.toLowerCase(), name: `${firstName} ${lastName}`, position: data.position ?? null, confidence: data.score ?? null } : null;
   }
+
+  /**
+   * Email Verifier. Hunter's status is mapped onto DealFlow's email statuses: valid, invalid, accept_all → catch_all,
+   * disposable and webmail → risky, anything else → unknown.
+   */
+  async verify(email: string): Promise<'valid' | 'invalid' | 'catch_all' | 'risky' | 'unknown'> {
+    const data = await this.get<{ status?: string | null }>('/email-verifier', { email });
+    switch (data.status) {
+      case 'valid':
+        return 'valid';
+      case 'invalid':
+        return 'invalid';
+      case 'accept_all':
+        return 'catch_all';
+      case 'disposable':
+      case 'webmail':
+        return 'risky';
+      default:
+        return 'unknown';
+    }
+  }
 }

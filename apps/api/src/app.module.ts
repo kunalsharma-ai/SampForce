@@ -27,6 +27,7 @@ import { ExtensionModule } from './extension/extension.module';
 import { FinderModule } from './finder/finder.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { VisitorsModule } from './visitors/visitors.module';
+import { ProspectsModule } from './prospects/prospects.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -74,6 +75,7 @@ import { redactUrl } from './observability/redact';
     FinderModule,
     GamificationModule,
     VisitorsModule,
+    ProspectsModule,
     IntelligenceModule,
     PortalModule,
     MailModule,

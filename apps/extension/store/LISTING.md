@@ -34,11 +34,14 @@ addresses on the page, check who is already in DealFlow, and save the right peop
 - "Find more people" asks DealFlow's email finder to read the company's public website for more contacts and works
   out how its addresses are written.
 - Save people straight into an email sequence, if your mailbox is connected in DealFlow.
+- "Find prospects" shows people who work at the company whose site you are on, from your workspace's Apollo.io
+  account (labelled sample people until the workspace adds its key), and saves the ones you choose to a prospect list
+  or as leads. It never reads people from the page or from social networks for this.
 - Optional automatic capture saves new people at a company's own domain as you browse, never personal mailboxes
   such as Gmail, at most 100 a day. It is off until you turn it on.
 
-You need a DealFlow workspace. Connect the extension with a connection code you create in DealFlow under
-Integrations, Browser extension. The extension only talks to your own workspace, and you can disconnect it at any time.
+You need a DealFlow workspace. Sign in with your DealFlow email and password, or connect with a connection code you
+create in DealFlow under Integrations, Browser extension (needed for workspaces that use single sign-on). The extension only talks to your own workspace, and you can disconnect it at any time.
 
 **Category:** Workflow & Planning (Edge: Productivity)
 
@@ -56,8 +59,8 @@ Integrations, Browser extension. The extension only talks to your own workspace,
 
 ## Privacy practices form
 
-**Single purpose:** Find email addresses on web pages and save the people as leads in the user's own DealFlow CRM
-workspace.
+**Single purpose:** Find people at the company whose website the user is on (email addresses on the page, and the
+workspace's own data provider) and save them as leads or prospects in the user's own DealFlow CRM workspace.
 
 **Permission justifications:**
 
@@ -76,7 +79,8 @@ workspace.
 - Website content: the page address, title and published company name.
 - Web history: with automatic capture on, it keeps the addresses of pages checked in the last 24 hours on the device,
   so it does not check them twice, and sends the page address of each saved lead as its source.
-- Authentication information: the DealFlow connection code, stored on the device.
+- Authentication information: the DealFlow email and password when signing in (sent once to the person's own
+  workspace, never stored) and the resulting connection token, stored on the device.
 
 **Certifications** (Sampledge confirms these; the code is built to meet them):
 - Data is not sold or transferred to third parties outside the approved use cases.

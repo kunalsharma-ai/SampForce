@@ -56,3 +56,16 @@ export async function call(path, { method = 'GET', body, baseUrl, token } = {}) 
   }
   return data;
 }
+
+/** Signs in with a DealFlow email and password (no token yet). Answers a connection, or a second-factor challenge. */
+export async function signIn(baseUrl, path, body) {
+  let res;
+  try {
+    res = await fetch(`${baseUrl}/api/v1${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), credentials: 'omit' });
+  } catch {
+    throw new ApiError(0, 'NETWORK', `Could not reach DealFlow at ${baseUrl}. Check the address and your connection.`);
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, data?.error?.code ?? 'HTTP_' + res.status, data?.error?.message ?? `DealFlow answered with an error (${res.status}).`);
+  return data;
+}

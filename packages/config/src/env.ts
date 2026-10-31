@@ -65,6 +65,11 @@ export const apiEnvSchema = z.object({
   /** Optional data provider for the email finder (Hunter.io). Unset = DealFlow's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
+  /** Prospect discovery (Apollo.io People API Search and People Enrichment). Unset = Mock Mode with sample people. */
+  APOLLO_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
+  APOLLO_API_BASE_URL: z.string().url().default('https://api.apollo.io/api/v1'),
+  /** Default provider calls (searches, email reveals, verifications) one person may make per 24 hours. */
+  PROSPECT_DAILY_LIMIT: z.coerce.number().int().min(0).max(5000).default(100),
   /** Optional speech-to-text for meeting recordings (Deepgram). Unset = paste a transcript or notes instead. */
   DEEPGRAM_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   DEEPGRAM_API_BASE_URL: z.string().url().default('https://api.deepgram.com'),

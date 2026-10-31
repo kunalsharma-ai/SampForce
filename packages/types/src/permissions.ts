@@ -47,6 +47,12 @@ export const PERMISSIONS = [
   'gamification:manage',
   'visitors:read',
   'visitors:manage',
+  'prospects:read',
+  'prospects:write',
+  /** Provider searches, email reveals and verifications, which use provider credits and the daily allowance. */
+  'prospects:search',
+  'prospects:export',
+  'prospects:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -69,9 +75,11 @@ const MEMBER: Permission[] = [
   'success:write',
   'reports:write',
   'sequences:write',
+  'prospects:write',
+  'prospects:search',
 ];
 
-const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage', 'gamification:manage', 'visitors:manage'];
+const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage', 'gamification:manage', 'visitors:manage', 'prospects:export', 'prospects:manage'];
 
 const ADMIN: Permission[] = PERMISSIONS.filter((p) => p !== 'billing:manage');
 

@@ -62,29 +62,42 @@ export class ExtensionService {
     return rows.map(toRow);
   }
 
-  async createToken(auth: AuthContext, name: string, meta: RequestMeta): Promise<ExtensionTokenCreated> {
-    const count = await this.prisma.session.count({ where: this.live(auth) });
+  createToken(auth: AuthContext, name: string, meta: RequestMeta): Promise<ExtensionTokenCreated> {
+    return this.createTokenFor(auth.userId, auth.tenantId, { authMethod: auth.authMethod, ssoTenantId: auth.ssoTenantId ?? null }, name, meta, 'code');
+  }
+
+  /** A new connection for this person and workspace: from a connection code in the web app, or a sign-in from the extension. */
+  async createTokenFor(
+    userId: string,
+    tenantId: string,
+    scope: { authMethod: AuthContext['authMethod']; ssoTenantId?: string | null },
+    name: string,
+    meta: RequestMeta,
+    via: 'code' | 'password',
+  ): Promise<ExtensionTokenCreated> {
+    const live = { userId, activeTenantId: tenantId, extensionTokenHash: { not: null }, revokedAt: null, expiresAt: { gt: new Date() } };
+    const count = await this.prisma.session.count({ where: live });
     if (count >= MAX_EXTENSION_TOKENS) {
       throw new ConflictException({ code: 'TOO_MANY_CONNECTIONS', message: `You can have ${MAX_EXTENSION_TOKENS} extension connections. Remove one you no longer use first.` });
     }
     const token = EXTENSION_TOKEN_PREFIX + randomBytes(32).toString('base64url');
     const session = await this.prisma.session.create({
       data: {
-        userId: auth.userId,
-        activeTenantId: auth.tenantId,
+        userId,
+        activeTenantId: tenantId,
         // Never handed out: an extension connection cannot be refreshed into a web session.
         refreshTokenHash: hash(randomBytes(32).toString('hex')),
         extensionTokenHash: hash(token),
         extensionName: name,
         userAgent: `${EXTENSION_USER_AGENT} (${name})`,
         ipAddress: meta.ipAddress,
-        authMethod: auth.authMethod,
-        ssoTenantId: auth.ssoTenantId ?? null,
+        authMethod: scope.authMethod,
+        ssoTenantId: scope.ssoTenantId ?? null,
         expiresAt: new Date(Date.now() + EXTENSION_TOKEN_DAYS * DAY),
       },
     });
-    await this.prisma.run(auth, (tx) =>
-      this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'extension.connected', entityType: 'user', entityId: auth.userId, metadata: { name }, meta }),
+    await this.prisma.run({ tenantId, userId }, (tx) =>
+      this.audit.record(tx, { tenantId, actorUserId: userId, action: 'extension.connected', entityType: 'user', entityId: userId, metadata: via === 'code' ? { name } : { name, via }, meta }),
     );
     return { token, connection: toRow(session) };
   }
@@ -116,6 +129,11 @@ export class ExtensionService {
         canEnroll: auth.permissions.includes('sequences:write'),
         mailboxConnected: !!mailbox,
         sequences,
+        prospects: {
+          canRead: auth.permissions.includes('prospects:read'),
+          canSave: auth.permissions.includes('prospects:write'),
+          canSearch: auth.permissions.includes('prospects:search'),
+        },
       };
     });
   }

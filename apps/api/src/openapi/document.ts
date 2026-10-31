@@ -6,6 +6,16 @@ import {
   competitionInputSchema,
   gamificationSettingsSchema,
   visitorSettingsSchema,
+  prospectListInputSchema,
+  prospectAddSchema,
+  prospectImportCommitSchema,
+  prospectMoveSchema,
+  prospectIdsSchema,
+  prospectToCrmSchema,
+  prospectUpdateSchema,
+  prospectSettingsSchema,
+  providerSearchSchema,
+  providerAddSchema,
   collectSchema,
   enquirySchema,
   teamInputSchema,
@@ -76,6 +86,10 @@ import {
   sequenceInputSchema,
   sequenceStatusSchema,
   extensionCaptureSchema,
+  extensionDiscoverSchema,
+  extensionLoginMfaSchema,
+  extensionLoginSchema,
+  extensionProspectImportSchema,
   extensionLookupSchema,
   extensionTokenCreateSchema,
   finderSaveSchema,
@@ -553,6 +567,36 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'get', path: '/public/track/{siteKey}/config', tags: ['Visitors'], summary: 'Public: consent mode and enquiry consent text for an allowed website; 404 when tracking is off or the origin is not allowed (no auth)', request: { params: z.object({ siteKey: z.string() }) }, responses: { 200: ok('Config'), 404: json(error, 'Not available') } });
   r.registerPath({ method: 'post', path: '/public/track/{siteKey}/collect', tags: ['Visitors'], summary: 'Public: record page views, custom events and engaged time; requests with a privacy signal are dropped (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(collectSchema) }, responses: { 200: ok('Stored count'), 404: json(error, 'Not available') } });
   r.registerPath({ method: 'post', path: '/public/track/{siteKey}/enquiry', tags: ['Visitors'], summary: 'Public: an enquiry from the website; links to a contact or open lead by email or creates a lead; 5 per address per 10 minutes (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(enquirySchema) }, responses: { 200: ok('Thank-you message'), 404: json(error, 'Not available'), 429: json(error, 'Too many enquiries') } });
+
+  // Part 2: Prospect Lists and prospect discovery (Apollo.io search, Hunter.io verification; Mock Mode without keys).
+  action('get', '/prospect-lists', 'Prospects', 'Prospect lists with counts, owner and assignee (prospects:read)');
+  r.registerPath({ method: 'post', path: '/prospect-lists', tags: ['Prospects'], summary: 'Create a named list; the assignee is notified in DealFlow (prospects:write)', security: secured, request: body(prospectListInputSchema), responses: { 201: ok('List'), ...errors } });
+  action('get', '/prospect-lists/{id}', 'Prospects', 'A page of prospects with search, filters (industry, country, company size, title, email status, stage, source), sort and facets (prospects:read)', undefined, { query: z.object({ search: z.string().optional(), industry: z.string().optional(), country: z.string().optional(), companySize: z.string().optional(), title: z.string().optional(), emailStatus: z.string().optional(), stage: z.string().optional(), source: z.string().optional(), sort: z.string().optional(), page: z.number().int().optional() }) });
+  action('put', '/prospect-lists/{id}', 'Prospects', 'Rename, describe or assign a list; audited (prospects:write)', prospectListInputSchema);
+  r.registerPath({ method: 'delete', path: '/prospect-lists/{id}', tags: ['Prospects'], summary: 'Delete a list and its prospects; leads and contacts are kept (prospects:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  r.registerPath({ method: 'post', path: '/prospect-lists/{id}/prospects', tags: ['Prospects'], summary: 'Add people by hand; duplicates in the list are skipped and people already in the CRM are linked (prospects:write)', security: secured, request: { params: idParam, ...body(prospectAddSchema) }, responses: { 201: ok('Added, duplicates, in CRM'), ...errors } });
+  r.registerPath({ method: 'post', path: '/prospect-lists/{id}/import', tags: ['Prospects'], summary: 'Upload a .csv or .xlsx file (raw body, ?name=, up to 5 MB and 5,000 rows); returns its columns and a suggested mapping (prospects:write)', security: secured, request: { params: idParam, query: z.object({ name: z.string() }) }, responses: { 201: ok('Import preview'), ...errors } });
+  r.registerPath({ method: 'post', path: '/prospect-lists/{id}/import/{importId}', tags: ['Prospects'], summary: 'Import the uploaded file with a column mapping; reports bad rows and duplicates (prospects:write)', security: secured, request: { params: z.object({ id: z.string().uuid(), importId: z.string().uuid() }), ...body(prospectImportCommitSchema) }, responses: { 200: ok('Import result'), ...notFound, ...errors } });
+  action('post', '/prospect-lists/{id}/dedupe', 'Prospects', 'Remove duplicates (same email, or same name at the same company), keeping the most complete copy (prospects:write)');
+  action('get', '/prospect-lists/{id}/performance', 'Prospects', 'Outreach results for sequences this list was sent to: enrolled, sent, opened, clicked, replied, bounced, unsubscribed (prospects:read)');
+  r.registerPath({ method: 'get', path: '/prospect-lists/{id}/export', tags: ['Prospects'], summary: 'CSV of eligible prospects only (not sample data, has an email that is not invalid, bounced or on the do-not-email list); audited (prospects:export)', security: secured, request: { params: idParam }, responses: { 200: { description: 'CSV', content: { 'text/csv': { schema: z.string() } } }, ...notFound, ...errors } });
+  action('post', '/prospect-lists/{id}/provider', 'Prospects', 'Add people from a provider search; revealEmails asks Apollo for their addresses (credits and allowance). Never guesses addresses (prospects:write)', providerAddSchema);
+  action('get', '/prospects/settings', 'Prospects', 'Provider status (live, Pending Configuration or Mock Mode) and daily allowances; per-person usage for managers (prospects:read)');
+  action('put', '/prospects/settings', 'Prospects', 'Set the daily allowance of provider calls and per-person overrides; audited (prospects:manage)', prospectSettingsSchema);
+  action('get', '/prospects/usage', 'Prospects', 'Your provider calls in the last 24 hours and your limit (prospects:read)');
+  action('post', '/prospects/search', 'Prospects', 'Search Apollo.io for people by company website, title, country, company size or keywords; Mock Mode returns labelled sample people. 429 USAGE_LIMIT (prospects:search)', providerSearchSchema);
+  action('post', '/prospects/move', 'Prospects', 'Move or copy prospects to another list, skipping people already there (prospects:write)', prospectMoveSchema);
+  action('post', '/prospects/delete', 'Prospects', 'Delete prospects (prospects:write)', prospectIdsSchema);
+  action('post', '/prospects/to-crm', 'Prospects', 'Add prospects as leads (or link existing leads and contacts), optionally enrolling them in a running sequence; sample data is skipped (prospects:write, leads:write; sequences:write to enrol)', prospectToCrmSchema);
+  action('post', '/prospects/verify', 'Prospects', 'Verify up to 50 addresses with Hunter.io. 409 PENDING_CONFIGURATION without HUNTER_API_KEY (prospects:search)', prospectIdsSchema);
+  action('patch', '/prospects/{id}', 'Prospects', 'Edit a prospect (prospects:write)', prospectUpdateSchema);
+  // Part 2 from the browser extension: sign in with a password, discover people at the company on screen, import them.
+  r.registerPath({ method: 'post', path: '/extension/login', tags: ['Browser extension'], summary: 'Public: sign in with email and password; returns an extension connection (dfx_ token, no cookie) or a second-factor challenge. SSO-enforced workspaces get 403 SSO_REQUIRED and use a connection code (no auth)', request: body(extensionLoginSchema), responses: { 200: ok('Connection, or { mfaRequired, challenge }'), 401: json(error, 'Wrong email or password'), 403: json(error, 'SSO required') } });
+  r.registerPath({ method: 'post', path: '/extension/login/mfa', tags: ['Browser extension'], summary: 'Public: finish an extension sign-in with an authenticator or recovery code (no auth)', request: body(extensionLoginMfaSchema), responses: { 200: ok('Connection'), 401: json(error, 'Invalid code or expired challenge') } });
+  action('get', '/extension/prospect-lists', 'Browser extension', 'Prospect lists to import into (prospects:read, extension token)');
+  action('get', '/extension/prospects/usage', 'Browser extension', 'Your provider calls in the last 24 hours and your limit (prospects:read, extension token)');
+  action('post', '/extension/prospects/discover', 'Browser extension', 'People at the company whose website is open, from Apollo.io; Mock Mode returns labelled sample people (prospects:search, extension token)', extensionDiscoverSchema);
+  action('post', '/extension/prospects/import', 'Browser extension', 'Import up to 25 discovered people into a prospect list (existing or new) or the CRM as leads, optionally revealing emails and enrolling; sample people and people without an email never become leads (prospects:write or leads:write, extension token)', extensionProspectImportSchema);
 
   // Phase 6: billing, custom roles, onboarding, support access and the operator console.
   action('get', '/billing', 'Billing', 'Plan, seats, usage against allowances and what can be bought here (billing:read)');

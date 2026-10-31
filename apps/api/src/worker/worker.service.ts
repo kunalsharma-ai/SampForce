@@ -10,6 +10,7 @@ import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { VisitorsService } from '../visitors/visitors.service';
+import { ProspectsService } from '../prospects/prospects.service';
 import { DealHealthService } from '../intelligence/deal-health.service';
 import { SequenceRunner } from '../sequences/sequence-runner.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
@@ -31,6 +32,7 @@ export interface WorkerTick {
   badges: number;
   /** Website tracking rows deleted under each workspace's retention period. */
   visitorRetention: number;
+  prospectImports: number;
 }
 
 /**
@@ -60,6 +62,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly sequences: SequenceRunner,
     private readonly gamification: GamificationService,
     private readonly visitors: VisitorsService,
+    private readonly prospects: ProspectsService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -111,7 +114,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const sequences = await this.sequences.runDue();
     const badges = await this.gamification.sweep();
     const visitorRetention = await this.visitors.sweep();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention };
+    const prospectImports = await this.prospects.sweep();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
