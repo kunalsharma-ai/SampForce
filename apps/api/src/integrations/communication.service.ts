@@ -147,6 +147,17 @@ export class CommunicationService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: audit.action, entityType: 'email', entityId: email.id,
         metadata: { provider: conn.provider, contactId, leadId, ...audit.metadata }, meta,
       });
+      // Automation Studio trigger "Email is sent to them", for one-off and sequence emails alike.
+      if (contactId || leadId) {
+        await this.audit.publish(tx, {
+          tenantId: auth.tenantId,
+          type: 'email.sent',
+          entityType: contactId ? 'contact' : 'lead',
+          entityId: (contactId ?? leadId)!,
+          actorUserId: auth.userId,
+          payload: { emailId: email.id, to: mail.to, subject: mail.subject.slice(0, 200), source: audit.action === 'sequence.email_sent' ? 'sequence' : 'direct', confirmed: true, ...audit.metadata },
+        });
+      }
       return email;
     });
 

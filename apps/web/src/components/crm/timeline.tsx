@@ -172,6 +172,11 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
                 />
                 <span className="flex-1">
                   {t.title}
+                  {t.priority === 'HIGH' && (
+                    <Badge tone="critical" className="ml-1.5">
+                      High priority
+                    </Badge>
+                  )}
                   <span className={`block text-xs ${t.overdue ? 'text-critical' : 'text-muted-foreground'}`}>
                     {t.dueAt ? `${t.overdue ? 'Overdue · ' : 'Due '}${formatDate(t.dueAt)}` : 'No due date'} · {t.assignee?.name ?? 'Unassigned'}
                   </span>

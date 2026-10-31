@@ -15500,6 +15500,14 @@
                     "minLength": 1,
                     "maxLength": 200
                   },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "LOW",
+                      "NORMAL",
+                      "HIGH"
+                    ]
+                  },
                   "description": {
                     "type": [
                       "string",
@@ -15847,6 +15855,14 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "LOW",
+                      "NORMAL",
+                      "HIGH"
+                    ]
                   },
                   "description": {
                     "type": [
@@ -19775,7 +19791,16 @@
                               "deal.lost",
                               "task.completed",
                               "activity.logged",
-                              "deal.health_dropped"
+                              "deal.health_dropped",
+                              "email.sent",
+                              "email.opened",
+                              "email.clicked",
+                              "email.replied",
+                              "email.bounced",
+                              "email.unsubscribed",
+                              "email.failed",
+                              "sequence.enrolled",
+                              "sequence.removed"
                             ]
                           },
                           "conditions": {
@@ -20028,6 +20053,15 @@
                                             }
                                           ],
                                           "default": "record_owner"
+                                        },
+                                        "priority": {
+                                          "type": "string",
+                                          "enum": [
+                                            "LOW",
+                                            "NORMAL",
+                                            "HIGH"
+                                          ],
+                                          "default": "NORMAL"
                                         }
                                       },
                                       "required": [
@@ -20191,6 +20225,90 @@
                                       "required": [
                                         "type",
                                         "subject"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop_sequences"
+                                          ]
+                                        },
+                                        "mode": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop",
+                                            "pause"
+                                          ],
+                                          "default": "stop"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "enroll_in_sequence"
+                                          ]
+                                        },
+                                        "sequenceId": {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sequenceId"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "flag_email"
+                                          ]
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "needs_verification",
+                                            "invalid",
+                                            "valid"
+                                          ],
+                                          "default": "needs_verification"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "add_engagement_points"
+                                          ]
+                                        },
+                                        "points": {
+                                          "type": "integer",
+                                          "minimum": -50,
+                                          "maximum": 50
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "points"
                                       ]
                                     },
                                     {
@@ -20975,7 +21093,16 @@
                               "deal.lost",
                               "task.completed",
                               "activity.logged",
-                              "deal.health_dropped"
+                              "deal.health_dropped",
+                              "email.sent",
+                              "email.opened",
+                              "email.clicked",
+                              "email.replied",
+                              "email.bounced",
+                              "email.unsubscribed",
+                              "email.failed",
+                              "sequence.enrolled",
+                              "sequence.removed"
                             ]
                           },
                           "conditions": {
@@ -21228,6 +21355,15 @@
                                             }
                                           ],
                                           "default": "record_owner"
+                                        },
+                                        "priority": {
+                                          "type": "string",
+                                          "enum": [
+                                            "LOW",
+                                            "NORMAL",
+                                            "HIGH"
+                                          ],
+                                          "default": "NORMAL"
                                         }
                                       },
                                       "required": [
@@ -21391,6 +21527,90 @@
                                       "required": [
                                         "type",
                                         "subject"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop_sequences"
+                                          ]
+                                        },
+                                        "mode": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop",
+                                            "pause"
+                                          ],
+                                          "default": "stop"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "enroll_in_sequence"
+                                          ]
+                                        },
+                                        "sequenceId": {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sequenceId"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "flag_email"
+                                          ]
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "needs_verification",
+                                            "invalid",
+                                            "valid"
+                                          ],
+                                          "default": "needs_verification"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "add_engagement_points"
+                                          ]
+                                        },
+                                        "points": {
+                                          "type": "integer",
+                                          "minimum": -50,
+                                          "maximum": 50
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "points"
                                       ]
                                     },
                                     {
@@ -22750,7 +22970,16 @@
                               "deal.lost",
                               "task.completed",
                               "activity.logged",
-                              "deal.health_dropped"
+                              "deal.health_dropped",
+                              "email.sent",
+                              "email.opened",
+                              "email.clicked",
+                              "email.replied",
+                              "email.bounced",
+                              "email.unsubscribed",
+                              "email.failed",
+                              "sequence.enrolled",
+                              "sequence.removed"
                             ]
                           },
                           "conditions": {
@@ -23003,6 +23232,15 @@
                                             }
                                           ],
                                           "default": "record_owner"
+                                        },
+                                        "priority": {
+                                          "type": "string",
+                                          "enum": [
+                                            "LOW",
+                                            "NORMAL",
+                                            "HIGH"
+                                          ],
+                                          "default": "NORMAL"
                                         }
                                       },
                                       "required": [
@@ -23166,6 +23404,90 @@
                                       "required": [
                                         "type",
                                         "subject"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop_sequences"
+                                          ]
+                                        },
+                                        "mode": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stop",
+                                            "pause"
+                                          ],
+                                          "default": "stop"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "enroll_in_sequence"
+                                          ]
+                                        },
+                                        "sequenceId": {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "sequenceId"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "flag_email"
+                                          ]
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "needs_verification",
+                                            "invalid",
+                                            "valid"
+                                          ],
+                                          "default": "needs_verification"
+                                        }
+                                      },
+                                      "required": [
+                                        "type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "add_engagement_points"
+                                          ]
+                                        },
+                                        "points": {
+                                          "type": "integer",
+                                          "minimum": -50,
+                                          "maximum": 50
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "points"
                                       ]
                                     },
                                     {
@@ -25413,6 +25735,15 @@
                         "task.completed",
                         "activity.logged",
                         "deal.health_dropped",
+                        "email.sent",
+                        "email.opened",
+                        "email.clicked",
+                        "email.replied",
+                        "email.bounced",
+                        "email.unsubscribed",
+                        "email.failed",
+                        "sequence.enrolled",
+                        "sequence.removed",
                         "lead.deleted",
                         "lead.merged",
                         "contact.updated",
@@ -25426,7 +25757,7 @@
                       ]
                     },
                     "minItems": 1,
-                    "maxItems": 23
+                    "maxItems": 32
                   }
                 },
                 "required": [
@@ -25753,6 +26084,15 @@
                         "task.completed",
                         "activity.logged",
                         "deal.health_dropped",
+                        "email.sent",
+                        "email.opened",
+                        "email.clicked",
+                        "email.replied",
+                        "email.bounced",
+                        "email.unsubscribed",
+                        "email.failed",
+                        "sequence.enrolled",
+                        "sequence.removed",
                         "lead.deleted",
                         "lead.merged",
                         "contact.updated",
@@ -25766,7 +26106,7 @@
                       ]
                     },
                     "minItems": 1,
-                    "maxItems": 23
+                    "maxItems": 32
                   },
                   "active": {
                     "type": "boolean"

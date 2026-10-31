@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { TenantTx } from '@dealflow/database';
+import { Prisma, type TenantTx } from '@dealflow/database';
 import {
   type DealHealth,
   formatReference,
@@ -42,6 +42,7 @@ export const NEXT_ACTION_RULES = {
   renewal_due: { base: 70, note: 'A contract you own ends within 30 days and has no renewal yet' },
   quote_awaiting_answer: { base: 65, note: 'A quote was sent 5 or more days ago and is not accepted or declined' },
   new_lead_untouched: { base: 60, note: 'A lead assigned to you is still New with nothing logged after a day' },
+  engaged_no_reply: { base: 58, note: 'Someone opened or clicked several of your sequence emails in 14 days without replying (opens are estimates)' },
   prospect_silent: { base: 55, note: 'Someone finished one of your sequences in the last 14 days without replying: try another channel' },
   deal_no_next_step: { base: 50, note: 'Your open deal has no open task' },
 } as const;
@@ -368,6 +369,36 @@ export class NextActionsService {
         push({
           key: `prospect_silent:${e.id}`, kind: 'prospect_silent', priority: NEXT_ACTION_RULES.prospect_silent.base,
           title, reason: `Finished "${e.sequence.name}" on ${ymd(e.finishedAt!)} without replying. More email is unlikely to help.`,
+          record: { type, id, name }, href: href(type, id), suggestedTask: { title, dueInDays: 1 },
+        });
+      }
+    }
+    if (can('sequences:read')) {
+      // Engaged without replying (scenario 6): 2+ emails opened or a link clicked in 14 days, and no reply.
+      const ref = f ? Prisma.sql`(e.lead_id = ANY(${f.leadIds}::uuid[]) OR e.contact_id = ANY(${f.contactIds}::uuid[]))` : Prisma.sql`e.sender_id = ${me}::uuid`;
+      const engaged = await tx.$queryRaw<{ lead_id: string | null; contact_id: string | null; opened: number; clicked: number; last_at: Date }[]>`
+        SELECT e.lead_id, e.contact_id, count(m.opened_at)::int AS opened, count(m.clicked_at)::int AS clicked, max(greatest(m.opened_at, m.clicked_at)) AS last_at
+          FROM sequence_messages m JOIN sequence_enrollments e ON e.id = m.enrollment_id
+         WHERE m.tenant_id = ${t}::uuid AND ${ref} AND m.sent_at > ${new Date(now.getTime() - 14 * DAY)}
+         GROUP BY e.lead_id, e.contact_id
+        HAVING count(m.replied_at) = 0 AND (count(m.opened_at) >= 2 OR count(m.clicked_at) >= 1)
+         ORDER BY max(greatest(m.opened_at, m.clicked_at)) DESC
+         LIMIT 50`;
+      const [cs, ls] = await Promise.all([
+        tx.contact.findMany({ where: { tenantId: t, deletedAt: null, id: { in: engaged.flatMap((r) => (r.contact_id ? [r.contact_id] : [])) } }, select: { id: true, firstName: true, lastName: true } }),
+        tx.lead.findMany({ where: { tenantId: t, deletedAt: null, id: { in: engaged.flatMap((r) => (r.contact_id ? [] : r.lead_id ? [r.lead_id] : [])) } }, select: { id: true, fullName: true } }),
+      ]);
+      const names = new Map<string, string>([...cs.map((c) => [c.id, [c.firstName, c.lastName].filter(Boolean).join(' ')] as const), ...ls.map((l) => [l.id, l.fullName] as const)]);
+      for (const r of engaged) {
+        const type: NextActionRecordType = r.contact_id ? 'contact' : 'lead';
+        const id = (r.contact_id ?? r.lead_id)!;
+        const name = names.get(id);
+        if (!name) continue;
+        const what = [r.opened ? `opened ${r.opened} email${r.opened === 1 ? '' : 's'} (estimate)` : null, r.clicked ? `clicked links in ${r.clicked}` : null].filter(Boolean).join(' and ');
+        const title = `Follow up personally with ${name}`;
+        push({
+          key: `engaged_no_reply:${type}:${id}:${ymd(r.last_at)}`, kind: 'engaged_no_reply', priority: NEXT_ACTION_RULES.engaged_no_reply.base + Math.min(10, r.clicked * 3),
+          title, reason: `In the last 14 days they ${what} without replying. A short personal note or a call may land better than the next automated email.`,
           record: { type, id, name }, href: href(type, id), suggestedTask: { title, dueInDays: 1 },
         });
       }

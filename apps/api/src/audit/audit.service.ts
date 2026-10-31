@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
 import { currentAutomationScope } from '../automation/automation-context';
 import { domainEventsFor } from '../automation/domain-events';
+import type { DomainEventType } from '@dealflow/types';
 import type { RequestMeta } from '../common/auth-context';
 
 export interface AuditEntry {
@@ -53,5 +54,24 @@ export class AuditService {
         })),
       });
     }
+  }
+
+  /**
+   * Publishes one domain event without an audit entry, for high-volume facts already stored elsewhere
+   * (email opens, clicks, replies). Same outbox, same transaction, same loop protection as `record`.
+   */
+  async publish(tx: TenantTx, e: { tenantId: string; type: DomainEventType; entityType: string; entityId: string; actorUserId?: string | null; payload?: Record<string, unknown> }): Promise<void> {
+    const scope = currentAutomationScope();
+    await tx.domainEvent.create({
+      data: {
+        tenantId: e.tenantId,
+        type: e.type,
+        entityType: e.entityType,
+        entityId: e.entityId,
+        actorUserId: e.actorUserId ?? null,
+        payload: { ...(e.payload ?? {}), ...(scope ? { workflowId: scope.workflowId, executionId: scope.executionId } : {}) } as Prisma.InputJsonValue,
+        depth: scope ? scope.depth + 1 : 0,
+      },
+    });
   }
 }

@@ -21,7 +21,7 @@ import { EXECUTION_LABEL, EXECUTION_TONE, useExecutions, useVersions, useWorkflo
 import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { WorkflowEditor } from './workflow-editor';
-import { AI_DRAFT_KEY, type AiWorkflowDraft, emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
+import { AI_DRAFT_KEY, type AiWorkflowDraft, EMAIL_TEMPLATES, emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
 
 type Tab = 'builder' | 'simulate' | 'runs' | 'versions';
 const TABS: { key: Tab; label: string }[] = [
@@ -36,7 +36,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
   const params = useSearchParams();
   const qc = useQueryClient();
   const workflow = useWorkflow(id);
-  const template = TEMPLATES.find((t) => t.key === params.get('template'));
+  const template = [...TEMPLATES, ...EMAIL_TEMPLATES].find((t) => t.key === params.get('template'));
   const [name, setName] = useState(template?.name ?? '');
   const [description, setDescription] = useState(template?.description ?? '');
   const [definition, setDefinition] = useState<WorkflowDefinition>(template?.definition ?? emptyDefinition());

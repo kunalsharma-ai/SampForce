@@ -31,7 +31,7 @@ export function Mailbox() {
           !integrations.isPending && (
             <p className="text-sm text-muted-foreground">
               No mailbox connected.{' '}
-              <Link href="/app/integrations" className="text-primary hover:underline">
+              <Link href="/app/integrations" className="text-primary underline underline-offset-2">
                 Connect Gmail or Microsoft 365
               </Link>{' '}
               to sync and send email.

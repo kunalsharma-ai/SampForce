@@ -9,6 +9,7 @@ import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
+import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { formatDate, useRecord } from '@/lib/crm';
 
@@ -42,6 +43,8 @@ export function ContactDetail({ id }: { id: string }) {
                   ['Country', c.country],
                   ['Time zone', c.timezone],
                   ['Marketing consent', consentLabel(c.marketingConsent, c.consentSource)],
+                  ['Email status', c.emailStatus && <EmailStatusBadge status={c.emailStatus} />],
+                  ['Engagement score', c.engagementScore !== null ? `${c.engagementScore} / 100` : null],
                   ['Owner', c.owner?.name],
                   ['Created', formatDate(c.createdAt)],
                 ]}

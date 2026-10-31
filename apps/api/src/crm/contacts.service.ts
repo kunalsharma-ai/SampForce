@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { ContactInput, ContactRow, ListQuery, Page } from '@dealflow/types';
+import type { ContactInput, ContactRow, EmailStatus, ListQuery, Page } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -82,6 +82,7 @@ export class ContactsService {
           ...rest,
           ...(input.marketingConsent && input.marketingConsent !== before.marketingConsent ? consentFields(input.marketingConsent, 'manual') : {}),
           ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}),
+          ...(input.email !== undefined && (input.email ?? null) !== before.email ? { emailStatus: null } : {}),
         },
         include,
       });
@@ -118,6 +119,8 @@ export function toContactRow(r: ContactWith, owners: Map<string, { id: string; n
     marketingConsent: r.marketingConsent,
     consentSource: r.consentSource,
     consentUpdatedAt: r.consentUpdatedAt?.toISOString() ?? null,
+    emailStatus: (r.emailStatus as EmailStatus | null) ?? null,
+    engagementScore: r.engagementScore,
     customFields: (r.customFields ?? {}) as Record<string, unknown>,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),

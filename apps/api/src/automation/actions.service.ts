@@ -1,4 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { Prisma } from '@dealflow/database';
+import { AuditService } from '../audit/audit.service';
 import { createHmac } from 'node:crypto';
 import {
   companyUpdateSchema,
@@ -22,6 +25,8 @@ import { LeadsService } from '../crm/leads.service';
 import { TasksService } from '../crm/tasks.service';
 import { CommunicationService } from '../integrations/communication.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { loadContacts, loadLeads } from '../sequences/people';
+import { SequencesService } from '../sequences/sequences.service';
 import { describeAction, type EvalContext, nextRoundRobin } from './engine';
 import { relatedLinks, renderTemplate } from './records';
 
@@ -62,6 +67,8 @@ export class WorkflowActions {
     private readonly activities: ActivitiesService,
     private readonly notifications: NotificationsService,
     private readonly communication: CommunicationService,
+    private readonly audit: AuditService,
+    private readonly moduleRef: ModuleRef,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -80,10 +87,65 @@ export class WorkflowActions {
         const dueAt = action.dueInDays !== undefined ? new Date(Date.now() + action.dueInDays * 86_400_000).toISOString() : undefined;
         const task = await this.tasks.create(
           actor,
-          { title: text(action.title).slice(0, 200), assigneeId: this.resolveUser(action.assignTo, actor, ctx), dueAt, ...relatedLinks(entity, id, ctx.record) },
+          { title: text(action.title).slice(0, 200), priority: action.priority, assigneeId: this.resolveUser(action.assignTo, actor, ctx), dueAt, ...relatedLinks(entity, id, ctx.record) },
           meta,
         );
-        return { taskId: task.id, assigneeId: task.assignee?.id ?? null };
+        return { taskId: task.id, assigneeId: task.assignee?.id ?? null, priority: task.priority };
+      }
+      case 'stop_sequences': {
+        const person = this.person(entity, id);
+        need('sequences:write');
+        const r = await this.prisma.run(actor, async (tx) => {
+          const live = await tx.sequenceEnrollment.findMany({ where: { tenantId: actor.tenantId, [person.field]: person.id, status: { in: action.mode === 'pause' ? ['ACTIVE'] : ['ACTIVE', 'PAUSED'] } }, include: { sequence: { select: { name: true } } } });
+          for (const e of live) {
+            await tx.sequenceEnrollment.update({ where: { id: e.id }, data: action.mode === 'pause' ? { status: 'PAUSED', lastError: 'Paused by a workflow.', nextRunAt: null } : { status: 'STOPPED', finishedAt: new Date(), nextRunAt: null } });
+            if (action.mode === 'stop') {
+              await this.audit.publish(tx, { tenantId: actor.tenantId, type: 'sequence.removed', entityType: person.type, entityId: person.id, actorUserId: actor.userId, payload: { sequenceId: e.sequenceId, sequenceName: e.sequence.name, enrollmentId: e.id, email: e.email, reason: 'workflow' } });
+            }
+          }
+          return live.length;
+        });
+        return { [action.mode === 'pause' ? 'paused' : 'stopped']: r };
+      }
+      case 'enroll_in_sequence': {
+        const person = this.person(entity, id);
+        need('sequences:write');
+        const sequences = await this.sequences();
+        const result = await this.prisma.run(actor, async (tx) => {
+          const seq = await tx.sequence.findFirst({ where: { id: action.sequenceId, tenantId: actor.tenantId } });
+          if (!seq || seq.status !== 'ACTIVE') throw new ActionError('The sequence is missing or not active. Start it, then retry.');
+          const people = person.type === 'lead' ? await loadLeads(tx, actor.tenantId, [person.id]) : await loadContacts(tx, actor.tenantId, [person.id]);
+          if (!people.length) throw new ActionError('The lead or contact no longer exists.');
+          // Emails go from the workflow owner's mailbox, under the sequence's own windows, limits and do-not-email checks.
+          return sequences.enrollPeople(tx, actor.tenantId, seq, people, actor.userId, actor.userId);
+        });
+        if (!result.enrolled) return { enrolled: 0, skipped: result.skipped[0]?.reason ?? 'skipped' };
+        return { enrolled: 1, sequenceId: action.sequenceId };
+      }
+      case 'flag_email': {
+        const person = this.person(entity, id);
+        need(person.type === 'lead' ? 'leads:write' : 'contacts:write');
+        await this.prisma.run(actor, async (tx) => {
+          const where = { id: person.id, tenantId: actor.tenantId, deletedAt: null };
+          const n = person.type === 'lead' ? await tx.lead.updateMany({ where, data: { emailStatus: action.status } }) : await tx.contact.updateMany({ where, data: { emailStatus: action.status } });
+          if (!n.count) throw new ActionError('The lead or contact no longer exists.');
+          await this.audit.record(tx, { tenantId: actor.tenantId, actorUserId: actor.userId, action: `${person.type}.email_flagged`, entityType: person.type, entityId: person.id, metadata: { status: action.status }, meta });
+        });
+        return { emailStatus: action.status };
+      }
+      case 'add_engagement_points': {
+        const person = this.person(entity, id);
+        need(person.type === 'lead' ? 'leads:write' : 'contacts:write');
+        const score = await this.prisma.run(actor, async (tx) => {
+          const table = Prisma.raw(person.type === 'lead' ? 'leads' : 'contacts');
+          const rows = await tx.$queryRaw<{ engagement_score: number }[]>`
+            UPDATE ${table} SET engagement_score = LEAST(100, GREATEST(0, COALESCE(engagement_score, 0) + ${action.points}::int)), updated_at = now()
+             WHERE id = ${person.id}::uuid AND tenant_id = ${actor.tenantId}::uuid AND deleted_at IS NULL
+         RETURNING engagement_score`;
+          if (!rows.length) throw new ActionError('The lead or contact no longer exists.');
+          return rows[0]!.engagement_score;
+        });
+        return { engagementScore: score, points: action.points };
       }
       case 'assign_owner': {
         if (!id) throw new ActionError('This trigger has no record to assign.');
@@ -153,6 +215,16 @@ export class WorkflowActions {
         return { emailId: email.id, to };
       }
     }
+  }
+
+  private person(entity: string, id: string | null): { type: 'lead' | 'contact'; id: string; field: 'leadId' | 'contactId' } {
+    if (!id || (entity !== 'lead' && entity !== 'contact')) throw new ActionError('This step needs a lead or contact.');
+    return { type: entity, id, field: entity === 'lead' ? 'leadId' : 'contactId' };
+  }
+
+  /** Sequences depend on this module, so the service is looked up when first needed. */
+  private async sequences(): Promise<SequencesService> {
+    return this.moduleRef.get(SequencesService, { strict: false });
   }
 
   /** Human-readable description used in simulations, approvals and run history. */

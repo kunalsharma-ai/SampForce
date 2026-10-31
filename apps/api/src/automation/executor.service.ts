@@ -83,7 +83,9 @@ export class WorkflowExecutor {
     const context = exec.context as unknown as ExecutionContext;
     const entityType = context.event.entityType ?? null;
     const entityId = context.event.entityId ?? null;
-    const evalCtx: EvalContext = { record: await this.records.load(actor, entityType, entityId), event: context.event };
+    // Email engagement is measured from when the triggering event happened ("replied since the trigger").
+    const since = typeof context.event.occurredAt === 'string' ? context.event.occurredAt : exec.startedAt.toISOString();
+    const evalCtx: EvalContext = { record: await this.records.load(actor, entityType, entityId, { since }), event: context.event };
     const done = new Set(exec.steps.filter((s) => s.nodeType === 'action' && s.status === 'succeeded').map((s) => s.nodeId));
 
     await this.prisma.run({ tenantId }, (tx) => tx.workflowExecution.update({ where: { id: exec.id }, data: { status: 'RUNNING' } }));
@@ -94,7 +96,7 @@ export class WorkflowExecutor {
       evalCtx,
       {
         alreadyDone: (id) => done.has(id),
-        refresh: () => this.records.load(actor, entityType, entityId),
+        refresh: () => this.records.load(actor, entityType, entityId, { since }),
         action: (node) =>
           runInAutomationScope({ workflowId: exec.workflowId, executionId: exec.id, depth: exec.depth }, () =>
             this.actions.run(actor, { workflowId: exec.workflowId, executionId: exec.id, nodeId: node.id, entityType, entityId }, node.action, evalCtx),
@@ -214,7 +216,7 @@ export class WorkflowExecutor {
   /** Starts executions for every active workflow whose trigger and conditions match an event. */
   async startForEvent(
     tx: TenantTx,
-    event: { id: string; tenantId: string; type: string; entityType: string | null; entityId: string | null; actorUserId: string | null; payload: unknown; depth: number },
+    event: { id: string; tenantId: string; type: string; entityType: string | null; entityId: string | null; actorUserId: string | null; payload: unknown; depth: number; createdAt?: Date },
     record: Record<string, unknown> | null,
     evaluate: (conditions: unknown, ctx: EvalContext) => boolean,
   ): Promise<number> {
@@ -232,11 +234,14 @@ export class WorkflowExecutor {
       entityType: event.entityType,
       entityId: event.entityId,
       actorUserId: event.actorUserId,
+      occurredAt: (event.createdAt ?? new Date()).toISOString(),
     };
     let started = 0;
     for (const wf of workflows) {
       // A workflow never re-triggers itself; deeper chains are cut off by the depth limit.
       if (payload.workflowId === wf.id) continue;
+      // Events from before the workflow was switched on (still queued when it was) do not start it.
+      if (wf.activatedAt && event.createdAt && event.createdAt < wf.activatedAt) continue;
       const version = await tx.workflowVersion.findFirst({ where: { id: wf.activeVersionId!, tenantId: event.tenantId } });
       if (!version) continue;
       const def = workflowDefinitionSchema.parse(version.definition);

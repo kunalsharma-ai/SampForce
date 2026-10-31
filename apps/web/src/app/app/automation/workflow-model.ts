@@ -19,6 +19,10 @@ export const ACTION_LABELS: Record<WorkflowAction['type'], string> = {
   add_tag: 'Add a tag',
   notify: 'Send an in-app notification',
   log_note: 'Log a note',
+  stop_sequences: 'Stop or pause their sequences',
+  enroll_in_sequence: 'Add them to a sequence',
+  flag_email: 'Flag their email address',
+  add_engagement_points: 'Change their engagement score',
   send_webhook: 'Send to a webhook URL',
   send_email: 'Send an email',
 };
@@ -64,6 +68,23 @@ export const CONDITION_FIELDS: Record<string, { value: string; label: string }[]
     { value: 'record.type', label: 'Type' },
     { value: 'record.subject', label: 'Subject' },
   ],
+  // Email and sequence triggers: the lead or contact, their email activity, and the email itself.
+  person: [
+    { value: 'record.emailActivity.repliedSinceTrigger', label: 'Replied since the trigger (yes/no)' },
+    { value: 'record.emailActivity.clickedSinceTrigger', label: 'Clicked since the trigger (yes/no)' },
+    { value: 'record.emailActivity.openedSinceTrigger', label: 'Opened since the trigger (estimate, yes/no)' },
+    { value: 'record.emailActivity.opens30', label: 'Emails opened in 30 days (estimate)' },
+    { value: 'record.emailActivity.clicks30', label: 'Emails with a click in 30 days' },
+    { value: 'record.emailActivity.replies30', label: 'Replies in 30 days' },
+    { value: 'record.emailActivity.activeSequences', label: 'Live sequences' },
+    { value: 'record.engagementScore', label: 'Engagement score' },
+    { value: 'record.emailStatus', label: 'Email status' },
+    { value: 'record.email', label: 'Email' },
+    { value: 'event.sequenceName', label: 'Sequence name' },
+    { value: 'event.subject', label: 'Email subject' },
+    { value: 'event.url', label: 'Clicked link (click only)' },
+    { value: 'event.source', label: 'Sent by (sequence or direct)' },
+  ],
 };
 
 export const OP_LABELS: Record<ConditionRule['op'], string> = {
@@ -96,7 +117,7 @@ export function newId(def: WorkflowDefinition, type: NodeType): string {
 export function defaultNode(id: string, type: NodeType, next: string | null): WorkflowNode {
   switch (type) {
     case 'action':
-      return { id, type, action: { type: 'create_task', title: 'Follow up with {{record.fullName}}', assignTo: 'record_owner' }, next };
+      return { id, type, action: { type: 'create_task', title: 'Follow up with {{record.fullName}}', assignTo: 'record_owner', priority: 'NORMAL' }, next };
     case 'condition':
       return { id, type, condition: { match: 'all', rules: [] }, onTrue: next, onFalse: null };
     case 'delay':
@@ -169,7 +190,7 @@ export function updateNode(def: WorkflowDefinition, id: string, patch: Partial<W
 export function defaultAction(type: WorkflowAction['type']): WorkflowAction {
   switch (type) {
     case 'create_task':
-      return { type, title: 'Follow up with {{record.fullName}}', assignTo: 'record_owner' };
+      return { type, title: 'Follow up with {{record.fullName}}', assignTo: 'record_owner', priority: 'NORMAL' };
     case 'assign_owner':
       return { type, mode: 'round_robin', userIds: [] };
     case 'update_field':
@@ -180,6 +201,14 @@ export function defaultAction(type: WorkflowAction['type']): WorkflowAction {
       return { type, to: 'record_owner', title: 'Heads up' };
     case 'log_note':
       return { type, subject: 'Automated note' };
+    case 'stop_sequences':
+      return { type, mode: 'stop' };
+    case 'enroll_in_sequence':
+      return { type, sequenceId: '' };
+    case 'flag_email':
+      return { type, status: 'needs_verification' };
+    case 'add_engagement_points':
+      return { type, points: 10 };
     case 'send_webhook':
       return { type, url: 'https://' };
     case 'send_email':
@@ -194,6 +223,93 @@ export interface Template {
   definition: WorkflowDefinition;
 }
 
+/** The six email scenarios from the enhancement spec, ready to adapt. Scenario 1 also works inside a sequence. */
+export const EMAIL_TEMPLATES: Template[] = [
+  {
+    key: 'email-no-reply',
+    name: 'No reply in 3 days: follow up',
+    description: 'After an email goes out, wait three days. If they have not replied, send a follow-up after someone approves it. Sequences do this on their own; use this for one-off emails.',
+    definition: {
+      trigger: { event: 'email.sent', conditions: { match: 'all', rules: [{ field: 'event.source', op: 'eq', value: 'direct' }] } },
+      start: 'delay_1',
+      nodes: [
+        { id: 'delay_1', type: 'delay', amount: 3, unit: 'days', next: 'condition_1' },
+        { id: 'condition_1', type: 'condition', condition: { match: 'all', rules: [{ field: 'record.emailActivity.repliedSinceTrigger', op: 'eq', value: false }] }, onTrue: 'action_1', onFalse: null },
+        { id: 'action_1', type: 'action', action: { type: 'send_email', subject: 'Re: {{event.subject}}', body: 'Hi {{record.fullName}},\n\nJust checking this reached you.\n' }, next: null },
+      ],
+    },
+  },
+  {
+    key: 'email-proposal-click',
+    name: 'Proposal link clicked: high-priority task',
+    description: 'When someone clicks a link containing "proposal", create a high-priority follow-up task for the owner. Clicks can come from security scanners, so the task says to check.',
+    definition: {
+      trigger: { event: 'email.clicked', conditions: { match: 'all', rules: [{ field: 'event.url', op: 'contains', value: 'proposal' }] } },
+      start: 'action_1',
+      nodes: [{ id: 'action_1', type: 'action', action: { type: 'create_task', title: 'Call {{record.fullName}}: they opened the proposal link', dueInDays: 0, assignTo: 'record_owner', priority: 'HIGH' }, next: null }],
+    },
+  },
+  {
+    key: 'email-replied',
+    name: 'Reply received: stop sequences and notify',
+    description: 'When they reply, stop every live sequence to them and tell the owner.',
+    definition: {
+      trigger: { event: 'email.replied', conditions: { match: 'all', rules: [] } },
+      start: 'action_1',
+      nodes: [
+        { id: 'action_1', type: 'action', action: { type: 'stop_sequences', mode: 'stop' }, next: 'action_2' },
+        { id: 'action_2', type: 'action', action: { type: 'notify', to: 'record_owner', title: '{{record.fullName}} replied', body: 'Their sequences are stopped so you can answer personally.' }, next: null },
+      ],
+    },
+  },
+  {
+    key: 'email-bounced',
+    name: 'Bounce: stop sending and flag the address',
+    description: 'DealFlow already stops all sending to a bounced address. This also flags the record for checking and asks the owner to find a working address.',
+    definition: {
+      trigger: { event: 'email.bounced', conditions: { match: 'all', rules: [] } },
+      start: 'action_1',
+      nodes: [
+        { id: 'action_1', type: 'action', action: { type: 'flag_email', status: 'needs_verification' }, next: 'action_2' },
+        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Find a working email address for {{record.fullName}}', dueInDays: 2, assignTo: 'record_owner', priority: 'NORMAL' }, next: null },
+      ],
+    },
+  },
+  {
+    key: 'email-unsubscribed',
+    name: 'Unsubscribe: confirm and tell the owner',
+    description: 'DealFlow suppresses the address from every sequence and marks the person opted out the moment they unsubscribe. This adds a note and tells the owner.',
+    definition: {
+      trigger: { event: 'email.unsubscribed', conditions: { match: 'all', rules: [] } },
+      start: 'action_1',
+      nodes: [
+        { id: 'action_1', type: 'action', action: { type: 'log_note', subject: 'Unsubscribed from email', body: 'Unsubscribed via the link in "{{event.subject}}". No further marketing or sequence email will be sent.' }, next: 'action_2' },
+        { id: 'action_2', type: 'action', action: { type: 'notify', to: 'record_owner', title: '{{record.fullName}} unsubscribed' }, next: null },
+      ],
+    },
+  },
+  {
+    key: 'email-engaged',
+    name: 'Engaged without replying: raise score and follow up',
+    description: 'Each click adds engagement points. Once they have clicked in two or more emails in 30 days without replying, the owner gets a follow-up task.',
+    definition: {
+      trigger: { event: 'email.clicked', conditions: { match: 'all', rules: [] } },
+      start: 'action_1',
+      nodes: [
+        { id: 'action_1', type: 'action', action: { type: 'add_engagement_points', points: 10 }, next: 'condition_1' },
+        {
+          id: 'condition_1',
+          type: 'condition',
+          condition: { match: 'all', rules: [{ field: 'record.emailActivity.clicks30', op: 'gte', value: 2 }, { field: 'record.emailActivity.replies30', op: 'eq', value: 0 }] },
+          onTrue: 'action_2',
+          onFalse: null,
+        },
+        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Reach out personally to {{record.fullName}}: engaged but no reply', dueInDays: 1, assignTo: 'record_owner', priority: 'HIGH' }, next: null },
+      ],
+    },
+  },
+];
+
 export const TEMPLATES: Template[] = [
   {
     key: 'hot-leads',
@@ -204,7 +320,7 @@ export const TEMPLATES: Template[] = [
       start: 'action_1',
       nodes: [
         { id: 'action_1', type: 'action', action: { type: 'add_tag', tag: 'high-value' }, next: 'action_2' },
-        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Call {{record.fullName}} today', dueInDays: 0, assignTo: 'record_owner' }, next: 'delay_1' },
+        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Call {{record.fullName}} today', dueInDays: 0, assignTo: 'record_owner', priority: 'NORMAL' }, next: 'delay_1' },
         { id: 'delay_1', type: 'delay', amount: 2, unit: 'days', next: 'condition_1' },
         {
           id: 'condition_1',
@@ -226,7 +342,7 @@ export const TEMPLATES: Template[] = [
       start: 'action_1',
       nodes: [
         { id: 'action_1', type: 'action', action: { type: 'notify', to: 'record_owner', title: 'You won {{record.name}}' }, next: 'action_2' },
-        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Hand over {{record.name}} to onboarding', dueInDays: 2, assignTo: 'record_owner' }, next: null },
+        { id: 'action_2', type: 'action', action: { type: 'create_task', title: 'Hand over {{record.name}} to onboarding', dueInDays: 2, assignTo: 'record_owner', priority: 'NORMAL' }, next: null },
       ],
     },
   },

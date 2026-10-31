@@ -134,6 +134,10 @@ export interface ContactRow {
   marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
   consentSource: string | null;
   consentUpdatedAt: string | null;
+  /** Last known state of the email address: bounced, needs_verification, valid, risky, … ; null = never checked. */
+  emailStatus: EmailStatus | null;
+  /** 0-100 from email engagement rules; null = never scored. */
+  engagementScore: number | null;
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -203,6 +207,10 @@ export interface LeadRow {
   marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
   consentSource: string | null;
   consentUpdatedAt: string | null;
+  /** Last known state of the email address: bounced, needs_verification, valid, risky, … ; null = never checked. */
+  emailStatus: EmailStatus | null;
+  /** 0-100 from email engagement rules; null = never scored. */
+  engagementScore: number | null;
   estimatedValue: number | null;
   currency: string | null;
   status: LeadStatus;
@@ -352,8 +360,25 @@ export interface ActivityRow {
   opportunityId: string | null;
 }
 
+/** States an email address can be in. Provider checks (Prospect Finder) and bounces set them. */
+export const EMAIL_STATUSES = ['valid', 'risky', 'catch_all', 'invalid', 'unknown', 'bounced', 'needs_verification'] as const;
+export type EmailStatus = (typeof EMAIL_STATUSES)[number];
+export const EMAIL_STATUS_LABELS: Record<EmailStatus, string> = {
+  valid: 'Verified',
+  risky: 'Risky',
+  catch_all: 'Accept-all domain',
+  invalid: 'Invalid',
+  unknown: 'Could not check',
+  bounced: 'Bounced',
+  needs_verification: 'Check before emailing',
+};
+
+export const TASK_PRIORITIES = ['LOW', 'NORMAL', 'HIGH'] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
 export const taskInputSchema = z.object({
   title: z.string().trim().min(1, 'Enter a title').max(200),
+  priority: z.enum(TASK_PRIORITIES).optional(),
   description: optionalText(5_000),
   dueAt: z.string().datetime({ offset: true }).nullable().optional(),
   assigneeId: uuidRef,
@@ -379,6 +404,7 @@ export interface TaskRow {
   title: string;
   description: string | null;
   status: 'OPEN' | 'DONE' | 'CANCELED';
+  priority: TaskPriority;
   dueAt: string | null;
   completedAt: string | null;
   overdue: boolean;

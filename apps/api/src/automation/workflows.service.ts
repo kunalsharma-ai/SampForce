@@ -99,7 +99,7 @@ export class WorkflowsService {
         }
         await this.checkReferences(tx, auth, def);
       }
-      await tx.workflow.update({ where: { id }, data: { status, ...(status === 'ACTIVE' ? { createdById: auth.userId } : {}) } });
+      await tx.workflow.update({ where: { id }, data: { status, ...(status === 'ACTIVE' ? { createdById: auth.userId, activatedAt: new Date() } : {}) } });
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: status === 'ACTIVE' ? 'workflow.activated' : 'workflow.paused', entityType: 'workflow', entityId: id, meta,
       });
@@ -172,8 +172,13 @@ export class WorkflowsService {
 
   /** Dry run against a real record. Nothing is written and no action runs. */
   async simulate(auth: AuthContext, def: WorkflowDefinition, recordId: string): Promise<SimulationResult> {
-    const entity = TRIGGER_EVENTS[def.trigger.event as TriggerEvent].entity;
-    const record = await this.records.load(auth, entity, recordId);
+    let entity: string = TRIGGER_EVENTS[def.trigger.event as TriggerEvent].entity;
+    // Email triggers are about a lead or a contact; try both.
+    let record = await this.records.load(auth, entity === 'person' ? 'contact' : entity, recordId);
+    if (entity === 'person') {
+      entity = record ? 'contact' : 'lead';
+      record ??= await this.records.load(auth, 'lead', recordId);
+    }
     if (!record) throw notFound('Record');
     const ctx: EvalContext = { record, event: sampleEvent(def.trigger.event, entity, recordId, auth.userId, record) };
     if (!evaluateGroup(def.trigger.conditions, ctx)) return { path: [], triggerMatched: false, ended: 'trigger_not_matched' };
@@ -248,6 +253,9 @@ function sampleEvent(type: string, entity: string, id: string, userId: string, r
   if (entity === 'deal') {
     const stage = record.stage as { name?: string } | undefined;
     return { ...base, to: stage?.name, status: record.status };
+  }
+  if (type.startsWith('email.') || type.startsWith('sequence.')) {
+    return { ...base, email: record.email, subject: '(sample email)', sequenceName: '(sample sequence)', url: type === 'email.clicked' ? 'https://example.com/proposal' : undefined, confirmed: type !== 'email.opened' && type !== 'email.clicked', occurredAt: new Date().toISOString() };
   }
   return base;
 }

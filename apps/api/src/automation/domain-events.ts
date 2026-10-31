@@ -8,6 +8,9 @@ const KNOWN = new Set<string>(DOMAIN_EVENT_TYPES);
  * import of thousands of rows never fans out into thousands of automation runs.
  */
 export function domainEventsFor(action: string, metadata: Record<string, unknown> = {}): DomainEventType[] {
+  // Email and sequence events are about a person, not the audited row; they are published per person with
+  // AuditService.publish, so the audit entries that share their names publish nothing here.
+  if (action.startsWith('email.') || action.startsWith('sequence.')) return [];
   switch (action) {
     case 'lead.assigned':
       return ['lead.assigned', 'lead.updated'];

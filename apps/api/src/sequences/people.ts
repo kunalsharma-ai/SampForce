@@ -64,3 +64,10 @@ export function senderValues(user: { name: string; email: string } | null, mailb
   if (!user) return {};
   return { sender_name: user.name, sender_first_name: firstOf(user.name), sender_email: mailbox ?? user.email };
 }
+
+/** The record an email event is about: the contact if there is one, else the lead. */
+export function personSubject(p: { leadId: string | null; contactId: string | null }): { entityType: 'lead' | 'contact'; entityId: string } | null {
+  if (p.contactId) return { entityType: 'contact', entityId: p.contactId };
+  if (p.leadId) return { entityType: 'lead', entityId: p.leadId };
+  return null;
+}

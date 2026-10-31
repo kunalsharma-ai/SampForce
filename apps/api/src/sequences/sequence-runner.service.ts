@@ -13,7 +13,7 @@ import { IntegrationsService } from '../integrations/integrations.service';
 import { parseAddresses, type ProviderEmail } from '../integrations/providers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
-import { loadPerson, senderValues } from './people';
+import { loadPerson, personSubject, senderValues } from './people';
 import { SequencesService, seqRules, seqSettings, seqSteps } from './sequences.service';
 import { buildSequenceEmail, TrackingSigner } from './tracking';
 
@@ -155,7 +155,11 @@ export class SequenceRunner implements OnModuleInit {
     }
 
     const actor = await this.actorFor(tenantId, e.senderId);
-    if (!actor) return void (await finish('FAILED', 'The sender is no longer an active member who can use sequences.'));
+    if (!actor) {
+      const why = 'The sender is no longer an active member who can use sequences.';
+      await finish('FAILED', why);
+      return void (await this.publishFailed(e, why, step.id));
+    }
 
     if (step.type === 'task') {
       await this.tasks.create(actor, { title: await this.renderTitle(e, step.title), assigneeId: e.senderId, leadId: e.leadId ?? undefined, contactId: e.contactId ?? undefined, dueAt: new Date(Date.now() + DAY).toISOString() }, SYSTEM_META);
@@ -212,7 +216,7 @@ export class SequenceRunner implements OnModuleInit {
         { to: e.email, subject: prep.subject, body: built.body, html: built.html, headers: built.headers },
         { leadId: e.leadId, contactId: e.contactId },
         SYSTEM_META,
-        { action: 'sequence.email_sent', metadata: { sequenceId: e.sequenceId, enrollmentId: id, stepId: step.id } },
+        { action: 'sequence.email_sent', metadata: { sequenceId: e.sequenceId, sequenceName: e.sequence.name, enrollmentId: id, stepId: step.id, messageId: prep.msg.id, variant: prep.msg.variant } },
       );
       const next = scheduleFrom(e.stepIndex + 1);
       await this.prisma.run({ tenantId }, async (tx) => {
@@ -224,9 +228,22 @@ export class SequenceRunner implements OnModuleInit {
       const code = err instanceof ConflictException ? (err.getResponse() as { code?: string }).code : undefined;
       if (code === 'REAUTH_REQUIRED') return void (await this.pause(e, "The sender's mailbox sign-in expired. Reconnect it in Integrations, then resume."));
       const attempts = e.attempts + 1;
-      if (attempts >= MAX_ATTEMPTS) return void (await finish('FAILED', `Sending failed ${attempts} times: ${errorMessage(err)}`));
+      if (attempts >= MAX_ATTEMPTS) {
+        const why = `Sending failed ${attempts} times: ${errorMessage(err)}`;
+        await finish('FAILED', why);
+        return void (await this.publishFailed(e, why, step.id));
+      }
       await set({ attempts, lastError: errorMessage(err), nextRunAt: new Date(Date.now() + 15 * MINUTE * 2 ** (attempts - 1)) });
     }
+  }
+
+  /** Automation Studio trigger "Sending to them fails". */
+  private async publishFailed(e: Live, reason: string, stepId: string): Promise<void> {
+    const who = personSubject(e);
+    if (!who) return;
+    await this.prisma.run({ tenantId: e.tenantId }, (tx) =>
+      this.audit.publish(tx, { tenantId: e.tenantId, type: 'email.failed', ...who, actorUserId: null, payload: { sequenceId: e.sequenceId, sequenceName: e.sequence.name, enrollmentId: e.id, stepId, email: e.email, reason, confirmed: true } }),
+    );
   }
 
   private async pause(e: Live, why: string): Promise<void> {
@@ -300,6 +317,28 @@ export class SequenceRunner implements OnModuleInit {
         UNSUBSCRIBED: e.status !== 'UNSUBSCRIBED',
       }[type];
       await tx.emailEvent.create({ data: { tenantId, messageId, type, url: url?.slice(0, 2000) ?? null } });
+      // One Automation Studio event per email and kind (the first open of an email, not every reload of it).
+      const firstForMessage = { REPLIED: !msg.repliedAt, OPENED: !msg.openedAt, CLICKED: !msg.clickedAt, BOUNCED: !msg.bouncedAt, UNSUBSCRIBED: e.status !== 'UNSUBSCRIBED' }[type];
+      const who = personSubject(e);
+      if (firstForMessage && who) {
+        await this.audit.publish(tx, {
+          tenantId,
+          type: `email.${type.toLowerCase()}` as 'email.replied',
+          ...who,
+          actorUserId: null,
+          payload: {
+            sequenceId: e.sequenceId, sequenceName: e.sequence.name, enrollmentId: e.id, stepId: msg.stepId, messageId: msg.id, subject: msg.subject, email: msg.toAddress,
+            ...(url ? { url: url.slice(0, 2000) } : {}),
+            // Opens are estimates (images, privacy proxies, scanners); clicks can come from link scanners.
+            confirmed: type !== 'OPENED' && type !== 'CLICKED',
+          },
+        });
+      }
+      if (type === 'BOUNCED') {
+        // Flag the address for a check before anyone writes to it again (scenario 4).
+        await tx.lead.updateMany({ where: { tenantId, email: { equals: msg.toAddress, mode: 'insensitive' }, deletedAt: null }, data: { emailStatus: 'bounced' } });
+        await tx.contact.updateMany({ where: { tenantId, email: { equals: msg.toAddress, mode: 'insensitive' }, deletedAt: null }, data: { emailStatus: 'bounced' } });
+      }
       if (type === 'OPENED') await tx.sequenceMessage.update({ where: { id: msg.id }, data: { openCount: { increment: 1 }, openedAt: msg.openedAt ?? now } });
       if (type === 'CLICKED') await tx.sequenceMessage.update({ where: { id: msg.id }, data: { clickCount: { increment: 1 }, clickedAt: msg.clickedAt ?? now, openedAt: msg.openedAt ?? now } });
       if (type === 'REPLIED' && !msg.repliedAt) await tx.sequenceMessage.update({ where: { id: msg.id }, data: { repliedAt: now } });
@@ -354,14 +393,16 @@ export class SequenceRunner implements OnModuleInit {
     const label = { replied: 'replied', opened: 'opened an email', clicked: 'clicked a link', bounced: 'bounced', unsubscribed: 'unsubscribed' }[event];
     switch (action.type) {
       case 'stop':
-        await this.prisma.run({ tenantId }, (tx) =>
-          tx.sequenceEnrollment.updateMany({ where: { id: e.id, status: { in: ['ACTIVE', 'PAUSED'] } }, data: { status: flowStatus, finishedAt: new Date(), nextRunAt: null } }),
-        );
+        await this.prisma.run({ tenantId }, async (tx) => {
+          const r = await tx.sequenceEnrollment.updateMany({ where: { id: e.id, status: { in: ['ACTIVE', 'PAUSED'] } }, data: { status: flowStatus, finishedAt: new Date(), nextRunAt: null } });
+          if (r.count) await this.publishRemoved(tx, e, `rule:${event}`);
+        });
         return;
       case 'move_sequence': {
         await this.prisma.run({ tenantId }, async (tx) => {
           const stopped = await tx.sequenceEnrollment.updateMany({ where: { id: e.id, status: { in: ['ACTIVE', 'PAUSED', 'COMPLETED'] } }, data: { status: 'MOVED', finishedAt: new Date(), nextRunAt: null } });
           if (!stopped.count) return;
+          await this.publishRemoved(tx, e, `moved:${event}`);
           const target = await tx.sequence.findFirst({ where: { id: action.sequenceId, tenantId, status: 'ACTIVE' } });
           const person = await loadPerson(tx, tenantId, e);
           if (target && person) await this.sequences.enrollPeople(tx, tenantId, target, [person], e.senderId, null);
@@ -386,6 +427,11 @@ export class SequenceRunner implements OnModuleInit {
           this.notifications.send(tx, tenantId, [e.senderId], { type: `sequence.${event}`, title: `${e.email} ${label}`, body: `In the sequence "${e.sequence.name}".`, link: e.leadId ? `/app/leads/${e.leadId}` : e.contactId ? `/app/contacts/${e.contactId}` : `/app/sequences/${e.sequenceId}` }),
         );
     }
+  }
+
+  private async publishRemoved(tx: TenantTx, e: Live, reason: string): Promise<void> {
+    const who = personSubject(e);
+    if (who) await this.audit.publish(tx, { tenantId: e.tenantId, type: 'sequence.removed', ...who, actorUserId: null, payload: { sequenceId: e.sequenceId, sequenceName: e.sequence.name, enrollmentId: e.id, email: e.email, reason } });
   }
 
   /** Public tracking endpoints call these with a verified token. */
