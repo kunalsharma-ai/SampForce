@@ -188,7 +188,9 @@ function pageSection(scanning) {
 
   const rows = page.people.slice(0, 50).map((p, i) => {
     const known = info.get(p.email);
-    const box = h('input', { type: 'checkbox', id: `p${i}`, checked: !known?.match && !known?.suppressed && !p.personal, disabled: !!known?.match || !me?.canSave });
+    // Ticked by default: new people at the site's own domain. Other companies and personal mailboxes are left for the person to choose.
+    const fresh = !known?.match && !known?.suppressed && !p.personal && p.ownDomain;
+    const box = h('input', { type: 'checkbox', id: `p${i}`, checked: fresh, disabled: !!known?.match || !me?.canSave });
     const name = h('input', { type: 'text', value: p.name, placeholder: 'Name', 'aria-label': `Name for ${p.email}` });
     return {
       p, box, name, known,
