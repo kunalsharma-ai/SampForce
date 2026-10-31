@@ -21,7 +21,7 @@ export function MeetingsList() {
       {!connected && !integrations.isPending && (
         <p className="text-sm text-muted-foreground">
           No calendar connected.{' '}
-          <Link href="/app/integrations" className="text-primary hover:underline">
+          <Link href="/app/integrations" className="text-primary underline underline-offset-2">
             Connect Google or Microsoft 365
           </Link>{' '}
           to see meetings here.

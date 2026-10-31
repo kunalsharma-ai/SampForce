@@ -130,3 +130,30 @@ test('integrations show mailbox set-up honestly and manage signed webhooks', asy
   await expect(page.getByText('No upcoming meetings with contacts.')).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test('email automation templates use email triggers, warn about estimated opens and clicks, and save', async ({ page }) => {
+  await signUp(page, 'Email Flow');
+  await page.goto('/app/automation');
+  await expect(page.getByRole('heading', { name: 'Email automation' })).toBeVisible();
+  await expect(page.getByText(/Opens are estimates/)).toBeVisible();
+  await page.getByRole('link', { name: 'Use template: Proposal link clicked: high-priority task' }).click();
+  await expect(page.getByLabel('Trigger')).toHaveValue('email.clicked');
+  await expect(page.getByText(/Some clicks come from security scanners/)).toBeVisible();
+  await expect(page.getByLabel('Priority')).toHaveValue('HIGH');
+  await page.waitForLoadState('networkidle');
+  await expectNoA11yViolations(page);
+  await page.getByRole('button', { name: 'Create workflow' }).click();
+  await expect(page).toHaveURL(/\/app\/automation\/[0-9a-f-]{36}$/);
+
+  // The engaged-prospect template branches on email activity and changes the engagement score.
+  await page.goto('/app/automation');
+  await page.getByRole('link', { name: 'Use template: Engaged without replying: raise score and follow up' }).click();
+  await expect(page.getByLabel('Points (use a minus sign to lower)')).toHaveValue('10');
+  await page.getByLabel('Trigger').selectOption('email.opened');
+  await expect(page.getByText(/Opens are an estimate/)).toBeVisible();
+  await page.getByRole('button', { name: 'Create workflow' }).click();
+  await expect(page).toHaveURL(/\/app\/automation\/[0-9a-f-]{36}$/);
+  await expect(page.getByText('Draft')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expectNoA11yViolations(page);
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import type { ActivityRow, Page, TaskRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -133,7 +133,14 @@ function TaskList() {
                     onChange={(e) => setDone.mutate({ id: t.id, done: e.target.checked })}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm ${t.status === 'DONE' ? 'text-muted-foreground line-through' : ''}`}>{t.title}</p>
+                    <p className={`text-sm ${t.status === 'DONE' ? 'text-muted-foreground line-through' : ''}`}>
+                      {t.title}
+                      {t.priority === 'HIGH' && t.status !== 'DONE' && (
+                        <Badge tone="critical" className="ml-1.5">
+                          High priority
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       <span className={t.overdue ? 'font-medium text-critical' : undefined}>{t.dueAt ? `${t.overdue ? 'Overdue · ' : 'Due '}${formatDate(t.dueAt)}` : 'No due date'}</span>
                       {scope === 'all' && ` · ${t.assignee?.name ?? 'Unassigned'}`}

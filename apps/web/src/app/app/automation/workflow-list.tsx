@@ -13,7 +13,7 @@ import { api } from '@/lib/api';
 import { useApprovals, useWorkflows } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
-import { AI_DRAFT_KEY, type AiWorkflowDraft, TEMPLATES } from './workflow-model';
+import { AI_DRAFT_KEY, type AiWorkflowDraft, EMAIL_TEMPLATES, type Template, TEMPLATES } from './workflow-model';
 
 export function WorkflowList() {
   const workflows = useWorkflows();
@@ -63,29 +63,44 @@ export function WorkflowList() {
 
       <DescribeWithAi />
 
-      <section aria-labelledby="templates-heading" className="space-y-3">
-        <h2 id="templates-heading" className="text-sm font-semibold">
-          Start from a template
-        </h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {TEMPLATES.map((t) => (
-            <Card key={t.key} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-sm">{t.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-3">
-                <p className="flex-1 text-sm text-muted-foreground">{t.description}</p>
-                <Button asChild variant="outline" size="sm" className="self-start">
-                  <Link href={`/app/automation/new?template=${t.key}`} aria-label={`Use template: ${t.name}`}>
-                    Use template
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <TemplateSection id="templates-heading" title="Start from a template" templates={TEMPLATES} />
+      <TemplateSection
+        id="email-templates-heading"
+        title="Email automation"
+        note="React to what people do with your email. Opens are estimates (images, privacy proxies and scanners trigger them), and some clicks come from link scanners; replies, bounces and unsubscribes are confirmed."
+        templates={EMAIL_TEMPLATES}
+      />
     </div>
+  );
+}
+
+function TemplateSection({ id, title, note, templates }: { id: string; title: string; note?: string; templates: Template[] }) {
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <div>
+        <h2 id={id} className="text-sm font-semibold">
+          {title}
+        </h2>
+        {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {templates.map((t) => (
+          <Card key={t.key} className="flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-sm">{t.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-3">
+              <p className="flex-1 text-sm text-muted-foreground">{t.description}</p>
+              <Button asChild variant="outline" size="sm" className="self-start">
+                <Link href={`/app/automation/new?template=${t.key}`} aria-label={`Use template: ${t.name}`}>
+                  Use template
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
   );
 }
 

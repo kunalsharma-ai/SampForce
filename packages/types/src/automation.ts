@@ -16,9 +16,35 @@ export const TRIGGER_EVENTS = {
   'deal.lost': { label: 'Deal is lost', entity: 'deal' },
   'task.completed': { label: 'Task is completed', entity: 'task' },
   'activity.logged': { label: 'Activity is logged', entity: 'activity' },
-  'deal.health_dropped': { label: 'Deal health turns high risk', entity: 'deal' },
+  'deal.health_dropped': { label: 'Deal health turns critical', entity: 'deal' },
+  // Email and sequence events. The record is the lead or contact the email was sent to ("person").
+  'email.sent': { label: 'Email is sent to them', entity: 'person' },
+  'email.opened': { label: 'They open an email (estimate)', entity: 'person' },
+  'email.clicked': { label: 'They click a link in an email', entity: 'person' },
+  'email.replied': { label: 'They reply to an email', entity: 'person' },
+  'email.bounced': { label: 'An email to them bounces', entity: 'person' },
+  'email.unsubscribed': { label: 'They unsubscribe', entity: 'person' },
+  'email.failed': { label: 'Sending to them fails', entity: 'person' },
+  'sequence.enrolled': { label: 'They are added to a sequence', entity: 'person' },
+  'sequence.removed': { label: 'They are removed from a sequence', entity: 'person' },
 } as const;
 export type TriggerEvent = keyof typeof TRIGGER_EVENTS;
+export type TriggerEntity = (typeof TRIGGER_EVENTS)[TriggerEvent]['entity'];
+
+/**
+ * Email events DealFlow can actually observe. There is no "delivered" event: Gmail and Outlook do not report
+ * delivery to the sender, so DealFlow only knows an email was handed over (sent) or came back (bounced).
+ * Opens are estimates (image loading, privacy proxies and scanners); clicks can come from security scanners too.
+ */
+export const EMAIL_TRIGGER_CONFIDENCE: Partial<Record<TriggerEvent, 'confirmed' | 'estimate' | 'likely'>> = {
+  'email.sent': 'confirmed',
+  'email.opened': 'estimate',
+  'email.clicked': 'likely',
+  'email.replied': 'confirmed',
+  'email.bounced': 'confirmed',
+  'email.unsubscribed': 'confirmed',
+  'email.failed': 'confirmed',
+};
 export const TRIGGER_EVENT_KEYS = Object.keys(TRIGGER_EVENTS) as [TriggerEvent, ...TriggerEvent[]];
 
 /** Every event type the outbox carries (triggers plus events only webhooks and notifications use). */
@@ -73,6 +99,7 @@ export const actionSchema = z.discriminatedUnion('type', [
     title: z.string().trim().min(1).max(200),
     dueInDays: z.number().int().min(0).max(365).optional(),
     assignTo: assignee.default('record_owner'),
+    priority: z.enum(['LOW', 'NORMAL', 'HIGH']).default('NORMAL'),
   }),
   z.object({ type: z.literal('assign_owner'), mode: z.enum(['round_robin', 'user']), userIds: z.array(z.string().uuid()).min(1).max(50) }),
   z.object({ type: z.literal('update_field'), field: z.string().max(40), value: z.union([z.string().max(200), z.number(), z.null()]) }),
@@ -85,6 +112,17 @@ export const actionSchema = z.discriminatedUnion('type', [
     body: z.string().max(1000).optional(),
   }),
   z.object({ type: z.literal('log_note'), subject: z.string().trim().min(1).max(200), body: z.string().max(5000).optional() }),
+  /** Leads and contacts: stop or pause every live sequence run to this person. */
+  z.object({ type: z.literal('stop_sequences'), mode: z.enum(['stop', 'pause']).default('stop') }),
+  /**
+   * Leads and contacts: add them to an active sequence, which then sends under its own send window, daily limits,
+   * do-not-email list and consent checks. One person per run; never a bulk enrolment.
+   */
+  z.object({ type: z.literal('enroll_in_sequence'), sequenceId: z.string().uuid() }),
+  /** Leads and contacts: mark the email address as needing a check before anyone writes to it again. */
+  z.object({ type: z.literal('flag_email'), status: z.enum(['needs_verification', 'invalid', 'valid']).default('needs_verification') }),
+  /** Leads and contacts: add (or with a negative number, remove) engagement points. Kept between 0 and 100. */
+  z.object({ type: z.literal('add_engagement_points'), points: z.number().int().min(-50).max(50).refine((n) => n !== 0, 'Use a number other than 0') }),
   /** External: always requires an approval before it runs. */
   z.object({ type: z.literal('send_webhook'), url: z.string().url().max(2000) }),
   /** External: one email to the record's address from the workflow owner's mailbox, after approval. */
@@ -92,6 +130,8 @@ export const actionSchema = z.discriminatedUnion('type', [
 ]);
 export type WorkflowAction = z.infer<typeof actionSchema>;
 export const EXTERNAL_ACTIONS = ['send_webhook', 'send_email'] as const;
+/** Actions that only make sense for a lead or contact. */
+export const PERSON_ACTIONS = new Set<WorkflowAction['type']>(['stop_sequences', 'enroll_in_sequence', 'flag_email', 'add_engagement_points']);
 
 // ───────────── Nodes and definition ─────────────
 
@@ -155,6 +195,9 @@ export const workflowDefinitionSchema = z
       }
       if (n.type === 'action' && n.action.type === 'add_tag' && TRIGGER_EVENTS[def.trigger.event].entity !== 'lead') {
         ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": tags can only be added to leads` });
+      }
+      if (n.type === 'action' && PERSON_ACTIONS.has(n.action.type) && !['lead', 'contact', 'person'].includes(TRIGGER_EVENTS[def.trigger.event].entity)) {
+        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": this action needs a lead or contact, so use a lead, contact or email trigger` });
       }
     }
   });

@@ -7,6 +7,9 @@ import {
   type ConditionRule,
   LEAD_STATUSES,
   TRIGGER_EVENT_KEYS,
+  EMAIL_TRIGGER_CONFIDENCE,
+  PERSON_ACTIONS,
+  type SequenceRow,
   TRIGGER_EVENTS,
   type TriggerEvent,
   UPDATABLE_FIELDS,
@@ -15,7 +18,9 @@ import {
   type WorkflowNode,
 } from '@dealflow/types';
 import { Clock, GitBranch, Plus, ShieldCheck, Trash2, Zap } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
+import { api } from '@/lib/api';
 import { Select, Textarea } from '@/components/crm/select';
 import { useMembers } from '@/lib/crm';
 import {
@@ -76,13 +81,29 @@ function TriggerCard({ definition, onChange, readOnly }: Props) {
               onChange({ ...definition, trigger: { event: next, conditions: sameEntity ? definition.trigger.conditions : { match: 'all', rules: [] } } });
             }}
           >
-            {TRIGGER_EVENT_KEYS.map((k) => (
-              <option key={k} value={k}>
-                {TRIGGER_EVENTS[k].label}
-              </option>
-            ))}
+            <optgroup label="Records">
+              {TRIGGER_EVENT_KEYS.filter((k) => TRIGGER_EVENTS[k].entity !== 'person').map((k) => (
+                <option key={k} value={k}>
+                  {TRIGGER_EVENTS[k].label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Email and sequences">
+              {TRIGGER_EVENT_KEYS.filter((k) => TRIGGER_EVENTS[k].entity === 'person').map((k) => (
+                <option key={k} value={k}>
+                  {TRIGGER_EVENTS[k].label}
+                </option>
+              ))}
+            </optgroup>
           </Select>
         </div>
+        {EMAIL_TRIGGER_CONFIDENCE[event] && EMAIL_TRIGGER_CONFIDENCE[event] !== 'confirmed' && (
+          <p className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
+            {event === 'email.opened'
+              ? 'Opens are an estimate: privacy protection, image blocking and security scanners make them fire without a person reading, or not fire at all. Avoid sending email on opens alone.'
+              : 'Some clicks come from security scanners that check links before a person sees the email. Pair clicks with other signals before acting on them.'}
+          </p>
+        )}
         <ConditionEditor
           label="Only when"
           entity={entityOf(event)}
@@ -393,7 +414,11 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
   const a = node.action;
   const members = useMembers();
   const allowed = (Object.keys(ACTION_LABELS) as WorkflowAction['type'][]).filter(
-    (t) => (t !== 'update_field' || entity in UPDATABLE_FIELDS) && (t !== 'add_tag' || entity === 'lead') && (t !== 'assign_owner' || entity !== 'activity'),
+    (t) =>
+      (t !== 'update_field' || entity in UPDATABLE_FIELDS) &&
+      (t !== 'add_tag' || entity === 'lead') &&
+      (t !== 'assign_owner' || (entity !== 'activity' && entity !== 'person')) &&
+      (!PERSON_ACTIONS.has(t) || ['lead', 'contact', 'person'].includes(entity)),
   );
   return (
     <div className="space-y-3">
@@ -417,8 +442,47 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
               <Input id={`${id}-due`} type="number" min={0} max={365} disabled={readOnly} value={a.dueInDays ?? ''} onChange={(e) => onChange({ ...a, dueInDays: e.target.value === '' ? undefined : Math.max(0, Math.min(365, Number(e.target.value))) })} />
             </div>
             <PersonSelect label="Assign to" value={a.assignTo} readOnly={readOnly} onChange={(assignTo) => onChange({ ...a, assignTo })} />
+            <div className="space-y-1.5">
+              <Label htmlFor={`${id}-prio`}>Priority</Label>
+              <Select id={`${id}-prio`} disabled={readOnly} value={a.priority} onChange={(e) => onChange({ ...a, priority: e.target.value as 'LOW' | 'NORMAL' | 'HIGH' })}>
+                <option value="LOW">Low</option>
+                <option value="NORMAL">Normal</option>
+                <option value="HIGH">High</option>
+              </Select>
+            </div>
           </div>
         </>
+      )}
+
+      {a.type === 'stop_sequences' && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-mode`}>Their live sequences</Label>
+          <Select id={`${id}-mode`} disabled={readOnly} value={a.mode} onChange={(e) => onChange({ ...a, mode: e.target.value as 'stop' | 'pause' })}>
+            <option value="stop">Stop them</option>
+            <option value="pause">Pause them (resume by hand)</option>
+          </Select>
+        </div>
+      )}
+
+      {a.type === 'enroll_in_sequence' && <SequencePicker id={`${id}-seq`} value={a.sequenceId} readOnly={readOnly} onChange={(sequenceId) => onChange({ ...a, sequenceId })} />}
+
+      {a.type === 'flag_email' && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-flag`}>Mark the address as</Label>
+          <Select id={`${id}-flag`} disabled={readOnly} value={a.status} onChange={(e) => onChange({ ...a, status: e.target.value as 'needs_verification' | 'invalid' | 'valid' })}>
+            <option value="needs_verification">Check before emailing</option>
+            <option value="invalid">Invalid</option>
+            <option value="valid">Verified</option>
+          </Select>
+        </div>
+      )}
+
+      {a.type === 'add_engagement_points' && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-pts`}>Points (use a minus sign to lower)</Label>
+          <Input id={`${id}-pts`} type="number" min={-50} max={50} disabled={readOnly} value={a.points} onChange={(e) => onChange({ ...a, points: Math.max(-50, Math.min(50, Math.trunc(Number(e.target.value)) || 1)) })} />
+          <p className="text-xs text-muted-foreground">The score stays between 0 and 100.</p>
+        </div>
       )}
 
       {a.type === 'assign_owner' && (
@@ -516,6 +580,26 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
           <TextField label="Body" multiline value={a.body} readOnly={readOnly} maxLength={10_000} hint={TEMPLATE_HINT} onChange={(body) => onChange({ ...a, body })} />
         </>
       )}
+    </div>
+  );
+}
+
+/** Active sequences to enrol into. Emails then follow that sequence's own send window, limits and do-not-email list. */
+function SequencePicker({ id, value, readOnly, onChange }: { id: string; value: string; readOnly?: boolean; onChange: (v: string) => void }) {
+  const list = useQuery({ queryKey: ['sequences'], queryFn: () => api<SequenceRow[]>('/sequences') });
+  const active = list.data?.filter((s) => s.status === 'ACTIVE') ?? [];
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>Sequence</Label>
+      <Select id={id} disabled={readOnly || list.isPending} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Choose an active sequence</option>
+        {active.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </Select>
+      <p className="text-xs text-muted-foreground">Emails go from the workflow owner’s mailbox, inside the sequence’s send window and limits. People on the do-not-email list or opted out are skipped.</p>
     </div>
   );
 }

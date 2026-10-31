@@ -421,6 +421,10 @@ model Contact {
   timezone         String?
   ownerId          String?          @map("owner_id") @db.Uuid
   marketingConsent MarketingConsent @default(UNKNOWN) @map("marketing_consent")
+  /// valid, risky, catch_all, invalid, unknown, bounced, needs_verification; null = never checked.
+  emailStatus      String?          @map("email_status")
+  /// 0-100, raised by email engagement rules in Automation Studio; null = never scored.
+  engagementScore  Int?             @map("engagement_score")
   consentSource    String?          @map("consent_source")
   consentUpdatedAt DateTime?        @map("consent_updated_at") @db.Timestamptz(3)
   customFields     Json             @default("{}") @map("custom_fields")
@@ -465,6 +469,8 @@ model Lead {
   /// First-touch campaign, set by hosted forms or by hand.
   campaignId             String?          @map("campaign_id") @db.Uuid
   marketingConsent       MarketingConsent @default(UNKNOWN) @map("marketing_consent")
+  /// valid, risky, catch_all, invalid, unknown, bounced, needs_verification; null = never checked.
+  emailStatus            String?          @map("email_status")
   consentSource          String?          @map("consent_source")
   consentUpdatedAt       DateTime?        @map("consent_updated_at") @db.Timestamptz(3)
   estimatedValue         Decimal?         @map("estimated_value") @db.Decimal(18, 2)
@@ -569,11 +575,11 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pipeline    Pipeline         @relation(fields: [pipelineId], references: [id])
-  stage       PipelineStage    @relation(fields: [stageId], references: [id])
-  company     Company?         @relation(fields: [companyId], references: [id])
-  contact     Contact?         @relation(fields: [contactId], references: [id])
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline    Pipeline          @relation(fields: [pipelineId], references: [id])
+  stage       PipelineStage     @relation(fields: [stageId], references: [id])
+  company     Company?          @relation(fields: [companyId], references: [id])
+  contact     Contact?          @relation(fields: [contactId], references: [id])
   activities  Activity[]
   tasks       Task[]
   quotes      Quote[]
@@ -634,21 +640,28 @@ enum TaskStatus {
   CANCELED
 }
 
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
 model Task {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String     @map("tenant_id") @db.Uuid
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
   title         String
   description   String?
-  status        TaskStatus @default(OPEN)
-  dueAt         DateTime?  @map("due_at") @db.Timestamptz(3)
-  completedAt   DateTime?  @map("completed_at") @db.Timestamptz(3)
-  assigneeId    String?    @map("assignee_id") @db.Uuid
-  leadId        String?    @map("lead_id") @db.Uuid
-  contactId     String?    @map("contact_id") @db.Uuid
-  opportunityId String?    @map("opportunity_id") @db.Uuid
-  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  status        TaskStatus   @default(OPEN)
+  priority      TaskPriority @default(NORMAL)
+  dueAt         DateTime?    @map("due_at") @db.Timestamptz(3)
+  completedAt   DateTime?    @map("completed_at") @db.Timestamptz(3)
+  assigneeId    String?      @map("assignee_id") @db.Uuid
+  leadId        String?      @map("lead_id") @db.Uuid
+  contactId     String?      @map("contact_id") @db.Uuid
+  opportunityId String?      @map("opportunity_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(3)
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
@@ -758,6 +771,8 @@ model Workflow {
   status          WorkflowStatus @default(DRAFT)
   triggerType     String         @map("trigger_type")
   activeVersionId String?        @map("active_version_id") @db.Uuid
+  /// When it was last switched on; events from before then do not start runs.
+  activatedAt     DateTime?      @map("activated_at") @db.Timestamptz(3)
   createdById     String         @map("created_by_id") @db.Uuid
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -2028,7 +2043,9 @@ model FinderLookup {
 
 // ───────────── Enhancement Phase 1: sales intelligence ─────────────
 
-/** Latest rule-based health of an open deal, kept by the worker's hourly sweep. */
+/**
+ * Latest rule-based health of an open deal, kept by the worker's hourly sweep.
+ */
 model DealHealthScore {
   dealId     String    @id @map("deal_id") @db.Uuid
   tenantId   String    @map("tenant_id") @db.Uuid
@@ -2036,7 +2053,9 @@ model DealHealthScore {
   risk       String
   signals    Json
   computedAt DateTime  @map("computed_at") @db.Timestamptz(3)
-  /** Set when the owner was told the deal turned high risk; cleared when it recovers. */
+  /**
+   * Set when the owner was told the deal turned high risk; cleared when it recovers.
+   */
   alertedAt  DateTime? @map("alerted_at") @db.Timestamptz(3)
 
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2046,7 +2065,9 @@ model DealHealthScore {
   @@map("deal_health_scores")
 }
 
-/** One score per deal per day (the last of the day wins), for trends. */
+/**
+ * One score per deal per day (the last of the day wins), for trends.
+ */
 model DealHealthDaily {
   dealId   String   @map("deal_id") @db.Uuid
   day      DateTime @db.Date
@@ -2062,7 +2083,9 @@ model DealHealthDaily {
   @@map("deal_health_daily")
 }
 
-/** What a person did with one item of their next best action list; accepted items keep the task they created. */
+/**
+ * What a person did with one item of their next best action list; accepted items keep the task they created.
+ */
 model NextActionDecision {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId   String    @map("tenant_id") @db.Uuid
@@ -2071,9 +2094,13 @@ model NextActionDecision {
   kind       String
   recordType String    @map("record_type")
   recordId   String    @map("record_id") @db.Uuid
-  /** accepted, dismissed or snoozed. */
+  /**
+   * accepted, dismissed or snoozed.
+   */
   decision   String
-  /** Snoozed until; null with "dismissed" hides it until the situation behind the key changes. */
+  /**
+   * Snoozed until; null with "dismissed" hides it until the situation behind the key changes.
+   */
   until      DateTime? @db.Timestamptz(3)
   taskId     String?   @map("task_id") @db.Uuid
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

@@ -13,6 +13,7 @@ import { RecordSequences } from '@/components/crm/record-sequences';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
+import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
@@ -80,6 +81,8 @@ export function LeadDetail({ id }: { id: string }) {
                   ['Campaign', l.campaignSource],
                   ['Estimated value', l.estimatedValue !== null ? formatMoney(l.estimatedValue, l.currency ?? 'USD') : null],
                   ['Marketing consent', consentLabel(l.marketingConsent, l.consentSource)],
+                  ['Email status', l.emailStatus && <EmailStatusBadge status={l.emailStatus} />],
+                  ['Engagement score', l.engagementScore !== null ? `${l.engagementScore} / 100` : null],
                   ['Owner', l.owner?.name],
                   ['Tags', l.tags.length ? l.tags.map((t) => <Badge key={t} className="mr-1">{t}</Badge>) : null],
                   ['Created', formatDate(l.createdAt)],

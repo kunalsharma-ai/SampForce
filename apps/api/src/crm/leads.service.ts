@@ -8,6 +8,7 @@ import type {
   LeadRow,
   ListQuery,
   Page,
+  EmailStatus,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -108,7 +109,13 @@ export class LeadsService {
       const { customFields: _cf, ...rest } = input;
       const row = await tx.lead.update({
         where: { id },
-        data: { ...rest, ...(input.marketingConsent && input.marketingConsent !== before.marketingConsent ? consentFields(input.marketingConsent, 'manual') : {}), ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) },
+        data: {
+          ...rest,
+          ...(input.marketingConsent && input.marketingConsent !== before.marketingConsent ? consentFields(input.marketingConsent, 'manual') : {}),
+          ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}),
+          // A new address has not bounced or been checked yet.
+          ...(input.email !== undefined && (input.email ?? null) !== before.email ? { emailStatus: null } : {}),
+        },
       });
       const changes = diff(before, input);
       await this.audit.record(tx, {
@@ -301,6 +308,8 @@ export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: 
     marketingConsent: r.marketingConsent,
     consentSource: r.consentSource,
     consentUpdatedAt: iso(r.consentUpdatedAt),
+    emailStatus: (r.emailStatus as EmailStatus | null) ?? null,
+    engagementScore: r.engagementScore,
     estimatedValue: num(r.estimatedValue),
     currency: r.currency,
     status: r.status,

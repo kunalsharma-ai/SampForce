@@ -46,7 +46,7 @@ export function RecordEmails({ contactId, leadId, email }: { contactId?: string;
             {!connected && (
               <>
                 {' '}
-                <Link href="/app/integrations" className="text-primary hover:underline">
+                <Link href="/app/integrations" className="text-primary underline underline-offset-2">
                   Connect a mailbox
                 </Link>{' '}
                 to sync and send.

@@ -62,6 +62,7 @@ export class TasksService {
         data: {
           tenantId: auth.tenantId,
           title: input.title,
+          priority: input.priority ?? 'NORMAL',
           description: input.description ?? null,
           dueAt: input.dueAt ? new Date(input.dueAt) : null,
           assigneeId,
@@ -93,6 +94,7 @@ export class TasksService {
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
         ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.leadId !== undefined ? { leadId: input.leadId } : {}),
         ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
         ...(input.opportunityId !== undefined ? { opportunityId: input.opportunityId } : {}),
@@ -127,6 +129,7 @@ export function toTaskRow(r: TaskModel, owners: Map<string, { id: string; name: 
     title: r.title,
     description: r.description,
     status: r.status,
+    priority: r.priority,
     dueAt: iso(r.dueAt),
     completedAt: iso(r.completedAt),
     overdue: r.status === 'OPEN' && !!r.dueAt && r.dueAt < now,

@@ -23,7 +23,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { iso, notFound, ownerRefs } from '../crm/crm-helpers';
 import { segmentWhere } from '../marketing/segments.service';
-import { loadContacts, loadLeads, type Person } from './people';
+import { loadContacts, loadLeads, type Person, personSubject } from './people';
 
 const DAY = 86_400_000;
 const MAX_ENROL = 500;
@@ -155,7 +155,7 @@ export class SequencesService {
         continue;
       }
       live.add(p.email!);
-      await tx.sequenceEnrollment.create({
+      const created = await tx.sequenceEnrollment.create({
         data: {
           tenantId,
           sequenceId: s.id,
@@ -169,6 +169,14 @@ export class SequencesService {
           // Spread first sends over a few minutes so a batch does not leave the mailbox at once.
           nextRunAt: new Date(firstRun.getTime() + enrolled * 45_000),
         },
+      });
+      await this.audit.publish(tx, {
+        tenantId,
+        type: 'sequence.enrolled',
+        entityType: p.type,
+        entityId: p.id,
+        actorUserId: enrolledById,
+        payload: { sequenceId: s.id, sequenceName: s.name, enrollmentId: created.id, email: p.email, senderId },
       });
       enrolled++;
     }
@@ -212,6 +220,11 @@ export class SequencesService {
         if (sup) throw new ConflictException({ code: 'SUPPRESSED', message: 'This address is on the do-not-email list.' });
       }
       await tx.sequenceEnrollment.update({ where: { id: e.id }, data });
+      const who = personSubject(e);
+      if (action === 'stop' && who) {
+        const seq = await tx.sequence.findUnique({ where: { id: e.sequenceId }, select: { name: true } });
+        await this.audit.publish(tx, { tenantId: auth.tenantId, type: 'sequence.removed', ...who, actorUserId: auth.userId, payload: { sequenceId: e.sequenceId, sequenceName: seq?.name ?? null, enrollmentId: e.id, email: e.email, reason: 'stopped' } });
+      }
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: `sequence_enrollment.${action}`, entityType: 'sequence_enrollment', entityId: e.id, metadata: { sequenceId: e.sequenceId, email: e.email }, meta });
       const row = await tx.sequenceEnrollment.findFirstOrThrow({ where: { id: e.id }, include: { sequence: { select: { id: true, name: true, steps: true } }, _count: { select: { messages: true } } } });
       return (await this.enrollmentRows(tx, auth.tenantId, [row]))[0]!;

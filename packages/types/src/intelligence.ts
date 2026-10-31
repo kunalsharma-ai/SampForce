@@ -59,6 +59,7 @@ export function dealRisk(health: number): DealRisk {
 export const NEXT_ACTION_KINDS = [
   'escalate_deal',
   'prospect_silent',
+  'engaged_no_reply',
   'overdue_task',
   'reply_waiting',
   'deal_at_risk',
@@ -74,6 +75,7 @@ export type NextActionKind = (typeof NEXT_ACTION_KINDS)[number];
 export const NEXT_ACTION_LABELS: Record<NextActionKind, string> = {
   escalate_deal: 'Manager review',
   prospect_silent: 'No reply to sequence',
+  engaged_no_reply: 'Engaged, no reply',
   overdue_task: 'Overdue task',
   reply_waiting: 'Reply waiting',
   deal_at_risk: 'Deal at risk',

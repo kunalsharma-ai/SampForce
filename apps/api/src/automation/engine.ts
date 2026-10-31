@@ -201,7 +201,15 @@ export async function advance(
 export function describeAction(a: WorkflowAction): string {
   switch (a.type) {
     case 'create_task':
-      return `Create task "${a.title}"`;
+      return `Create ${a.priority === 'HIGH' ? 'high-priority ' : ''}task "${a.title}"`;
+    case 'stop_sequences':
+      return a.mode === 'pause' ? 'Pause their sequences' : 'Stop their sequences';
+    case 'enroll_in_sequence':
+      return 'Add them to a sequence';
+    case 'flag_email':
+      return a.status === 'needs_verification' ? 'Flag their email address for checking' : `Mark their email address ${a.status}`;
+    case 'add_engagement_points':
+      return a.points > 0 ? `Add ${a.points} engagement points` : `Remove ${-a.points} engagement points`;
     case 'assign_owner':
       return a.mode === 'round_robin' ? `Assign owner (round robin across ${a.userIds.length})` : 'Assign owner';
     case 'update_field':
