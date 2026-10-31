@@ -8,6 +8,7 @@ import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader 
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
+import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { formatDate, useRecord } from '@/lib/crm';
 
@@ -52,6 +53,7 @@ export function ContactDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />
         </div>
         <div className="space-y-4">
+          <RecordIntelligencePanel entity="contact" id={id} name={c.fullName} />
           <RecordSequences contactId={id} email={c.email} />
           <RecordTasks related={{ contactId: id }} />
           <CustomFieldList entity="contacts" values={c.customFields} />

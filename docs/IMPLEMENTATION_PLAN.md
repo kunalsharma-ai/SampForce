@@ -335,6 +335,22 @@ Requested by Kunal on 2026-10-31. Plan: https://claude.ai/artifact/Bi2GJHfJJMDsL
 | Browser extension (Chrome/Edge): own connection codes, side panel, save as lead, enrol, optional auto-capture (ADR 0015) | Built; tested in Chromium against a stand-in site. Not yet in the Chrome Web Store: the privacy page (`/extension-privacy`) and listing kit (`apps/extension/store/`) are ready; submitting needs Sampledge's developer account |
 | Email finder: own website reader, pattern and mail-server checks, optional Hunter.io key, extension button (ADR 0016) | Built; tested against made-up sites and a Hunter stand-in. Not yet run on the open internet or with a real Hunter key |
 
+## Enhancement programme (in progress)
+
+Requested by Kunal on 2026-10-31 ("Master enhancement, integration and non-duplication" spec plus the detailed
+feature specifications). Audit of what already existed: posted in the project thread before building. Providers:
+Apollo.io (company and contact data), Hunter.io (email finding and verification), Deepgram (speech to text), the
+existing Gmail and Outlook connections. Every provider stays in Pending Configuration or Mock Mode until a real key
+is configured and a live call has passed. One automation engine (Automation Studio) for sequences, workflows and AI
+triggers.
+
+| Phase | Features | Status |
+|---|---|---|
+| 1 | Deal health monitor, next best actions, 360° timeline, record intelligence, weekly insights (ADR 0017) | Built and tested; no external keys needed |
+| 2 | Email automation on Automation Studio, template and inbox improvements, campaign analytics, features 5–9 | Not started |
+| 3 | Features 10–15: client portal, voice (Deepgram), gamification, visitor intelligence and the rest | Not started |
+| Prospects | Prospect Discovery in the extension (Apollo, Hunter) and the Prospect Lists module | Not started |
+
 ## Original continuation instructions (Phase 8, done)
 
 Follow the roadmap row for Phase 8 (SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, performance tuning,

@@ -185,7 +185,7 @@ model Tenant {
   companyHealth          CompanyHealth[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
-  nextActionDismissals   NextActionDismissal[]
+  nextActionDecisions    NextActionDecision[]
   invoices               Invoice[]
   billingEvents          BillingEvent[]
   emailTemplates         EmailTemplate[]
@@ -2046,18 +2046,25 @@ model DealHealthDaily {
   @@map("deal_health_daily")
 }
 
-/** A person hid or snoozed one item of their next best action list. */
-model NextActionDismissal {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  key       String
-  /** Null hides it until the situation behind the key changes (the key changes with it). */
-  until     DateTime? @db.Timestamptz(3)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+/** What a person did with one item of their next best action list; accepted items keep the task they created. */
+model NextActionDecision {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  key        String
+  kind       String
+  recordType String    @map("record_type")
+  recordId   String    @map("record_id") @db.Uuid
+  /** accepted, dismissed or snoozed. */
+  decision   String
+  /** Snoozed until; null with "dismissed" hides it until the situation behind the key changes. */
+  until      DateTime? @db.Timestamptz(3)
+  taskId     String?   @map("task_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, userId, key])
-  @@map("next_action_dismissals")
+  @@index([tenantId, userId, createdAt])
+  @@map("next_action_decisions")
 }

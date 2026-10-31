@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   dealHealthQuerySchema,
   insightQuerySchema,
   nextActionAcceptSchema,
   nextActionDismissSchema,
+  nextActionQuerySchema,
   TIMELINE_ENTITIES,
   type TimelineEntity,
   timelineQuerySchema,
@@ -15,9 +16,11 @@ import { ZodPipe } from '../common/zod.pipe';
 import { DealHealthService } from './deal-health.service';
 import { InsightsService } from './insights.service';
 import { NextActionsService } from './next-actions.service';
+import { RecordIntelligenceService } from './record-intelligence.service';
 import { TimelineService } from './timeline.service';
 
 const uuid = new ParseUUIDPipe();
+const FOCUS_PERMISSION = { lead: 'leads:read', contact: 'contacts:read', company: 'companies:read', deal: 'deals:read' } as const;
 
 /** Enhancement Phase 1: sales intelligence over existing CRM data. */
 @Controller()
@@ -27,6 +30,7 @@ export class IntelligenceController {
     private readonly nextActions: NextActionsService,
     private readonly timeline: TimelineService,
     private readonly insights: InsightsService,
+    private readonly records: RecordIntelligenceService,
   ) {}
 
   @Get('deal-health')
@@ -57,8 +61,10 @@ export class IntelligenceController {
 
   @Get('next-actions')
   @RequirePermissions('dashboard:read')
-  nextActionList(@Auth() auth: AuthContext) {
-    return this.nextActions.list(auth);
+  nextActionList(@Auth() auth: AuthContext, @Query(new ZodPipe(nextActionQuerySchema)) q: z.infer<typeof nextActionQuerySchema>) {
+    if (!q.recordType || !q.recordId) return this.nextActions.list(auth);
+    if (!auth.permissions.includes(FOCUS_PERMISSION[q.recordType])) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot read this record.' });
+    return this.nextActions.list(auth, { type: q.recordType, id: q.recordId });
   }
 
   @Post('next-actions/dismiss')
@@ -84,6 +90,13 @@ export class IntelligenceController {
     @Query(new ZodPipe(timelineQuerySchema)) q: z.infer<typeof timelineQuerySchema>,
   ) {
     return this.timeline.get(auth, entity, id, q);
+  }
+
+  @Get('intelligence/:entity/:id')
+  @RequirePermissions('dashboard:read')
+  recordIntelligence(@Auth() auth: AuthContext, @Param('entity', new ParseEnumPipe(TIMELINE_ENTITIES)) entity: TimelineEntity, @Param('id', uuid) id: string) {
+    if (!auth.permissions.includes(FOCUS_PERMISSION[entity])) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot read this record.' });
+    return this.records.get(auth, entity, id);
   }
 
   @Get('insights')

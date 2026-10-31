@@ -1,5 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
-import type { DealHealthRow, DealHealthSummary, InsightFeed, NextActionList, TimelinePage } from '@dealflow/types';
+import type { DealHealthRow, DealHealthSummary, InsightFeed, NextActionList, RecordIntelligence, TimelinePage } from '@dealflow/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DealHealthService } from '../src/intelligence/deal-health.service';
 import { api, appClient, asTenant, inviteMember, ownerClient, registerUser, startApp, type TestUser } from './helpers';
@@ -106,14 +106,26 @@ describe('sales intelligence', () => {
     expect(after.items.find((i) => i.key === overdue.key)).toBeUndefined();
     expect(after.items.find((i) => i.key === newLead.key)).toBeUndefined();
     expect(after.dismissed).toBe(2);
+    expect(after.outcomes).toEqual({ accepted30: 1, tasksDone: 0, engaged: 0, dismissed30: 1 });
+    // The accepted suggestion led somewhere: the task got done and the lead saw new activity.
+    await api(owner).patch(`/tasks/${taskId}`, { status: 'DONE' }).expect(200);
+    await api(owner).post('/activities', { type: 'CALL', subject: 'Spoke to Nia', leadId: lead }).expect(201);
+    expect(((await api(owner).get('/next-actions').expect(200)).body as NextActionList).outcomes).toEqual({ accepted30: 1, tasksDone: 1, engaged: 1, dismissed30: 1 });
+
+    // A record page asks for that record's actions, whoever owns it; the risky deal shows up there.
+    const focused = (await api(owner).get(`/next-actions?recordType=deal&recordId=${riskyDeal}`).expect(200)).body as NextActionList;
+    expect(focused.outcomes).toBeNull();
+    expect(focused.items.length).toBeGreaterThan(0);
+    expect(focused.items.every((i) => i.record.type === 'deal' && i.record.id === riskyDeal)).toBe(true);
+    await api(owner).get(`/next-actions?recordType=widget&recordId=${riskyDeal}`).expect(400);
 
     // Dismissals are personal.
     const member = await inviteMember(app, owner, 'member');
     const { withDbContext } = await import('@dealflow/database');
     const db = appClient();
     try {
-      expect(await withDbContext(db, { tenantId: owner.tenantId, userId: member.userId }, (tx) => tx.nextActionDismissal.count())).toBe(0);
-      expect(await withDbContext(db, { tenantId: owner.tenantId, userId: ownerId }, (tx) => tx.nextActionDismissal.count())).toBe(2);
+      expect(await withDbContext(db, { tenantId: owner.tenantId, userId: member.userId }, (tx) => tx.nextActionDecision.count())).toBe(0);
+      expect(await withDbContext(db, { tenantId: owner.tenantId, userId: ownerId }, (tx) => tx.nextActionDecision.count())).toBe(2);
     } finally {
       await db.$disconnect();
     }
@@ -148,14 +160,30 @@ describe('sales intelligence', () => {
     await api(owner).get(`/timeline/widget/${company}`).expect(400);
   });
 
+  it('gives a record its engagement, buying signals, senior people and account value', async () => {
+    const company = (await api(owner).post('/companies', { name: 'Signals Account' }).expect(201)).body.id;
+    const vp = (await api(owner).post('/contacts', { firstName: 'Vera', lastName: 'Vp', jobTitle: 'VP Sales', companyId: company }).expect(201)).body.id;
+    await api(owner).post('/contacts', { firstName: 'Ian', lastName: 'Intern', jobTitle: 'Intern', companyId: company }).expect(201);
+    await api(owner).post('/deals', { name: 'Signals pilot', amount: 3000, stageId: openStage, companyId: company, contactId: vp }).expect(201);
+    await api(owner).post('/activities', { type: 'CALL', subject: 'Intro', contactId: vp }).expect(201);
+
+    const intel = (await api(owner).get(`/intelligence/company/${company}`).expect(200)).body as RecordIntelligence;
+    expect(intel.engagement.last30).toBeGreaterThanOrEqual(1);
+    expect(intel.decisionMakers!.map((m) => m.name)).toEqual(['Vera Vp']);
+    expect(intel.account).toMatchObject({ companyId: company, companyName: 'Signals Account', openPipeline: 3000, wonTotal: 0, wonDeals: 0 });
+    const contactView = (await api(owner).get(`/intelligence/contact/${vp}`).expect(200)).body as RecordIntelligence;
+    expect(contactView.account?.companyId).toBe(company);
+    await api(other).get(`/intelligence/company/${company}`).expect(404);
+  });
+
   it('summarises the week with numbers that come from records', async () => {
     const feed = (await api(owner).get('/insights?scope=mine').expect(200)).body as InsightFeed;
     const keys = feed.items.map((i) => i.key);
     expect(keys).toContain('pipeline_created');
     expect(keys).toContain('close_date_passed');
     const created = feed.items.find((i) => i.key === 'pipeline_created')!;
-    // Quiet Renewal 5,000 + Busy Expansion 8,000 + Timeline pilot 1,200, all in the default currency.
-    expect(created.metric).toEqual({ current: 14200, previous: 0, unit: 'money' });
+    // Quiet Renewal 5,000 + Busy Expansion 8,000 + Timeline pilot 1,200 + Signals pilot 3,000, all in the default currency.
+    expect(created.metric).toEqual({ current: 17200, previous: 0, unit: 'money' });
     expect(feed.items[0]!.tone).toBe('attention');
     const team = (await api(other).get('/insights?scope=team').expect(200)).body as InsightFeed;
     expect(team.items.find((i) => i.key === 'pipeline_created')!.metric!.current).toBe(0);

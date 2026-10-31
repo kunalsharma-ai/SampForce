@@ -10,6 +10,8 @@ import type { Signal } from './ai';
 // ───────────── Deal health monitor ─────────────
 
 export const DEAL_RISKS = ['low', 'medium', 'high'] as const;
+/** What people see for each band. */
+export const DEAL_RISK_LABELS = { low: 'Healthy', medium: 'At risk', high: 'Critical' } as const;
 export type DealRisk = (typeof DEAL_RISKS)[number];
 
 export interface DealHealthRow {
@@ -55,6 +57,8 @@ export function dealRisk(health: number): DealRisk {
 // ───────────── Next best actions ─────────────
 
 export const NEXT_ACTION_KINDS = [
+  'escalate_deal',
+  'prospect_silent',
   'overdue_task',
   'reply_waiting',
   'deal_at_risk',
@@ -68,6 +72,8 @@ export const NEXT_ACTION_KINDS = [
 export type NextActionKind = (typeof NEXT_ACTION_KINDS)[number];
 
 export const NEXT_ACTION_LABELS: Record<NextActionKind, string> = {
+  escalate_deal: 'Manager review',
+  prospect_silent: 'No reply to sequence',
   overdue_task: 'Overdue task',
   reply_waiting: 'Reply waiting',
   deal_at_risk: 'Deal at risk',
@@ -100,13 +106,23 @@ export interface NextAction {
 
 export interface NextActionList {
   items: NextAction[];
-  /** How many were left out because the person dismissed or snoozed them. */
+  /** How many were left out because the person accepted, dismissed or snoozed them. */
   dismissed: number;
+  /** For the personal list: what came of the suggestions the person accepted in the last 30 days. */
+  outcomes: { accepted30: number; tasksDone: number; engaged: number; dismissed30: number } | null;
   generatedAt: string;
 }
 
+export const NEXT_ACTION_FOCUS_TYPES = ['lead', 'contact', 'company', 'deal'] as const;
+export const nextActionFocusSchema = z.object({ type: z.enum(NEXT_ACTION_FOCUS_TYPES), id: z.string().uuid() });
+export type NextActionFocus = z.infer<typeof nextActionFocusSchema>;
+export const nextActionQuerySchema = z.object({ recordType: z.enum(NEXT_ACTION_FOCUS_TYPES).optional(), recordId: z.string().uuid().optional() });
+export type NextActionQuery = z.infer<typeof nextActionQuerySchema>;
+
 export const nextActionDismissSchema = z.object({
   key: z.string().min(3).max(200),
+  /** Set when the item came from a record page's list. */
+  focus: nextActionFocusSchema.optional(),
   /** Snooze for this many days; omitted means until the situation changes. */
   days: z.number().int().min(1).max(30).optional(),
 });
@@ -114,6 +130,7 @@ export type NextActionDismissInput = z.infer<typeof nextActionDismissSchema>;
 
 export const nextActionAcceptSchema = z.object({
   key: z.string().min(3).max(200),
+  focus: nextActionFocusSchema.optional(),
   title: z.string().trim().min(1).max(200),
   dueInDays: z.number().int().min(0).max(60),
 });
@@ -213,3 +230,52 @@ export interface InsightFeed {
 
 export const insightQuerySchema = z.object({ scope: z.enum(INSIGHT_SCOPES).default('mine') });
 export type InsightQuery = z.infer<typeof insightQuerySchema>;
+
+// ───────────── Record intelligence (AI Sales Intelligence and Customer 360, on each record) ─────────────
+
+export interface BuyingSignal {
+  key: string;
+  label: string;
+  detail: string;
+  at: string;
+  /** Opens are estimates (image loading); everything else is a recorded event. */
+  confirmed: boolean;
+}
+
+export interface DecisionMaker {
+  id: string;
+  name: string;
+  jobTitle: string;
+  lastEngagedAt: string | null;
+}
+
+export interface RecordIntelligence {
+  engagement: {
+    last30: number;
+    previous30: number;
+    trend: 'none' | 'rising' | 'steady' | 'declining';
+    lastInboundAt: string | null;
+    lastOutboundAt: string | null;
+  };
+  /** Things the buyer did recently that suggest interest, newest first. */
+  buyingSignals: BuyingSignal[];
+  /** Senior people at the company (by job title), for company, contact and deal records. */
+  decisionMakers: DecisionMaker[] | null;
+  /** The company's value to the business; null for leads and records without a company. */
+  account: {
+    companyId: string;
+    companyName: string;
+    currency: string;
+    wonTotal: number;
+    wonDeals: number;
+    openPipeline: number;
+    activeContractValue: number;
+    /** Deals or contracts in other currencies, left out of the totals above. */
+    otherCurrency: number;
+    customerSince: string | null;
+    /** Catalogue products this company has not had on an accepted quote yet (cross-sell ideas). */
+    notYetBought: string[];
+    renewalWithin60Days: boolean;
+  } | null;
+  flags: { key: 'inactive' | 'declining' | 'high_intent' | 'no_decision_maker'; label: string }[];
+}

@@ -28,6 +28,12 @@ interface FactRow {
   last_activity_at: Date | null;
   open_tasks: number;
   overdue_tasks: number;
+  touches14: number;
+  touches_prev14: number;
+  last_inbound_at: Date | null;
+  last_outbound_at: Date | null;
+  people30: number;
+  people_prev30: number;
 }
 
 /** Facts for the open deals of one workspace (or one deal), in a single query. */
@@ -40,6 +46,26 @@ export async function loadDealFacts(tx: TenantTx, tenantId: string, dealId?: str
            (SELECT count(*)::int FROM tasks t WHERE t.opportunity_id = o.id AND t.deleted_at IS NULL AND t.status = 'OPEN') AS open_tasks,
            (SELECT count(*)::int FROM tasks t WHERE t.opportunity_id = o.id AND t.deleted_at IS NULL AND t.status = 'OPEN' AND t.due_at < now()) AS overdue_tasks
       FROM opportunities o JOIN pipeline_stages s ON s.id = o.stage_id
+      CROSS JOIN LATERAL (
+        -- The deal's people: its main contact plus the contacts at its company.
+        SELECT coalesce(array_agg(c.id), '{}') AS ids FROM contacts c
+         WHERE c.deleted_at IS NULL AND (c.id = o.contact_id OR (o.company_id IS NOT NULL AND c.company_id = o.company_id))
+      ) p
+      CROSS JOIN LATERAL (
+        SELECT
+          (SELECT count(*)::int FROM activities a WHERE a.deleted_at IS NULL AND (a.opportunity_id = o.id OR a.contact_id = ANY(p.ids)) AND a.occurred_at >= now() - interval '14 days')
+            + (SELECT count(*)::int FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.sent_at >= now() - interval '14 days') AS touches14,
+          (SELECT count(*)::int FROM activities a WHERE a.deleted_at IS NULL AND (a.opportunity_id = o.id OR a.contact_id = ANY(p.ids)) AND a.occurred_at >= now() - interval '28 days' AND a.occurred_at < now() - interval '14 days')
+            + (SELECT count(*)::int FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.sent_at >= now() - interval '28 days' AND m.sent_at < now() - interval '14 days') AS touches_prev14,
+          (SELECT max(m.sent_at) FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND') AS last_inbound_at,
+          (SELECT max(m.sent_at) FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'OUTBOUND') AS last_outbound_at,
+          (SELECT count(DISTINCT x.cid)::int FROM (
+             SELECT a.contact_id AS cid FROM activities a WHERE a.deleted_at IS NULL AND a.contact_id = ANY(p.ids) AND a.occurred_at >= now() - interval '30 days'
+             UNION SELECT m.contact_id FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND' AND m.sent_at >= now() - interval '30 days') x) AS people30,
+          (SELECT count(DISTINCT x.cid)::int FROM (
+             SELECT a.contact_id AS cid FROM activities a WHERE a.deleted_at IS NULL AND a.contact_id = ANY(p.ids) AND a.occurred_at >= now() - interval '60 days' AND a.occurred_at < now() - interval '30 days'
+             UNION SELECT m.contact_id FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND' AND m.sent_at >= now() - interval '60 days' AND m.sent_at < now() - interval '30 days') x) AS people_prev30
+      ) e
      WHERE o.tenant_id = ${tenantId}::uuid AND o.deleted_at IS NULL
        AND ${dealId ? Prisma.sql`o.id = ${dealId}::uuid` : Prisma.sql`o.status = 'OPEN'`}`;
 }
@@ -55,6 +81,14 @@ export function toDealFacts(r: FactRow): DealFacts {
     openTasks: r.open_tasks,
     overdueTasks: r.overdue_tasks,
     hasContact: !!r.contact_id,
+    engagement: {
+      touches14: r.touches14,
+      touchesPrev14: r.touches_prev14,
+      lastInboundAt: r.last_inbound_at,
+      lastOutboundAt: r.last_outbound_at,
+      people30: r.people30,
+      peoplePrev30: r.people_prev30,
+    },
   };
 }
 

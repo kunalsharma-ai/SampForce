@@ -12,6 +12,7 @@ import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
+import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
@@ -90,6 +91,7 @@ export function LeadDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ leadId: id }} timeline={{ entity: 'lead', id }} />
         </div>
         <div className="space-y-4">
+          <RecordIntelligencePanel entity="lead" id={id} name={l.fullName} />
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
           <div className="flex flex-wrap gap-2">

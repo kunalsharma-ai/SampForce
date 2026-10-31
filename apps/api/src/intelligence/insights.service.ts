@@ -48,8 +48,8 @@ export class InsightsService {
         if (high > 0) {
           items.push({
             key: 'high_risk_deals', tone: 'attention',
-            title: `${high} open deal${high === 1 ? ' is' : 's are'} at high risk`,
-            detail: newlyHigh > 0 ? `${newlyHigh} turned high risk in the last 7 days. Health comes from activity, stage age, tasks and dates.` : 'None turned high risk in the last 7 days.',
+            title: `${high} open deal${high === 1 ? ' is' : 's are'} critical (high risk)`,
+            detail: newlyHigh > 0 ? `${newlyHigh} turned critical in the last 7 days. Health comes from activity, stage age, tasks and dates.` : 'None turned critical in the last 7 days.',
             metric: { current: high, previous: null, unit: 'count' }, href: `/app/deals/health?risk=high${mine ? '&mine=true' : ''}`,
           });
         }

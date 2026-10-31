@@ -9,6 +9,7 @@ import { TasksService } from '../crm/tasks.service';
 import { DealHealthService } from '../intelligence/deal-health.service';
 import { InsightsService } from '../intelligence/insights.service';
 import { NextActionsService } from '../intelligence/next-actions.service';
+import { RecordIntelligenceService } from '../intelligence/record-intelligence.service';
 import { ForecastService } from './forecast.service';
 import type { ModelTool } from './provider';
 import { PermissionDenied, READ_PERMISSION, RecordContextBuilder, type RecordType } from './record-context';
@@ -53,6 +54,7 @@ export class CopilotTools {
     private readonly nextActions: NextActionsService,
     private readonly insights: InsightsService,
     private readonly dealHealth: DealHealthService,
+    private readonly recordIntel: RecordIntelligenceService,
   ) {
     this.defs = [
       {
@@ -138,6 +140,23 @@ export class CopilotTools {
         run: async (auth, input) => {
           const feed = await this.insights.feed(auth, input.scope === 'team' ? 'team' : 'mine');
           return { period: `last 7 days from ${feed.periodStart.slice(0, 10)}`, currency: feed.currency, insights: feed.items.map(({ title, detail, tone }) => ({ title, detail, tone })) };
+        },
+      },
+      {
+        needs: ['dashboard:read'],
+        tool: {
+          name: 'record_intelligence',
+          description: 'For one lead, contact, company or deal: engagement trend, recent buying signals (opens marked as estimates), senior contacts at the company, account value and products not yet bought. Use with get_record to summarise a relationship.',
+          strict: true,
+          input_schema: schema({ type: { type: 'string', enum: ['lead', 'contact', 'company', 'deal'] }, id: { type: 'string' } }),
+        },
+        run: async (auth, input, state) => {
+          const type = input.type as 'lead' | 'contact' | 'company' | 'deal';
+          if (!auth.permissions.includes(READ_PERMISSION[type])) return { error: `Your role cannot read ${type}s.` };
+          const intel = await this.recordIntel.get(auth, type, String(input.id));
+          const ctx = await this.records.load(auth, type, String(input.id));
+          state.citations.set(`${ctx.citation.entity}:${ctx.citation.id}`, ctx.citation);
+          return intel;
         },
       },
       {

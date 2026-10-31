@@ -5,6 +5,7 @@ import type { CompanyRow } from '@dealflow/types';
 import Link from 'next/link';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RelatedContacts, RelatedDeals } from '@/components/crm/related-deals';
+import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline } from '@/components/crm/timeline';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
 import { formatDate, useRecord } from '@/lib/crm';
@@ -31,6 +32,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ companyId: id }} timeline={{ entity: 'company', id }} />
         </div>
         <div className="space-y-4">
+          <RecordIntelligencePanel entity="company" id={id} name={c.name} />
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Details</CardTitle>

@@ -59,6 +59,11 @@ export function NextActions() {
           </ol>
         )}
         {list.data && list.data.items.length > 8 && <p className="mt-2 text-xs text-muted-foreground">Showing 8 of {list.data.items.length}. Finish or snooze some to see the rest.</p>}
+        {list.data?.outcomes && list.data.outcomes.accepted30 > 0 && (
+          <p className="mt-3 border-t border-border pt-2 text-xs text-muted-foreground">
+            Last 30 days: you turned {list.data.outcomes.accepted30} suggestion{list.data.outcomes.accepted30 === 1 ? '' : 's'} into tasks, finished {list.data.outcomes.tasksDone}, and {list.data.outcomes.engaged} of those records showed new activity afterwards. {list.data.outcomes.dismissed30} hidden.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -35,7 +35,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await expect(page.getByText('Overdue by 2 days.')).toBeVisible();
   await expect(page.getByText(/Health \d+\/100: .*Close date has passed/)).toBeVisible();
   await expect(page.getByText('This week')).toBeVisible();
-  await expect(page.getByText(/1 open deal is at high risk/)).toBeVisible();
+  await expect(page.getByText(/1 open deal is critical/)).toBeVisible();
   await expectNoA11yViolations(page);
 
   // Turn the risky deal's suggestion into a task.
@@ -44,6 +44,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await item.getByLabel('Task title').fill('Call Northbeam about the new date');
   await item.getByRole('button', { name: 'Create task' }).click();
   await expect(page.getByText(/Health \d+\/100/)).toHaveCount(0);
+  await expect(page.getByText(/Last 30 days: you turned 1 suggestion into tasks, finished 0/)).toBeVisible();
 
   // Snooze the overdue task until tomorrow.
   await page.getByRole('button', { name: 'Snooze "Send the security questionnaire" until tomorrow' }).click();
@@ -53,7 +54,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await page.goto('/app/deals');
   await page.getByRole('link', { name: 'Deal health' }).click();
   await expect(page.getByRole('heading', { name: 'Deal health', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: /^High risk/ }).click();
+  await page.getByRole('button', { name: /^Critical/ }).click();
   await expect(page).toHaveURL(/risk=high/);
   await expect(page.getByRole('link', { name: 'Northbeam rollout' })).toBeVisible();
   await expectNoA11yViolations(page);
@@ -62,7 +63,11 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await page.getByRole('link', { name: 'Northbeam rollout' }).click();
   await expect(page.getByText('Health monitor')).toBeVisible();
   await expect(page.getByText(/Close date has passed: Expected/)).toBeVisible();
+  await expect(page.getByText('Sales intelligence')).toBeVisible();
   await page.goto(`/app/companies/${company.id}`);
+  const intel = page.locator('div').filter({ has: page.getByText('Sales intelligence', { exact: true }) }).filter({ has: page.getByText('Account value') }).last();
+  await expect(intel.getByText('Open pipeline')).toBeVisible();
+  await expect(intel.getByText('Engagement, last 30 days')).toBeVisible();
   const timeline = page.getByRole('list', { name: 'Timeline, newest first' });
   await expect(timeline.getByText('Note: Intro from the expo')).toBeVisible();
   await expect(timeline.getByRole('link', { name: 'Mira Stone' })).toBeVisible();

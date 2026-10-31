@@ -11,6 +11,7 @@ import { DealIntelligenceCard, MeetingNotesButton, ProposalButton } from '@/comp
 import { DealHealthTrend } from '@/components/crm/deal-health-trend';
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
+import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { DealQuotes } from '@/components/revenue/record-commercial';
 import { api } from '@/lib/api';
@@ -136,6 +137,7 @@ export function DealDetail({ id }: { id: string }) {
         </div>
         <div className="space-y-4">
           <DealHealthTrend dealId={id} />
+          <RecordIntelligencePanel entity="deal" id={id} name={d.name} />
           <DealIntelligenceCard dealId={id} />
           <RecordTasks related={{ opportunityId: id }} />
           <CustomFieldList entity="deals" values={d.customFields} />

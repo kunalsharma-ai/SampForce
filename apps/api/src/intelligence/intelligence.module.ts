@@ -5,6 +5,7 @@ import { DealHealthService } from './deal-health.service';
 import { InsightsService } from './insights.service';
 import { IntelligenceController } from './intelligence.controller';
 import { NextActionsService } from './next-actions.service';
+import { RecordIntelligenceService } from './record-intelligence.service';
 import { TimelineService } from './timeline.service';
 
 /**
@@ -14,7 +15,7 @@ import { TimelineService } from './timeline.service';
 @Module({
   imports: [CrmModule],
   controllers: [IntelligenceController],
-  providers: [DealHealthService, NextActionsService, TimelineService, InsightsService, NotificationsService],
-  exports: [DealHealthService, NextActionsService, InsightsService],
+  providers: [DealHealthService, NextActionsService, TimelineService, InsightsService, RecordIntelligenceService, NotificationsService],
+  exports: [DealHealthService, NextActionsService, InsightsService, RecordIntelligenceService],
 })
 export class IntelligenceModule {}

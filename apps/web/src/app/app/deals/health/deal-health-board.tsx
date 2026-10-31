@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, Skeleton } from '@dealflow/ui';
-import { DEAL_RISKS, type DealHealthRow, type DealHealthSummary, type DealRisk } from '@dealflow/types';
+import { DEAL_RISKS, DEAL_RISK_LABELS, type DealHealthRow, type DealHealthSummary, type DealRisk } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 
 const TONE: Record<DealRisk, 'success' | 'warning' | 'critical'> = { low: 'success', medium: 'warning', high: 'critical' };
-const LABEL: Record<DealRisk, string> = { high: 'High risk', medium: 'Medium risk', low: 'Low risk' };
+const LABEL: Record<DealRisk, string> = DEAL_RISK_LABELS;
 
 export function DealHealthBoard() {
   const qc = useQueryClient();

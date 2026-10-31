@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
-import type { DealHealthDetail, DealRisk } from '@dealflow/types';
+import { DEAL_RISK_LABELS, type DealHealthDetail, type DealRisk } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { Activity } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -38,7 +38,7 @@ export function DealHealthTrend({ dealId }: { dealId: string }) {
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">{q.data.current.health}</span>
               <span className="text-sm text-muted-foreground">/ 100</span>
-              <Badge tone={TONE[q.data.current.risk]}>{q.data.current.risk[0]!.toUpperCase() + q.data.current.risk.slice(1)} risk</Badge>
+              <Badge tone={TONE[q.data.current.risk]}>{DEAL_RISK_LABELS[q.data.current.risk]}</Badge>
               {q.data.current.change7d !== null && q.data.current.change7d !== 0 && (
                 <span className={`text-xs ${q.data.current.change7d > 0 ? 'text-success' : 'text-critical'}`}>
                   {q.data.current.change7d > 0 ? '+' : ''}
