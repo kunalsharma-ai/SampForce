@@ -229,6 +229,18 @@ export const operatorPaymentSchema = z.object({
 export type OperatorPaymentInput = z.infer<typeof operatorPaymentSchema>;
 export const operatorVoidSchema = z.object({ reason: z.string().trim().min(5).max(500) });
 
+/** Payment instructions shown on open offline invoices. Empty clears the console value. */
+export const paymentInstructionsSchema = z.object({ instructions: z.string().trim().max(2000) });
+
+export interface OperatorSettings {
+  /** What open invoices show now, or null: they say the DealFlow team will send payment details. */
+  paymentInstructions: string | null;
+  /** Where it comes from: the console (editable here), the OFFLINE_PAYMENT_INSTRUCTIONS setting, or nowhere. */
+  paymentInstructionsSource: 'console' | 'config' | 'none';
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
 /** An open offline invoice in the operator console's "waiting for payment" list. */
 export interface OperatorOpenInvoice extends InvoiceRow {
   tenant: { id: string; name: string };

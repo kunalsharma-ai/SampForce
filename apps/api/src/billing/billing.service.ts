@@ -45,6 +45,9 @@ export function addMonths(d: Date, months: number): Date {
   return target;
 }
 
+/** platform_settings key for the payment instructions edited in the operator console. */
+export const PAYMENT_INSTRUCTIONS_KEY = 'offline_payment_instructions';
+
 const offlinePlan = () =>
   new ConflictException({ code: 'OFFLINE_PLAN', message: 'This plan is paid by invoice. Request an invoice for the plan and seats you want instead.' });
 
@@ -105,7 +108,7 @@ export class BillingService {
         pastDueSince: sub.pastDueSince?.toISOString() ?? null,
         graceEndsAt: sub.status === 'PAST_DUE' && sub.pastDueSince ? new Date(sub.pastDueSince.getTime() + this.env.BILLING_GRACE_DAYS * DAY).toISOString() : null,
         providers: { STRIPE: this.providers.sells('STRIPE'), RAZORPAY: this.providers.sells('RAZORPAY') },
-        offline: { instructions: this.env.OFFLINE_PAYMENT_INSTRUCTIONS ?? null, openInvoice: openInvoice ? toInvoiceRow(openInvoice) : null },
+        offline: { instructions: await this.paymentInstructions(tx), openInvoice: openInvoice ? toInvoiceRow(openInvoice) : null },
         portalAvailable: stripe.configured && sub.provider === 'STRIPE' && !!sub.providerCustomerId,
         usage: {
           members: { used: members, limit: ent.seatLimit },
@@ -300,6 +303,12 @@ export class BillingService {
   }
 
   // ───────────── Offline payment ─────────────
+
+  /** How to pay an offline invoice: the operator console's value, else OFFLINE_PAYMENT_INSTRUCTIONS, else null. */
+  async paymentInstructions(tx: TenantTx | Prisma.TransactionClient): Promise<string | null> {
+    const row = await tx.platformSetting.findUnique({ where: { key: PAYMENT_INSTRUCTIONS_KEY } });
+    return row?.value || this.env.OFFLINE_PAYMENT_INSTRUCTIONS || null;
+  }
 
   /** Issues an invoice for a plan, to be paid offline. The plan starts when an operator records the payment. */
   async requestInvoice(auth: AuthContext, input: InvoiceRequestInput, meta: RequestMeta): Promise<InvoiceRow> {

@@ -43,6 +43,7 @@ describe('offline payment', () => {
     app = await startApp();
     const db = appClient();
     const passwordHash = await new PasswordService().hash(password);
+    await db.platformSetting.deleteMany();
     await db.platformOperator.createMany({ data: [{ email: adminEmail, name: 'Ada Ops', passwordHash, role: 'ADMIN' }, { email: supportEmail, name: 'Sam Support', passwordHash, role: 'SUPPORT' }] });
     await db.$disconnect();
     owner = await registerUser(app, 'Bank Transfer Ltd');
@@ -153,6 +154,20 @@ describe('offline payment', () => {
     await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { currentPeriodEnd: new Date(Date.now() - 1000) } }));
     await app.get(BillingService).runDue(true);
     expect(await sub()).toMatchObject({ planCode: 'free', status: 'ACTIVE', provider: 'NONE', cancelAtPeriodEnd: false });
+  });
+
+  it('lets admins set the bank details in the console, over the config value', async () => {
+    expect((await op(support).get('/settings').expect(200)).body).toMatchObject({ paymentInstructionsSource: 'config' });
+    await op(support).post('/settings/payment-instructions', { instructions: 'Bank: Other' }).expect(403);
+    const set = (await op(admin).post('/settings/payment-instructions', { instructions: '  Bank: Console Test Bank\nIFSC: TEST0000001  ' }).expect(200)).body;
+    expect(set).toMatchObject({ paymentInstructions: 'Bank: Console Test Bank\nIFSC: TEST0000001', paymentInstructionsSource: 'console', updatedBy: adminEmail });
+    expect((await api(owner).get('/billing').expect(200)).body.offline.instructions).toBe('Bank: Console Test Bank\nIFSC: TEST0000001');
+    const log = (await op(admin).get('/audit-log').expect(200)).body as { action: string; metadata: { instructions?: string } }[];
+    expect(log.find((l) => l.action === 'settings.payment_instructions_updated')?.metadata.instructions).toContain('Console Test Bank');
+
+    // Clearing it falls back to OFFLINE_PAYMENT_INSTRUCTIONS.
+    expect((await op(admin).post('/settings/payment-instructions', { instructions: '' }).expect(200)).body.paymentInstructionsSource).toBe('config');
+    expect((await api(owner).get('/billing').expect(200)).body.offline.instructions).toContain('Example Test Bank');
   });
 
   it('lets an admin void an invoice that will not be paid', async () => {

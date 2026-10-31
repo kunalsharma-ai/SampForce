@@ -45,6 +45,9 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Operator log
               </Link>
+              <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Settings
+              </Link>
             </nav>
           )}
           {me.data && (

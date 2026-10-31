@@ -75,7 +75,8 @@ export default function OperatorTenants() {
 
 /** Offline invoices workspaces have requested and not yet paid. Payments are recorded on the workspace page. */
 function AwaitingPayment() {
-  const open = useQuery({ queryKey: ['operator', 'invoices', 'open'], queryFn: () => api<OperatorOpenInvoice[]>('/operator/invoices/open') });
+  // Always fresh: payments are recorded from this list.
+  const open = useQuery({ queryKey: ['operator', 'invoices', 'open'], queryFn: () => api<OperatorOpenInvoice[]>('/operator/invoices/open'), staleTime: 0, refetchOnMount: 'always' });
   if (!open.data?.length) return <ErrorText error={open.error} />;
   return (
     <Card className="mb-6 p-4">

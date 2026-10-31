@@ -1,9 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow } from '@dealflow/types';
+import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
-import { BillingService, toInvoiceRow } from '../billing/billing.service';
+import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billing/billing.service';
 import { PrismaService } from '../common/prisma.service';
 import type { OperatorContext } from './operator-auth';
 
@@ -138,6 +138,34 @@ export class OperatorService {
       const rows = await tx.invoice.findMany({ where: { provider: 'OFFLINE', status: 'OPEN' }, orderBy: { issuedAt: 'asc' }, take: 200, include: { tenant: { select: { id: true, name: true } } } });
       return rows.map((r) => ({ ...toInvoiceRow(r), tenant: r.tenant }));
     });
+  }
+
+  async settings(): Promise<OperatorSettings> {
+    const row = await this.prisma.platformSetting.findUnique({ where: { key: PAYMENT_INSTRUCTIONS_KEY } });
+    const by = row?.updatedById ? await this.prisma.platformOperator.findUnique({ where: { id: row.updatedById }, select: { email: true } }) : null;
+    const paymentInstructions = await this.billing.paymentInstructions(this.prisma);
+    return {
+      paymentInstructions,
+      paymentInstructionsSource: row?.value ? 'console' : paymentInstructions ? 'config' : 'none',
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+      updatedBy: by?.email ?? null,
+    };
+  }
+
+  /** Bank details and other payment instructions for offline invoices. Empty removes the console value. */
+  async setPaymentInstructions(op: OperatorContext, instructions: string, ip: string | null): Promise<OperatorSettings> {
+    if (instructions) {
+      await this.prisma.platformSetting.upsert({
+        where: { key: PAYMENT_INSTRUCTIONS_KEY },
+        create: { key: PAYMENT_INSTRUCTIONS_KEY, value: instructions, updatedById: op.id },
+        update: { value: instructions, updatedById: op.id },
+      });
+    } else {
+      await this.prisma.platformSetting.deleteMany({ where: { key: PAYMENT_INSTRUCTIONS_KEY } });
+    }
+    // The full text is kept in the log so a changed bank account can always be traced.
+    await this.log(op.id, 'settings.payment_instructions_updated', null, { instructions: instructions || null }, ip);
+    return this.settings();
   }
 
   async setSuspended(op: OperatorContext, id: string, suspended: boolean, reason: string, ip: string | null) {

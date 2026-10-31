@@ -96,11 +96,24 @@ test('operator console: sign-in, workspace list, support access and an audited o
 });
 
 test('pay by invoice: the workspace requests an invoice and the plan starts when an operator records the payment', async ({ page, browser }) => {
+  test.setTimeout(60_000);
   const email = `ops-pay-${Date.now()}@platform.test`;
+  const account = `Account: ${Date.now()}`;
   execFileSync('node', ['-r', '@swc-node/register', 'scripts/create-operator.ts'], {
     cwd: '../api',
     env: { ...process.env, DATABASE_URL: databaseUrl, OPERATOR_EMAIL: email, OPERATOR_PASSWORD: 'operator-password-1', OPERATOR_NAME: 'E2E Payments', OPERATOR_ROLE: 'ADMIN' },
   });
+  const ops = await (await browser.newContext()).newPage();
+  await ops.goto('/operator/login');
+  await ops.getByLabel('Email').fill(email);
+  await ops.getByLabel('Password').fill('operator-password-1');
+  await ops.getByRole('button', { name: 'Sign in' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Settings' }).click();
+  await ops.getByLabel('Payment instructions').fill(`Bank: E2E Sample Bank\n${account}`);
+  await ops.getByRole('button', { name: 'Save' }).click();
+  await expect(ops.getByText('Saved. Open invoices now show this.')).toBeVisible();
+  await expectNoA11yViolations(ops);
+
   const workspace = `Invoice Buyer ${Date.now()}`;
   await signUp(page, workspace);
   await page.goto('/app/billing');
@@ -110,15 +123,11 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   const invoice = page.locator('[aria-labelledby="open-invoice-heading"]');
   await expect(invoice.getByText('$30.00')).toBeVisible();
   await expect(invoice.getByText('Waiting for payment')).toBeVisible();
-  await expect(page.getByText('The DealFlow team will send payment details for this invoice.')).toBeVisible();
+  await expect(invoice.getByText(account)).toBeVisible();
   const number = (await page.locator('#open-invoice-heading').textContent())!.match(/DF-\d{6}/)![0];
   await expectNoA11yViolations(page);
 
-  const ops = await (await browser.newContext()).newPage();
-  await ops.goto('/operator/login');
-  await ops.getByLabel('Email').fill(email);
-  await ops.getByLabel('Password').fill('operator-password-1');
-  await ops.getByRole('button', { name: 'Sign in' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Workspaces' }).click();
   await expect(ops.getByRole('heading', { name: /Waiting for payment/ })).toBeVisible();
   await ops.getByRole('listitem').filter({ hasText: number }).getByRole('link', { name: workspace }).click();
   await ops.getByLabel('Bank or transfer reference').fill('UTR-E2E-1');
@@ -133,4 +142,10 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   await expect(page.locator('#open-invoice-heading')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Request invoice for Growth/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Renew Growth, $30.00' })).toBeVisible();
+
+  // Leave the shared development database as it was.
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Settings' }).click();
+  await ops.getByLabel('Payment instructions').fill('');
+  await ops.getByRole('button', { name: 'Save' }).click();
+  await expect(ops.getByText(/Not set\. Open invoices say/)).toBeVisible();
 });

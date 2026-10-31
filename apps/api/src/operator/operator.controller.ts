@@ -9,6 +9,7 @@ import {
   operatorPlanSchema,
   operatorStatusSchema,
   operatorVoidSchema,
+  paymentInstructionsSchema,
   z,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
@@ -104,6 +105,18 @@ export class OperatorController {
     @Req() req: Request,
   ) {
     return this.ops.voidInvoice(op, id, invoiceId, body.reason, ip(req));
+  }
+
+  @Get('settings')
+  settings() {
+    return this.ops.settings();
+  }
+
+  @Post('settings/payment-instructions')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  paymentInstructions(@Operator() op: OperatorContext, @Body(new ZodPipe(paymentInstructionsSchema)) body: z.infer<typeof paymentInstructionsSchema>, @Req() req: Request) {
+    return this.ops.setPaymentInstructions(op, body.instructions, ip(req));
   }
 
   @Get('audit-log')

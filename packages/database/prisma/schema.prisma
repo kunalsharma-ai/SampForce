@@ -1664,6 +1664,16 @@ model PlatformAuditLog {
   @@map("platform_audit_logs")
 }
 
+/// Deployment-wide settings that platform admins edit in the operator console (not per workspace).
+model PlatformSetting {
+  key         String   @id
+  value       String
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_settings")
+}
+
 // ───────────────────────────── Reports and immersive views (Phase 7) ─────────────────────────────
 
 enum ReportVisibility {

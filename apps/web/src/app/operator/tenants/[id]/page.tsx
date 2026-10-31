@@ -117,7 +117,10 @@ function useOperatorAction(id: string, path: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (json: object) => api<OperatorTenantDetail>(`/operator/tenants/${id}/${path}`, { method: 'POST', json }),
-    onSuccess: (d) => qc.setQueryData(['operator', 'tenants', 'detail', id], d),
+    onSuccess: (d) => {
+      qc.setQueryData(['operator', 'tenants', 'detail', id], d);
+      void qc.invalidateQueries({ queryKey: ['operator', 'invoices'] });
+    },
   });
 }
 

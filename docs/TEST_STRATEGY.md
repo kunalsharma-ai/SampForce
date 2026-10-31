@@ -142,8 +142,8 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 
 | Suite | Result |
 |---|---|
-| `apps/api` unit + integration | 256 passed in 36 files. New `offline-billing.e2e` (8): checkout off even with provider keys set; invoice at rate-card prices, billing managers only, one open at a time, cancel; operators list open invoices, only ADMIN records a payment (no future dates, no double recording), plan starts, both audit logs, notification; seat and plan changes refused on an invoice plan, renewal continues from the period end; period end to past due (grace from period end) to unpaid, and paying again restores; scheduled cancellation ends on Free; void; `addMonths` month-end clamping |
-| Browser (Playwright) | 40 passed. New: request an invoice on the Billing page, operator records the payment, the plan shows as paid by invoice with a renewal option (axe on both pages) |
+| `apps/api` unit + integration | 257 passed in 36 files. New `offline-billing.e2e` (9): payment instructions set by ADMIN operators only, shown to workspaces over the config value, logged, and cleared back to the config value; checkout off even with provider keys set; invoice at rate-card prices, billing managers only, one open at a time, cancel; operators list open invoices, only ADMIN records a payment (no future dates, no double recording), plan starts, both audit logs, notification; seat and plan changes refused on an invoice plan, renewal continues from the period end; period end to past due (grace from period end) to unpaid, and paying again restores; scheduled cancellation ends on Free; void; `addMonths` month-end clamping |
+| Browser (Playwright) | 40 passed. New: an operator saves the bank details under Settings, the workspace requests an invoice and sees them on the Billing page, operator records the payment, the plan shows as paid by invoice with a renewal option (axe on both pages) |
 
 ## Running locally
 

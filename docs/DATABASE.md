@@ -209,4 +209,6 @@ entitlement the first one added: single sign-on and SCIM are on every plan.
 `billing_interval`, `seats`, `requested_by_id` and `payment_reference`, a partial unique index allowing one open
 offline invoice per workspace, and the `offline_invoice_number_seq` sequence for `DF-…` numbers. Migrations:
 `20261031000300_offline_provider` (the enum value on its own, since it cannot be used in the transaction that adds
-it) and `20261031000400_offline_invoices`.
+it) and `20261031000400_offline_invoices`. `20261031000500_platform_settings` adds `platform_settings` (key, value,
+who changed it): deployment-wide values edited in the operator console, such as the payment instructions. It has no
+`tenant_id` and no RLS; only the operator API writes it.

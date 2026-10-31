@@ -49,7 +49,7 @@ invoices with the provider dashboard.
 | `BILLING_GRACE_DAYS` | 14 | Days a past-due workspace keeps paid allowances |
 | `TRIAL_DAYS` | 14 | Length of the one free trial per workspace |
 | `ONLINE_PAYMENTS_ENABLED` | false | Stripe/Razorpay checkout for new subscriptions. Off: pay by invoice only |
-| `OFFLINE_PAYMENT_INSTRUCTIONS` | unset | Bank details shown on open offline invoices (`\n` for line breaks). Unset: the invoice says the DealFlow team sends them |
+| `OFFLINE_PAYMENT_INSTRUCTIONS` | unset | Fallback bank details for open offline invoices (`\n` for line breaks). Normally entered instead under operator console → Settings, which takes precedence. Neither set: the invoice says the DealFlow team sends them |
 | `PRICING_PUBLISHED` | false (`true` in the Helm chart) | Removes the "preview" labels from the pricing page and Billing page. The rate card was approved on 2026-10-31; with online payments off, plans are bought by invoice |
 | `SALES_CONTACT_EMAIL` | unset | Shown as "Contact sales" for Enterprise Plus |
 | `OPERATOR_JWT_SECRET` | unset | Enables the operator console; must differ from `JWT_ACCESS_SECRET` |

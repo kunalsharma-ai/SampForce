@@ -28,6 +28,7 @@ import {
   operatorPlanSchema,
   operatorStatusSchema,
   operatorVoidSchema,
+  paymentInstructionsSchema,
   roleInputSchema,
   seatsSchema,
   supportGrantSchema,
@@ -372,6 +373,8 @@ export function buildOpenApiDocument(): object {
     r.registerPath({ method: 'post', path: `/operator/tenants/{id}/invoices/{invoiceId}/${path}`, tags: ['Operator'], summary: `Operator console: ${summary}`,
       request: { params: z.object({ id: z.string().uuid(), invoiceId: z.string().uuid() }), ...body(schema) }, responses: { 200: ok('Workspace'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled or not found'), 409: json(error, 'Invoice not open') } });
   }
+  op('get', '/settings', 'deployment settings: payment instructions on offline invoices and where they come from');
+  op('post', '/settings/payment-instructions', 'set the bank details shown on open offline invoices; empty falls back to OFFLINE_PAYMENT_INSTRUCTIONS (ADMIN)', paymentInstructionsSchema);
   op('get', '/audit-log', 'platform audit log');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.
