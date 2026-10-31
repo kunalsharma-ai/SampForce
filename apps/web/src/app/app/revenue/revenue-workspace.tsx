@@ -214,7 +214,7 @@ function ListCard({ title, rows, empty }: { title: string; rows: [string, string
   );
 }
 
-function Targets({ period }: { period: string }) {
+export function Targets({ period }: { period: string }) {
   const qc = useQueryClient();
   const canManage = useCan('pipelines:manage');
   const targets = useTargets(period);
@@ -222,7 +222,7 @@ function Targets({ period }: { period: string }) {
   const base = useExchangeRates().data?.base;
   const [userId, setUserId] = useState('');
   const [amount, setAmount] = useState('');
-  const done = () => qc.invalidateQueries({ queryKey: ['analytics'] });
+  const done = () => Promise.all([qc.invalidateQueries({ queryKey: ['analytics'] }), qc.invalidateQueries({ queryKey: ['forecast'] })]);
   const save = useMutation({
     mutationFn: () => api('/analytics/targets', { method: 'PUT', json: { period, userId: userId || null, amount: Number(amount) } }),
     onSuccess: async () => {
@@ -238,7 +238,7 @@ function Targets({ period }: { period: string }) {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!targets.data?.length ? (
-          <p className="text-muted-foreground">No targets for this quarter.</p>
+          <p className="text-muted-foreground">No targets for this period.</p>
         ) : (
           <ul className="divide-y divide-border">
             {targets.data.map((t) => (

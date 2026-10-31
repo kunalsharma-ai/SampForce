@@ -41,7 +41,7 @@ describe('forecasting', () => {
 
   it('computes exact quarter totals and says what it left out', async () => {
     const f = (await h().get('/forecast').expect(200)).body;
-    expect(f.period).toEqual(period);
+    expect(f.period).toEqual({ ...period, granularity: 'quarter' });
     expect(f.totals).toEqual({
       won: 7000, commit: 20000, bestCase: 10000, pipeline: 5000, weighted: 16000 + 5000 + 500,
       worst: 7000, base: 28500, best: 37000, dealCount: 4,

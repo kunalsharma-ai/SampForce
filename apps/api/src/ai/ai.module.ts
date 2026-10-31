@@ -9,6 +9,7 @@ import { AiService } from './ai.service';
 import { CopilotTools } from './copilot-tools';
 import { CopilotService } from './copilot.service';
 import { EmailAssistantService } from './email-assistant.service';
+import { ForecastPlanService } from './forecast-plan.service';
 import { ForecastService } from './forecast.service';
 import { AI_PROVIDER, AiGateway, providerFactory } from './gateway.service';
 import { RecordContextBuilder } from './record-context';
@@ -26,6 +27,7 @@ import { MeetingRecordsService } from '../meetings/meeting-records.service';
     AiService,
     RecordContextBuilder,
     ForecastService,
+    ForecastPlanService,
     CopilotTools,
     CopilotService,
     AgentsService,

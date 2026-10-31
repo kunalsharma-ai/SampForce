@@ -10,7 +10,7 @@ export default function ForecastingPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Forecasting"
-        description="A weighted-probability projection of this quarter's open and won deals. These are projections from your pipeline data, not commitments."
+        description="Monthly, quarterly and yearly projections from your open and won deals, compared with targets. These are projections from your pipeline data, not commitments."
       />
       <RequirePermission permission="deals:read">
         <RequirePermission permission="dashboard:read">

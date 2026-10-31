@@ -15,6 +15,7 @@ import {
   copilotRequestSchema,
   createActionItemsSchema,
   forecastQuerySchema,
+  forecastSettingsSchema,
   campaignInputSchema,
   changePlanSchema,
   checkoutSchema,
@@ -318,12 +319,16 @@ export function buildOpenApiDocument(): object {
   action('post', '/ai/recommendations/{id}/dismiss', 'AI', 'Dismiss (ai:use)');
   action('post', '/ai/recommendations/{id}/tasks', 'AI', 'Create tasks from chosen meeting action items (ai:use, activities:write)', createActionItemsSchema);
   action('post', '/ai/forecast/explain', 'AI', 'Snapshot comparison with a written explanation (ai:use, dashboard:read, deals:read)', z.object({ from: z.string().uuid(), to: z.string().uuid() }));
-  action('get', '/forecast', 'Forecasting', 'Weighted forecast for a quarter; rule-based, no AI (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
-  action('get', '/forecast/snapshots', 'Forecasting', 'Snapshots for a quarter (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
+  action('get', '/forecast', 'Forecasting', 'Weighted forecast for a month, quarter or year; rule-based, no AI (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
+  action('get', '/forecast/snapshots', 'Forecasting', 'Snapshots for a period (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
   r.registerPath({ method: 'post', path: '/forecast/snapshots', tags: ['Forecasting'], summary: 'Store an immutable snapshot with its lines (dashboard:read, deals:read)', security: secured,
     request: body(snapshotInputSchema), responses: { 201: ok('Snapshot'), ...errors } });
   r.registerPath({ method: 'get', path: '/forecast/snapshots/{id}/verify', tags: ['Forecasting'], summary: 'Recompute totals from the stored lines (dashboard:read, deals:read)', security: secured,
     request: { params: idParam }, responses: { 200: ok('Stored and recomputed totals'), ...notFound, ...errors } });
+  action('get', '/forecast/plan', 'Forecasting', 'Target, attainment, gap per scenario, coverage, per-salesperson targets and gaps, risks in the period and stage win rates. period: YYYY, YYYY-Qn or YYYY-MM (dashboard:read, deals:read)', undefined, { query: forecastQuerySchema });
+  action('get', '/forecast/trends', 'Forecasting', 'Won revenue, win rate, cycle, loss reasons and first-snapshot accuracy per month, quarter or year (dashboard:read, deals:read)', undefined, { query: z.object({ granularity: z.enum(['month', 'quarter', 'year']).optional(), count: z.number().int().min(2).max(24).optional() }) });
+  action('get', '/forecast/settings', 'Forecasting', 'How probabilities and categories are worked out (dashboard:read, deals:read)');
+  action('put', '/forecast/settings', 'Forecasting', 'Change the probability method (stage or stage win history) and category thresholds (pipelines:manage)', forecastSettingsSchema);
   action('get', '/forecast/compare', 'Forecasting', 'Deal-level changes between two snapshots (dashboard:read, deals:read)', undefined, { query: z.object({ from: z.string().uuid(), to: z.string().uuid() }) });
 
   // Phase 5: catalogue, quotes, contracts, marketing, revenue analytics and customer success.

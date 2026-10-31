@@ -4,6 +4,7 @@ import {
   type ExchangeRateRow,
   type exchangeRateInputSchema,
   type ForecastTotals,
+  forecastPeriod,
   quarterPeriod,
   type RevenueAnalytics,
   type SalesTargetRow,
@@ -177,7 +178,7 @@ export class AnalyticsService {
       const p = quarterPeriod(q);
       const start = new Date(`${p.start}T00:00:00Z`);
       const end = new Date(`${p.end}T00:00:00Z`);
-      const snap = await tx.forecastSnapshot.findFirst({ where: { tenantId, periodStart: start, currency: base }, orderBy: { createdAt: 'asc' } });
+      const snap = await tx.forecastSnapshot.findFirst({ where: { tenantId, periodStart: start, periodEnd: end, currency: base }, orderBy: { createdAt: 'asc' } });
       if (!snap) continue;
       const won = await tx.opportunity.findMany({ where: { tenantId, deletedAt: null, status: 'WON', closedAt: { gte: start, lt: end } }, select: { amount: true, currency: true } });
       const actual = r2(won.reduce((a, d) => a + (toBase(d.amount.toNumber(), d.currency, base, rates) ?? 0), 0));
@@ -211,7 +212,7 @@ export class AnalyticsService {
   }
 
   targets(auth: AuthContext, period: string | undefined): Promise<SalesTargetRow[]> {
-    const p = quarterPeriod(period);
+    const p = forecastPeriod(period);
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.salesTarget.findMany({ where: { tenantId: auth.tenantId, period: p.label } });
       const names = await ownerRefs(tx, rows.map((r) => r.userId));

@@ -15,7 +15,8 @@ export const exchangeRateInputSchema = z.object({
 });
 
 export const salesTargetInputSchema = z.object({
-  period,
+  /** A quarter, a month or a year. */
+  period: z.string().regex(/^\d{4}(-Q[1-4]|-(0[1-9]|1[0-2]))?$/, 'Use YYYY, YYYY-Qn or YYYY-MM'),
   userId: z.string().uuid().nullable(),
   amount: z.coerce.number().min(0).max(1e13),
 });

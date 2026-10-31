@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import {
   acceptNextStepSchema,
   actionDecisionSchema,
@@ -14,6 +14,8 @@ import {
   type EmailRewriteRequest,
   emailSubjectsRequestSchema,
   forecastQuerySchema,
+  forecastSettingsSchema,
+  type ForecastSettingsInput,
   meetingNotesRequestSchema,
   type MeetingNotesRequest,
   snapshotInputSchema,
@@ -26,6 +28,7 @@ import { AgentsService } from './agents.service';
 import { AiService } from './ai.service';
 import { CopilotService } from './copilot.service';
 import { EmailAssistantService } from './email-assistant.service';
+import { ForecastPlanService } from './forecast-plan.service';
 import { ForecastService } from './forecast.service';
 
 const uuid = new ParseUUIDPipe();
@@ -197,10 +200,15 @@ export class AiController {
   }
 }
 
+const trendsQuery = z.object({ granularity: z.enum(['month', 'quarter', 'year']).default('quarter'), count: z.coerce.number().int().min(2).max(24).default(8) });
+
 /** Rule-based forecasting and snapshots. No AI is involved in any number here. */
 @Controller('forecast')
 export class ForecastController {
-  constructor(private readonly forecast: ForecastService) {}
+  constructor(
+    private readonly forecast: ForecastService,
+    private readonly plans: ForecastPlanService,
+  ) {}
 
   @Get()
   @RequirePermissions('dashboard:read', 'deals:read')
@@ -224,6 +232,31 @@ export class ForecastController {
   @RequirePermissions('dashboard:read', 'deals:read')
   verify(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.forecast.verify(auth, id);
+  }
+
+  @Get('plan')
+  @RequirePermissions('dashboard:read', 'deals:read')
+  plan(@Auth() auth: AuthContext, @Query(new ZodPipe(forecastQuerySchema)) q: z.infer<typeof forecastQuerySchema>) {
+    return this.plans.plan(auth, q.period);
+  }
+
+  @Get('trends')
+  @RequirePermissions('dashboard:read', 'deals:read')
+  trends(@Auth() auth: AuthContext, @Query(new ZodPipe(trendsQuery)) q: z.infer<typeof trendsQuery>) {
+    return this.plans.trends(auth, q.granularity, q.count);
+  }
+
+  @Get('settings')
+  @RequirePermissions('dashboard:read', 'deals:read')
+  settings(@Auth() auth: AuthContext) {
+    return this.forecast.getSettings(auth);
+  }
+
+  /** Managers (the same permission that sets targets) choose how probabilities and categories are worked out. */
+  @Put('settings')
+  @RequirePermissions('pipelines:manage')
+  saveSettings(@Auth() auth: AuthContext, @Body(new ZodPipe(forecastSettingsSchema)) body: ForecastSettingsInput, @Meta() meta: RequestMeta) {
+    return this.forecast.saveSettings(auth, body, meta);
   }
 
   @Get('compare')
