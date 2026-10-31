@@ -99,6 +99,7 @@ export class QuotesService {
           validUntil: new Date(input.validUntil ?? new Date(Date.now() + settings.quoteValidityDays * DAY).toISOString().slice(0, 10)),
           notes: input.notes ?? null,
           terms: input.terms ?? settings.quoteTerms,
+          sections: input.sections ?? [],
           createdById: auth.userId,
         },
       });
@@ -180,7 +181,7 @@ export class QuotesService {
         const next = await tx.quote.create({
           data: {
             tenantId: auth.tenantId, number: q.number, version: q.version + 1, opportunityId: q.opportunityId, priceBookId: q.priceBookId, currency: q.currency,
-            title: q.title, validUntil: q.validUntil, notes: q.notes, terms: q.terms, createdById: auth.userId,
+            title: q.title, validUntil: q.validUntil, notes: q.notes, terms: q.terms, sections: q.sections ?? [], createdById: auth.userId,
           },
         });
         // Prices are re-read from the price book, so a revision picks up any price change since.
@@ -280,6 +281,8 @@ export function toQuoteRow(q: QuoteWith, names: Map<string, { id: string; name: 
     sentAt: q.sentAt?.toISOString() ?? null,
     decidedAt: q.decidedAt?.toISOString() ?? null,
     contractId: q.contracts[0]?.id ?? null,
+    sections: (q.sections as unknown as QuoteRow['sections']) ?? [],
+    share: { enabled: q.shareEnabled, firstViewedAt: q.firstViewedAt?.toISOString() ?? null, lastViewedAt: q.lastViewedAt?.toISOString() ?? null, viewCount: q.viewCount },
     lines: q.lines.map((l) => ({
       id: l.id, productId: l.productId, position: l.position, name: l.name, description: l.description, quantity: l.quantity.toNumber(), unitPrice: l.unitPrice.toNumber(),
       discountPercent: l.discountPercent.toNumber(), taxRateId: l.taxRateId, taxPercent: l.taxPercent.toNumber(), netTotal: l.netTotal.toNumber(), taxTotal: l.taxTotal.toNumber(),

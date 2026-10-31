@@ -38,10 +38,16 @@ export const taxRateInputSchema = z.object({
   active: z.boolean().default(true),
 });
 
+/** A small PNG or JPEG logo as a data URL (about 250 KB at most), printed on proposals and their PDFs. */
+export const LOGO_DATA_URL = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/;
 export const commercialSettingsSchema = z.object({
   discountApprovalThreshold: z.coerce.number().min(0).max(100).optional(),
   quoteValidityDays: z.coerce.number().int().min(1).max(365).optional(),
   quoteTerms: text(5000),
+  /** Proposal branding (feature 9). */
+  proposalHeader: text(300),
+  proposalFooter: text(500),
+  logoDataUrl: z.string().max(350_000, 'Use a logo under about 250 KB').regex(LOGO_DATA_URL, 'Use a PNG or JPEG image').nullable().optional(),
 });
 
 export const quoteLineInputSchema = z.object({
@@ -61,6 +67,8 @@ export const quoteInputSchema = z.object({
   notes: text(5000),
   terms: text(5000),
   lines: z.array(quoteLineInputSchema).max(200).default([]),
+  /** Proposal sections shown above the price table: executive summary, scope and so on. */
+  sections: z.array(z.object({ heading: z.string().trim().min(1, 'Give the section a heading').max(120), body: z.string().trim().max(8000) })).max(20).optional(),
 });
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 export const quoteUpdateSchema = quoteInputSchema.omit({ opportunityId: true, priceBookId: true }).partial();
@@ -145,6 +153,71 @@ export interface CommercialSettingsRow {
   discountApprovalThreshold: number;
   quoteValidityDays: number;
   quoteTerms: string | null;
+  proposalHeader: string | null;
+  proposalFooter: string | null;
+  logoDataUrl: string | null;
+}
+
+export interface ProposalSection {
+  heading: string;
+  body: string;
+}
+
+/** Starting points for a proposal's sections; the person edits every word. */
+export const PROPOSAL_TEMPLATES: { key: string; name: string; sections: ProposalSection[] }[] = [
+  {
+    key: 'software',
+    name: 'Software subscription',
+    sections: [
+      { heading: 'Executive summary', body: 'What the customer wants to achieve and how this proposal helps, in two or three sentences.' },
+      { heading: 'Your goals', body: 'The outcomes the customer described, in their words.' },
+      { heading: 'Proposed solution', body: 'Which products and plans, and how they meet each goal.' },
+      { heading: 'Onboarding and support', body: 'How setup works, who is involved, and the support included.' },
+      { heading: 'Next steps', body: 'What happens after acceptance and the proposed start date.' },
+    ],
+  },
+  {
+    key: 'services',
+    name: 'Professional services',
+    sections: [
+      { heading: 'Executive summary', body: 'The problem, the proposed engagement and the expected result.' },
+      { heading: 'Scope of work', body: 'What is included, listed as deliverables.' },
+      { heading: 'Out of scope', body: 'What is not included, so expectations are clear.' },
+      { heading: 'Timeline', body: 'Phases and milestones with dates to confirm.' },
+      { heading: 'Assumptions', body: 'What the customer provides and any dependencies.' },
+    ],
+  },
+  { key: 'simple', name: 'Simple quote', sections: [{ heading: 'Summary', body: 'A short note on what this quote covers.' }] },
+];
+
+/** Send a proposal from the caller's mailbox; a link to the online proposal is added to the message. */
+export const proposalSendSchema = z.object({
+  to: z.string().trim().email('Enter an email address'),
+  subject: z.string().trim().min(1, 'Enter a subject').max(200),
+  message: z.string().trim().min(1, 'Write a short message').max(5000),
+});
+export type ProposalSendInput = z.infer<typeof proposalSendSchema>;
+
+/** What the customer sees on the online proposal page. */
+export interface PublicProposal {
+  seller: { name: string; logoDataUrl: string | null; header: string | null; footer: string | null; brandColor: string | null };
+  reference: string;
+  title: string;
+  preparedFor: string | null;
+  createdAt: string;
+  validUntil: string | null;
+  expired: boolean;
+  /** SENT, ACCEPTED or DECLINED; an older version says it was replaced. */
+  status: QuoteStatus;
+  superseded: boolean;
+  currency: string;
+  sections: ProposalSection[];
+  lines: { name: string; description: string | null; quantity: number; unitPrice: number; discountPercent: number; taxPercent: number; netTotal: number }[];
+  subtotal: number;
+  discountTotal: number;
+  taxTotal: number;
+  total: number;
+  terms: string | null;
 }
 
 export interface QuoteLineRow {
@@ -191,6 +264,9 @@ export interface QuoteRow {
   decidedAt: string | null;
   contractId: string | null;
   lines: QuoteLineRow[];
+  sections: ProposalSection[];
+  /** The online proposal link: whether it is live, and when it was opened (opens can include email security scanners). */
+  share: { enabled: boolean; firstViewedAt: string | null; lastViewedAt: string | null; viewCount: number };
   createdAt: string;
   updatedAt: string;
 }

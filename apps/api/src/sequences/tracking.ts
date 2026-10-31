@@ -9,8 +9,9 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export class TrackingSigner {
   private readonly key: Buffer;
 
-  constructor(secret: string, readonly baseUrl: string) {
-    this.key = createHmac('sha256', secret).update('dealflow-tracking-v1').digest();
+  /** `purpose` keeps tokens for different links apart: a tracking token never opens a proposal. */
+  constructor(secret: string, readonly baseUrl: string, purpose = 'dealflow-tracking-v1') {
+    this.key = createHmac('sha256', secret).update(purpose).digest();
   }
 
   private mac(data: string, len = 16): string {

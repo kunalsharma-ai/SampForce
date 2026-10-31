@@ -146,7 +146,9 @@ export class CatalogService {
         create: { tenantId: auth.tenantId, ...input, updatedById: auth.userId },
         update: { ...input, updatedById: auth.userId },
       });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'commercial_settings.updated', entityType: 'tenant', entityId: auth.tenantId, metadata: { before, after: input }, meta });
+      // The logo is a large data URL; the audit row records only whether it changed.
+      const brief = (v: Record<string, unknown>) => ({ ...v, logoDataUrl: v.logoDataUrl ? '(image)' : v.logoDataUrl });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'commercial_settings.updated', entityType: 'tenant', entityId: auth.tenantId, metadata: { before: brief({ ...before }), after: brief({ ...input }) }, meta });
       return readSettings(tx, auth.tenantId);
     });
   }
@@ -160,5 +162,12 @@ export class CatalogService {
 
 export async function readSettings(tx: TenantTx, tenantId: string): Promise<CommercialSettingsRow> {
   const s = await tx.commercialSettings.findUnique({ where: { tenantId } });
-  return { discountApprovalThreshold: s?.discountApprovalThreshold.toNumber() ?? 10, quoteValidityDays: s?.quoteValidityDays ?? 30, quoteTerms: s?.quoteTerms ?? null };
+  return {
+    discountApprovalThreshold: s?.discountApprovalThreshold.toNumber() ?? 10,
+    quoteValidityDays: s?.quoteValidityDays ?? 30,
+    quoteTerms: s?.quoteTerms ?? null,
+    proposalHeader: s?.proposalHeader ?? null,
+    proposalFooter: s?.proposalFooter ?? null,
+    logoDataUrl: s?.logoDataUrl ?? null,
+  };
 }
