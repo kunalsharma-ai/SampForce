@@ -19,6 +19,8 @@ export function useSecuritySettings(enabled = true) {
 /** "Chrome on macOS" from a user-agent string; good enough to tell your own devices apart. */
 export function describeDevice(ua: string | null): string {
   if (!ua) return 'Unknown device';
+  const ext = ua.match(/^DealFlow browser extension \((.+)\)$/);
+  if (ext) return `Browser extension: ${ext[1]}`;
   const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /curl|node|undici/i.test(ua) ? 'Script' : 'Browser';
   const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : null;
   return os ? `${browser} on ${os}` : browser;

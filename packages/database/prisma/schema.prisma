@@ -79,6 +79,11 @@ model Session {
   authMethod       String    @default("password") @map("auth_method")
   /// Set for single sign-on sessions: the session can only ever act in this workspace.
   ssoTenantId      String?   @map("sso_tenant_id") @db.Uuid
+  /// Browser extension connections: the SHA-256 hash of the extension's token. These sessions never refresh.
+  extensionTokenHash String? @unique @map("extension_token_hash")
+  /// The name the person gave a browser extension connection.
+  extensionName    String?   @map("extension_name")
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(3)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

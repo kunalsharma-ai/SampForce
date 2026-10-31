@@ -52,6 +52,15 @@ Without credentials the Integrations page says which variables are missing and o
 - Tracking and unsubscribe links point at `TRACKING_BASE_URL` (default `PUBLIC_WEB_URL`), which must be reachable
   from the internet and serve `/api/v1/t/*` and `/unsubscribe/*`.
 
+## Browser extension
+
+The DealFlow lead-capture extension for Chrome and Edge (`apps/extension`, ADR 0015) saves people found on web pages
+as leads. Each person creates a connection code under Integrations → Browser extension; the extension can only look
+people up, save leads and enrol them, within what the person's role allows. Connections show under the person's
+signed-in devices and end with any "sign out other devices". Automatic capture is off by default and only saves
+addresses at the website's own domain, never personal mailboxes. It is not in the Chrome Web Store yet: load
+`apps/extension/dist` unpacked (see `apps/extension/README.md`).
+
 ## Webhooks
 
 - Admins with `integrations:manage` add an https endpoint and choose events. The signing secret is shown

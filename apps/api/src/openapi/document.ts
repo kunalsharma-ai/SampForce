@@ -53,6 +53,9 @@ import {
   enrollInputSchema,
   sequenceInputSchema,
   sequenceStatusSchema,
+  extensionCaptureSchema,
+  extensionLookupSchema,
+  extensionTokenCreateSchema,
   suppressionInputSchema,
   templatePreviewSchema,
   segmentRulesSchema,
@@ -333,6 +336,14 @@ export function buildOpenApiDocument(): object {
   action('post', '/sequences/enrollments/{id}', 'Sequences', 'Pause, resume or stop one run (sender or marketing:manage)', z.object({ action: z.enum(['pause', 'resume', 'stop']) }));
   action('get', '/sequences/suppressions', 'Sequences', 'The do-not-email list (sequences:read)');
   action('post', '/sequences/suppressions', 'Sequences', 'Add addresses to the do-not-email list (sequences:write)', suppressionInputSchema);
+  // Phase 9: browser extension. Connections are managed with the web session; the rest takes the extension's dfx_ bearer token only.
+  action('get', '/extension/connections', 'Browser extension', 'Your extension connections (web session only)');
+  r.registerPath({ method: 'post', path: '/extension/connections', tags: ['Browser extension'], summary: 'Create a connection; the dfx_ code is returned once (web session only, at most 5)', security: secured, request: body(extensionTokenCreateSchema), responses: { 201: ok('Connection and code'), ...errors } });
+  r.registerPath({ method: 'delete', path: '/extension/connections/{id}', tags: ['Browser extension'], summary: 'End a connection (web session only)', security: secured, request: { params: idParam }, responses: { 204: ok('Ended'), ...notFound, ...errors } });
+  action('get', '/extension/me', 'Browser extension', 'Who the extension is signed in as, what it may do, and running sequences (extension token)');
+  action('post', '/extension/lookup', 'Browser extension', 'Match addresses and a website against leads, contacts, companies and the do-not-email list (leads:read, extension token)', extensionLookupSchema);
+  action('post', '/extension/capture', 'Browser extension', 'Save up to 25 people as leads, skipping anyone already in DealFlow, and optionally enrol them (leads:write, extension token)', extensionCaptureSchema);
+  action('post', '/extension/disconnect', 'Browser extension', 'The extension ends its own connection (extension token)');
   r.registerPath({ method: 'get', path: '/t/o/{token}', tags: ['Sequences'], summary: 'Public: open-tracking image (signed token, no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'GIF', content: { 'image/gif': { schema: z.string() } } } } });
   r.registerPath({ method: 'get', path: '/t/c/{token}', tags: ['Sequences'], summary: 'Public: signed click redirect (no auth)', request: { params: z.object({ token: z.string() }), query: z.object({ u: z.string(), s: z.string() }) }, responses: { 302: { description: 'Redirect to the signed URL' }, 400: json(error, 'Invalid link') } });
   r.registerPath({ method: 'post', path: '/t/u/{token}', tags: ['Sequences'], summary: 'Public: unsubscribe, including RFC 8058 one-click (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Unsubscribe result') } });
