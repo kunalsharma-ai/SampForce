@@ -4,7 +4,7 @@ import { signUp } from './helpers';
 
 const SIDEBAR = [
   'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Sales Activities',
-  'Email & Communication', 'Email Sequences', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
+  'Email & Communication', 'Email Sequences', 'Email Finder', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Customer Success',
   'Reports & Analytics', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
 ];

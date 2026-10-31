@@ -66,25 +66,25 @@ model User {
 
 /// Refresh-token sessions. Tokens are stored as SHA-256 hashes and rotated on every refresh.
 model Session {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  activeTenantId   String    @map("active_tenant_id") @db.Uuid
-  refreshTokenHash String    @unique @map("refresh_token_hash")
-  userAgent        String?   @map("user_agent")
-  ipAddress        String?   @map("ip_address")
-  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
-  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
-  replacedById     String?   @map("replaced_by_id") @db.Uuid
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  activeTenantId     String    @map("active_tenant_id") @db.Uuid
+  refreshTokenHash   String    @unique @map("refresh_token_hash")
+  userAgent          String?   @map("user_agent")
+  ipAddress          String?   @map("ip_address")
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedById       String?   @map("replaced_by_id") @db.Uuid
   /// "password", "mfa" (password + second factor) or "sso".
-  authMethod       String    @default("password") @map("auth_method")
+  authMethod         String    @default("password") @map("auth_method")
   /// Set for single sign-on sessions: the session can only ever act in this workspace.
-  ssoTenantId      String?   @map("sso_tenant_id") @db.Uuid
+  ssoTenantId        String?   @map("sso_tenant_id") @db.Uuid
   /// Browser extension connections: the SHA-256 hash of the extension's token. These sessions never refresh.
-  extensionTokenHash String? @unique @map("extension_token_hash")
+  extensionTokenHash String?   @unique @map("extension_token_hash")
   /// The name the person gave a browser extension connection.
-  extensionName    String?   @map("extension_name")
-  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(3)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  extensionName      String?   @map("extension_name")
+  lastUsedAt         DateTime? @map("last_used_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -198,6 +198,7 @@ model Tenant {
   ssoConnection          SsoConnection?
   ssoIdentities          SsoIdentity[]
   scimTokens             ScimToken[]
+  finderLookups          FinderLookup[]
 
   @@map("tenants")
 }
@@ -1982,4 +1983,22 @@ model EmailSuppression {
 
   @@id([tenantId, email])
   @@map("email_suppressions")
+}
+
+/// Email finder lookups (Phase 9): history for the person and the daily limit.
+model FinderLookup {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  companyName String   @map("company_name")
+  domain      String?
+  person      String?
+  found       Int      @default(0)
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, createdAt])
+  @@map("finder_lookups")
 }

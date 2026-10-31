@@ -103,6 +103,7 @@ async function scan() {
   state.lookup = null;
   state.result = null;
   state.pageError = null;
+  state.findNote = null;
   if (!(await chrome.permissions.contains(ALL_SITES))) {
     state.pageError = 'access';
     return renderMain();
@@ -132,11 +133,55 @@ async function scan() {
   renderMain();
 }
 
-function statusChip(info) {
+const FINDER_CHIP = { found: 'On their site', provider: 'Data provider', pattern: 'Pattern', guess: 'Guess' };
+
+/** Re-checks the listed addresses against DealFlow, keeping everything found so far. */
+async function refreshLookup() {
+  try {
+    const fresh = await call('/extension/lookup', { method: 'POST', body: { emails: state.page.people.slice(0, 50).map((p) => p.email), website: state.page.url } });
+    state.lookup = fresh;
+  } catch (e) {
+    state.error = message(e);
+  }
+  renderMain();
+}
+
+function statusChip(info, p) {
+  if (p?.finder && !info?.match && !info?.suppressed) return h('span', { class: 'chip ok' }, FINDER_CHIP[p.finder] ?? 'Found');
   if (info?.match) return h('span', { class: 'chip ok' }, info.match.entity === 'contact' ? 'Contact' : 'Lead');
   if (info?.suppressed) return h('span', { class: 'chip bad' }, 'Do not email');
   if (info?.personal) return h('span', { class: 'chip warn' }, 'Personal');
   return h('span', { class: 'chip' }, 'New');
+}
+
+/** Asks DealFlow's email finder for more people at this company, read from its public website. */
+async function findMore() {
+  const page = state.page;
+  state.finding = true;
+  state.findNote = null;
+  renderMain();
+  try {
+    const r = await call('/extension/find', { method: 'POST', body: { domain: page.domain } });
+    const known = new Set(page.people.map((p) => p.email));
+    const lookup = state.lookup ?? { people: [], company: null };
+    let added = 0;
+    for (const e of r.emails) {
+      if (known.has(e.email)) continue;
+      page.people.push({ email: e.email, name: e.name ?? '', personal: false, ownDomain: true, finder: e.status });
+      lookup.people.push({ email: e.email, match: e.match, suppressed: e.suppressed, personal: false });
+      added++;
+    }
+    state.lookup = lookup;
+    state.findNote = [`${added ? `Found ${added} more` : 'No more addresses'} on ${r.domain ?? page.domain} (${r.pagesRead} page${r.pagesRead === 1 ? '' : 's'} read).`, r.pattern ? `Their addresses look like ${r.pattern.replace(/[{}]/g, '')}@${r.domain}.` : '', ...r.notes].filter(Boolean).join(' ');
+  } catch (e) {
+    state.findNote = message(e);
+  }
+  state.finding = false;
+  renderMain();
+}
+
+function findButton(domain) {
+  return h('button', { type: 'button', onclick: findMore, disabled: state.finding }, state.finding ? 'Searching their website…' : `Find more people at ${domain}`);
 }
 
 function renderMain(scanning = false) {
@@ -181,8 +226,11 @@ function pageSection(scanning) {
   sec.append(h('p', { class: 'muted small' }, page.domain), h('label', { for: 'company' }, 'Company'), company);
   if (state.lookup?.company) sec.append(h('p', { class: 'small muted' }, 'Already in DealFlow as a company.'));
 
+  const findRow = h('div', { class: 'row' }, findButton(page.domain));
+  if (state.findNote) findRow.append(h('p', { class: 'small', role: 'status', style: 'margin:0' }, state.findNote));
+
   if (!page.people.length) {
-    sec.append(h('p', { class: 'muted' }, 'No email addresses on this page. Try the team, contact or about page.'), h('button', { type: 'button', onclick: scan }, 'Scan again'));
+    sec.append(h('p', { class: 'muted' }, 'No email addresses on this page.'), findRow, h('button', { type: 'button', onclick: scan, style: 'margin-top:8px' }, 'Scan again'));
     return sec;
   }
 
@@ -196,7 +244,7 @@ function pageSection(scanning) {
       p, box, name, known,
       el: h('li', {},
         box,
-        h('label', { for: `p${i}`, class: 'addr', style: 'margin:0;font-size:13px' }, p.email, statusChip(known)),
+        h('label', { for: `p${i}`, class: 'addr', style: 'margin:0;font-size:13px' }, p.email, statusChip(known, p)),
         h('div', { class: 'name' },
           known?.match
             ? h('a', { href: `${state.conn.baseUrl}/app/${known.match.entity === 'contact' ? 'contacts' : 'leads'}/${known.match.id}`, target: '_blank', rel: 'noopener', class: 'small' }, `Open ${known.match.label} in DealFlow`)
@@ -205,7 +253,7 @@ function pageSection(scanning) {
       ),
     };
   });
-  sec.append(h('p', { class: 'small' }, `${page.people.length} address${page.people.length === 1 ? '' : 'es'} found.`), h('ul', { class: 'people' }, rows.map((r) => r.el)));
+  sec.append(h('p', { class: 'small' }, `${page.people.length} address${page.people.length === 1 ? '' : 'es'} found.`), h('ul', { class: 'people' }, rows.map((r) => r.el)), findRow);
 
   if (!me?.canSave) {
     sec.append(h('p', { class: 'muted small' }, 'Your role in this workspace can look people up but not save leads.'));
@@ -251,7 +299,7 @@ function pageSection(scanning) {
       if (existing) lines.push(`${existing} already in DealFlow.`);
       if (res.enrollment) lines.push(`Enrolled ${res.enrollment.enrolled}${res.enrollment.skipped.length ? `, skipped ${res.enrollment.skipped.length}` : ''}.`);
       state.busy = false;
-      await scan();
+      await refreshLookup();
       app.querySelector('#page-h')?.parentElement?.append(alertBox('success', lines.join(' ')));
       return;
     } catch (e) {

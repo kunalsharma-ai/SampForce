@@ -23,6 +23,7 @@ import { HealthController } from './health/health.controller';
 import { RevenueModule } from './revenue/revenue.module';
 import { SequencesModule } from './sequences/sequences.module';
 import { ExtensionModule } from './extension/extension.module';
+import { FinderModule } from './finder/finder.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
@@ -65,6 +66,7 @@ import { redactUrl } from './observability/redact';
     IdentityModule,
     SequencesModule,
     ExtensionModule,
+    FinderModule,
     WorkerModule,
   ],
   controllers: [HealthController],

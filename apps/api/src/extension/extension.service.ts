@@ -120,7 +120,8 @@ export class ExtensionService {
     });
   }
 
-  private async matches(tx: TenantTx, tenantId: string, emails: string[]) {
+  /** Leads and contacts with these addresses (a contact wins), and which are on the do-not-email list. */
+  async matches(tx: TenantTx, tenantId: string, emails: string[]) {
     const out = new Map<string, ExtensionMatch>();
     if (!emails.length) return { out, suppressed: new Set<string>() };
     const base = { tenantId, deletedAt: null, email: { in: emails, mode: 'insensitive' as const } };
@@ -156,7 +157,12 @@ export class ExtensionService {
     });
   }
 
-  async capture(auth: AuthContext, input: ExtensionCaptureInput, meta: RequestMeta): Promise<ExtensionCaptureResult> {
+  async capture(
+    auth: AuthContext,
+    input: ExtensionCaptureInput,
+    meta: RequestMeta,
+    origin: { source: string; tag: string; action: string } = { source: 'Browser extension', tag: 'browser-extension', action: 'extension.captured' },
+  ): Promise<ExtensionCaptureResult> {
     // Check the sequence first, so nothing is saved when the enrolment would be refused.
     if (input.sequenceId) {
       if (!auth.permissions.includes('sequences:write')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role does not allow enrolling people in sequences.' });
@@ -191,11 +197,11 @@ export class ExtensionService {
         {
           fullName: p.fullName || nameFromEmail(p.email),
           email: p.email,
-          jobTitle: p.jobTitle || undefined,
           companyName: input.companyName || undefined,
           website: isPersonalEmail(p.email) ? undefined : domain ?? undefined,
-          source: 'Browser extension',
-          tags: input.auto ? ['browser-extension', 'auto-captured'] : ['browser-extension'],
+          jobTitle: p.jobTitle || undefined,
+          source: origin.source,
+          tags: input.auto ? [origin.tag, 'auto-captured'] : [origin.tag],
         },
         meta,
       );
@@ -204,7 +210,7 @@ export class ExtensionService {
 
     await this.prisma.run(auth, (tx) =>
       this.audit.record(tx, {
-        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'extension.captured', entityType: 'user', entityId: auth.userId,
+        tenantId: auth.tenantId, actorUserId: auth.userId, action: origin.action, entityType: 'user', entityId: auth.userId,
         metadata: { sourceUrl: input.sourceUrl.slice(0, 500), auto: input.auto, created: results.filter((r) => r.outcome === 'created').length, existing: results.filter((r) => r.outcome === 'existing').length },
         meta,
       }),

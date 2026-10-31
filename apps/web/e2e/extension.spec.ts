@@ -21,6 +21,8 @@ const PAGES: Record<string, string> = {
       <p>Our founder's personal address: founder.private@gmail.com</p>
       <img src="logo@2x.png" alt="">
     </body></html>`,
+  '/kestrel.html': `<!doctype html><html lang="en"><head><title>Kestrel Analytics</title><meta property="og:site_name" content="Kestrel Analytics"></head>
+    <body><p>Start a project: projects@kestrel-analytics.com</p></body></html>`,
   '/about.html': `<!doctype html><html lang="en"><head><title>About | Globex Research</title><meta property="og:site_name" content="Globex Research"></head>
     <body><p>Press: lee.wong@globex.test. Our agency: hello@agency.test. Fan mail: fan@gmail.com</p></body></html>`,
 };
@@ -42,7 +44,7 @@ test.beforeAll(async () => {
   context = await chromium.launchPersistentContext('', {
     channel: 'chromium',
     baseURL: 'http://localhost:3000',
-    args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`, '--host-resolver-rules=MAP globex.test 127.0.0.1'],
+    args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`, '--host-resolver-rules=MAP globex.test 127.0.0.1, MAP kestrel-analytics.com 127.0.0.1'],
   });
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   extensionId = new URL(worker.url()).host;
@@ -128,4 +130,30 @@ test('saves people found on a company page as leads, without duplicates', async 
   await expect(panel.getByRole('heading', { name: 'Connect to DealFlow' })).toBeVisible();
   await app.reload();
   await expect(app.getByRole('list', { name: 'Extension connections' })).toHaveCount(0);
+});
+
+test('finds more people at the company through the email finder', async () => {
+  const app = await context.newPage();
+  await signUp(app, 'Extension Finder');
+  const code = await connect(app);
+  const site = await context.newPage();
+  const url = `http://kestrel-analytics.com:${port}/kestrel.html`;
+  await site.goto(url);
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/panel.html?tab=${await tabIdFor(url)}`);
+  if (await panel.getByLabel('Connection code').isVisible()) {
+    await panel.getByLabel('Your DealFlow address').fill('http://localhost:3000');
+    await panel.getByLabel('Connection code').fill(code);
+    await panel.getByRole('button', { name: 'Connect' }).click();
+  }
+  await expect(panel.getByText('1 address found.')).toBeVisible();
+  await panel.getByRole('button', { name: 'Find more people at kestrel-analytics.com' }).click();
+  await expect(panel.getByRole('status').filter({ hasText: 'Found 3 more on kestrel-analytics.com' })).toBeVisible();
+  await expect(panel.getByText('4 addresses found.')).toBeVisible();
+  await expect(panel.getByLabel('Name for tomas.herrera@kestrel-analytics.com')).toHaveValue('Tomás Herrera');
+  await expect(panel.getByRole('checkbox', { name: /priya.raman@kestrel-analytics.com.*On their site/ })).toBeChecked();
+  await panel.getByRole('button', { name: 'Save 4 as leads' }).click();
+  await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new leads.' })).toBeVisible();
+  // The people found through the finder stay listed, now as leads.
+  await expect(panel.getByRole('link', { name: 'Open Priya Raman in DealFlow' })).toBeVisible();
 });

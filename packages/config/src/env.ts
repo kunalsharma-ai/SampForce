@@ -46,6 +46,16 @@ export const apiEnvSchema = z.object({
   TRACKING_BASE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /** Signs tracking and unsubscribe links. Defaults to a key derived from JWT_ACCESS_SECRET. */
   TRACKING_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
+  /** Website lookups one person may run per day in the email finder. */
+  FINDER_DAILY_LIMIT: z.coerce.number().int().min(1).max(5000).default(50),
+  /**
+   * Test fixtures only (refused in production): every page and mail-server lookup the finder makes goes to
+   * this server instead of the internet, as GET /site/<host>/<path> and GET /mx/<domain>.
+   */
+  FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /** Optional data provider for the email finder (Hunter.io). Unset = DealFlow's own finder only. */
+  HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
+  HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
@@ -116,6 +126,9 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_NETWORK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_NETWORK_TARGETS is for tests only and cannot be used in production');
+  }
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.FINDER_FIXTURE_URL) {
+    throw new Error('FINDER_FIXTURE_URL is for tests only and cannot be used in production');
   }
   const d = parsed.data;
   if (d.STRIPE_SECRET_KEY && !d.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');
