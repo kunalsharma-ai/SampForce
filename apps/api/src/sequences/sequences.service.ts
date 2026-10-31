@@ -13,6 +13,7 @@ import {
   type SequenceSettings,
   type SequenceStats,
   type SequenceStep,
+  type EmailCounts,
   type SequenceStepStats,
   type SuppressionRow,
   sequenceSettingsSchema,
@@ -220,18 +221,21 @@ export class SequencesService {
   stepStats(auth: AuthContext, id: string): Promise<SequenceStepStats[]> {
     return this.prisma.run(auth, async (tx) => {
       const s = await this.find(tx, auth.tenantId, id);
-      const rows = await tx.$queryRaw<{ step_id: string; sent: bigint; replied: bigint; opened: bigint; clicked: bigint; bounced: bigint }[]>`
-        SELECT m.step_id, count(*) AS sent, count(m.replied_at) AS replied, count(m.opened_at) AS opened,
+      const rows = await tx.$queryRaw<{ step_id: string; variant: string; sent: bigint; replied: bigint; opened: bigint; clicked: bigint; bounced: bigint }[]>`
+        SELECT m.step_id, m.variant, count(*) AS sent, count(m.replied_at) AS replied, count(m.opened_at) AS opened,
                count(m.clicked_at) AS clicked, count(m.bounced_at) AS bounced
         FROM sequence_messages m JOIN sequence_enrollments e ON e.id = m.enrollment_id
         WHERE e.sequence_id = ${s.id}::uuid AND m.tenant_id = ${auth.tenantId}::uuid
-        GROUP BY m.step_id`;
-      const by = new Map(rows.map((r) => [r.step_id, r]));
+        GROUP BY m.step_id, m.variant`;
+      const counts = (r?: (typeof rows)[number]): EmailCounts => ({ sent: Number(r?.sent ?? 0), replied: Number(r?.replied ?? 0), opened: Number(r?.opened ?? 0), clicked: Number(r?.clicked ?? 0), bounced: Number(r?.bounced ?? 0) });
       return seqSteps(s)
         .filter((st) => st.type === 'email')
         .map((st) => {
-          const r = by.get(st.id);
-          return { stepId: st.id, sent: Number(r?.sent ?? 0), replied: Number(r?.replied ?? 0), opened: Number(r?.opened ?? 0), clicked: Number(r?.clicked ?? 0), bounced: Number(r?.bounced ?? 0) };
+          const a = counts(rows.find((r) => r.step_id === st.id && r.variant === 'A'));
+          const b = counts(rows.find((r) => r.step_id === st.id && r.variant === 'B'));
+          const total: EmailCounts = { sent: a.sent + b.sent, replied: a.replied + b.replied, opened: a.opened + b.opened, clicked: a.clicked + b.clicked, bounced: a.bounced + b.bounced };
+          const tested = (st.type === 'email' && st.variantB) || b.sent > 0;
+          return { stepId: st.id, ...total, variants: tested ? [{ variant: 'A' as const, counts: a }, { variant: 'B' as const, counts: b }] : null };
         });
     });
   }
@@ -289,7 +293,7 @@ export class SequencesService {
 
   /** Templates must be visible to the editor; move targets must be other sequences in this workspace. */
   private async assertRefs(tx: TenantTx, auth: AuthContext, input: SequenceInput, selfId?: string): Promise<void> {
-    const templateIds = [...new Set(input.steps.flatMap((s) => (s.type === 'email' && s.templateId ? [s.templateId] : [])))];
+    const templateIds = [...new Set(input.steps.flatMap((s) => (s.type === 'email' ? [s.templateId, s.variantB?.templateId].filter((t): t is string => !!t) : [])))];
     if (templateIds.length) {
       const n = await tx.emailTemplate.count({ where: { tenantId: auth.tenantId, id: { in: templateIds }, OR: [{ shared: true }, { ownerId: auth.userId }] } });
       if (n !== templateIds.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'A step uses a template that does not exist or is not shared with you.' });
@@ -300,6 +304,11 @@ export class SequencesService {
       const n = await tx.sequence.count({ where: { tenantId: auth.tenantId, id: { in: targets } } });
       if (n !== targets.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'A rule moves people to a sequence that does not exist.' });
     }
+  }
+
+  /** A sequence in the tenant, for other services in this module. */
+  findIn(tx: TenantTx, tenantId: string, id: string): Promise<Sequence> {
+    return this.find(tx, tenantId, id);
   }
 
   private async find(tx: TenantTx, tenantId: string, id: string): Promise<Sequence> {

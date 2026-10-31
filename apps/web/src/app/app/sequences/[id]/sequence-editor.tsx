@@ -6,6 +6,9 @@ import {
   EMAIL_EVENTS,
   ENROLL_SKIP_LABELS,
   type EmailEvent,
+  type EmailCounts,
+  type EmailVariant,
+  type EmailVersion,
   type EnrollResult,
   type EventRule,
   LEAD_STATUSES,
@@ -16,7 +19,7 @@ import {
   type SequenceStep,
 } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, CheckSquare, GitBranch, Mail, Pause, Play, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckSquare, FlaskConical, GitBranch, Mail, Pause, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
@@ -108,7 +111,7 @@ function Editor({ seq }: { seq: SequenceRow }) {
           { key: 'results', label: 'Results' },
         ]}
       />
-      {tab === 'steps' && <StepsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} />}
+      {tab === 'steps' && <StepsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} test={canEdit ? { seqId: seq.id, dirty } : undefined} />}
       {tab === 'rules' && <RulesTab seqId={seq.id} rules={draft.rules} onChange={(rules) => setDraft({ ...draft, rules })} readOnly={!canEdit} />}
       {tab === 'settings' && <SettingsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} />}
       {tab === 'people' && <PeopleTab seq={seq} />}
@@ -119,7 +122,9 @@ function Editor({ seq }: { seq: SequenceRow }) {
 
 // ───────────── Steps ─────────────
 
-function StepsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean }) {
+type TestTarget = { seqId: string; dirty: boolean };
+
+function StepsTab({ draft, setDraft, readOnly, test }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean; test?: TestTarget }) {
   const steps = draft.steps;
   const set = (i: number, s: SequenceStep) => setDraft({ ...draft, steps: steps.map((x, j) => (j === i ? s : x)) });
   const move = (i: number, by: number) => {
@@ -131,7 +136,7 @@ function StepsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: D
   const add = (type: SequenceStep['type']) => {
     const id = newId();
     const step: SequenceStep =
-      type === 'email' ? { id, type, delayDays: 3, templateId: null, subject: '', body: '' }
+      type === 'email' ? { id, type, delayDays: 3, templateId: null, subject: '', body: '', variantB: null }
         : type === 'task' ? { id, type, delayDays: 0, title: 'Call {{first_name}}' }
           : { id, type, delayDays: 2, check: 'replied', ifYes: 'stop', ifNo: 'next' };
     setDraft({ ...draft, steps: [...steps, step] });
@@ -147,7 +152,7 @@ function StepsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: D
           day += s.delayDays;
           return (
             <li key={s.id}>
-              <StepCard step={s} index={i} day={day} steps={steps} readOnly={readOnly} onChange={(n) => set(i, n)}
+              <StepCard step={s} index={i} day={day} steps={steps} readOnly={readOnly} test={test} onChange={(n) => set(i, n)}
                 onUp={i > 0 ? () => move(i, -1) : undefined}
                 onDown={i < steps.length - 1 ? () => move(i, 1) : undefined}
                 onDelete={() => setDraft({ ...draft, steps: steps.filter((_, j) => j !== i) })}
@@ -176,8 +181,8 @@ function StepsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: D
 const STEP_ICON = { email: Mail, task: CheckSquare, condition: GitBranch };
 const STEP_LABEL = { email: 'Email', task: 'Task for you', condition: 'Check' };
 
-function StepCard({ step, index, day, steps, readOnly, onChange, onUp, onDown, onDelete }: {
-  step: SequenceStep; index: number; day: number; steps: SequenceStep[]; readOnly: boolean;
+function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onDown, onDelete }: {
+  step: SequenceStep; index: number; day: number; steps: SequenceStep[]; readOnly: boolean; test?: TestTarget;
   onChange: (s: SequenceStep) => void; onUp?: () => void; onDown?: () => void; onDelete: () => void;
 }) {
   const Icon = STEP_ICON[step.type];
@@ -209,7 +214,7 @@ function StepCard({ step, index, day, steps, readOnly, onChange, onUp, onDown, o
           <Input id={delayId} type="number" min={0} max={60} className="h-8 w-20" disabled={readOnly} value={step.delayDays} onChange={(e) => onChange({ ...step, delayDays: Math.max(0, Math.min(60, Number(e.target.value) || 0)) })} />
           <span className="text-muted-foreground">{index === 0 ? 'days after enrolment' : 'days after the previous step'}</span>
         </div>
-        {step.type === 'email' && <EmailStep step={step} readOnly={readOnly} onChange={onChange} />}
+        {step.type === 'email' && <EmailStep step={step} readOnly={readOnly} test={test} onChange={onChange} />}
         {step.type === 'task' && (
           <Field id={`task-${step.id}`} label="Task title" hint="Created for the sender, due a day later.">
             <Input id={`task-${step.id}`} maxLength={200} disabled={readOnly} value={step.title} onChange={(e) => onChange({ ...step, title: e.target.value })} />
@@ -249,18 +254,61 @@ function JumpSelect({ id, label, value, steps, after, readOnly, onChange }: { id
   );
 }
 
-function EmailStep({ step, readOnly, onChange }: { step: Extract<SequenceStep, { type: 'email' }>; readOnly: boolean; onChange: (s: SequenceStep) => void }) {
+type EmailStepT = Extract<SequenceStep, { type: 'email' }>;
+
+function EmailStep({ step, readOnly, test, onChange }: { step: EmailStepT; readOnly: boolean; test?: TestTarget; onChange: (s: SequenceStep) => void }) {
+  const [shown, setShown] = useState<EmailVariant>('A');
+  const variant: EmailVariant = step.variantB ? shown : 'A';
+  const version: EmailVersion = variant === 'B' && step.variantB ? step.variantB : step;
+  const setVersion = (v: EmailVersion) => onChange(variant === 'B' ? { ...step, variantB: v } : { ...step, ...v });
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {step.variantB ? (
+          <>
+            <div className="inline-flex overflow-hidden rounded-md border border-border" role="group" aria-label={`Versions of this email`}>
+              {(['A', 'B'] as const).map((v) => (
+                <button key={v} type="button" aria-pressed={variant === v} onClick={() => setShown(v)}
+                  className={`px-3 py-1 text-sm ${variant === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                  Version {v}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">About half the people get each version. The Results tab compares them.</span>
+            {!readOnly && (
+              <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => { setShown('A'); onChange({ ...step, variantB: null }); }}>
+                Stop testing, keep version A
+              </Button>
+            )}
+          </>
+        ) : (
+          !readOnly && (
+            <Button type="button" size="sm" variant="outline" onClick={() => { onChange({ ...step, variantB: { templateId: null, subject: step.subject, body: step.body } }); setShown('B'); }}>
+              <FlaskConical className="h-4 w-4" aria-hidden /> A/B test this email
+            </Button>
+          )
+        )}
+      </div>
+      <VersionFields key={variant} idBase={`${step.id}-${variant}`} version={version} readOnly={readOnly} onChange={setVersion}
+        test={test ? { ...test, stepId: step.id, variant } : undefined} />
+    </div>
+  );
+}
+
+function VersionFields({ idBase, version, readOnly, test, onChange }: {
+  idBase: string; version: EmailVersion; readOnly: boolean; test?: TestTarget & { stepId: string; variant: EmailVariant }; onChange: (v: EmailVersion) => void;
+}) {
   const templates = useTemplates();
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const last = useRef<'subject' | 'body'>('body');
-  const tpl = templates.data?.find((t) => t.id === step.templateId);
+  const tpl = templates.data?.find((t) => t.id === version.templateId);
   const insert = (tag: string) =>
-    onChange(last.current === 'subject' ? { ...step, subject: insertAt(subjectRef.current, step.subject, tag) } : { ...step, body: insertAt(bodyRef.current, step.body, tag) });
+    onChange(last.current === 'subject' ? { ...version, subject: insertAt(subjectRef.current, version.subject, tag) } : { ...version, body: insertAt(bodyRef.current, version.body, tag) });
   return (
     <div className="space-y-3">
-      <Field id={`tpl-${step.id}`} label="Template" hint={tpl ? 'Leave the boxes below empty to use the template as it is, or write here to change it for this step.' : undefined}>
-        <Select id={`tpl-${step.id}`} disabled={readOnly} value={step.templateId ?? ''} onChange={(e) => onChange({ ...step, templateId: e.target.value || null })}>
+      <Field id={`tpl-${idBase}`} label="Template" hint={tpl ? 'Leave the boxes below empty to use the template as it is, or write here to change it for this step.' : undefined}>
+        <Select id={`tpl-${idBase}`} disabled={readOnly} value={version.templateId ?? ''} onChange={(e) => onChange({ ...version, templateId: e.target.value || null })}>
           <option value="">No template, write it here</option>
           {templates.data?.map((t) => (
             <option key={t.id} value={t.id}>
@@ -269,14 +317,14 @@ function EmailStep({ step, readOnly, onChange }: { step: Extract<SequenceStep, {
           ))}
         </Select>
       </Field>
-      <Field id={`subj-${step.id}`} label="Subject">
-        <Input id={`subj-${step.id}`} ref={subjectRef} maxLength={200} disabled={readOnly} placeholder={tpl?.subject} value={step.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => onChange({ ...step, subject: e.target.value })} />
+      <Field id={`subj-${idBase}`} label="Subject">
+        <Input id={`subj-${idBase}`} ref={subjectRef} maxLength={200} disabled={readOnly} placeholder={tpl?.subject} value={version.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => onChange({ ...version, subject: e.target.value })} />
       </Field>
-      <Field id={`body-${step.id}`} label="Email">
-        <Textarea id={`body-${step.id}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={step.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...step, body: e.target.value })} />
+      <Field id={`body-${idBase}`} label="Email">
+        <Textarea id={`body-${idBase}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={version.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...version, body: e.target.value })} />
       </Field>
       {!readOnly && <MergeFieldBar onInsert={insert} />}
-      <PreviewPanel subject={step.subject || tpl?.subject || ''} body={step.body || tpl?.body || ''} />
+      <PreviewPanel idBase={idBase} subject={version.subject || tpl?.subject || ''} body={version.body || tpl?.body || ''} test={test} />
     </div>
   );
 }
@@ -579,6 +627,32 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
 
 // ───────────── Results ─────────────
 
+/** Each version must reach this many people before one is shown as ahead. */
+const AB_MIN_SENT = 20;
+
+function leader(variants: { variant: EmailVariant; counts: EmailCounts }[]): EmailVariant | null {
+  const [a, b] = variants;
+  if (!a || !b || a.counts.sent < AB_MIN_SENT || b.counts.sent < AB_MIN_SENT) return null;
+  const ra = a.counts.replied / a.counts.sent;
+  const rb = b.counts.replied / b.counts.sent;
+  return ra === rb ? null : ra > rb ? a.variant : b.variant;
+}
+
+function StatsRow({ label, c, sub, lead }: { label: string; c: EmailCounts; sub?: boolean; lead?: boolean }) {
+  return (
+    <tr className={sub ? 'bg-muted/30' : undefined}>
+      <td className={`px-4 py-2 ${sub ? 'pl-8 text-muted-foreground' : ''}`}>
+        {label} {lead && <Badge tone="success">Ahead on replies</Badge>}
+      </td>
+      <td className="px-4 py-2 text-right tabular-nums">{c.sent}</td>
+      <td className="px-4 py-2 text-right tabular-nums">{c.replied} <span className="text-xs text-muted-foreground">{pct(c.replied, c.sent)}</span></td>
+      <td className="px-4 py-2 text-right tabular-nums">{c.clicked} <span className="text-xs text-muted-foreground">{pct(c.clicked, c.sent)}</span></td>
+      <td className="px-4 py-2 text-right tabular-nums">{c.opened} <span className="text-xs text-muted-foreground">{pct(c.opened, c.sent)}</span></td>
+      <td className="px-4 py-2 text-right tabular-nums">{c.bounced}</td>
+    </tr>
+  );
+}
+
 function ResultsTab({ seq }: { seq: SequenceRow }) {
   const stats = useStepStats(seq.id);
   const t = seq.stats;
@@ -625,22 +699,24 @@ function ResultsTab({ seq }: { seq: SequenceRow }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {stats.data.map((r) => (
-                  <tr key={r.stepId}>
-                    <td className="px-4 py-2">Step {position.get(r.stepId) ?? '?'}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.sent}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.replied} <span className="text-xs text-muted-foreground">{pct(r.replied, r.sent)}</span></td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.clicked} <span className="text-xs text-muted-foreground">{pct(r.clicked, r.sent)}</span></td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.opened} <span className="text-xs text-muted-foreground">{pct(r.opened, r.sent)}</span></td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.bounced}</td>
-                  </tr>
-                ))}
+                {stats.data.flatMap((r) => [
+                  <StatsRow key={r.stepId} label={`Step ${position.get(r.stepId) ?? '?'}${r.variants ? ', both versions' : ''}`} c={r} />,
+                  ...(r.variants ?? []).map((v) => (
+                    <StatsRow key={`${r.stepId}-${v.variant}`} label={`Version ${v.variant}`} c={v.counts} sub
+                      lead={leader(r.variants!) === v.variant} />
+                  )),
+                ])}
               </tbody>
             </table>
           )}
         </CardContent>
       </Card>
       <p className="text-xs text-muted-foreground">*Opens are approximate: some mail apps load images automatically and others block them. Replies and bounces come from your synced mailbox.</p>
+      {stats.data?.some((r) => r.variants) && (
+        <p className="text-xs text-muted-foreground">
+          A/B tests: “Ahead on replies” appears once each version has gone to at least {AB_MIN_SENT} people and one has a higher reply rate. With small numbers the difference can be chance, so keep testing before you pick one.
+        </p>
+      )}
     </div>
   );
 }

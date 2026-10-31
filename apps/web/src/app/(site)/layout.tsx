@@ -12,7 +12,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       </a>
       <header className="border-b border-border/60">
         <nav aria-label="Main" className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-4 sm:px-6">
-          <Link href="/" aria-label="DealFlow home">
+          <Link href="/">
             <Logo />
           </Link>
           <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
@@ -39,6 +39,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </Link>
           <Link href="/login" className="hover:text-foreground">
             Sign in
+          </Link>
+          <Link href="/extension-privacy" className="hover:text-foreground">
+            Browser extension privacy
           </Link>
         </div>
       </footer>

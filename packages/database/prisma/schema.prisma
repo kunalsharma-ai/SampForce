@@ -1933,6 +1933,8 @@ model SequenceMessage {
   tenantId       String    @map("tenant_id") @db.Uuid
   enrollmentId   String    @map("enrollment_id") @db.Uuid
   stepId         String    @map("step_id")
+  /// "A" or "B" for A/B-tested steps; "A" otherwise.
+  variant        String    @default("A")
   senderId       String    @map("sender_id") @db.Uuid
   emailMessageId String?   @map("email_message_id") @db.Uuid
   toAddress      String    @map("to_address")
