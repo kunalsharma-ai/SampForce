@@ -36,15 +36,24 @@ const HUNTER_DOMAINS: Record<string, { value: string; first_name: string; last_n
   'bluefin-logistics.com': [{ value: 'ana.ruiz@bluefin-logistics.com', first_name: 'Ana', last_name: 'Ruiz', position: 'COO', confidence: 88 }],
 };
 const HUNTER_COMPANIES: Record<string, string> = { 'bluefin logistics': 'bluefin-logistics.com' };
+const HUNTER_VERIFY: Record<string, string> = { 'ana.lima@bluefin-logistics.com': 'valid', 'old.address@bluefin-logistics.com': 'invalid', 'info@bluefin-logistics.com': 'accept_all' };
+/** Made-up people at the made-up Bluefin Logistics, for the Apollo stand-in. */
+const APOLLO_PEOPLE = [
+  { id: 'ap_1', first_name: 'Ana', last_name: 'Lima', name: 'Ana Lima', title: 'Head of Operations', country: 'Brazil', email: 'ana.lima@bluefin-logistics.com', email_status: 'verified', organization: { name: 'Bluefin Logistics', primary_domain: 'bluefin-logistics.com', industry: 'logistics & supply chain', estimated_num_employees: 320 } },
+  { id: 'ap_2', first_name: 'Dev', last_name: 'Kapoor', name: 'Dev Kapoor', title: 'VP Sales', country: 'India', email: 'dev.kapoor@bluefin-logistics.com', email_status: 'unverified', organization: { name: 'Bluefin Logistics', primary_domain: 'bluefin-logistics.com', industry: 'logistics & supply chain', estimated_num_employees: 320 } },
+  { id: 'ap_3', first_name: 'Ruth', last_name: 'Okon', name: 'Ruth Okon', title: 'Procurement Manager', country: 'Nigeria', email: null, email_status: null, organization: { name: 'Bluefin Logistics', primary_domain: 'bluefin-logistics.com', industry: 'logistics & supply chain', estimated_num_employees: 320 } },
+];
 
 export interface FinderFixture {
   url: string;
   hunterCalls: string[];
+  apolloCalls: string[];
   close(): Promise<void>;
 }
 
 export async function startFinderFixture(port = 0): Promise<FinderFixture> {
   const hunterCalls: string[] = [];
+  const apolloCalls: string[] = [];
   const server: Server = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://fixture');
     const send = (status: number, body: string, type = 'text/html; charset=utf-8') => {
@@ -74,12 +83,40 @@ export async function startFinderFixture(port = 0): Promise<FinderFixture> {
         const l = (u.searchParams.get('last_name') ?? '').toLowerCase();
         return send(200, JSON.stringify({ data: { email: d === 'bluefin-logistics.com' ? `${f[0]}${l}@${d}` : null, score: 72, position: null } }), 'application/json');
       }
+      if (u.pathname === '/hunter/email-verifier') {
+        const email = u.searchParams.get('email') ?? '';
+        return send(200, JSON.stringify({ data: { email, status: HUNTER_VERIFY[email] ?? 'unknown' } }), 'application/json');
+      }
+    }
+    // A stand-in for Apollo.io's People API Search and Bulk People Enrichment. The response shape follows
+    // Apollo's documentation as far as it is published; it has not been compared with a live response.
+    if (u.pathname.startsWith('/apollo/')) {
+      apolloCalls.push(u.pathname);
+      if (req.headers['x-api-key'] !== 'apollo-test-key') return send(401, JSON.stringify({ error: 'Invalid access credentials.' }), 'application/json');
+      let raw = '';
+      req.on('data', (c: Buffer) => (raw += c.toString('utf8')));
+      req.on('end', () => {
+        const body = (raw ? JSON.parse(raw) : {}) as { q_organization_domains_list?: string[]; person_titles?: string[]; page?: number; details?: { id: string }[] };
+        if (u.pathname === '/apollo/mixed_people/api_search') {
+          const people = APOLLO_PEOPLE.filter(
+            (p) => (!body.q_organization_domains_list?.length || body.q_organization_domains_list.includes(p.organization.primary_domain)) &&
+              (!body.person_titles?.length || body.person_titles.some((t) => p.title.toLowerCase().includes(t.toLowerCase()))),
+          ).map(({ email: _e, email_status: _s, last_name: _l, ...p }) => ({ ...p, last_name_obfuscated: `${_l[0]}***`, has_email: true }));
+          return send(200, JSON.stringify({ people, pagination: { page: body.page ?? 1, per_page: 25, total_entries: people.length, total_pages: 1 } }), 'application/json');
+        }
+        if (u.pathname === '/apollo/people/bulk_match') {
+          const matches = (body.details ?? []).map((d) => APOLLO_PEOPLE.find((p) => p.id === d.id) ?? null);
+          return send(200, JSON.stringify({ status: 'success', matches, total_requested_enrichments: matches.length, unique_enriched_records: matches.filter(Boolean).length }), 'application/json');
+        }
+        send(404, 'Not found', 'application/json');
+      });
+      return;
     }
     send(404, 'Not found', 'text/plain');
   });
   await new Promise<void>((r) => server.listen(port, '127.0.0.1', r));
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  return { url, hunterCalls, close: () => new Promise((r) => server.close(() => r())) };
+  return { url, hunterCalls, apolloCalls, close: () => new Promise((r) => server.close(() => r())) };
 }
 
 // Run on its own (Playwright and demos): `tsx test/fixtures/finder-fixture.ts`, port from FINDER_FIXTURE_PORT.

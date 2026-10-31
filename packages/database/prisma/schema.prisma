@@ -210,6 +210,12 @@ model Tenant {
   gamificationContests   GamificationCompetition[]
   visitorSettings        VisitorSettings?
   webVisitors            WebVisitor[]
+  prospectLists          ProspectList[]
+  prospects              Prospect[]
+  prospectOutreach       ProspectOutreach[]
+  prospectImports        ProspectImport[]
+  providerUsage          ProviderUsage[]
+  prospectSettings       ProspectSettings?
   webSessions            WebSession[]
   webEvents              WebEvent[]
   companyHealthDays      CompanyHealthDaily[]
@@ -463,6 +469,7 @@ model Contact {
 
   portalUsers PortalUser[]
   webVisitors WebVisitor[]
+  prospects   Prospect[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -519,6 +526,7 @@ model Lead {
   activities  Activity[]
   tasks       Task[]
   webVisitors WebVisitor[]
+  prospects   Prospect[]
 
   @@index([tenantId, status])
   @@index([tenantId, campaignId])
@@ -2037,8 +2045,9 @@ model Sequence {
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  enrollments SequenceEnrollment[]
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enrollments      SequenceEnrollment[]
+  prospectOutreach ProspectOutreach[]
 
   @@index([tenantId, status])
   @@map("sequences")
@@ -2679,4 +2688,139 @@ model WebEvent {
   @@index([tenantId, occurredAt])
   @@index([visitorId])
   @@map("web_events")
+}
+
+// ───────────── Enhancement Part 2: Prospect Lists and prospect discovery ─────────────
+
+/// A named list of prospects: people the team may contact, kept out of the CRM until someone adds them.
+model ProspectList {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  ownerId     String?  @map("owner_id") @db.Uuid
+  /// The team member who works this list.
+  assigneeId  String?  @map("assignee_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  prospects Prospect[]
+  outreach  ProspectOutreach[]
+  imports   ProspectImport[]
+
+  @@unique([tenantId, name])
+  @@map("prospect_lists")
+}
+
+model Prospect {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  listId         String    @map("list_id") @db.Uuid
+  fullName       String    @map("full_name")
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  /// Lower-cased.
+  email          String?
+  /// verified | unverified | risky | invalid; null when no address.
+  emailStatus    String?   @map("email_status")
+  emailCheckedAt DateTime? @map("email_checked_at") @db.Timestamptz(3)
+  title          String?
+  companyName    String?   @map("company_name")
+  domain         String?
+  industry       String?
+  country        String?
+  companySize    String?   @map("company_size")
+  phone          String?
+  notes          String?
+  source         String
+  /// The provider's own id, to reveal or refresh the record.
+  sourceRef      String?   @map("source_ref")
+  /// Mock Mode sample person on a reserved .example domain; never added to the CRM, enrolled or exported.
+  sample         Boolean   @default(false)
+  leadId         String?   @map("lead_id") @db.Uuid
+  contactId      String?   @map("contact_id") @db.Uuid
+  createdById    String?   @map("created_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  list    ProspectList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  lead    Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, listId, createdAt])
+  @@index([listId, email])
+  @@index([tenantId, email])
+  @@map("prospects")
+}
+
+/// A list sent to a sequence, so list-level outreach results can be reported.
+model ProspectOutreach {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  listId      String   @map("list_id") @db.Uuid
+  sequenceId  String   @map("sequence_id") @db.Uuid
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  list     ProspectList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  sequence Sequence     @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, sequenceId])
+  @@map("prospect_outreach")
+}
+
+/// A parsed CSV or Excel file waiting for its column mapping. Deleted once imported or after a day.
+model ProspectImport {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  listId    String   @map("list_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  fileName  String   @map("file_name")
+  kind      String
+  headers   Json
+  rows      Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  list   ProspectList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("prospect_imports")
+}
+
+/// Each provider call (search, email reveal, verification) a person makes, for the daily allowance and history.
+model ProviderUsage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  provider  String
+  kind      String
+  units     Int      @default(1)
+  /// False in Mock Mode: nothing was sent to a provider.
+  live      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, createdAt])
+  @@map("provider_usage")
+}
+
+/// Per-workspace provider allowance: a default number of provider calls per person per 24 hours, with overrides.
+model ProspectSettings {
+  tenantId     String    @id @map("tenant_id") @db.Uuid
+  dailyLimit   Int       @map("daily_limit")
+  userLimits   Json      @default("{}") @map("user_limits")
+  /// When a provider call last succeeded with a real key, so the integration can be shown as live.
+  apolloLiveAt DateTime? @map("apollo_live_at") @db.Timestamptz(3)
+  hunterLiveAt DateTime? @map("hunter_live_at") @db.Timestamptz(3)
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("prospect_settings")
 }

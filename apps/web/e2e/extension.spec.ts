@@ -157,3 +157,57 @@ test('finds more people at the company through the email finder', async () => {
   // The people found through the finder stay listed, now as leads.
   await expect(panel.getByRole('link', { name: 'Open Priya Raman in DealFlow' })).toBeVisible();
 });
+
+test('signs in with a password and imports prospects at the company on screen (Mock Mode)', async () => {
+  const app = await context.newPage();
+  const { email, password } = await signUp(app, 'Extension Prospects');
+  const site = await context.newPage();
+  const url = `http://globex.test:${port}/team.html`;
+  await site.goto(url);
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extensionId}/panel.html?tab=${await tabIdFor(url)}`);
+  if (!(await panel.getByRole('heading', { name: 'Connect to DealFlow' }).isVisible())) {
+    await panel.getByRole('button', { name: 'Disconnect' }).click();
+  }
+  await panel.getByLabel('Your DealFlow address').fill('http://localhost:3000');
+  await panel.getByLabel('Work email').fill(email);
+  await panel.getByLabel('Password').fill('wrong-password');
+  await panel.getByRole('button', { name: 'Sign in' }).click();
+  await expect(panel.getByRole('alert')).toBeVisible();
+  await panel.getByLabel('Password').fill(password);
+  await panel.getByRole('button', { name: 'Sign in' }).click();
+  await expect(panel.getByText('Test Person · Extension Prospects')).toBeVisible();
+
+  const prospects = panel.getByRole('region', { name: 'Prospects at globex.test' });
+  await expect(prospects).toBeVisible();
+  await prospects.getByLabel('Job titles (optional)').fill('Head of Research');
+  await prospects.getByRole('button', { name: 'Find prospects at globex.test' }).click();
+  await expect(prospects.getByRole('note')).toContainText('Mock Mode');
+  const found = prospects.getByRole('list', { name: 'Prospects found' }).getByRole('listitem');
+  await expect(found).toHaveCount(12);
+  await expect(found.first()).toContainText('Sample');
+  await expect(found.first()).toContainText('Head of Research · Globex (sample)');
+  const axe = await new AxeBuilder({ page: panel }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+
+  // Keep three people and save them to a new prospect list.
+  for (let i = 3; i < 12; i++) await found.nth(i).getByRole('checkbox').uncheck();
+  await prospects.getByLabel('Import to').selectOption('new');
+  await prospects.getByLabel('New list name').fill('Globex research team');
+  await prospects.getByRole('button', { name: 'Import 3' }).click();
+  await expect(prospects.getByRole('status').filter({ hasText: 'Added 3 to Globex research team.' })).toBeVisible();
+  await expect(prospects.getByRole('link', { name: 'Open Globex research team in DealFlow' })).toBeVisible();
+  await expect(prospects.getByText(/Provider calls in the last 24 hours: 4 of 100/)).toBeVisible();
+
+  // Sample people are refused by the CRM.
+  await prospects.getByLabel('Import to').selectOption('crm');
+  await prospects.getByRole('button', { name: 'Import 3' }).click();
+  await expect(prospects.getByRole('status').filter({ hasText: 'Added 0 to the CRM as leads. 3 skipped.' })).toBeVisible();
+  await expect(prospects.getByRole('list', { name: 'Import notes' })).toContainText('Sample data from Mock Mode cannot be added to the CRM.');
+
+  await app.goto('/app/prospects');
+  await app.getByRole('link', { name: 'Globex research team' }).click();
+  await expect(app.getByRole('table', { name: 'Prospects in Globex research team' }).getByRole('row')).toHaveCount(4);
+  await app.goto('/app/integrations');
+  await expect(app.getByRole('list', { name: 'Extension connections' })).toContainText('Browser extension (Chrome)');
+});

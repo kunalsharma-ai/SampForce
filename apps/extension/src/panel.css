@@ -39,7 +39,7 @@ p { margin: 0 0 8px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; }
-input[type='text'], input[type='url'], input[type='password'], select {
+input[type='text'], input[type='url'], input[type='password'], input[type='email'], select {
   width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font: inherit;
 }
 input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -66,3 +66,8 @@ ul.people .name input { padding: 5px 8px; font-size: 13px; }
 .switch { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 13px; margin: 0; }
 .switch input { margin-top: 3px; width: 16px; height: 16px; }
 ol.log { padding-left: 18px; margin: 6px 0 0; font-size: 12px; }
+h3 { font-size: 14px; margin: 0 0 4px; }
+section h3:not(:first-child) { margin-top: 14px; }
+.alert.warn { border-color: var(--warning); }
+ul.log { padding-left: 18px; margin: 6px 0 0; font-size: 12px; }
+[hidden] { display: none !important; }

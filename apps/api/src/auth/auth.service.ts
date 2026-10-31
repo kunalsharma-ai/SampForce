@@ -218,15 +218,7 @@ export class AuthService {
    * paused the answer is the same generic error, so it does not reveal whether the email has an account.
    */
   async login(input: LoginInput, meta: RequestMeta): Promise<IssuedTokens | MfaChallenge> {
-    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
-    const locked = !!user && this.mfa.isLocked(user);
-    const valid = await this.passwords.verify(locked ? null : (user?.passwordHash ?? null), input.password);
-    if (!user || !valid || user.status !== 'ACTIVE') {
-      if (user && !locked) await this.mfa.recordFailure(user.id, meta.requestId);
-      authEvents.inc({ event: 'login_failure' });
-      this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress, locked }, 'Failed sign-in attempt');
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
-    }
+    const user = await this.checkPassword(input, meta);
     if (user.mfaEnabledAt) {
       // The failure counter is only reset once the second factor also checks out.
       return { mfaRequired: true, challenge: await this.tokens.signMfaChallenge(user.id) };
@@ -237,6 +229,40 @@ export class AuthService {
 
   /** Second step of a password sign-in: an authenticator code or a recovery code. */
   async verifyMfa(challenge: string, code: string, meta: RequestMeta): Promise<IssuedTokens> {
+    const userId = await this.checkSecondFactor(challenge, code, meta);
+    return this.completeSignIn(userId, { authMethod: 'mfa' }, meta);
+  }
+
+  /**
+   * The browser extension signs in with the same password, lockout and second-factor rules, but gets an extension
+   * connection instead of a web session (see ExtensionService). SSO-enforced workspaces still need a connection code.
+   */
+  async extensionSignIn(input: LoginInput, meta: RequestMeta): Promise<{ userId: string; tenantId: string; scope: SessionScope } | MfaChallenge> {
+    const user = await this.checkPassword(input, meta);
+    if (user.mfaEnabledAt) return { mfaRequired: true, challenge: await this.tokens.signMfaChallenge(user.id) };
+    await this.mfa.clearFailures(user.id);
+    return this.firstWorkspace(user.id, { authMethod: 'password' }, meta, 'extension');
+  }
+
+  async extensionVerifyMfa(challenge: string, code: string, meta: RequestMeta): Promise<{ userId: string; tenantId: string; scope: SessionScope }> {
+    const userId = await this.checkSecondFactor(challenge, code, meta);
+    return this.firstWorkspace(userId, { authMethod: 'mfa' }, meta, 'extension');
+  }
+
+  private async checkPassword(input: LoginInput, meta: RequestMeta) {
+    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    const locked = !!user && this.mfa.isLocked(user);
+    const valid = await this.passwords.verify(locked ? null : (user?.passwordHash ?? null), input.password);
+    if (!user || !valid || user.status !== 'ACTIVE') {
+      if (user && !locked) await this.mfa.recordFailure(user.id, meta.requestId);
+      authEvents.inc({ event: 'login_failure' });
+      this.logger.warn({ requestId: meta.requestId, ip: meta.ipAddress, locked }, 'Failed sign-in attempt');
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
+    }
+    return user;
+  }
+
+  private async checkSecondFactor(challenge: string, code: string, meta: RequestMeta): Promise<string> {
     const userId = await this.tokens.verifyMfaChallenge(challenge);
     if (!userId) throw new UnauthorizedException({ code: 'MFA_CHALLENGE_EXPIRED', message: 'The sign-in took too long. Enter your password again.' });
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -247,10 +273,16 @@ export class AuthService {
       throw new UnauthorizedException({ code: 'INVALID_MFA_CODE', message: 'That code is not valid. Try again, or use a recovery code.' });
     }
     await this.mfa.clearFailures(userId);
-    return this.completeSignIn(userId, { authMethod: 'mfa' }, meta);
+    return userId;
   }
 
   private async completeSignIn(userId: string, scope: SessionScope, meta: RequestMeta): Promise<IssuedTokens> {
+    const { tenantId } = await this.firstWorkspace(userId, scope, meta, 'web');
+    return this.startSession(userId, tenantId, meta, scope);
+  }
+
+  /** The first workspace this sign-in may enter (SSO-enforced workspaces are skipped for non-SSO sign-ins), audited. */
+  private async firstWorkspace(userId: string, scope: SessionScope, meta: RequestMeta, client: 'web' | 'extension'): Promise<{ userId: string; tenantId: string; scope: SessionScope }> {
     const memberships = await this.listMemberships(userId, scope);
     const first = memberships[0];
     if (!first) {
@@ -271,11 +303,11 @@ export class AuthService {
         action: 'auth.login',
         entityType: 'user',
         entityId: userId,
-        metadata: { method: scope.authMethod },
+        metadata: client === 'web' ? { method: scope.authMethod } : { method: scope.authMethod, client },
         meta,
       }),
     );
-    return this.startSession(userId, first.tenantId, meta, scope);
+    return { userId, tenantId: first.tenantId, scope };
   }
 
   /** Rotates the refresh token. Reuse of an already-rotated token revokes every session of the user. */

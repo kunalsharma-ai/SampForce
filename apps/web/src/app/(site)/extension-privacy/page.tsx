@@ -13,11 +13,12 @@ export default function ExtensionPrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_li]:mt-1 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5">
       <h1 className="text-4xl font-semibold tracking-tight">DealFlow lead capture: privacy</h1>
-      <p className="text-muted-foreground">Last updated 31 October 2026</p>
+      <p className="text-muted-foreground">Last updated 1 November 2026</p>
       <p>
         The DealFlow lead capture extension for Chrome and Edge finds email addresses on the web page you are reading and saves the people as leads in your
-        DealFlow workspace. It works only after you connect it to your workspace with a connection code you create in DealFlow. Sampledge makes DealFlow and
-        the extension.
+        DealFlow workspace. It can also show people who work at the company whose website you are on, from your workspace&apos;s data provider, and save
+        them to a prospect list or as leads. It works only after you connect it to your workspace, by signing in with your DealFlow email and password or
+        with a connection code you create in DealFlow. Sampledge makes DealFlow and the extension.
       </p>
 
       <h2>What it reads</h2>
@@ -32,12 +33,14 @@ export default function ExtensionPrivacyPage() {
         <li>Only to the DealFlow address you entered when connecting, which is your own workspace.</li>
         <li>To check who is already in DealFlow, it sends the addresses found and the site&apos;s address. When you save people, it sends their addresses and the names you kept, the company name and the page address, which DealFlow records as the lead&apos;s source.</li>
         <li>When you press &quot;Find more people&quot;, it sends the site&apos;s domain. DealFlow&apos;s servers then read that company&apos;s public website, and, if your workspace has added its own key, ask the data provider Hunter.io. The extension itself contacts no one but your workspace.</li>
+        <li>When you press &quot;Find prospects&quot;, it sends the site&apos;s domain and any job titles you typed. DealFlow&apos;s servers ask the data provider Apollo.io for people at that company, if your workspace has added its own key; without one, DealFlow shows labelled sample people and nothing is sent to Apollo. Finding email addresses for the people you import also goes through DealFlow&apos;s servers. The extension never reads people from the page or from social networks for this.</li>
+        <li>When you sign in, it sends your email and password to your workspace only, once, to create the extension&apos;s own connection. The password is not stored.</li>
         <li>With automatic capture, it saves only addresses at the website&apos;s own domain, never personal mailboxes such as Gmail, at most 100 a day.</li>
       </ul>
 
       <h2>What it keeps in your browser</h2>
       <ul>
-        <li>Your DealFlow address, the connection code and your name and workspace name, so it stays signed in.</li>
+        <li>Your DealFlow address, the connection token (from signing in or a connection code) and your name and workspace name, so it stays signed in. Never your password.</li>
         <li>Whether automatic capture is on, how many people it saved today, the last 30 automatic saves, and the pages it already checked in the last 24 hours, so it does not check them again.</li>
         <li>This is stored with the browser&apos;s extension storage on your device and is not synced to other devices.</li>
       </ul>
@@ -59,7 +62,7 @@ export default function ExtensionPrivacyPage() {
       <h2>Removing it</h2>
       <ul>
         <li>Press Disconnect in the extension to sign it out and clear the connection code and automatic capture settings from your browser.</li>
-        <li>In DealFlow, Integrations, Browser extension lists every connection; Remove ends one immediately. Codes also end after 90 days.</li>
+        <li>In DealFlow, Integrations, Browser extension lists every connection; Remove ends one immediately. Connections also end after 90 days.</li>
         <li>Uninstalling the extension removes everything it stored in your browser.</li>
       </ul>
 
