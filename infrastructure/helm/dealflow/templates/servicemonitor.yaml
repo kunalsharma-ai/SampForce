@@ -1,0 +1,20 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- range $name := list "api" "worker" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "dealflow.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "dealflow.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "dealflow.selector" (dict "root" $ "component" $name) | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ $.Values.metrics.serviceMonitor.interval }}
+{{- end }}
+{{- end }}

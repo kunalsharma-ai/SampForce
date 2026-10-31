@@ -1,0 +1,67 @@
+{{- $c := dict "root" . "component" "worker" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dealflow.fullname" . }}-worker
+  labels:
+    {{- include "dealflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "dealflow.selector" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "dealflow.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: {{ include "dealflow.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      # A pass in progress finishes before shutdown; claims are leased, so an interrupted one is retried.
+      terminationGracePeriodSeconds: 120
+      {{- include "dealflow.podSecurity" . | nindent 6 }}
+      containers:
+        - name: worker
+          image: {{ include "dealflow.image" (dict "root" . "name" .Values.image.api) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/worker.js"]
+          ports:
+            - { name: metrics, containerPort: {{ .Values.metrics.port }} }
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: dealflow-worker
+            {{- include "dealflow.serverEnv" . | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.existingSecret }}
+          livenessProbe:
+            # /healthz turns 503 when no pass over the queues has finished for five minutes.
+            httpGet: { path: /healthz, port: metrics }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 256Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dealflow.fullname" . }}-worker-metrics
+  labels:
+    {{- include "dealflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  selector:
+    {{- include "dealflow.selector" $c | nindent 4 }}
+  ports:
+    - { name: metrics, port: {{ .Values.metrics.port }}, targetPort: metrics }

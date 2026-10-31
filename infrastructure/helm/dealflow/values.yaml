@@ -1,0 +1,118 @@
+# DealFlow Helm values. Secrets are never set here: create a Secret (or use an external secrets operator)
+# and name it in `secrets.existingSecret`. See docs/DEPLOYMENT.md.
+
+image:
+  registry: ""            # e.g. ghcr.io/sampledge
+  tag: ""                 # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+  api: dealflow-api
+  web: dealflow-web
+  migrate: dealflow-migrate
+imagePullSecrets: []
+
+# Public URL people use; also used for SSO and OAuth redirect URIs.
+publicUrl: https://app.example.com
+
+secrets:
+  # Secret with keys: DATABASE_URL (runtime role, no BYPASSRLS), MIGRATION_DATABASE_URL (schema owner),
+  # JWT_ACCESS_SECRET, ENCRYPTION_KEY, and optionally OPERATOR_JWT_SECRET, ANTHROPIC_API_KEY,
+  # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_* (see .env.example).
+  existingSecret: dealflow-secrets
+
+# Non-secret settings passed to the API and worker as environment variables.
+config:
+  LOG_LEVEL: info
+  WORKER_POLL_MS: "2000"
+  ACCESS_TOKEN_TTL_SECONDS: "900"
+  REFRESH_TOKEN_TTL_DAYS: "30"
+  AUTH_RATE_LIMIT_PER_MINUTE: "10"
+  PRICING_PUBLISHED: "false"
+
+api:
+  replicas: 2
+  port: 4000
+  resources:
+    requests: { cpu: 250m, memory: 384Mi }
+    limits: { memory: 768Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  # Several copies are safe: every queue claim uses FOR UPDATE SKIP LOCKED with a lease.
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+web:
+  replicas: 2
+  port: 3000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+migrations:
+  # Runs `prisma migrate deploy` as a pre-install/pre-upgrade hook, so new code never meets an old schema.
+  enabled: true
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+
+metrics:
+  port: 9464
+  serviceMonitor:
+    enabled: false        # needs the Prometheus Operator CRDs
+    interval: 30s
+  prometheusRule:
+    enabled: false        # needs the Prometheus Operator CRDs
+
+tracing:
+  # OTLP/HTTP collector, e.g. http://otel-collector.observability:4318. Empty = tracing off.
+  otlpEndpoint: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.example.com
+  annotations: {}
+  tls:
+    enabled: true
+    secretName: dealflow-tls
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  # Restricts ingress to the pods; egress stays open because the API calls identity providers, payment
+  # providers, mail providers and the AI provider. Tighten egress with your own policy if you can list them.
+  enabled: true
+  ingressNamespaceSelector: {}   # e.g. { kubernetes.io/metadata.name: ingress-nginx }
+  monitoringNamespaceSelector: {}
+
+serviceAccount:
+  create: true
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile: { type: RuntimeDefault }
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,47 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # A new name per revision, so each upgrade runs its own migration.
+  name: {{ include "dealflow.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "dealflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "dealflow.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "dealflow.podSecurity" . | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ include "dealflow.image" (dict "root" . "name" .Values.image.migrate) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # Migrations run as the schema owner, never as the runtime role.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.secrets.existingSecret }}, key: MIGRATION_DATABASE_URL }
+            - name: HOME
+              value: /tmp
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 256Mi } }
+{{- end }}

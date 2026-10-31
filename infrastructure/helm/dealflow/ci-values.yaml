@@ -1,0 +1,13 @@
+# Values used by CI to lint and render the chart with every optional part switched on.
+image:
+  registry: ghcr.io/sampledge
+  tag: ci
+publicUrl: https://app.example.com
+metrics:
+  serviceMonitor: { enabled: true }
+  prometheusRule: { enabled: true }
+tracing:
+  otlpEndpoint: http://otel-collector.observability:4318
+networkPolicy:
+  ingressNamespaceSelector: { kubernetes.io/metadata.name: ingress-nginx }
+  monitoringNamespaceSelector: { kubernetes.io/metadata.name: monitoring }

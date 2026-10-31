@@ -74,3 +74,22 @@ jobs:
         run: docker build -f apps/api/Dockerfile -t dealflow-api:ci .
       - name: Build web image
         run: docker build -f apps/web/Dockerfile -t dealflow-web:ci .
+      - name: Build migration image
+        run: docker build -f apps/api/Dockerfile --target migrate -t dealflow-migrate:ci .
+
+  helm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+      - name: Lint the chart
+        run: helm lint infrastructure/helm/dealflow -f infrastructure/helm/dealflow/ci-values.yaml --strict
+      - name: Render and validate against Kubernetes schemas
+        run: |
+          mkdir -p rendered
+          helm template dealflow infrastructure/helm/dealflow -f infrastructure/helm/dealflow/ci-values.yaml > rendered/all.yaml
+          docker run --rm -v "$PWD/rendered:/rendered" ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 /rendered/all.yaml
