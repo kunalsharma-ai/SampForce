@@ -64,8 +64,8 @@ export function useForms() {
   return useQuery({ queryKey: ['forms'], queryFn: () => api<LeadFormRow[]>('/forms') });
 }
 
-export function useCampaigns() {
-  return useQuery({ queryKey: ['campaigns'], queryFn: () => api<CampaignRow[]>('/campaigns') });
+export function useCampaigns(enabled = true) {
+  return useQuery({ queryKey: ['campaigns'], queryFn: () => api<CampaignRow[]>('/campaigns'), enabled });
 }
 
 export function useRevenue(period: string) {

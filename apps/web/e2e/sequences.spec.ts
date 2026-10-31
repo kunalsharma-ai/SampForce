@@ -85,3 +85,59 @@ test('shows a clear message for an invalid unsubscribe link', async ({ page }) =
   await expect(page.getByText('This unsubscribe link is not valid.')).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test('workspace variables and custom fields fill templates, templates group by category and duplicate, and results show estimates honestly', async ({ page }) => {
+  await signUp(page, 'Template Flow');
+  await apiCall(page, 'post', '/custom-fields', { entity: 'LEAD', key: 'region', label: 'Region', type: 'TEXT' });
+  await apiCall(page, 'post', '/leads', { fullName: 'Rhea North', email: 'rhea@buyer.test', customFields: { region: 'Nordics' } });
+
+  await page.goto('/app/sequences');
+  await page.getByRole('tab', { name: 'Variables' }).click();
+  await expect(page.getByText(/No variables yet/)).toBeVisible();
+  await page.getByLabel('Key').fill('booking_link');
+  await page.getByLabel('Label').fill('Booking link');
+  await page.getByLabel('Value').fill('https://cal.example.com/rep');
+  await page.getByRole('button', { name: 'Save variable' }).click();
+  await expect(page.getByText('{{var.booking_link}}')).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.getByRole('tab', { name: 'Templates' }).click();
+  await page.getByRole('button', { name: 'New template' }).click();
+  await page.getByLabel('Name').fill('Regional opener');
+  await page.getByLabel('Subject').fill('News for ');
+  await page.getByLabel('Insert a custom field or workspace variable').selectOption('custom.region');
+  await expect(page.getByLabel('Subject')).toHaveValue('News for {{custom.region}}');
+  await page.getByLabel('Email', { exact: true }).fill('Pick a time: ');
+  await page.getByLabel('Insert a custom field or workspace variable').selectOption('var.booking_link');
+  await expect(page.getByLabel('Email', { exact: true })).toHaveValue('Pick a time: {{var.booking_link}}');
+  await page.getByLabel('Category').fill('Cold outreach');
+  await page.getByLabel('Preview for a lead').fill('Rhea');
+  await page.getByRole('option', { name: /Rhea North/ }).click();
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByText('News for Nordics')).toBeVisible();
+  await expect(page.getByText('Pick a time: https://cal.example.com/rep')).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole('button', { name: 'Save template' }).click();
+  await expect(page.getByRole('heading', { name: /Regional opener/ })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Duplicate Regional opener' }).click();
+  await expect(page.getByLabel('Name')).toHaveValue('Regional opener (copy)');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('heading', { name: /Regional opener \(copy\)/ })).toBeVisible();
+  await page.getByLabel('Category', { exact: true }).selectOption('Cold outreach');
+  await expect(page.getByRole('heading', { name: /Regional opener/ })).toHaveCount(2);
+
+  // A variable that templates use cannot be deleted.
+  await page.getByRole('tab', { name: 'Variables' }).click();
+  await page.getByRole('button', { name: 'Delete Booking link' }).click();
+  await expect(page.getByText(/is used in 2 template/)).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Results' }).click();
+  await expect(page.getByText('Emails sent')).toBeVisible();
+  await expect(page.getByText(/Opens are estimates/)).toBeVisible();
+  await expect(page.getByText('Nothing sent in this period.').first()).toBeVisible();
+  await page.getByLabel('Whose emails').selectOption('team');
+  await expect(page.getByText('Emails sent')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expectNoA11yViolations(page);
+});

@@ -2,7 +2,11 @@ import { Body, Controller, Delete, Get, Header, HttpCode, Param, ParseUUIDPipe, 
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
+  type EmailAnalyticsQuery,
+  emailAnalyticsQuerySchema,
   type EmailTemplateInput,
+  type EmailVariableInput,
+  emailVariableInputSchema,
   emailTemplateInputSchema,
   type EnrollInput,
   enrollInputSchema,
@@ -17,9 +21,10 @@ import {
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { EmailAnalyticsService } from './analytics.service';
 import { SequenceRunner } from './sequence-runner.service';
 import { SequencesService } from './sequences.service';
-import { TemplatesService } from './templates.service';
+import { EmailVariablesService, TemplatesService } from './templates.service';
 
 const uuid = new ParseUUIDPipe();
 const enrollmentQuery = z.object({
@@ -30,6 +35,32 @@ const enrollmentQuery = z.object({
 });
 const enrollmentAction = z.object({ action: z.enum(['pause', 'resume', 'stop']) });
 const removeSuppression = z.object({ reason: z.string().trim().max(500).optional() });
+const templateListQuery = z.object({ category: z.string().trim().max(40).optional(), campaignId: z.string().uuid().optional() });
+
+/** Workspace email variables: {{var.key}}. */
+@Controller('email-variables')
+export class EmailVariablesController {
+  constructor(private readonly variables: EmailVariablesService) {}
+
+  @Get()
+  @RequirePermissions('sequences:read')
+  list(@Auth() auth: AuthContext) {
+    return this.variables.list(auth);
+  }
+
+  @Put()
+  @RequirePermissions('marketing:manage')
+  upsert(@Auth() auth: AuthContext, @Body(new ZodPipe(emailVariableInputSchema)) body: EmailVariableInput, @Meta() meta: RequestMeta) {
+    return this.variables.upsert(auth, body, meta);
+  }
+
+  @Delete(':key')
+  @HttpCode(204)
+  @RequirePermissions('marketing:manage')
+  remove(@Auth() auth: AuthContext, @Param('key') key: string, @Meta() meta: RequestMeta) {
+    return this.variables.remove(auth, key, meta);
+  }
+}
 
 @Controller('email-templates')
 export class EmailTemplatesController {
@@ -37,14 +68,26 @@ export class EmailTemplatesController {
 
   @Get()
   @RequirePermissions('sequences:read')
-  list(@Auth() auth: AuthContext) {
-    return this.templates.list(auth);
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(templateListQuery)) q: z.infer<typeof templateListQuery>) {
+    return this.templates.list(auth, q);
+  }
+
+  @Get('categories')
+  @RequirePermissions('sequences:read')
+  categories(@Auth() auth: AuthContext) {
+    return this.templates.categories(auth);
   }
 
   @Get(':id')
   @RequirePermissions('sequences:read')
   get(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.templates.get(auth, id);
+  }
+
+  @Post(':id/duplicate')
+  @RequirePermissions('sequences:write')
+  duplicate(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.templates.duplicate(auth, id, meta);
   }
 
   @Post()
@@ -79,6 +122,7 @@ export class SequencesController {
   constructor(
     private readonly sequences: SequencesService,
     private readonly runner: SequenceRunner,
+    private readonly analyticsService: EmailAnalyticsService,
   ) {}
 
   @Get()
@@ -117,6 +161,12 @@ export class SequencesController {
   @RequirePermissions('marketing:manage')
   removeSuppression(@Auth() auth: AuthContext, @Param('email') email: string, @Body(new ZodPipe(removeSuppression)) body: z.infer<typeof removeSuppression>, @Meta() meta: RequestMeta) {
     return this.sequences.removeSuppression(auth, email, body.reason, meta);
+  }
+
+  @Get('analytics')
+  @RequirePermissions('sequences:read')
+  analytics(@Auth() auth: AuthContext, @Query(new ZodPipe(emailAnalyticsQuerySchema)) q: EmailAnalyticsQuery) {
+    return this.analyticsService.analytics(auth, q);
   }
 
   @Get(':id')

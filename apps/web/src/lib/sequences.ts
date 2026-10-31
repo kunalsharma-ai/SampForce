@@ -1,12 +1,24 @@
-import type { EmailTemplateRow, EnrollmentRow, SequenceRow, SequenceStepStats, SuppressionRow } from '@dealflow/types';
+import type { EmailAnalytics, EmailTemplateRow, EmailVariableRow, EnrollmentRow, SequenceRow, SequenceStepStats, SuppressionRow } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { api } from './api';
 import { toQuery } from './crm';
 
 /** Data hooks for email templates, sequences, enrolments and the do-not-email list. */
 
-export function useTemplates() {
-  return useQuery({ queryKey: ['email-templates'], queryFn: () => api<EmailTemplateRow[]>('/email-templates') });
+export function useTemplates(filter: { category?: string; campaignId?: string } = {}) {
+  return useQuery({ queryKey: ['email-templates', filter], queryFn: () => api<EmailTemplateRow[]>(`/email-templates${toQuery(filter)}`) });
+}
+
+export function useTemplateCategories() {
+  return useQuery({ queryKey: ['email-templates', 'categories'], queryFn: () => api<string[]>('/email-templates/categories') });
+}
+
+export function useEmailVariables() {
+  return useQuery({ queryKey: ['email-variables'], queryFn: () => api<EmailVariableRow[]>('/email-variables') });
+}
+
+export function useEmailAnalytics(days: number, scope: 'mine' | 'team') {
+  return useQuery({ queryKey: ['sequences', 'analytics', days, scope], queryFn: () => api<EmailAnalytics>(`/sequences/analytics${toQuery({ days, scope })}`) });
 }
 
 export function useSequences() {

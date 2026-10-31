@@ -218,6 +218,7 @@ model Tenant {
   ssoIdentities          SsoIdentity[]
   scimTokens             ScimToken[]
   finderLookups          FinderLookup[]
+  emailVariables         EmailVariable[]
 
   @@map("tenants")
 }
@@ -1434,9 +1435,10 @@ model Campaign {
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  leads  Lead[]
-  forms  LeadForm[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads          Lead[]
+  forms          LeadForm[]
+  emailTemplates EmailTemplate[]
 
   @@unique([tenantId, name])
   @@map("campaigns")
@@ -1892,20 +1894,41 @@ enum SuppressionReason {
 
 /// Reusable email text with merge fields. Personal unless shared.
 model EmailTemplate {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  name      String
-  subject   String
-  body      String
-  shared    Boolean  @default(false)
-  ownerId   String?  @map("owner_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  name       String
+  subject    String
+  body       String
+  shared     Boolean  @default(false)
+  category   String?
+  campaignId String?  @map("campaign_id") @db.Uuid
+  ownerId    String?  @map("owner_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, ownerId])
+  @@index([tenantId, category])
+  @@map("email_templates")
+}
+
+/// Workspace email variables: {{var.key}} in templates and sequences.
+model EmailVariable {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  key         String
+  label       String
+  value       String   @default("")
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, ownerId])
-  @@map("email_templates")
+  @@unique([tenantId, key])
+  @@map("email_variables")
 }
 
 /// A person-built series of emails, tasks and checks, sent one-to-one from each sender's own mailbox.

@@ -107,6 +107,7 @@ import {
   updateMemberRoleSchema,
   updateTenantSchema,
   z,
+  emailVariableInputSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -337,7 +338,13 @@ export function buildOpenApiDocument(): object {
   action('put', '/forms/{id}', 'Marketing', 'Update a form (marketing:manage)', leadFormInputSchema);
   action('get', '/forms/{id}/submissions', 'Marketing', 'Latest 50 submissions (marketing:read, leads:read)');
   // Phase 9: email templates and sequences
-  action('get', '/email-templates', 'Sequences', 'Your templates and shared ones (sequences:read)');
+  action('get', '/email-templates', 'Sequences', 'Your templates and shared ones, optionally by category or campaign (sequences:read)', undefined, { query: z.object({ category: z.string().max(40).optional(), campaignId: z.string().uuid().optional() }) });
+  action('get', '/email-templates/categories', 'Sequences', 'Categories in use on templates you can see (sequences:read)');
+  r.registerPath({ method: 'post', path: '/email-templates/{id}/duplicate', tags: ['Sequences'], summary: 'Copy a template as a private "(copy)" (sequences:write)', security: secured, request: { params: idParam }, responses: { 201: ok('Template'), ...notFound, ...errors } });
+  action('get', '/email-variables', 'Sequences', 'Workspace email variables, used as {{var.key}} (sequences:read)');
+  action('put', '/email-variables', 'Sequences', 'Create or change a workspace variable, up to 50 (marketing:manage)', emailVariableInputSchema);
+  r.registerPath({ method: 'delete', path: '/email-variables/{key}', tags: ['Sequences'], summary: 'Delete a variable no template or live sequence uses (marketing:manage)', security: secured, request: { params: z.object({ key: z.string() }) }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('get', '/sequences/analytics', 'Sequences', 'Sequence email results by sequence, mailbox, template and follow-up position; opens are estimates; team scope needs marketing:manage (sequences:read)', undefined, { query: z.object({ days: z.number().int().min(1).max(365).optional(), scope: z.enum(['mine', 'team']).optional() }) });
   r.registerPath({ method: 'post', path: '/email-templates', tags: ['Sequences'], summary: 'Create a template; sharing needs marketing:manage (sequences:write)', security: secured, request: body(emailTemplateInputSchema), responses: { 201: ok('Template'), ...errors } });
   action('put', '/email-templates/{id}', 'Sequences', 'Update a template (owner or marketing:manage)', emailTemplateInputSchema);
   r.registerPath({ method: 'delete', path: '/email-templates/{id}', tags: ['Sequences'], summary: 'Delete a template not used by a sequence (sequences:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });

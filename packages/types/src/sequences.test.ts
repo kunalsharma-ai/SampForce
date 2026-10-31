@@ -87,3 +87,21 @@ describe('pickVariant', () => {
     expect(b).toBeLessThan(1100);
   });
 });
+
+describe('custom fields and workspace variables in merge tags', () => {
+  it('fills custom.* and var.* tags, reports gaps and leaves other dotted tags alone', () => {
+    const r = renderMerge('Hi {{first_name}}, region {{custom.region}}. Book: {{var.booking_link}} {{custom.tier|standard}} {{other.thing}}', {
+      first_name: 'Ana',
+      'custom.region': 'EMEA',
+      'var.booking_link': '',
+    });
+    expect(r.text).toBe('Hi Ana, region EMEA. Book:  standard {{other.thing}}');
+    expect(r.missing).toEqual(['var.booking_link']);
+    expect(r.unknown).toEqual(['other.thing']);
+  });
+
+  it('accepts custom and variable tags in templates but still rejects unknown ones', () => {
+    expect(emailTemplateInputSchema.safeParse({ name: 'T', subject: 'For {{custom.region}}', body: '{{var.booking_link}}' }).success).toBe(true);
+    expect(emailTemplateInputSchema.safeParse({ name: 'T', subject: 'Hi {{nickname}}', body: 'x' }).success).toBe(false);
+  });
+});
