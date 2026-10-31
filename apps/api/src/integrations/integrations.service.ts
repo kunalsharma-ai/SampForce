@@ -244,6 +244,7 @@ export class IntegrationsService {
               organizer: e.organizer,
               canceled: e.canceled,
               contactIds,
+              joinUrl: e.joinUrl?.slice(0, 1000) ?? null,
             };
             await tx.meeting.upsert({
               where: { connectionId_providerEventId: { connectionId: conn.id, providerEventId: e.providerEventId } },

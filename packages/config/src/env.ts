@@ -65,6 +65,11 @@ export const apiEnvSchema = z.object({
   /** Optional data provider for the email finder (Hunter.io). Unset = DealFlow's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
+  /** Optional speech-to-text for meeting recordings (Deepgram). Unset = paste a transcript or notes instead. */
+  DEEPGRAM_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
+  DEEPGRAM_API_BASE_URL: z.string().url().default('https://api.deepgram.com'),
+  /** Largest recording accepted for transcription, in megabytes. The audio is never stored. */
+  MEETING_UPLOAD_MAX_MB: z.coerce.number().int().min(1).max(500).default(100),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),

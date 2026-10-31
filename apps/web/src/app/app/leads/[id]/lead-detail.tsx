@@ -7,7 +7,8 @@ import { AlertTriangle, ArrowRightLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LeadQualificationCard, MeetingNotesButton } from '@/components/ai/record-ai';
+import { LeadQualificationCard } from '@/components/ai/record-ai';
+import { RecordMeetings } from '@/components/meetings/record-meetings';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
@@ -97,9 +98,7 @@ export function LeadDetail({ id }: { id: string }) {
           <RecordIntelligencePanel entity="lead" id={id} name={l.fullName} />
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
-          <div className="flex flex-wrap gap-2">
-            <MeetingNotesButton target={{ leadId: id }} />
-          </div>
+          <RecordMeetings target={{ leadId: id }} />
           <RecordSequences leadId={id} email={l.email} />
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />

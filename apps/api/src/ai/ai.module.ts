@@ -12,11 +12,14 @@ import { EmailAssistantService } from './email-assistant.service';
 import { ForecastService } from './forecast.service';
 import { AI_PROVIDER, AiGateway, providerFactory } from './gateway.service';
 import { RecordContextBuilder } from './record-context';
+import { DeepgramClient } from '../meetings/deepgram';
+import { MeetingRecordsController } from '../meetings/meeting-records.controller';
+import { MeetingRecordsService } from '../meetings/meeting-records.service';
 
 /** Phase 4: AI gateway, Copilot, agents and forecasting. */
 @Module({
   imports: [CrmModule, IntelligenceModule],
-  controllers: [AiController, ForecastController],
+  controllers: [AiController, ForecastController, MeetingRecordsController],
   providers: [
     { provide: AI_PROVIDER, inject: [API_ENV], useFactory: (env: ApiEnv) => providerFactory(env) },
     AiGateway,
@@ -28,6 +31,8 @@ import { RecordContextBuilder } from './record-context';
     AgentsService,
     EmailAssistantService,
     AiRunner,
+    DeepgramClient,
+    MeetingRecordsService,
   ],
   exports: [AiRunner, AiGateway],
 })

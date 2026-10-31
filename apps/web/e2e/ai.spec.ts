@@ -80,13 +80,15 @@ test('lead scoring, deal health and meeting notes on record pages', async ({ pag
   await expect(page.getByText('Task created.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Meeting notes' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Meeting notes' });
-  await dialog.getByLabel('Notes').fill('Kick-off call with Navy about the rollout.\n- Send the security questionnaire\n- Book a demo for the ops team');
-  await dialog.getByRole('button', { name: 'Summarise' }).click();
-  await expect(dialog.getByText('Send the security questionnaire')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Meeting notes', level: 1 })).toBeVisible();
+  await page.getByLabel('Notes or transcript').fill("Speaker 0: Hi, I'm Priya.\nSpeaker 1: I'm Tom. We need SSO before rollout.\nSpeaker 0: I'll send the security questionnaire by Friday.\nSpeaker 0: We'll book a demo for the ops team.");
+  await page.getByRole('button', { name: 'Save notes' }).click();
+  await page.getByRole('button', { name: 'Analyse with AI' }).click();
+  await expect(page.getByLabel('Action 1', { exact: true })).toHaveValue(/send the security questionnaire/);
+  await page.getByRole('button', { name: 'Save reviewed version' }).click();
+  await page.getByRole('button', { name: 'Create 2 tasks' }).click();
+  await expect(page.getByText('2 tasks created from this meeting.')).toBeVisible();
   await expectNoA11yViolations(page);
-  await dialog.getByRole('button', { name: 'Create 2 tasks' }).click();
-  await expect(dialog.getByText('2 tasks created.')).toBeVisible();
 });
 
 test('forecast, snapshots and the AI workflow draft', async ({ page }) => {

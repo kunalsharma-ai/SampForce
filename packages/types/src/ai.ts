@@ -58,12 +58,12 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
   meeting_notes: {
     key: 'meeting_notes',
     name: 'Meeting Notes',
-    purpose: 'Turns meeting notes you paste in into a summary, action items and a follow-up email draft.',
+    purpose: 'Turns meeting notes or a transcript into a summary, key points, requirements, objections, action items, commitments, speakers and a follow-up email draft for you to review.',
     tier: 'balanced',
     permission: 'activities:write',
     withoutModel: null,
-    can: ['Read the notes you provide and the related record', 'Propose tasks and a draft follow-up'],
-    cannot: ['Record or transcribe meetings', 'Send the follow-up'],
+    can: ['Read the notes or transcript you provide and the related record', 'Propose tasks, a record note and a draft follow-up for you to review'],
+    cannot: ['Join or record meetings', 'Transcribe audio (a separate speech-to-text service does that when configured)', 'Create tasks or notes without your review', 'Send the follow-up'],
   },
   proposal_draft: {
     key: 'proposal_draft',
