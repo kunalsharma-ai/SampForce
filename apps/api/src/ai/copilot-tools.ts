@@ -6,6 +6,9 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { SearchService } from '../crm/search.service';
 import { TasksService } from '../crm/tasks.service';
+import { DealHealthService } from '../intelligence/deal-health.service';
+import { InsightsService } from '../intelligence/insights.service';
+import { NextActionsService } from '../intelligence/next-actions.service';
 import { ForecastService } from './forecast.service';
 import type { ModelTool } from './provider';
 import { PermissionDenied, READ_PERMISSION, RecordContextBuilder, type RecordType } from './record-context';
@@ -47,6 +50,9 @@ export class CopilotTools {
     private readonly tasks: TasksService,
     private readonly records: RecordContextBuilder,
     private readonly forecast: ForecastService,
+    private readonly nextActions: NextActionsService,
+    private readonly insights: InsightsService,
+    private readonly dealHealth: DealHealthService,
   ) {
     this.defs = [
       {
@@ -106,6 +112,47 @@ export class CopilotTools {
           input_schema: schema({}),
         },
         run: (auth) => this.pipelineSummary(auth),
+      },
+      {
+        needs: ['dashboard:read'],
+        tool: {
+          name: 'my_next_actions',
+          description: 'The signed-in person’s ranked next best actions (replies waiting, overdue tasks, risky deals, quotes, renewals, new leads), each with the rule that produced it.',
+          strict: true,
+          input_schema: schema({}),
+        },
+        run: async (auth, _input, state) => {
+          const list = await this.nextActions.list(auth);
+          for (const i of list.items) this.cite(state, i.record.type, i.record.id, i.record.name);
+          return { actions: list.items.slice(0, 15).map((i) => ({ kind: i.kind, title: i.title, reason: i.reason, record: i.record })) };
+        },
+      },
+      {
+        needs: ['dashboard:read'],
+        tool: {
+          name: 'sales_insights',
+          description: 'This week against last week: risky deals, new pipeline, wins, emails received, overdue tasks, untouched leads, sequence reply rate, renewals, customers at risk. Use it for a briefing.',
+          strict: true,
+          input_schema: schema({ scope: { type: 'string', enum: ['mine', 'team'] } }),
+        },
+        run: async (auth, input) => {
+          const feed = await this.insights.feed(auth, input.scope === 'team' ? 'team' : 'mine');
+          return { period: `last 7 days from ${feed.periodStart.slice(0, 10)}`, currency: feed.currency, insights: feed.items.map(({ title, detail, tone }) => ({ title, detail, tone })) };
+        },
+      },
+      {
+        needs: ['deals:read'],
+        tool: {
+          name: 'deals_at_risk',
+          description: 'Open deals by stored health score (lowest first) with the signals behind each score, from the hourly deal health monitor.',
+          strict: true,
+          input_schema: schema({ risk: { type: 'string', enum: ['high', 'medium', 'low'] }, mine_only: { type: 'boolean' } }),
+        },
+        run: async (auth, input, state) => {
+          const rows = await this.dealHealth.list(auth, { risk: input.risk as 'high' | 'medium' | 'low', mine: input.mine_only === true });
+          for (const r of rows) state.citations.set(`deal:${r.deal.id}`, { entity: 'deal', id: r.deal.id, label: r.deal.name });
+          return { deals: rows.slice(0, 20).map((r) => ({ id: r.deal.id, name: r.deal.name, stage: r.deal.stage, amount: r.deal.amount, currency: r.deal.currency, health: r.health, change7d: r.change7d, signals: r.signals.map((x) => x.label), owner: r.owner?.name ?? null })) };
+        },
       },
       {
         needs: ['activities:read'],
@@ -207,6 +254,10 @@ export class CopilotTools {
       const message = err instanceof PermissionDenied ? err.message : err instanceof Error && 'status' in err ? err.message : 'The lookup failed.';
       return { ok: false, content: JSON.stringify({ error: message }) };
     }
+  }
+
+  private cite(state: ToolRunState, type: string, id: string, label: string): void {
+    if (type === 'lead' || type === 'contact' || type === 'company' || type === 'deal') state.citations.set(`${type}:${id}`, { entity: type, id, label });
   }
 
   private propose(state: ToolRunState, tool: ProposedAction['tool'], title: string, permission: Permission, input: Record<string, unknown>) {

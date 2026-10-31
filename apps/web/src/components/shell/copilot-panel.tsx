@@ -6,12 +6,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bot, Check, Loader2, RotateCcw, Send, ShieldCheck, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useCopilot } from '@/stores/copilot';
 import { Textarea } from '@/components/crm/select';
 import { aiErrorMessage, agentReason, useAiStatus } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
 
-const EXAMPLES = ['Summarise my open pipeline.', 'Which of my deals close this month?', 'What tasks are overdue?'];
+const EXAMPLES = ['Brief me on my week: what needs attention?', 'Summarise my open pipeline.', 'Which of my deals close this month?', 'What tasks are overdue?'];
 
 const citationHref = (c: Citation) => (c.entity === 'task' ? '/app/activities' : `/app/${c.entity === 'company' ? 'companies' : `${c.entity}s`}/${c.id}`);
 
@@ -48,6 +49,15 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
   }, [turns]);
+
+  // "Ask Copilot" buttons elsewhere open the panel with a question ready to send.
+  const takePending = useCopilot((s) => s.takePending);
+  const pending = useCopilot((s) => s.pending);
+  useEffect(() => {
+    if (!open || !pending || !canUse) return;
+    const q = takePending();
+    if (q && !ask.isPending) ask.mutate(q);
+  }, [open, pending, canUse, takePending, ask]);
 
   const submit = (q: string) => {
     const text = q.trim();

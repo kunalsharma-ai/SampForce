@@ -1,6 +1,7 @@
 'use client';
 
-import { KanbanSquare, List } from 'lucide-react';
+import { HeartPulse, KanbanSquare, List } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { DealsBoard } from '@/components/crm/deals-board';
 import { RecordList } from '@/components/crm/record-list';
@@ -77,6 +78,9 @@ export function DealsView() {
           <>
             {pipelinePicker}
             {toggle}
+            <Link href="/app/deals/health" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium hover:bg-muted">
+              <HeartPulse className="size-3.5" aria-hidden /> Deal health
+            </Link>
           </>
         }
         hideTable={view === 'board'}

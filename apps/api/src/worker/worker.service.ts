@@ -8,6 +8,7 @@ import { ContractsService } from '../commercial/contracts.service';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { SuccessService } from '../revenue/success.service';
+import { DealHealthService } from '../intelligence/deal-health.service';
 import { SequenceRunner } from '../sequences/sequence-runner.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
@@ -48,6 +49,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly aiRunner: AiRunner,
     private readonly contracts: ContractsService,
     private readonly success: SuccessService,
+    private readonly dealHealth: DealHealthService,
     private readonly billing: BillingService,
     private readonly sequences: SequenceRunner,
     @Inject(API_ENV) private readonly env: ApiEnv,
@@ -96,7 +98,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const syncs = await this.integrations.syncDue();
     const aiRuns = await this.aiRunner.runDue();
     const contracts = await this.contracts.runDue();
-    const health = await this.success.sweep();
+    const health = (await this.success.sweep()) + (await this.dealHealth.sweep());
     const billing = await this.billing.runDue();
     const sequences = await this.sequences.runDue();
     return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences };

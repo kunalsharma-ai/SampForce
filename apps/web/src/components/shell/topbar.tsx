@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Permission } from '@dealflow/types';
 import { useSession, useSignOut, useSwitchTenant } from '@/lib/session';
+import { useCopilot } from '@/stores/copilot';
 import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 import { Logo } from '../logo';
 import { CommandPalette } from './command-palette';
@@ -70,7 +71,8 @@ export function Topbar() {
   const signOut = useSignOut();
   const switchTenant = useSwitchTenant();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [copilotOpen, setCopilotOpen] = useState(false);
+  const copilotOpen = useCopilot((s) => s.open);
+  const setCopilotOpen = useCopilot((s) => s.setOpen);
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {

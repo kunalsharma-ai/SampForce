@@ -5,12 +5,14 @@ import type { DashboardSummary } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { ActivityStream } from '@/components/command-center/activity-stream';
+import { SalesInsights } from '@/components/command-center/insights';
 import { KpiGrid } from '@/components/command-center/kpi-grid';
+import { NextActions } from '@/components/command-center/next-actions';
 import { OnboardingChecklist } from '@/components/command-center/onboarding';
 import { PipelineChart } from '@/components/command-center/pipeline-chart';
 import { PageHeader } from '@/components/page-header';
 import { api } from '@/lib/api';
-import { useSession } from '@/lib/session';
+import { useCan, useSession } from '@/lib/session';
 
 
 export function CommandCenter() {
@@ -21,6 +23,7 @@ export function CommandCenter() {
     refetchInterval: 60_000,
   });
   const firstName = session?.user.name.split(' ')[0];
+  const canDashboard = useCan('dashboard:read');
 
   return (
     <div className="space-y-6">
@@ -40,6 +43,15 @@ export function CommandCenter() {
       />
 
       <OnboardingChecklist />
+
+      {canDashboard && (
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <NextActions />
+          </div>
+          <SalesInsights />
+        </div>
+      )}
 
       {summary.isPending ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-busy="true" aria-label="Loading metrics">

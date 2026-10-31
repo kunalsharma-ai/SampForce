@@ -87,7 +87,7 @@ export function LeadDetail({ id }: { id: string }) {
             </CardContent>
           </Card>
           <RecordEmails leadId={id} email={l.email} />
-          <ActivityTimeline related={{ leadId: id }} />
+          <ActivityTimeline related={{ leadId: id }} timeline={{ entity: 'lead', id }} />
         </div>
         <div className="space-y-4">
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />

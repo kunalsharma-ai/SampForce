@@ -28,7 +28,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <RelatedContacts companyId={id} />
           <RelatedDeals filter={{ companyId: id }} />
           <CompanyCommercial company={{ id, name: c.name }} />
-          <ActivityTimeline related={{ companyId: id }} />
+          <ActivityTimeline related={{ companyId: id }} timeline={{ entity: 'company', id }} />
         </div>
         <div className="space-y-4">
           <Card>

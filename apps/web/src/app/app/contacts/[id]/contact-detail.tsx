@@ -49,7 +49,7 @@ export function ContactDetail({ id }: { id: string }) {
           </Card>
           <RelatedDeals filter={{ contactId: id }} />
           <RecordEmails contactId={id} email={c.email} />
-          <ActivityTimeline related={{ contactId: id }} />
+          <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />
         </div>
         <div className="space-y-4">
           <RecordSequences contactId={id} email={c.email} />
