@@ -2,14 +2,17 @@ import type {
   ApprovalRow,
   EmailRow,
   ExecutionRow,
+  InboxThread,
+  InboxThreadRow,
   MeetingRow,
   NotificationRow,
   ProviderStatus,
+  SyncLogRow,
   WebhookRow,
   WorkflowDefinition,
   WorkflowRow,
 } from '@dealflow/types';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from './api';
 import { toQuery } from './crm';
 
@@ -89,3 +92,22 @@ export const EXECUTION_LABEL = {
   FAILED: 'Failed',
   CANCELED: 'Canceled',
 } as const;
+
+export type InboxFilters = { status?: string; category?: string; assigned?: string; mine?: string; linked?: string; q?: string; dealId?: string; contactId?: string; leadId?: string };
+
+export function useInboxThreads(params: InboxFilters, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ['inbox', 'list', params],
+    queryFn: () => api<{ items: InboxThreadRow[]; nextCursor: string | null }>(`/inbox/threads${toQuery({ ...params, limit: 50 })}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useInboxThread(id: string | null) {
+  return useQuery({ enabled: !!id, queryKey: ['inbox', 'detail', id], queryFn: () => api<InboxThread>(`/inbox/threads/${id}`) });
+}
+
+export function useSyncLogs(enabled: boolean) {
+  return useQuery({ enabled, queryKey: ['inbox', 'sync-logs'], queryFn: () => api<SyncLogRow[]>('/inbox/sync-logs') });
+}

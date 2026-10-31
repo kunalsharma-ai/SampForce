@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DealIntelligenceCard, MeetingNotesButton, ProposalButton } from '@/components/ai/record-ai';
 import { DealHealthTrend } from '@/components/crm/deal-health-trend';
+import { RecordConversations } from '@/components/crm/record-conversations';
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -133,6 +134,7 @@ export function DealDetail({ id }: { id: string }) {
             </CardContent>
           </Card>
           <DealQuotes deal={{ id, name: d.name }} />
+          <RecordConversations dealId={id} />
           <ActivityTimeline related={{ opportunityId: id }} timeline={{ entity: 'deal', id }} />
         </div>
         <div className="space-y-4">

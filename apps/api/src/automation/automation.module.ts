@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { CrmModule } from '../crm/crm.module';
 import { CommunicationService } from '../integrations/communication.service';
-import { CommunicationController, IntegrationsController } from '../integrations/integrations.controller';
+import { CommunicationController, InboxController, IntegrationsController } from '../integrations/integrations.controller';
+import { InboxService } from '../integrations/inbox.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { NotificationsController } from '../notifications/notifications.controller';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -19,7 +20,7 @@ import { WorkflowsService } from './workflows.service';
 /** Phase 3: outbox relay, workflow engine, approvals, notifications, webhooks and mailbox integrations. */
 @Module({
   imports: [CrmModule],
-  controllers: [WorkflowsController, ApprovalsController, NotificationsController, WebhooksController, IntegrationsController, CommunicationController],
+  controllers: [WorkflowsController, ApprovalsController, NotificationsController, WebhooksController, IntegrationsController, CommunicationController, InboxController],
   providers: [
     AutomationRecords,
     WorkflowActions,
@@ -32,6 +33,7 @@ import { WorkflowsService } from './workflows.service';
     WebhookDeliverer,
     IntegrationsService,
     CommunicationService,
+    InboxService,
   ],
   exports: [EventRelay, WorkflowExecutor, WebhookDeliverer, ApprovalsService, IntegrationsService, CommunicationService, NotificationsService],
 })

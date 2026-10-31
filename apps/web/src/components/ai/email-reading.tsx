@@ -32,7 +32,7 @@ export function EmailReading({ emailId, from, onReply }: { emailId: string; from
     mutationFn: () => api<EmailAnalysis>('/ai/email/analyse', { method: 'POST', json: { emailId } }),
     onSuccess: async (a) => {
       qc.setQueryData(['ai', 'email-analysis', emailId], { analysis: a });
-      await qc.invalidateQueries({ queryKey: ['emails'] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ['emails'] }), qc.invalidateQueries({ queryKey: ['inbox'] })]);
     },
   });
   const suppress = useMutation({ mutationFn: () => api<{ added: number }>('/sequences/suppressions', { method: 'POST', json: { emails: [from] } }) });

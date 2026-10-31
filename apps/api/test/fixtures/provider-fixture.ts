@@ -25,6 +25,7 @@ export interface GmailFixtureMessage {
   body: string;
   internalDate: number;
   labels?: string[];
+  threadId?: string;
 }
 
 export interface ProviderFixture {
@@ -83,7 +84,7 @@ export async function startProviderFixture(): Promise<ProviderFixture> {
       if (!m) return json(404, { error: { message: 'Not found' } });
       return json(200, {
         id: m.id,
-        threadId: `t-${m.id}`,
+        threadId: m.threadId ?? `t-${m.id}`,
         internalDate: String(m.internalDate),
         snippet: m.body.slice(0, 40),
         labelIds: m.labels ?? ['INBOX'],
@@ -101,7 +102,7 @@ export async function startProviderFixture(): Promise<ProviderFixture> {
     if (p === '/gmail/v1/users/me/messages/send' && req.method === 'POST') {
       if (!authed()) return;
       state.sent.push({ provider: 'google', body });
-      return json(200, { id: `sent-${state.sent.length}`, threadId: 'thread-sent' });
+      return json(200, { id: `sent-${state.sent.length}`, threadId: (JSON.parse(body) as { threadId?: string }).threadId ?? 'thread-sent' });
     }
     if (p === '/calendar/v3/calendars/primary/events') return authed() && json(200, { items: state.googleEvents });
 

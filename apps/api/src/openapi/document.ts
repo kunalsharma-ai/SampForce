@@ -75,6 +75,9 @@ import {
   workflowDraftRequestSchema,
   activityInputSchema,
   approvalDecisionSchema,
+  inboxNoteSchema,
+  inboxQuerySchema,
+  inboxUpdateSchema,
   sendEmailSchema,
   simulateSchema,
   webhookInputSchema,
@@ -201,7 +204,7 @@ export function buildOpenApiDocument(): object {
   crud('/contacts', 'Contacts', 'contacts', contactInputSchema, contactUpdateSchema);
   crud('/companies', 'Companies', 'companies', companyInputSchema, companyUpdateSchema);
   crud('/deals', 'Deals', 'deals', dealInputSchema, dealUpdateSchema);
-  const action = (method: 'get' | 'post' | 'put' | 'delete', path: string, tag: string, summary: string, schema?: z.ZodTypeAny, extra: object = {}) =>
+  const action = (method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, tag: string, summary: string, schema?: z.ZodTypeAny, extra: object = {}) =>
     r.registerPath({ method, path, tags: [tag], summary, security: secured,
       request: { ...(path.includes('{id}') ? { params: idParam } : {}), ...(schema ? body(schema) : {}), ...extra },
       responses: { 200: ok('OK'), ...notFound, ...errors } });
@@ -269,7 +272,12 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
-  action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies (activities:write)", sendEmailSchema);
+  action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);
+  action('get', '/inbox/threads', 'Communication', 'Inbox conversations, newest first, with filters, search and cursor paging (activities:read)', undefined, { query: inboxQuerySchema });
+  action('get', '/inbox/threads/{id}', 'Communication', 'A conversation with its messages, tracking for sequence emails, and internal notes (activities:read)');
+  action('patch', '/inbox/threads/{id}', 'Communication', 'Set status, category, assignee, or the linked deal, contact or lead; the assignee is notified (activities:write)', inboxUpdateSchema);
+  action('post', '/inbox/threads/{id}/notes', 'Communication', 'Add an internal note; the assignee and mailbox owner are notified (activities:write)', inboxNoteSchema);
+  action('get', '/inbox/sync-logs', 'Communication', 'Mailbox sync history: your own mailboxes, or all with integrations:manage (activities:read)');
   action('get', '/meetings', 'Communication', 'Synced meetings with known contacts (activities:read)', undefined, { query: z.object({ from: z.string().optional(), to: z.string().optional(), contactId: z.string().uuid().optional() }) });
 
   // AI: every route also needs ai:use; model calls are metered in credits and can return 402/409/429/503.

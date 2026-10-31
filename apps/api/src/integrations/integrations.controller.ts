@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { sendEmailSchema, type SendEmailInput, z } from '@dealflow/types';
+import { type InboxQuery, inboxNoteSchema, inboxQuerySchema, type InboxUpdate, inboxUpdateSchema, sendEmailSchema, type SendEmailInput, z } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { CommunicationService } from './communication.service';
+import { InboxService } from './inbox.service';
 import { IntegrationsService } from './integrations.service';
 
 const callbackQuery = z.object({ code: z.string().max(4000).optional(), state: z.string().max(4000).optional(), error: z.string().max(200).optional() });
@@ -108,5 +109,41 @@ export class CommunicationController {
     const from = q.from ? new Date(q.from) : new Date(Date.now() - 30 * 86_400_000);
     const to = q.to ? new Date(q.to) : new Date(Date.now() + 60 * 86_400_000);
     return this.communication.listMeetings(auth, { from, to, contactId: q.contactId });
+  }
+}
+
+/** Enhancement feature 8: conversations, assignment, categories, notes and mailbox sync logs. */
+@Controller('inbox')
+export class InboxController {
+  constructor(private readonly inbox: InboxService) {}
+
+  @Get('threads')
+  @RequirePermissions('activities:read')
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(inboxQuerySchema)) q: InboxQuery) {
+    return this.inbox.list(auth, q);
+  }
+
+  @Get('threads/:id')
+  @RequirePermissions('activities:read')
+  get(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string) {
+    return this.inbox.get(auth, id);
+  }
+
+  @Patch('threads/:id')
+  @RequirePermissions('activities:write')
+  update(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body(new ZodPipe(inboxUpdateSchema)) body: InboxUpdate, @Meta() meta: RequestMeta) {
+    return this.inbox.update(auth, id, body, meta);
+  }
+
+  @Post('threads/:id/notes')
+  @RequirePermissions('activities:write')
+  note(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Body(new ZodPipe(inboxNoteSchema)) body: { body: string }, @Meta() meta: RequestMeta) {
+    return this.inbox.addNote(auth, id, body.body, meta);
+  }
+
+  @Get('sync-logs')
+  @RequirePermissions('activities:read')
+  syncLogs(@Auth() auth: AuthContext) {
+    return this.inbox.syncLogs(auth);
   }
 }

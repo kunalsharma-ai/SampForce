@@ -5,8 +5,8 @@ import { toQuery } from './crm';
 
 /** Data hooks for email templates, sequences, enrolments and the do-not-email list. */
 
-export function useTemplates(filter: { category?: string; campaignId?: string } = {}) {
-  return useQuery({ queryKey: ['email-templates', filter], queryFn: () => api<EmailTemplateRow[]>(`/email-templates${toQuery(filter)}`) });
+export function useTemplates(filter: { category?: string; campaignId?: string } = {}, enabled = true) {
+  return useQuery({ enabled, queryKey: ['email-templates', filter], queryFn: () => api<EmailTemplateRow[]>(`/email-templates${toQuery(filter)}`) });
 }
 
 export function useTemplateCategories() {

@@ -219,6 +219,9 @@ model Tenant {
   scimTokens             ScimToken[]
   finderLookups          FinderLookup[]
   emailVariables         EmailVariable[]
+  emailThreads           EmailThread[]
+  emailThreadNotes       EmailThreadNote[]
+  integrationSyncLogs    IntegrationSyncLog[]
 
   @@map("tenants")
 }
@@ -576,18 +579,19 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
-  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pipeline    Pipeline          @relation(fields: [pipelineId], references: [id])
-  stage       PipelineStage     @relation(fields: [stageId], references: [id])
-  company     Company?          @relation(fields: [companyId], references: [id])
-  contact     Contact?          @relation(fields: [contactId], references: [id])
-  activities  Activity[]
-  tasks       Task[]
-  quotes      Quote[]
-  contracts   Contract[]
-  stageEvents DealStageEvent[]
-  healthScore DealHealthScore?
-  healthDays  DealHealthDaily[]
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline     Pipeline          @relation(fields: [pipelineId], references: [id])
+  stage        PipelineStage     @relation(fields: [stageId], references: [id])
+  company      Company?          @relation(fields: [companyId], references: [id])
+  contact      Contact?          @relation(fields: [contactId], references: [id])
+  activities   Activity[]
+  tasks        Task[]
+  quotes       Quote[]
+  contracts    Contract[]
+  stageEvents  DealStageEvent[]
+  healthScore  DealHealthScore?
+  healthDays   DealHealthDaily[]
+  emailThreads EmailThread[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -998,9 +1002,11 @@ model IntegrationConnection {
   createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   emails   EmailMessage[]
   meetings Meeting[]
+  threads  EmailThread[]
+  syncLogs IntegrationSyncLog[]
 
   @@unique([tenantId, userId, provider])
   @@index([status, nextSyncAt])
@@ -1031,14 +1037,18 @@ model EmailMessage {
   /// The Email Assistant's latest reading of a received email (EMAIL_INTENTS); a model's judgement, not a fact.
   aiIntent          String?        @map("ai_intent")
   aiAnalysedAt      DateTime?      @map("ai_analysed_at") @db.Timestamptz(3)
+  /// Set by a database trigger on insert; see email_messages_join_thread().
+  conversationId    String?        @map("conversation_id") @db.Uuid
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  conversation EmailThread?          @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@unique([connectionId, providerMessageId])
   @@index([tenantId, contactId, sentAt(sort: Desc)])
   @@index([tenantId, leadId, sentAt(sort: Desc)])
+  @@index([conversationId, sentAt])
   @@map("email_messages")
 }
 
@@ -2147,4 +2157,74 @@ model NextActionDecision {
   @@unique([tenantId, userId, key])
   @@index([tenantId, userId, createdAt])
   @@map("next_action_decisions")
+}
+
+/// Inbox conversation (feature 8): stored messages grouped by provider thread. Rows are created by a trigger on email_messages.
+model EmailThread {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  connectionId  String   @map("connection_id") @db.Uuid
+  threadKey     String   @map("thread_key")
+  subject       String
+  /// OPEN, WAITING or CLOSED
+  status        String   @default("OPEN")
+  category      String?
+  assignedToId  String?  @map("assigned_to_id") @db.Uuid
+  contactId     String?  @map("contact_id") @db.Uuid
+  leadId        String?  @map("lead_id") @db.Uuid
+  dealId        String?  @map("deal_id") @db.Uuid
+  messageCount  Int      @default(0) @map("message_count")
+  lastMessageAt DateTime @map("last_message_at") @db.Timestamptz(3)
+  lastDirection String   @map("last_direction")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  deal       Opportunity?          @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  messages   EmailMessage[]
+  notes      EmailThreadNote[]
+
+  @@unique([connectionId, threadKey])
+  @@index([tenantId, lastMessageAt(sort: Desc)])
+  @@index([tenantId, assignedToId])
+  @@index([tenantId, dealId])
+  @@map("email_threads")
+}
+
+model EmailThreadNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  threadId  String   @map("thread_id") @db.Uuid
+  authorId  String?  @map("author_id") @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  thread EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("email_thread_notes")
+}
+
+/// One row per mailbox sync attempt, kept for the connection log.
+model IntegrationSyncLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  connectionId String   @map("connection_id") @db.Uuid
+  /// manual or scheduled
+  trigger      String
+  ok           Boolean
+  emails       Int      @default(0)
+  meetings     Int      @default(0)
+  error        String?
+  startedAt    DateTime @map("started_at") @db.Timestamptz(3)
+  finishedAt   DateTime @default(now()) @map("finished_at") @db.Timestamptz(3)
+
+  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, startedAt(sort: Desc)])
+  @@index([tenantId])
+  @@map("integration_sync_logs")
 }
