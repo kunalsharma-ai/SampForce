@@ -208,6 +208,10 @@ model Tenant {
   gamificationBadges     GamificationBadge[]
   gamificationAwards     GamificationAward[]
   gamificationContests   GamificationCompetition[]
+  visitorSettings        VisitorSettings?
+  webVisitors            WebVisitor[]
+  webSessions            WebSession[]
+  webEvents              WebEvent[]
   companyHealthDays      CompanyHealthDaily[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
@@ -458,6 +462,7 @@ model Contact {
   tasks         Task[]
 
   portalUsers PortalUser[]
+  webVisitors WebVisitor[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -509,10 +514,11 @@ model Lead {
   updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt              DateTime?        @map("deleted_at") @db.Timestamptz(3)
 
-  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  campaign   Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  activities Activity[]
-  tasks      Task[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  activities  Activity[]
+  tasks       Task[]
+  webVisitors WebVisitor[]
 
   @@index([tenantId, status])
   @@index([tenantId, campaignId])
@@ -1508,6 +1514,7 @@ model Campaign {
   leads          Lead[]
   forms          LeadForm[]
   emailTemplates EmailTemplate[]
+  webVisitors    WebVisitor[]
 
   @@unique([tenantId, name])
   @@map("campaigns")
@@ -2576,4 +2583,100 @@ model GamificationCompetition {
 
   @@index([tenantId, endDate])
   @@map("gamification_competitions")
+}
+
+model VisitorSettings {
+  tenantId           String   @id @map("tenant_id") @db.Uuid
+  enabled            Boolean  @default(false)
+  siteKey            String   @unique @map("site_key")
+  consentMode        String   @default("opt_in") @map("consent_mode")
+  allowedDomains     String[] @default([]) @map("allowed_domains")
+  retentionDays      Int      @default(180) @map("retention_days")
+  createLeads        Boolean  @default(true) @map("create_leads")
+  enquiryConsentText String?  @map("enquiry_consent_text")
+  highIntentScore    Int      @default(50) @map("high_intent_score")
+  importantPages     Json     @map("important_pages")
+  updatedById        String?  @map("updated_by_id") @db.Uuid
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("visitor_settings")
+}
+
+model WebVisitor {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  clientId       String    @map("client_id") @db.Uuid
+  firstSeenAt    DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  lastSeenAt     DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  visits         Int       @default(0)
+  pageViews      Int       @default(0) @map("page_views")
+  engagedSeconds Int       @default(0) @map("engaged_seconds")
+  enquiries      Int       @default(0)
+  leadId         String?   @map("lead_id") @db.Uuid
+  contactId      String?   @map("contact_id") @db.Uuid
+  identifiedAt   DateTime? @map("identified_at") @db.Timestamptz(3)
+  identifiedVia  String?   @map("identified_via")
+  firstTouch     Json?     @map("first_touch")
+  campaignId     String?   @map("campaign_id") @db.Uuid
+  intentScore    Int       @default(0) @map("intent_score")
+  highIntentAt   DateTime? @map("high_intent_at") @db.Timestamptz(3)
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead     Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact  Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  campaign Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  sessions WebSession[]
+  events   WebEvent[]
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId, lastSeenAt])
+  @@index([tenantId, leadId])
+  @@index([tenantId, contactId])
+  @@map("web_visitors")
+}
+
+model WebSession {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  visitorId      String   @map("visitor_id") @db.Uuid
+  clientId       String   @map("client_id") @db.Uuid
+  startedAt      DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
+  lastAt         DateTime @default(now()) @map("last_at") @db.Timestamptz(3)
+  landingPath    String?  @map("landing_path")
+  referrerHost   String?  @map("referrer_host")
+  utm            Json?
+  pageViews      Int      @default(0) @map("page_views")
+  engagedSeconds Int      @default(0) @map("engaged_seconds")
+
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visitor WebVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  events  WebEvent[]
+
+  @@unique([tenantId, clientId])
+  @@index([tenantId, startedAt])
+  @@index([visitorId])
+  @@map("web_sessions")
+}
+
+model WebEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  visitorId  String   @map("visitor_id") @db.Uuid
+  sessionId  String?  @map("session_id") @db.Uuid
+  type       String
+  path       String?
+  title      String?
+  name       String?
+  data       Json?
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visitor WebVisitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  session WebSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([visitorId])
+  @@map("web_events")
 }

@@ -5,6 +5,9 @@ import {
   badgeInputSchema,
   competitionInputSchema,
   gamificationSettingsSchema,
+  visitorSettingsSchema,
+  collectSchema,
+  enquirySchema,
   teamInputSchema,
   voiceApplySchema,
   voiceInterpretSchema,
@@ -536,6 +539,20 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/tenants/current/teams', tags: ['Tenants'], summary: 'Create a sales team from active members (members:manage)', security: secured, request: body(teamInputSchema), responses: { 201: ok('Team'), ...errors } });
   action('put', '/tenants/current/teams/{id}', 'Tenants', 'Rename a team and replace its members (members:manage)', teamInputSchema);
   r.registerPath({ method: 'delete', path: '/tenants/current/teams/{id}', tags: ['Tenants'], summary: 'Delete a sales team (members:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+
+  // Enhancement feature 15: website visitor intelligence.
+  action('get', '/visitors/settings', 'Visitors', 'Tracking on or off, consent mode, allowed websites, retention, important pages and the public site key (visitors:read)');
+  action('put', '/visitors/settings', 'Visitors', 'Change tracking settings; turning tracking on needs at least one allowed website; audited (visitors:manage)', visitorSettingsSchema);
+  action('post', '/visitors/settings/rotate-key', 'Visitors', 'Issue a new site key; the old snippet stops working (visitors:manage)');
+  action('get', '/visitors/dashboard', 'Visitors', 'Visits, important pages, sources, campaigns and high-intent visitors for the last 7, 30 or 90 days (visitors:read)', undefined, { query: z.object({ days: z.coerce.number().optional() }) });
+  action('get', '/visitors/record', 'Visitors', 'Website activity linked to a lead or contact (visitors:read)', undefined, { query: z.object({ type: z.enum(['lead', 'contact']), id: z.string().uuid() }) });
+  action('get', '/visitors', 'Visitors', 'Visitors, newest first; segment all, identified, anonymous or high_intent (visitors:read)', undefined, { query: z.object({ segment: z.string().optional(), search: z.string().optional() }) });
+  action('get', '/visitors/{id}', 'Visitors', 'One visitor with sessions, pages and the intent signals behind the score (visitors:read)');
+  r.registerPath({ method: 'delete', path: '/visitors/{id}', tags: ['Visitors'], summary: 'Erase a visitor and all their page views; the linked lead or contact is kept; audited (visitors:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Erased'), ...notFound, ...errors } });
+  r.registerPath({ method: 'get', path: '/public/track/script.js', tags: ['Visitors'], summary: 'Public: the first-party tracking script. Honours Global Privacy Control and Do Not Track; no cookies or fingerprinting (no auth)', responses: { 200: { description: 'JavaScript', content: { 'application/javascript': { schema: z.string() } } } } });
+  r.registerPath({ method: 'get', path: '/public/track/{siteKey}/config', tags: ['Visitors'], summary: 'Public: consent mode and enquiry consent text for an allowed website; 404 when tracking is off or the origin is not allowed (no auth)', request: { params: z.object({ siteKey: z.string() }) }, responses: { 200: ok('Config'), 404: json(error, 'Not available') } });
+  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/collect', tags: ['Visitors'], summary: 'Public: record page views, custom events and engaged time; requests with a privacy signal are dropped (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(collectSchema) }, responses: { 200: ok('Stored count'), 404: json(error, 'Not available') } });
+  r.registerPath({ method: 'post', path: '/public/track/{siteKey}/enquiry', tags: ['Visitors'], summary: 'Public: an enquiry from the website; links to a contact or open lead by email or creates a lead; 5 per address per 10 minutes (no auth)', request: { params: z.object({ siteKey: z.string() }), ...body(enquirySchema) }, responses: { 200: ok('Thank-you message'), 404: json(error, 'Not available'), 429: json(error, 'Too many enquiries') } });
 
   // Phase 6: billing, custom roles, onboarding, support access and the operator console.
   action('get', '/billing', 'Billing', 'Plan, seats, usage against allowances and what can be bought here (billing:read)');
