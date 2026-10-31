@@ -43,7 +43,7 @@ invoices with the provider dashboard.
 |---|---|---|
 | `BILLING_GRACE_DAYS` | 14 | Days a past-due workspace keeps paid allowances |
 | `TRIAL_DAYS` | 14 | Length of the one free trial per workspace |
-| `PRICING_PUBLISHED` | false | Removes the "preview" labels from the pricing page and Billing page |
+| `PRICING_PUBLISHED` | false (`true` in the Helm chart) | Removes the "preview" labels from the pricing page and Billing page. The rate card was approved on 2026-10-31; the matching prices still have to be created in Stripe or Razorpay before anyone can buy |
 | `SALES_CONTACT_EMAIL` | unset | Shown as "Contact sales" for Enterprise Plus |
 | `OPERATOR_JWT_SECRET` | unset | Enables the operator console; must differ from `JWT_ACCESS_SECRET` |
 

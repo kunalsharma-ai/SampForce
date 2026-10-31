@@ -22,7 +22,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 - Billing: plans enforced through one entitlement rule, free trial, usage meters, Stripe and Razorpay hosted checkout and signed webhooks (needs provider keys and prices; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
 - Custom roles (Professional and above), onboarding checklist, owner-granted support access
 - Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`)
-- Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true`
+- Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true` (set in the Helm chart: the rate card is approved)
 - Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
 - Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
 - Two-step verification (authenticator app, recovery codes), account lockout, signed-in device list with remote sign-out

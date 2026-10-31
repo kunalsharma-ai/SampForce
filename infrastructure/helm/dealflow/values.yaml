@@ -26,7 +26,8 @@ config:
   ACCESS_TOKEN_TTL_SECONDS: "900"
   REFRESH_TOKEN_TTL_DAYS: "30"
   AUTH_RATE_LIMIT_PER_MINUTE: "10"
-  PRICING_PUBLISHED: "false"
+  # The rate card was approved on 2026-10-31; local and test setups keep the preview labels.
+  PRICING_PUBLISHED: "true"
 
 api:
   replicas: 2

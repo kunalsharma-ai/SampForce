@@ -43,7 +43,7 @@ export interface PlanCatalogEntry {
   audience: string;
 }
 
-/** Proposed launch rate card. Must match the `plans` rows seeded by the database migration. */
+/** Launch rate card (approved 2026-10-31). Must match the `plans` rows seeded by the database migration. */
 export const PLAN_CATALOG: PlanCatalogEntry[] = [
   { code: 'free', name: 'DealFlow Free', monthly: 0, annualMonthly: 0, audience: 'Individuals' },
   { code: 'launch', name: 'DealFlow Launch', monthly: 8, annualMonthly: 6, audience: 'Startups' },

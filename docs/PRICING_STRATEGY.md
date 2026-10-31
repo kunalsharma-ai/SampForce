@@ -1,13 +1,14 @@
 # DealFlow Pricing Strategy and Unit Economics
 
-**Status:** proposal for Sampledge leadership, 2026-10-30. These are **proposed launch prices, not
-published prices.** Validate costs with real usage data from a beta before advertising them.
+**Status:** rate card approved by Kunal (Sampledge) on 2026-10-31, after the proposal of 2026-10-30. The cost model
+in sections 3 to 5 is still an estimate: check it against real usage from a beta and revisit prices if it is off.
 
 **Phase 6 note:** the product now enforces these allowances and can sell them through Stripe or Razorpay once
 prices are created in those dashboards (docs/BILLING.md). The public `/pricing` page and the Billing page label the
-rate card a preview until `PRICING_PUBLISHED=true` is set, which should happen only after this proposal is approved.
+rate card a preview until `PRICING_PUBLISHED=true` is set. The Helm chart sets it to true now that the rate card is
+approved; local and test setups keep the preview labels.
 
-## 1. Proposed rate card (from the master brief)
+## 1. Rate card (from the master brief, approved 2026-10-31)
 
 | Plan | Monthly | Annual (per month) | Target |
 |---|---|---|---|

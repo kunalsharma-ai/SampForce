@@ -320,7 +320,8 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 All eight roadmap phases are complete. Before general availability: install the chart on staging and run every
 runbook there; run Stripe and Razorpay in test mode (docs/BILLING.md); connect a real Okta or Entra tenant for SSO and
 SCIM; run the AI evals with a real key; measure the 3D views on real devices; commission the external pen test with
-docs/security/PENTEST_PREP.md; confirm the rate card.
+docs/security/PENTEST_PREP.md; create the approved prices in Stripe or Razorpay. The rate card was approved on
+2026-10-31, and production publishes it (`PRICING_PUBLISHED=true` in the Helm chart).
 
 ## Original continuation instructions (Phase 8, done)
 
