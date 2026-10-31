@@ -125,22 +125,6 @@ function SingleSignOn({ s }: { s: SecuritySettings }) {
   const remove = useMutation({ mutationFn: () => api('/security/sso', { method: 'DELETE' }), onSuccess: () => { setForm(EMPTY); setDomains(''); void qc.invalidateQueries({ queryKey: ['security-settings'] }); } });
   const assignable = (roles.data ?? []).filter((r) => r.key !== 'owner');
 
-  if (!s.ssoEntitled && !s.sso) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Single sign-on</CardTitle>
-          <CardDescription>Sign in through Okta, Microsoft Entra ID, Google Workspace or any OpenID Connect provider. Included in the Enterprise plans.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/billing" className="text-sm font-medium text-primary hover:underline">
-            See plans
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -148,7 +132,6 @@ function SingleSignOn({ s }: { s: SecuritySettings }) {
           Single sign-on (OpenID Connect)
           {s.sso?.enabled ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}
           {s.sso?.enforced && <Badge tone="accent">Required</Badge>}
-          {s.sso && !s.ssoEntitled && <Badge tone="warning">Not in current plan</Badge>}
         </CardTitle>
         <CardDescription>
           Create an OpenID Connect web application in your identity provider with the redirect URI below, then enter its details. People sign in from “Sign in with SSO” using the sign-in name.
@@ -231,7 +214,6 @@ function Scim({ s }: { s: SecuritySettings }) {
   const create = useMutation({ mutationFn: () => api<ScimTokenView & { token: string }>('/security/scim-tokens', { method: 'POST', json: { name } }), onSuccess: (t) => { setCreated(t); setName(''); void done(); } });
   const revoke = useMutation({ mutationFn: (id: string) => api(`/security/scim-tokens/${id}`, { method: 'DELETE' }), onSuccess: done });
 
-  if (!s.ssoEntitled) return null;
   return (
     <Card>
       <CardHeader>

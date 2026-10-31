@@ -41,7 +41,7 @@ More than 20 accounts locked in 15 minutes: likely password guessing. Accounts u
 
 More than 20 failed SSO sign-ins in 15 minutes. Logs carry the reason code (`sso_error`), e.g. `invalid_response`
 (token did not verify: the provider changed keys, issuer or client settings), `provider_error`, `domain_not_allowed`,
-`no_seats`, `not_entitled` (plan no longer includes SSO). Contact the workspace admin if it is one
+`no_seats`. Contact the workspace admin if it is one
 workspace; check provider status if it is all of them.
 
 ## DealFlowPodsNotReady

@@ -37,6 +37,8 @@ USD, excluding taxes. Feature packaging per plan follows the brief and is mirror
   Deep-reasoning steps cost 4 credits. Credits are pooled across the tenant's seats and reset monthly.
 - **Overage:** AI credit packs (proposed $10 per 1,000 credits). SMS, voice and WhatsApp are passed through at
   provider cost plus a published margin; DealFlow never promises unlimited inference, messaging or third-party usage.
+- **Single sign-on (OpenID Connect) and SCIM provisioning are on every plan, including Free** (decided 2026-10-31).
+  They are not used as an upgrade lever; seats still count toward each plan's user limit.
 - **No mandatory onboarding fee** on self-service plans; no seat minimums below Business; storage and
   integration limits published on the pricing page.
 

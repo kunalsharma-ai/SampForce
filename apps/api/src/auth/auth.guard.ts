@@ -6,7 +6,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { effectiveEntitlements, type SubscriptionState } from '@dealflow/types';
 import {
   ALLOW_RESTRICTED,
   type AuthedRequest,
@@ -63,11 +62,7 @@ export class AuthGuard implements CanActivate {
             include: {
               role: true,
               tenant: {
-                select: {
-                  requireMfa: true,
-                  ssoEnforced: true,
-                  subscription: { select: { planCode: true, status: true, seats: true } },
-                },
+                select: { requireMfa: true, ssoEnforced: true },
               },
             },
           }),
@@ -79,16 +74,8 @@ export class AuthGuard implements CanActivate {
         (!session.revokedAt || !!session.replacedById);
       if (membership && sessionLive) {
         const { tenant } = membership;
-        // Enforcement lapses with the plan (a downgrade must not lock members out of password sign-in).
-        const ssoEnforced =
-          tenant.ssoEnforced &&
-          effectiveEntitlements(
-            tenant.subscription
-              ? { ...tenant.subscription, status: tenant.subscription.status as SubscriptionState }
-              : null,
-          ).entitlements.sso;
         const restriction =
-          ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner'
+          tenant.ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner'
             ? 'sso_required'
             : tenant.requireMfa && claims.amr === 'password'
               ? 'mfa_enrolment'

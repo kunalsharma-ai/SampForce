@@ -41,6 +41,7 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
                   `${e.monthlyAiCredits.toLocaleString()} AI credits per user per month`,
                   `${e.automationRunsPerMonth.toLocaleString()} automation runs per month`,
                   e.customRoles ? 'Custom roles and permissions' : 'Standard roles',
+                  'Single sign-on (OpenID Connect) and SCIM',
                 ].map((f) => (
                   <li key={f} className="flex gap-2">
                     <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />

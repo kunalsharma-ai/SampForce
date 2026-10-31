@@ -397,11 +397,7 @@ export class AuthService {
     );
     const blocked = new Set<string>();
     if (scope && !scope.ssoTenantId) {
-      // Single sign-on enforcement only counts while the plan includes it (read in each tenant's own context).
-      for (const m of rows.filter((r) => r.tenant.ssoEnforced && r.role.key !== 'owner')) {
-        const ent = await this.prisma.run({ tenantId: m.tenantId }, (tx) => entitlementsFor(tx, m.tenantId));
-        if (ent.entitlements.sso) blocked.add(m.tenantId);
-      }
+      for (const m of rows) if (m.tenant.ssoEnforced && m.role.key !== 'owner') blocked.add(m.tenantId);
     }
     const allowed = rows.filter((m) => (scope?.ssoTenantId ? m.tenantId === scope.ssoTenantId : !blocked.has(m.tenantId)));
     return allowed.map((m) => ({

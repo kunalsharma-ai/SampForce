@@ -124,7 +124,6 @@ export interface SecuritySettings {
   membersWithoutMfa: number;
   /** Whether the caller has two-step verification on (needed before requiring it for everyone). */
   callerHasMfa: boolean;
-  ssoEntitled: boolean;
   sso: SsoConnectionView | null;
   /** Values the identity provider needs. */
   redirectUri: string;
@@ -142,6 +141,5 @@ export const SSO_ERRORS = {
   not_invited: 'You do not have access to this workspace yet. Ask an administrator to invite you.',
   suspended: 'Your access to this workspace is suspended.',
   no_seats: 'This workspace has no free seats. Ask an administrator.',
-  not_entitled: 'Single sign-on is not included in this workspace’s plan.',
 } as const;
 export type SsoErrorCode = keyof typeof SSO_ERRORS;

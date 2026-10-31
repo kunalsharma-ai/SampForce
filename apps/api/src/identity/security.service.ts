@@ -3,7 +3,6 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { Prisma, type TenantTx } from '@dealflow/database';
 import type { ScimTokenView, SecuritySettings, SsoConnectionInput, SsoConnectionView } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
-import { entitlementsFor, planLimit } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -15,8 +14,6 @@ export const SCIM_TOKEN_PREFIX = 'dfscim_';
 export function hashScimToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
-
-const NOT_ENTITLED = 'Single sign-on and SCIM provisioning are included in the Enterprise plans.';
 
 /** Workspace security settings: the two-step verification policy, the SSO connection and SCIM tokens. */
 @Injectable()
@@ -34,11 +31,10 @@ export class SecurityService {
 
   async settings(auth: AuthContext): Promise<SecuritySettings> {
     return this.prisma.run(auth, async (tx) => {
-      const [tenant, conn, tokens, ent, caller] = await Promise.all([
+      const [tenant, conn, tokens, caller] = await Promise.all([
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { requireMfa: true } }),
         tx.ssoConnection.findUnique({ where: { tenantId: auth.tenantId } }),
         tx.scimToken.findMany({ where: { tenantId: auth.tenantId, revokedAt: null }, orderBy: { createdAt: 'desc' } }),
-        entitlementsFor(tx, auth.tenantId),
         this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, select: { mfaEnabledAt: true } }),
       ]);
       const ssoUsers = await tx.ssoIdentity.findMany({ where: { tenantId: auth.tenantId }, select: { userId: true } });
@@ -49,7 +45,6 @@ export class SecurityService {
         requireMfa: tenant.requireMfa,
         membersWithoutMfa,
         callerHasMfa: !!caller.mfaEnabledAt || auth.authMethod === 'sso',
-        ssoEntitled: ent.entitlements.sso,
         sso: conn ? this.view(conn) : null,
         redirectUri: this.redirectUri,
         scimBaseUrl: `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}/api/v1/scim/v2`,
@@ -72,7 +67,6 @@ export class SecurityService {
 
   async saveSso(auth: AuthContext, input: SsoConnectionInput, meta: RequestMeta): Promise<SsoConnectionView> {
     return this.prisma.run(auth, async (tx) => {
-      if (!(await entitlementsFor(tx, auth.tenantId)).entitlements.sso) throw planLimit(NOT_ENTITLED);
       const existing = await tx.ssoConnection.findUnique({ where: { tenantId: auth.tenantId } });
       const secret = input.clientSecret?.trim();
       if (!existing && !secret) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Enter the client secret.', details: [{ path: 'clientSecret', message: 'Enter the client secret' }] });
@@ -135,7 +129,6 @@ export class SecurityService {
 
   async createScimToken(auth: AuthContext, name: string, meta: RequestMeta): Promise<ScimTokenView & { token: string }> {
     return this.prisma.run(auth, async (tx) => {
-      if (!(await entitlementsFor(tx, auth.tenantId)).entitlements.sso) throw planLimit(NOT_ENTITLED);
       if ((await tx.scimToken.count({ where: { tenantId: auth.tenantId, revokedAt: null } })) >= 5) {
         throw new BadRequestException({ code: 'TOO_MANY_TOKENS', message: 'A workspace can have five SCIM tokens. Revoke one first.' });
       }

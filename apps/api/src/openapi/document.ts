@@ -397,9 +397,9 @@ export function buildOpenApiDocument(): object {
   action('delete', '/auth/sessions/{id}', 'Account security', 'Sign out one device');
   action('get', '/security', 'Workspace security', 'Two-step policy, single sign-on and SCIM settings (tenant:manage)');
   action('put', '/security/mfa-policy', 'Workspace security', 'Require two-step verification for password sign-in (tenant:manage)', mfaPolicySchema);
-  action('put', '/security/sso', 'Workspace security', 'Create or update the OIDC connection (tenant:manage; Enterprise plans)', ssoConnectionSchema);
+  action('put', '/security/sso', 'Workspace security', 'Create or update the OIDC connection (tenant:manage)', ssoConnectionSchema);
   action('delete', '/security/sso', 'Workspace security', 'Remove the OIDC connection (tenant:manage)');
-  action('post', '/security/scim-tokens', 'Workspace security', 'Create a SCIM token; the token is shown once (tenant:manage; Enterprise plans)', scimTokenCreateSchema);
+  action('post', '/security/scim-tokens', 'Workspace security', 'Create a SCIM token; the token is shown once (tenant:manage)', scimTokenCreateSchema);
   action('delete', '/security/scim-tokens/{id}', 'Workspace security', 'Revoke a SCIM token (tenant:manage)');
   r.registerPath({ method: 'get', path: '/auth/sso/start', tags: ['Single sign-on'], summary: 'Redirect to the workspace identity provider',
     request: { query: z.object({ workspace: z.string().min(1).max(63) }) },

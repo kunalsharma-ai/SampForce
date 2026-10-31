@@ -40,12 +40,11 @@ describe('single sign-on (OpenID Connect)', () => {
     loginSlug: slug, issuer: idp.issuer, clientId: idp.clientId, clientSecret: idp.clientSecret, allowedDomains: ['acme.test'], jitProvisioning: false, defaultRoleId: null, enabled: true, enforced: false, ...over,
   });
 
-  it('is an Enterprise feature, and checks the provider before turning on', async () => {
+  it('is available on the Free plan, and checks the provider before turning on', async () => {
     owner = await registerUser(app, 'SSO Co');
     slug = `sso-${randomUUID().slice(0, 8)}`;
     const o = api(owner);
-    expect((await o.put('/security/sso', connection()).expect(403)).body.error.code).toBe('PLAN_LIMIT');
-    await setPlan(owner.tenantId, 'enterprise');
+    expect((await o.get('/security/settings').expect(200)).body).not.toHaveProperty('ssoEntitled');
     const bad = await o.put('/security/sso', connection({ issuer: `${idp.issuer}/nope` })).expect(400);
     expect(bad.body.error.code).toBe('SSO_DISCOVERY_FAILED');
     expect((await o.put('/security/sso', connection({ enforced: true })).expect(400)).body.error.code).toBe('SSO_NOT_VERIFIED');
@@ -56,6 +55,8 @@ describe('single sign-on (OpenID Connect)', () => {
     memberRoleId = roles.find((r) => r.key === 'member')!.id;
     const ownerRole = roles.find((r) => r.key === 'owner')!.id;
     await o.put('/security/sso', connection({ jitProvisioning: true, defaultRoleId: ownerRole })).expect(400);
+    // Free has two seats; the tests below add more people.
+    await setPlan(owner.tenantId, 'launch');
   });
 
   it('refuses people who were not invited, and other email domains', async () => {
@@ -107,7 +108,7 @@ describe('single sign-on (OpenID Connect)', () => {
     expect((await jit.agent.get('/api/v1/auth/me').expect(200)).body.role).toBe('member');
   });
 
-  it('can require single sign-on: members lose password access, owners keep it, and a downgrade lifts it', async () => {
+  it('can require single sign-on: members lose password access, owners keep it, on any plan', async () => {
     const member = await inviteMember(app, owner, 'member');
     await api(owner).put('/security/sso', connection({ jitProvisioning: true, defaultRoleId: memberRoleId, enforced: true })).expect(200);
     expect((await api(member).get('/contacts').expect(403)).body.error.code).toBe('SSO_REQUIRED');
@@ -117,10 +118,9 @@ describe('single sign-on (OpenID Connect)', () => {
     expect(pw.body.error.code).toBe('SSO_REQUIRED');
     await api(owner).get('/contacts').expect(200);
 
-    await setPlan(owner.tenantId, 'business');
-    await api(member).get('/contacts').expect(200);
-    expect((await ssoSignIn(app, slug)).landed).toContain('sso_error=not_entitled');
-    await setPlan(owner.tenantId, 'enterprise');
+    // Enforcement does not depend on the plan.
+    await setPlan(owner.tenantId, 'growth');
+    expect((await api(member).get('/contacts').expect(403)).body.error.code).toBe('SSO_REQUIRED');
     await api(owner).put('/security/sso', connection({ enforced: false })).expect(200);
   });
 });
@@ -145,12 +145,11 @@ describe('SCIM 2.0 provisioning', () => {
     await app.close();
   });
 
-  it('issues tokens on Enterprise plans only, shown once', async () => {
+  it('issues tokens on the Free plan, shown once', async () => {
     const o = api(owner);
-    await o.post('/security/scim-tokens', { name: 'Okta' }).expect(403);
-    await setPlan(owner.tenantId, 'enterprise');
     const created = (await o.post('/security/scim-tokens', { name: 'Okta' }).expect(201)).body;
     token = created.token;
+    await setPlan(owner.tenantId, 'launch'); // seats for the people provisioned below
     expect(token).toMatch(/^dfscim_/);
     const settings = (await o.get('/security/settings').expect(200)).body;
     expect(settings.scimTokens).toEqual([expect.objectContaining({ name: 'Okta', prefix: token.slice(0, 12) })]);

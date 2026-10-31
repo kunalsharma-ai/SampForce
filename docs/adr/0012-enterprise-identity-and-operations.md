@@ -23,15 +23,16 @@ out or leak data if done loosely, so the rules below favour failing closed and s
   Discovery must return exactly the configured issuer, every URL passes the private-network guard, and ID tokens are
   verified with the provider's JWKS (issuer, audience, `azp`, nonce, expiry, verified email). The workspace chooses
   allowed email domains, whether to create accounts just in time (with a default role, never Owner) and whether to
-  enforce SSO. Enforcement needs a successful sign-in first (`lastVerifiedAt`), lapses if the plan no longer
-  includes SSO, and never applies to Owners, who keep password sign-in as a break-glass route. An SSO session is
+  enforce SSO. Enforcement needs a successful sign-in first (`lastVerifiedAt`) and never applies to Owners, who keep password sign-in as a break-glass route. An SSO session is
   bound to the workspace that issued it (`stid` claim) and cannot switch to another workspace. SAML 2.0 is not built.
 - **SCIM 2.0 Users** (`/api/v1/scim/v2`) with bearer tokens (`dfscim_…`, SHA-256 hashed, at most 5, shown once).
   SCIM ids are membership ids. Deactivation suspends the membership; access to that workspace stops on the next request because the guard checks membership status every time. SCIM never
   changes an Owner, and changes a person's email or name only when this workspace is their only membership, so one
   customer's directory cannot rename someone in another customer's workspace. Seat limits apply. Groups are not built.
-- **SSO and SCIM are Enterprise entitlements** (`sso: true` on `enterprise` and `enterprise_plus`). This is a product
-  decision to confirm; it is one line in `packages/types/src/plans.ts` plus a data migration.
+- **SSO and SCIM are on every plan, including Free** (decided by Kunal on 2026-10-31). An earlier draft made them
+  Enterprise entitlements; migration `20261031000200_sso_all_plans` removed the `sso` key from the plan catalogue, so
+  there is no plan check and enforcement no longer depends on the plan. Seat limits still apply to people added
+  through SSO or SCIM.
 - **CSP with per-request nonces** from Next.js middleware: `script-src 'self' 'nonce-…' 'strict-dynamic'`, no
   `unsafe-eval`, `frame-ancestors 'none'` except embeddable lead forms (`/f/…`), `upgrade-insecure-requests` only on
   HTTPS. The browser suite fails on any CSP violation. Pages are rendered per request as a result.

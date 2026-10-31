@@ -53,6 +53,10 @@ export default async function PricingPage() {
             <dd className="mt-1 text-muted-foreground">Paid features stay on for {pricing.graceDays} days while the payment method is updated. After that, Free plan limits apply until the invoice is paid. No data is deleted.</dd>
           </div>
           <div>
+            <dt className="font-medium">Is single sign-on included?</dt>
+            <dd className="mt-1 text-muted-foreground">Yes, on every plan, including Free. Connect an identity provider that supports OpenID Connect, and optionally add and remove people automatically with SCIM 2.0. People added this way use seats like anyone else.</dd>
+          </div>
+          <div>
             <dt className="font-medium">How do I pay?</dt>
             <dd className="mt-1 text-muted-foreground">On the payment provider’s secure checkout page. DealFlow stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.</dd>
           </div>

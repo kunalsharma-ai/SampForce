@@ -76,14 +76,15 @@ test('turn on two-step verification, then sign in with a code and with a recover
   expect(cspViolations).toEqual([]);
 });
 
-test('workspace security page explains the plan gate and the two-step policy', async ({ page }) => {
+test('workspace security page offers single sign-on and SCIM on Free, and explains the two-step policy', async ({ page }) => {
   await signUp(page, 'Policy Co');
   await page.goto('/app/administration');
   await page.getByRole('link', { name: /Workspace security/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Workspace security' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Require for everyone' })).toBeDisabled();
   await expect(page.getByText('Turn it on for your own account first')).toBeVisible();
-  await expect(page.getByText('Included in the Enterprise plans.')).toBeVisible();
+  await expect(page.getByLabel('Client secret')).toBeVisible();
+  await expect(page.getByText('SCIM provisioning', { exact: true })).toBeVisible();
   await expectNoA11yViolations(page);
 });
 

@@ -286,7 +286,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Signed-in devices: list with method, device, IP and last use; sign out one or all others, effective immediately | Implemented, tested (API + e2e) |
 | Single sign-on with OpenID Connect: per-workspace connection, discovery check, PKCE, state, nonce, JWKS verification, allowed domains, invitations or just-in-time accounts with a default role, enforcement (owners exempt), sessions bound to the workspace | Implemented, tested against a local OIDC provider (9 API tests including wrong issuer, audience, nonce, signature and domain). **Not yet tried with Okta, Entra ID or Google** |
 | SCIM 2.0 Users: list/filter, get, create, replace, patch (Okta and Entra styles), delete; owner and cross-workspace protections; seat limits; hashed tokens | Implemented, tested (API). **Not yet tried with a real directory** |
-| SSO and SCIM limited to Enterprise plans | Implemented (decision to confirm) |
+| SSO and SCIM on every plan, including Free (decided 2026-10-31) | Implemented, tested (API + e2e) |
 | Content security policy with per-request nonces and `strict-dynamic`; HSTS; COOP | Implemented, tested (e2e fails on any violation, 3D pages included) |
 | Prometheus metrics (route-template labels), worker liveness, OpenTelemetry traces, log and trace redaction, `trace_id` in logs | Implemented, tested (API e2e + tracing check script) |
 | Helm chart: API, worker, web, migration Job, HPA, PDB, NetworkPolicy, ServiceMonitor, PrometheusRule (7 alerts), hardened pods | Implemented. **Checked by CI lint and schema validation only; not installed on a cluster** |
@@ -320,7 +320,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 All eight roadmap phases are complete. Before general availability: install the chart on staging and run every
 runbook there; run Stripe and Razorpay in test mode (docs/BILLING.md); connect a real Okta or Entra tenant for SSO and
 SCIM; run the AI evals with a real key; measure the 3D views on real devices; commission the external pen test with
-docs/security/PENTEST_PREP.md; confirm the Enterprise-only SSO decision and the rate card.
+docs/security/PENTEST_PREP.md; confirm the rate card.
 
 ## Original continuation instructions (Phase 8, done)
 

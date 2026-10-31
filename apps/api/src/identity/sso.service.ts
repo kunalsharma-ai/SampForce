@@ -61,8 +61,6 @@ export class SsoService {
   async start(loginSlug: string, loginHint?: string): Promise<{ url: string; cookie: string }> {
     const conn = await this.connectionBySlug(loginSlug.trim().toLowerCase());
     if (!conn) throw new SsoFailure('unknown_workspace');
-    const entitled = await this.prisma.run({ tenantId: conn.tenantId }, (tx) => entitlementsFor(tx, conn.tenantId));
-    if (!entitled.entitlements.sso) throw new SsoFailure('not_entitled');
     let meta;
     try {
       meta = await discover(conn.issuer, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
@@ -110,7 +108,6 @@ export class SsoService {
 
     const result = await this.prisma.run({ tenantId, userId }, async (tx) => {
       const ent = await entitlementsFor(tx, tenantId);
-      if (!ent.entitlements.sso) throw new SsoFailure('not_entitled');
       let membership = userId ? await tx.membership.findUnique({ where: { tenantId_userId: { tenantId, userId } } }) : null;
       if (membership && membership.status !== 'ACTIVE') throw new SsoFailure('suspended');
       let joinedVia: 'invitation' | 'jit' | null = null;

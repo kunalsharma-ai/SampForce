@@ -66307,7 +66307,7 @@
         "tags": [
           "Workspace security"
         ],
-        "summary": "Create or update the OIDC connection (tenant:manage; Enterprise plans)",
+        "summary": "Create or update the OIDC connection (tenant:manage)",
         "security": [
           {
             "cookieAuth": []
@@ -66920,7 +66920,7 @@
         "tags": [
           "Workspace security"
         ],
-        "summary": "Create a SCIM token; the token is shown once (tenant:manage; Enterprise plans)",
+        "summary": "Create a SCIM token; the token is shown once (tenant:manage)",
         "security": [
           {
             "cookieAuth": []

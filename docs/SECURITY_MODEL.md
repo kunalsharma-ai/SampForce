@@ -33,7 +33,7 @@ before any compliance statement is made.
   catalogue; nobody can create, assign or invite into a role with permissions they do not hold. Attribute-based rules (record ownership, territory, team) layer on top in Phase 2.
 - **Owner protections:** only owners can grant or remove the owner role; the last owner cannot be demoted.
 - **Two-step verification (Phase 8):** TOTP with recovery codes; a workspace can require it for password sign-in.
-- **Single sign-on and SCIM (Phase 8, Enterprise plans):** OIDC per workspace with optional enforcement (owners keep
+- **Single sign-on and SCIM (Phase 8, every plan):** OIDC per workspace with optional enforcement (owners keep
   password sign-in as break-glass); SCIM 2.0 Users. See ADR 0012.
 - **Sessions (Phase 8):** Account security lists signed-in devices and signs them out immediately.
 - **Not built:** WebAuthn/passkeys, SAML 2.0, SCIM Groups, IP allow-lists, password reset by email.

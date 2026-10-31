@@ -202,4 +202,5 @@ insert B's rows; context does not leak across pooled transactions; audit logs ca
 Columns added: `users` (`failed_login_count`, `locked_until`, `mfa_secret_enc`, `mfa_enabled_at`, `mfa_last_step`),
 `sessions` (`auth_method`, `sso_tenant_id`), `tenants` (`require_mfa`, `sso_enforced`), `memberships`
 (`external_id`, unique per workspace). Migrations: `20261031000000_enterprise_identity`,
-`20261031000100_sso_enforced_flag`. The plan catalogue gains the `sso` entitlement (Enterprise plans).
+`20261031000100_sso_enforced_flag` and `20261031000200_sso_all_plans`, which removes the `sso`
+entitlement the first one added: single sign-on and SCIM are on every plan.

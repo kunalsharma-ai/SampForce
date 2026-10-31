@@ -26,7 +26,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 - Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
 - Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
 - Two-step verification (authenticator app, recovery codes), account lockout, signed-in device list with remote sign-out
-- Single sign-on with OpenID Connect and SCIM 2.0 provisioning on Enterprise plans (tested against a local provider only)
+- Single sign-on with OpenID Connect and SCIM 2.0 provisioning on every plan, including Free (tested against a local provider only)
 - Strict content security policy with nonces; Prometheus metrics, OpenTelemetry traces, redacted logs
 - Helm chart (CI-checked, not yet installed on a cluster), backup/restore scripts with drilled times, runbooks in [docs/runbooks](docs/runbooks/README.md)
 - 26-module navigation; the one unscheduled module (Marketplace) says so instead of leading to a dead end

@@ -64,7 +64,7 @@ to individual vendors beyond that file.
 | Mobile access | 1 (responsive web, **done**); React Native later |
 | REST API and webhooks | 2–3 (OpenAPI spec live in Phase 1) |
 | Role-based permissions and audit trail | **1 (done)** |
-| SSO | **8 (done: OIDC, with SCIM 2.0 provisioning; Enterprise plans).** SAML not built |
+| SSO | **8 (done: OIDC, with SCIM 2.0 provisioning; every plan, including Free).** SAML not built |
 
 ### Category B: should improve (same capability, simpler or clearer)
 
