@@ -313,7 +313,7 @@ function FollowUpDialog({ c, extra, onClose }: { c: CustomerRow; extra: { title:
   const set = (i: number, patch: Partial<Draft>) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-lg">
+      <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-2xl">
         <div className="pr-8">
           <DialogTitle className="text-lg font-semibold">Follow-up schedule</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
