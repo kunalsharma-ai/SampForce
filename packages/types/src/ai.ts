@@ -7,7 +7,7 @@ import { PLAN_ENTITLEMENTS, type PlanCode } from './plans';
 /** Model tier an agent asks for. The gateway maps a tier to a model and an effort level. */
 export type AiTier = 'fast' | 'balanced' | 'deep';
 
-export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant', 'voice_assistant'] as const;
+export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant', 'voice_assistant', 'retention_advisor'] as const;
 export type AiAgentKey = (typeof AI_AGENT_KEYS)[number];
 
 export interface AiAgentDef {
@@ -114,6 +114,16 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
     withoutModel: 'You can still dictate or type a note and add tasks and notes by hand; turning a note into actions needs the AI provider.',
     can: ['Read the note you dictate and the record it is on', 'Propose tasks, notes, leads and contacts for you to check and confirm'],
     cannot: ['Save anything without your confirmation', 'Delete records, send emails or change amounts, stages or owners', 'Invent names, emails, phone numbers or dates'],
+  },
+  retention_advisor: {
+    key: 'retention_advisor',
+    name: 'Retention Advisor',
+    purpose: 'Explains why a customer may be at risk of leaving, from its health signals, recent activity, requests and escalations, and drafts talking points and retention steps.',
+    tier: 'balanced',
+    permission: 'success:read',
+    withoutModel: 'The churn-risk score, signals, suggested actions and follow-up schedule are rule-based and still work; the written briefing needs the AI provider.',
+    can: ['Read the customer health signals, contracts, recent activity, open requests and escalations', 'Draft a briefing and steps for you to add to the follow-up schedule'],
+    cannot: ['Create tasks or contact the customer', 'Change contracts, prices or discounts', 'Change the risk score'],
   },
 };
 

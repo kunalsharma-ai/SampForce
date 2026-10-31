@@ -11,7 +11,7 @@ export default function CustomerSuccessPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Customer Success"
-        description="Customers are companies with an active contract. Health is a rule-based score from activity, escalations, renewals and overdue tasks, and every point lost is explained."
+        description="Customers are companies with an active contract. Churn risk comes from a rule-based health score: activity and engagement, escalations and portal requests, renewals, lost deals and overdue tasks. Every point lost is explained."
       />
       <RequirePermission permission="success:read">
         <Suspense>

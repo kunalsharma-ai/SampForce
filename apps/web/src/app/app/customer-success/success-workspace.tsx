@@ -1,16 +1,17 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, Input, Skeleton } from '@dealflow/ui';
-import type { CustomerRow, EscalationRow } from '@dealflow/types';
+import { CHURN_RISK, type CustomerRow, type EscalationRow, type HealthBand } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { RecordPicker, type PickerValue } from '@/components/crm/record-picker';
+import { ChurnTrendCard, CustomerInsights, RetentionPanel } from '@/components/revenue/churn';
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/crm';
+import { formatDate, useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { formatAmount, HEALTH_BAND, SEVERITY_TONE, useCustomers, useEscalations } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
@@ -26,11 +27,15 @@ export function SuccessWorkspace() {
 }
 
 function Customers() {
-  const customers = useCustomers();
+  const [band, setBand] = useState<HealthBand | ''>('');
+  const [ownerId, setOwnerId] = useState('');
+  const all = useCustomers();
+  const customers = useCustomers({ band: band || undefined, ownerId: ownerId || undefined });
+  const members = useMembers();
   const focus = useSearchParams().get('company');
-  if (customers.isPending) return <Skeleton className="h-48" />;
-  if (customers.error) return <ErrorText error={customers.error} />;
-  if (customers.data.length === 0)
+  if (all.isPending) return <Skeleton className="h-48" />;
+  if (all.error) return <ErrorText error={all.error} />;
+  if (all.data.length === 0)
     return (
       <Card>
         <CardContent className="p-6 text-sm text-muted-foreground">
@@ -41,25 +46,63 @@ function Customers() {
         </CardContent>
       </Card>
     );
-  const counts = { healthy: 0, watch: 0, at_risk: 0 };
-  for (const c of customers.data) counts[c.health.band]++;
+  const counts = { at_risk: 0, watch: 0, healthy: 0 };
+  for (const c of all.data) counts[c.health.band]++;
+  const rows = customers.data ?? [];
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {(Object.keys(counts) as (keyof typeof counts)[]).map((b) => (
-          <Card key={b}>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-muted-foreground">{HEALTH_BAND[b].label}</p>
-              <p className="text-xl font-semibold tabular-nums">{counts[b]}</p>
-            </CardContent>
-          </Card>
+      <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Customers by churn risk">
+        {(Object.keys(counts) as HealthBand[]).map((b) => (
+          <button
+            key={b}
+            type="button"
+            aria-pressed={band === b}
+            onClick={() => setBand(band === b ? '' : b)}
+            className={`rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 ${band === b ? 'border-primary ring-2 ring-primary/40' : 'border-border'}`}
+          >
+            <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className={`inline-block size-2.5 rounded-sm ${b === 'at_risk' ? 'bg-critical' : b === 'watch' ? 'bg-warning' : 'bg-success'}`} aria-hidden />
+              {CHURN_RISK[b].label}
+            </span>
+            <span className="text-xl font-semibold tabular-nums">{counts[b]}</span>
+          </button>
         ))}
       </div>
-      <ul className="space-y-3">
-        {customers.data.map((c) => (
-          <CustomerCard key={c.company.id} c={c} highlight={c.company.id === focus} />
-        ))}
-      </ul>
+      <ChurnTrendCard />
+      <div className="flex flex-wrap items-end gap-3">
+        <Field id="cs-band" label="Churn risk">
+          <Select id="cs-band" value={band} onChange={(e) => setBand(e.target.value as HealthBand | '')} className="w-48">
+            <option value="">All customers</option>
+            <option value="at_risk">High</option>
+            <option value="watch">Medium</option>
+            <option value="healthy">Low</option>
+          </Select>
+        </Field>
+        <Field id="cs-owner" label="Account owner">
+          <Select id="cs-owner" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="w-56">
+            <option value="">Everyone</option>
+            {(members.data ?? []).map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <p className="pb-2 text-xs text-muted-foreground" aria-live="polite">
+          Showing {rows.length} of {all.data.length}
+        </p>
+      </div>
+      {customers.isPending ? (
+        <Skeleton className="h-32" />
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No customers match these filters.</p>
+      ) : (
+        <ul className="space-y-3">
+          {rows.map((c) => (
+            <CustomerCard key={c.company.id} c={c} highlight={c.company.id === focus} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -74,7 +117,7 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
               {c.company.name}
             </Link>
             <Badge tone={HEALTH_BAND[c.health.band].tone}>
-              {HEALTH_BAND[c.health.band].label} · {c.health.score}/100
+              {CHURN_RISK[c.health.band].label} · health {c.health.score}/100
             </Badge>
             {c.openEscalations > 0 && <Badge tone="warning">{c.openEscalations} open escalation{c.openEscalations === 1 ? '' : 's'}</Badge>}
             <span className="ml-auto text-xs text-muted-foreground">{c.owner?.name ?? 'Unassigned'}</span>
@@ -85,7 +128,7 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
               <>
                 {' '}
                 · next end{' '}
-                <Link href={`/app/contracts/${c.nextRenewal.contractId}`} className="text-primary hover:underline">
+                <Link href={`/app/contracts/${c.nextRenewal.contractId}`} className="text-primary underline underline-offset-2">
                   {c.nextRenewal.reference}
                 </Link>{' '}
                 on {formatDate(c.nextRenewal.endDate)} ({c.nextRenewal.daysToEnd} days)
@@ -103,6 +146,8 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
           ) : (
             <p className="text-xs text-success">No risk signals.</p>
           )}
+          {c.engagement && <CustomerInsights c={c} />}
+          {c.plan && <RetentionPanel c={c} />}
         </CardContent>
       </Card>
     </li>

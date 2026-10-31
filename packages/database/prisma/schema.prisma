@@ -203,6 +203,7 @@ model Tenant {
   salesTargets           SalesTarget[]
   escalations            Escalation[]
   companyHealth          CompanyHealth[]
+  companyHealthDays      CompanyHealthDaily[]
   dealHealthScores       DealHealthScore[]
   dealHealthDays         DealHealthDaily[]
   nextActionDecisions    NextActionDecision[]
@@ -411,6 +412,7 @@ model Company {
   contracts     Contract[]
   escalations   Escalation[]
   health        CompanyHealth?
+  healthDays    CompanyHealthDaily[]
 
   portalUsers    PortalUser[]
   portalRequests PortalRequest[]
@@ -1655,6 +1657,22 @@ model CompanyHealth {
 
   @@index([tenantId, band])
   @@map("company_health")
+}
+
+/// One score per customer per day, for churn-risk trends (enhancement feature 13).
+model CompanyHealthDaily {
+  companyId String   @map("company_id") @db.Uuid
+  day       DateTime @db.Date
+  tenantId  String   @map("tenant_id") @db.Uuid
+  score     Int
+  band      String
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, day])
+  @@index([tenantId, day])
+  @@map("company_health_daily")
 }
 
 // ───────────── Phase 6: billing, operators, support access ─────────────

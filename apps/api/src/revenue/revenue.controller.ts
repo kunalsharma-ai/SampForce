@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
-import { analyticsQuerySchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, forecastQuerySchema, salesTargetInputSchema, z } from '@dealflow/types';
+import { analyticsQuerySchema, CHURN_TREND_DAYS, type CustomerFollowUps, customerFollowUpsSchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, forecastQuerySchema, salesTargetInputSchema, z } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AnalyticsService } from './analytics.service';
@@ -50,14 +50,32 @@ export class AnalyticsController {
   }
 }
 
+const customerQuery = z.object({ band: z.enum(['healthy', 'watch', 'at_risk']).optional(), ownerId: z.string().uuid().optional() });
+const trendQuery = z.object({ days: z.coerce.number().int().refine((d) => (CHURN_TREND_DAYS as readonly number[]).includes(d), 'Use 30, 90 or 180').default(90) });
+
 @Controller('success')
 export class SuccessController {
   constructor(private readonly success: SuccessService) {}
 
   @Get('customers')
   @RequirePermissions('success:read', 'companies:read')
-  customers(@Auth() auth: AuthContext) {
-    return this.success.customers(auth);
+  customers(@Auth() auth: AuthContext, @Query(new ZodPipe(customerQuery)) q: z.infer<typeof customerQuery>) {
+    return this.success.customers(auth, q);
+  }
+
+  /** Feature 13: churn-risk counts per day and the biggest falls. */
+  @Get('trends')
+  @RequirePermissions('success:read', 'companies:read')
+  trends(@Auth() auth: AuthContext, @Query(new ZodPipe(trendQuery)) q: z.infer<typeof trendQuery>) {
+    return this.success.trends(auth, q.days);
+  }
+
+  /** Creates the follow-up tasks the manager confirmed from the retention plan. */
+  @Post('customers/:companyId/follow-ups')
+  @HttpCode(201)
+  @RequirePermissions('success:write', 'activities:write')
+  followUps(@Auth() auth: AuthContext, @Param('companyId', uuid) companyId: string, @Body(new ZodPipe(customerFollowUpsSchema)) body: CustomerFollowUps, @Meta() meta: RequestMeta) {
+    return this.success.createFollowUps(auth, companyId, body, meta);
   }
 
   @Get('customers/:companyId')
