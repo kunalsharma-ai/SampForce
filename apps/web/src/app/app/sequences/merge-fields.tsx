@@ -36,13 +36,15 @@ export function insertAt(el: HTMLInputElement | HTMLTextAreaElement | null, valu
   const end = el.selectionEnd ?? value.length;
   const next = value.slice(0, start) + text + value.slice(end);
   requestAnimationFrame(() => {
+    // Put the cursor back after the field, unless the person has already moved on to another box.
+    const now = document.activeElement;
+    if (now && now !== el && now !== document.body && (now instanceof HTMLInputElement || now instanceof HTMLTextAreaElement || now instanceof HTMLSelectElement)) return;
     el.focus();
     el.setSelectionRange(start + text.length, start + text.length);
   });
   return next;
 }
 
-/** Renders the email for a real lead so people see exactly what goes out, including empty fields. */
 /** Where a "Send me a test" goes: one saved email step of a sequence. */
 export interface TestSendTarget {
   seqId: string;
@@ -52,6 +54,7 @@ export interface TestSendTarget {
   dirty: boolean;
 }
 
+/** Renders the email for a real lead so people see exactly what goes out, including empty fields. */
 export function PreviewPanel({ subject, body, idBase = 'tpl', test }: { subject: string; body: string; idBase?: string; test?: TestSendTarget }) {
   const [lead, setLead] = useState<PickerValue | null>(null);
   const preview = useMutation({

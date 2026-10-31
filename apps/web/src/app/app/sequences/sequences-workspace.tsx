@@ -198,8 +198,10 @@ function TemplateForm({ template, onDone }: { template: EmailTemplateRow | null;
       onDone();
     },
   });
+  // insertAt moves the cursor as a side effect, so call it once here rather than inside a state updater,
+  // which React may run more than once.
   const insert = (tag: string) =>
-    setV((s) => (last.current === 'subject' ? { ...s, subject: insertAt(subjectRef.current, s.subject, tag) } : { ...s, body: insertAt(bodyRef.current, s.body, tag) }));
+    setV(last.current === 'subject' ? { ...v, subject: insertAt(subjectRef.current, v.subject, tag) } : { ...v, body: insertAt(bodyRef.current, v.body, tag) });
   return (
     <Card>
       <CardHeader>
