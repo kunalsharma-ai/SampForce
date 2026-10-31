@@ -366,6 +366,19 @@ export interface EmailAnalytics {
   byTemplate: (AnalyticsCounts & { id: string | null; name: string })[];
   /** First email against each follow-up: does following up pay off? */
   byStepPosition: (AnalyticsCounts & { position: number })[];
+  /** Rule-based tips (Part 3 F). Each states the numbers and the minimum sample it needs. */
+  insights: EmailInsight[];
+}
+
+export const EMAIL_INSIGHT_KINDS = ['quiet_step', 'high_bounce', 'ab_leader', 'reply_timing', 'disengaged'] as const;
+export interface EmailInsight {
+  kind: (typeof EMAIL_INSIGHT_KINDS)[number];
+  severity: 'info' | 'warning';
+  title: string;
+  detail: string;
+  sequenceId: string | null;
+  /** For disengaged people: up to ten names with the lead or contact they belong to. */
+  people?: { name: string; leadId: string | null; contactId: string | null }[];
 }
 
 export interface SequenceStepStats extends EmailCounts {

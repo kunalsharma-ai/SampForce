@@ -56,7 +56,7 @@ const workflowOutSchema = z.object({ name: z.string().min(1).max(120), definitio
 
 const DAY = 86_400_000;
 
-interface RunHandle {
+export interface RunHandle {
   id: string;
   redactor: Redactor | null;
 }
@@ -343,7 +343,8 @@ export class AgentsService {
     if (!auth.permissions.includes(p)) throw new ForbiddenException({ code: 'FORBIDDEN', message: `Your role does not allow this (${p}).` });
   }
 
-  private async saveRec(auth: AuthContext, runId: string, agent: AiAgentKey, kind: string, entityType: string, entityId: string, payload: unknown, promptVersion: string, meta: RequestMeta) {
+  /** Shared with the other agent services in this module. */
+  async saveRec(auth: AuthContext, runId: string, agent: AiAgentKey, kind: string, entityType: string, entityId: string, payload: unknown, promptVersion: string, meta: RequestMeta) {
     return this.prisma.run(auth, async (tx) => {
       const row = await tx.aiRecommendation.create({
         data: { tenantId: auth.tenantId, runId, agent, kind, entityType, entityId, payload: payload as Prisma.InputJsonValue, promptVersion },
@@ -357,7 +358,7 @@ export class AgentsService {
   }
 
   /** A model call whose answer must match a JSON schema; the parsed answer is validated again with Zod. */
-  private async structured<T>(auth: AuthContext, run: RunHandle, agent: AiAgentKey, prompt: PromptKey & keyof typeof SCHEMAS, schema: z.ZodType<T>, input: unknown): Promise<T> {
+  async structured<T>(auth: AuthContext, run: RunHandle, agent: AiAgentKey, prompt: PromptKey & keyof typeof SCHEMAS, schema: z.ZodType<T>, input: unknown): Promise<T> {
     const p = PROMPTS[prompt];
     const res = await this.gateway.call(
       { tenantId: auth.tenantId, userId: auth.userId || null, agent, runId: run.id, promptVersion: p.version },
@@ -377,7 +378,7 @@ export class AgentsService {
   }
 
   /** Records an agent run around `fn`. Pass `existingRunId` when a queued run is being processed. */
-  private async withRun<T>(
+  async withRun<T>(
     auth: AuthContext,
     agent: AiAgentKey,
     entityType: string | null,
@@ -423,6 +424,7 @@ function promptVersionOf(agent: AiAgentKey): string {
     proposal_draft: PROMPTS.proposalDraft.version,
     workflow_builder: PROMPTS.workflowBuilder.version,
     forecast_explainer: PROMPTS.forecastExplainer.version,
+    email_assistant: 'email-assistant@1.0.0',
   };
   return map[agent] ?? PROMPTS.copilot.version;
 }

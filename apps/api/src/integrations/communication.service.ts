@@ -185,6 +185,7 @@ export function toEmailRow(r: WithProvider<EmailMessage>): EmailRow {
     sentAt: r.sentAt.toISOString(),
     contactId: r.contactId,
     leadId: r.leadId,
+    aiIntent: r.aiIntent,
     provider: r.connection.provider,
   };
 }

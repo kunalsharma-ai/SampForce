@@ -7,7 +7,7 @@ import { PLAN_ENTITLEMENTS, type PlanCode } from './plans';
 /** Model tier an agent asks for. The gateway maps a tier to a model and an effort level. */
 export type AiTier = 'fast' | 'balanced' | 'deep';
 
-export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer'] as const;
+export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant'] as const;
 export type AiAgentKey = (typeof AI_AGENT_KEYS)[number];
 
 export interface AiAgentDef {
@@ -94,6 +94,16 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
     withoutModel: 'The list of changed deals is still shown; only the written explanation needs the AI provider.',
     can: ['Read two forecast snapshots'],
     cannot: ['Change deals or forecasts'],
+  },
+  email_assistant: {
+    key: 'email_assistant',
+    name: 'Email Assistant',
+    purpose: 'Drafts, rewrites and improves emails from CRM data, suggests subject lines, and reads a received email for intent, objections and a suggested reply.',
+    tier: 'balanced',
+    permission: 'ai:use',
+    withoutModel: 'Templates, merge fields and the rule-based sequence tips still work; drafting and reading emails need the AI provider.',
+    can: ['Read the lead, contact or deal and its recent email', 'Write a draft into the editor for you to review'],
+    cannot: ['Send an email', 'Change the record', 'Invent prices, dates or commitments'],
   },
 };
 
@@ -274,3 +284,121 @@ export const workflowDraftRequestSchema = z.object({ description: z.string().tri
 export const acceptNextStepSchema = z.object({ title: z.string().trim().min(1).max(200).optional(), dueInDays: z.number().int().min(0).max(365).optional() });
 
 export const createActionItemsSchema = z.object({ indexes: z.array(z.number().int().min(0).max(50)).min(1).max(20) });
+
+// ───────────── Email assistant (enhancement feature 5, Part 3 F) ─────────────
+
+export const EMAIL_TONES = ['professional', 'friendly', 'formal', 'concise', 'confident', 'empathetic'] as const;
+export type EmailTone = (typeof EMAIL_TONES)[number];
+export const EMAIL_TONE_LABELS: Record<EmailTone, string> = {
+  professional: 'Professional',
+  friendly: 'Friendly',
+  formal: 'Formal',
+  concise: 'Concise',
+  confident: 'Confident',
+  empathetic: 'Empathetic',
+};
+export const EMAIL_LENGTHS = ['short', 'medium', 'long'] as const;
+
+/**
+ * Draft an email. `compose` writes a first email for an objective, `follow_up` follows up on the latest email to
+ * the person, `reply` answers a received email. With `asTemplate` the draft uses merge tags instead of real values,
+ * so it can be saved as a template or sequence step.
+ */
+export const emailDraftRequestSchema = z
+  .object({
+    mode: z.enum(['compose', 'follow_up', 'reply']).default('compose'),
+    objective: z.string().trim().max(500).default(''),
+    tone: z.enum(EMAIL_TONES).default('professional'),
+    length: z.enum(EMAIL_LENGTHS).default('short'),
+    leadId: z.string().uuid().optional(),
+    contactId: z.string().uuid().optional(),
+    dealId: z.string().uuid().optional(),
+    /** For replies: the received email to answer. */
+    emailId: z.string().uuid().optional(),
+    asTemplate: z.boolean().default(false),
+  })
+  .superRefine((v, ctx) => {
+    if (v.mode === 'reply' && !v.emailId) ctx.addIssue({ code: 'custom', path: ['emailId'], message: 'Pick the email to reply to' });
+    if (v.mode === 'compose' && !v.objective) ctx.addIssue({ code: 'custom', path: ['objective'], message: 'Say what the email should achieve' });
+    if (!v.asTemplate && !v.leadId && !v.contactId && !v.dealId && !v.emailId) ctx.addIssue({ code: 'custom', path: ['leadId'], message: 'Pick who the email is for, or write it as a template' });
+  });
+export type EmailDraftRequest = z.infer<typeof emailDraftRequestSchema>;
+
+export interface EmailDraft {
+  subject: string;
+  body: string;
+  subjectAlternatives: string[];
+  /** Facts from the CRM the draft relied on. */
+  basedOn: string[];
+  /** Things to check before sending, such as a claim the CRM could not confirm. */
+  checkBeforeSending: string[];
+  /** Merge tags the draft uses (template drafts only). */
+  mergeTags: string[];
+}
+
+export const EMAIL_REWRITE_ACTIONS = ['improve', 'shorten', 'tone'] as const;
+export const emailRewriteRequestSchema = z
+  .object({
+    action: z.enum(EMAIL_REWRITE_ACTIONS),
+    tone: z.enum(EMAIL_TONES).optional(),
+    subject: z.string().max(200).default(''),
+    body: z.string().trim().min(1, 'Write something to rewrite').max(20_000),
+  })
+  .refine((v) => v.action !== 'tone' || v.tone, { message: 'Pick a tone', path: ['tone'] });
+export type EmailRewriteRequest = z.infer<typeof emailRewriteRequestSchema>;
+export interface EmailRewrite {
+  subject: string;
+  body: string;
+  /** What changed, in a few words each. */
+  changes: string[];
+}
+
+export const emailSubjectsRequestSchema = z.object({ body: z.string().trim().min(1, 'Write the email first').max(20_000), current: z.string().max(200).default('') });
+export interface EmailSubjects {
+  subjects: { text: string; why: string }[];
+}
+
+/** What a received email asks for. Intent is the model's reading; confidence says how clear the email was. */
+export const EMAIL_INTENTS = ['interested', 'meeting_request', 'question', 'objection', 'not_now', 'not_interested', 'unsubscribe', 'referral', 'out_of_office', 'other'] as const;
+export type EmailIntent = (typeof EMAIL_INTENTS)[number];
+export const EMAIL_INTENT_LABELS: Record<EmailIntent, string> = {
+  interested: 'Interested',
+  meeting_request: 'Wants a meeting',
+  question: 'Has a question',
+  objection: 'Raised an objection',
+  not_now: 'Not now',
+  not_interested: 'Not interested',
+  unsubscribe: 'Asked not to be emailed',
+  referral: 'Referred someone else',
+  out_of_office: 'Out of office',
+  other: 'Other',
+};
+export const EMAIL_NEXT_ACTIONS = ['reply_now', 'book_meeting', 'send_information', 'follow_up_later', 'contact_referral', 'stop_outreach', 'no_action'] as const;
+export type EmailNextAction = (typeof EMAIL_NEXT_ACTIONS)[number];
+export const EMAIL_NEXT_ACTION_LABELS: Record<EmailNextAction, string> = {
+  reply_now: 'Reply now',
+  book_meeting: 'Offer meeting times',
+  send_information: 'Send the information they asked for',
+  follow_up_later: 'Follow up later',
+  contact_referral: 'Contact the person they referred',
+  stop_outreach: 'Stop emailing them',
+  no_action: 'No action needed',
+};
+
+export const emailAnalyseRequestSchema = z.object({ emailId: z.string().uuid() });
+export interface EmailAnalysis {
+  emailId: string;
+  /** Summary of the conversation so far (this email and earlier ones with the same person). */
+  summary: string;
+  intent: EmailIntent;
+  confidence: 'high' | 'medium' | 'low';
+  objections: string[];
+  buyingSignals: string[];
+  nextAction: EmailNextAction;
+  /** Days to wait before following up, or null when no follow-up is needed. */
+  followUpInDays: number | null;
+  reason: string;
+  suggestedReply: { subject: string; body: string } | null;
+  /** How many emails in the conversation were read. */
+  messagesRead: number;
+}

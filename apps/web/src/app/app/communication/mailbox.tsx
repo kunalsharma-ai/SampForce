@@ -1,11 +1,13 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
-import { type EmailRow, sendEmailSchema } from '@dealflow/types';
+import { EMAIL_INTENT_LABELS, type EmailIntent, type EmailRow, sendEmailSchema } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, PenSquare, Plug } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { EmailAssist } from '@/components/ai/email-assist';
+import { EmailReading, INTENT_TONE } from '@/components/ai/email-reading';
 import { Textarea } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { useEmails, useIntegrations } from '@/lib/automation';
@@ -18,6 +20,7 @@ export function Mailbox() {
   const canSend = useCan('activities:write');
   const [open, setOpen] = useState<EmailRow | null>(null);
   const [compose, setCompose] = useState(false);
+  const [reply, setReply] = useState<{ email: EmailRow; subject: string; body: string } | null>(null);
   const connected = integrations.data?.filter((p) => p.connection?.status === 'CONNECTED') ?? [];
 
   return (
@@ -68,6 +71,11 @@ export function Mailbox() {
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-baseline gap-2">
                       <span className="truncate text-sm font-medium">{e.subject}</span>
+                      {e.aiIntent && e.aiIntent in EMAIL_INTENT_LABELS && (
+                        <Badge tone={INTENT_TONE[e.aiIntent as EmailIntent]} title="The AI's reading of this email">
+                          AI: {EMAIL_INTENT_LABELS[e.aiIntent as EmailIntent]}
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground">{e.direction === 'INBOUND' ? `from ${e.from}` : `to ${e.to.join(', ')}`}</span>
                     </span>
                     {e.snippet && <span className="line-clamp-1 text-xs text-muted-foreground">{e.snippet}</span>}
@@ -79,13 +87,34 @@ export function Mailbox() {
           </ul>
         </Card>
       )}
-      <EmailDialog email={open} onClose={() => setOpen(null)} />
+      <EmailDialog
+        email={open}
+        onClose={() => setOpen(null)}
+        onReply={(e, draft) => {
+          setOpen(null);
+          setReply({ email: e, ...draft });
+        }}
+      />
       <ComposeDialog open={compose} onOpenChange={setCompose} />
+      {reply && (
+        <ComposeDialog
+          key={reply.email.id + reply.body}
+          open
+          onOpenChange={(o) => !o && setReply(null)}
+          to={reply.email.from}
+          subject={reply.subject}
+          body={reply.body}
+          contactId={reply.email.contactId ?? undefined}
+          leadId={reply.email.leadId ?? undefined}
+          replyTo={reply.email.id}
+        />
+      )}
     </div>
   );
 }
 
-function EmailDialog({ email, onClose }: { email: EmailRow | null; onClose: () => void }) {
+function EmailDialog({ email, onClose, onReply }: { email: EmailRow | null; onClose: () => void; onReply: (email: EmailRow, draft: { subject: string; body: string }) => void }) {
+  const canSend = useCan('activities:write');
   const detail = useQuery({ enabled: !!email, queryKey: ['emails', 'detail', email?.id], queryFn: () => api<EmailRow & { bodyText: string | null }>(`/emails/${email!.id}`) });
   return (
     <Dialog open={!!email} onOpenChange={(o) => !o && onClose()}>
@@ -108,16 +137,45 @@ function EmailDialog({ email, onClose }: { email: EmailRow | null; onClose: () =
           {email && <Badge>{email.provider === 'GOOGLE' ? 'Gmail' : 'Outlook'}</Badge>}
         </div>
         {detail.isPending ? <Skeleton className="mt-4 h-32" /> : <pre className="mt-4 whitespace-pre-wrap font-sans text-sm">{detail.data?.bodyText ?? detail.data?.snippet ?? 'No text body.'}</pre>}
+        {email?.direction === 'INBOUND' && (
+          <>
+            <EmailReading emailId={email.id} from={email.from} onReply={(d) => onReply(email, d)} />
+            {canSend && (
+              <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => onReply(email, { subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`, body: '' })}>
+                Reply
+              </Button>
+            )}
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-export function ComposeDialog({ open, onOpenChange, to: initialTo = '', contactId, leadId }: { open: boolean; onOpenChange: (o: boolean) => void; to?: string; contactId?: string; leadId?: string }) {
+export function ComposeDialog({
+  open,
+  onOpenChange,
+  to: initialTo = '',
+  contactId,
+  leadId,
+  subject: initialSubject = '',
+  body: initialBody = '',
+  replyTo,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  to?: string;
+  contactId?: string;
+  leadId?: string;
+  subject?: string;
+  body?: string;
+  /** The received email this answers, so the assistant can read it. */
+  replyTo?: string;
+}) {
   const qc = useQueryClient();
   const [to, setTo] = useState(initialTo);
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(initialBody);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const send = useMutation({
     mutationFn: () => api<EmailRow>('/emails/send', { method: 'POST', json: { to, subject, body, contactId, leadId } }),
@@ -158,6 +216,15 @@ export function ComposeDialog({ open, onOpenChange, to: initialTo = '', contactI
           <Field id="mail-body" label="Message" error={errors.body}>
             <Textarea className="min-h-40" value={body} maxLength={20_000} onChange={(e) => setBody(e.target.value)} />
           </Field>
+          <EmailAssist
+            subject={subject}
+            body={body}
+            target={{ contactId, leadId, emailId: replyTo }}
+            onApply={(v) => {
+              if (v.subject !== undefined) setSubject(v.subject);
+              if (v.body !== undefined) setBody(v.body);
+            }}
+          />
           {send.error && (
             <p role="alert" className="text-sm text-critical">
               {send.error.message}

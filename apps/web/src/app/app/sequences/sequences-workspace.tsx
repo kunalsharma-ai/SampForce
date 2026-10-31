@@ -7,6 +7,7 @@ import { Copy, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { EmailAssist } from '@/components/ai/email-assist';
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -291,6 +292,12 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
             />
           </Field>
           <MergeFieldBar idBase="tpl" onInsert={insert} />
+          <EmailAssist
+            asTemplate
+            subject={v.subject}
+            body={v.body}
+            onApply={(x) => setV({ ...v, ...(x.subject !== undefined ? { subject: x.subject } : {}), ...(x.body !== undefined ? { body: x.body } : {}) })}
+          />
           <p className="text-xs text-muted-foreground">
             Add a fallback after a bar for fields that may be empty, for example {'{{first_name|there}}'}. Custom fields use {'{{custom.key}}'} and workspace variables use {'{{var.key}}'}.
           </p>

@@ -132,6 +132,46 @@ export function EmailAnalyticsPanel() {
             Replies and bounces come from your synced mailbox and are reliable. Opens are estimates: some mail apps load images by themselves and others block them. Some clicks come
             from security scanners. Delivery is not shown because mail providers do not report it.
           </p>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Tips</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {q.data.insights.length === 0 ? (
+                <p className="text-muted-foreground">No tips yet. Tips appear once there is enough data, for example 20 emails from one step or 10 replies.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {q.data.insights.map((i) => (
+                    <li key={`${i.kind}-${i.title}`}>
+                      <p className="flex flex-wrap items-center gap-2 font-medium">
+                        <Badge tone={i.severity === 'warning' ? 'warning' : 'primary'}>{i.severity === 'warning' ? 'Check' : 'Tip'}</Badge>
+                        {i.sequenceId ? (
+                          <Link href={`/app/sequences/${i.sequenceId}`} className="underline underline-offset-2">
+                            {i.title}
+                          </Link>
+                        ) : (
+                          i.title
+                        )}
+                      </p>
+                      <p className="text-muted-foreground">{i.detail}</p>
+                      {i.people && (
+                        <p className="text-xs">
+                          {i.people.map((p, n) => (
+                            <span key={`${p.leadId ?? p.contactId ?? p.name}-${n}`}>
+                              {n > 0 && ', '}
+                              <Link className="underline underline-offset-2" href={p.leadId ? `/app/leads/${p.leadId}` : `/app/contacts/${p.contactId}`}>
+                                {p.name}
+                              </Link>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
           <Table
             title="By sequence"
             first="Sequence"

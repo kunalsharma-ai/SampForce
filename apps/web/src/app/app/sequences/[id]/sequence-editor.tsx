@@ -30,6 +30,7 @@ import { formatDate, titleCase } from '@/lib/crm';
 import { useSegments } from '@/lib/revenue';
 import { ENROLLMENT_LABEL, ENROLLMENT_TONE, pct, SEQUENCE_TONE, useEnrollments, useSequence, useSequences, useStepStats, useTemplates } from '@/lib/sequences';
 import { useCan, useSession } from '@/lib/session';
+import { EmailAssist } from '@/components/ai/email-assist';
 import { insertAt, MergeFieldBar, PreviewPanel } from '../merge-fields';
 
 type Tab = 'steps' | 'rules' | 'settings' | 'people' | 'results';
@@ -324,6 +325,14 @@ function VersionFields({ idBase, version, readOnly, test, onChange }: {
         <Textarea id={`body-${idBase}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={version.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...version, body: e.target.value })} />
       </Field>
       {!readOnly && <MergeFieldBar idBase={idBase} onInsert={insert} />}
+      {!readOnly && (
+        <EmailAssist
+          asTemplate
+          subject={version.subject || tpl?.subject || ''}
+          body={version.body || tpl?.body || ''}
+          onApply={(x) => onChange({ ...version, ...(x.subject !== undefined ? { subject: x.subject } : {}), ...(x.body !== undefined ? { body: x.body } : {}) })}
+        />
+      )}
       <PreviewPanel idBase={idBase} subject={version.subject || tpl?.subject || ''} body={version.body || tpl?.body || ''} test={test} />
     </div>
   );
