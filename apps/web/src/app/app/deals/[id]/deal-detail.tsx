@@ -16,6 +16,7 @@ import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader 
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { DealQuotes } from '@/components/revenue/record-commercial';
+import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { api } from '@/lib/api';
 import { DEAL_STATUS_TONE, formatDate, formatMoney, titleCase, usePipelines, useRecord } from '@/lib/crm';
 import { useCan } from '@/lib/session';
@@ -137,6 +138,7 @@ export function DealDetail({ id }: { id: string }) {
           <DealQuotes deal={{ id, name: d.name }} />
           <RecordConversations dealId={id} />
           <RecordMeetings target={{ dealId: id }} />
+          <RecordVoiceNotes record={{ type: 'deal', id, name: d.name }} />
           <ActivityTimeline related={{ opportunityId: id }} timeline={{ entity: 'deal', id }} />
         </div>
         <div className="space-y-4">

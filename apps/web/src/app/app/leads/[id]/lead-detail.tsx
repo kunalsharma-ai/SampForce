@@ -16,6 +16,7 @@ import { Select } from '@/components/crm/select';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
+import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, useRecord } from '@/lib/crm';
 import { consentLabel } from '@/lib/crm-fields';
@@ -99,6 +100,7 @@ export function LeadDetail({ id }: { id: string }) {
           <LeadQualificationCard leadId={id} canRun={canWrite && !converted} />
           <Qualification lead={l} disabled={converted || !canWrite} />
           <RecordMeetings target={{ leadId: id }} />
+          <RecordVoiceNotes record={{ type: 'lead', id, name: l.fullName }} />
           <RecordSequences leadId={id} email={l.email} />
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />

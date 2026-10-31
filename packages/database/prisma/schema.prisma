@@ -134,6 +134,7 @@ model Tenant {
   portalSettings        PortalSettings?
   portalUsers           PortalUser[]
   forecastSettings      ForecastSettings?
+  voiceNotes            VoiceNote[]
   id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String
   slug                  String            @unique
@@ -2445,4 +2446,37 @@ model PortalUpdate {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)], map: "portal_updates_company_idx")
   @@map("portal_updates")
+}
+
+/// Enhancement feature 12: a dictated or recorded voice note and the CRM actions proposed from it (ADR 0026).
+model VoiceNote {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  leadId                String?   @map("lead_id") @db.Uuid
+  contactId             String?   @map("contact_id") @db.Uuid
+  dealId                String?   @map("deal_id") @db.Uuid
+  companyId             String?   @map("company_id") @db.Uuid
+  /// typed or recording
+  source                String    @default("typed")
+  language              String    @default("auto")
+  transcript            String?
+  detectedLanguage      String?   @map("detected_language")
+  durationSeconds       Decimal?  @map("duration_seconds") @db.Decimal(10, 2)
+  /// none, processing, done or failed
+  transcriptionStatus   String    @default("none") @map("transcription_status")
+  transcriptionProvider String?   @map("transcription_provider")
+  transcriptionError    String?   @map("transcription_error")
+  interpretation        Json?
+  aiRunId               String?   @map("ai_run_id") @db.Uuid
+  interpretedAt         DateTime? @map("interpreted_at") @db.Timestamptz(3)
+  appliedAt             DateTime? @map("applied_at") @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, createdAt(sort: Desc)], map: "voice_notes_user_idx")
+  @@index([tenantId, leadId, contactId, dealId, companyId], map: "voice_notes_record_idx")
+  @@map("voice_notes")
 }

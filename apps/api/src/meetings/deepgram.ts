@@ -8,6 +8,15 @@ export interface TranscriptionResult {
   text: string;
   segments: TranscriptSegment[];
   durationSeconds: number | null;
+  /** Set when Deepgram detected the language. */
+  detectedLanguage: string | null;
+}
+
+export interface TranscriptionOptions {
+  /** A language code, or "auto" to let Deepgram detect it. Omitted: Deepgram's default (English). */
+  language?: string;
+  /** Tell speakers apart (meetings). A dictated note has one speaker. */
+  diarize?: boolean;
 }
 
 /**
@@ -26,9 +35,12 @@ export class DeepgramClient {
     return this.env.MEETING_UPLOAD_MAX_MB * 1024 * 1024;
   }
 
-  async transcribe(audio: ReadableStream<Uint8Array> | Uint8Array, contentType: string): Promise<TranscriptionResult> {
+  async transcribe(audio: ReadableStream<Uint8Array> | Uint8Array, contentType: string, opts: TranscriptionOptions = {}): Promise<TranscriptionResult> {
     if (!this.env.DEEPGRAM_API_KEY) throw new TranscriptionError('Transcription is not configured.');
-    const q = new URLSearchParams({ model: 'nova-3', smart_format: 'true', punctuate: 'true', diarize: 'true', utterances: 'true' });
+    const diarize = opts.diarize ?? true;
+    const q = new URLSearchParams({ model: 'nova-3', smart_format: 'true', punctuate: 'true', diarize: String(diarize), utterances: String(diarize) });
+    if (opts.language === 'auto') q.set('detect_language', 'true');
+    else if (opts.language) q.set('language', opts.language);
     let res: Response;
     try {
       res = await fetch(`${this.env.DEEPGRAM_API_BASE_URL.replace(/\/+$/, '')}/v1/listen?${q}`, {
@@ -52,7 +64,7 @@ export class DeepgramClient {
       ? segments.map((s) => `${s.speaker === null ? '' : `Speaker ${s.speaker}: `}${s.text}`).join('\n')
       : (body.results.channels?.[0]?.alternatives?.[0]?.transcript ?? '').trim();
     if (!text) throw new TranscriptionError('No speech was found in the recording.');
-    return { text: text.slice(0, 200_000), segments: segments.slice(0, 5000), durationSeconds: body.metadata?.duration ?? null };
+    return { text: text.slice(0, 200_000), segments: segments.slice(0, 5000), durationSeconds: body.metadata?.duration ?? null, detectedLanguage: body.results.channels?.[0]?.detected_language ?? null };
   }
 }
 
@@ -60,7 +72,7 @@ interface DeepgramResponse {
   err_msg?: string;
   metadata?: { duration?: number };
   results?: {
-    channels?: { alternatives?: { transcript?: string }[] }[];
+    channels?: { detected_language?: string; alternatives?: { transcript?: string }[] }[];
     utterances?: { start?: number; end?: number; speaker?: number; transcript?: string }[];
   };
 }

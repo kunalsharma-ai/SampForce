@@ -101,6 +101,39 @@ export const rules: Handler = (b) => {
     }
   })();
 
+  const strip = (v: unknown) => String(v ?? '').replace(/<\/?untrusted_data[^>]*>/g, '').trim();
+  if (system.startsWith('You read a voice note a sales rep dictated')) {
+    const note = strip(input.note);
+    const today = String(input.today ?? new Date().toISOString().slice(0, 10));
+    const addDays = (n: number) => new Date(Date.parse(`${today}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+    const nextWeekday = (target: number) => {
+      const now = new Date(`${today}T00:00:00Z`).getUTCDay();
+      return addDays(((target - now + 7) % 7) || 7);
+    };
+    const sentences = note.split(/(?<=[.!?])\s+/).map((x: string) => x.trim()).filter(Boolean);
+    const actions: Loose[] = [];
+    const unsupported: string[] = [];
+    let lastCallRequested = false;
+    for (const s of sentences) {
+      const l = s.toLowerCase();
+      const time = l.match(/\bat (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+      const dueTime = time ? `${String((Number(time[1]) % 12) + (time[3] === 'pm' ? 12 : 0)).padStart(2, '0')}:${time[2] ?? '00'}` : null;
+      const dueDate = /tomorrow/.test(l) ? addDays(1) : /next monday/.test(l) ? nextWeekday(1) : /next week/.test(l) ? addDays(7) : null;
+      if (/summari[sz]e my last/.test(l)) lastCallRequested = true;
+      else if (/\bdelete|remove the|send (an )?email|change the (amount|stage|owner)/.test(l)) unsupported.push(s.replace(/[.!?]$/, ''));
+      else if (/schedule .*meeting|book .*meeting/.test(l)) actions.push({ type: 'create_task', title: 'Follow-up meeting', dueDate, dueTime, meeting: true });
+      else if (/\btask\b|remind me|follow up|call them/.test(l)) actions.push({ type: 'create_task', title: /call/.test(l) ? 'Call back' : 'Follow up', dueDate, dueTime, meeting: false });
+      else if (/note that/.test(l)) actions.push({ type: 'add_note', body: s.replace(/^.*?note that\s*/i, '').replace(/^./, (c: string) => c.toUpperCase()) });
+      else if (/add (a )?(new )?lead/.test(l)) {
+        const m = s.match(/lead,?\s+([A-Z][a-z]+(?: [A-Z][a-z]+)?)(?: from ([A-Z][\w ]+?))?(?:[,.]|$)/);
+        actions.push({ type: 'create_lead', name: m?.[1] ?? 'New lead', company: m?.[2]?.trim() ?? null, email: s.match(/[\w.+-]+@[\w-]+\.[\w.]+/)?.[0]?.replace(/\.$/, '') ?? null, phone: null });
+      } else if (/add (a )?(new )?contact/.test(l)) {
+        const m = s.match(/contact,?\s+([A-Z][a-z]+)(?: ([A-Z][a-z]+))?/);
+        actions.push({ type: 'create_contact', firstName: m?.[1] ?? 'New', lastName: m?.[2] ?? null, jobTitle: null, email: null, phone: null });
+      }
+    }
+    return json({ summary: `Voice note with ${sentences.length} sentence${sentences.length === 1 ? '' : 's'}.`, actions, lastCallRequested, unsupported });
+  }
   if (system.startsWith('You are DealFlow Copilot')) {
     const tr = lastToolResult(b);
     if (!tr) {
@@ -162,7 +195,6 @@ export const rules: Handler = (b) => {
   if (system.startsWith('You explain to a sales manager')) {
     return text(`- The base forecast moved by ${input.delta?.base} ${input.currency}.\n- ${(input.changes ?? []).length} deals changed.`);
   }
-  const strip = (v: unknown) => String(v ?? '').replace(/<\/?untrusted_data[^>]*>/g, '').trim();
   if (system.startsWith('You write sales emails')) {
     const obj = String(input.objective ?? 'checking in');
     const first = String(input.recipient?.name ?? '').split(' ')[0] || 'there';

@@ -6,7 +6,7 @@
 |---|---|---|
 | Google (Gmail read and send, Google Calendar read) | **Implemented, tested against a local fixture of the Google APIs.** Not yet tested against Google with real credentials. | Needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` |
 | Microsoft 365 (Outlook inbox read and send, calendar read via Microsoft Graph) | **Implemented, tested against a local fixture of Microsoft Graph.** Not yet tested against Microsoft with real credentials. | Needs `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, optional `MICROSOFT_TENANT` |
-| Deepgram (meeting recording transcription) | **Pending Configuration.** Implemented and tested against a local stand-in only. Not yet tested against Deepgram with a real key. The app shows Pending Configuration until a key is set, and Verified only after a successful transcription. | Needs `DEEPGRAM_API_KEY` (server secret). Optional `MEETING_UPLOAD_MAX_MB` |
+| Deepgram (meeting and voice note transcription) | **Pending Configuration.** Implemented and tested against a local stand-in only. Not yet tested against Deepgram with a real key. The app shows Pending Configuration until a key is set, and Verified only after a successful transcription. | Needs `DEEPGRAM_API_KEY` (server secret). Optional `MEETING_UPLOAD_MAX_MB` |
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
 | Slack, Teams, Zoom, Twilio, WhatsApp, Stripe, Razorpay, DocuSign, Zapier | Not built | Shown as "Not available yet" in the app |
 
@@ -78,6 +78,9 @@ been tested against a local stand-in, so check the first results after adding it
 
 Recordings are streamed to Deepgram and not stored by DealFlow. Meet, Zoom and Teams are recognised from calendar
 links only; there is no Zoom, Meet or Teams API connection and no meeting bot.
+
+The same key transcribes voice notes (up to 25 MB each, with a language choice or automatic detection). Voice
+recordings are not stored either, and any successful transcription, meeting or voice note, marks the workspace Verified.
 
 ## Webhooks
 
