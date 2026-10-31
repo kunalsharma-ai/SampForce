@@ -19,3 +19,4 @@ export * from './tenant';
 export { z } from 'zod';
 export * from './security';
 export * from './sequences';
+export * from './extension';

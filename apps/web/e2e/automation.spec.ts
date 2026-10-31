@@ -110,17 +110,17 @@ test('integrations show mailbox set-up honestly and manage signed webhooks', asy
   await expect(page.getByRole('heading', { name: 'Your mailbox and calendar' })).toBeVisible();
   await expect(page.getByText('Not set up on this installation')).toHaveCount(2);
   await expect(page.getByText(/An operator must add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Connect' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0);
 
   await page.getByLabel('Endpoint URL').fill('http://127.0.0.1:9/dealflow');
   await page.getByLabel('lead.created').check();
   await page.getByRole('button', { name: 'Add webhook' }).click();
   await expect(page.getByText('Signing secret, shown once.')).toBeVisible();
-  await expect(page.locator('code')).toContainText('whsec_');
+  await expect(page.locator('code', { hasText: 'whsec_' })).toBeVisible();
   await expect(page.getByText('http://127.0.0.1:9/dealflow')).toBeVisible();
   await expectNoA11yViolations(page);
   await page.reload();
-  await expect(page.locator('code')).toHaveCount(0);
+  await expect(page.locator('code', { hasText: 'whsec_' })).toHaveCount(0);
 
   await page.goto('/app/communication');
   await expect(page.getByText('No mailbox connected.')).toBeVisible();

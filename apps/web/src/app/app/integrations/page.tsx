@@ -2,6 +2,7 @@ import { Badge, Card } from '@dealflow/ui';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { BrowserExtension } from './browser-extension';
 import { MailboxConnections, WebhooksManager } from './integrations-board';
 
 export const metadata: Metadata = { title: 'Integrations' };
@@ -31,10 +32,11 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
 export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-8">
-      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, manage outbound webhooks, and see which integrations are still planned." />
+      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, set up the browser extension, manage outbound webhooks, and see which integrations are still planned." />
       <Suspense>
         <MailboxConnections />
       </Suspense>
+      <BrowserExtension />
       <WebhooksManager />
       <section aria-labelledby="planned-heading" className="space-y-4">
         <h2 id="planned-heading" className="text-base font-semibold">

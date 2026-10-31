@@ -6,8 +6,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { EXTENSION_SCOPES, EXTENSION_TOKEN_PREFIX } from '@dealflow/types';
+import { createHash } from 'node:crypto';
 import {
   ALLOW_RESTRICTED,
+  type AuthContext,
+  EXTENSION_ACCESS,
   type AuthedRequest,
   IS_PUBLIC,
   REQUIRED_PERMISSIONS,
@@ -35,7 +39,10 @@ export class AuthGuard implements CanActivate {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, targets);
 
     const header = req.get('authorization');
-    const raw: string | undefined =
+    const extensionToken = header?.startsWith(`Bearer ${EXTENSION_TOKEN_PREFIX}`) ? header.slice(7) : undefined;
+    // An extension token is used on its own, never alongside the cookie: the origin check lets it through
+    // from the extension's own origin, so it must not carry the person's web session with it.
+    const raw: string | undefined = extensionToken ? undefined :
       (req.cookies as Record<string, string> | undefined)?.[ACCESS_COOKIE] ??
       (header?.startsWith('Bearer ') ? header.slice(7) : undefined);
 
@@ -94,6 +101,8 @@ export class AuthGuard implements CanActivate {
       }
     }
 
+    if (extensionToken) req.auth = await this.extensionAuth(extensionToken);
+
     if (isPublic) return true;
     if (!req.auth) {
       throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to continue.' });
@@ -116,6 +125,10 @@ export class AuthGuard implements CanActivate {
       );
     }
 
+    if (req.auth.via === 'extension' && !this.reflector.getAllAndOverride<boolean>(EXTENSION_ACCESS, targets)) {
+      throw new ForbiddenException({ code: 'EXTENSION_NOT_ALLOWED', message: 'The browser extension cannot do this. Use DealFlow in your browser.' });
+    }
+
     const required =
       this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS, targets) ?? [];
     const missing = required.filter((p) => !req.auth!.permissions.includes(p));
@@ -127,5 +140,41 @@ export class AuthGuard implements CanActivate {
       });
     }
     return true;
+  }
+
+  /** A browser extension connection: a session of its own, limited to the extension scopes. */
+  private async extensionAuth(token: string): Promise<AuthContext | undefined> {
+    const hash = createHash('sha256').update(token).digest('hex');
+    const session = await this.prisma.session.findUnique({ where: { extensionTokenHash: hash } });
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) return undefined;
+    if (session.ssoTenantId && session.ssoTenantId !== session.activeTenantId) return undefined;
+    const membership = await this.prisma.run({ tenantId: session.activeTenantId, userId: session.userId }, (tx) =>
+      tx.membership.findFirst({
+        where: { tenantId: session.activeTenantId, userId: session.userId, status: 'ACTIVE', tenant: { status: 'ACTIVE', deletedAt: null }, user: { status: 'ACTIVE' } },
+        include: { role: true, tenant: { select: { requireMfa: true, ssoEnforced: true } } },
+      }),
+    );
+    if (!membership) return undefined;
+    const method = (['password', 'mfa', 'sso'].includes(session.authMethod) ? session.authMethod : 'password') as AuthContext['authMethod'];
+    const { tenant } = membership;
+    const restriction =
+      tenant.ssoEnforced && method !== 'sso' && membership.role.key !== 'owner' ? 'sso_required' : tenant.requireMfa && method === 'password' ? 'mfa_enrolment' : undefined;
+    // Record use at most once a minute.
+    if (!session.lastUsedAt || Date.now() - session.lastUsedAt.getTime() > 60_000) {
+      await this.prisma.session.update({ where: { id: session.id }, data: { lastUsedAt: new Date() } });
+    }
+    const scopes = new Set<string>(EXTENSION_SCOPES);
+    return {
+      userId: session.userId,
+      tenantId: session.activeTenantId,
+      sessionId: session.id,
+      membershipId: membership.id,
+      roleKey: membership.role.key,
+      permissions: membership.role.permissions.filter((p) => scopes.has(p)),
+      authMethod: method,
+      via: 'extension',
+      ...(session.ssoTenantId ? { ssoTenantId: session.ssoTenantId } : {}),
+      ...(restriction ? { restriction } : {}),
+    };
   }
 }

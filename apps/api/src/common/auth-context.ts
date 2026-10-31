@@ -18,6 +18,8 @@ export interface AuthContext {
    * (the profile, two-step verification setup, sessions, switching workspace).
    */
   restriction?: 'mfa_enrolment' | 'sso_required';
+  /** Set when the caller is the browser extension, which may only use routes marked @ExtensionAccess. */
+  via?: 'extension';
 }
 
 export interface RequestMeta {
@@ -35,6 +37,10 @@ export const Public = () => SetMetadata(IS_PUBLIC, true);
 export const ALLOW_RESTRICTED = 'dealflow:allowRestricted';
 /** Reachable while the workspace's MFA or SSO policy still blocks the session (see AuthContext.restriction). */
 export const AllowRestricted = () => SetMetadata(ALLOW_RESTRICTED, true);
+
+export const EXTENSION_ACCESS = 'dealflow:extensionAccess';
+/** Reachable with a browser extension token. Every other route refuses one. */
+export const ExtensionAccess = () => SetMetadata(EXTENSION_ACCESS, true);
 
 export const REQUIRED_PERMISSIONS = 'dealflow:permissions';
 /** Every listed permission must be granted by the caller's role in the active tenant. */

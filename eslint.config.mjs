@@ -28,4 +28,14 @@ export default tseslint.config(
       ...nextPlugin.configs['core-web-vitals'].rules,
     },
   },
+  {
+    // The browser extension is plain JavaScript loaded by the browser as-is.
+    files: ['apps/extension/src/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: Object.fromEntries(
+        ['chrome', 'document', 'location', 'fetch', 'URL', 'URLSearchParams', 'console', 'decodeURIComponent'].map((g) => [g, 'readonly']),
+      ),
+    },
+  },
 );

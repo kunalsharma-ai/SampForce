@@ -453,7 +453,7 @@ export class AuthService {
       method: r.authMethod as SessionSummary['method'],
       userAgent: r.userAgent,
       ipAddress: r.ipAddress,
-      lastActiveAt: r.createdAt.toISOString(),
+      lastActiveAt: (r.lastUsedAt ?? r.createdAt).toISOString(),
       expiresAt: r.expiresAt.toISOString(),
     }));
   }
