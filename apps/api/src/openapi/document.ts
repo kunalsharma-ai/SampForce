@@ -76,6 +76,9 @@ import {
   activityInputSchema,
   approvalDecisionSchema,
   inboxNoteSchema,
+  meetingRecordCreateSchema,
+  meetingRecordUpdateSchema,
+  meetingTasksSchema,
   inboxQuerySchema,
   inboxUpdateSchema,
   sendEmailSchema,
@@ -278,6 +281,16 @@ export function buildOpenApiDocument(): object {
   action('patch', '/inbox/threads/{id}', 'Communication', 'Set status, category, assignee, or the linked deal, contact or lead; the assignee is notified (activities:write)', inboxUpdateSchema);
   action('post', '/inbox/threads/{id}/notes', 'Communication', 'Add an internal note; the assignee and mailbox owner are notified (activities:write)', inboxNoteSchema);
   action('get', '/inbox/sync-logs', 'Communication', 'Mailbox sync history: your own mailboxes, or all with integrations:manage (activities:read)');
+  action('get', '/meeting-records', 'Meetings', 'Meeting notes, newest first, optionally for one deal, contact or lead (activities:read)', undefined, { query: z.object({ dealId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
+  action('get', '/meeting-records/transcription-status', 'Meetings', 'Whether recording transcription is pending configuration, configured, or verified by a successful transcription here (activities:read)');
+  action('post', '/meeting-records', 'Meetings', 'Open notes for a calendar meeting (returns the existing notes if there are any) or for a call outside the calendar (activities:write)', meetingRecordCreateSchema);
+  action('get', '/meeting-records/{id}', 'Meetings', 'Notes, transcript with speaker timings, the AI reading and its review state (activities:read)');
+  action('patch', '/meeting-records/{id}', 'Meetings', 'Edit the title, links, notes or transcript; saving an analysis marks it reviewed by you (activities:write)', meetingRecordUpdateSchema);
+  action('delete', '/meeting-records/{id}', 'Meetings', 'Delete the notes; tasks and timeline notes already created stay (activities:write)');
+  action('post', '/meeting-records/{id}/recording', 'Meetings', 'Body is the audio or video file. Requires consent=true. Streamed to Deepgram and not stored; 409 PENDING_CONFIGURATION when no key is set (activities:write)', undefined, { query: z.object({ consent: z.literal('true') }) });
+  action('post', '/meeting-records/{id}/analyse', 'Meetings', 'AI reading: summary, requirements, objections, decisions, action items, commitments, participants and a follow-up draft. Resets the review (activities:write, ai:use)');
+  action('post', '/meeting-records/{id}/tasks', 'Meetings', 'Create tasks from reviewed action items (activities:write)', meetingTasksSchema);
+  action('post', '/meeting-records/{id}/save', 'Meetings', 'Add the reviewed summary to the linked deal, contact or lead timeline, once (activities:write)');
   action('get', '/meetings', 'Communication', 'Synced meetings with known contacts (activities:read)', undefined, { query: z.object({ from: z.string().optional(), to: z.string().optional(), contactId: z.string().uuid().optional() }) });
 
   // AI: every route also needs ai:use; model calls are metered in credits and can return 402/409/429/503.

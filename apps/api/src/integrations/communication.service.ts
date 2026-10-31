@@ -1,7 +1,7 @@
 import { ConflictException, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { EmailMessage, IntegrationConnection, Meeting, TenantTx } from '@dealflow/database';
-import type { EmailRow, IntegrationProviderKey, MeetingRow, SendEmailInput } from '@dealflow/types';
+import { type EmailRow, type IntegrationProviderKey, type MeetingRow, meetingPlatform, type SendEmailInput } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -55,7 +55,7 @@ export class CommunicationService {
           startsAt: { gte: range.from, lt: range.to },
           ...(range.contactId ? { contactIds: { has: range.contactId } } : {}),
         },
-        include: { connection: { select: { provider: true } } },
+        include: { connection: { select: { provider: true } }, record: { select: { id: true } } },
         orderBy: { startsAt: 'asc' },
         take: 500,
       });
@@ -209,7 +209,7 @@ export function toEmailRow(r: WithProvider<EmailMessage>): EmailRow {
   };
 }
 
-export function toMeetingRow(r: WithProvider<Meeting>): MeetingRow {
+export function toMeetingRow(r: WithProvider<Meeting> & { record?: { id: string } | null }): MeetingRow {
   return {
     id: r.id,
     title: r.title,
@@ -220,6 +220,9 @@ export function toMeetingRow(r: WithProvider<Meeting>): MeetingRow {
     canceled: r.canceled,
     contactIds: r.contactIds,
     provider: r.connection.provider,
+    joinUrl: r.joinUrl,
+    platform: meetingPlatform(r.joinUrl),
+    recordId: r.record?.id ?? null,
   };
 }
 

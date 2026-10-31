@@ -6,6 +6,7 @@ import type { ContactRow } from '@dealflow/types';
 import Link from 'next/link';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordEmails } from '@/components/crm/record-emails';
+import { RecordMeetings } from '@/components/meetings/record-meetings';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -53,6 +54,7 @@ export function ContactDetail({ id }: { id: string }) {
           </Card>
           <RelatedDeals filter={{ contactId: id }} />
           <RecordEmails contactId={id} email={c.email} />
+          <RecordMeetings target={{ contactId: id }} />
           <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />
         </div>
         <div className="space-y-4">

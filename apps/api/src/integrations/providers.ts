@@ -32,6 +32,17 @@ export interface ProviderEvent {
   attendees: string[];
   organizer: string | null;
   canceled: boolean;
+  /** The online meeting link (Google Meet, Teams, Zoom) when the event has one. */
+  joinUrl?: string | null;
+}
+
+/** First https link to a known meeting service in the text, if any. */
+export function meetingLink(...texts: (string | null | undefined)[]): string | null {
+  for (const t of texts) {
+    const m = t?.match(/https:\/\/(?:meet\.google\.com|[\w.-]*zoom\.us|teams\.microsoft\.com|teams\.live\.com)\/[^\s<>"')]+/i);
+    if (m) return m[0];
+  }
+  return null;
 }
 
 export interface OutgoingEmail {
@@ -267,6 +278,9 @@ export function googleAdapter(env: ApiEnv): ProviderAdapter {
           end?: { dateTime?: string; date?: string };
           attendees?: { email?: string }[];
           organizer?: { email?: string };
+          hangoutLink?: string;
+          description?: string;
+          conferenceData?: { entryPoints?: { entryPointType?: string; uri?: string }[] };
         }[];
       }>(`${env.GOOGLE_API_BASE_URL}/calendar/v3/calendars/primary/events?${q}`, { token });
       return (r.items ?? []).flatMap((e) => {
@@ -282,6 +296,7 @@ export function googleAdapter(env: ApiEnv): ProviderAdapter {
           attendees: (e.attendees ?? []).map((a) => lower(a.email)).filter(Boolean),
           organizer: e.organizer?.email ? lower(e.organizer.email) : null,
           canceled: e.status === 'cancelled',
+          joinUrl: e.hangoutLink ?? meetingLink(e.conferenceData?.entryPoints?.find((p) => p.entryPointType === 'video')?.uri, e.location, e.description),
         }];
       });
     },
@@ -377,10 +392,10 @@ export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
         startDateTime: from.toISOString(),
         endDateTime: to.toISOString(),
         $top: '250',
-        $select: 'id,subject,start,end,location,attendees,organizer,isCancelled',
+        $select: 'id,subject,start,end,location,attendees,organizer,isCancelled,onlineMeeting',
       });
       const r = await http<{
-        value?: { id: string; subject?: string; start?: { dateTime?: string }; end?: { dateTime?: string }; location?: { displayName?: string }; attendees?: GraphAddress[]; organizer?: GraphAddress; isCancelled?: boolean }[];
+        value?: { id: string; subject?: string; start?: { dateTime?: string }; end?: { dateTime?: string }; location?: { displayName?: string }; attendees?: GraphAddress[]; organizer?: GraphAddress; isCancelled?: boolean; onlineMeeting?: { joinUrl?: string } | null }[];
       }>(`${graph}/me/calendarView?${q}`, { token, headers: { Prefer: 'outlook.timezone="UTC"' } });
       const utc = (s: string) => new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : `${s}Z`);
       return (r.value ?? []).flatMap((e) =>
@@ -394,6 +409,7 @@ export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
               attendees: (e.attendees ?? []).map(addr).filter(Boolean),
               organizer: addr(e.organizer) || null,
               canceled: !!e.isCancelled,
+              joinUrl: e.onlineMeeting?.joinUrl ?? meetingLink(e.location?.displayName),
             }]
           : [],
       );

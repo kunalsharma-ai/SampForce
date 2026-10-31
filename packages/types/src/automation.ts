@@ -361,6 +361,21 @@ export interface MeetingRow {
   canceled: boolean;
   contactIds: string[];
   provider: IntegrationProviderKey;
+  /** Google Meet, Teams or Zoom link from the calendar event. */
+  joinUrl: string | null;
+  platform: MeetingPlatform | null;
+  /** The meeting record (notes, transcript, AI reading) opened for this meeting, if any. */
+  recordId: string | null;
+}
+
+export type MeetingPlatform = 'google_meet' | 'zoom' | 'teams';
+export const MEETING_PLATFORM_LABELS: Record<MeetingPlatform, string> = { google_meet: 'Google Meet', zoom: 'Zoom', teams: 'Microsoft Teams' };
+export function meetingPlatform(url: string | null | undefined): MeetingPlatform | null {
+  if (!url) return null;
+  if (/meet\.google\.com/i.test(url)) return 'google_meet';
+  if (/zoom\.us/i.test(url)) return 'zoom';
+  if (/teams\.(microsoft|live)\.com/i.test(url)) return 'teams';
+  return null;
 }
 
 export const sendEmailSchema = z.object({

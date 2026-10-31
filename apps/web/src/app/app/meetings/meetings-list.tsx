@@ -1,10 +1,17 @@
 'use client';
 
-import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
-import type { MeetingRow } from '@dealflow/types';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Skeleton } from '@dealflow/ui';
+import { MEETING_PLATFORM_LABELS, type MeetingRecord, type MeetingRow } from '@dealflow/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ExternalLink, NotebookPen } from 'lucide-react';
 import Link from 'next/link';
-import { MeetingNotesButton } from '@/components/ai/record-ai';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { MeetingNotesButton, MeetingRecordList } from '@/components/meetings/record-meetings';
+import { api } from '@/lib/api';
 import { useIntegrations, useMeetings } from '@/lib/automation';
+import { useMeetingRecords } from '@/lib/meetings';
+import { useCan } from '@/lib/session';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
@@ -28,12 +35,13 @@ export function MeetingsList() {
         </p>
       )}
       <Section title="Upcoming" items={upcoming} empty="No upcoming meetings with contacts." />
-      <Section title="Past 30 days" items={past} empty="No recent meetings with contacts." summarise />
+      <Section title="Past 30 days" items={past} empty="No recent meetings with contacts." notes />
+      <NotesSection />
     </div>
   );
 }
 
-function Section({ title, items, empty, summarise }: { title: string; items: MeetingRow[]; empty: string; summarise?: boolean }) {
+function Section({ title, items, empty, notes }: { title: string; items: MeetingRow[]; empty: string; notes?: boolean }) {
   return (
     <Card>
       <CardHeader>
@@ -48,14 +56,25 @@ function Section({ title, items, empty, summarise }: { title: string; items: Mee
               <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
                 <span className={`text-sm font-medium ${m.canceled ? 'line-through text-muted-foreground' : ''}`}>{m.title}</span>
                 {m.canceled && <Badge tone="neutral">Canceled</Badge>}
-                {summarise && !m.canceled && m.contactIds.length > 0 && (
-                  <span className="ml-auto">
-                    <MeetingNotesButton target={{ meetingId: m.id }} label="Summarise notes" />
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">
+                {m.platform && <Badge tone="neutral">{MEETING_PLATFORM_LABELS[m.platform]}</Badge>}
+                <span className="ml-auto flex flex-wrap gap-2">
+                  {!notes && m.joinUrl && !m.canceled && (
+                    <a href={m.joinUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
+                      Join <span className="sr-only">{m.title}</span>
+                      <ExternalLink className="size-3" aria-hidden />
+                    </a>
+                  )}
+                  {m.recordId ? (
+                    <Link href={`/app/meetings/records/${m.recordId}`} className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
+                      <NotebookPen className="size-3.5" aria-hidden /> Open notes <span className="sr-only">for {m.title}</span>
+                    </Link>
+                  ) : (
+                    notes && !m.canceled && m.contactIds.length > 0 && <MeetingNotesButton target={{ meetingId: m.id }} label="Add notes" />
+                  )}
+                </span>
+                <span className="w-full text-xs text-muted-foreground">
                   {fmt(m.startsAt)}
-                  {m.location && ` · ${m.location}`}
+                  {m.location && !m.location.startsWith('http') && ` · ${m.location}`}
                 </span>
                 <span className="w-full text-xs text-muted-foreground">
                   {m.attendees.slice(0, 6).join(', ')}
@@ -70,6 +89,50 @@ function Section({ title, items, empty, summarise }: { title: string; items: Mee
             ))}
           </ul>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Every meeting notes page in the workspace, including ones for calls that were not in a calendar. */
+function NotesSection() {
+  const canWrite = useCan('activities:write');
+  const records = useMeetingRecords();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [title, setTitle] = useState('');
+  const create = useMutation({
+    mutationFn: () => api<MeetingRecord>('/meeting-records', { method: 'POST', json: { title: title.trim() } }),
+    onSuccess: async (r) => {
+      await qc.invalidateQueries({ queryKey: ['meeting-records'] });
+      router.push(`/app/meetings/records/${r.id}`);
+    },
+  });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Meeting notes</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {canWrite && (
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (title.trim()) create.mutate();
+            }}
+          >
+            <div className="min-w-56 flex-1">
+              <Field id="new-meeting-title" label="New notes for a call not in your calendar" error={create.error?.message}>
+                <Input value={title} maxLength={300} placeholder="Discovery call with Acme" onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+            </div>
+            <Button type="submit" disabled={!title.trim() || create.isPending}>
+              New meeting notes
+            </Button>
+          </form>
+        )}
+        {records.isPending ? <Skeleton className="h-16" /> : <MeetingRecordList items={records.data ?? []} empty="No meeting notes yet." />}
       </CardContent>
     </Card>
   );

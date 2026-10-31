@@ -20,7 +20,8 @@ export async function createApp(): Promise<INestApplication> {
   app.use(helmet());
   app.use(cookieParser());
   // Replaces Nest's default JSON parser so SCIM clients' application/scim+json bodies are parsed too.
-  app.useBodyParser('json', { type: ['application/json', 'application/scim+json'] });
+  // 1 MB fits a pasted meeting transcript (up to 200,000 characters); recordings stream past the parsers.
+  app.useBodyParser('json', { type: ['application/json', 'application/scim+json'], limit: '1mb' });
   app.enableCors({ origin: env.WEB_ORIGINS.split(',').map((o) => o.trim()), credentials: true });
   // Express runs behind the Next.js proxy / load balancer; trust one hop for client IPs.
   (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void }).set('trust proxy', 1);

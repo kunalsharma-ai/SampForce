@@ -36,3 +36,23 @@ SELECT ${tenant}, c.id, gen_random_uuid()::text, 'INBOUND', ${q(email.from)}, '{
 COMMIT;`;
   execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
 }
+
+/** Inserts a calendar meeting as if it had been synced from Google Calendar. */
+export async function seedMeeting(page: Page, m: { title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }) {
+  const { execFileSync } = await import('node:child_process');
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  const url = process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
+  const q = (v: string | null) => (v === null ? 'NULL' : `'${v.replace(/'/g, "''")}'`);
+  const tenant = q(me.tenant.id);
+  const user = q(me.user.id);
+  const sql = `BEGIN;
+SELECT set_config('app.tenant_id', ${tenant}, true), set_config('app.user_id', ${user}, true);
+WITH c AS (
+  INSERT INTO integration_connections (tenant_id, user_id, provider, account_email, scopes, credentials_encrypted, updated_at)
+  VALUES (${tenant}, ${user}, 'GOOGLE', 'me@seller.test', '{}', 'v1.x.y.z', now())
+  ON CONFLICT (tenant_id, user_id, provider) DO UPDATE SET updated_at = now() RETURNING id)
+INSERT INTO meetings (tenant_id, connection_id, provider_event_id, title, starts_at, ends_at, attendees, contact_ids, join_url, updated_at)
+SELECT ${tenant}, c.id, gen_random_uuid()::text, ${q(m.title)}, now() + interval '${m.hoursFromNow} hours', now() + interval '${m.hoursFromNow + 1} hours', ARRAY[${q(m.attendee)}, 'me@seller.test'], ARRAY[${q(m.contactId)}]::uuid[], ${q(m.joinUrl ?? null)}, now() FROM c;
+COMMIT;`;
+  execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
+}

@@ -222,6 +222,7 @@ model Tenant {
   emailThreads           EmailThread[]
   emailThreadNotes       EmailThreadNote[]
   integrationSyncLogs    IntegrationSyncLog[]
+  meetingRecords         MeetingRecord[]
 
   @@map("tenants")
 }
@@ -579,19 +580,20 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt         DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
-  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  pipeline     Pipeline          @relation(fields: [pipelineId], references: [id])
-  stage        PipelineStage     @relation(fields: [stageId], references: [id])
-  company      Company?          @relation(fields: [companyId], references: [id])
-  contact      Contact?          @relation(fields: [contactId], references: [id])
-  activities   Activity[]
-  tasks        Task[]
-  quotes       Quote[]
-  contracts    Contract[]
-  stageEvents  DealStageEvent[]
-  healthScore  DealHealthScore?
-  healthDays   DealHealthDaily[]
-  emailThreads EmailThread[]
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline       Pipeline          @relation(fields: [pipelineId], references: [id])
+  stage          PipelineStage     @relation(fields: [stageId], references: [id])
+  company        Company?          @relation(fields: [companyId], references: [id])
+  contact        Contact?          @relation(fields: [contactId], references: [id])
+  activities     Activity[]
+  tasks          Task[]
+  quotes         Quote[]
+  contracts      Contract[]
+  stageEvents    DealStageEvent[]
+  healthScore    DealHealthScore?
+  healthDays     DealHealthDaily[]
+  emailThreads   EmailThread[]
+  meetingRecords MeetingRecord[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -1065,11 +1067,14 @@ model Meeting {
   organizer       String?
   canceled        Boolean  @default(false)
   contactIds      String[] @map("contact_ids") @db.Uuid
+  /// Google Meet, Teams or Zoom link from the calendar event, when it has one.
+  joinUrl         String?  @map("join_url")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  record     MeetingRecord?
 
   @@unique([connectionId, providerEventId])
   @@index([tenantId, startsAt])
@@ -2227,4 +2232,45 @@ model IntegrationSyncLog {
   @@index([connectionId, startedAt(sort: Desc)])
   @@index([tenantId])
   @@map("integration_sync_logs")
+}
+
+/// Meeting intelligence (feature 7): transcript or notes, the AI reading, the reviewed version, and what was created from it.
+model MeetingRecord {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  meetingId             String?   @unique @map("meeting_id") @db.Uuid
+  title                 String
+  occurredAt            DateTime  @map("occurred_at") @db.Timestamptz(3)
+  contactId             String?   @map("contact_id") @db.Uuid
+  leadId                String?   @map("lead_id") @db.Uuid
+  dealId                String?   @map("deal_id") @db.Uuid
+  /// notes, transcript or recording
+  source                String    @default("notes")
+  transcript            String?
+  segments              Json?
+  /// none, processing, done or failed
+  transcriptionStatus   String    @default("none") @map("transcription_status")
+  transcriptionProvider String?   @map("transcription_provider")
+  transcriptionError    String?   @map("transcription_error")
+  recordingConsentById  String?   @map("recording_consent_by_id") @db.Uuid
+  recordingConsentAt    DateTime? @map("recording_consent_at") @db.Timestamptz(3)
+  analysis              Json?
+  aiRunId               String?   @map("ai_run_id") @db.Uuid
+  analysedAt            DateTime? @map("analysed_at") @db.Timestamptz(3)
+  reviewedById          String?   @map("reviewed_by_id") @db.Uuid
+  reviewedAt            DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  activityId            String?   @map("activity_id") @db.Uuid
+  taskIds               String[]  @default([]) @map("task_ids") @db.Uuid
+  createdById           String?   @map("created_by_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meeting Meeting?     @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  deal    Opportunity? @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt(sort: Desc)])
+  @@index([tenantId, dealId])
+  @@index([tenantId, contactId])
+  @@map("meeting_records")
 }

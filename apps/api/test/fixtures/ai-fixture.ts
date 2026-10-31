@@ -207,6 +207,37 @@ export const rules: Handler = (b) => {
             : { ...base, intent: 'interested', confidence: 'medium', nextAction: 'reply_now', followUpInDays: 3, reason: 'Positive reply.' };
     return json({ summary: `${(input.earlier ?? []).length + 1} emails so far. Latest: ${body.slice(0, 80)}`, ...out });
   }
+  if (system.startsWith('You turn a sales meeting transcript')) {
+    const t = strip(input.transcript);
+    const lines = t.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const said = lines.map((l: string) => {
+      const m = l.match(/^Speaker (\d+):\s*(.*)$/);
+      return m ? { speaker: Number(m[1]), text: m[2]! } : { speaker: null, text: l };
+    });
+    const pick = (re: RegExp) => said.filter((x: { text: string }) => re.test(x.text)).map((x: { text: string }) => x.text.slice(0, 200));
+    const speakers = [...new Set(said.map((x: { speaker: number | null }) => x.speaker).filter((v: number | null): v is number => v !== null))] as number[];
+    const names = new Map<number, string>();
+    for (const x of said) {
+      const m = x.text.match(/\b(?:I'm|I am|this is) ([A-Z][a-z]+)/);
+      if (m && x.speaker !== null && !names.has(x.speaker)) names.set(x.speaker, m[1]!);
+    }
+    const actions = said
+      .filter((x: { text: string }) => /\b(I'll|we'll|I will|we will)\b/i.test(x.text))
+      .map((x: { speaker: number | null; text: string }) => ({ title: x.text.replace(/^.*?\b(I'll|we'll|I will|we will)\s*/i, '').replace(/\.$/, '').slice(0, 120) || 'Follow up', owner: x.speaker === 1 ? 'customer' : 'me', dueInDays: /friday|this week/i.test(x.text) ? 3 : null }));
+    return json({
+      summary: `Meeting "${input.meeting?.title ?? ''}": ${lines.length} lines discussed.`,
+      keyPoints: lines.slice(0, 2).map((l: string) => l.replace(/^Speaker \d+:\s*/, '').slice(0, 120)),
+      requirements: pick(/\bneed|must|require/i),
+      objections: pick(/expensive|concern|worried|too (much|long)/i),
+      decisions: pick(/\bagree|decided|let's go/i),
+      actionItems: actions,
+      commitments: actions.map((a: { owner: string; title: string }) => ({ who: a.owner === 'me' ? 'Rep' : 'Customer', what: a.title })),
+      participants: speakers.length
+        ? speakers.map((n) => ({ name: names.get(n) ?? `Speaker ${n}`, speaker: n, side: names.has(n) ? (n === 0 ? 'us' : 'customer') : 'unknown' }))
+        : [{ name: 'Rep', speaker: null, side: 'us' }],
+      followUpEmail: { subject: `Follow-up: ${input.meeting?.title ?? 'our meeting'}`, body: `Thanks for the time today.\n\nNext steps:\n${actions.map((a: { title: string }) => `- ${a.title}`).join('\n') || '- [next step]'}` },
+    });
+  }
   return text('Unrecognised fixture prompt.');
 };
 

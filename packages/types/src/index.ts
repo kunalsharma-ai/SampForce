@@ -22,3 +22,4 @@ export * from './sequences';
 export * from './extension';
 export * from './finder';
 export * from './intelligence';
+export * from './meetings';
