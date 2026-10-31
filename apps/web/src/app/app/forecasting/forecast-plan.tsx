@@ -310,32 +310,24 @@ export function Trends({ granularity }: { granularity: PeriodGranularity }) {
 function TrendView({ t }: { t: ForecastTrends }) {
   const money = (v: number) => formatMoney(v, t.currency);
   const max = Math.max(1, ...t.points.map((p) => p.won));
-  const W = 640;
-  const H = 160;
-  const step = W / t.points.length;
-  const bar = Math.min(36, step * 0.6);
   return (
     <>
       <figure>
-        <svg viewBox={`0 0 ${W} ${H + 24}`} className="h-auto w-full" role="img" aria-label={`Won revenue per ${t.granularity}. The table below has the figures.`}>
-          <line x1={0} x2={W} y1={H} y2={H} className="stroke-border" strokeWidth={1} />
-          {t.points.map((p, i) => {
-            const h = (p.won / max) * (H - 12);
-            const x = i * step + (step - bar) / 2;
-            return (
-              <g key={p.period}>
-                <rect x={i * step} y={0} width={step} height={H} fill="transparent">
-                  <title>{`${p.period}: ${money(p.won)} won, ${p.wonCount} won / ${p.lostCount} lost`}</title>
-                </rect>
-                {h > 0 && <path d={`M${x},${H} V${H - h + 4} q0,-4 4,-4 h${bar - 8} q4,0 4,4 V${H} Z`} className="fill-primary" pointerEvents="none" />}
-                <text x={i * step + step / 2} y={H + 16} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-                  {p.period}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-        <figcaption className="text-xs text-muted-foreground">Won revenue per {t.granularity}. Hover a bar for details.</figcaption>
+        <div className="flex h-40 items-end gap-2 border-b border-border" role="img" aria-label={`Won revenue per ${t.granularity}. The table below has the figures.`}>
+          {t.points.map((p) => (
+            <div key={p.period} className="group relative flex h-full flex-1 items-end justify-center" title={`${p.period}: ${money(p.won)} won · ${p.wonCount} won, ${p.lostCount} lost`}>
+              {p.won > 0 && <div className="w-full max-w-9 rounded-t bg-primary transition-opacity group-hover:opacity-80" style={{ height: `${Math.max(2, (p.won / max) * 100)}%` }} />}
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex gap-2" aria-hidden>
+          {t.points.map((p) => (
+            <span key={p.period} className="flex-1 truncate text-center text-[11px] text-muted-foreground">
+              {p.period}
+            </span>
+          ))}
+        </div>
+        <figcaption className="mt-1 text-xs text-muted-foreground">Won revenue per {t.granularity}. Hover a bar for details.</figcaption>
       </figure>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
