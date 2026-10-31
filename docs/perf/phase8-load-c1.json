@@ -1,0 +1,229 @@
+{
+  "api": "http://localhost:4000/api/v1",
+  "concurrency": 1,
+  "seconds": 5,
+  "at": "2026-10-31T04:08:38.614Z",
+  "results": [
+    {
+      "name": "dashboard summary",
+      "requests": 110,
+      "rps": 22,
+      "p50": 45,
+      "p95": 50,
+      "p99": 59,
+      "max": 66,
+      "bytes": 5370,
+      "statuses": {
+        "200": 110
+      }
+    },
+    {
+      "name": "deals list",
+      "requests": 239,
+      "rps": 48,
+      "p50": 21,
+      "p95": 24,
+      "p99": 28,
+      "max": 34,
+      "bytes": 18405,
+      "statuses": {
+        "200": 239
+      }
+    },
+    {
+      "name": "deals list (search)",
+      "requests": 171,
+      "rps": 34,
+      "p50": 28,
+      "p95": 38,
+      "p99": 46,
+      "max": 49,
+      "bytes": 18384,
+      "statuses": {
+        "200": 171
+      }
+    },
+    {
+      "name": "deals board",
+      "requests": 105,
+      "rps": 21,
+      "p50": 47,
+      "p95": 53,
+      "p99": 57,
+      "max": 62,
+      "bytes": 220585,
+      "statuses": {
+        "200": 105
+      }
+    },
+    {
+      "name": "leads list",
+      "requests": 360,
+      "rps": 72,
+      "p50": 14,
+      "p95": 16,
+      "p99": 20,
+      "max": 26,
+      "bytes": 16542,
+      "statuses": {
+        "200": 360
+      }
+    },
+    {
+      "name": "contacts list",
+      "requests": 214,
+      "rps": 43,
+      "p50": 23,
+      "p95": 30,
+      "p99": 31,
+      "max": 33,
+      "bytes": 13531,
+      "statuses": {
+        "200": 214
+      }
+    },
+    {
+      "name": "companies list",
+      "requests": 150,
+      "rps": 30,
+      "p50": 32,
+      "p95": 44,
+      "p99": 47,
+      "max": 50,
+      "bytes": 9011,
+      "statuses": {
+        "200": 150
+      }
+    },
+    {
+      "name": "activities list",
+      "requests": 265,
+      "rps": 53,
+      "p50": 18,
+      "p95": 22,
+      "p99": 25,
+      "max": 28,
+      "bytes": 17345,
+      "statuses": {
+        "200": 265
+      }
+    },
+    {
+      "name": "forecast",
+      "requests": 36,
+      "rps": 7,
+      "p50": 141,
+      "p95": 153,
+      "p99": 153,
+      "max": 153,
+      "bytes": 81563,
+      "statuses": {
+        "200": 36
+      }
+    },
+    {
+      "name": "report: deal value by stage",
+      "requests": 101,
+      "rps": 20,
+      "p50": 49,
+      "p95": 53,
+      "p99": 58,
+      "max": 68,
+      "bytes": 568,
+      "statuses": {
+        "200": 101
+      }
+    },
+    {
+      "name": "report: deals closed by month",
+      "requests": 112,
+      "rps": 22,
+      "p50": 42,
+      "p95": 61,
+      "p99": 65,
+      "max": 65,
+      "bytes": 878,
+      "statuses": {
+        "200": 112
+      }
+    },
+    {
+      "name": "report: activities by type",
+      "requests": 128,
+      "rps": 26,
+      "p50": 38,
+      "p95": 48,
+      "p99": 53,
+      "max": 55,
+      "bytes": 396,
+      "statuses": {
+        "200": 128
+      }
+    },
+    {
+      "name": "report: lead value by country",
+      "requests": 106,
+      "rps": 21,
+      "p50": 46,
+      "p95": 64,
+      "p99": 65,
+      "max": 65,
+      "bytes": 535,
+      "statuses": {
+        "200": 106
+      }
+    },
+    {
+      "name": "insights galaxy",
+      "requests": 103,
+      "rps": 21,
+      "p50": 48,
+      "p95": 55,
+      "p99": 62,
+      "max": 77,
+      "bytes": 271348,
+      "statuses": {
+        "200": 103
+      }
+    },
+    {
+      "name": "insights globe",
+      "requests": 216,
+      "rps": 43,
+      "p50": 22,
+      "p95": 29,
+      "p99": 34,
+      "max": 35,
+      "bytes": 643,
+      "statuses": {
+        "200": 216
+      }
+    },
+    {
+      "name": "insights flow",
+      "requests": 57,
+      "rps": 11,
+      "p50": 87,
+      "p95": 105,
+      "p99": 115,
+      "max": 115,
+      "bytes": 1068,
+      "statuses": {
+        "200": 57
+      }
+    },
+    {
+      "name": "insights replay",
+      "requests": 120,
+      "rps": 24,
+      "p50": 41,
+      "p95": 47,
+      "p99": 51,
+      "max": 54,
+      "bytes": 94986,
+      "statuses": {
+        "200": 120
+      }
+    }
+  ]
+}

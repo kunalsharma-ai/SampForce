@@ -1,0 +1,17 @@
+dashboard summary                   82 req/s  p50   121 ms  p95   153 ms  p99   178 ms  {"200":819}
+deals list                         160 req/s  p50    62 ms  p95    77 ms  p99    83 ms  {"200":1601}
+deals list (search)                130 req/s  p50    76 ms  p95    94 ms  p99   109 ms  {"200":1304}
+deals board                         55 req/s  p50   181 ms  p95   237 ms  p99   266 ms  {"200":546}
+leads list                         240 req/s  p50    41 ms  p95    53 ms  p99    60 ms  {"200":2395}
+contacts list                      164 req/s  p50    61 ms  p95    75 ms  p99    85 ms  {"200":1642}
+companies list                     119 req/s  p50    82 ms  p95   113 ms  p99   140 ms  {"200":1191}
+activities list                    186 req/s  p50    53 ms  p95    69 ms  p99    80 ms  {"200":1862}
+forecast                            17 req/s  p50   581 ms  p95   947 ms  p99  1092 ms  {"200":171}
+report: deal value by stage         63 req/s  p50   156 ms  p95   228 ms  p99   258 ms  {"200":632}
+report: deals closed by month       44 req/s  p50   226 ms  p95   306 ms  p99   336 ms  {"200":437}
+report: activities by type         104 req/s  p50    94 ms  p95   131 ms  p99   154 ms  {"200":1043}
+report: lead value by country       85 req/s  p50   115 ms  p95   161 ms  p99   192 ms  {"200":853}
+insights galaxy                     61 req/s  p50   162 ms  p95   208 ms  p99   238 ms  {"200":610}
+insights globe                     158 req/s  p50    63 ms  p95    80 ms  p99    90 ms  {"200":1583}
+insights flow                       29 req/s  p50   341 ms  p95   490 ms  p99   552 ms  {"200":291}
+insights replay                     82 req/s  p50   122 ms  p95   152 ms  p99   170 ms  {"200":816}

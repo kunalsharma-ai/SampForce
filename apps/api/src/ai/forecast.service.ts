@@ -9,6 +9,7 @@ import {
   type ForecastLine,
   type ForecastSnapshotRow,
   type ForecastTotals,
+  FORECAST_MAX_LINES,
   type ForecastView,
   quarterPeriod,
   toBase,
@@ -34,7 +35,10 @@ export class ForecastService {
   ) {}
 
   current(auth: AuthContext, period: string | undefined): Promise<ForecastView> {
-    return this.prisma.run(auth, (tx) => this.build(tx, auth.tenantId, period));
+    return this.prisma.run(auth, async (tx) => {
+      const view = await this.build(tx, auth.tenantId, period);
+      return { ...view, lines: view.lines.slice(0, FORECAST_MAX_LINES) };
+    });
   }
 
   private async build(tx: TenantTx, tenantId: string, period: string | undefined): Promise<ForecastView> {
@@ -47,21 +51,22 @@ export class ForecastService {
       where: {
         tenantId,
         deletedAt: null,
-        OR: [{ status: 'OPEN' }, { status: 'WON', closedAt: { gte: start, lt: end } }],
+        // The period filter runs in the database: loading every open deal took ~400 ms at 13k open deals.
+        OR: [{ status: 'OPEN', expectedCloseDate: { gte: start, lt: end } }, { status: 'WON', closedAt: { gte: start, lt: end } }],
       },
-      include: { stage: { select: { name: true, probability: true } } },
+      select: {
+        id: true, name: true, amount: true, currency: true, probability: true, status: true, closedAt: true, expectedCloseDate: true, ownerId: true,
+        stage: { select: { name: true, probability: true } },
+      },
       orderBy: { id: 'asc' },
     });
+    const noCloseDate = await tx.opportunity.count({ where: { tenantId, deletedAt: null, status: 'OPEN', expectedCloseDate: null } });
     const owners = await ownerRefs(tx, deals.map((d) => d.ownerId));
     const rates = await loadRates(tx, tenantId);
-    const excluded = { otherCurrency: 0, noCloseDate: 0 };
+    const excluded = { otherCurrency: 0, noCloseDate };
     const lines: ForecastLine[] = [];
     for (const d of deals) {
       const closeDate = d.status === 'WON' ? d.closedAt : d.expectedCloseDate;
-      if (d.status === 'OPEN' && !closeDate) {
-        excluded.noCloseDate++;
-        continue;
-      }
       if (!closeDate || closeDate < start || closeDate >= end) continue;
       // Other currencies count at the latest exchange rate; without a rate the deal is left out and reported.
       const amount = toBase(Number(d.amount), d.currency, currency, rates);
@@ -88,6 +93,7 @@ export class ForecastService {
       totals: computeTotals(lines),
       byOwner: totalsByOwner(lines),
       lines: lines.map((l) => ({ ...l, category: categoryOf(l) })).sort((a, b) => b.amount - a.amount),
+      lineCount: lines.length,
       excluded,
     };
   }

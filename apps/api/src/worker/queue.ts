@@ -16,7 +16,9 @@ export function claim<T>(prisma: PrismaClient, query: Prisma.Sql): Promise<T[]> 
 export async function enterTenant(tx: TenantTx, tenantId: string): Promise<void> {
   await tx.$executeRaw`SELECT set_config('app.worker_scan', 'off', true),
                               set_config('app.tenant_id', ${tenantId}, true),
-                              set_config('app.user_id', '', true)`;
+                              set_config('app.user_id', '', true),
+                              set_config('plan_cache_mode', 'force_custom_plan', true),
+                              set_config('jit', 'off', true)`;
 }
 
 export const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err)).slice(0, 1000);

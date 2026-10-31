@@ -11,6 +11,7 @@
     "test": "vitest run",
     "operator:create": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/create-operator.ts",
     "seed:demo": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/seed-demo.ts",
+    "seed:load": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/seed-load.ts",
     "openapi": "node -r @swc-node/register scripts/export-openapi.ts",
     "eval": "tsx evals/run-evals.ts"
   },

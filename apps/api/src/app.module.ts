@@ -45,7 +45,7 @@ import { redactUrl } from './observability/redact';
         transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
       },
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: Number(process.env.API_RATE_LIMIT_PER_MINUTE ?? 300) }]),
     CommonModule,
     AuditModule,
     AuthModule,

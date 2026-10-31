@@ -99,10 +99,14 @@ export class ImmersiveService {
       const { base, convert } = await this.money(tx, auth.tenantId);
       const companies = await tx.company.groupBy({ by: ['country'], where: { tenantId: auth.tenantId, deletedAt: null }, _count: { _all: true } });
       const since = new Date(Date.now() - 365 * DAY);
-      const deals = await tx.opportunity.findMany({
-        where: { tenantId: auth.tenantId, deletedAt: null, OR: [{ status: 'OPEN' }, { status: 'WON', closedAt: { gte: since } }] },
-        select: { amount: true, currency: true, status: true, company: { select: { country: true, deletedAt: true } } },
-      });
+      // Summed in the database per country, status and currency; conversion is linear, so converting the sums
+      // matches converting each deal (to the cent). Loading every deal into the API took ~250 ms at 20k deals.
+      const deals = await tx.$queryRaw<{ country: string | null; status: 'OPEN' | 'WON'; currency: string; n: number; total: number }[]>`
+        SELECT upper(c.country) AS country, o.status::text AS status, o.currency, count(*)::int AS n, sum(o.amount)::float8 AS total
+        FROM opportunities o LEFT JOIN companies c ON c.id = o.company_id AND c.deleted_at IS NULL
+        WHERE o.tenant_id = ${auth.tenantId}::uuid AND o.deleted_at IS NULL
+          AND (o.status = 'OPEN' OR (o.status = 'WON' AND o.closed_at >= ${since}))
+        GROUP BY 1, 2, 3`;
       const by = new Map<string, { companies: number; openDeals: number; openValue: number; wonValue: number }>();
       const row = (c: string) => by.get(c) ?? by.set(c, { companies: 0, openDeals: 0, openValue: 0, wonValue: 0 }).get(c)!;
       let unplacedCompanies = 0;
@@ -113,16 +117,15 @@ export class ImmersiveService {
       let unplacedDeals = 0;
       let excludedDeals = 0;
       for (const d of deals) {
-        const country = d.company && !d.company.deletedAt ? d.company.country?.toUpperCase() : null;
-        if (!country) {
-          if (d.status === 'OPEN') unplacedDeals += 1;
+        if (!d.country) {
+          if (d.status === 'OPEN') unplacedDeals += d.n;
           continue;
         }
-        const v = convert(d.amount.toNumber(), d.currency);
-        if (v === null) excludedDeals += 1;
-        const r = row(country);
+        const v = convert(d.total, d.currency);
+        if (v === null) excludedDeals += d.n;
+        const r = row(d.country);
         if (d.status === 'OPEN') {
-          r.openDeals += 1;
+          r.openDeals += d.n;
           r.openValue += v ?? 0;
         } else r.wonValue += v ?? 0;
       }

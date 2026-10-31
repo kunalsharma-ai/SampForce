@@ -37,13 +37,18 @@ export interface ForecastTotals {
   dealCount: number;
 }
 
+/** How many deal lines the forecast view returns. Snapshots keep every line. */
+export const FORECAST_MAX_LINES = 300;
+
 export interface ForecastView {
   method: string;
   period: { start: string; end: string; label: string };
   currency: string;
   totals: ForecastTotals;
   byOwner: { owner: { id: string; name: string } | null; totals: ForecastTotals }[];
+  /** The largest deals first, at most FORECAST_MAX_LINES; the totals always cover every deal (lineCount). */
   lines: (ForecastLine & { category: ForecastCategory })[];
+  lineCount: number;
   /** Deals left out, and why, so the totals are never silently partial (otherCurrency: no exchange rate set). */
   excluded: { otherCurrency: number; noCloseDate: number };
 }

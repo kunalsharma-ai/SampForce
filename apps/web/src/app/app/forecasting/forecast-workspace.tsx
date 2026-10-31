@@ -153,7 +153,10 @@ function Lines({ view }: { view: ForecastView }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Deals in this forecast ({view.lines.length})</CardTitle>
+        <CardTitle className="text-base">Deals in this forecast ({view.lineCount})</CardTitle>
+        {view.lineCount > view.lines.length && (
+          <p className="text-sm text-muted-foreground">Showing the {view.lines.length} largest. The totals above include all {view.lineCount}.</p>
+        )}
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {view.lines.length === 0 ? (

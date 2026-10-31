@@ -18,6 +18,7 @@ export const apiEnvSchema = z.object({
   WEB_ORIGINS: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
+  API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(300),
   /** Escape hatch for running the production image over plain http on localhost only. */
   ALLOW_INSECURE_COOKIES: bool.default('false'),
   /** 32-byte key (base64 or hex) for encrypting webhook secrets and mailbox tokens. Required in production. */
