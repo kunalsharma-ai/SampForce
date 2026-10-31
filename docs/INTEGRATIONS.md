@@ -61,6 +61,13 @@ signed-in devices and end with any "sign out other devices". Automatic capture i
 addresses at the website's own domain, never personal mailboxes. It is not in the Chrome Web Store yet: load
 `apps/extension/dist` unpacked (see `apps/extension/README.md`).
 
+## Email finder
+
+The Email Finder (ADR 0016) reads a company's public website to find published work addresses and their pattern,
+and checks the domain's mail server. It needs outbound https and DNS from the API. Set `FINDER_DAILY_LIMIT` (lookups
+per person per day, default 50). To add a data provider, set `HUNTER_API_KEY` to your own Hunter.io key; it has only
+been tested against a local stand-in, so check the first results after adding it.
+
 ## Webhooks
 
 - Admins with `integrations:manage` add an https endpoint and choose events. The signing secret is shown

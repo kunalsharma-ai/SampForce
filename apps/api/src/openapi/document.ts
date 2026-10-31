@@ -56,6 +56,8 @@ import {
   extensionCaptureSchema,
   extensionLookupSchema,
   extensionTokenCreateSchema,
+  finderSaveSchema,
+  finderSearchSchema,
   suppressionInputSchema,
   templatePreviewSchema,
   segmentRulesSchema,
@@ -344,6 +346,13 @@ export function buildOpenApiDocument(): object {
   action('post', '/extension/lookup', 'Browser extension', 'Match addresses and a website against leads, contacts, companies and the do-not-email list (leads:read, extension token)', extensionLookupSchema);
   action('post', '/extension/capture', 'Browser extension', 'Save up to 25 people as leads, skipping anyone already in DealFlow, and optionally enrol them (leads:write, extension token)', extensionCaptureSchema);
   action('post', '/extension/disconnect', 'Browser extension', 'The extension ends its own connection (extension token)');
+  // Phase 9: email finder (own website reader; optional Hunter.io key).
+  action('post', '/finder/search', 'Email finder', 'Find a company’s website and work addresses, or a person’s likely address; counts toward FINDER_DAILY_LIMIT (leads:read)', finderSearchSchema);
+  action('get', '/finder/usage', 'Email finder', 'Lookups used in the last 24 hours, the limit, and whether a provider is connected (leads:read)');
+  action('get', '/finder/lookups', 'Email finder', 'Your 20 most recent lookups (leads:read)');
+  action('get', '/finder/lookups/{id}', 'Email finder', 'One of your lookups, with current "already in DealFlow" marks (leads:read)');
+  action('post', '/finder/lookups/{id}/save', 'Email finder', 'Save chosen people as leads (source "Email finder"), optionally enrolling them (leads:write)', finderSaveSchema);
+  action('post', '/extension/find', 'Browser extension', 'Run the email finder for the domain the extension is on (leads:read, extension token)', z.object({ domain: z.string() }));
   r.registerPath({ method: 'get', path: '/t/o/{token}', tags: ['Sequences'], summary: 'Public: open-tracking image (signed token, no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'GIF', content: { 'image/gif': { schema: z.string() } } } } });
   r.registerPath({ method: 'get', path: '/t/c/{token}', tags: ['Sequences'], summary: 'Public: signed click redirect (no auth)', request: { params: z.object({ token: z.string() }), query: z.object({ u: z.string(), s: z.string() }) }, responses: { 302: { description: 'Redirect to the signed URL' }, 400: json(error, 'Invalid link') } });
   r.registerPath({ method: 'post', path: '/t/u/{token}', tags: ['Sequences'], summary: 'Public: unsubscribe, including RFC 8058 one-click (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Unsubscribe result') } });

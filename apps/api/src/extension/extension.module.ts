@@ -9,5 +9,6 @@ import { ExtensionService } from './extension.service';
   imports: [CrmModule, SequencesModule],
   controllers: [ExtensionConnectionsController, ExtensionController],
   providers: [ExtensionService],
+  exports: [ExtensionService],
 })
 export class ExtensionModule {}

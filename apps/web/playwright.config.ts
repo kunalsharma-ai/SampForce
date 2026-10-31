@@ -32,6 +32,14 @@ export default defineConfig({
       env: { AI_FIXTURE_PORT: '4100' },
     },
     {
+      // Local stand-in for company websites and mail-server lookups, for the email finder.
+      command: 'npx tsx test/fixtures/finder-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4300/health',
+      reuseExistingServer: !process.env.CI,
+      env: { FINDER_FIXTURE_PORT: '4300' },
+    },
+    {
       command: 'node dist/main.js',
       cwd: '../api',
       url: 'http://localhost:4000/api/v1/health/ready',
@@ -50,6 +58,8 @@ export default defineConfig({
         // Not a real key: requests go to the fixture above, never to Anthropic.
         ANTHROPIC_API_KEY: 'test-key-not-real',
         AI_API_BASE_URL: 'http://127.0.0.1:4100',
+        // The email finder reads made-up company sites from the stand-in above, never the internet.
+        FINDER_FIXTURE_URL: 'http://127.0.0.1:4300',
         // Enables the operator console; e2e creates its own operator account.
         OPERATOR_JWT_SECRET: 'e2e-operator-secret-at-least-32-characters',
       },
