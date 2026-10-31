@@ -8,6 +8,7 @@ import { AiRunner } from './ai-runner.service';
 import { AiService } from './ai.service';
 import { CopilotTools } from './copilot-tools';
 import { CopilotService } from './copilot.service';
+import { EmailAssistantService } from './email-assistant.service';
 import { ForecastService } from './forecast.service';
 import { AI_PROVIDER, AiGateway, providerFactory } from './gateway.service';
 import { RecordContextBuilder } from './record-context';
@@ -25,6 +26,7 @@ import { RecordContextBuilder } from './record-context';
     CopilotTools,
     CopilotService,
     AgentsService,
+    EmailAssistantService,
     AiRunner,
   ],
   exports: [AiRunner, AiGateway],

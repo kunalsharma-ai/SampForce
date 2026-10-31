@@ -108,6 +108,10 @@ import {
   updateTenantSchema,
   z,
   emailVariableInputSchema,
+  emailDraftRequestSchema,
+  emailRewriteRequestSchema,
+  emailSubjectsRequestSchema,
+  emailAnalyseRequestSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -281,6 +285,11 @@ export function buildOpenApiDocument(): object {
   action('post', '/ai/deals/{id}/analyse', 'AI', 'Deal health and a recommended next step (ai:use, deals:read)');
   action('post', '/ai/deals/{id}/proposal', 'AI', 'Draft a proposal outline from the deal; nothing is sent (ai:use, deals:read)');
   action('post', '/ai/meeting-notes', 'AI', 'Summarise pasted notes into decisions, action items and a follow-up draft (ai:use, activities:write)', meetingNotesRequestSchema);
+  action('post', '/ai/email/draft', 'AI', 'Email Assistant: draft a first email, follow-up or reply from the record, or a template with merge fields; never sends (ai:use)', emailDraftRequestSchema);
+  action('post', '/ai/email/rewrite', 'AI', 'Email Assistant: improve, shorten or change the tone; merge fields must survive unchanged (ai:use)', emailRewriteRequestSchema);
+  action('post', '/ai/email/subjects', 'AI', 'Email Assistant: suggest subject lines (ai:use)', emailSubjectsRequestSchema);
+  action('post', '/ai/email/analyse', 'AI', 'Email Assistant: read a received email for intent, objections, buying signals, next step and a suggested reply; stores the intent on the email (ai:use, activities:read)', emailAnalyseRequestSchema);
+  action('get', '/ai/email/analysis/{emailId}', 'AI', 'Latest Email Assistant reading of an email (ai:use, activities:read)', undefined, { params: z.object({ emailId: z.string().uuid() }) });
   action('post', '/ai/workflows/draft', 'AI', 'Turn a description into a validated workflow definition; not saved (ai:use, automation:manage)', workflowDraftRequestSchema);
   action('get', '/ai/recommendations', 'AI', 'Agent results for a record (ai:use)', undefined, { query: z.object({ entityType: z.enum(['lead', 'contact', 'deal']), entityId: z.string().uuid() }) });
   action('post', '/ai/recommendations/{id}/accept', 'AI', 'Accept: creates the task or note as the caller (ai:use)', acceptNextStepSchema);

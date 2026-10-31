@@ -345,6 +345,8 @@ export interface EmailRow {
   contactId: string | null;
   leadId: string | null;
   provider: IntegrationProviderKey;
+  /** The Email Assistant's reading of a received email (an EMAIL_INTENTS key), when someone asked for it. */
+  aiIntent: string | null;
 }
 
 export interface MeetingRow {

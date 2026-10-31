@@ -171,4 +171,43 @@ describe('email templates, variables and analytics', () => {
     const team = (await http.get('/sequences/analytics?scope=team').expect(200)).body as EmailAnalytics;
     expect(team.totals.sent).toBe(a.totals.sent);
   });
+
+  it('gives rule-based tips only with enough data: quiet steps, bounces and disengaged people', async () => {
+    const seq = (await http.post('/sequences', {
+      name: 'Quiet one',
+      steps: [
+        { id: 'a', type: 'email', delayDays: 0, subject: 'One', body: 'First note.' },
+        { id: 'b', type: 'email', delayDays: 0, subject: 'Two', body: 'Second note.' },
+        { id: 'c', type: 'email', delayDays: 0, subject: 'Three', body: 'Third note.' },
+      ],
+      rules: [],
+      settings: { ...ALL_DAY, dailyLimit: 100 },
+    }).expect(201)).body;
+    await http.post(`/sequences/${seq.id}/status`, { status: 'ACTIVE' }).expect(200);
+    const ids: string[] = [];
+    for (let i = 0; i < 20; i++) ids.push((await http.post('/leads', { fullName: `Quiet ${i}`, email: `quiet${i}@silent.test` }).expect(201)).body.lead.id);
+    await http.post(`/sequences/${seq.id}/enroll`, { leadIds: ids }).expect(200);
+    for (let step = 0; step < 3; step++) {
+      await asTenant(owner.tenantId, (tx) => tx.sequenceEnrollment.updateMany({ where: { status: 'ACTIVE', sequenceId: seq.id }, data: { nextRunAt: new Date(Date.now() - 1000) } }));
+      await runner.runDue(200);
+    }
+    const msgs = await asTenant(owner.tenantId, (tx) => tx.sequenceMessage.findMany({ where: { enrollment: { sequenceId: seq.id } }, orderBy: { sentAt: 'asc' } }));
+    expect(msgs).toHaveLength(60);
+    for (const m of msgs.filter((x) => x.stepId === 'c').slice(0, 3)) await runner.record(owner.tenantId, m.id, 'BOUNCED');
+
+    const a = (await http.get('/sequences/analytics').expect(200)).body as EmailAnalytics;
+    const mineTips = a.insights.filter((i) => i.sequenceId === seq.id);
+    expect(mineTips.filter((i) => i.kind === 'quiet_step').map((i) => i.title).sort()).toEqual([
+      'Quiet one: email 1 has no replies', 'Quiet one: email 2 has no replies', 'Quiet one: email 3 has no replies',
+    ]);
+    expect(mineTips.find((i) => i.kind === 'high_bounce')).toMatchObject({ title: 'Quiet one: 5% of emails bounced', severity: 'warning' });
+    const quiet = a.insights.find((i) => i.kind === 'disengaged')!;
+    expect(quiet.title).toMatch(/^17 people have had 3 or more emails/);
+    expect(quiet.people).toHaveLength(10);
+    expect(quiet.detail).toMatch(/Opens are often blocked/);
+    // Ten replies are needed before a timing tip appears.
+    expect(a.insights.find((i) => i.kind === 'reply_timing')).toBeUndefined();
+    // Warnings come first.
+    expect(a.insights[0]!.severity).toBe('warning');
+  });
 });

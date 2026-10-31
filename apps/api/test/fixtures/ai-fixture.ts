@@ -162,6 +162,51 @@ export const rules: Handler = (b) => {
   if (system.startsWith('You explain to a sales manager')) {
     return text(`- The base forecast moved by ${input.delta?.base} ${input.currency}.\n- ${(input.changes ?? []).length} deals changed.`);
   }
+  const strip = (v: unknown) => String(v ?? '').replace(/<\/?untrusted_data[^>]*>/g, '').trim();
+  if (system.startsWith('You write sales emails')) {
+    const obj = String(input.objective ?? 'checking in');
+    const first = String(input.recipient?.name ?? '').split(' ')[0] || 'there';
+    const sender = input.sender?.firstName ?? 'Me';
+    const meeting = /meet|call|demo/i.test(obj);
+    if (input.asTemplate) {
+      const extra = /BADTAG/.test(obj) ? ' {{custom.nope}}' : (input.availableTags ?? []).find((t: string) => t.startsWith('var.')) ? ` {{${(input.availableTags as string[]).find((t) => t.startsWith('var.'))}}}` : '';
+      return json({ subject: 'A quick idea for {{company}}', body: `Hi {{first_name|there}},\n\nI am reaching out about ${obj}.${extra}\n\n{{sender_first_name}}`, subjectAlternatives: ['Idea for {{company}}', 'Question for you'], basedOn: [], checkBeforeSending: [] });
+    }
+    const subject = input.mode === 'reply' ? `Re: ${input.receivedEmail?.subject ?? ''}` : input.mode === 'follow_up' ? 'Following up' : `About ${obj}`.slice(0, 80);
+    return json({
+      subject,
+      body: `Hi ${first},\n\n${input.mode === 'follow_up' ? 'Following up on my last note.' : `I wanted to reach out about ${obj}.`}${meeting ? ' Would [proposed time] work for a short call?' : ''}\n\n${sender}`,
+      subjectAlternatives: ['Quick question', `For ${first}`],
+      basedOn: input.recipient ? [`Record: ${input.recipient.name}`] : [],
+      checkBeforeSending: meeting ? ['Fill in [proposed time]'] : [],
+    });
+  }
+  if (system.startsWith('You edit a sales email')) {
+    const body = strip(input.body);
+    const subject = strip(input.subject);
+    if (/DROPTAGS/.test(body)) return json({ subject, body: body.replace(/\{\{[^}]*\}\}/g, 'friend'), changes: ['Removed fields'] });
+    if (input.action === 'shorten') return json({ subject, body: body.split('\n')[0]!, changes: ['Cut to the first line'] });
+    if (input.action === 'tone') return json({ subject, body: `${input.tone === 'friendly' ? 'Hey!' : 'Dear reader,'} ${body}`, changes: [`Made it ${input.tone}`] });
+    return json({ subject: subject ? subject.charAt(0).toUpperCase() + subject.slice(1) : '', body: body.replace(/\bdont\b/g, "don't").replace(/\bi\b/g, 'I'), changes: ['Fixed spelling and capitals'] });
+  }
+  if (system.startsWith('You suggest subject lines')) {
+    const words = strip(input.body).split(/\s+/).slice(0, 4).join(' ');
+    return json({ subjects: [{ text: `About: ${words}`, why: 'Names the topic' }, { text: 'Quick question', why: 'Short' }, { text: 'Idea for your team', why: 'Benefit first' }, { text: 'x'.repeat(150), why: 'Too long' }] });
+  }
+  if (system.startsWith('You read an email a sales rep received')) {
+    const body = strip(input.email?.body).toLowerCase();
+    const base = { objections: [] as string[], buyingSignals: [] as string[], followUpInDays: null as number | null, suggestedReply: { subject: `Re: ${input.email?.subject ?? ''}`, body: 'Thanks for your reply. [answer]' } };
+    const out = /unsubscribe|remove me/.test(body)
+      ? { ...base, intent: 'unsubscribe', confidence: 'high', nextAction: 'reply_now', followUpInDays: 5, reason: 'They asked to be removed.' }
+      : /price|expensive|budget/.test(body)
+        ? { ...base, intent: 'objection', confidence: 'high', objections: ['Price is too high'], buyingSignals: ['Asked about a smaller plan'], nextAction: 'reply_now', followUpInDays: 2, reason: 'They said the price is too high.' }
+        : /out of office/.test(body)
+          ? { ...base, intent: 'out_of_office', confidence: 'high', nextAction: 'follow_up_later', followUpInDays: 7, reason: 'Automatic reply.' }
+          : /call|meeting|demo/.test(body)
+            ? { ...base, intent: 'meeting_request', confidence: 'high', buyingSignals: ['Asked for a call'], nextAction: 'book_meeting', followUpInDays: 1, reason: 'They asked for a call.' }
+            : { ...base, intent: 'interested', confidence: 'medium', nextAction: 'reply_now', followUpInDays: 3, reason: 'Positive reply.' };
+    return json({ summary: `${(input.earlier ?? []).length + 1} emails so far. Latest: ${body.slice(0, 80)}`, ...out });
+  }
   return text('Unrecognised fixture prompt.');
 };
 

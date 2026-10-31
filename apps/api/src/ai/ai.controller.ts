@@ -7,6 +7,12 @@ import {
   copilotRequestSchema,
   type CopilotRequest,
   createActionItemsSchema,
+  emailAnalyseRequestSchema,
+  emailDraftRequestSchema,
+  type EmailDraftRequest,
+  emailRewriteRequestSchema,
+  type EmailRewriteRequest,
+  emailSubjectsRequestSchema,
   forecastQuerySchema,
   meetingNotesRequestSchema,
   type MeetingNotesRequest,
@@ -19,6 +25,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { AgentsService } from './agents.service';
 import { AiService } from './ai.service';
 import { CopilotService } from './copilot.service';
+import { EmailAssistantService } from './email-assistant.service';
 import { ForecastService } from './forecast.service';
 
 const uuid = new ParseUUIDPipe();
@@ -32,7 +39,43 @@ export class AiController {
     private readonly ai: AiService,
     private readonly copilot: CopilotService,
     private readonly agents: AgentsService,
+    private readonly email: EmailAssistantService,
   ) {}
+
+  // Email Assistant: results go into an editor; nothing here sends email.
+  @Post('email/draft')
+  @HttpCode(200)
+  @RequirePermissions('ai:use')
+  emailDraft(@Auth() auth: AuthContext, @Body(new ZodPipe(emailDraftRequestSchema)) body: EmailDraftRequest, @Meta() meta: RequestMeta) {
+    return this.email.draft(auth, body, meta);
+  }
+
+  @Post('email/rewrite')
+  @HttpCode(200)
+  @RequirePermissions('ai:use')
+  emailRewrite(@Auth() auth: AuthContext, @Body(new ZodPipe(emailRewriteRequestSchema)) body: EmailRewriteRequest) {
+    return this.email.rewrite(auth, body);
+  }
+
+  @Post('email/subjects')
+  @HttpCode(200)
+  @RequirePermissions('ai:use')
+  emailSubjects(@Auth() auth: AuthContext, @Body(new ZodPipe(emailSubjectsRequestSchema)) body: z.infer<typeof emailSubjectsRequestSchema>) {
+    return this.email.subjects(auth, body.body, body.current);
+  }
+
+  @Post('email/analyse')
+  @HttpCode(200)
+  @RequirePermissions('ai:use', 'activities:read')
+  emailAnalyse(@Auth() auth: AuthContext, @Body(new ZodPipe(emailAnalyseRequestSchema)) body: z.infer<typeof emailAnalyseRequestSchema>, @Meta() meta: RequestMeta) {
+    return this.email.analyse(auth, body.emailId, meta);
+  }
+
+  @Get('email/analysis/:emailId')
+  @RequirePermissions('ai:use', 'activities:read')
+  emailAnalysis(@Auth() auth: AuthContext, @Param('emailId', uuid) emailId: string) {
+    return this.email.latestAnalysis(auth, emailId).then((analysis) => ({ analysis }));
+  }
 
   @Get('status')
   @RequirePermissions('ai:use')
