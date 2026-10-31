@@ -33,6 +33,6 @@ import { WorkflowsService } from './workflows.service';
     IntegrationsService,
     CommunicationService,
   ],
-  exports: [EventRelay, WorkflowExecutor, WebhookDeliverer, ApprovalsService, IntegrationsService],
+  exports: [EventRelay, WorkflowExecutor, WebhookDeliverer, ApprovalsService, IntegrationsService, CommunicationService, NotificationsService],
 })
 export class AutomationModule {}

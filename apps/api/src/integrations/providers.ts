@@ -38,7 +38,12 @@ export interface OutgoingEmail {
   from: string;
   to: string;
   subject: string;
+  /** Plain-text body; always sent. */
   body: string;
+  /** Optional HTML alternative (sequences use it for tracking links). */
+  html?: string;
+  /** Extra headers, e.g. List-Unsubscribe. Microsoft Graph only accepts `X-` headers, so others are dropped there. */
+  headers?: Record<string, string>;
 }
 
 /** The access token was rejected or the refresh token revoked: the user must reconnect. */
@@ -120,16 +125,33 @@ function tokenSet(r: { access_token: string; refresh_token?: string; expires_in?
 export function rfc2822(mail: OutgoingEmail): string {
   const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').trim();
   const subject = /^[\x20-\x7e]*$/.test(mail.subject) ? clean(mail.subject) : `=?UTF-8?B?${Buffer.from(clean(mail.subject)).toString('base64')}?=`;
-  const lines = [
-    `From: ${clean(mail.from)}`,
-    `To: ${clean(mail.to)}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset="UTF-8"',
-    'Content-Transfer-Encoding: base64',
-    '',
-    Buffer.from(mail.body).toString('base64'),
-  ];
+  const b64 = (s: string) => (Buffer.from(s).toString('base64').match(/.{1,76}/g) ?? ['']).join('\r\n');
+  const extra = Object.entries(mail.headers ?? {})
+    .filter(([k]) => /^[A-Za-z][A-Za-z0-9-]{0,60}$/.test(k))
+    .map(([k, v]) => `${k}: ${clean(v)}`);
+  const head = [`From: ${clean(mail.from)}`, `To: ${clean(mail.to)}`, `Subject: ${subject}`, ...extra, 'MIME-Version: 1.0'];
+  let lines: string[];
+  if (mail.html) {
+    const boundary = `df-${Buffer.from(String(Math.random())).toString('hex').slice(0, 24)}`;
+    lines = [
+      ...head,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64(mail.body),
+      `--${boundary}`,
+      'Content-Type: text/html; charset="UTF-8"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64(mail.html),
+      `--${boundary}--`,
+    ];
+  } else {
+    lines = [...head, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', b64(mail.body)];
+  }
   return Buffer.from(lines.join('\r\n')).toString('base64url');
 }
 
@@ -279,6 +301,13 @@ interface GraphAddress {
   emailAddress?: { address?: string };
 }
 
+/** Graph only allows custom headers that start with `X-`. */
+function graphHeaders(h: Record<string, string> | undefined): { name: string; value: string }[] {
+  return Object.entries(h ?? {})
+    .filter(([k]) => /^x-[a-z0-9-]{1,60}$/i.test(k))
+    .map(([name, value]) => ({ name, value: value.replace(/[\r\n]+/g, ' ') }));
+}
+
 export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
   const scopes = ['offline_access', 'openid', 'email', 'User.Read', 'Mail.Read', 'Mail.Send', 'Calendars.Read'];
   const base = `${env.MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(env.MICROSOFT_TENANT)}/oauth2/v2.0`;
@@ -373,7 +402,12 @@ export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
         token,
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          message: { subject: mail.subject, body: { contentType: 'Text', content: mail.body }, toRecipients: [{ emailAddress: { address: mail.to } }] },
+          message: {
+            subject: mail.subject,
+            body: mail.html ? { contentType: 'HTML', content: mail.html } : { contentType: 'Text', content: mail.body },
+            toRecipients: [{ emailAddress: { address: mail.to } }],
+            ...(graphHeaders(mail.headers).length ? { internetMessageHeaders: graphHeaders(mail.headers) } : {}),
+          },
           saveToSentItems: true,
         }),
       });

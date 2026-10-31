@@ -21,6 +21,7 @@ import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthController } from './health/health.controller';
 import { RevenueModule } from './revenue/revenue.module';
+import { SequencesModule } from './sequences/sequences.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
@@ -61,6 +62,7 @@ import { redactUrl } from './observability/redact';
     OperatorModule,
     ReportsModule,
     IdentityModule,
+    SequencesModule,
     WorkerModule,
   ],
   controllers: [HealthController],

@@ -41,6 +41,8 @@ export const PERMISSIONS = [
   'reports:read',
   'reports:write',
   'reports:manage',
+  'sequences:read',
+  'sequences:write',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -62,6 +64,7 @@ const MEMBER: Permission[] = [
   'contracts:write',
   'success:write',
   'reports:write',
+  'sequences:write',
 ];
 
 const MANAGER: Permission[] = [...MEMBER, 'pipelines:manage', 'automation:manage', 'audit:read', 'catalog:manage', 'quotes:approve', 'marketing:manage', 'reports:manage'];
