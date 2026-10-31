@@ -10,6 +10,6 @@ import { QuotesService } from './quotes.service';
   imports: [AutomationModule],
   controllers: [CatalogController, QuotesController, ContractsController, PublicProposalsController],
   providers: [CatalogService, QuotesService, ContractsService, ProposalsService],
-  exports: [QuotesService, ContractsService],
+  exports: [QuotesService, ContractsService, ProposalsService],
 })
 export class CommercialModule {}

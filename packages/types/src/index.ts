@@ -23,3 +23,4 @@ export * from './extension';
 export * from './finder';
 export * from './intelligence';
 export * from './meetings';
+export * from './portal';

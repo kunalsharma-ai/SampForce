@@ -14,7 +14,7 @@ export class ApiError extends Error {
 let refreshing: Promise<boolean> | null = null;
 
 /** Sign-in steps answer 401 for wrong credentials; refreshing the session would not help them. */
-const NO_REFRESH = /^\/(operator\/|auth\/(login|register|refresh|logout|invitations|mfa\/verify))/;
+const NO_REFRESH = /^\/(operator\/|client-portal\/|auth\/(login|register|refresh|logout|invitations|mfa\/verify))/;
 
 /** Single-flight refresh so parallel 401s trigger one token rotation, not many. */
 function refreshSession(): Promise<boolean> {

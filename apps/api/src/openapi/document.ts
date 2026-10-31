@@ -120,6 +120,17 @@ import {
   emailRewriteRequestSchema,
   emailSubjectsRequestSchema,
   emailAnalyseRequestSchema,
+  portalAcceptSchema,
+  portalDecisionSchema,
+  portalForgotSchema,
+  portalInviteSchema,
+  portalLoginSchema,
+  portalMessageSchema,
+  portalRequestCreateSchema,
+  portalRequestUpdateSchema,
+  portalResetSchema,
+  portalSettingsSchema,
+  portalUserUpdateSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -330,6 +341,50 @@ export function buildOpenApiDocument(): object {
   action('get', '/forecast/settings', 'Forecasting', 'How probabilities and categories are worked out (dashboard:read, deals:read)');
   action('put', '/forecast/settings', 'Forecasting', 'Change the probability method (stage or stage win history) and category thresholds (pipelines:manage)', forecastSettingsSchema);
   action('get', '/forecast/compare', 'Forecasting', 'Deal-level changes between two snapshots (dashboard:read, deals:read)', undefined, { query: z.object({ from: z.string().uuid(), to: z.string().uuid() }) });
+
+  // Enhancement feature 11: client self-service portal (ADR 0025). Workspace routes need a member session;
+  // /client-portal routes use the separate portal session cookie (df_portal) and never accept a member session.
+  action('get', '/portal/settings', 'Client portal', 'Portal address, on/off and what customers can see and do (companies:read)');
+  action('put', '/portal/settings', 'Client portal', 'Change portal settings; the address must be unused (tenant:manage)', portalSettingsSchema);
+  action('get', '/portal/users', 'Client portal', 'People with portal access, optionally for one company (companies:read)', undefined, { query: z.object({ companyId: z.string().uuid().optional() }) });
+  action('post', '/portal/users', 'Client portal', 'Invite someone at a company; returns a 7-day invitation link and whether it was emailed (companies:write)', portalInviteSchema);
+  action('patch', '/portal/users/{id}', 'Client portal', 'Change access (viewer or approver) or switch access off, which ends their sessions (companies:write)', portalUserUpdateSchema);
+  action('post', '/portal/users/{id}/invitation', 'Client portal', 'A new invitation link for someone who has not accepted (companies:write)');
+  action('delete', '/portal/users/{id}', 'Client portal', 'Remove portal access; messages and requests stay (companies:write)');
+  action('get', '/portal/companies/{id}', 'Client portal', 'One company: people, shared documents, messages, tasks that can be shared and requests (companies:read)');
+  action('post', '/portal/companies/{id}/messages', 'Client portal', 'Message the customer (companies:write)', portalMessageSchema);
+  action('post', '/portal/companies/{id}/documents', 'Client portal', 'Share a file with the customer: raw body, Content-Type of the file, ?name=; PDF, image, text, CSV or Office, up to 10 MB (companies:write)', undefined, { query: z.object({ name: z.string() }) });
+  action('delete', '/portal/documents/{id}', 'Client portal', 'Stop sharing a document (companies:write)');
+  action('get', '/portal/documents/{id}/download', 'Client portal', 'Download a portal document (companies:read)');
+  action('put', '/portal/tasks/{id}/visibility', 'Client portal', 'Show or hide a task as a milestone in the portal (activities:write)', z.object({ visible: z.boolean() }));
+  action('get', '/portal/requests', 'Client portal', 'Requests from customers; status=active|open|in_progress|resolved|closed, mine=true (companies:read)', undefined, { query: z.object({ status: z.string().optional(), mine: z.enum(['true', 'false']).optional() }) });
+  action('get', '/portal/requests/{id}', 'Client portal', 'One request with its messages (companies:read)');
+  action('patch', '/portal/requests/{id}', 'Client portal', 'Change status or assignee (companies:write)', portalRequestUpdateSchema);
+  action('post', '/portal/requests/{id}/messages', 'Client portal', 'Reply to the customer (companies:write)', portalMessageSchema);
+  for (const [method, path, summary, schema] of [
+    ['get', '/client-portal/portals/{slug}', 'Public: portal name, seller and branding (404 when off)', undefined],
+    ['post', '/client-portal/portals/{slug}/login', 'Public: sign in; sets the df_portal cookie. Five wrong passwords lock the account for 15 minutes', portalLoginSchema],
+    ['post', '/client-portal/portals/{slug}/password/forgot', 'Public: email a 60-minute reset link; answers the same whether or not the email has access', portalForgotSchema],
+    ['post', '/client-portal/invitations/accept', 'Public: choose a password from an invitation and sign in', portalAcceptSchema],
+    ['post', '/client-portal/password/reset', 'Public: set a new password from a reset link; ends every other session', portalResetSchema],
+    ['post', '/client-portal/logout', 'Portal session: sign out', undefined],
+    ['get', '/client-portal/me', 'Portal session: who is signed in, their company, account manager, branding and enabled sections', undefined],
+    ['get', '/client-portal/dashboard', 'Portal session: projects with progress, proposals, contracts, shared milestones, updates; invoices are reported as not connected', undefined],
+    ['post', '/client-portal/updates/seen', 'Portal session: mark updates as seen', undefined],
+    ['get', '/client-portal/proposals/{id}', 'Portal session: a sent, accepted or declined proposal for the customer\'s company', undefined],
+    ['post', '/client-portal/proposals/{id}/decision', 'Portal session: approve or decline a sent proposal (approvers only, when approvals are on)', portalDecisionSchema],
+    ['get', '/client-portal/requests', 'Portal session: the company\'s requests', undefined],
+    ['post', '/client-portal/requests', 'Portal session: open a request; assigned to the company owner', portalRequestCreateSchema],
+    ['get', '/client-portal/requests/{id}', 'Portal session: one request with messages', undefined],
+    ['post', '/client-portal/requests/{id}/messages', 'Portal session: reply; re-opens a resolved request, refused when closed', portalMessageSchema],
+    ['get', '/client-portal/messages', 'Portal session: messages with the account team', undefined],
+    ['post', '/client-portal/messages', 'Portal session: send a message', portalMessageSchema],
+    ['get', '/client-portal/documents', 'Portal session: shared documents with 10-minute signed download links', undefined],
+    ['post', '/client-portal/documents', 'Portal session: upload a file (raw body, ?name=), when uploads are on', undefined],
+    ['get', '/client-portal/documents/download/{token}', 'Signed link: download a document; expires after 10 minutes', undefined],
+  ] as const) {
+    r.registerPath({ method, path, tags: ['Client portal'], summary, ...(schema ? { request: body(schema) } : {}), responses: { 200: ok('OK'), ...errors } });
+  }
 
   // Phase 5: catalogue, quotes, contracts, marketing, revenue analytics and customer success.
   action('get', '/catalog/products', 'Catalogue', 'Products with their prices per price book (quotes:read)');
