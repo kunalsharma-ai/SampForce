@@ -51,6 +51,7 @@ import {
   segmentInputSchema,
   emailTemplateInputSchema,
   enrollInputSchema,
+  sequenceTestSendSchema,
   sequenceInputSchema,
   sequenceStatusSchema,
   extensionCaptureSchema,
@@ -341,7 +342,8 @@ export function buildOpenApiDocument(): object {
   action('put', '/sequences/{id}', 'Sequences', 'Update steps, rules and sending settings (owner or marketing:manage)', sequenceInputSchema);
   action('post', '/sequences/{id}/status', 'Sequences', 'Start, pause or archive (owner or marketing:manage)', sequenceStatusSchema);
   action('post', '/sequences/{id}/enroll', 'Sequences', 'Enrol leads, contacts or a segment; emails go from the caller\'s own mailbox (sequences:write)', enrollInputSchema);
-  action('get', '/sequences/{id}/step-stats', 'Sequences', 'Sent, replied, opened, clicked and bounced per email step (sequences:read)');
+  action('get', '/sequences/{id}/step-stats', 'Sequences', 'Sent, replied, opened, clicked and bounced per email step, and per version for A/B-tested steps (sequences:read)');
+  action('post', '/sequences/{id}/test-send', 'Sequences', "Send one email of the sequence (version A or B) to the caller's own mailbox, filled in for a chosen lead or contact; not tracked (sequences:write)", sequenceTestSendSchema);
   action('get', '/sequences/enrollments', 'Sequences', 'Enrolments by sequence, lead or contact (sequences:read)', undefined, { query: z.object({ sequenceId: z.string().uuid().optional(), leadId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), status: z.enum(['live', 'finished']).optional() }) });
   action('post', '/sequences/enrollments/{id}', 'Sequences', 'Pause, resume or stop one run (sender or marketing:manage)', z.object({ action: z.enum(['pause', 'resume', 'stop']) }));
   action('get', '/sequences/suppressions', 'Sequences', 'The do-not-email list (sequences:read)');

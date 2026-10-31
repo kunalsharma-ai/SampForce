@@ -156,6 +156,28 @@ export type EventRule = z.infer<typeof eventRuleSchema>;
 
 const delayDays = z.number().int().min(0).max(60);
 
+const emailVersionSchema = z.object({
+  templateId: z.string().uuid().nullable().default(null),
+  subject: z.string().trim().max(200).default(''),
+  body: z.string().trim().max(20_000).default(''),
+});
+export type EmailVersion = z.infer<typeof emailVersionSchema>;
+
+export type EmailVariant = 'A' | 'B';
+
+/**
+ * Which version of an A/B-tested step a person gets. Deterministic, so a retried send uses the same one,
+ * and spread evenly over a sequence's runs (FNV-1a over the run id and step id).
+ */
+export function pickVariant(enrollmentId: string, stepId: string): EmailVariant {
+  let h = 0x811c9dc5;
+  for (const ch of `${enrollmentId}:${stepId}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h % 2 === 0 ? 'A' : 'B';
+}
+
 export const sequenceStepSchema = z.discriminatedUnion('type', [
   z.object({
     id: stepId,
@@ -166,6 +188,8 @@ export const sequenceStepSchema = z.discriminatedUnion('type', [
     /** Used when there is no template, or to override the template for this step. */
     subject: z.string().trim().max(200).default(''),
     body: z.string().trim().max(20_000).default(''),
+    /** A/B test: when set, about half the people get this version instead. Each person keeps the version they were given. */
+    variantB: emailVersionSchema.nullable().default(null),
   }),
   z.object({ id: stepId, type: z.literal('task'), delayDays, title: z.string().trim().min(1, 'Name the task').max(200) }),
   z.object({
@@ -230,6 +254,12 @@ export const sequenceInputSchema = z
         if (!s.templateId && (!s.subject || !s.body)) ctx.addIssue({ code: 'custom', path: ['steps', i], message: `Step ${i + 1}: pick a template or write a subject and body` });
         const bad = [...mergeTags(s.subject), ...mergeTags(s.body)].filter((t) => !(t in MERGE_FIELDS));
         if (bad.length) ctx.addIssue({ code: 'custom', path: ['steps', i], message: `Step ${i + 1}: unknown merge field {{${bad[0]}}}` });
+        const b = s.variantB;
+        if (b) {
+          if (!b.templateId && (!b.subject || !b.body)) ctx.addIssue({ code: 'custom', path: ['steps', i, 'variantB'], message: `Step ${i + 1}, version B: pick a template or write a subject and body` });
+          const badB = [...mergeTags(b.subject), ...mergeTags(b.body)].filter((t) => !(t in MERGE_FIELDS));
+          if (badB.length) ctx.addIssue({ code: 'custom', path: ['steps', i, 'variantB'], message: `Step ${i + 1}, version B: unknown merge field {{${badB[0]}}}` });
+        }
       }
       if (s.type === 'condition') {
         for (const target of [s.ifYes, s.ifNo]) {
@@ -272,13 +302,33 @@ export interface SequenceRow {
   updatedAt: string;
 }
 
-export interface SequenceStepStats {
-  stepId: string;
+export interface EmailCounts {
   sent: number;
   replied: number;
   opened: number;
   clicked: number;
   bounced: number;
+}
+
+export interface SequenceStepStats extends EmailCounts {
+  stepId: string;
+  /** For A/B-tested steps (or steps that were tested before): results for each version. */
+  variants: { variant: EmailVariant; counts: EmailCounts }[] | null;
+}
+
+/** Test email to the sender's own address, with merge fields filled from a chosen lead or contact. */
+export const sequenceTestSendSchema = z.object({
+  stepId: z.string().max(40),
+  variant: z.enum(['A', 'B']).default('A'),
+  leadId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+});
+export type SequenceTestSendInput = z.infer<typeof sequenceTestSendSchema>;
+export interface SequenceTestSendResult {
+  to: string;
+  subject: string;
+  /** Merge fields that were empty, filled with a visible marker in the test. */
+  missing: MergeField[];
 }
 
 // ───────────── Enrolments ─────────────

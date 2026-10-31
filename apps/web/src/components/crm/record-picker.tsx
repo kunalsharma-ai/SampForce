@@ -2,7 +2,7 @@
 
 import { Input } from '@dealflow/ui';
 import type { Page } from '@dealflow/types';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { api } from '@/lib/api';
@@ -43,6 +43,9 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
     queryKey: [entity, 'picker', debounced],
     queryFn: () => api<Page<Option>>(`/${entity}${toQuery({ q: debounced, pageSize: 8, sort: entity === 'companies' ? 'name' : 'createdAt', order: 'asc' })}`),
     enabled: open,
+    // Keep showing the last matches while the next search loads, so the list does not flash "Searching…"
+    // and the option under the pointer is not replaced mid-click.
+    placeholderData: keepPreviousData,
   });
   const options = (results.data?.items ?? []).map((o) => ({ id: o.id, name: o.name ?? o.fullName ?? '', sub: o.domain ?? o.email ?? null }));
 

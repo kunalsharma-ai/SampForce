@@ -1,8 +1,9 @@
 'use client';
 
 import { Button } from '@dealflow/ui';
-import { MERGE_FIELD_KEYS, MERGE_FIELDS, type MergeField, type TemplatePreview } from '@dealflow/types';
+import { MERGE_FIELD_KEYS, MERGE_FIELDS, type MergeField, type SequenceTestSendResult, type TemplatePreview } from '@dealflow/types';
 import { useMutation } from '@tanstack/react-query';
+import { Send } from 'lucide-react';
 import { useState } from 'react';
 import { RecordPicker, type PickerValue } from '@/components/crm/record-picker';
 import { ErrorText } from '@/components/revenue/tabs';
@@ -35,32 +36,60 @@ export function insertAt(el: HTMLInputElement | HTMLTextAreaElement | null, valu
   const end = el.selectionEnd ?? value.length;
   const next = value.slice(0, start) + text + value.slice(end);
   requestAnimationFrame(() => {
+    // Put the cursor back after the field, unless the person has already moved on to another box.
+    const now = document.activeElement;
+    if (now && now !== el && now !== document.body && (now instanceof HTMLInputElement || now instanceof HTMLTextAreaElement || now instanceof HTMLSelectElement)) return;
     el.focus();
     el.setSelectionRange(start + text.length, start + text.length);
   });
   return next;
 }
 
+/** Where a "Send me a test" goes: one saved email step of a sequence. */
+export interface TestSendTarget {
+  seqId: string;
+  stepId: string;
+  variant: 'A' | 'B';
+  /** Unsaved changes: the test would send the saved version, so ask to save first. */
+  dirty: boolean;
+}
+
 /** Renders the email for a real lead so people see exactly what goes out, including empty fields. */
-export function PreviewPanel({ subject, body }: { subject: string; body: string }) {
+export function PreviewPanel({ subject, body, idBase = 'tpl', test }: { subject: string; body: string; idBase?: string; test?: TestSendTarget }) {
   const [lead, setLead] = useState<PickerValue | null>(null);
   const preview = useMutation({
     mutationFn: () => api<TemplatePreview>('/email-templates/preview', { method: 'POST', json: { subject, body, leadId: lead?.id } }),
   });
+  const send = useMutation({
+    mutationFn: () => api<SequenceTestSendResult>(`/sequences/${test!.seqId}/test-send`, { method: 'POST', json: { stepId: test!.stepId, variant: test!.variant, leadId: lead?.id } }),
+  });
+  const pickerId = `preview-lead-${idBase}`;
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-56 flex-1">
-          <label htmlFor="preview-lead" className="text-xs font-medium">
+          <label htmlFor={pickerId} className="text-xs font-medium">
             Preview for a lead
           </label>
-          <RecordPicker id="preview-lead" entity="leads" value={lead} onChange={setLead} placeholder="Search leads (optional)" />
+          <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder="Search leads (optional)" />
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => preview.mutate()} disabled={preview.isPending || !subject || !body}>
           Preview
         </Button>
+        {test && (
+          <Button type="button" size="sm" variant="outline" onClick={() => send.mutate()} disabled={send.isPending || test.dirty || !subject || !body}>
+            <Send className="h-4 w-4" aria-hidden /> Send me a test
+          </Button>
+        )}
       </div>
-      <ErrorText error={preview.error} />
+      {test?.dirty && <p className="text-xs text-muted-foreground">Save your changes to send a test of this email.</p>}
+      <ErrorText error={preview.error ?? send.error} />
+      {send.data && (
+        <p role="status" className="text-xs text-success">
+          Test sent to {send.data.to} with the subject “{send.data.subject}”.
+          {send.data.missing.length > 0 && ` Empty fields are marked in it: ${send.data.missing.map((m) => MERGE_FIELDS[m]).join(', ')}.`}
+        </p>
+      )}
       {preview.data && (
         <div className="space-y-1 text-sm">
           {preview.data.recipient && (

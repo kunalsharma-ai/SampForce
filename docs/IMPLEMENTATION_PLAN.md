@@ -331,8 +331,8 @@ Requested by Kunal on 2026-10-31. Plan: https://claude.ai/artifact/Bi2GJHfJJMDsL
 
 | Part | Status |
 |---|---|
-| Email templates, sequences, event rules, tracking, unsubscribe, do-not-email list (ADR 0014) | Built and tested against the provider fixture; not yet sent through real Gmail or Outlook |
-| Browser extension (Chrome/Edge): own connection codes, side panel, save as lead, enrol, optional auto-capture (ADR 0015) | Built; tested in Chromium against a stand-in site. Not yet in the Chrome Web Store (needs Sampledge's developer account and a privacy policy) |
+| Email templates, sequences, event rules, tracking, unsubscribe, do-not-email list, A/B tests of an email, test sends to yourself (ADR 0014) | Built and tested against the provider fixture; not yet sent through real Gmail or Outlook |
+| Browser extension (Chrome/Edge): own connection codes, side panel, save as lead, enrol, optional auto-capture (ADR 0015) | Built; tested in Chromium against a stand-in site. Not yet in the Chrome Web Store: the privacy page (`/extension-privacy`) and listing kit (`apps/extension/store/`) are ready; submitting needs Sampledge's developer account |
 | Email finder: own website reader, pattern and mail-server checks, optional Hunter.io key, extension button (ADR 0016) | Built; tested against made-up sites and a Hunter stand-in. Not yet run on the open internet or with a real Hunter key |
 
 ## Original continuation instructions (Phase 8, done)

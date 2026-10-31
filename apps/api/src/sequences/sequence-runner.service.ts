@@ -1,7 +1,7 @@
-import { ConflictException, Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { Prisma, type IntegrationConnection, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
-import { nextSendSlot, renderMerge, type EmailEvent, type EnrollmentStatus, type RuleAction } from '@dealflow/types';
+import { MERGE_FIELDS, nextSendSlot, pickVariant, renderMerge, type MergeField, type SequenceTestSendInput, type SequenceTestSendResult, type EmailEvent, type EnrollmentStatus, type RuleAction } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -55,6 +55,53 @@ export class SequenceRunner implements OnModuleInit {
 
   onModuleInit(): void {
     this.integrations.onInbound((tx, conn, messages) => this.detectRepliesAndBounces(tx, conn, messages));
+  }
+
+  // ───────────── Test sends ─────────────
+
+  /**
+   * Sends one step to the caller's own mailbox address, filled in for a chosen lead or contact. Nothing is
+   * tracked and no run is created; it counts toward the mailbox's daily limit like any other send.
+   */
+  async testSend(auth: AuthContext, sequenceId: string, input: SequenceTestSendInput, meta: RequestMeta): Promise<SequenceTestSendResult> {
+    const prep = await this.prisma.run(auth, async (tx) => {
+      const seq = await this.sequences.findIn(tx, auth.tenantId, sequenceId);
+      const step = seqSteps(seq).find((st) => st.id === input.stepId);
+      if (!step || step.type !== 'email') throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Save the sequence first, then send a test of one of its emails.' });
+      if (input.variant === 'B' && !step.variantB) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'This email has no version B.' });
+      const version = input.variant === 'B' && step.variantB ? step.variantB : step;
+      let subject = version.subject;
+      let body = version.body;
+      if (version.templateId) {
+        const t = await tx.emailTemplate.findFirst({ where: { id: version.templateId, tenantId: auth.tenantId } });
+        subject ||= t?.subject ?? '';
+        body ||= t?.body ?? '';
+      }
+      if (!subject || !body) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'This email has no subject or body yet.' });
+      const person = await loadPerson(tx, auth.tenantId, input);
+      if ((input.leadId || input.contactId) && !person) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'That lead or contact was not found.' });
+      const conn = await this.communication.mailboxFor(tx, auth.tenantId, auth.userId);
+      if (!conn) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox in Integrations to send yourself a test.' });
+      if ((await this.communication.sentInLastDay(tx, conn.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) {
+        throw new HttpException({ code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from DealFlow.` }, HttpStatus.TOO_MANY_REQUESTS);
+      }
+      const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
+      const values = { ...(person?.values ?? {}), ...senderValues(user, conn.accountEmail) };
+      const first = [renderMerge(subject, values), renderMerge(body, values)];
+      const missing = [...new Set(first.flatMap((r) => r.missing))] as MergeField[];
+      // In a test, show gaps visibly instead of leaving them blank.
+      for (const m of missing) values[m] = `[${MERGE_FIELDS[m]} missing]`;
+      const index = seqSteps(seq).filter((st) => st.type === 'email').findIndex((st) => st.id === step.id) + 1;
+      return { conn, seq, index, missing, subject: renderMerge(subject, values).text, body: renderMerge(body, values).text };
+    });
+    const version = input.variant === 'B' ? ', version B' : '';
+    const footer = `\n\n--\nTest of email ${prep.index}${version} in the sequence "${prep.seq.name}", sent only to you. Opens and clicks are not tracked in tests, and the real email adds an unsubscribe link.`;
+    const subject = `[Test] ${prep.subject}`;
+    await this.communication.deliver(auth, prep.conn, { to: prep.conn.accountEmail, subject, body: prep.body + footer }, {}, meta, {
+      action: 'sequence.test_sent',
+      metadata: { sequenceId, stepId: input.stepId, variant: input.variant },
+    });
+    return { to: prep.conn.accountEmail, subject, missing: prep.missing };
   }
 
   // ───────────── Sending ─────────────
@@ -129,10 +176,12 @@ export class SequenceRunner implements OnModuleInit {
       if (person.consent === 'OPTED_OUT') return { kind: 'stop' as const, stop: 'UNSUBSCRIBED' as const, why: 'The person opted out of marketing.' };
       const conn = await this.communication.mailboxFor(tx, tenantId, e.senderId);
       if (!conn) return { kind: 'pause' as const, pause: "The sender's mailbox is not connected. Reconnect it in Integrations, then resume." };
-      let subject = step.subject;
-      let body = step.body;
-      if (step.templateId) {
-        const t = await tx.emailTemplate.findFirst({ where: { id: step.templateId, tenantId } });
+      const variant = step.variantB ? pickVariant(id, step.id) : 'A';
+      const version = variant === 'B' && step.variantB ? step.variantB : step;
+      let subject = version.subject;
+      let body = version.body;
+      if (version.templateId) {
+        const t = await tx.emailTemplate.findFirst({ where: { id: version.templateId, tenantId } });
         if (!t && (!subject || !body)) return { kind: 'pause' as const, pause: 'The template for this step was deleted. Edit the step, then resume.' };
         subject ||= t?.subject ?? '';
         body ||= t?.body ?? '';
@@ -146,7 +195,7 @@ export class SequenceRunner implements OnModuleInit {
       if ((await this.communication.sentInLastDay(tx, conn.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) return { kind: 'later' as const, later: 60 };
       const sentBySequence = await tx.sequenceMessage.count({ where: { tenantId, senderId: e.senderId, sentAt: { gte: new Date(Date.now() - DAY) }, enrollment: { sequenceId: e.sequenceId } } });
       if (sentBySequence >= settings.dailyLimit) return { kind: 'later' as const, later: 60 };
-      const msg = await tx.sequenceMessage.create({ data: { tenantId, enrollmentId: id, stepId: step.id, senderId: e.senderId, toAddress: e.email, subject: s.text.slice(0, 500) } });
+      const msg = await tx.sequenceMessage.create({ data: { tenantId, enrollmentId: id, stepId: step.id, variant, senderId: e.senderId, toAddress: e.email, subject: s.text.slice(0, 500) } });
       return { kind: 'send' as const, conn, msg, subject: s.text, body: b.text };
     });
 
