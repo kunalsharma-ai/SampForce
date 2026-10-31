@@ -143,7 +143,7 @@ describe('prospect lists (Mock Mode, no provider keys)', () => {
     const added = addRes.body;
     expect(added).toMatchObject({ added: 3, revealed: 3 });
     const rows = (await http.get(`/prospect-lists/${sampleList.id}`).expect(200)).body.prospects;
-    expect(rows.every((p: { sample: boolean; email: string; emailStatus: string; source: string }) => p.sample && p.email.endsWith('@acme.example') && p.emailStatus === 'unknown' && p.source === 'sample')).toBe(true);
+    expect(rows.every((p: { sample: boolean; email: string; emailStatus: string; source: string }) => p.sample && p.email.endsWith('@acme.example') && p.emailStatus === null && p.source === 'sample')).toBe(true);
     expect((await http.get('/prospects/usage').expect(200)).body).toEqual({ used: 5, limit: 100 });
 
     const crm = (await http.post('/prospects/to-crm', { prospectIds: rows.map((p: { id: string }) => p.id) }).expect(200)).body;

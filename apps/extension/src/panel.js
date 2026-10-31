@@ -462,7 +462,7 @@ function prospectsSection() {
 
   const r = ps.result;
   if (r) {
-    if (r.mode === 'mock') sec.append(h('p', { class: 'alert warn', role: 'note' }, h('strong', {}, 'Mock Mode. '), r.notice));
+    if (r.mode === 'mock') sec.append(h('p', { class: 'alert warn', role: 'note' }, r.notice));
     else if (r.notice) sec.append(h('p', { class: 'small muted' }, r.notice));
     if (!r.people.length) sec.append(h('p', { class: 'muted' }, 'No people found at this company.'));
   }

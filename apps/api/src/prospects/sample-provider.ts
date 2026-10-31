@@ -55,7 +55,7 @@ export function sampleSearch(input: ProviderSearchInput): { people: ProviderPers
   return { people, hasMore: input.page * 12 < total };
 }
 
-/** The sample address for a sample person (on a .example domain). Status stays "unknown": nothing was checked. */
+/** The sample address for a sample person (on a .example domain). It gets no status: nothing was checked. */
 export function sampleEmail(p: { firstName: string | null; lastName: string | null; fullName: string; domain: string | null }): string {
   const local = [p.firstName, p.lastName].filter(Boolean).join('.') || p.fullName.replace(/\s+/g, '.');
   return `${local.toLowerCase().replace(/[^a-z.]/g, '')}@${p.domain?.endsWith(SAMPLE_DOMAIN_SUFFIX) ? p.domain : `sample${SAMPLE_DOMAIN_SUFFIX}`}`;

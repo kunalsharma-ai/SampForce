@@ -685,7 +685,8 @@ export class ProspectsService {
     await this.spend(auth, 'apollo', 'reveal', need.length, real.length > 0);
     for (const p of samples) {
       p.email = sampleEmail(p);
-      p.emailStatus = 'unknown';
+      // Nothing was checked: a sample address has no status.
+      p.emailStatus = null;
       revealed++;
     }
     if (real.length) {
