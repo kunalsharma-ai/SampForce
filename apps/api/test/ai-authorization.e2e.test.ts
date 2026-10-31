@@ -60,9 +60,10 @@ describe('AI actions respect authorization', () => {
     await setMemberRole((p) => p.filter((x) => !['deals:write', 'activities:write', 'deals:read'].includes(x)));
     await api(rep).post('/ai/copilot', { question: 'hello' }).expect(200);
     const offered = fixture.requests.at(-1)!.body.tools!.map((t) => t.name).sort();
-    expect(offered).toEqual(['get_record', 'list_tasks', 'search_records']);
+    // Read-only intelligence tools come with dashboard:read; deals_at_risk needs deals:read, which this role lost.
+    expect(offered).toEqual(['get_record', 'list_tasks', 'my_next_actions', 'record_intelligence', 'sales_insights', 'search_records']);
     const everything = new Set(fixture.requests.flatMap((r) => r.body.tools?.map((t) => t.name) ?? []));
-    for (const name of everything) expect(name).toMatch(/^(search_records|get_record|list_deals|pipeline_summary|list_tasks|propose_create_task|propose_log_note|propose_move_deal_stage)$/);
+    for (const name of everything) expect(name).toMatch(/^(search_records|get_record|list_deals|pipeline_summary|list_tasks|propose_create_task|propose_log_note|propose_move_deal_stage|my_next_actions|sales_insights|record_intelligence|deals_at_risk)$/);
   });
 
   it('refuses a tool the model was not offered, and proposes nothing', async () => {

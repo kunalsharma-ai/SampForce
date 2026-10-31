@@ -199,6 +199,9 @@ model Tenant {
   salesTargets           SalesTarget[]
   escalations            Escalation[]
   companyHealth          CompanyHealth[]
+  dealHealthScores       DealHealthScore[]
+  dealHealthDays         DealHealthDaily[]
+  nextActionDecisions    NextActionDecision[]
   invoices               Invoice[]
   billingEvents          BillingEvent[]
   emailTemplates         EmailTemplate[]
@@ -576,6 +579,8 @@ model Opportunity {
   quotes      Quote[]
   contracts   Contract[]
   stageEvents DealStageEvent[]
+  healthScore DealHealthScore?
+  healthDays  DealHealthDaily[]
 
   @@index([tenantId, status])
   @@index([tenantId, stageId])
@@ -2019,4 +2024,63 @@ model FinderLookup {
 
   @@index([tenantId, userId, createdAt])
   @@map("finder_lookups")
+}
+
+// ───────────── Enhancement Phase 1: sales intelligence ─────────────
+
+/** Latest rule-based health of an open deal, kept by the worker's hourly sweep. */
+model DealHealthScore {
+  dealId     String    @id @map("deal_id") @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  health     Int
+  risk       String
+  signals    Json
+  computedAt DateTime  @map("computed_at") @db.Timestamptz(3)
+  /** Set when the owner was told the deal turned high risk; cleared when it recovers. */
+  alertedAt  DateTime? @map("alerted_at") @db.Timestamptz(3)
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deal   Opportunity @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, risk])
+  @@map("deal_health_scores")
+}
+
+/** One score per deal per day (the last of the day wins), for trends. */
+model DealHealthDaily {
+  dealId   String   @map("deal_id") @db.Uuid
+  day      DateTime @db.Date
+  tenantId String   @map("tenant_id") @db.Uuid
+  health   Int
+  risk     String
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deal   Opportunity @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, day])
+  @@index([tenantId, day])
+  @@map("deal_health_daily")
+}
+
+/** What a person did with one item of their next best action list; accepted items keep the task they created. */
+model NextActionDecision {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  key        String
+  kind       String
+  recordType String    @map("record_type")
+  recordId   String    @map("record_id") @db.Uuid
+  /** accepted, dismissed or snoozed. */
+  decision   String
+  /** Snoozed until; null with "dismissed" hides it until the situation behind the key changes. */
+  until      DateTime? @db.Timestamptz(3)
+  taskId     String?   @map("task_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, key])
+  @@index([tenantId, userId, createdAt])
+  @@map("next_action_decisions")
 }

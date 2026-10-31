@@ -20,6 +20,12 @@ import {
   checkoutSchema,
   dashboardInputSchema,
   immersiveQuerySchema,
+  dealHealthQuerySchema,
+  insightQuerySchema,
+  nextActionAcceptSchema,
+  nextActionDismissSchema,
+  nextActionQuerySchema,
+  timelineQuerySchema,
   reportDefinitionSchema,
   reportInputSchema,
   invoiceRequestSchema,
@@ -451,6 +457,18 @@ export function buildOpenApiDocument(): object {
   action('get', '/insights/globe', 'Reports', 'Companies, open pipeline and recent wins by country (companies:read, deals:read)');
   action('get', '/insights/flow', 'Reports', 'Stage-to-stage moves and median time in stage (deals:read, pipelines:read)', undefined, { query: immersiveQuerySchema });
   action('get', '/insights/replay', 'Reports', 'Stage history for a time-based replay (deals:read, pipelines:read)', undefined, { query: immersiveQuerySchema });
+
+  // Enhancement Phase 1: deal health monitor, next best actions, the 360° timeline, record intelligence and insights.
+  action('get', '/deal-health', 'Intelligence', 'Open deals with their health score, band and 7-day change (deals:read)', undefined, { query: dealHealthQuerySchema });
+  action('get', '/deal-health/summary', 'Intelligence', 'Count of open deals per health band (deals:read)');
+  action('post', '/deal-health/refresh', 'Intelligence', 'Score every open deal now instead of waiting for the hourly run (deals:read)');
+  action('get', '/deals/{id}/health', 'Intelligence', 'One deal: score, signals behind it, and 90 days of history (deals:read)');
+  action('get', '/next-actions', 'Intelligence', 'Ranked next best actions for the caller, or for one record with recordType and recordId (dashboard:read)', undefined, { query: nextActionQuerySchema });
+  action('post', '/next-actions/dismiss', 'Intelligence', 'Hide a suggestion, or snooze it for some days; personal to the caller (dashboard:read)', nextActionDismissSchema);
+  action('post', '/next-actions/accept', 'Intelligence', 'Turn a suggestion into a task (dashboard:read, activities:write)', nextActionAcceptSchema);
+  action('get', '/timeline/{entity}/{id}', 'Intelligence', 'Everything recorded about a lead, contact, company or deal, newest first; sources the caller cannot read are listed in hidden (dashboard:read)', undefined, { query: timelineQuerySchema });
+  action('get', '/intelligence/{entity}/{id}', 'Intelligence', 'Engagement trend, buying signals, senior people and account value for one record (dashboard:read)');
+  action('get', '/insights', 'Intelligence', 'The last 7 days against the 7 before, for the caller or the team (dashboard:read)', undefined, { query: insightQuerySchema });
 
   r.registerPath({ method: 'get', path: '/health/live', tags: ['Health'], summary: 'Liveness', responses: { 200: { description: 'OK' } } });
   r.registerPath({ method: 'get', path: '/health/ready', tags: ['Health'], summary: 'Readiness', responses: { 200: { description: 'OK' }, 503: json(error, 'Not ready') } });

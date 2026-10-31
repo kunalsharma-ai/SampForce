@@ -24,6 +24,7 @@ import { RevenueModule } from './revenue/revenue.module';
 import { SequencesModule } from './sequences/sequences.module';
 import { ExtensionModule } from './extension/extension.module';
 import { FinderModule } from './finder/finder.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { WorkerModule } from './worker/worker.module';
@@ -68,6 +69,7 @@ import { redactUrl } from './observability/redact';
     SequencesModule,
     ExtensionModule,
     FinderModule,
+    IntelligenceModule,
     MailModule,
     WorkerModule,
   ],

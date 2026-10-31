@@ -16,6 +16,7 @@ export const TRIGGER_EVENTS = {
   'deal.lost': { label: 'Deal is lost', entity: 'deal' },
   'task.completed': { label: 'Task is completed', entity: 'task' },
   'activity.logged': { label: 'Activity is logged', entity: 'activity' },
+  'deal.health_dropped': { label: 'Deal health turns high risk', entity: 'deal' },
 } as const;
 export type TriggerEvent = keyof typeof TRIGGER_EVENTS;
 export const TRIGGER_EVENT_KEYS = Object.keys(TRIGGER_EVENTS) as [TriggerEvent, ...TriggerEvent[]];

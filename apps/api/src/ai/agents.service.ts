@@ -30,6 +30,7 @@ import { PROMPTS, type PromptKey, SCHEMAS } from './prompts';
 import { textOf } from './provider';
 import { RecordContextBuilder, type RecordType } from './record-context';
 import { Redactor, untrusted } from './redact';
+import { loadDealFacts, toDealFacts } from '../intelligence/deal-health.service';
 import { dealHealth, SCORING_VERSION, scoreLead } from './scoring';
 
 /** Identity for automatic runs: no user, read-only access to what the agent needs. */
@@ -121,21 +122,14 @@ export class AgentsService {
   // ───────────── Deal intelligence ─────────────
 
   async analyseDeal(auth: AuthContext, dealId: string, meta: RequestMeta): Promise<RecommendationRow<DealHealth>> {
+    // Same facts and rules as the hourly deal health monitor, so the two never disagree.
     const facts = await this.prisma.run(auth, async (tx) => {
-      const d = await tx.opportunity.findFirst({ where: { id: dealId, tenantId: auth.tenantId, deletedAt: null } });
+      const d = await tx.opportunity.findFirst({ where: { id: dealId, tenantId: auth.tenantId, deletedAt: null }, select: { status: true } });
       if (!d) throw notFound('Deal');
-      const [last, open, overdue, stageLog] = await Promise.all([
-        tx.activity.findFirst({ where: { tenantId: auth.tenantId, opportunityId: dealId, deletedAt: null }, orderBy: { occurredAt: 'desc' }, select: { occurredAt: true } }),
-        tx.task.count({ where: { tenantId: auth.tenantId, opportunityId: dealId, deletedAt: null, status: 'OPEN' } }),
-        tx.task.count({ where: { tenantId: auth.tenantId, opportunityId: dealId, deletedAt: null, status: 'OPEN', dueAt: { lt: new Date() } } }),
-        tx.auditLog.findFirst({ where: { tenantId: auth.tenantId, entityType: 'deal', entityId: dealId, action: 'deal.stage_changed' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
-      ]);
-      return { d, last, open, overdue, stageLog };
+      const [row] = await loadDealFacts(tx, auth.tenantId, dealId);
+      return { d, row: row! };
     });
-    const base = dealHealth({
-      status: facts.d.status, amount: Number(facts.d.amount), expectedCloseDate: facts.d.expectedCloseDate, createdAt: facts.d.createdAt,
-      stageEnteredAt: facts.stageLog?.createdAt ?? null, lastActivityAt: facts.last?.occurredAt ?? null, openTasks: facts.open, overdueTasks: facts.overdue, hasContact: !!facts.d.contactId,
-    });
+    const base = dealHealth(toDealFacts(facts.row));
     return this.withRun(auth, 'deal_intelligence', 'deal', dealId, { dealId }, undefined, async (run) => {
       const result: DealHealth = { ...base, nextStep: null, nextStepUnavailable: null };
       if (facts.d.status === 'OPEN') {

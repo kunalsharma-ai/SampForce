@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { ACTIVITY_TYPES, type ActivityRow, type Page, type TaskRow } from '@dealflow/types';
+import { ACTIVITY_TYPES, type ActivityRow, type Page, type TaskRow, type TimelineEntity } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, Mail, MessageSquare, Phone, StickyNote, Users } from 'lucide-react';
 import { useId, useState } from 'react';
@@ -9,19 +9,23 @@ import { api } from '@/lib/api';
 import { formatDate, titleCase, toQuery } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { RecordTimeline } from './record-timeline';
 import { Select, Textarea } from './select';
 
 export type RelatedRef = { leadId: string } | { contactId: string } | { companyId: string } | { opportunityId: string };
 
 const ICONS = { CALL: Phone, EMAIL: Mail, MEETING: Users, NOTE: StickyNote } as const;
 
-/** Activity timeline with a "log activity" form, for any record. */
-export function ActivityTimeline({ related }: { related: RelatedRef }) {
+/**
+ * Activity with a "log activity" form, for any record. With `timeline`, the list below the form is the merged
+ * Customer 360 timeline (email, meetings, sequences, stage moves, quotes and more) instead of logged activity only.
+ */
+export function ActivityTimeline({ related, timeline }: { related: RelatedRef; timeline?: { entity: TimelineEntity; id: string } }) {
   const qc = useQueryClient();
   const formId = useId();
   const canWrite = useCan('activities:write');
   const key = ['activities', related];
-  const list = useQuery({ queryKey: key, queryFn: () => api<Page<ActivityRow>>(`/activities${toQuery(related)}`) });
+  const list = useQuery({ queryKey: key, queryFn: () => api<Page<ActivityRow>>(`/activities${toQuery(related)}`), enabled: !timeline });
   const [type, setType] = useState<(typeof ACTIVITY_TYPES)[number]>('NOTE');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -31,6 +35,7 @@ export function ActivityTimeline({ related }: { related: RelatedRef }) {
       setSubject('');
       setBody('');
       void qc.invalidateQueries({ queryKey: ['activities'] });
+      void qc.invalidateQueries({ queryKey: ['timeline'] });
     },
   });
 
@@ -38,7 +43,7 @@ export function ActivityTimeline({ related }: { related: RelatedRef }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> Activity
+          <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> {timeline ? 'Timeline' : 'Activity'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -82,7 +87,9 @@ export function ActivityTimeline({ related }: { related: RelatedRef }) {
             </div>
           </form>
         )}
-        {list.isPending ? (
+        {timeline ? (
+          <RecordTimeline entity={timeline.entity} id={timeline.id} />
+        ) : list.isPending ? (
           <Skeleton className="h-20" />
         ) : list.data?.items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No activity yet.</p>

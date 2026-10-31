@@ -78,7 +78,7 @@ describe('AI gateway, Copilot and agents (against the Claude API fixture)', () =
     expect(sent[0]!.headers['anthropic-beta']).toContain('server-side-fallback-2026-07-01');
     expect(sent[0]!.body).toMatchObject({ model: 'claude-opus-5-5', fallbacks: 'default', output_config: { effort: 'medium' } });
     expect(sent[0]!.body.tools!.map((t) => t.name).sort()).toEqual(
-      ['get_record', 'list_deals', 'list_tasks', 'pipeline_summary', 'propose_create_task', 'propose_log_note', 'propose_move_deal_stage', 'search_records'].sort(),
+      ['deals_at_risk', 'get_record', 'list_deals', 'list_tasks', 'my_next_actions', 'pipeline_summary', 'propose_create_task', 'propose_log_note', 'propose_move_deal_stage', 'record_intelligence', 'sales_insights', 'search_records'].sort(),
     );
 
     const usage = (await h().get('/ai/usage').expect(200)).body;
@@ -166,7 +166,7 @@ describe('AI gateway, Copilot and agents (against the Claude API fixture)', () =
     const lead = (await h().post('/leads', { fullName: 'Quinn Q', email: 'q@buyer.test', jobTitle: 'Head of Ops', companyName: 'Buyer', estimatedValue: 15000, source: 'Website' }).expect(201)).body.lead;
     const rec = (await h().post(`/ai/leads/${lead.id}/qualify`).expect(200)).body;
     expect(rec.payload).toMatchObject({ score: 10 + 15 + 5 + 12 + 6, grade: 'C', summary: 'Grade C lead scoring 48 from 6 signals.', summaryUnavailable: null });
-    expect(rec.promptVersion).toBe('signals-v1+lead-summary@1.0.0');
+    expect(rec.promptVersion).toBe('signals-v2+lead-summary@1.0.0');
     const recs = (await h().get(`/ai/recommendations?entityType=lead&entityId=${lead.id}`).expect(200)).body;
     expect(recs).toHaveLength(1);
     const stored = await asTenant(u.tenantId, (tx) => tx.lead.findUniqueOrThrow({ where: { id: lead.id } }));

@@ -4,7 +4,7 @@ import type { DealHealth, LeadQualification, Signal } from '@dealflow/types';
  * Explainable, rule-based signals. They run without any AI provider; the model only writes the
  * summary or next step on top of them, so a score never depends on model output.
  */
-export const SCORING_VERSION = 'signals-v1';
+export const SCORING_VERSION = 'signals-v2';
 
 const DAY = 86_400_000;
 const daysBetween = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime()) / DAY);
@@ -67,6 +67,18 @@ export interface DealFacts {
   openTasks: number;
   overdueTasks: number;
   hasContact: boolean;
+  /** Engagement (signals-v2). Optional so callers without email data still score; missing means "not known". */
+  engagement?: {
+    /** Activities logged plus emails exchanged with the deal's people, last 14 days and the 14 before. */
+    touches14: number;
+    touchesPrev14: number;
+    /** Last email received from and sent to the deal's people. */
+    lastInboundAt: Date | null;
+    lastOutboundAt: Date | null;
+    /** Distinct people at the buyer who wrote, met or were logged against, last 30 days and the 30 before. */
+    people30: number;
+    peoplePrev30: number;
+  };
 }
 
 export function dealHealth(f: DealFacts, now = new Date()): Omit<DealHealth, 'nextStep' | 'nextStepUnavailable'> {
@@ -91,6 +103,19 @@ export function dealHealth(f: DealFacts, now = new Date()): Omit<DealHealth, 'ne
   else if (f.openTasks === 0) risk('no_next_step', 'No open task', 10, 'No next step is scheduled');
   if (!f.hasContact) risk('no_contact', 'No contact linked', 5, 'Link the main buyer');
   if (f.amount <= 0) risk('no_amount', 'No amount', 5, 'Amount is 0');
+  const e = f.engagement;
+  if (e) {
+    if (e.touchesPrev14 >= 3 && e.touches14 * 2 <= e.touchesPrev14) {
+      risk('declining_engagement', 'Engagement is declining', 10, `${e.touches14} touches in the last 14 days, ${e.touchesPrev14} in the 14 before`);
+    }
+    if (e.lastOutboundAt && (!e.lastInboundAt || e.lastInboundAt < e.lastOutboundAt)) {
+      const waiting = daysBetween(now, e.lastOutboundAt);
+      if (waiting >= 7) risk('buyer_silent', 'Buyer has not replied', 10, `Your last email was ${waiting} days ago with no answer`);
+    }
+    if (e.peoplePrev30 >= 2 && e.people30 < e.peoplePrev30) {
+      risk('fewer_stakeholders', 'Fewer people involved', 5, `${e.people30} people engaged in the last 30 days, ${e.peoplePrev30} in the 30 before`);
+    }
+  }
 
   const health = Math.max(0, 100 + signals.reduce((s, x) => s + x.points, 0));
   return { health, risk: health >= 70 ? 'low' : health >= 40 ? 'medium' : 'high', signals };
