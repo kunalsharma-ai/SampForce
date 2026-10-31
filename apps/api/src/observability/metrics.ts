@@ -18,7 +18,7 @@ export const httpDuration = new Histogram({
 
 export const authEvents = new Counter({
   name: 'dealflow_auth_events_total',
-  help: 'Sign-in outcomes: login_success, login_failure, mfa_failure, lockout, sso_success, sso_failure.',
+  help: 'Sign-in outcomes: login_success, login_failure, mfa_failure, lockout, sso_success, sso_failure, password_reset_requested, password_reset, password_reset_invalid.',
   labelNames: ['event'] as const,
   registers: [registry],
 });

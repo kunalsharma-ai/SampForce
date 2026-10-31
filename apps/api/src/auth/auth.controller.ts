@@ -21,6 +21,10 @@ import {
   type MfaStatus,
   type MfaVerifyInput,
   mfaVerifySchema,
+  type PasswordResetInput,
+  passwordResetSchema,
+  type PasswordResetRequestInput,
+  passwordResetRequestSchema,
   type SessionSummary,
   type RegisterInput,
   registerSchema,
@@ -111,6 +115,24 @@ export class AuthController {
   async logout(@Req() req: AuthedRequest, @Meta() meta: RequestMeta, @Res({ passthrough: true }) res: Response) {
     await this.auth.logout(this.refreshCookie(req), req.auth, meta);
     clearAuthCookies(res, this.env);
+  }
+
+  /** Emails a reset link if the address has an account. Always 202, so it does not reveal who has one. */
+  @Public()
+  @Throttle(AUTH_LIMIT)
+  @HttpCode(202)
+  @Post('password-reset/request')
+  async requestPasswordReset(@Body(new ZodPipe(passwordResetRequestSchema)) body: PasswordResetRequestInput, @Meta() meta: RequestMeta): Promise<{ ok: true }> {
+    await this.auth.requestPasswordReset(body.email, meta);
+    return { ok: true };
+  }
+
+  @Public()
+  @Throttle(AUTH_LIMIT)
+  @HttpCode(204)
+  @Post('password-reset')
+  async resetPassword(@Body(new ZodPipe(passwordResetSchema)) body: PasswordResetInput, @Meta() meta: RequestMeta): Promise<void> {
+    await this.auth.resetPassword(body.token, body.password, meta);
   }
 
   @Public()

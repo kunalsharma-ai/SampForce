@@ -24,6 +24,16 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** Asks for a password reset link. The answer is the same whether or not the address has an account. */
+export const passwordResetRequestSchema = z.object({ email: emailSchema });
+export type PasswordResetRequestInput = z.infer<typeof passwordResetRequestSchema>;
+
+export const passwordResetSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: passwordSchema,
+});
+export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
+
 export const switchTenantSchema = z.object({ tenantId: z.string().uuid() });
 export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;
 

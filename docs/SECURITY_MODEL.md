@@ -36,7 +36,12 @@ before any compliance statement is made.
 - **Single sign-on and SCIM (Phase 8, every plan):** OIDC per workspace with optional enforcement (owners keep
   password sign-in as break-glass); SCIM 2.0 Users. See ADR 0012.
 - **Sessions (Phase 8):** Account security lists signed-in devices and signs them out immediately.
-- **Not built:** WebAuthn/passkeys, SAML 2.0, SCIM Groups, IP allow-lists, password reset by email.
+- **Not built:** WebAuthn/passkeys, SAML 2.0, SCIM Groups, IP allow-lists.
+- **Password reset by email:** one-time links (32 random bytes, only a SHA-256 hash stored, 30 minutes by default),
+  sent through the operator's SMTP service. The same answer whether or not the address has an account; at most 3
+  links per account per hour; a new link cancels older ones; a reset signs out every device, clears any lockout,
+  writes an audit entry and emails a "password changed" notice. Two-step verification still applies after a reset.
+  The token travels in the URL fragment so it does not reach server logs. Tested only against a local SMTP stand-in.
 
 ## 3. Data protection
 

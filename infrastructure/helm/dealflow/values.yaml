@@ -16,7 +16,7 @@ publicUrl: https://app.example.com
 secrets:
   # Secret with keys: DATABASE_URL (runtime role, no BYPASSRLS), MIGRATION_DATABASE_URL (schema owner),
   # JWT_ACCESS_SECRET, ENCRYPTION_KEY, and optionally OPERATOR_JWT_SECRET, ANTHROPIC_API_KEY,
-  # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_* (see .env.example).
+  # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_*, SMTP_URL (see .env.example).
   existingSecret: dealflow-secrets
 
 # Non-secret settings passed to the API and worker as environment variables.
@@ -32,6 +32,8 @@ config:
   ONLINE_PAYMENTS_ENABLED: "false"
   # Fallback bank details for offline invoices. Normally entered in the operator console under Settings instead.
   OFFLINE_PAYMENT_INSTRUCTIONS: ""
+  # Sender for account email such as password reset links; needs SMTP_URL in the Secret. Example: "DealFlow <no-reply@your-domain>".
+  MAIL_FROM: ""
 
 api:
   replicas: 2
