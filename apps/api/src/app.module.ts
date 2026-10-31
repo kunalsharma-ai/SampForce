@@ -16,6 +16,7 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
 import { OperatorModule } from './operator/operator.module';
+import { PortalModule } from './portal/portal.module';
 import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -70,6 +71,7 @@ import { redactUrl } from './observability/redact';
     ExtensionModule,
     FinderModule,
     IntelligenceModule,
+    PortalModule,
     MailModule,
     WorkerModule,
   ],

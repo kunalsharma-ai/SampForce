@@ -56,7 +56,34 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
       </Card>
     );
 
-  const { p } = state;
+  return (
+    <ProposalDocument
+      p={state.p}
+      banner={
+        preview && (
+          <p className="rounded-md bg-muted p-2 text-xs">
+            Preview. This visit is not counted as a view.
+          </p>
+        )
+      }
+      actions={
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <Button asChild variant="outline" size="sm">
+            <a href={`${base}/pdf`} download>
+              <Download aria-hidden /> Download PDF
+            </a>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            To accept or ask a question, reply to the email this link came in.
+          </p>
+        </div>
+      }
+    />
+  );
+}
+
+/** The proposal itself: shared by the link view and the client portal, which bring their own actions. */
+export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; banner?: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <article
       className="space-y-6"
@@ -82,11 +109,7 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
         {p.seller.header && <p className="text-xs text-muted-foreground">{p.seller.header}</p>}
       </header>
 
-      {preview && (
-        <p className="rounded-md bg-muted p-2 text-xs">
-          Preview. This visit is not counted as a view.
-        </p>
-      )}
+      {banner}
       {p.superseded && (
         <p className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm">
           A newer version of this proposal has been prepared. Ask {p.seller.name} for the latest
@@ -185,16 +208,7 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
         </section>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-        <Button asChild variant="outline" size="sm">
-          <a href={`${base}/pdf`} download>
-            <Download aria-hidden /> Download PDF
-          </a>
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          To accept or ask a question, reply to the email this link came in.
-        </p>
-      </div>
+      {actions}
       {p.seller.footer && (
         <footer className="text-xs text-muted-foreground">{p.seller.footer}</footer>
       )}

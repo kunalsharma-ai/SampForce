@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ContactRound,
   CreditCard,
+  DoorOpen,
   FileSignature,
   FileText,
   Handshake,
@@ -45,7 +46,7 @@ export interface ModuleDef {
   capabilities: string[];
 }
 
-/** The 27 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
+/** The 28 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
 /** Phase number for work planned after the eight roadmap phases; it has no date. */
 export const LATER = 10;
 
@@ -109,6 +110,9 @@ export const MODULES: ModuleDef[] = [
   { slug: 'forecasting', label: 'Forecasting', icon: TrendingUp, group: 'Intelligence', status: 'available', phase: 4,
     summary: 'Weighted, historical and scenario forecasts, clearly labelled as projections.',
     capabilities: ['Best/base/worst scenarios', 'Reproducible snapshots and comparisons', 'AI explanations of what changed'] },
+  { slug: 'portal', label: 'Client Portal', icon: DoorOpen, group: 'Revenue', status: 'available', phase: 9,
+    summary: 'A branded, signed-in space where customers follow projects, approve proposals, share documents and ask for help.',
+    capabilities: ['Invitations per company with viewer and approver access', 'Proposal approval with a recorded decision', 'Requests, messages and shared documents', 'Milestones you choose to share'] },
   { slug: 'customer-success', label: 'Customer Success', icon: HeartHandshake, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Explained health scores, escalations, renewals and churn-risk alerts.',
     capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'] },

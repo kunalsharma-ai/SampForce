@@ -7,6 +7,7 @@ import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader 
 import { RelatedContacts, RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline } from '@/components/crm/timeline';
+import { CompanyPortal } from '@/components/portal/company-portal';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
 import { formatDate, useRecord } from '@/lib/crm';
 
@@ -29,6 +30,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <RelatedContacts companyId={id} />
           <RelatedDeals filter={{ companyId: id }} />
           <CompanyCommercial company={{ id, name: c.name }} />
+          <CompanyPortal company={{ id, name: c.name }} />
           <ActivityTimeline related={{ companyId: id }} timeline={{ entity: 'company', id }} />
         </div>
         <div className="space-y-4">

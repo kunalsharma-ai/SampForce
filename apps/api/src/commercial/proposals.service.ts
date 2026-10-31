@@ -79,10 +79,23 @@ export class ProposalsService {
   async view(token: string, opts: { count: boolean }): Promise<PublicProposal | null> {
     const t = this.signer.verify(token);
     if (!t) return null;
-    const { tenantId, messageId: quoteId } = t;
+    return this.load(t.tenantId, t.messageId, { count: opts.count, shared: true });
+  }
+
+  /** The client portal shows a company's sent proposals to its signed-in people, whether or not the public link is on. */
+  forPortal(tenantId: string, quoteId: string, companyId: string): Promise<PublicProposal | null> {
+    return this.load(tenantId, quoteId, { count: false, shared: false, companyId });
+  }
+
+  private load(tenantId: string, quoteId: string, opts: { count: boolean; shared: boolean; companyId?: string }): Promise<PublicProposal | null> {
     return this.prisma.run({ tenantId }, async (tx) => {
       const q = await tx.quote.findFirst({
-        where: { id: quoteId, tenantId, shareEnabled: true, status: { in: ['APPROVED', 'SENT', 'ACCEPTED', 'DECLINED'] } },
+        where: {
+          id: quoteId,
+          tenantId,
+          ...(opts.shared ? { shareEnabled: true, status: { in: ['APPROVED', 'SENT', 'ACCEPTED', 'DECLINED'] } } : { status: { in: ['SENT', 'ACCEPTED', 'DECLINED'] } }),
+          ...(opts.companyId ? { opportunity: { companyId: opts.companyId, deletedAt: null } } : {}),
+        },
         include: { lines: { orderBy: { position: 'asc' } }, opportunity: { include: { company: { select: { name: true } } } } },
       });
       if (!q) return null;

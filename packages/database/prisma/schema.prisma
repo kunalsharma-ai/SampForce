@@ -131,6 +131,8 @@ enum TenantStatus {
 }
 
 model Tenant {
+  portalSettings        PortalSettings?
+  portalUsers           PortalUser[]
   forecastSettings      ForecastSettings?
   id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String
@@ -409,6 +411,9 @@ model Company {
   escalations   Escalation[]
   health        CompanyHealth?
 
+  portalUsers    PortalUser[]
+  portalRequests PortalRequest[]
+
   @@index([tenantId, name])
   @@index([tenantId, domain])
   @@map("companies")
@@ -443,6 +448,8 @@ model Contact {
   opportunities Opportunity[]
   activities    Activity[]
   tasks         Task[]
+
+  portalUsers PortalUser[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -663,6 +670,8 @@ model Task {
   priority      TaskPriority @default(NORMAL)
   dueAt         DateTime?    @map("due_at") @db.Timestamptz(3)
   completedAt   DateTime?    @map("completed_at") @db.Timestamptz(3)
+  /// Shown to the customer in the client portal as a milestone.
+  portalVisible Boolean      @default(false) @map("portal_visible")
   assigneeId    String?      @map("assignee_id") @db.Uuid
   leadId        String?      @map("lead_id") @db.Uuid
   contactId     String?      @map("contact_id") @db.Uuid
@@ -1340,37 +1349,40 @@ enum QuoteStatus {
 
 /// One version of a quote. Revising creates a new row with the same number and version + 1.
 model Quote {
-  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String      @map("tenant_id") @db.Uuid
-  number             Int
-  version            Int         @default(1)
-  isLatest           Boolean     @default(true) @map("is_latest")
-  opportunityId      String      @map("opportunity_id") @db.Uuid
-  priceBookId        String      @map("price_book_id") @db.Uuid
-  title              String
-  currency           String      @db.Char(3)
-  status             QuoteStatus @default(DRAFT)
-  validUntil         DateTime?   @map("valid_until") @db.Date
-  notes              String?
-  terms              String?
-  subtotal           Decimal     @default(0) @db.Decimal(18, 2)
-  discountTotal      Decimal     @default(0) @map("discount_total") @db.Decimal(18, 2)
-  taxTotal           Decimal     @default(0) @map("tax_total") @db.Decimal(18, 2)
-  total              Decimal     @default(0) @db.Decimal(18, 2)
-  maxDiscountPercent Decimal     @default(0) @map("max_discount_percent") @db.Decimal(5, 2)
-  approvalId         String?     @map("approval_id") @db.Uuid
-  createdById        String?     @map("created_by_id") @db.Uuid
-  sentAt             DateTime?   @map("sent_at") @db.Timestamptz(3)
-  decidedAt          DateTime?   @map("decided_at") @db.Timestamptz(3)
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String      @map("tenant_id") @db.Uuid
+  number                Int
+  version               Int         @default(1)
+  isLatest              Boolean     @default(true) @map("is_latest")
+  opportunityId         String      @map("opportunity_id") @db.Uuid
+  priceBookId           String      @map("price_book_id") @db.Uuid
+  title                 String
+  currency              String      @db.Char(3)
+  status                QuoteStatus @default(DRAFT)
+  validUntil            DateTime?   @map("valid_until") @db.Date
+  notes                 String?
+  terms                 String?
+  subtotal              Decimal     @default(0) @db.Decimal(18, 2)
+  discountTotal         Decimal     @default(0) @map("discount_total") @db.Decimal(18, 2)
+  taxTotal              Decimal     @default(0) @map("tax_total") @db.Decimal(18, 2)
+  total                 Decimal     @default(0) @db.Decimal(18, 2)
+  maxDiscountPercent    Decimal     @default(0) @map("max_discount_percent") @db.Decimal(5, 2)
+  approvalId            String?     @map("approval_id") @db.Uuid
+  createdById           String?     @map("created_by_id") @db.Uuid
+  sentAt                DateTime?   @map("sent_at") @db.Timestamptz(3)
+  decidedAt             DateTime?   @map("decided_at") @db.Timestamptz(3)
   /// Proposal sections ([{heading, body}]) shown above the price table.
-  sections           Json        @default("[]")
+  sections              Json        @default("[]")
   /// Whether the online proposal link works. Turning it off revokes every link to this version.
-  shareEnabled       Boolean     @default(false) @map("share_enabled")
-  firstViewedAt      DateTime?   @map("first_viewed_at") @db.Timestamptz(3)
-  lastViewedAt       DateTime?   @map("last_viewed_at") @db.Timestamptz(3)
-  viewCount          Int         @default(0) @map("view_count")
-  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  shareEnabled          Boolean     @default(false) @map("share_enabled")
+  /// Set when the customer approved or declined in the client portal.
+  decidedByPortalUserId String?     @map("decided_by_portal_user_id") @db.Uuid
+  decisionNote          String?     @map("decision_note")
+  firstViewedAt         DateTime?   @map("first_viewed_at") @db.Timestamptz(3)
+  lastViewedAt          DateTime?   @map("last_viewed_at") @db.Timestamptz(3)
+  viewCount             Int         @default(0) @map("view_count")
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
@@ -2293,4 +2305,144 @@ model MeetingRecord {
   @@index([tenantId, dealId])
   @@index([tenantId, contactId])
   @@map("meeting_records")
+}
+
+// ───────────── Enhancement feature 11: client self-service portal ─────────────
+
+model PortalSettings {
+  tenantId       String   @id @map("tenant_id") @db.Uuid
+  enabled        Boolean  @default(false)
+  slug           String   @unique
+  title          String?
+  welcome        String?
+  showDeals      Boolean  @default(true) @map("show_deals")
+  showQuotes     Boolean  @default(true) @map("show_quotes")
+  showContracts  Boolean  @default(true) @map("show_contracts")
+  showTasks      Boolean  @default(true) @map("show_tasks")
+  showDocuments  Boolean  @default(true) @map("show_documents")
+  allowRequests  Boolean  @default(true) @map("allow_requests")
+  allowMessages  Boolean  @default(true) @map("allow_messages")
+  allowUploads   Boolean  @default(true) @map("allow_uploads")
+  allowApprovals Boolean  @default(false) @map("allow_approvals")
+  updatedById    String?  @map("updated_by_id") @db.Uuid
+  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("portal_settings")
+}
+
+model PortalUser {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  contactId       String?   @map("contact_id") @db.Uuid
+  email           String
+  name            String
+  role            String    @default("viewer")
+  status          String    @default("invited")
+  passwordHash    String?   @map("password_hash")
+  inviteTokenHash String?   @map("invite_token_hash")
+  inviteExpiresAt DateTime? @map("invite_expires_at") @db.Timestamptz(3)
+  resetTokenHash  String?   @map("reset_token_hash")
+  resetExpiresAt  DateTime? @map("reset_expires_at") @db.Timestamptz(3)
+  failedLogins    Int       @default(0) @map("failed_logins")
+  lockedUntil     DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  updatesSeenAt   DateTime? @map("updates_seen_at") @db.Timestamptz(3)
+  createdById     String?   @map("created_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact  Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  sessions PortalSession[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, companyId], map: "portal_users_company_idx")
+  @@map("portal_users")
+}
+
+model PortalSession {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  portalUserId String   @map("portal_user_id") @db.Uuid
+  tokenHash    String   @unique @map("token_hash")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt   DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  ip           String?
+  userAgent    String?  @map("user_agent")
+
+  user PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([portalUserId], map: "portal_sessions_user_idx")
+  @@map("portal_sessions")
+}
+
+model PortalRequest {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  portalUserId String?   @map("portal_user_id") @db.Uuid
+  number       Int
+  subject      String
+  category     String    @default("question")
+  status       String    @default("open")
+  assignedToId String?   @map("assigned_to_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, updatedAt(sort: Desc)], map: "portal_requests_status_idx")
+  @@index([tenantId, companyId], map: "portal_requests_company_idx")
+  @@map("portal_requests")
+}
+
+model PortalMessage {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  companyId          String   @map("company_id") @db.Uuid
+  requestId          String?  @map("request_id") @db.Uuid
+  authorPortalUserId String?  @map("author_portal_user_id") @db.Uuid
+  authorUserId       String?  @map("author_user_id") @db.Uuid
+  body               String
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([tenantId, companyId, requestId, createdAt], map: "portal_messages_thread_idx")
+  @@map("portal_messages")
+}
+
+model PortalDocument {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String   @map("tenant_id") @db.Uuid
+  companyId              String   @map("company_id") @db.Uuid
+  name                   String
+  contentType            String   @map("content_type")
+  sizeBytes              Int      @map("size_bytes")
+  data                   Bytes
+  sha256                 String
+  uploadedByUserId       String?  @map("uploaded_by_user_id") @db.Uuid
+  uploadedByPortalUserId String?  @map("uploaded_by_portal_user_id") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([tenantId, companyId, createdAt(sort: Desc)], map: "portal_documents_company_idx")
+  @@map("portal_documents")
+}
+
+model PortalUpdate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  kind      String
+  title     String
+  body      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([tenantId, companyId, createdAt(sort: Desc)], map: "portal_updates_company_idx")
+  @@map("portal_updates")
 }
