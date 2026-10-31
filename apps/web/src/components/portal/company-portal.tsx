@@ -39,13 +39,13 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
           <p className="text-xs text-muted-foreground">
             {portal.data.url === null ? (
               <>
-                The portal is not set up yet. <Link className="text-primary hover:underline" href="/app/portal">Set it up</Link>
+                The portal is not set up yet. <Link className="text-primary underline underline-offset-2" href="/app/portal">Set it up</Link>
               </>
             ) : portal.data.enabled ? (
               <>Customers sign in at {portal.data.url}</>
             ) : (
               <>
-                The portal is switched off, so nobody can sign in. <Link className="text-primary hover:underline" href="/app/portal">Portal settings</Link>
+                The portal is switched off, so nobody can sign in. <Link className="text-primary underline underline-offset-2" href="/app/portal">Portal settings</Link>
               </>
             )}
           </p>
