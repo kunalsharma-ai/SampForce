@@ -425,6 +425,7 @@ function promptVersionOf(agent: AiAgentKey): string {
     workflow_builder: PROMPTS.workflowBuilder.version,
     forecast_explainer: PROMPTS.forecastExplainer.version,
     email_assistant: 'email-assistant@1.0.0',
+    voice_assistant: PROMPTS.voiceNote.version,
   };
   return map[agent] ?? PROMPTS.copilot.version;
 }

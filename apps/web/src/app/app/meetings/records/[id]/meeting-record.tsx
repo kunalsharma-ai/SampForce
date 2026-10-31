@@ -11,6 +11,7 @@ import { RecordPicker } from '@/components/crm/record-picker';
 import { DetailError } from '@/components/crm/record-detail';
 import { Select, Textarea } from '@/components/crm/select';
 import { recordStage } from '@/components/meetings/record-meetings';
+import { TranscriptionBanner } from '@/components/meetings/transcription-banner';
 import { ComposeDialog } from '@/app/app/communication/mailbox';
 import { aiErrorMessage } from '@/lib/ai';
 import { api } from '@/lib/api';
@@ -124,32 +125,6 @@ export function MeetingRecordView({ id }: { id: string }) {
 
       <TranscriptCard r={r} status={status.data} canWrite={canWrite} />
       <AnalysisCard r={r} canWrite={canWrite} />
-    </div>
-  );
-}
-
-function TranscriptionBanner({ status }: { status: TranscriptionStatus | undefined }) {
-  if (!status) return null;
-  const body =
-    status.state === 'pending_configuration' ? (
-      <>
-        <Badge tone="warning">Pending Configuration</Badge>
-        <span>Recording transcription is not set up yet. An administrator needs to add a Deepgram API key to the server&apos;s secrets. You can paste notes or a transcript in the meantime.</span>
-      </>
-    ) : status.state === 'configured' ? (
-      <>
-        <Badge tone="primary">Configured, not yet verified</Badge>
-        <span>A transcription key is set. This shows as verified after the first recording is transcribed successfully in this workspace.</span>
-      </>
-    ) : (
-      <>
-        <Badge tone="success">Verified</Badge>
-        <span>Recording transcription works here. Last successful transcription {status.lastSuccessAt ? relativeTime(status.lastSuccessAt) : 'recently'}.</span>
-      </>
-    );
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm" aria-label="Recording transcription status">
-      {body}
     </div>
   );
 }

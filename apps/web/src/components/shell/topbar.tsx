@@ -39,6 +39,7 @@ import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 import { Logo } from '../logo';
 import { CommandPalette } from './command-palette';
 import { CopilotPanel } from './copilot-panel';
+import { VoiceNoteButton } from '../voice/voice-note';
 import { NotificationsMenu } from './notifications-menu';
 import { SidebarNav } from './sidebar';
 
@@ -141,6 +142,10 @@ export function Topbar() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <span className="hidden md:inline-flex">
+          <VoiceNoteButton record={null} variant="ghost" iconOnly label="New voice note" />
+        </span>
 
         <NotificationsMenu />
 

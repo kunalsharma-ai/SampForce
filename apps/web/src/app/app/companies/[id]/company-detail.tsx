@@ -9,6 +9,7 @@ import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { ActivityTimeline } from '@/components/crm/timeline';
 import { CompanyPortal } from '@/components/portal/company-portal';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
+import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { formatDate, useRecord } from '@/lib/crm';
 
 export function CompanyDetail({ id }: { id: string }) {
@@ -31,6 +32,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <RelatedDeals filter={{ companyId: id }} />
           <CompanyCommercial company={{ id, name: c.name }} />
           <CompanyPortal company={{ id, name: c.name }} />
+          <RecordVoiceNotes record={{ type: 'company', id, name: c.name }} />
           <ActivityTimeline related={{ companyId: id }} timeline={{ entity: 'company', id }} />
         </div>
         <div className="space-y-4">

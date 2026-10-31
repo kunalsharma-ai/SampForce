@@ -1,5 +1,10 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  VOICE_RECORD_TYPES,
+  voiceApplySchema,
+  voiceInterpretSchema,
+  voiceNoteCreateSchema,
+  voiceNoteUpdateSchema,
   mfaDisableSchema,
   mfaEnableSchema,
   mfaPolicySchema,
@@ -303,6 +308,15 @@ export function buildOpenApiDocument(): object {
   action('post', '/meeting-records/{id}/analyse', 'Meetings', 'AI reading: summary, requirements, objections, decisions, action items, commitments, participants and a follow-up draft. Resets the review (activities:write, ai:use)');
   action('post', '/meeting-records/{id}/tasks', 'Meetings', 'Create tasks from reviewed action items (activities:write)', meetingTasksSchema);
   action('post', '/meeting-records/{id}/save', 'Meetings', 'Add the reviewed summary to the linked deal, contact or lead timeline, once (activities:write)');
+  action('get', '/voice-notes', 'Voice notes', 'Your own voice notes, newest first, optionally for one lead, contact, deal or company (activities:write)', undefined, { query: z.object({ type: z.enum(VOICE_RECORD_TYPES).optional(), id: z.string().uuid().optional() }) });
+  action('get', '/voice-notes/transcription-status', 'Voice notes', 'Pending configuration, configured, or verified by a successful transcription here; same Deepgram key as meetings (activities:write)');
+  action('post', '/voice-notes', 'Voice notes', 'Start a voice note, typed or for a recording, optionally on a record you can read (activities:write)', voiceNoteCreateSchema);
+  action('get', '/voice-notes/{id}', 'Voice notes', 'The note, its suggestions and what was saved from them (activities:write)');
+  action('patch', '/voice-notes/{id}', 'Voice notes', 'Correct the text or language; clears the suggestions. 409 ALREADY_APPLIED once anything was saved (activities:write)', voiceNoteUpdateSchema);
+  action('delete', '/voice-notes/{id}', 'Voice notes', 'Delete the note; anything already saved from it stays (activities:write)');
+  action('post', '/voice-notes/{id}/recording', 'Voice notes', 'Body is the audio. Requires consent=true. Up to 25 MB, streamed to Deepgram and not stored; 409 PENDING_CONFIGURATION when no key is set (activities:write)', undefined, { query: z.object({ consent: z.literal('true') }) });
+  action('post', '/voice-notes/{id}/interpret', 'Voice notes', 'AI suggestions: tasks, notes, new leads or contacts, and the last call summary when asked. Nothing is saved (activities:write, ai:use)', voiceInterpretSchema);
+  action('post', '/voice-notes/{id}/apply', 'Voice notes', 'Save the suggestions you confirmed, as edited, through the normal task, note, lead and contact rules (activities:write plus leads:write or contacts:write where needed)', voiceApplySchema);
   action('get', '/meetings', 'Communication', 'Synced meetings with known contacts (activities:read)', undefined, { query: z.object({ from: z.string().optional(), to: z.string().optional(), contactId: z.string().uuid().optional() }) });
 
   // AI: every route also needs ai:use; model calls are metered in credits and can return 402/409/429/503.

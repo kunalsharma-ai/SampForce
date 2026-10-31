@@ -50,10 +50,16 @@ export class MeetingRecordsService {
   ) {}
 
   async transcriptionStatus(auth: AuthContext): Promise<TranscriptionStatus> {
+    // Verified by any successful transcription in this workspace: a meeting recording or a voice note.
     const last = this.deepgram.configured
-      ? await this.prisma.run(auth, (tx) =>
-          tx.meetingRecord.findFirst({ where: { tenantId: auth.tenantId, transcriptionProvider: 'deepgram', transcriptionStatus: 'done' }, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
-        )
+      ? await this.prisma.run(auth, async (tx) => {
+          const where = { tenantId: auth.tenantId, transcriptionProvider: 'deepgram', transcriptionStatus: 'done' };
+          const [m, v] = await Promise.all([
+            tx.meetingRecord.findFirst({ where, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
+            tx.voiceNote.findFirst({ where, orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
+          ]);
+          return [m, v].filter((x): x is { updatedAt: Date } => !!x).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0] ?? null;
+        })
       : null;
     return {
       provider: 'deepgram',
@@ -358,12 +364,12 @@ function transcriptForAi(r: RecordWith): string {
   return (r.transcript ?? '').trim();
 }
 
-function tooLarge(max: number) {
+export function tooLarge(max: number) {
   return new PayloadTooLargeException({ code: 'PAYLOAD_TOO_LARGE', message: `The recording is larger than ${Math.round(max / 1024 / 1024)} MB.` });
 }
 
 /** Passes the upload through, failing once more than `max` bytes have arrived. */
-function limitStream(src: ReadableStream<Uint8Array>, max: number): { stream: ReadableStream<Uint8Array>; exceeded: () => boolean } {
+export function limitStream(src: ReadableStream<Uint8Array>, max: number): { stream: ReadableStream<Uint8Array>; exceeded: () => boolean } {
   let seen = 0;
   const stream = src.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({

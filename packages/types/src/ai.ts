@@ -7,7 +7,7 @@ import { PLAN_ENTITLEMENTS, type PlanCode } from './plans';
 /** Model tier an agent asks for. The gateway maps a tier to a model and an effort level. */
 export type AiTier = 'fast' | 'balanced' | 'deep';
 
-export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant'] as const;
+export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant', 'voice_assistant'] as const;
 export type AiAgentKey = (typeof AI_AGENT_KEYS)[number];
 
 export interface AiAgentDef {
@@ -104,6 +104,16 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
     withoutModel: 'Templates, merge fields and the rule-based sequence tips still work; drafting and reading emails need the AI provider.',
     can: ['Read the lead, contact or deal and its recent email', 'Write a draft into the editor for you to review'],
     cannot: ['Send an email', 'Change the record', 'Invent prices, dates or commitments'],
+  },
+  voice_assistant: {
+    key: 'voice_assistant',
+    name: 'Voice Assistant',
+    purpose: 'Turns a dictated or recorded voice note into proposed tasks, notes, leads and contacts, and finds the summary of your last call.',
+    tier: 'fast',
+    permission: 'activities:write',
+    withoutModel: 'You can still dictate or type a note and add tasks and notes by hand; turning a note into actions needs the AI provider.',
+    can: ['Read the note you dictate and the record it is on', 'Propose tasks, notes, leads and contacts for you to check and confirm'],
+    cannot: ['Save anything without your confirmation', 'Delete records, send emails or change amounts, stages or owners', 'Invent names, emails, phone numbers or dates'],
   },
 };
 
