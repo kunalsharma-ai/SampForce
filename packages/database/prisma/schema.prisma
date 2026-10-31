@@ -180,6 +180,12 @@ model Tenant {
   companyHealth          CompanyHealth[]
   invoices               Invoice[]
   billingEvents          BillingEvent[]
+  emailTemplates         EmailTemplate[]
+  sequences              Sequence[]
+  sequenceEnrollments    SequenceEnrollment[]
+  sequenceMessages       SequenceMessage[]
+  emailEvents            EmailEvent[]
+  emailSuppressions      EmailSuppression[]
   supportGrants          SupportGrant[]
   reports                Report[]
   dashboards             Dashboard[]
@@ -1805,4 +1811,170 @@ model ScimToken {
 
   @@index([tenantId])
   @@map("scim_tokens")
+}
+
+// ───────────── Email templates and sequences (Phase 9) ─────────────
+
+enum SequenceStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  REPLIED
+  BOUNCED
+  UNSUBSCRIBED
+  STOPPED
+  MOVED
+  FAILED
+}
+
+enum EmailEventType {
+  REPLIED
+  OPENED
+  CLICKED
+  BOUNCED
+  UNSUBSCRIBED
+}
+
+enum SuppressionReason {
+  UNSUBSCRIBED
+  BOUNCED
+  MANUAL
+}
+
+/// Reusable email text with merge fields. Personal unless shared.
+model EmailTemplate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  subject   String
+  body      String
+  shared    Boolean  @default(false)
+  ownerId   String?  @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ownerId])
+  @@map("email_templates")
+}
+
+/// A person-built series of emails, tasks and checks, sent one-to-one from each sender's own mailbox.
+model Sequence {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  status      SequenceStatus @default(DRAFT)
+  ownerId     String?        @map("owner_id") @db.Uuid
+  steps       Json           @default("[]")
+  rules       Json           @default("[]")
+  settings    Json           @default("{}")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enrollments SequenceEnrollment[]
+
+  @@index([tenantId, status])
+  @@map("sequences")
+}
+
+/// One person's run through a sequence. The worker claims due rows by next_run_at.
+model SequenceEnrollment {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String           @map("tenant_id") @db.Uuid
+  sequenceId   String           @map("sequence_id") @db.Uuid
+  leadId       String?          @map("lead_id") @db.Uuid
+  contactId    String?          @map("contact_id") @db.Uuid
+  email        String
+  senderId     String           @map("sender_id") @db.Uuid
+  enrolledById String?          @map("enrolled_by_id") @db.Uuid
+  status       EnrollmentStatus @default(ACTIVE)
+  stepIndex    Int              @default(0) @map("step_index")
+  nextRunAt    DateTime?        @map("next_run_at") @db.Timestamptz(3)
+  attempts     Int              @default(0)
+  lastError    String?          @map("last_error")
+  repliedAt    DateTime?        @map("replied_at") @db.Timestamptz(3)
+  openedAt     DateTime?        @map("opened_at") @db.Timestamptz(3)
+  clickedAt    DateTime?        @map("clicked_at") @db.Timestamptz(3)
+  finishedAt   DateTime?        @map("finished_at") @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sequence Sequence          @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  messages SequenceMessage[]
+
+  @@index([status, nextRunAt])
+  @@index([tenantId, sequenceId, status])
+  @@index([tenantId, email])
+  @@index([tenantId, leadId])
+  @@index([tenantId, contactId])
+  @@map("sequence_enrollments")
+}
+
+/// An email a sequence sent, with what DealFlow saw happen to it.
+model SequenceMessage {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  enrollmentId   String    @map("enrollment_id") @db.Uuid
+  stepId         String    @map("step_id")
+  senderId       String    @map("sender_id") @db.Uuid
+  emailMessageId String?   @map("email_message_id") @db.Uuid
+  toAddress      String    @map("to_address")
+  subject        String
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz(3)
+  openedAt       DateTime? @map("opened_at") @db.Timestamptz(3)
+  openCount      Int       @default(0) @map("open_count")
+  clickedAt      DateTime? @map("clicked_at") @db.Timestamptz(3)
+  clickCount     Int       @default(0) @map("click_count")
+  repliedAt      DateTime? @map("replied_at") @db.Timestamptz(3)
+  bouncedAt      DateTime? @map("bounced_at") @db.Timestamptz(3)
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enrollment SequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  events     EmailEvent[]
+
+  @@index([tenantId, senderId, sentAt])
+  @@index([tenantId, toAddress, sentAt])
+  @@index([enrollmentId])
+  @@map("sequence_messages")
+}
+
+/// Opens, clicks, replies, bounces and unsubscribes, as DealFlow observed them. No IP addresses are stored.
+model EmailEvent {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String         @map("tenant_id") @db.Uuid
+  messageId String         @map("message_id") @db.Uuid
+  type      EmailEventType
+  url       String?
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  message SequenceMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, messageId])
+  @@map("email_events")
+}
+
+/// The workspace's do-not-email list. Sequences never send to these addresses.
+model EmailSuppression {
+  tenantId    String            @map("tenant_id") @db.Uuid
+  email       String
+  reason      SuppressionReason
+  createdById String?           @map("created_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, email])
+  @@map("email_suppressions")
 }

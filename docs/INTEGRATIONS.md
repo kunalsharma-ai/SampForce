@@ -45,7 +45,12 @@ Without credentials the Integrations page says which variables are missing and o
   the person. After 5 consecutive other failures the connection is also paused.
 - Sending: one recipient per message, from the sender's own mailbox, at most `EMAIL_DAILY_SEND_LIMIT`
   (default 200) per person per 24 hours. Headers are sanitised. A sent email is logged as an EMAIL
-  activity on the matching contact or lead. DealFlow does not send bulk email.
+  activity on the matching contact or lead. Sequence emails (Phase 9, ADR 0014) count towards the same limit.
+- Email sequences send one-to-one from each person's own connected mailbox, inside a send window and under a
+  per-sequence daily limit. Mailbox sync also detects replies and bounces to sequence emails. DealFlow does not
+  send newsletters or bulk email from a shared domain.
+- Tracking and unsubscribe links point at `TRACKING_BASE_URL` (default `PUBLIC_WEB_URL`), which must be reachable
+  from the internet and serve `/api/v1/t/*` and `/unsubscribe/*`.
 
 ## Webhooks
 

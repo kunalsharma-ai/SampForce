@@ -9,7 +9,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
-import { googleAdapter, microsoftAdapter, type ProviderAdapter, ProviderError, ReauthRequiredError, type TokenSet } from './providers';
+import { googleAdapter, microsoftAdapter, type ProviderAdapter, type ProviderEmail, ProviderError, ReauthRequiredError, type TokenSet } from './providers';
 
 interface OAuthState {
   t: string;
@@ -30,6 +30,9 @@ export interface SyncResult {
   meetings: number;
 }
 
+/** Runs inside the sync transaction for the connection's tenant. */
+export type InboundHook = (tx: TenantTx, conn: IntegrationConnection, messages: ProviderEmail[]) => Promise<void | (() => Promise<void>)>;
+
 @Injectable()
 export class IntegrationsService {
   private readonly log = new Logger(IntegrationsService.name);
@@ -43,6 +46,16 @@ export class IntegrationsService {
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {
     this.adapters = { GOOGLE: googleAdapter(env), MICROSOFT: microsoftAdapter(env) };
+  }
+
+  /**
+   * Listeners for every message a sync pulls, before the people filter (bounce notices come from
+   * mailer daemons, which are never CRM people). Sequences register here to detect replies and bounces.
+   */
+  private readonly inboundHooks: InboundHook[] = [];
+
+  onInbound(hook: InboundHook): void {
+    this.inboundHooks.push(hook);
   }
 
   static parseProvider(raw: string): IntegrationProviderKey {
@@ -166,8 +179,9 @@ export class IntegrationsService {
    */
   async sync(connectionId: string, tenantId: string): Promise<SyncResult> {
     const ctx = { tenantId };
+    const afterCommit: (() => Promise<void>)[] = [];
     try {
-      return await this.prisma.run(
+      const result = await this.prisma.run(
         ctx,
         async (tx) => {
           const conn = await tx.integrationConnection.findFirst({ where: { id: connectionId, tenantId } });
@@ -179,6 +193,11 @@ export class IntegrationsService {
           const since = conn.mailCursor ? new Date(Number(conn.mailCursor)) : new Date(now.getTime() - INITIAL_MAIL_WINDOW_MS);
           const messages = await adapter.listMessages(token, since, conn.accountEmail);
           const events = await adapter.listEvents(token, new Date(now.getTime() - CALENDAR_PAST_MS), new Date(now.getTime() + CALENDAR_FUTURE_MS));
+
+          for (const hook of this.inboundHooks) {
+            const after = await hook(tx, conn, messages);
+            if (after) afterCommit.push(after);
+          }
 
           const people = [...new Set([...messages.flatMap((m) => [m.from, ...m.to, ...m.cc]), ...events.flatMap((e) => e.attendees)])].filter(
             (e) => e && e !== conn.accountEmail,
@@ -249,6 +268,8 @@ export class IntegrationsService {
         },
         { timeoutMs: 120_000 },
       );
+      for (const fn of afterCommit) await fn().catch((err) => this.log.error({ err: errorMessage(err) }, 'inbound mail hook failed'));
+      return result;
     } catch (err) {
       await this.recordFailure(connectionId, tenantId, err);
       if (err instanceof ReauthRequiredError) {

@@ -1,0 +1,646 @@
+'use client';
+
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
+import {
+  EMAIL_EVENT_LABELS,
+  EMAIL_EVENTS,
+  ENROLL_SKIP_LABELS,
+  type EmailEvent,
+  type EnrollResult,
+  type EventRule,
+  LEAD_STATUSES,
+  RULE_ACTION_LABELS,
+  type RuleAction,
+  type SequenceRow,
+  type SequenceSettings,
+  type SequenceStep,
+} from '@dealflow/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, CheckSquare, GitBranch, Mail, Pause, Play, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { useMemo, useRef, useState } from 'react';
+import { Select, Textarea } from '@/components/crm/select';
+import { RecordPicker, type PickerValue } from '@/components/crm/record-picker';
+import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
+import { api } from '@/lib/api';
+import { formatDate, titleCase } from '@/lib/crm';
+import { useSegments } from '@/lib/revenue';
+import { ENROLLMENT_LABEL, ENROLLMENT_TONE, pct, SEQUENCE_TONE, useEnrollments, useSequence, useSequences, useStepStats, useTemplates } from '@/lib/sequences';
+import { useCan, useSession } from '@/lib/session';
+import { insertAt, MergeFieldBar, PreviewPanel } from '../merge-fields';
+
+type Tab = 'steps' | 'rules' | 'settings' | 'people' | 'results';
+type Draft = Pick<SequenceRow, 'name' | 'description' | 'steps' | 'rules' | 'settings'>;
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const newId = () => `s${Math.random().toString(36).slice(2, 8)}`;
+
+export function SequenceEditor({ id }: { id: string }) {
+  const seq = useSequence(id);
+  if (seq.isPending) return <Skeleton className="h-96" />;
+  if (seq.error) return <ErrorText error={seq.error} />;
+  return <Editor key={seq.data.updatedAt} seq={seq.data} />;
+}
+
+function Editor({ seq }: { seq: SequenceRow }) {
+  const qc = useQueryClient();
+  const me = useSession().data;
+  const canManage = useCan('marketing:manage');
+  const canEdit = useCan('sequences:write') && (seq.owner?.id === me?.user.id || canManage);
+  const [tab, setTab] = useState<Tab>('steps');
+  const [draft, setDraft] = useState<Draft>({ name: seq.name, description: seq.description, steps: seq.steps, rules: seq.rules, settings: seq.settings });
+  const dirty = JSON.stringify(draft) !== JSON.stringify({ name: seq.name, description: seq.description, steps: seq.steps, rules: seq.rules, settings: seq.settings });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['sequences'] });
+  const save = useMutation({ mutationFn: () => api<SequenceRow>(`/sequences/${seq.id}`, { method: 'PUT', json: draft }), onSuccess: refresh });
+  const status = useMutation({ mutationFn: (s: 'ACTIVE' | 'PAUSED' | 'ARCHIVED') => api(`/sequences/${seq.id}/status`, { method: 'POST', json: { status: s } }), onSuccess: refresh });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <Link href="/app/sequences" className="text-xs text-muted-foreground hover:underline">
+            ← All sequences
+          </Link>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
+            {seq.name} <Badge tone={SEQUENCE_TONE[seq.status]}>{titleCase(seq.status)}</Badge>
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {seq.stats.active} in progress · {seq.stats.sent} sent · {seq.stats.replied} replied ({pct(seq.stats.replied, seq.stats.sent)})
+          </p>
+        </div>
+        {canEdit && (
+          <div className="flex flex-wrap gap-2">
+            {dirty && (
+              <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+                Save changes
+              </Button>
+            )}
+            {seq.status !== 'ACTIVE' && seq.status !== 'ARCHIVED' && (
+              <Button size="sm" variant="accent" onClick={() => status.mutate('ACTIVE')} disabled={dirty || status.isPending}>
+                <Play aria-hidden /> Start sequence
+              </Button>
+            )}
+            {seq.status === 'ACTIVE' && (
+              <Button size="sm" variant="outline" onClick={() => status.mutate('PAUSED')} disabled={status.isPending}>
+                <Pause aria-hidden /> Pause sending
+              </Button>
+            )}
+            {seq.status !== 'ARCHIVED' && (
+              <Button size="sm" variant="ghost" onClick={() => window.confirm('Archive this sequence? Everyone still in it stops.') && status.mutate('ARCHIVED')}>
+                Archive
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+      <ErrorText error={save.error ?? status.error} />
+      {dirty && <p className="text-xs text-warning">You have unsaved changes{seq.status === 'DRAFT' ? '. Save before starting the sequence.' : '.'}</p>}
+
+      <Tabs<Tab>
+        label="Sequence"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'steps', label: `Steps (${draft.steps.length})` },
+          { key: 'rules', label: 'When they respond' },
+          { key: 'settings', label: 'Sending' },
+          { key: 'people', label: `People (${seq.stats.active})` },
+          { key: 'results', label: 'Results' },
+        ]}
+      />
+      {tab === 'steps' && <StepsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} />}
+      {tab === 'rules' && <RulesTab seqId={seq.id} rules={draft.rules} onChange={(rules) => setDraft({ ...draft, rules })} readOnly={!canEdit} />}
+      {tab === 'settings' && <SettingsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} />}
+      {tab === 'people' && <PeopleTab seq={seq} />}
+      {tab === 'results' && <ResultsTab seq={seq} />}
+    </div>
+  );
+}
+
+// ───────────── Steps ─────────────
+
+function StepsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean }) {
+  const steps = draft.steps;
+  const set = (i: number, s: SequenceStep) => setDraft({ ...draft, steps: steps.map((x, j) => (j === i ? s : x)) });
+  const move = (i: number, by: number) => {
+    const next = [...steps];
+    const [s] = next.splice(i, 1);
+    next.splice(i + by, 0, s!);
+    setDraft({ ...draft, steps: next });
+  };
+  const add = (type: SequenceStep['type']) => {
+    const id = newId();
+    const step: SequenceStep =
+      type === 'email' ? { id, type, delayDays: 3, templateId: null, subject: '', body: '' }
+        : type === 'task' ? { id, type, delayDays: 0, title: 'Call {{first_name}}' }
+          : { id, type, delayDays: 2, check: 'replied', ifYes: 'stop', ifNo: 'next' };
+    setDraft({ ...draft, steps: [...steps, step] });
+  };
+  let day = 0;
+  return (
+    <div className="space-y-3">
+      <Field id="seq-name" label="Name">
+        <Input id="seq-name" value={draft.name} maxLength={120} disabled={readOnly} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+      </Field>
+      <ol className="space-y-3">
+        {steps.map((s, i) => {
+          day += s.delayDays;
+          return (
+            <li key={s.id}>
+              <StepCard step={s} index={i} day={day} steps={steps} readOnly={readOnly} onChange={(n) => set(i, n)}
+                onUp={i > 0 ? () => move(i, -1) : undefined}
+                onDown={i < steps.length - 1 ? () => move(i, 1) : undefined}
+                onDelete={() => setDraft({ ...draft, steps: steps.filter((_, j) => j !== i) })}
+              />
+            </li>
+          );
+        })}
+      </ol>
+      {!readOnly && steps.length < 20 && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => add('email')}>
+            <Mail aria-hidden /> Add email
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => add('task')}>
+            <CheckSquare aria-hidden /> Add task
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => add('condition')}>
+            <GitBranch aria-hidden /> Add check
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STEP_ICON = { email: Mail, task: CheckSquare, condition: GitBranch };
+const STEP_LABEL = { email: 'Email', task: 'Task for you', condition: 'Check' };
+
+function StepCard({ step, index, day, steps, readOnly, onChange, onUp, onDown, onDelete }: {
+  step: SequenceStep; index: number; day: number; steps: SequenceStep[]; readOnly: boolean;
+  onChange: (s: SequenceStep) => void; onUp?: () => void; onDown?: () => void; onDelete: () => void;
+}) {
+  const Icon = STEP_ICON[step.type];
+  const delayId = `delay-${step.id}`;
+  return (
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-center gap-2 space-y-0 pb-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
+        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+        <CardTitle className="text-sm">{STEP_LABEL[step.type]}</CardTitle>
+        <span className="text-xs text-muted-foreground">Day {day}</span>
+        {!readOnly && (
+          <div className="ml-auto flex gap-1">
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Move step ${index + 1} up`} disabled={!onUp} onClick={onUp}>
+              <ArrowUp className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Move step ${index + 1} down`} disabled={!onDown} onClick={onDown}>
+              <ArrowDown className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Delete step ${index + 1}`} onClick={onDelete}>
+              <Trash2 className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <label htmlFor={delayId}>Wait</label>
+          <Input id={delayId} type="number" min={0} max={60} className="h-8 w-20" disabled={readOnly} value={step.delayDays} onChange={(e) => onChange({ ...step, delayDays: Math.max(0, Math.min(60, Number(e.target.value) || 0)) })} />
+          <span className="text-muted-foreground">{index === 0 ? 'days after enrolment' : 'days after the previous step'}</span>
+        </div>
+        {step.type === 'email' && <EmailStep step={step} readOnly={readOnly} onChange={onChange} />}
+        {step.type === 'task' && (
+          <Field id={`task-${step.id}`} label="Task title" hint="Created for the sender, due a day later.">
+            <Input id={`task-${step.id}`} maxLength={200} disabled={readOnly} value={step.title} onChange={(e) => onChange({ ...step, title: e.target.value })} />
+          </Field>
+        )}
+        {step.type === 'condition' && (
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field id={`check-${step.id}`} label="Has the person">
+              <Select id={`check-${step.id}`} disabled={readOnly} value={step.check} onChange={(e) => onChange({ ...step, check: e.target.value as typeof step.check })}>
+                <option value="replied">replied</option>
+                <option value="opened">opened an email (approximate)</option>
+                <option value="clicked">clicked a link</option>
+              </Select>
+            </Field>
+            <JumpSelect id={`yes-${step.id}`} label="If yes" value={step.ifYes} steps={steps} after={index} readOnly={readOnly} onChange={(ifYes) => onChange({ ...step, ifYes })} />
+            <JumpSelect id={`no-${step.id}`} label="If no" value={step.ifNo} steps={steps} after={index} readOnly={readOnly} onChange={(ifNo) => onChange({ ...step, ifNo })} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function JumpSelect({ id, label, value, steps, after, readOnly, onChange }: { id: string; label: string; value: string; steps: SequenceStep[]; after: number; readOnly: boolean; onChange: (v: string) => void }) {
+  return (
+    <Field id={id} label={label}>
+      <Select id={id} disabled={readOnly} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="next">Carry on to the next step</option>
+        <option value="stop">End the sequence for them</option>
+        {steps.slice(after + 2).map((s, j) => (
+          <option key={s.id} value={s.id}>
+            Jump to step {after + 3 + j} ({STEP_LABEL[s.type].toLowerCase()})
+          </option>
+        ))}
+      </Select>
+    </Field>
+  );
+}
+
+function EmailStep({ step, readOnly, onChange }: { step: Extract<SequenceStep, { type: 'email' }>; readOnly: boolean; onChange: (s: SequenceStep) => void }) {
+  const templates = useTemplates();
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const last = useRef<'subject' | 'body'>('body');
+  const tpl = templates.data?.find((t) => t.id === step.templateId);
+  const insert = (tag: string) =>
+    onChange(last.current === 'subject' ? { ...step, subject: insertAt(subjectRef.current, step.subject, tag) } : { ...step, body: insertAt(bodyRef.current, step.body, tag) });
+  return (
+    <div className="space-y-3">
+      <Field id={`tpl-${step.id}`} label="Template" hint={tpl ? 'Leave the boxes below empty to use the template as it is, or write here to change it for this step.' : undefined}>
+        <Select id={`tpl-${step.id}`} disabled={readOnly} value={step.templateId ?? ''} onChange={(e) => onChange({ ...step, templateId: e.target.value || null })}>
+          <option value="">No template, write it here</option>
+          {templates.data?.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field id={`subj-${step.id}`} label="Subject">
+        <Input id={`subj-${step.id}`} ref={subjectRef} maxLength={200} disabled={readOnly} placeholder={tpl?.subject} value={step.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => onChange({ ...step, subject: e.target.value })} />
+      </Field>
+      <Field id={`body-${step.id}`} label="Email">
+        <Textarea id={`body-${step.id}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={step.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...step, body: e.target.value })} />
+      </Field>
+      {!readOnly && <MergeFieldBar onInsert={insert} />}
+      <PreviewPanel subject={step.subject || tpl?.subject || ''} body={step.body || tpl?.body || ''} />
+    </div>
+  );
+}
+
+// ───────────── Rules ─────────────
+
+function RulesTab({ seqId, rules, onChange, readOnly }: { seqId: string; rules: EventRule[]; onChange: (r: EventRule[]) => void; readOnly: boolean }) {
+  const others = useSequences().data?.filter((s) => s.id !== seqId && s.status !== 'ARCHIVED') ?? [];
+  const ruleFor = (on: EmailEvent) => rules.find((r) => r.on === on);
+  const update = (on: EmailEvent, actions: RuleAction[]) => {
+    const rest = rules.filter((r) => r.on !== on);
+    onChange(actions.length ? [...rest, { on, actions }] : rest);
+  };
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Choose what DealFlow does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.
+      </p>
+      {EMAIL_EVENTS.map((on) => (
+        <RuleCard key={on} on={on} rule={ruleFor(on)} others={others} readOnly={readOnly} onChange={(a) => update(on, a)} />
+      ))}
+    </div>
+  );
+}
+
+function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; rule?: EventRule; others: SequenceRow[]; readOnly: boolean; onChange: (a: RuleAction[]) => void }) {
+  const actions = rule?.actions ?? [];
+  const has = (t: RuleAction['type']) => actions.find((a) => a.type === t);
+  const toggle = (t: RuleAction['type'], make: () => RuleAction) => {
+    if (has(t)) return onChange(actions.filter((a) => a.type !== t));
+    let next = [...actions, make()];
+    if (t === 'stop') next = next.filter((a) => a.type !== 'move_sequence');
+    if (t === 'move_sequence') next = next.filter((a) => a.type !== 'stop');
+    onChange(next);
+  };
+  const patch = (t: RuleAction['type'], v: Partial<RuleAction>) => onChange(actions.map((a) => (a.type === t ? ({ ...a, ...v } as RuleAction) : a)));
+  const move = has('move_sequence') as Extract<RuleAction, { type: 'move_sequence' }> | undefined;
+  const status = has('set_lead_status') as Extract<RuleAction, { type: 'set_lead_status' }> | undefined;
+  const task = has('create_task') as Extract<RuleAction, { type: 'create_task' }> | undefined;
+  const box = (t: RuleAction['type'], make: () => RuleAction, disabled = false) => (
+    <label className="flex items-center gap-2">
+      <input type="checkbox" checked={!!has(t)} disabled={readOnly || disabled} onChange={() => toggle(t, make)} /> {RULE_ACTION_LABELS[t]}
+    </label>
+  );
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">When someone {EMAIL_EVENT_LABELS[on].charAt(0).toLowerCase() + EMAIL_EVENT_LABELS[on].slice(1)}</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
+        {on === 'bounced' || on === 'unsubscribed' ? (
+          <p className="text-muted-foreground sm:col-span-2">Sending to them always stops. You can also:</p>
+        ) : (
+          box('stop', () => ({ type: 'stop' }))
+        )}
+        {on !== 'bounced' && on !== 'unsubscribed' && (
+          <div className="space-y-1">
+            {box('move_sequence', () => ({ type: 'move_sequence', sequenceId: others[0]?.id ?? '' }), others.length === 0)}
+            {move && (
+              <Select aria-label="Sequence to move them to" disabled={readOnly} value={move.sequenceId} onChange={(e) => patch('move_sequence', { sequenceId: e.target.value })}>
+                {others.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </div>
+        )}
+        <div className="space-y-1">
+          {box('set_lead_status', () => ({ type: 'set_lead_status', status: on === 'replied' ? 'CONTACTED' : 'UNQUALIFIED' }))}
+          {status && (
+            <Select aria-label="New lead status" disabled={readOnly} value={status.status} onChange={(e) => patch('set_lead_status', { status: e.target.value as typeof status.status })}>
+              {LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => (
+                <option key={s} value={s}>
+                  {titleCase(s)}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+        <div className="space-y-1">
+          {box('create_task', () => ({ type: 'create_task', title: on === 'replied' ? 'Reply to {{first_name}}' : 'Follow up', dueInDays: 1 }))}
+          {task && <Input aria-label="Task title" disabled={readOnly} maxLength={200} value={task.title} onChange={(e) => patch('create_task', { title: e.target.value })} />}
+        </div>
+        {box('notify_owner', () => ({ type: 'notify_owner' }))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ───────────── Sending settings ─────────────
+
+function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean }) {
+  const s = draft.settings;
+  const set = (v: Partial<SequenceSettings>) => setDraft({ ...draft, settings: { ...s, ...v } });
+  const zones = useMemo(() => {
+    try {
+      return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf('timeZone');
+    } catch {
+      return ['UTC'];
+    }
+  }, []);
+  return (
+    <Card>
+      <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
+        <fieldset className="space-y-2 sm:col-span-2">
+          <legend className="text-sm font-medium">Send on</legend>
+          <div className="flex flex-wrap gap-3 text-sm">
+            {DAYS.map((d, i) => (
+              <label key={d} className="flex items-center gap-1">
+                <input type="checkbox" disabled={readOnly} checked={s.sendDays.includes(i)} onChange={(e) => set({ sendDays: e.target.checked ? [...s.sendDays, i].sort() : s.sendDays.filter((x) => x !== i) })} /> {d}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Field id="send-start" label="From">
+          <Input id="send-start" type="time" disabled={readOnly} value={s.sendStart} onChange={(e) => set({ sendStart: e.target.value })} />
+        </Field>
+        <Field id="send-end" label="Until">
+          <Input id="send-end" type="time" disabled={readOnly} value={s.sendEnd} onChange={(e) => set({ sendEnd: e.target.value })} />
+        </Field>
+        <Field id="send-tz" label="Time zone" hint="The window uses this zone for everyone in the sequence.">
+          <Input id="send-tz" list="tz-list" disabled={readOnly} value={s.timezone} onChange={(e) => set({ timezone: e.target.value })} />
+          <datalist id="tz-list">
+            {zones.map((z) => (
+              <option key={z} value={z} />
+            ))}
+          </datalist>
+        </Field>
+        <Field id="send-limit" label="Emails per sender per day" hint="Your mailbox's overall DealFlow limit also applies. Sends are spread out by a few minutes.">
+          <Input id="send-limit" type="number" min={1} max={500} disabled={readOnly} value={s.dailyLimit} onChange={(e) => set({ dailyLimit: Math.max(1, Math.min(500, Number(e.target.value) || 1)) })} />
+        </Field>
+        <fieldset className="space-y-2 sm:col-span-2">
+          <legend className="text-sm font-medium">Tracking</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" disabled={readOnly} checked={s.trackOpens} onChange={(e) => set({ trackOpens: e.target.checked })} /> Track opens (approximate)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" disabled={readOnly} checked={s.trackClicks} onChange={(e) => set({ trackClicks: e.target.checked })} /> Track link clicks
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Tracking sends the email with an HTML part, a small image and rewritten links. Plain text with no tracking can land in the inbox more often. Replies are detected either way.
+          </p>
+        </fieldset>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ───────────── People ─────────────
+
+function PeopleTab({ seq }: { seq: SequenceRow }) {
+  const qc = useQueryClient();
+  const me = useSession().data;
+  const canWrite = useCan('sequences:write');
+  const canManage = useCan('marketing:manage');
+  const [filter, setFilter] = useState<'live' | 'finished' | undefined>('live');
+  const rows = useEnrollments({ sequenceId: seq.id, status: filter });
+  const segments = useSegments();
+  const [lead, setLead] = useState<PickerValue | null>(null);
+  const [segmentId, setSegmentId] = useState('');
+  const refresh = () => qc.invalidateQueries({ queryKey: ['sequences'] });
+  const enroll = useMutation({
+    mutationFn: (json: { leadIds?: string[]; segmentId?: string }) => api<EnrollResult>(`/sequences/${seq.id}/enroll`, { method: 'POST', json }),
+    onSuccess: () => {
+      setLead(null);
+      return refresh();
+    },
+  });
+  const change = useMutation({ mutationFn: (v: { id: string; action: 'pause' | 'resume' | 'stop' }) => api(`/sequences/enrollments/${v.id}`, { method: 'POST', json: { action: v.action } }), onSuccess: refresh });
+  const open = seq.status === 'ACTIVE' || seq.status === 'PAUSED';
+  return (
+    <div className="space-y-4">
+      {canWrite && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Enrol people</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {!open && <p className="text-warning">Start the sequence before enrolling people.</p>}
+            <p className="text-muted-foreground">Emails go from your own connected mailbox. People who opted out, are on the do-not-email list or have no email address are skipped.</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label htmlFor="enrol-lead" className="text-sm font-medium">
+                    A lead
+                  </label>
+                  <RecordPicker id="enrol-lead" entity="leads" value={lead} onChange={setLead} placeholder="Search leads" />
+                </div>
+                <Button size="sm" disabled={!open || !lead || enroll.isPending} onClick={() => lead && enroll.mutate({ leadIds: [lead.id] })}>
+                  Enrol
+                </Button>
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label htmlFor="enrol-seg" className="text-sm font-medium">
+                    A whole segment (up to 500)
+                  </label>
+                  <Select id="enrol-seg" value={segmentId} onChange={(e) => setSegmentId(e.target.value)}>
+                    <option value="">Choose a segment</option>
+                    {segments.data?.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <Button size="sm" disabled={!open || !segmentId || enroll.isPending} onClick={() => enroll.mutate({ segmentId })}>
+                  Enrol segment
+                </Button>
+              </div>
+            </div>
+            <ErrorText error={enroll.error} />
+            {enroll.data && (
+              <p role="status" className="text-sm">
+                Enrolled {enroll.data.enrolled}.
+                {enroll.data.skipped.length > 0 && ` Skipped ${enroll.data.skipped.length}: ${enroll.data.skipped.slice(0, 5).map((s) => `${s.name} (${ENROLL_SKIP_LABELS[s.reason]})`).join(', ')}${enroll.data.skipped.length > 5 ? '…' : ''}.`}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      <div className="flex gap-2 text-sm">
+        {(['live', 'finished', undefined] as const).map((f) => (
+          <Button key={f ?? 'all'} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)}>
+            {f === 'live' ? 'In progress' : f === 'finished' ? 'Finished' : 'Everyone'}
+          </Button>
+        ))}
+      </div>
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          {rows.isPending ? (
+            <Skeleton className="m-4 h-24" />
+          ) : rows.error ? (
+            <div className="p-4">
+              <ErrorText error={rows.error} />
+            </div>
+          ) : rows.data.length === 0 ? (
+            <p className="p-6 text-sm text-muted-foreground">Nobody here yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Person</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Next</th>
+                  <th className="px-4 py-2 text-right font-medium">Sent</th>
+                  <th className="px-4 py-2 font-medium">Activity</th>
+                  <th className="sr-only">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {rows.data.map((r) => {
+                  const mine = r.sender?.id === me?.user.id || canManage;
+                  return (
+                    <tr key={r.id}>
+                      <td className="px-4 py-2">
+                        <Link href={`/app/${r.person.type === 'lead' ? 'leads' : 'contacts'}/${r.person.id}`} className="font-medium hover:underline">
+                          {r.person.name}
+                        </Link>
+                        <span className="block text-xs text-muted-foreground">
+                          {r.email}
+                          {r.sender ? ` · from ${r.sender.name}` : ''}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge tone={ENROLLMENT_TONE[r.status]}>{ENROLLMENT_LABEL[r.status]}</Badge>
+                        {r.lastError && <span className="block max-w-xs text-xs text-warning">{r.lastError}</span>}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{r.nextStep ? `Step ${r.nextStep}${r.nextRunAt ? `, ${new Date(r.nextRunAt).toLocaleString()}` : ''}` : '—'}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.sent}</td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {[r.repliedAt && `Replied ${formatDate(r.repliedAt)}`, r.clickedAt && 'Clicked', !r.clickedAt && r.openedAt && 'Opened*'].filter(Boolean).join(' · ') || '—'}
+                      </td>
+                      <td className="px-4 py-2">
+                        {canWrite && mine && (r.status === 'ACTIVE' || r.status === 'PAUSED') && (
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => change.mutate({ id: r.id, action: r.status === 'ACTIVE' ? 'pause' : 'resume' })}>
+                              {r.status === 'ACTIVE' ? 'Pause' : 'Resume'}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => change.mutate({ id: r.id, action: 'stop' })}>
+                              Stop
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+      <ErrorText error={change.error} />
+    </div>
+  );
+}
+
+// ───────────── Results ─────────────
+
+function ResultsTab({ seq }: { seq: SequenceRow }) {
+  const stats = useStepStats(seq.id);
+  const t = seq.stats;
+  const tiles: [string, number, string][] = [
+    ['Sent', t.sent, ''],
+    ['Replied', t.replied, pct(t.replied, t.sent)],
+    ['Clicked', t.clicked, pct(t.clicked, t.sent)],
+    ['Opened*', t.opened, pct(t.opened, t.sent)],
+    ['Bounced', t.bounced, pct(t.bounced, t.sent)],
+    ['Unsubscribed', t.unsubscribed, ''],
+  ];
+  const position = new Map(seq.steps.map((s, i) => [s.id, i + 1]));
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {tiles.map(([label, n, p]) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="text-2xl font-semibold tabular-nums">{n}</p>
+              {p && <p className="text-xs text-muted-foreground">{p}</p>}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardContent className="overflow-x-auto p-0">
+          {stats.isPending ? (
+            <Skeleton className="m-4 h-24" />
+          ) : stats.error ? (
+            <div className="p-4">
+              <ErrorText error={stats.error} />
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Email step</th>
+                  <th className="px-4 py-2 text-right font-medium">Sent</th>
+                  <th className="px-4 py-2 text-right font-medium">Replied</th>
+                  <th className="px-4 py-2 text-right font-medium">Clicked</th>
+                  <th className="px-4 py-2 text-right font-medium">Opened*</th>
+                  <th className="px-4 py-2 text-right font-medium">Bounced</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {stats.data.map((r) => (
+                  <tr key={r.stepId}>
+                    <td className="px-4 py-2">Step {position.get(r.stepId) ?? '?'}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.sent}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.replied} <span className="text-xs text-muted-foreground">{pct(r.replied, r.sent)}</span></td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.clicked} <span className="text-xs text-muted-foreground">{pct(r.clicked, r.sent)}</span></td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.opened} <span className="text-xs text-muted-foreground">{pct(r.opened, r.sent)}</span></td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.bounced}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+      <p className="text-xs text-muted-foreground">*Opens are approximate: some mail apps load images automatically and others block them. Replies and bounces come from your synced mailbox.</p>
+    </div>
+  );
+}

@@ -39,6 +39,13 @@ export const apiEnvSchema = z.object({
   WEBHOOK_DISABLE_AFTER_FAILURES: z.coerce.number().int().min(1).default(15),
   /** Emails one user may send per day from a connected mailbox. */
   EMAIL_DAILY_SEND_LIMIT: z.coerce.number().int().min(1).max(2000).default(200),
+  /**
+   * Public address that serves sequence open/click tracking and unsubscribe links (the web app proxies
+   * /api to the API). Defaults to PUBLIC_WEB_URL; use a dedicated subdomain in production.
+   */
+  TRACKING_BASE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /** Signs tracking and unsubscribe links. Defaults to a key derived from JWT_ACCESS_SECRET. */
+  TRACKING_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
