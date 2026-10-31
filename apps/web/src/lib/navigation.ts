@@ -16,6 +16,7 @@ import {
   LineChart,
   type LucideIcon,
   Mail,
+  Mails,
   Megaphone,
   Plug,
   Send,
@@ -43,9 +44,9 @@ export interface ModuleDef {
   capabilities: string[];
 }
 
-/** The 26 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
+/** The 27 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
 /** Phase number for work planned after the eight roadmap phases; it has no date. */
-export const LATER = 9;
+export const LATER = 10;
 
 export const MODULES: ModuleDef[] = [
   { slug: '', label: 'Command Center', icon: LayoutDashboard, group: 'Workspace', status: 'available', phase: 1,
@@ -73,7 +74,10 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Task management with reminders', 'Activity logging from any record', 'Team activity reporting'] },
   { slug: 'communication', label: 'Email & Communication', icon: Mail, group: 'Engage', status: 'available', phase: 3,
     summary: 'Email with your contacts and leads, synced from Gmail or Microsoft 365.',
-    capabilities: ['Gmail and Microsoft 365 sync (requires OAuth app credentials)', 'Send from your own mailbox', 'Templates and shared inboxes (later phase)'] },
+    capabilities: ['Gmail and Microsoft 365 sync (requires OAuth app credentials)', 'Send from your own mailbox', 'Templates and sequences (see Email Sequences)', 'Shared inboxes (later phase)'] },
+  { slug: 'sequences', label: 'Email Sequences', icon: Mails, group: 'Engage', status: 'available', phase: 9,
+    summary: 'Personal email sequences from your own mailbox, with templates and rules for replies, opens, clicks and bounces.',
+    capabilities: ['Templates with merge fields', 'Send windows and daily limits', 'Reply and bounce detection from mailbox sync', 'One-click unsubscribe and a do-not-email list'] },
   { slug: 'meetings', label: 'Meetings', icon: CalendarDays, group: 'Engage', status: 'available', phase: 3,
     summary: 'Customer meetings synced from Google Calendar or Outlook.',
     capabilities: ['Google and Microsoft calendar sync', 'Scheduling links (later phase)', 'AI summaries of pasted meeting notes'] },
@@ -131,6 +135,7 @@ export const PHASE_NAMES: Record<number, string> = {
   6: 'SaaS Commercialization',
   7: 'Immersive Experience',
   8: 'Enterprise Readiness',
+  9: 'Email Outreach and Lead Capture',
 };
 
 /** How a module's planned phase reads in badges: "Phase 5", or "After launch" for unscheduled work. */

@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LeadQualificationCard, MeetingNotesButton } from '@/components/ai/record-ai';
 import { RecordEmails } from '@/components/crm/record-emails';
+import { RecordSequences } from '@/components/crm/record-sequences';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
@@ -94,6 +95,7 @@ export function LeadDetail({ id }: { id: string }) {
           <div className="flex flex-wrap gap-2">
             <MeetingNotesButton target={{ leadId: id }} />
           </div>
+          <RecordSequences leadId={id} email={l.email} />
           <RecordTasks related={{ leadId: id }} />
           <CustomFieldList entity="leads" values={l.customFields} />
         </div>

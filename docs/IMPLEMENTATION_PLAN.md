@@ -325,6 +325,16 @@ docs/security/PENTEST_PREP.md; set `OFFLINE_PAYMENT_INSTRUCTIONS` to the real ba
 on 2026-10-31 and production publishes it; payments are offline only (ADR 0013), so Stripe and Razorpay test-mode runs
 are needed only before online checkout is turned on.
 
+## Phase 9: email outreach and lead capture (in progress)
+
+Requested by Kunal on 2026-10-31. Plan: https://claude.ai/artifact/Bi2GJHfJJMDsLQs2cZXFw5
+
+| Part | Status |
+|---|---|
+| Email templates, sequences, event rules, tracking, unsubscribe, do-not-email list (ADR 0014) | Built and tested against the provider fixture; not yet sent through real Gmail or Outlook |
+| Browser extension (Chrome/Edge): sign-in, side panel, save as lead, optional auto-capture | Not started |
+| Email finder | Waiting on Kunal's choice of data source |
+
 ## Original continuation instructions (Phase 8, done)
 
 Follow the roadmap row for Phase 8 (SSO/SCIM/MFA, Kubernetes/Helm, observability, DR drills, performance tuning,

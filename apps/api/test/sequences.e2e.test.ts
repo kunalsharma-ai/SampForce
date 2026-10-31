@@ -24,7 +24,7 @@ describe('email templates and sequences', () => {
   let owner: TestUser;
   let http: ReturnType<typeof api>;
   const saved: Record<string, string | undefined> = {};
-  const ids: Record<string, string> = {};
+  const ids = {} as Record<'ana' | 'ben' | 'cat' | 'noEmail' | 'optedOut' | 'dee' | 'template' | 'seq', string>;
 
   beforeAll(async () => {
     fixture = await startProviderFixture();
@@ -98,6 +98,10 @@ describe('email templates and sequences', () => {
         { id: 'intro', type: 'email', delayDays: 0, templateId: ids.template },
         { id: 'check', type: 'condition', delayDays: 2, check: 'replied', ifYes: 'stop', ifNo: 'next' },
         { id: 'follow', type: 'email', delayDays: 0, subject: 'Re: {{company|your team}}', body: 'Just bumping this, {{first_name|there}}.' },
+      ],
+      rules: [
+        { on: 'replied', actions: [{ type: 'stop' }, { type: 'notify_owner' }, { type: 'set_lead_status', status: 'CONTACTED' }, { type: 'create_task', title: 'Reply to {{first_name}} at {{company}}', dueInDays: 1 }] },
+        { on: 'bounced', actions: [{ type: 'stop' }] },
       ],
       settings: ALL_DAY,
     }).expect(201)).body;
@@ -185,6 +189,9 @@ describe('email templates and sequences', () => {
     const notes = (await http.get('/notifications').expect(200)).body;
     const list = Array.isArray(notes) ? notes : notes.items;
     expect(list.some((n: { title: string }) => n.title === 'ana@buyer.test replied')).toBe(true);
+    expect((await http.get(`/leads/${ids.ana}`).expect(200)).body.status).toBe('CONTACTED');
+    const tasks = (await http.get(`/tasks?leadId=${ids.ana}`).expect(200)).body;
+    expect((Array.isArray(tasks) ? tasks : tasks.items).map((t: { title: string }) => t.title)).toContain('Reply to Ana at Buyer Co');
   });
 
   it('treats a mailer-daemon notice as a bounce and adds the address to the do-not-email list', async () => {

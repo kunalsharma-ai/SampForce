@@ -111,7 +111,7 @@ export class SequenceRunner implements OnModuleInit {
     if (!actor) return void (await finish('FAILED', 'The sender is no longer an active member who can use sequences.'));
 
     if (step.type === 'task') {
-      await this.tasks.create(actor, { title: step.title, assigneeId: e.senderId, leadId: e.leadId ?? undefined, contactId: e.contactId ?? undefined, dueAt: new Date(Date.now() + DAY).toISOString() }, SYSTEM_META);
+      await this.tasks.create(actor, { title: await this.renderTitle(e, step.title), assigneeId: e.senderId, leadId: e.leadId ?? undefined, contactId: e.contactId ?? undefined, dueAt: new Date(Date.now() + DAY).toISOString() }, SYSTEM_META);
       const next = scheduleFrom(e.stepIndex + 1);
       return void (await (next ? set(next) : finish('COMPLETED')));
     }
@@ -184,6 +184,16 @@ export class SequenceRunner implements OnModuleInit {
     await this.prisma.run({ tenantId: e.tenantId }, async (tx) => {
       await tx.sequenceEnrollment.update({ where: { id: e.id }, data: { status: 'PAUSED', lastError: why, nextRunAt: null } });
       await this.notifications.send(tx, e.tenantId, [e.senderId], { type: 'sequence.paused', title: `Paused: ${e.email} in ${e.sequence.name}`, body: why, link: `/app/sequences/${e.sequenceId}` });
+    });
+  }
+
+  /** Fills merge fields in task titles; empty fields fall back to the person's email address. */
+  private renderTitle(e: SequenceEnrollment, title: string): Promise<string> {
+    return this.prisma.run({ tenantId: e.tenantId }, async (tx) => {
+      const person = await loadPerson(tx, e.tenantId, e);
+      const user = await tx.user.findUnique({ where: { id: e.senderId }, select: { name: true, email: true } });
+      const r = renderMerge(title, { ...(person?.values ?? {}), ...senderValues(user) });
+      return (r.missing.length ? renderMerge(title, { ...(person?.values ?? {}), ...senderValues(user), ...Object.fromEntries(r.missing.map((m) => [m, e.email])) }).text : r.text).slice(0, 200);
     });
   }
 
@@ -318,7 +328,7 @@ export class SequenceRunner implements OnModuleInit {
       case 'create_task': {
         const actor = await this.actorFor(tenantId, e.senderId);
         if (actor?.permissions.includes('activities:write')) {
-          await this.tasks.create(actor, { title: action.title, assigneeId: e.senderId, leadId: e.leadId ?? undefined, contactId: e.contactId ?? undefined, dueAt: new Date(Date.now() + action.dueInDays * DAY).toISOString() }, SYSTEM_META);
+          await this.tasks.create(actor, { title: await this.renderTitle(e, action.title), assigneeId: e.senderId, leadId: e.leadId ?? undefined, contactId: e.contactId ?? undefined, dueAt: new Date(Date.now() + action.dueInDays * DAY).toISOString() }, SYSTEM_META);
         }
         return;
       }

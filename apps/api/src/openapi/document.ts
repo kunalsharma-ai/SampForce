@@ -49,6 +49,12 @@ import {
   quoteUpdateSchema,
   salesTargetInputSchema,
   segmentInputSchema,
+  emailTemplateInputSchema,
+  enrollInputSchema,
+  sequenceInputSchema,
+  sequenceStatusSchema,
+  suppressionInputSchema,
+  templatePreviewSchema,
   segmentRulesSchema,
   taxRateInputSchema,
   meetingNotesRequestSchema,
@@ -310,6 +316,26 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/forms', tags: ['Marketing'], summary: 'Create a hosted lead form (marketing:manage)', security: secured, request: body(leadFormInputSchema), responses: { 201: ok('Form'), ...errors } });
   action('put', '/forms/{id}', 'Marketing', 'Update a form (marketing:manage)', leadFormInputSchema);
   action('get', '/forms/{id}/submissions', 'Marketing', 'Latest 50 submissions (marketing:read, leads:read)');
+  // Phase 9: email templates and sequences
+  action('get', '/email-templates', 'Sequences', 'Your templates and shared ones (sequences:read)');
+  r.registerPath({ method: 'post', path: '/email-templates', tags: ['Sequences'], summary: 'Create a template; sharing needs marketing:manage (sequences:write)', security: secured, request: body(emailTemplateInputSchema), responses: { 201: ok('Template'), ...errors } });
+  action('put', '/email-templates/{id}', 'Sequences', 'Update a template (owner or marketing:manage)', emailTemplateInputSchema);
+  r.registerPath({ method: 'delete', path: '/email-templates/{id}', tags: ['Sequences'], summary: 'Delete a template not used by a sequence (sequences:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
+  action('post', '/email-templates/preview', 'Sequences', 'Render a subject and body for a lead or contact, listing empty merge fields (sequences:read)', templatePreviewSchema);
+  action('get', '/sequences', 'Sequences', 'Sequences with totals (sequences:read)');
+  r.registerPath({ method: 'post', path: '/sequences', tags: ['Sequences'], summary: 'Create a draft sequence (sequences:write)', security: secured, request: body(sequenceInputSchema), responses: { 201: ok('Sequence'), ...errors } });
+  action('get', '/sequences/{id}', 'Sequences', 'Sequence (sequences:read)');
+  action('put', '/sequences/{id}', 'Sequences', 'Update steps, rules and sending settings (owner or marketing:manage)', sequenceInputSchema);
+  action('post', '/sequences/{id}/status', 'Sequences', 'Start, pause or archive (owner or marketing:manage)', sequenceStatusSchema);
+  action('post', '/sequences/{id}/enroll', 'Sequences', 'Enrol leads, contacts or a segment; emails go from the caller\'s own mailbox (sequences:write)', enrollInputSchema);
+  action('get', '/sequences/{id}/step-stats', 'Sequences', 'Sent, replied, opened, clicked and bounced per email step (sequences:read)');
+  action('get', '/sequences/enrollments', 'Sequences', 'Enrolments by sequence, lead or contact (sequences:read)', undefined, { query: z.object({ sequenceId: z.string().uuid().optional(), leadId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), status: z.enum(['live', 'finished']).optional() }) });
+  action('post', '/sequences/enrollments/{id}', 'Sequences', 'Pause, resume or stop one run (sender or marketing:manage)', z.object({ action: z.enum(['pause', 'resume', 'stop']) }));
+  action('get', '/sequences/suppressions', 'Sequences', 'The do-not-email list (sequences:read)');
+  action('post', '/sequences/suppressions', 'Sequences', 'Add addresses to the do-not-email list (sequences:write)', suppressionInputSchema);
+  r.registerPath({ method: 'get', path: '/t/o/{token}', tags: ['Sequences'], summary: 'Public: open-tracking image (signed token, no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'GIF', content: { 'image/gif': { schema: z.string() } } } } });
+  r.registerPath({ method: 'get', path: '/t/c/{token}', tags: ['Sequences'], summary: 'Public: signed click redirect (no auth)', request: { params: z.object({ token: z.string() }), query: z.object({ u: z.string(), s: z.string() }) }, responses: { 302: { description: 'Redirect to the signed URL' }, 400: json(error, 'Invalid link') } });
+  r.registerPath({ method: 'post', path: '/t/u/{token}', tags: ['Sequences'], summary: 'Public: unsubscribe, including RFC 8058 one-click (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Unsubscribe result') } });
   r.registerPath({ method: 'get', path: '/public/forms/{token}', tags: ['Marketing'], summary: 'Public: what the hosted form page shows (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Form view'), 404: json(error, 'Not available') } });
   r.registerPath({ method: 'post', path: '/public/forms/{token}', tags: ['Marketing'], summary: 'Public: submit a form; 5 per address per 10 minutes (no auth)', request: { params: z.object({ token: z.string() }), ...body(z.record(z.unknown())) },
     responses: { 200: ok('Thank-you message'), 400: json(error, 'Validation failed'), 404: json(error, 'Not available'), 429: json(error, 'Rate limited') } });
