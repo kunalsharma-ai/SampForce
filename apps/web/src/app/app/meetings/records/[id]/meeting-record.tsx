@@ -388,7 +388,7 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
               type="number"
               min={0}
               max={365}
-              placeholder="Due in days"
+              placeholder="Days"
               className="w-28"
               readOnly={ro}
               value={a.dueInDays ?? ''}
