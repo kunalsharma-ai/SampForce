@@ -58,6 +58,11 @@ export function LoginForm() {
         <Field id="password" label="Password" error={form.formState.errors.password?.message}>
           <Input type="password" autoComplete="current-password" {...form.register('password')} />
         </Field>
+        <p className="-mt-2 text-right text-sm">
+          <Link href="/forgot-password" className="text-primary hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
         {error && (
           <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
             {error}

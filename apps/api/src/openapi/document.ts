@@ -100,6 +100,8 @@ import {
   taskListQuerySchema,
   taskUpdateSchema,
   loginSchema,
+  passwordResetRequestSchema,
+  passwordResetSchema,
   registerSchema,
   switchTenantSchema,
   updateMemberRoleSchema,
@@ -145,6 +147,12 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/auth/login', tags: ['Auth'], summary: 'Sign in',
     request: { body: { content: { 'application/json': { schema: loginSchema } } } },
     responses: { 200: json(tenantRef, 'Signed in; auth cookies set'), ...errors } });
+  r.registerPath({ method: 'post', path: '/auth/password-reset/request', tags: ['Auth'], summary: 'Email a one-time password reset link (same answer for unknown addresses)',
+    request: { body: { content: { 'application/json': { schema: passwordResetRequestSchema } } } },
+    responses: { 202: { description: 'Accepted; a link is sent if the address has a password account' }, 503: json(error, 'Account email is not set up (MAIL_NOT_CONFIGURED)'), ...errors } });
+  r.registerPath({ method: 'post', path: '/auth/password-reset', tags: ['Auth'], summary: 'Set a new password with the emailed token; signs out every device',
+    request: { body: { content: { 'application/json': { schema: passwordResetSchema } } } },
+    responses: { ...errors, 204: { description: 'Password changed' }, 400: json(error, 'Invalid, used or expired link (RESET_LINK_INVALID)') } });
   r.registerPath({ method: 'post', path: '/auth/refresh', tags: ['Auth'], summary: 'Rotate the refresh token',
     responses: { 200: json(tenantRef, 'New cookies set'), ...errors } });
   r.registerPath({ method: 'post', path: '/auth/logout', tags: ['Auth'], summary: 'Revoke the session', responses: { 204: { description: 'Signed out' } } });

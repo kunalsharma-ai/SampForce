@@ -1,11 +1,13 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, provisionTenant, slugify } from '@dealflow/database';
@@ -22,7 +24,9 @@ import {
 import { entitlementsFor } from '../billing/entitlements';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
+import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { PasswordService } from './password.service';
@@ -57,6 +61,13 @@ const INVITATION_INVALID = {
   message: 'This invitation link is invalid, has expired or was already used. Ask for a new invitation.',
 };
 
+const RESET_INVALID = {
+  code: 'RESET_LINK_INVALID',
+  message: 'This reset link is invalid, has expired or was already used. Ask for a new one.',
+};
+
+const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
+
 const INVALID_CREDENTIALS = {
   code: 'INVALID_CREDENTIALS',
   message: 'The email or password is incorrect.',
@@ -72,7 +83,93 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
     private readonly mfa: MfaService,
+    private readonly mailer: MailerService,
+    @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
+
+  // ───── Password reset ─────
+
+  /**
+   * Emails a one-time reset link. The answer is the same whether or not the address has an account, and at most
+   * three links go to one account an hour. Accounts without a password (single sign-on) get no link.
+   */
+  async requestPasswordReset(email: string, meta: RequestMeta): Promise<void> {
+    if (!this.mailer.configured) throw new ServiceUnavailableException(MAIL_NOT_CONFIGURED);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.status !== 'ACTIVE' || !PasswordService.usable(user.passwordHash)) {
+      // Same work as a real request, so timing does not reveal who has an account.
+      await this.passwords.verify(null, email);
+      this.logger.log({ requestId: meta.requestId }, 'Password reset asked for an address with no usable account');
+      return;
+    }
+    const recent = await this.prisma.passwordResetToken.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3_600_000) } } });
+    if (recent >= 3) {
+      this.logger.warn({ userId: user.id, requestId: meta.requestId }, 'Password reset limit reached');
+      return;
+    }
+    const token = randomBytes(32).toString('base64url');
+    const minutes = this.env.PASSWORD_RESET_TTL_MINUTES;
+    await this.prisma.$transaction([
+      // Only the newest link works.
+      this.prisma.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } }),
+      this.prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + minutes * 60_000) } }),
+    ]);
+    const link = `${this.env.PUBLIC_WEB_URL.replace(/\/+$/, '')}/reset-password#token=${token}`;
+    await this.mailer.send({
+      to: user.email,
+      subject: 'Reset your DealFlow password',
+      text: [
+        `Hi ${user.name},`,
+        '',
+        'Someone asked to reset the password for your DealFlow account. To choose a new password, open this link:',
+        '',
+        link,
+        '',
+        `The link works once and expires in ${minutes} minutes. If you did not ask for this, ignore this email: your password has not changed.`,
+        '',
+        'DealFlow',
+      ].join('\n'),
+    });
+    await this.auditForUser(user.id, 'auth.password_reset_requested', meta);
+    authEvents.inc({ event: 'password_reset_requested' });
+  }
+
+  /**
+   * Sets a new password from a reset link, then signs the person out everywhere and clears any sign-in lock.
+   * Two-step verification stays on. The person signs in again with the new password.
+   */
+  async resetPassword(token: string, password: string, meta: RequestMeta): Promise<void> {
+    const row = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(token) }, include: { user: true } });
+    if (!row || row.usedAt || row.expiresAt < new Date() || row.user.status !== 'ACTIVE') {
+      authEvents.inc({ event: 'password_reset_invalid' });
+      throw new BadRequestException(RESET_INVALID);
+    }
+    const passwordHash = await this.passwords.hash(password);
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.passwordResetToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
+      if (claimed.count !== 1) throw new BadRequestException(RESET_INVALID);
+      await tx.passwordResetToken.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.user.update({ where: { id: row.userId }, data: { passwordHash, failedLoginCount: 0, lockedUntil: null } });
+      await tx.session.updateMany({ where: { userId: row.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    });
+    await this.auditForUser(row.userId, 'auth.password_reset', meta);
+    authEvents.inc({ event: 'password_reset' });
+    // Tell the account owner, in case it was not them. A failure here does not undo the reset.
+    await this.mailer
+      .send({
+        to: row.user.email,
+        subject: 'Your DealFlow password was changed',
+        text: `Hi ${row.user.name},\n\nThe password for your DealFlow account was just changed with a reset link, and every device was signed out.\n\nIf this was not you, contact your workspace administrator straight away.\n\nDealFlow`,
+      })
+      .catch(() => undefined);
+  }
+
+  /** Records an account-level event in the audit log of every workspace the person belongs to. */
+  private async auditForUser(userId: string, action: string, meta: RequestMeta): Promise<void> {
+    for (const m of await this.listMemberships(userId)) {
+      await this.prisma.run({ tenantId: m.tenantId }, (tx) => this.audit.record(tx, { tenantId: m.tenantId, actorUserId: userId, action, entityType: 'user', entityId: userId, meta }));
+    }
+  }
 
   async register(input: RegisterInput, meta: RequestMeta): Promise<IssuedTokens> {
     const passwordHash = await this.passwords.hash(input.password);

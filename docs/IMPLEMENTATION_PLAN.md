@@ -300,7 +300,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 ### Deferred from the Phase 8 scope (not built)
 
 - SAML 2.0 (OIDC only), WebAuthn/passkeys, SCIM Groups, IP allow-lists.
-- Password reset by email (no email sending exists yet).
+- ~~Password reset by email~~: built after Phase 9 (account email via `SMTP_URL`); tested only against a local SMTP stand-in.
 - Egress NetworkPolicies, a WAF configuration, and a point-in-time-recovery drill.
 - An external penetration test, and a real-device check of the Phase 7 60 FPS budget (no hardware or cluster here).
 - Provider test-mode runs (Stripe, Razorpay, Google, Microsoft) and AI evals against the real model: no keys exist in
@@ -325,7 +325,7 @@ docs/security/PENTEST_PREP.md; set `OFFLINE_PAYMENT_INSTRUCTIONS` to the real ba
 on 2026-10-31 and production publishes it; payments are offline only (ADR 0013), so Stripe and Razorpay test-mode runs
 are needed only before online checkout is turned on.
 
-## Phase 9: email outreach and lead capture (in progress)
+## Phase 9: email outreach and lead capture (complete, 2026-10-31)
 
 Requested by Kunal on 2026-10-31. Plan: https://claude.ai/artifact/Bi2GJHfJJMDsLQs2cZXFw5
 
