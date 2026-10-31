@@ -13,7 +13,7 @@ import { IntegrationsService } from '../integrations/integrations.service';
 import { parseAddresses, type ProviderEmail } from '../integrations/providers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
-import { loadPerson, personSubject, senderValues } from './people';
+import { loadPerson, personSubject, senderValues, variableValues } from './people';
 import { SequencesService, seqRules, seqSettings, seqSteps } from './sequences.service';
 import { buildSequenceEmail, TrackingSigner } from './tracking';
 
@@ -86,7 +86,7 @@ export class SequenceRunner implements OnModuleInit {
         throw new HttpException({ code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from DealFlow.` }, HttpStatus.TOO_MANY_REQUESTS);
       }
       const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
-      const values = { ...(person?.values ?? {}), ...senderValues(user, conn.accountEmail) };
+      const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, conn.accountEmail) };
       const first = [renderMerge(subject, values), renderMerge(body, values)];
       const missing = [...new Set(first.flatMap((r) => r.missing))] as MergeField[];
       // In a test, show gaps visibly instead of leaving them blank.
@@ -191,7 +191,7 @@ export class SequenceRunner implements OnModuleInit {
         body ||= t?.body ?? '';
       }
       const user = await tx.user.findUnique({ where: { id: e.senderId }, select: { name: true, email: true } });
-      const values = { ...person.values, ...senderValues(user, conn.accountEmail) };
+      const values = { ...(await variableValues(tx, tenantId)), ...person.values, ...senderValues(user, conn.accountEmail) };
       const s = renderMerge(subject, values);
       const b = renderMerge(body, values);
       const missing = [...new Set([...s.missing, ...b.missing])];

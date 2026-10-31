@@ -323,7 +323,7 @@ function VersionFields({ idBase, version, readOnly, test, onChange }: {
       <Field id={`body-${idBase}`} label="Email">
         <Textarea id={`body-${idBase}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={version.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...version, body: e.target.value })} />
       </Field>
-      {!readOnly && <MergeFieldBar onInsert={insert} />}
+      {!readOnly && <MergeFieldBar idBase={idBase} onInsert={insert} />}
       <PreviewPanel idBase={idBase} subject={version.subject || tpl?.subject || ''} body={version.body || tpl?.body || ''} test={test} />
     </div>
   );

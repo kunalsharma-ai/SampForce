@@ -25,34 +25,48 @@ export const MERGE_FIELDS = {
 } as const;
 export type MergeField = keyof typeof MERGE_FIELDS;
 export const MERGE_FIELD_KEYS = Object.keys(MERGE_FIELDS) as MergeField[];
-export type MergeValues = Partial<Record<MergeField, string | null | undefined>>;
+/**
+ * Values to merge. Built-in fields use their own keys; `custom.<key>` reads a lead or contact custom field and
+ * `var.<key>` a workspace email variable (a booking link, an address).
+ */
+export type MergeValues = Partial<Record<MergeField, string | null | undefined>> & Record<string, string | null | undefined>;
 
-/** `{{first_name}}` or `{{first_name|there}}`; spaces inside the braces are allowed. */
-const TAG = /\{\{\s*([a-z_]+)\s*(?:\|([^}]*))?\}\}/g;
+/** `{{first_name}}`, `{{first_name|there}}`, `{{custom.region}}`, `{{var.booking_link}}`; spaces inside the braces are allowed. */
+const TAG = /\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?)\s*(?:\|([^}]*))?\}\}/g;
+
+/** True for a tag DealFlow can fill: a built-in field, a custom field or a workspace variable (existence is checked on save). */
+export function isMergeTag(tag: string): boolean {
+  return tag in MERGE_FIELDS || /^(custom|var)\.[a-z][a-z0-9_]{0,39}$/.test(tag);
+}
 
 export interface RenderResult {
   text: string;
   /** Fields that were empty and had no fallback, so the text shows a gap. */
-  missing: MergeField[];
+  missing: string[];
   /** Tags that are not merge fields; they are left as typed. */
   unknown: string[];
 }
 
 export function renderMerge(text: string, values: MergeValues): RenderResult {
-  const missing = new Set<MergeField>();
+  const missing = new Set<string>();
   const unknown = new Set<string>();
   const out = text.replace(TAG, (whole, key: string, fallback: string | undefined) => {
-    if (!(key in MERGE_FIELDS)) {
+    if (!isMergeTag(key)) {
       unknown.add(key);
       return whole;
     }
-    const v = values[key as MergeField]?.trim();
+    const v = values[key]?.trim();
     if (v) return v;
     if (fallback !== undefined) return fallback.trim();
-    missing.add(key as MergeField);
+    missing.add(key);
     return '';
   });
   return { text: out, missing: [...missing], unknown: [...unknown] };
+}
+
+/** A readable name for a tag: the built-in label, a supplied label for custom fields and variables, or the tag itself. */
+export function mergeTagLabel(tag: string, labels: Record<string, string> = {}): string {
+  return (MERGE_FIELDS as Record<string, string>)[tag] ?? labels[tag] ?? `{{${tag}}}`;
 }
 
 /** Tags used in a text, for validation and the editor's field list. */
@@ -60,11 +74,26 @@ export function mergeTags(text: string): string[] {
   return [...new Set([...text.matchAll(TAG)].map((m) => m[1]!))];
 }
 
+/** Workspace email variables: one value for everyone, such as a booking link or office address. */
+export const emailVariableInputSchema = z.object({
+  key: z.string().trim().regex(/^[a-z][a-z0-9_]{0,39}$/, 'Lowercase letters, digits and underscores, starting with a letter'),
+  label: z.string().trim().min(1, 'Enter a label').max(80),
+  value: z.string().trim().max(2000),
+});
+export type EmailVariableInput = z.infer<typeof emailVariableInputSchema>;
+export interface EmailVariableRow {
+  id: string;
+  key: string;
+  label: string;
+  value: string;
+  updatedAt: string;
+}
+
 // ───────────── Templates ─────────────
 
 const unknownTags = (v: { subject: string; body: string }, ctx: z.RefinementCtx) => {
   for (const [path, text] of [['subject', v.subject], ['body', v.body]] as const) {
-    const bad = mergeTags(text).filter((t) => !(t in MERGE_FIELDS));
+    const bad = mergeTags(text).filter((t) => !isMergeTag(t));
     if (bad.length) ctx.addIssue({ code: 'custom', path: [path], message: `Unknown merge field ${bad.map((b) => `{{${b}}}`).join(', ')}` });
   }
 };
@@ -76,6 +105,10 @@ export const emailTemplateInputSchema = z
     body: z.string().trim().min(1, 'Write the email').max(20_000),
     /** Shared templates are visible to the whole workspace; only people with marketing:manage can share. */
     shared: z.boolean().default(false),
+    /** Free-text grouping such as "Cold outreach" or "Follow-up". */
+    category: z.string().trim().max(40).nullable().default(null),
+    /** Optional marketing campaign the template belongs to. */
+    campaignId: z.string().uuid().nullable().default(null),
   })
   .superRefine(unknownTags);
 export type EmailTemplateInput = z.infer<typeof emailTemplateInputSchema>;
@@ -86,6 +119,8 @@ export interface EmailTemplateRow {
   subject: string;
   body: string;
   shared: boolean;
+  category: string | null;
+  campaign: { id: string; name: string } | null;
   owner: OwnerRef | null;
   /** Sequences whose steps use it. */
   usedBy: number;
@@ -103,7 +138,7 @@ export const templatePreviewSchema = z.object({
 export interface TemplatePreview {
   subject: string;
   body: string;
-  missing: MergeField[];
+  missing: string[];
   recipient: { name: string; email: string | null } | null;
 }
 
@@ -252,12 +287,12 @@ export const sequenceInputSchema = z
     v.steps.forEach((s, i) => {
       if (s.type === 'email') {
         if (!s.templateId && (!s.subject || !s.body)) ctx.addIssue({ code: 'custom', path: ['steps', i], message: `Step ${i + 1}: pick a template or write a subject and body` });
-        const bad = [...mergeTags(s.subject), ...mergeTags(s.body)].filter((t) => !(t in MERGE_FIELDS));
+        const bad = [...mergeTags(s.subject), ...mergeTags(s.body)].filter((t) => !isMergeTag(t));
         if (bad.length) ctx.addIssue({ code: 'custom', path: ['steps', i], message: `Step ${i + 1}: unknown merge field {{${bad[0]}}}` });
         const b = s.variantB;
         if (b) {
           if (!b.templateId && (!b.subject || !b.body)) ctx.addIssue({ code: 'custom', path: ['steps', i, 'variantB'], message: `Step ${i + 1}, version B: pick a template or write a subject and body` });
-          const badB = [...mergeTags(b.subject), ...mergeTags(b.body)].filter((t) => !(t in MERGE_FIELDS));
+          const badB = [...mergeTags(b.subject), ...mergeTags(b.body)].filter((t) => !isMergeTag(t));
           if (badB.length) ctx.addIssue({ code: 'custom', path: ['steps', i, 'variantB'], message: `Step ${i + 1}, version B: unknown merge field {{${badB[0]}}}` });
         }
       }
@@ -308,6 +343,29 @@ export interface EmailCounts {
   opened: number;
   clicked: number;
   bounced: number;
+}
+
+/** Campaign analytics (Part 3 E). Opens are estimates; there is no delivery count because providers do not report it. */
+export const emailAnalyticsQuerySchema = z.object({
+  days: z.preprocess((v) => (v === undefined ? 30 : Number(v)), z.number().int().min(1).max(365)),
+  scope: z.enum(['mine', 'team']).default('mine'),
+});
+export type EmailAnalyticsQuery = z.infer<typeof emailAnalyticsQuerySchema>;
+export interface AnalyticsCounts extends EmailCounts {
+  unsubscribed: number;
+  /** Replies / sent, 0-1; null when nothing was sent. */
+  replyRate: number | null;
+  bounceRate: number | null;
+}
+export interface EmailAnalytics {
+  days: number;
+  scope: 'mine' | 'team';
+  totals: AnalyticsCounts & { enrolled: number; completed: number; failed: number };
+  bySequence: (AnalyticsCounts & { id: string; name: string; status: SequenceStatus; enrolled: number; completed: number; abTested: boolean })[];
+  byMailbox: (AnalyticsCounts & { userId: string; name: string; mailbox: string | null })[];
+  byTemplate: (AnalyticsCounts & { id: string | null; name: string })[];
+  /** First email against each follow-up: does following up pay off? */
+  byStepPosition: (AnalyticsCounts & { position: number })[];
 }
 
 export interface SequenceStepStats extends EmailCounts {

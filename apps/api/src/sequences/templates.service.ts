@@ -1,11 +1,11 @@
-import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import type { EmailTemplate, TenantTx } from '@dealflow/database';
-import { renderMerge, type EmailTemplateInput, type EmailTemplateRow, type SequenceStep, type TemplatePreview } from '@dealflow/types';
+import { mergeTags, renderMerge, type EmailTemplateInput, type EmailTemplateRow, type SequenceStep, type TemplatePreview, type EmailVariableInput, type EmailVariableRow } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
-import { loadPerson, senderValues } from './people';
+import { loadPerson, senderValues, undefinedTags, variableValues } from './people';
 
 /**
  * Email templates. Personal templates are visible to their owner only; shared ones to everyone with
@@ -18,11 +18,16 @@ export class TemplatesService {
     private readonly audit: AuditService,
   ) {}
 
-  list(auth: AuthContext): Promise<EmailTemplateRow[]> {
+  list(auth: AuthContext, q: { category?: string; campaignId?: string } = {}): Promise<EmailTemplateRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.emailTemplate.findMany({
-        where: { tenantId: auth.tenantId, OR: [{ shared: true }, { ownerId: auth.userId }] },
-        orderBy: [{ shared: 'desc' }, { name: 'asc' }],
+        where: {
+          tenantId: auth.tenantId,
+          OR: [{ shared: true }, { ownerId: auth.userId }],
+          ...(q.category ? { category: { equals: q.category, mode: 'insensitive' as const } } : {}),
+          ...(q.campaignId ? { campaignId: q.campaignId } : {}),
+        },
+        orderBy: [{ shared: 'desc' }, { category: 'asc' }, { name: 'asc' }],
       });
       return this.rows(tx, auth.tenantId, rows);
     });
@@ -35,6 +40,7 @@ export class TemplatesService {
   create(auth: AuthContext, input: EmailTemplateInput, meta: RequestMeta): Promise<EmailTemplateRow> {
     if (input.shared) this.assertCanShare(auth);
     return this.prisma.run(auth, async (tx) => {
+      await this.check(tx, auth.tenantId, input);
       const t = await tx.emailTemplate.create({ data: { ...input, tenantId: auth.tenantId, ownerId: auth.userId } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.created', entityType: 'email_template', entityId: t.id, metadata: { name: t.name, shared: t.shared }, meta });
       return (await this.rows(tx, auth.tenantId, [t]))[0]!;
@@ -45,10 +51,38 @@ export class TemplatesService {
     return this.prisma.run(auth, async (tx) => {
       const t = await this.editable(tx, auth, id);
       if (input.shared !== t.shared) this.assertCanShare(auth);
+      await this.check(tx, auth.tenantId, input);
       const updated = await tx.emailTemplate.update({ where: { id: t.id }, data: input });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.updated', entityType: 'email_template', entityId: t.id, metadata: { name: updated.name, shared: updated.shared }, meta });
       return (await this.rows(tx, auth.tenantId, [updated]))[0]!;
     });
+  }
+
+  /** A personal copy of a template the caller can see, to edit without changing the original. */
+  duplicate(auth: AuthContext, id: string, meta: RequestMeta): Promise<EmailTemplateRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const t = await this.visible(tx, auth, id);
+      const copy = await tx.emailTemplate.create({
+        data: { tenantId: auth.tenantId, ownerId: auth.userId, name: `${t.name} (copy)`.slice(0, 120), subject: t.subject, body: t.body, category: t.category, campaignId: t.campaignId, shared: false },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.created', entityType: 'email_template', entityId: copy.id, metadata: { name: copy.name, copiedFrom: t.id }, meta });
+      return (await this.rows(tx, auth.tenantId, [copy]))[0]!;
+    });
+  }
+
+  /** Categories in use, for the filter. */
+  categories(auth: AuthContext): Promise<string[]> {
+    return this.prisma.run(auth, async (tx) => {
+      const rows = await tx.emailTemplate.findMany({ where: { tenantId: auth.tenantId, category: { not: null }, OR: [{ shared: true }, { ownerId: auth.userId }] }, select: { category: true }, distinct: ['category'], orderBy: { category: 'asc' } });
+      return rows.map((r) => r.category!);
+    });
+  }
+
+  /** Custom fields and variables must exist, and a campaign must belong to the workspace. */
+  private async check(tx: TenantTx, tenantId: string, input: EmailTemplateInput): Promise<void> {
+    const missing = await undefinedTags(tx, tenantId, [...mergeTags(input.subject), ...mergeTags(input.body)]);
+    if (missing.length) throw new BadRequestException({ code: 'UNKNOWN_MERGE_FIELD', message: `{{${missing[0]}}} does not exist. Add the custom field or email variable first.` });
+    if (input.campaignId && !(await tx.campaign.findFirst({ where: { id: input.campaignId, tenantId }, select: { id: true } }))) throw notFound('Campaign');
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
@@ -68,7 +102,7 @@ export class TemplatesService {
       if ((input.leadId || input.contactId) && !person) throw notFound(input.leadId ? 'Lead' : 'Contact');
       const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
       const mailbox = await tx.integrationConnection.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, status: 'CONNECTED' }, select: { accountEmail: true } });
-      const values = { ...(person?.values ?? {}), ...senderValues(user, mailbox?.accountEmail) };
+      const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, mailbox?.accountEmail) };
       const subject = renderMerge(input.subject, values);
       const body = renderMerge(input.body, values);
       return {
@@ -113,6 +147,8 @@ export class TemplatesService {
 
   private async rows(tx: TenantTx, tenantId: string, rows: EmailTemplate[]): Promise<EmailTemplateRow[]> {
     const names = await ownerRefs(tx, rows.map((r) => r.ownerId));
+    const campaignIds = [...new Set(rows.flatMap((r) => (r.campaignId ? [r.campaignId] : [])))];
+    const campaigns = new Map((campaignIds.length ? await tx.campaign.findMany({ where: { tenantId, id: { in: campaignIds } }, select: { id: true, name: true } }) : []).map((c) => [c.id, c]));
     const usage = await this.usage(tx, tenantId);
     return rows.map((r) => ({
       id: r.id,
@@ -120,10 +156,62 @@ export class TemplatesService {
       subject: r.subject,
       body: r.body,
       shared: r.shared,
+      category: r.category,
+      campaign: r.campaignId ? (campaigns.get(r.campaignId) ?? null) : null,
       owner: r.ownerId ? (names.get(r.ownerId) ?? null) : null,
       usedBy: usage.get(r.id) ?? 0,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
     }));
   }
+
+}
+
+/** Workspace email variables. Everyone who can read sequences sees them; marketing managers change them. */
+@Injectable()
+export class EmailVariablesService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
+  list(auth: AuthContext): Promise<EmailVariableRow[]> {
+    return this.prisma.run(auth, async (tx) => (await tx.emailVariable.findMany({ where: { tenantId: auth.tenantId }, orderBy: { key: 'asc' } })).map(toVariableRow));
+  }
+
+  upsert(auth: AuthContext, input: EmailVariableInput, meta: RequestMeta): Promise<EmailVariableRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const count = await tx.emailVariable.count({ where: { tenantId: auth.tenantId } });
+      const exists = await tx.emailVariable.findUnique({ where: { tenantId_key: { tenantId: auth.tenantId, key: input.key } } });
+      if (!exists && count >= 50) throw new BadRequestException({ code: 'LIMIT', message: 'A workspace can have up to 50 email variables.' });
+      const row = await tx.emailVariable.upsert({
+        where: { tenantId_key: { tenantId: auth.tenantId, key: input.key } },
+        create: { tenantId: auth.tenantId, key: input.key, label: input.label, value: input.value, updatedById: auth.userId },
+        update: { label: input.label, value: input.value, updatedById: auth.userId },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: exists ? 'email_variable.updated' : 'email_variable.created', entityType: 'email_variable', entityId: row.id, metadata: { key: row.key }, meta });
+      return toVariableRow(row);
+    });
+  }
+
+  remove(auth: AuthContext, key: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      const row = await tx.emailVariable.findUnique({ where: { tenantId_key: { tenantId: auth.tenantId, key } } });
+      if (!row) throw notFound('Variable');
+      // Parse the tags rather than substring-match, so {{ var.key }} with spaces counts and var.key_two does not.
+      const tag = `var.${key}`;
+      const uses = (text: string) => mergeTags(text).includes(tag);
+      const templates = await tx.emailTemplate.findMany({ where: { tenantId: auth.tenantId }, select: { subject: true, body: true } });
+      const inTemplates = templates.filter((t) => uses(t.subject) || uses(t.body)).length;
+      const seqs = await tx.sequence.findMany({ where: { tenantId: auth.tenantId, status: { not: 'ARCHIVED' } }, select: { steps: true } });
+      const inSequences = seqs.filter((s) => uses(JSON.stringify(s.steps))).length;
+      if (inTemplates + inSequences > 0) throw new ConflictException({ code: 'VARIABLE_IN_USE', message: `{{var.${key}}} is used in ${inTemplates} template(s) and ${inSequences} sequence(s). Remove it there first.` });
+      await tx.emailVariable.delete({ where: { id: row.id } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_variable.deleted', entityType: 'email_variable', entityId: row.id, metadata: { key }, meta });
+    });
+  }
+}
+
+function toVariableRow(r: { id: string; key: string; label: string; value: string; updatedAt: Date }): EmailVariableRow {
+  return { id: r.id, key: r.key, label: r.label, value: r.value, updatedAt: r.updatedAt.toISOString() };
 }

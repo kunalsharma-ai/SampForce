@@ -17,13 +17,14 @@ import {
   type SequenceStepStats,
   type SuppressionRow,
   sequenceSettingsSchema,
+  mergeTags,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { iso, notFound, ownerRefs } from '../crm/crm-helpers';
 import { segmentWhere } from '../marketing/segments.service';
-import { loadContacts, loadLeads, type Person, personSubject } from './people';
+import { loadContacts, loadLeads, type Person, personSubject, undefinedTags } from './people';
 
 const DAY = 86_400_000;
 const MAX_ENROL = 500;
@@ -306,6 +307,9 @@ export class SequencesService {
 
   /** Templates must be visible to the editor; move targets must be other sequences in this workspace. */
   private async assertRefs(tx: TenantTx, auth: AuthContext, input: SequenceInput, selfId?: string): Promise<void> {
+    const tags = input.steps.flatMap((s) => (s.type === 'email' ? [s.subject, s.body, s.variantB?.subject ?? '', s.variantB?.body ?? ''] : s.type === 'task' ? [s.title] : [])).flatMap((t) => mergeTags(t));
+    const missing = await undefinedTags(tx, auth.tenantId, tags);
+    if (missing.length) throw new BadRequestException({ code: 'UNKNOWN_MERGE_FIELD', message: `{{${missing[0]}}} does not exist. Add the custom field or email variable first.` });
     const templateIds = [...new Set(input.steps.flatMap((s) => (s.type === 'email' ? [s.templateId, s.variantB?.templateId].filter((t): t is string => !!t) : [])))];
     if (templateIds.length) {
       const n = await tx.emailTemplate.count({ where: { tenantId: auth.tenantId, id: { in: templateIds }, OR: [{ shared: true }, { ownerId: auth.userId }] } });

@@ -3,19 +3,22 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { DEFAULT_EVENT_RULES, type EmailTemplateRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { Textarea } from '@/components/crm/select';
+import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, titleCase } from '@/lib/crm';
-import { pct, SEQUENCE_TONE, useSequences, useSuppressions, useTemplates } from '@/lib/sequences';
+import { useCampaigns } from '@/lib/revenue';
+import { pct, SEQUENCE_TONE, useSequences, useSuppressions, useTemplateCategories, useTemplates } from '@/lib/sequences';
 import { useCan } from '@/lib/session';
+import { EmailAnalyticsPanel } from './email-analytics';
+import { EmailVariables } from './email-variables';
 import { insertAt, MergeFieldBar, PreviewPanel } from './merge-fields';
 
-type Tab = 'sequences' | 'templates' | 'suppressions';
+type Tab = 'sequences' | 'analytics' | 'templates' | 'variables' | 'suppressions';
 
 export function SequencesWorkspace() {
   const [tab, setTab] = useState<Tab>('sequences');
@@ -27,12 +30,16 @@ export function SequencesWorkspace() {
         onChange={setTab}
         tabs={[
           { key: 'sequences', label: 'Sequences' },
+          { key: 'analytics', label: 'Results' },
           { key: 'templates', label: 'Templates' },
+          { key: 'variables', label: 'Variables' },
           { key: 'suppressions', label: 'Do-not-email list' },
         ]}
       />
       {tab === 'sequences' && <SequenceList />}
+      {tab === 'analytics' && <EmailAnalyticsPanel />}
       {tab === 'templates' && <TemplateLibrary />}
+      {tab === 'variables' && <EmailVariables />}
       {tab === 'suppressions' && <SuppressionList />}
     </div>
   );
@@ -130,24 +137,54 @@ function SequenceList() {
 // ───────────── Templates ─────────────
 
 function TemplateLibrary() {
-  const templates = useTemplates();
+  const [category, setCategory] = useState('');
+  const templates = useTemplates({ category: category || undefined });
+  const categories = useTemplateCategories();
   const canWrite = useCan('sequences:write');
+  const qc = useQueryClient();
   const [editing, setEditing] = useState<EmailTemplateRow | 'new' | null>(null);
+  const duplicate = useMutation({
+    mutationFn: (id: string) => api<EmailTemplateRow>(`/email-templates/${id}/duplicate`, { method: 'POST' }),
+    onSuccess: async (copy) => {
+      await qc.invalidateQueries({ queryKey: ['email-templates'] });
+      setEditing(copy);
+    },
+  });
   return (
     <div className="space-y-4">
-      {canWrite && !editing && (
-        <Button size="sm" onClick={() => setEditing('new')}>
-          <Plus aria-hidden /> New template
-        </Button>
-      )}
-      {editing && <TemplateForm key={editing === 'new' ? 'new' : editing.id} template={editing === 'new' ? null : editing} onDone={() => setEditing(null)} />}
+      <div className="flex flex-wrap items-end gap-3">
+        {canWrite && !editing && (
+          <Button size="sm" onClick={() => setEditing('new')}>
+            <Plus aria-hidden /> New template
+          </Button>
+        )}
+        {(categories.data?.length ?? 0) > 0 && (
+          <div>
+            <label htmlFor="tpl-filter" className="block text-xs font-medium">
+              Category
+            </label>
+            <Select id="tpl-filter" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">All categories</option>
+              {categories.data!.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <ErrorText error={duplicate.error} />
+      </div>
+      {editing && <TemplateForm key={editing === 'new' ? 'new' : editing.id} template={editing === 'new' ? null : editing} categories={categories.data ?? []} onDone={() => setEditing(null)} />}
       {templates.isPending ? (
         <Skeleton className="h-24" />
       ) : templates.error ? (
         <ErrorText error={templates.error} />
       ) : templates.data.length === 0 ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">No templates yet. Templates are reusable emails with merge fields such as first name and company.</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            {category ? 'No templates in this category.' : 'No templates yet. Templates are reusable emails with merge fields such as first name and company.'}
+          </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -157,16 +194,23 @@ function TemplateLibrary() {
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                   {t.name}
                   {t.shared ? <Badge tone="primary">Shared</Badge> : <Badge>Only you</Badge>}
+                  {t.category && <Badge tone="neutral">{t.category}</Badge>}
                   {t.usedBy > 0 && <Badge tone="accent">In {t.usedBy} sequence{t.usedBy === 1 ? '' : 's'}</Badge>}
                 </CardTitle>
+                {t.campaign && <p className="text-xs text-muted-foreground">Campaign: {t.campaign.name}</p>}
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p className="font-medium">{t.subject}</p>
                 <p className="line-clamp-4 whitespace-pre-wrap text-muted-foreground">{t.body}</p>
                 {canWrite && (
-                  <Button size="sm" variant="outline" onClick={() => setEditing(t)}>
-                    Edit
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => duplicate.mutate(t.id)} disabled={duplicate.isPending} aria-label={`Duplicate ${t.name}`}>
+                      <Copy className="h-4 w-4" aria-hidden /> Duplicate
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -177,15 +221,28 @@ function TemplateLibrary() {
   );
 }
 
-function TemplateForm({ template, onDone }: { template: EmailTemplateRow | null; onDone: () => void }) {
+function TemplateForm({ template, categories, onDone }: { template: EmailTemplateRow | null; categories: string[]; onDone: () => void }) {
   const qc = useQueryClient();
   const canShare = useCan('marketing:manage');
-  const [v, setV] = useState({ name: template?.name ?? '', subject: template?.subject ?? '', body: template?.body ?? '', shared: template?.shared ?? false });
+  const canSeeCampaigns = useCan('marketing:read');
+  const campaigns = useCampaigns(canSeeCampaigns);
+  const [v, setV] = useState({
+    name: template?.name ?? '',
+    subject: template?.subject ?? '',
+    body: template?.body ?? '',
+    shared: template?.shared ?? false,
+    category: template?.category ?? '',
+    campaignId: template?.campaign?.id ?? '',
+  });
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const last = useRef<'subject' | 'body'>('body');
   const save = useMutation({
-    mutationFn: () => api(template ? `/email-templates/${template.id}` : '/email-templates', { method: template ? 'PUT' : 'POST', json: v }),
+    mutationFn: () =>
+      api(template ? `/email-templates/${template.id}` : '/email-templates', {
+        method: template ? 'PUT' : 'POST',
+        json: { ...v, category: v.category.trim() || null, campaignId: v.campaignId || null },
+      }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['email-templates'] });
       onDone();
@@ -233,8 +290,32 @@ function TemplateForm({ template, onDone }: { template: EmailTemplateRow | null;
               onChange={(e) => setV({ ...v, body: e.target.value })}
             />
           </Field>
-          <MergeFieldBar onInsert={insert} />
-          <p className="text-xs text-muted-foreground">Add a fallback after a bar for fields that may be empty, for example {'{{first_name|there}}'}.</p>
+          <MergeFieldBar idBase="tpl" onInsert={insert} />
+          <p className="text-xs text-muted-foreground">
+            Add a fallback after a bar for fields that may be empty, for example {'{{first_name|there}}'}. Custom fields use {'{{custom.key}}'} and workspace variables use {'{{var.key}}'}.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field id="tpl-category" label="Category" hint="Optional, for example Cold outreach or Follow-up.">
+              <Input id="tpl-category" list="tpl-category-options" maxLength={40} value={v.category} onChange={(e) => setV({ ...v, category: e.target.value })} />
+              <datalist id="tpl-category-options">
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Field>
+            {canSeeCampaigns && (
+              <Field id="tpl-campaign" label="Campaign">
+                <Select id="tpl-campaign" value={v.campaignId} onChange={(e) => setV({ ...v, campaignId: e.target.value })}>
+                  <option value="">No campaign</option>
+                  {(campaigns.data ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
           {canShare && (
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={v.shared} onChange={(e) => setV({ ...v, shared: e.target.checked })} /> Share with the whole workspace

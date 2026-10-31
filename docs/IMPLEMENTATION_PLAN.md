@@ -347,7 +347,7 @@ triggers.
 | Phase | Features | Status |
 |---|---|---|
 | 1 | Deal health monitor, next best actions, 360° timeline, record intelligence, weekly insights (ADR 0017) | Built and tested; no external keys needed |
-| 2 | Email automation on Automation Studio, template and inbox improvements, campaign analytics, features 5–9 | 2a built and tested: email and sequence events as triggers, new actions, the six scenarios as templates (ADR 0018). Templates, analytics, AI email, inbox, meetings and proposals still to do |
+| 2 | Email automation on Automation Studio, template and inbox improvements, campaign analytics, features 5–9 | 2a built and tested: email and sequence events as triggers, new actions, the six scenarios as templates (ADR 0018). 2b built and tested: template categories, campaigns and duplication, `{{custom.*}}` and `{{var.*}}` merge fields, results by sequence, mailbox, template and follow-up (ADR 0019). AI email, inbox, meetings and proposals still to do |
 | 3 | Features 10–15: client portal, voice (Deepgram), gamification, visitor intelligence and the rest | Not started |
 | Prospects | Prospect Discovery in the extension (Apollo, Hunter) and the Prospect Lists module | Not started |
 
