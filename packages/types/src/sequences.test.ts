@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailTemplateInputSchema, nextSendSlot, renderMerge, sequenceInputSchema } from './sequences';
+import { emailTemplateInputSchema, nextSendSlot, pickVariant, renderMerge, sequenceInputSchema } from './sequences';
 
 describe('renderMerge', () => {
   it('fills fields, uses fallbacks and reports gaps', () => {
@@ -75,5 +75,15 @@ describe('nextSendSlot', () => {
     // US clocks go back on Sun 2026-11-01. Sat 2026-10-31 20:00 New York → Mon 09:00 EST = 14:00Z
     const ny = { ...win, timezone: 'America/New_York' };
     expect(nextSendSlot(new Date('2026-11-01T00:00:00Z'), ny).toISOString()).toBe('2026-11-02T14:00:00.000Z');
+  });
+});
+
+describe('pickVariant', () => {
+  it('is stable for a run and splits runs roughly in half', () => {
+    expect(pickVariant('run-1', 'e1')).toBe(pickVariant('run-1', 'e1'));
+    const ids = Array.from({ length: 2000 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    const b = ids.filter((id) => pickVariant(id, 'step-1') === 'B').length;
+    expect(b).toBeGreaterThan(900);
+    expect(b).toBeLessThan(1100);
   });
 });

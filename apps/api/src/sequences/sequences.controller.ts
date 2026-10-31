@@ -9,6 +9,8 @@ import {
   type SequenceInput,
   sequenceInputSchema,
   sequenceStatusSchema,
+  type SequenceTestSendInput,
+  sequenceTestSendSchema,
   suppressionInputSchema,
   templatePreviewSchema,
   z,
@@ -74,7 +76,10 @@ export class EmailTemplatesController {
 
 @Controller('sequences')
 export class SequencesController {
-  constructor(private readonly sequences: SequencesService) {}
+  constructor(
+    private readonly sequences: SequencesService,
+    private readonly runner: SequenceRunner,
+  ) {}
 
   @Get()
   @RequirePermissions('sequences:read')
@@ -143,6 +148,15 @@ export class SequencesController {
   @RequirePermissions('sequences:write')
   setStatus(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(sequenceStatusSchema)) body: z.infer<typeof sequenceStatusSchema>, @Meta() meta: RequestMeta) {
     return this.sequences.setStatus(auth, id, body.status, meta);
+  }
+
+  /** Sends one email of the sequence to the caller's own mailbox address. */
+  @Post(':id/test-send')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @RequirePermissions('sequences:write')
+  testSend(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(sequenceTestSendSchema)) body: SequenceTestSendInput, @Meta() meta: RequestMeta) {
+    return this.runner.testSend(auth, id, body, meta);
   }
 
   @Post(':id/enroll')

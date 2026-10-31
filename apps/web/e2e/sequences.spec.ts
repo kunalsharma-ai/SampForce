@@ -46,6 +46,13 @@ test('writes a template, previews it for a lead, and builds and starts a sequenc
   await page.getByLabel('Template').first().selectOption({ label: 'Intro' });
   await page.getByLabel('Subject').first().fill('');
   await page.getByLabel('Email', { exact: true }).first().fill('');
+  // A/B test the first email: version B gets its own subject and text.
+  await page.getByRole('button', { name: 'A/B test this email' }).first().click();
+  await expect(page.getByRole('button', { name: 'Version B', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByLabel('Subject').first().fill('A different hello for {{company|your team}}');
+  await page.getByLabel('Email', { exact: true }).first().fill('Hi {{first_name|there}}, version B.');
+  await page.getByRole('button', { name: 'Version A', exact: true }).click();
+  await expect(page.getByLabel('Template').first()).toHaveValue(/.+/);
   await page.getByRole('button', { name: 'Add check' }).click();
   await expect(page.getByLabel('Has the person')).toHaveValue('replied');
 
@@ -58,7 +65,12 @@ test('writes a template, previews it for a lead, and builds and starts a sequenc
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Start sequence' }).click();
   await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Version B', exact: true }).click();
+  await expect(page.getByLabel('Subject').first()).toHaveValue('A different hello for {{company|your team}}');
   await expectNoA11yViolations(page);
+  // A test goes to the sender's own mailbox, which this workspace has not connected.
+  await page.getByRole('button', { name: 'Send me a test' }).first().click();
+  await expect(page.getByRole('alert').filter({ hasText: 'to send yourself a test' })).toBeVisible();
 
   // Enrolling needs the sender's own mailbox, which this test workspace has not connected.
   await page.getByRole('tab', { name: /People/ }).click();

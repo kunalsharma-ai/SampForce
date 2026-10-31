@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { pickVariant } from '@dealflow/types';
 import { SequenceRunner } from '../src/sequences/sequence-runner.service';
 import { startProviderFixture, providerEnv, type ProviderFixture } from './fixtures/provider-fixture';
 import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
@@ -12,6 +13,8 @@ function decodeSent(body: string): { headers: string; text: string; html: string
   const parts = rest.join('\r\n\r\n');
   const chunks = [...parts.matchAll(/Content-Type: text\/(plain|html); charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=\r\n]+)/g)];
   const get = (t: string) => Buffer.from((chunks.find((c) => c[1] === t)?.[2] ?? '').replace(/\r\n/g, ''), 'base64').toString();
+  // A plain-text-only message has no parts: the body follows the headers.
+  if (!chunks.length) return { headers, text: Buffer.from(parts.replace(/\r\n/g, ''), 'base64').toString(), html: '' };
   return { headers, text: get('plain'), html: get('html') };
 }
 
@@ -217,8 +220,8 @@ describe('email templates and sequences', () => {
 
     const stats = (await http.get(`/sequences/${ids.seq}/step-stats`).expect(200)).body;
     expect(stats).toEqual([
-      { stepId: 'intro', sent: 3, replied: 1, opened: 1, clicked: 1, bounced: 1 },
-      { stepId: 'follow', sent: 1, replied: 0, opened: 0, clicked: 0, bounced: 0 },
+      { stepId: 'intro', sent: 3, replied: 1, opened: 1, clicked: 1, bounced: 1, variants: null },
+      { stepId: 'follow', sent: 1, replied: 0, opened: 0, clicked: 0, bounced: 0, variants: null },
     ]);
   });
 
@@ -257,6 +260,71 @@ describe('email templates and sequences', () => {
     expect(by['Gus']!.lastError).toContain('Missing job_title');
     expect(rows.filter((r) => r.sent === 1)).toHaveLength(1);
     expect(rows.filter((r) => r.status === 'ACTIVE' && r.sent === 0)).toHaveLength(1);
+  });
+
+  it('A/B tests an email: each person gets one version, and results are kept per version', async () => {
+    await http.post('/sequences', { name: 'Bad AB', steps: [{ id: 'a', type: 'email', delayDays: 0, subject: 'A', body: 'A', variantB: { subject: '', body: '' } }] }).expect(400);
+    const seq = (await http.post('/sequences', {
+      name: 'Subject test',
+      settings: ALL_DAY,
+      steps: [{ id: 'ab', type: 'email', delayDays: 0, subject: 'Version A for {{first_name|you}}', body: 'Body A', variantB: { subject: 'Version B for {{first_name|you}}', body: 'Body B' } }],
+    }).expect(201)).body;
+    expect(seq.steps[0].variantB).toMatchObject({ subject: 'Version B for {{first_name|you}}', templateId: null });
+    await http.post(`/sequences/${seq.id}/status`, { status: 'ACTIVE' }).expect(200);
+    const people = [];
+    for (let i = 0; i < 12; i++) people.push((await http.post('/leads', { fullName: `Abby Test${i}`, email: `abby${i}@ab.test` }).expect(201)).body.lead.id as string);
+    await http.post(`/sequences/${seq.id}/enroll`, { leadIds: people }).expect(200);
+    const before = fixture.state.sent.length;
+    await runNow(seq.id);
+    const sent = fixture.state.sent.slice(before).map((x) => decodeSent(x.body));
+    expect(sent).toHaveLength(12);
+
+    const msgs = await asTenant(owner.tenantId, (tx) => tx.sequenceMessage.findMany({ where: { enrollment: { sequenceId: seq.id } }, include: { enrollment: true } }));
+    for (const m of msgs) {
+      const mail = sent.find((x) => x.headers.includes(`To: ${m.toAddress}`))!;
+      expect(mail.text).toContain(m.variant === 'B' ? 'Body B' : 'Body A');
+      expect(m.subject).toBe(`Version ${m.variant} for Abby`);
+      expect(m.variant).toBe(pickVariant(m.enrollmentId, 'ab'));
+    }
+    const b = msgs.filter((m) => m.variant === 'B').length;
+    expect(b).toBeGreaterThan(0);
+    expect(b).toBeLessThan(12);
+
+    const replied = msgs.find((m) => m.variant === 'B')!;
+    await asTenant(owner.tenantId, (tx) => tx.sequenceMessage.update({ where: { id: replied.id }, data: { repliedAt: new Date() } }));
+    const stats = (await http.get(`/sequences/${seq.id}/step-stats`).expect(200)).body;
+    expect(stats[0]).toMatchObject({ stepId: 'ab', sent: 12, replied: 1 });
+    expect(stats[0].variants).toEqual([
+      { variant: 'A', counts: { sent: 12 - b, replied: 0, opened: 0, clicked: 0, bounced: 0 } },
+      { variant: 'B', counts: { sent: b, replied: 1, opened: 0, clicked: 0, bounced: 0 } },
+    ]);
+    const plain = (await http.get(`/sequences/${ids.seq}/step-stats`).expect(200)).body;
+    expect(plain[0].variants).toBeNull();
+  });
+
+  it('sends a test of one email to the sender only, with gaps marked and nothing tracked', async () => {
+    const seq = (await http.post('/sequences', {
+      name: 'Testable',
+      steps: [{ id: 't1', type: 'email', delayDays: 0, subject: 'Hi {{first_name}}', body: 'Your role: {{job_title}}', variantB: { subject: 'Hey {{first_name}}', body: 'B body' } }],
+    }).expect(201)).body;
+    const before = fixture.state.sent.length;
+    const r = (await http.post(`/sequences/${seq.id}/test-send`, { stepId: 't1', leadId: ids.dee }).expect(200)).body;
+    expect(r.subject).toBe('[Test] Hi Dee');
+    expect(r.missing).toEqual(['job_title']);
+    expect(fixture.state.sent.length).toBe(before + 1);
+    const mail = decodeSent(fixture.state.sent.at(-1)!.body);
+    expect(mail.headers).toContain(`To: ${r.to}`);
+    expect(mail.text).toContain('Your role: [Job title missing]');
+    expect(mail.text).toContain('sent only to you');
+    expect(mail.text).not.toContain('/unsubscribe/');
+    expect(await asTenant(owner.tenantId, (tx) => tx.sequenceMessage.count({ where: { enrollment: { sequenceId: seq.id } } }))).toBe(0);
+
+    const b = (await http.post(`/sequences/${seq.id}/test-send`, { stepId: 't1', variant: 'B', leadId: ids.ana }).expect(200)).body;
+    expect(b.subject).toBe('[Test] Hey Ana');
+    await http.post(`/sequences/${seq.id}/test-send`, { stepId: 'nope' }).expect(400);
+    await http.post(`/sequences/${ids.seq}/test-send`, { stepId: 'intro', variant: 'B' }).expect(400);
+    const viewer = await inviteMember(app, owner, 'viewer');
+    await api(viewer).post(`/sequences/${seq.id}/test-send`, { stepId: 't1' }).expect(403);
   });
 
   it('keeps sequences inside their workspace', async () => {

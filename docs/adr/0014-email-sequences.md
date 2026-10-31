@@ -53,3 +53,16 @@ and stated that DealFlow does not send bulk email. Sales teams want multi-step o
   mail system (tested with a Gmail-style notice). Legal duties for cold outreach (for example GDPR, CAN-SPAM, India's
   DPDP Act) depend on where senders and recipients are; DealFlow records consent and honours unsubscribes but does not
   make a workspace compliant.
+
+**Addendum, 2026-10-31: A/B tests and test sends.**
+
+- An email step can have a **version B** (its own template or subject and text). Each person in the run gets one
+  version, chosen from a hash of the run id and step id, so a retried send uses the same version and runs split about
+  evenly. `sequence_messages.variant` records which one went out, and the Results tab shows replies, clicks, opens and
+  bounces for each version. The page marks a version "ahead on replies" only once both have gone to at least 20 people,
+  and says that small differences can be chance. DealFlow does not pick a winner automatically: the sender decides and
+  removes the other version.
+- **Send me a test** sends one saved email step (either version) to the caller's own connected mailbox address, filled
+  in for a chosen lead. Empty merge fields are shown as "[Job title missing]" rather than left blank, the subject starts
+  with "[Test]", nothing is tracked, no run or sequence message is created, and it counts toward the mailbox's daily
+  limit. It needs `sequences:write` and is limited to 10 a minute.

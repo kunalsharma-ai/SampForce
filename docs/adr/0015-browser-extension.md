@@ -43,3 +43,7 @@ different address per customer, so neither the cookie nor the allow-list fits.
 policy for the listing. Edge uses the same package. Firefox would need a different side panel API and is not built.
 Whether saving people found on public pages is lawful for a given customer and country is for their legal review;
 DealFlow records the source page in the audit log so customers can answer "where did you get my address?".
+
+**Update, 2026-10-31.** The privacy page is at `/extension-privacy` on the DealFlow site, and the store listing kit
+(text, permission reasons, privacy-form answers, screenshots, promo tile) is in `apps/extension/store/`. Submission
+still needs Sampledge's developer accounts.

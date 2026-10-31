@@ -16,6 +16,11 @@ pnpm --filter @dealflow/extension build   # dist/ and dealflow-extension-<versio
 3. In DealFlow, go to Integrations → Browser extension and create a connection code.
 4. Click the DealFlow icon in the toolbar, enter your DealFlow address and paste the code.
 
+## Store listing
+
+`store/LISTING.md` has the Chrome Web Store and Edge Add-ons text, permission reasons and privacy answers;
+`store/` also holds the screenshots and promo tile. The privacy page is `/extension-privacy` on the DealFlow site.
+
 ## Tests
 
 - `pnpm --filter @dealflow/extension test`: the page reader (address and name detection).

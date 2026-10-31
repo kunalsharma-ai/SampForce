@@ -48380,6 +48380,33 @@
                               "type": "string",
                               "maxLength": 20000,
                               "default": ""
+                            },
+                            "variantB": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "templateId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid",
+                                  "default": null
+                                },
+                                "subject": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "body": {
+                                  "type": "string",
+                                  "maxLength": 20000,
+                                  "default": ""
+                                }
+                              },
+                              "default": null
                             }
                           },
                           "required": [
@@ -49257,6 +49284,33 @@
                               "type": "string",
                               "maxLength": 20000,
                               "default": ""
+                            },
+                            "variantB": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "templateId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "format": "uuid",
+                                  "default": null
+                                },
+                                "subject": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "body": {
+                                  "type": "string",
+                                  "maxLength": 20000,
+                                  "default": ""
+                                }
+                              },
+                              "default": null
                             }
                           },
                           "required": [
@@ -50452,7 +50506,7 @@
         "tags": [
           "Sequences"
         ],
-        "summary": "Sent, replied, opened, clicked and bounced per email step (sequences:read)",
+        "summary": "Sent, replied, opened, clicked and bounced per email step, and per version for A/B-tested steps (sequences:read)",
         "security": [
           {
             "cookieAuth": []
@@ -50472,6 +50526,327 @@
             "in": "path"
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sequences/{id}/test-send": {
+      "post": {
+        "tags": [
+          "Sequences"
+        ],
+        "summary": "Send one email of the sequence (version A or B) to the caller's own mailbox, filled in for a chosen lead or contact; not tracked (sequences:write)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stepId": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "variant": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B"
+                    ],
+                    "default": "A"
+                  },
+                  "leadId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "contactId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "stepId"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
