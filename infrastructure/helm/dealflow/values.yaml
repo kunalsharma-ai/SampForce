@@ -28,6 +28,10 @@ config:
   AUTH_RATE_LIMIT_PER_MINUTE: "10"
   # The rate card was approved on 2026-10-31; local and test setups keep the preview labels.
   PRICING_PUBLISHED: "true"
+  # Offline payments only for now: workspaces request an invoice and an operator records the payment.
+  ONLINE_PAYMENTS_ENABLED: "false"
+  # How to pay an offline invoice (bank details). Empty: the invoice says the DealFlow team will send them.
+  OFFLINE_PAYMENT_INSTRUCTIONS: ""
 
 api:
   replicas: 2

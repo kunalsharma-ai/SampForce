@@ -11,6 +11,8 @@ export type SelfServePlan = (typeof SELF_SERVE_PLANS)[number];
 
 export const BILLING_PROVIDERS = ['STRIPE', 'RAZORPAY'] as const;
 export type BillingProviderKey = (typeof BILLING_PROVIDERS)[number];
+/** How a subscription is paid: an online provider, offline against a DealFlow invoice, or not at all. */
+export type PaymentMethod = 'NONE' | 'OFFLINE' | BillingProviderKey;
 export type Interval = 'MONTH' | 'YEAR';
 export type SubscriptionState = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID';
 
@@ -75,6 +77,19 @@ export const seatsSchema = z.object({ seats: z.number().int().min(1).max(1000) }
 export const changePlanSchema = z.object({ planCode: z.enum(SELF_SERVE_PLANS), interval: z.enum(['MONTH', 'YEAR']) });
 export const trialSchema = z.object({ planCode: z.enum(SELF_SERVE_PLANS) });
 
+/** A workspace asks for an invoice to pay offline (bank transfer). */
+export const invoiceRequestSchema = z.object({
+  planCode: z.enum(SELF_SERVE_PLANS),
+  interval: z.enum(['MONTH', 'YEAR']),
+  seats: z.number().int().min(1).max(1000),
+});
+export type InvoiceRequestInput = z.infer<typeof invoiceRequestSchema>;
+
+/** Offline invoice total in cents: rate-card price × seats × months in the interval. Taxes are not included. */
+export function offlineInvoiceCents(code: SelfServePlan, interval: Interval, seats: number): number {
+  return Math.round(catalogPrice(code, interval)! * 100) * seats * (interval === 'YEAR' ? 12 : 1);
+}
+
 export const supportGrantSchema = z.object({
   hours: z.number().int().min(1).max(72),
   reason: z.string().trim().min(5).max(500),
@@ -127,15 +142,17 @@ export interface BillingOverview {
   seats: number;
   seatLimit: number | null;
   restricted: boolean;
-  provider: 'NONE' | BillingProviderKey;
+  provider: PaymentMethod;
   currentPeriodEnd: string | null;
   trialEndsAt: string | null;
   trialAvailable: boolean;
   cancelAtPeriodEnd: boolean;
   pastDueSince: string | null;
   graceEndsAt: string | null;
-  /** Providers with keys configured in this deployment. */
+  /** Providers that can take new subscriptions here: keys configured and online payments turned on. */
   providers: Record<BillingProviderKey, boolean>;
+  /** Paying offline: the open invoice, if any, and how to pay it (null: the DealFlow team sends details). */
+  offline: { instructions: string | null; openInvoice: InvoiceRow | null };
   portalAvailable: boolean;
   usage: { members: UsageMeter; pendingInvitations: number; pipelines: UsageMeter; aiCredits: UsageMeter; automationRuns: UsageMeter };
   catalog: CatalogPlan[];
@@ -147,7 +164,7 @@ export interface BillingOverview {
 
 export interface InvoiceRow {
   id: string;
-  provider: BillingProviderKey;
+  provider: 'OFFLINE' | BillingProviderKey;
   number: string | null;
   status: 'DRAFT' | 'OPEN' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE';
   currency: string;
@@ -161,6 +178,11 @@ export interface InvoiceRow {
   pdfUrl: string | null;
   issuedAt: string | null;
   paidAt: string | null;
+  /** Offline invoices: what paying it buys. */
+  planCode: PlanCode | null;
+  interval: Interval | null;
+  seats: number | null;
+  paymentReference: string | null;
 }
 
 export interface SupportGrantRow {
@@ -198,6 +220,20 @@ export type OperatorPlanInput = z.infer<typeof operatorPlanSchema>;
 
 export const operatorStatusSchema = z.object({ suspended: z.boolean(), reason: z.string().trim().min(5).max(500) });
 
+/** An operator records the offline payment of an open invoice: the plan it names starts or renews. */
+export const operatorPaymentSchema = z.object({
+  reference: z.string().trim().min(2).max(120),
+  /** Day the money arrived (YYYY-MM-DD); defaults to today. Not in the future. */
+  receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+export type OperatorPaymentInput = z.infer<typeof operatorPaymentSchema>;
+export const operatorVoidSchema = z.object({ reason: z.string().trim().min(5).max(500) });
+
+/** An open offline invoice in the operator console's "waiting for payment" list. */
+export interface OperatorOpenInvoice extends InvoiceRow {
+  tenant: { id: string; name: string };
+}
+
 export interface OperatorMe {
   id: string;
   email: string;
@@ -233,6 +269,8 @@ export interface PublicPricing {
   trialDays: number;
   graceDays: number;
   salesContact: string | null;
+  /** False: plans are paid offline against an invoice instead of online checkout. */
+  onlinePayments: boolean;
   plans: (Omit<CatalogPlan, 'checkout'> & { buyOnline: boolean })[];
 }
 

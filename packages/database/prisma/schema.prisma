@@ -204,6 +204,8 @@ enum BillingProvider {
   NONE
   STRIPE
   RAZORPAY
+  /// Paid by bank transfer or another offline method against a DealFlow invoice; an operator records the payment.
+  OFFLINE
 }
 
 enum BillingInterval {
@@ -1553,25 +1555,32 @@ enum InvoiceStatus {
 
 /// Invoices as reported by the billing provider. Amounts in the smallest currency unit.
 model Invoice {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId          String          @map("tenant_id") @db.Uuid
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
   provider          BillingProvider
-  providerInvoiceId String          @map("provider_invoice_id")
+  providerInvoiceId String           @map("provider_invoice_id")
   number            String?
   status            InvoiceStatus
-  currency          String          @db.Char(3)
-  subtotalCents     Int             @map("subtotal_cents")
-  taxCents          Int             @default(0) @map("tax_cents")
-  totalCents        Int             @map("total_cents")
-  amountPaidCents   Int             @default(0) @map("amount_paid_cents")
-  periodStart       DateTime?       @map("period_start") @db.Timestamptz(3)
-  periodEnd         DateTime?       @map("period_end") @db.Timestamptz(3)
-  hostedUrl         String?         @map("hosted_url")
-  pdfUrl            String?         @map("pdf_url")
-  issuedAt          DateTime        @map("issued_at") @db.Timestamptz(3)
-  paidAt            DateTime?       @map("paid_at") @db.Timestamptz(3)
-  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  currency          String           @db.Char(3)
+  subtotalCents     Int              @map("subtotal_cents")
+  taxCents          Int              @default(0) @map("tax_cents")
+  totalCents        Int              @map("total_cents")
+  amountPaidCents   Int              @default(0) @map("amount_paid_cents")
+  periodStart       DateTime?        @map("period_start") @db.Timestamptz(3)
+  periodEnd         DateTime?        @map("period_end") @db.Timestamptz(3)
+  hostedUrl         String?          @map("hosted_url")
+  pdfUrl            String?          @map("pdf_url")
+  issuedAt          DateTime         @map("issued_at") @db.Timestamptz(3)
+  paidAt            DateTime?        @map("paid_at") @db.Timestamptz(3)
+  /// Offline invoices only: what the workspace asked for, applied when an operator records the payment.
+  planCode          String?          @map("plan_code")
+  billingInterval   BillingInterval? @map("billing_interval")
+  seats             Int?
+  requestedById     String?          @map("requested_by_id") @db.Uuid
+  /// The bank or transfer reference an operator entered when recording the payment.
+  paymentReference  String?          @map("payment_reference")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

@@ -1,8 +1,13 @@
 # Billing setup and verification status
 
-DealFlow bills through **Stripe** (cards, global) and/or **Razorpay** (India). Either, both or neither can be
-configured. With neither, the Billing page shows plans and usage, offers the free trial, and says that online
-checkout is not configured. Design decisions are in [ADR 0010](adr/0010-billing-and-operator-realm.md).
+**Current setup: offline payments only** (decided 2026-10-31, [ADR 0013](adr/0013-offline-payments.md)). A
+workspace requests an invoice under Billing, pays it by bank transfer, and an operator records the payment in the
+operator console ([runbook](runbooks/offline-payments.md)), which starts or renews the plan. Online checkout is off
+(`ONLINE_PAYMENTS_ENABLED=false`).
+
+The Stripe (cards, global) and Razorpay (India) integration below is kept for later. It sells new subscriptions only
+when `ONLINE_PAYMENTS_ENABLED=true` and that provider's keys are set. Design decisions are in
+[ADR 0010](adr/0010-billing-and-operator-realm.md).
 
 ## Verification status (2026-10-30)
 
@@ -43,7 +48,9 @@ invoices with the provider dashboard.
 |---|---|---|
 | `BILLING_GRACE_DAYS` | 14 | Days a past-due workspace keeps paid allowances |
 | `TRIAL_DAYS` | 14 | Length of the one free trial per workspace |
-| `PRICING_PUBLISHED` | false (`true` in the Helm chart) | Removes the "preview" labels from the pricing page and Billing page. The rate card was approved on 2026-10-31; the matching prices still have to be created in Stripe or Razorpay before anyone can buy |
+| `ONLINE_PAYMENTS_ENABLED` | false | Stripe/Razorpay checkout for new subscriptions. Off: pay by invoice only |
+| `OFFLINE_PAYMENT_INSTRUCTIONS` | unset | Bank details shown on open offline invoices (`\n` for line breaks). Unset: the invoice says the DealFlow team sends them |
+| `PRICING_PUBLISHED` | false (`true` in the Helm chart) | Removes the "preview" labels from the pricing page and Billing page. The rate card was approved on 2026-10-31; with online payments off, plans are bought by invoice |
 | `SALES_CONTACT_EMAIL` | unset | Shown as "Contact sales" for Enterprise Plus |
 | `OPERATOR_JWT_SECRET` | unset | Enables the operator console; must differ from `JWT_ACCESS_SECRET` |
 

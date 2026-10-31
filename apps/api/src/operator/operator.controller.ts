@@ -1,7 +1,16 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { type OperatorPlanInput, operatorLoginSchema, operatorPlanSchema, operatorStatusSchema, z } from '@dealflow/types';
+import {
+  type OperatorPaymentInput,
+  type OperatorPlanInput,
+  operatorLoginSchema,
+  operatorPaymentSchema,
+  operatorPlanSchema,
+  operatorStatusSchema,
+  operatorVoidSchema,
+  z,
+} from '@dealflow/types';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPublic, OperatorRoles, OperatorTokens } from './operator-auth';
@@ -63,6 +72,38 @@ export class OperatorController {
   @OperatorRoles('ADMIN')
   status(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(operatorStatusSchema)) body: z.infer<typeof operatorStatusSchema>, @Req() req: Request) {
     return this.ops.setSuspended(op, id, body.suspended, body.reason, ip(req));
+  }
+
+  /** Offline invoices waiting for payment, across workspaces. */
+  @Get('invoices/open')
+  openInvoices() {
+    return this.ops.openInvoices();
+  }
+
+  @Post('tenants/:id/invoices/:invoiceId/paid')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  paid(
+    @Operator() op: OperatorContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('invoiceId', new ParseUUIDPipe()) invoiceId: string,
+    @Body(new ZodPipe(operatorPaymentSchema)) body: OperatorPaymentInput,
+    @Req() req: Request,
+  ) {
+    return this.ops.recordPayment(op, id, invoiceId, body, ip(req));
+  }
+
+  @Post('tenants/:id/invoices/:invoiceId/void')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  voidInvoice(
+    @Operator() op: OperatorContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('invoiceId', new ParseUUIDPipe()) invoiceId: string,
+    @Body(new ZodPipe(operatorVoidSchema)) body: z.infer<typeof operatorVoidSchema>,
+    @Req() req: Request,
+  ) {
+    return this.ops.voidInvoice(op, id, invoiceId, body.reason, ip(req));
   }
 
   @Get('audit-log')

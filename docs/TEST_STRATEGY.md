@@ -138,6 +138,13 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 | 14 | Application works without optional 3D effects | **Pass** (every 3D view has a 2D view and table; low-power, no-WebGL and lost-context paths fall back) | e2e preferences test, `reports.spec.ts` |
 | 15 | Application works on mobile devices | **Pass** | `mobile.spec.ts` (drawer nav, no horizontal overflow) |
 
+## Offline payments (2026-10-31)
+
+| Suite | Result |
+|---|---|
+| `apps/api` unit + integration | 256 passed in 36 files. New `offline-billing.e2e` (8): checkout off even with provider keys set; invoice at rate-card prices, billing managers only, one open at a time, cancel; operators list open invoices, only ADMIN records a payment (no future dates, no double recording), plan starts, both audit logs, notification; seat and plan changes refused on an invoice plan, renewal continues from the period end; period end to past due (grace from period end) to unpaid, and paying again restores; scheduled cancellation ends on Free; void; `addMonths` month-end clamping |
+| Browser (Playwright) | 40 passed. New: request an invoice on the Billing page, operator records the payment, the plan shows as paid by invoice with a renewal option (axe on both pages) |
+
 ## Running locally
 
 ```bash

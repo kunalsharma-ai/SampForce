@@ -19,7 +19,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 - AI agents and Copilot through Claude (needs `ANTHROPIC_API_KEY`; tested against a local fixture), rule-based forecasting with snapshots
 - Quotes priced from price books with discount approvals, versions and PDFs; contracts with renewals and reminders
 - Segments with consent-aware export, hosted lead forms, campaign attribution, revenue analytics, customer health
-- Billing: plans enforced through one entitlement rule, free trial, usage meters, Stripe and Razorpay hosted checkout and signed webhooks (needs provider keys and prices; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
+- Billing: plans enforced through one entitlement rule, free trial, usage meters, and payment by invoice (bank transfer recorded by an operator). Stripe and Razorpay checkout is built but switched off (`ONLINE_PAYMENTS_ENABLED`; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
 - Custom roles (Professional and above), onboarding checklist, owner-granted support access
 - Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`)
 - Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true` (set in the Helm chart: the rate card is approved)

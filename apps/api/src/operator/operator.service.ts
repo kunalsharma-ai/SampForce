@@ -1,9 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { OperatorPlanInput, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow } from '@dealflow/types';
+import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
-import { toInvoiceRow } from '../billing/billing.service';
+import { BillingService, toInvoiceRow } from '../billing/billing.service';
 import { PrismaService } from '../common/prisma.service';
 import type { OperatorContext } from './operator-auth';
 
@@ -20,6 +20,7 @@ export class OperatorService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
+    private readonly billing: BillingService,
   ) {}
 
   async login(email: string, password: string, ip: string | null): Promise<OperatorContext> {
@@ -113,6 +114,30 @@ export class OperatorService {
     });
     await this.log(op.id, 'tenant.plan_overridden', id, { ...input }, ip);
     return this.tenant(op, id, ip);
+  }
+
+  /** Records that an offline invoice was paid; the plan it names starts or renews. Recorded in both audit logs. */
+  async recordPayment(op: OperatorContext, id: string, invoiceId: string, input: OperatorPaymentInput, ip: string | null) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (input.receivedOn && input.receivedOn > today) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The payment date cannot be in the future.', details: [{ path: 'receivedOn', message: 'Not in the future' }] });
+    // A past date keeps the time of recording, so a payment entered today is not back-dated to midnight.
+    const receivedAt = input.receivedOn && input.receivedOn !== today ? new Date(`${input.receivedOn}T12:00:00Z`) : new Date();
+    const invoice = await this.prisma.run({ tenantId: id }, (tx) => this.billing.recordOfflinePayment(tx, id, invoiceId, { reference: input.reference, receivedAt, operator: op.email }));
+    await this.log(op.id, 'tenant.offline_payment_recorded', id, { invoiceId, number: invoice.number, reference: input.reference, receivedOn: receivedAt.toISOString().slice(0, 10) }, ip);
+    return this.tenant(op, id, ip);
+  }
+
+  async voidInvoice(op: OperatorContext, id: string, invoiceId: string, reason: string, ip: string | null) {
+    await this.prisma.run({ tenantId: id }, (tx) => this.billing.voidOfflineInvoice(tx, id, invoiceId, reason, op.email));
+    await this.log(op.id, 'tenant.invoice_voided', id, { invoiceId, reason }, ip);
+    return this.tenant(op, id, ip);
+  }
+
+  async openInvoices(): Promise<OperatorOpenInvoice[]> {
+    return this.scan(async (tx) => {
+      const rows = await tx.invoice.findMany({ where: { provider: 'OFFLINE', status: 'OPEN' }, orderBy: { issuedAt: 'asc' }, take: 200, include: { tenant: { select: { id: true, name: true } } } });
+      return rows.map((r) => ({ ...toInvoiceRow(r), tenant: r.tenant }));
+    });
   }
 
   async setSuspended(op: OperatorContext, id: string, suspended: boolean, reason: string, ip: string | null) {

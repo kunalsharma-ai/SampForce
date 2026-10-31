@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { type OperatorTenantDetail, PLAN_CODES, type SubscriptionState } from '@dealflow/types';
+import { type InvoiceRow, type OperatorTenantDetail, PLAN_CATALOG, PLAN_CODES, type SubscriptionState } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -38,7 +38,7 @@ export default function OperatorTenantPage() {
             {d.status !== 'ACTIVE' && <Badge tone="critical">{d.status}</Badge>}
           </CardTitle>
           <CardDescription>
-            {d.subscription ? `${d.subscription.planCode} · ${d.subscription.seats} seats · ${d.subscription.provider === 'NONE' ? 'managed manually' : `billed through ${d.subscription.provider.toLowerCase()}`}` : 'No subscription row'}
+            {d.subscription ? `${d.subscription.planCode} · ${d.subscription.seats} seats · ${d.subscription.provider === 'NONE' ? 'managed manually' : d.subscription.provider === 'OFFLINE' ? 'paid by invoice' : `billed through ${d.subscription.provider.toLowerCase()}`}` : 'No subscription row'}
             {d.subscription?.currentPeriodEnd && ` · period ends ${formatDate(d.subscription.currentPeriodEnd)}`}
           </CardDescription>
         </CardHeader>
@@ -57,13 +57,22 @@ export default function OperatorTenantPage() {
           {d.invoices.length === 0 ? (
             <p className="text-sm text-muted-foreground">No invoices.</p>
           ) : (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-3 text-sm">
               {d.invoices.map((i) => (
-                <li key={i.id} className="flex flex-wrap gap-3">
-                  <span>{i.number ?? i.provider.toLowerCase()}</span>
-                  <span className="text-muted-foreground">{formatDate(i.issuedAt)}</span>
-                  <Badge tone={INVOICE_STATUS[i.status].tone}>{INVOICE_STATUS[i.status].label}</Badge>
-                  <span className="tabular">{formatMinor(i.totalCents, i.currency)}</span>
+                <li key={i.id} className="space-y-2">
+                  <div className="flex flex-wrap gap-3">
+                    <span>{i.number ?? i.provider.toLowerCase()}</span>
+                    <span className="text-muted-foreground">{formatDate(i.issuedAt)}</span>
+                    <Badge tone={INVOICE_STATUS[i.status].tone}>{INVOICE_STATUS[i.status].label}</Badge>
+                    <span className="tabular">{formatMinor(i.totalCents, i.currency)}</span>
+                    {i.planCode && (
+                      <span className="text-muted-foreground">
+                        {PLAN_CATALOG.find((p) => p.code === i.planCode)?.name ?? i.planCode} · {i.seats} seats · {i.interval === 'YEAR' ? 'annual' : 'monthly'}
+                      </span>
+                    )}
+                    {i.paymentReference && <span className="text-muted-foreground">ref {i.paymentReference}</span>}
+                  </div>
+                  {admin && i.provider === 'OFFLINE' && i.status === 'OPEN' && <RecordPayment d={d} i={i} />}
                 </li>
               ))}
             </ul>
@@ -128,7 +137,7 @@ function PlanOverride({ d }: { d: OperatorTenantDetail }) {
       }}
     >
       <h2 className="text-sm font-medium">Override plan</h2>
-      {s.provider !== 'NONE' && <p className="text-xs text-warning">This workspace pays through {s.provider.toLowerCase()}. The provider’s next webhook will overwrite a manual change; change the subscription in the provider dashboard instead where possible.</p>}
+      {s.provider !== 'NONE' && s.provider !== 'OFFLINE' && <p className="text-xs text-warning">This workspace pays through {s.provider.toLowerCase()}. The provider’s next webhook will overwrite a manual change; change the subscription in the provider dashboard instead where possible.</p>}
       <div className="flex flex-wrap items-end gap-3">
         <Field id="ov-plan" label="Plan">
           <Select id="ov-plan" value={planCode} onChange={(e) => setPlan(e.target.value)}>
@@ -158,6 +167,52 @@ function PlanOverride({ d }: { d: OperatorTenantDetail }) {
       </div>
       <ErrorText error={save.error} />
     </form>
+  );
+}
+
+function RecordPayment({ d, i }: { d: OperatorTenantDetail; i: InvoiceRow }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [reference, setReference] = useState('');
+  const [receivedOn, setReceivedOn] = useState(today);
+  const [reason, setReason] = useState('');
+  const paid = useOperatorAction(d.id, `invoices/${i.id}/paid`);
+  const voided = useOperatorAction(d.id, `invoices/${i.id}/void`);
+  return (
+    <div className="space-y-3 rounded-md border border-border p-3">
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          paid.mutate({ reference, receivedOn });
+        }}
+      >
+        <Field id={`ref-${i.id}`} label="Bank or transfer reference" className="min-w-56 flex-1">
+          <Input id={`ref-${i.id}`} value={reference} onChange={(e) => setReference(e.target.value)} required minLength={2} />
+        </Field>
+        <Field id={`on-${i.id}`} label="Received on">
+          <Input id={`on-${i.id}`} type="date" max={today} value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} required />
+        </Field>
+        <Button type="submit" disabled={paid.isPending || reference.trim().length < 2}>
+          Mark paid
+        </Button>
+      </form>
+      <p className="text-xs text-muted-foreground">Check the full amount has arrived first. Marking it paid starts or renews the plan on the invoice and is recorded in both audit logs.</p>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          voided.mutate({ reason });
+        }}
+      >
+        <Field id={`void-${i.id}`} label="Reason to void" className="min-w-56 flex-1">
+          <Input id={`void-${i.id}`} value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} required />
+        </Field>
+        <Button type="submit" variant="outline" disabled={voided.isPending || reason.trim().length < 5}>
+          Void invoice
+        </Button>
+      </form>
+      <ErrorText error={paid.error ?? voided.error} />
+    </div>
   );
 }
 

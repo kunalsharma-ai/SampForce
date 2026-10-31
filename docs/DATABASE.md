@@ -204,3 +204,9 @@ Columns added: `users` (`failed_login_count`, `locked_until`, `mfa_secret_enc`, 
 (`external_id`, unique per workspace). Migrations: `20261031000000_enterprise_identity`,
 `20261031000100_sso_enforced_flag` and `20261031000200_sso_all_plans`, which removes the `sso`
 entitlement the first one added: single sign-on and SCIM are on every plan.
+
+**Offline payments (2026-10-31, ADR 0013).** `BillingProvider` gains `OFFLINE`. `invoices` gains `plan_code`,
+`billing_interval`, `seats`, `requested_by_id` and `payment_reference`, a partial unique index allowing one open
+offline invoice per workspace, and the `offline_invoice_number_seq` sequence for `DF-…` numbers. Migrations:
+`20261031000300_offline_provider` (the enum value on its own, since it cannot be used in the transaction that adds
+it) and `20261031000400_offline_invoices`.

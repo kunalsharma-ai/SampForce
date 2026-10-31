@@ -1,14 +1,14 @@
 'use client';
 
 import { Badge, Card, Input, Skeleton } from '@dealflow/ui';
-import type { OperatorTenantRow } from '@dealflow/types';
+import { type OperatorOpenInvoice, type OperatorTenantRow, PLAN_CATALOG } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
-import { formatDate, SUBSCRIPTION_STATUS } from '@/lib/billing';
+import { formatDate, formatMinor, SUBSCRIPTION_STATUS } from '@/lib/billing';
 import { useOperator } from './operator-shell';
 
 export default function OperatorTenants() {
@@ -23,6 +23,7 @@ export default function OperatorTenants() {
   return (
     <>
       <PageHeader title="Workspaces" description="Plan, seats and member counts. CRM records are never shown here; member lists and workspace audit logs only appear while a workspace grants support access." />
+      <AwaitingPayment />
       <label htmlFor="op-search" className="sr-only">
         Search workspaces
       </label>
@@ -69,5 +70,30 @@ export default function OperatorTenants() {
         {list.data?.length === 0 && <p className="p-4 text-sm text-muted-foreground">No workspaces match.</p>}
       </Card>
     </>
+  );
+}
+
+/** Offline invoices workspaces have requested and not yet paid. Payments are recorded on the workspace page. */
+function AwaitingPayment() {
+  const open = useQuery({ queryKey: ['operator', 'invoices', 'open'], queryFn: () => api<OperatorOpenInvoice[]>('/operator/invoices/open') });
+  if (!open.data?.length) return <ErrorText error={open.error} />;
+  return (
+    <Card className="mb-6 p-4">
+      <h2 className="text-sm font-medium">Waiting for payment ({open.data.length})</h2>
+      <ul className="mt-2 space-y-1 text-sm">
+        {open.data.map((i) => (
+          <li key={i.id} className="flex flex-wrap gap-x-3">
+            <Link href={`/operator/tenants/${i.tenant.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+              {i.tenant.name}
+            </Link>
+            <span>{i.number}</span>
+            <span className="text-muted-foreground">
+              {PLAN_CATALOG.find((p) => p.code === i.planCode)?.name ?? i.planCode} · {i.seats} seats · {i.interval === 'YEAR' ? 'annual' : 'monthly'} · issued {formatDate(i.issuedAt)}
+            </span>
+            <span className="tabular">{formatMinor(i.totalCents, i.currency)}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

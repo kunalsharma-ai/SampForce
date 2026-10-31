@@ -5,6 +5,8 @@ import {
   changePlanSchema,
   type CheckoutInput,
   checkoutSchema,
+  type InvoiceRequestInput,
+  invoiceRequestSchema,
   seatsSchema,
   supportGrantSchema,
   trialSchema,
@@ -81,6 +83,20 @@ export class BillingController {
     return this.billing.startTrial(auth, body.planCode, meta);
   }
 
+  /** Pay offline: issue an invoice for a plan. The plan starts when the payment is recorded. */
+  @Post('invoice-requests')
+  @RequirePermissions('billing:manage')
+  requestInvoice(@Auth() auth: AuthContext, @Body(new ZodPipe(invoiceRequestSchema)) body: InvoiceRequestInput, @Meta() meta: RequestMeta) {
+    return this.billing.requestInvoice(auth, body, meta);
+  }
+
+  @Post('invoice-requests/:id/cancel')
+  @HttpCode(204)
+  @RequirePermissions('billing:manage')
+  cancelInvoice(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.billing.cancelInvoice(auth, id, meta);
+  }
+
   /** Provider webhooks: authenticated by signature over the raw body, not by session. */
   @Post('webhooks/stripe')
   @Public()
@@ -154,6 +170,7 @@ export class PublicPricingController {
       trialDays: this.env.TRIAL_DAYS,
       graceDays: this.env.BILLING_GRACE_DAYS,
       salesContact: this.env.SALES_CONTACT_EMAIL ?? null,
+      onlinePayments: this.env.ONLINE_PAYMENTS_ENABLED,
       plans: this.billing.catalog().map(({ checkout, ...p }) => ({ ...p, buyOnline: Object.values(checkout).some((c) => c.MONTH || c.YEAR) })),
     };
   }

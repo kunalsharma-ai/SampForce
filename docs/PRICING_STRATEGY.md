@@ -3,8 +3,8 @@
 **Status:** rate card approved by Kunal (Sampledge) on 2026-10-31, after the proposal of 2026-10-30. The cost model
 in sections 3 to 5 is still an estimate: check it against real usage from a beta and revisit prices if it is off.
 
-**Phase 6 note:** the product now enforces these allowances and can sell them through Stripe or Razorpay once
-prices are created in those dashboards (docs/BILLING.md). The public `/pricing` page and the Billing page label the
+**Phase 6 note:** the product enforces these allowances. Since 2026-10-31 it sells them by invoice, paid offline
+(ADR 0013); Stripe and Razorpay checkout is built but switched off (docs/BILLING.md). The public `/pricing` page and the Billing page label the
 rate card a preview until `PRICING_PUBLISHED=true` is set. The Helm chart sets it to true now that the rate card is
 approved; local and test setups keep the preview labels.
 

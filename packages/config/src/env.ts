@@ -63,6 +63,13 @@ export const apiEnvSchema = z.object({
   AI_USER_CALLS_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(30),
 
   // ───── Billing (Phase 6). With no provider keys, checkout says it is not configured. ─────
+  /**
+   * Stripe and Razorpay checkout for new subscriptions. Off: workspaces pay offline against a DealFlow invoice
+   * that an operator marks paid. Provider subscriptions that already exist keep syncing while keys are set.
+   */
+  ONLINE_PAYMENTS_ENABLED: bool.default('false'),
+  /** Shown on every open offline invoice: how to pay (bank details, reference to quote). Unset: the DealFlow team sends them. */
+  OFFLINE_PAYMENT_INSTRUCTIONS: z.string().max(2000).optional().transform((v) => v?.replace(/\\n/g, '\n').trim() || undefined),
   STRIPE_SECRET_KEY: z.string().optional().transform((v) => v || undefined),
   STRIPE_WEBHOOK_SECRET: z.string().optional().transform((v) => v || undefined),
   STRIPE_API_BASE_URL: z.string().url().default('https://api.stripe.com'),

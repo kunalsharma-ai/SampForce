@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
 import {
@@ -8,8 +9,10 @@ import {
   downgradeBlockers,
   effectiveEntitlements,
   type Interval,
+  type InvoiceRequestInput,
   type InvoiceRow,
   monthlyCreditAllowance,
+  offlineInvoiceCents,
   PLAN_CATALOG,
   PLAN_ENTITLEMENTS,
   type PlanCode,
@@ -34,13 +37,26 @@ const LIVE = ['ACTIVE', 'TRIALING', 'PAST_DUE'];
 
 type SubRow = Prisma.SubscriptionGetPayload<object>;
 
+/** The same day `months` later (UTC), clamped to the month's last day. */
+export function addMonths(d: Date, months: number): Date {
+  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d.getUTCDate(), last));
+  return target;
+}
+
+const offlinePlan = () =>
+  new ConflictException({ code: 'OFFLINE_PLAN', message: 'This plan is paid by invoice. Request an invoice for the plan and seats you want instead.' });
+
 const notConfigured = (what: string) => new ServiceUnavailableException({ code: 'BILLING_NOT_CONFIGURED', message: `${what} is not configured for this deployment.` });
 const providerFailed = (err: unknown) =>
   new ServiceUnavailableException({ code: 'BILLING_PROVIDER_ERROR', message: err instanceof BillingProviderError ? err.message : 'The billing provider could not be reached. Try again shortly.' });
 
 /**
- * Subscriptions, checkout, seats and invoices. DealFlow never sees card details: buyers pay on the
- * provider's hosted page and the provider's signed webhooks are the source of truth for what was paid.
+ * Subscriptions, checkout, seats and invoices. Two ways to pay: online, where buyers pay on the provider's
+ * hosted page and the provider's signed webhooks are the source of truth (DealFlow never sees card details);
+ * and offline, where the workspace requests an invoice, pays it by bank transfer, and a platform operator
+ * records the payment, which starts or renews the plan.
  */
 @Injectable()
 export class BillingService {
@@ -61,13 +77,14 @@ export class BillingService {
     return this.prisma.run(auth, async (tx) => {
       const sub = await this.subscription(tx, auth.tenantId);
       const ent = effectiveEntitlements(sub);
-      const [members, pending, pipelines, used, runs, ai] = await Promise.all([
+      const [members, pending, pipelines, used, runs, ai, openInvoice] = await Promise.all([
         tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE' } }),
         tx.invitation.count({ where: { tenantId: auth.tenantId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } } }),
         tx.pipeline.count({ where: { tenantId: auth.tenantId, deletedAt: null } }),
         tx.aiUsage.aggregate({ where: { tenantId: auth.tenantId, createdAt: { gte: monthStart() } }, _sum: { credits: true } }),
         tx.workflowExecution.count({ where: { tenantId: auth.tenantId, startedAt: { gte: monthStart() } } }),
         tx.aiSettings.findUnique({ where: { tenantId: auth.tenantId }, select: { monthlyCreditCap: true } }),
+        tx.invoice.findFirst({ where: { tenantId: auth.tenantId, provider: 'OFFLINE', status: 'OPEN' } }),
       ]);
       const allowance = monthlyCreditAllowance(ent.appliedPlan, members);
       const cap = ai?.monthlyCreditCap ?? null;
@@ -87,7 +104,8 @@ export class BillingService {
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
         pastDueSince: sub.pastDueSince?.toISOString() ?? null,
         graceEndsAt: sub.status === 'PAST_DUE' && sub.pastDueSince ? new Date(sub.pastDueSince.getTime() + this.env.BILLING_GRACE_DAYS * DAY).toISOString() : null,
-        providers: { STRIPE: stripe.configured, RAZORPAY: this.providers.get('RAZORPAY').configured },
+        providers: { STRIPE: this.providers.sells('STRIPE'), RAZORPAY: this.providers.sells('RAZORPAY') },
+        offline: { instructions: this.env.OFFLINE_PAYMENT_INSTRUCTIONS ?? null, openInvoice: openInvoice ? toInvoiceRow(openInvoice) : null },
         portalAvailable: stripe.configured && sub.provider === 'STRIPE' && !!sub.providerCustomerId,
         usage: {
           members: { used: members, limit: ent.seatLimit },
@@ -108,7 +126,7 @@ export class BillingService {
   catalog(): CatalogPlan[] {
     const selfServe = new Set<string>(SELF_SERVE_PLANS);
     return PLAN_CATALOG.map((p) => {
-      const can = (k: BillingProviderKey, i: Interval) => selfServe.has(p.code) && this.providers.get(k).configured && !!this.providers.get(k).priceId(p.code, i);
+      const can = (k: BillingProviderKey, i: Interval) => selfServe.has(p.code) && this.providers.sells(k) && !!this.providers.get(k).priceId(p.code, i);
       return {
         code: p.code, name: p.name, audience: p.audience, monthly: p.monthly, annualMonthly: p.annualMonthly,
         entitlements: PLAN_ENTITLEMENTS[p.code], selfServe: selfServe.has(p.code),
@@ -128,6 +146,9 @@ export class BillingService {
   async checkout(auth: AuthContext, input: CheckoutInput, meta: RequestMeta): Promise<{ url: string }> {
     const adapter = this.providers.get(input.provider);
     if (!adapter.configured) throw notConfigured(input.provider === 'STRIPE' ? 'Stripe' : 'Razorpay');
+    if (!this.providers.sells(input.provider)) {
+      throw new ServiceUnavailableException({ code: 'ONLINE_PAYMENTS_OFF', message: 'Online payment is turned off. Request an invoice to pay by bank transfer.' });
+    }
     const priceId = adapter.priceId(input.planCode, input.interval);
     if (!priceId) throw new BadRequestException({ code: 'PRICE_NOT_CONFIGURED', message: 'That plan and billing interval cannot be bought online yet.' });
 
@@ -209,6 +230,16 @@ export class BillingService {
 
   async setCancel(auth: AuthContext, cancel: boolean, meta: RequestMeta) {
     const sub = await this.prisma.run(auth, (tx) => this.subscription(tx, auth.tenantId));
+    if (sub.provider === 'OFFLINE' && sub.status === 'ACTIVE' && sub.planCode !== 'free') {
+      // Nothing to tell a provider: the worker moves the workspace to Free when the paid period ends.
+      if (sub.cancelAtPeriodEnd !== cancel) {
+        await this.prisma.run(auth, async (tx) => {
+          await tx.subscription.update({ where: { tenantId: auth.tenantId }, data: { cancelAtPeriodEnd: cancel } });
+          await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: cancel ? 'billing.cancel_scheduled' : 'billing.cancel_withdrawn', entityType: 'subscription', entityId: sub.id, meta });
+        });
+      }
+      return { appliesAt: 'cycle_end' as const };
+    }
     const adapter = this.liveAdapter(sub);
     if (sub.cancelAtPeriodEnd === cancel) return { appliesAt: 'cycle_end' as const };
     let remote: ProviderSubscription | null;
@@ -244,6 +275,7 @@ export class BillingService {
   }
 
   private liveAdapter(sub: SubRow) {
+    if (sub.provider === 'OFFLINE') throw offlinePlan();
     if (sub.provider === 'NONE' || !sub.providerSubscriptionId || sub.planCode === 'free' || !LIVE.includes(sub.status) || sub.status === 'TRIALING') {
       throw new ConflictException({ code: 'NO_PAID_SUBSCRIPTION', message: 'This workspace has no paid subscription to change. Choose a plan first.' });
     }
@@ -265,6 +297,103 @@ export class BillingService {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action, entityType: 'subscription', entityId: sub.id, metadata: { ...metadata, appliesAt: adapter.changesApply }, meta });
     });
     return { appliesAt: adapter.changesApply };
+  }
+
+  // ───────────── Offline payment ─────────────
+
+  /** Issues an invoice for a plan, to be paid offline. The plan starts when an operator records the payment. */
+  async requestInvoice(auth: AuthContext, input: InvoiceRequestInput, meta: RequestMeta): Promise<InvoiceRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const sub = await this.subscription(tx, auth.tenantId);
+      if (sub.provider !== 'OFFLINE' && sub.provider !== 'NONE' && sub.providerSubscriptionId && LIVE.includes(sub.status)) {
+        throw new ConflictException({ code: 'ALREADY_SUBSCRIBED', message: 'This workspace pays online. Change its plan or seats there instead.' });
+      }
+      if (await tx.invoice.count({ where: { tenantId: auth.tenantId, provider: 'OFFLINE', status: 'OPEN' } })) {
+        throw new ConflictException({ code: 'OPEN_INVOICE', message: 'An invoice is already waiting for payment. Cancel it first to request a different one.' });
+      }
+      const [members, pending, pipelines] = await Promise.all([
+        tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE' } }),
+        tx.invitation.count({ where: { tenantId: auth.tenantId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } } }),
+        tx.pipeline.count({ where: { tenantId: auth.tenantId, deletedAt: null } }),
+      ]);
+      if (input.seats < members + pending) {
+        throw new BadRequestException({ code: 'TOO_FEW_SEATS', message: `${members + pending} seats are in use, counting pending invitations. Ask for at least that many.`, details: [{ path: 'seats', message: `At least ${members + pending}` }] });
+      }
+      const blockers = downgradeBlockers(input.planCode, input.seats, { members, pipelines });
+      if (blockers.length) throw new ConflictException({ code: 'DOWNGRADE_BLOCKED', message: 'Current usage is above that plan’s limits.', details: blockers.map((message) => ({ path: 'planCode', message })) });
+
+      const [{ n }] = (await tx.$queryRaw<{ n: bigint }[]>`SELECT nextval('offline_invoice_number_seq') AS n`) as [{ n: bigint }];
+      const total = offlineInvoiceCents(input.planCode, input.interval, input.seats);
+      const inv = await tx.invoice.create({
+        data: {
+          tenantId: auth.tenantId, provider: 'OFFLINE', providerInvoiceId: randomUUID(), number: `DF-${String(n).padStart(6, '0')}`,
+          status: 'OPEN', currency: 'USD', subtotalCents: total, totalCents: total, issuedAt: new Date(),
+          planCode: input.planCode, billingInterval: input.interval, seats: input.seats, requestedById: auth.userId,
+        },
+      });
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'billing.invoice_requested', entityType: 'invoice', entityId: inv.id,
+        metadata: { number: inv.number, planCode: input.planCode, interval: input.interval, seats: input.seats, totalCents: total }, meta,
+      });
+      return toInvoiceRow(inv);
+    });
+  }
+
+  /** The workspace withdraws an invoice it has not paid. */
+  cancelInvoice(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      const { count } = await tx.invoice.updateMany({ where: { id, tenantId: auth.tenantId, provider: 'OFFLINE', status: 'OPEN' }, data: { status: 'VOID' } });
+      if (!count) throw new NotFoundException({ code: 'NOT_FOUND', message: 'No open invoice with that id.' });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'billing.invoice_canceled', entityType: 'invoice', entityId: id, meta });
+    });
+  }
+
+  /**
+   * Records the offline payment of an open invoice (operator console) and applies the plan it names. Paying
+   * for the current plan, interval and seats renews it from the end of the current period; anything else
+   * starts a new period on the day the money arrived. Runs in the workspace's transaction.
+   */
+  async recordOfflinePayment(tx: TenantTx, tenantId: string, invoiceId: string, payment: { reference: string; receivedAt: Date; operator: string }) {
+    const inv = await tx.invoice.findFirst({ where: { id: invoiceId, tenantId, provider: 'OFFLINE' } });
+    if (!inv) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Invoice not found.' });
+    if (inv.status !== 'OPEN' || !inv.planCode || !inv.billingInterval || !inv.seats) {
+      throw new ConflictException({ code: 'INVOICE_NOT_OPEN', message: 'Only an open invoice can be marked paid.' });
+    }
+    const sub = await this.subscription(tx, tenantId);
+    const renewal =
+      sub.provider === 'OFFLINE' && sub.planCode === inv.planCode && sub.billingInterval === inv.billingInterval && sub.seats === inv.seats &&
+      (sub.status === 'ACTIVE' || sub.status === 'PAST_DUE') && !!sub.currentPeriodEnd;
+    const start = renewal ? sub.currentPeriodEnd! : payment.receivedAt;
+    const end = addMonths(start, inv.billingInterval === 'YEAR' ? 12 : 1);
+    await tx.subscription.update({
+      where: { tenantId },
+      data: {
+        planCode: inv.planCode, billingInterval: inv.billingInterval, seats: inv.seats, status: 'ACTIVE', provider: 'OFFLINE',
+        providerCustomerId: null, providerSubscriptionId: null, currentPeriodStart: start, currentPeriodEnd: end,
+        trialEndsAt: null, pastDueSince: null, cancelAtPeriodEnd: false,
+      },
+    });
+    const paid = await tx.invoice.update({
+      where: { id: inv.id },
+      data: { status: 'PAID', amountPaidCents: inv.totalCents, paidAt: payment.receivedAt, periodStart: start, periodEnd: end, paymentReference: payment.reference },
+    });
+    await this.audit.record(tx, {
+      tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.offline_payment_recorded', entityType: 'invoice', entityId: inv.id,
+      metadata: { operator: payment.operator, number: inv.number, reference: payment.reference, renewal, from: { planCode: sub.planCode, status: sub.status, seats: sub.seats }, to: { planCode: inv.planCode, seats: inv.seats, periodEnd: end.toISOString() } },
+    });
+    const name = PLAN_CATALOG.find((p) => p.code === inv.planCode)?.name ?? inv.planCode;
+    await this.notifyBilling(tx, tenantId, {
+      type: 'billing.payment_received', title: `Payment received for invoice ${inv.number}`,
+      body: `${name} is active until ${end.toISOString().slice(0, 10)}.`, link: '/app/billing',
+    });
+    return toInvoiceRow(paid);
+  }
+
+  /** An operator voids an invoice that will not be paid (wrong amount, deal changed). */
+  async voidOfflineInvoice(tx: TenantTx, tenantId: string, invoiceId: string, reason: string, operator: string) {
+    const { count } = await tx.invoice.updateMany({ where: { id: invoiceId, tenantId, provider: 'OFFLINE', status: 'OPEN' }, data: { status: 'VOID' } });
+    if (!count) throw new ConflictException({ code: 'INVOICE_NOT_OPEN', message: 'Only an open invoice can be voided.' });
+    await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.invoice_voided', entityType: 'invoice', entityId: invoiceId, metadata: { operator, reason } });
   }
 
   // ───────────── Provider webhooks ─────────────
@@ -374,7 +503,11 @@ export class BillingService {
 
   // ───────────── Worker: trial expiry and dunning ─────────────
 
-  /** At most once a minute: ends lapsed trials and moves past-due workspaces to unpaid when the grace period is over. */
+  /**
+   * At most once a minute: ends lapsed trials; ends invoice-paid periods (to Free if cancellation was
+   * scheduled, otherwise past due while the renewal is paid); and moves past-due workspaces to unpaid when
+   * the grace period is over.
+   */
   async runDue(force = false): Promise<number> {
     if (!force && Date.now() - this.lastSweep < MINUTE) return 0;
     this.lastSweep = Date.now();
@@ -383,6 +516,7 @@ export class BillingService {
       this.prisma,
       Prisma.sql`SELECT tenant_id FROM subscriptions
                  WHERE (status = 'TRIALING' AND trial_ends_at < now() AND provider_subscription_id IS NULL)
+                    OR (provider = 'OFFLINE' AND status = 'ACTIVE' AND current_period_end < now())
                     OR (status = 'PAST_DUE' AND past_due_since < ${graceStart})
                  LIMIT 200`,
     );
@@ -397,6 +531,23 @@ export class BillingService {
           if (ended.count) {
             await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.trial_ended', entityType: 'subscription' });
             await this.notifyBilling(tx, tenantId, { type: 'billing.trial_ended', title: 'Your DealFlow trial has ended', body: 'The workspace is back on the Free plan. All data is kept; choose a plan to continue with paid features.', link: '/app/billing' });
+            return 1;
+          }
+          const sub = await tx.subscription.findUnique({ where: { tenantId } });
+          if (sub && sub.provider === 'OFFLINE' && sub.status === 'ACTIVE' && sub.currentPeriodEnd && sub.currentPeriodEnd < new Date()) {
+            if (sub.cancelAtPeriodEnd) {
+              await tx.subscription.update({ where: { tenantId }, data: { planCode: 'free', status: 'ACTIVE', seats: 1, billingInterval: 'MONTH', provider: 'NONE', cancelAtPeriodEnd: false, currentPeriodEnd: null } });
+              await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_ended', entityType: 'subscription', entityId: sub.id, metadata: { provider: 'OFFLINE', planCode: sub.planCode } });
+              await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid DealFlow plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
+            } else {
+              // The grace period counts from the end of the paid period.
+              await tx.subscription.update({ where: { tenantId }, data: { status: 'PAST_DUE', pastDueSince: sub.currentPeriodEnd } });
+              await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.period_ended_unpaid', entityType: 'subscription', entityId: sub.id });
+              await this.notifyBilling(tx, tenantId, {
+                type: 'billing.renewal_due', title: 'Your DealFlow plan is due for renewal',
+                body: `The paid period has ended. Paid features stay on for ${this.env.BILLING_GRACE_DAYS} days from its end; request and pay the renewal invoice under Billing before then.`, link: '/app/billing',
+              });
+            }
             return 1;
           }
           const lapsed = await tx.subscription.updateMany({ where: { tenantId, status: 'PAST_DUE', pastDueSince: { lt: graceStart } }, data: { status: 'UNPAID' } });
@@ -429,10 +580,11 @@ export class BillingService {
 
 export function toInvoiceRow(r: Prisma.InvoiceGetPayload<object>): InvoiceRow {
   return {
-    id: r.id, provider: r.provider as BillingProviderKey, number: r.number, status: r.status, currency: r.currency,
+    id: r.id, provider: r.provider as InvoiceRow['provider'], number: r.number, status: r.status, currency: r.currency,
     totalCents: r.totalCents, amountPaidCents: r.amountPaidCents, taxCents: r.taxCents,
     periodStart: r.periodStart?.toISOString() ?? null, periodEnd: r.periodEnd?.toISOString() ?? null,
     hostedUrl: r.hostedUrl, pdfUrl: r.pdfUrl, issuedAt: r.issuedAt?.toISOString() ?? null, paidAt: r.paidAt?.toISOString() ?? null,
+    planCode: r.planCode && isPlanCode(r.planCode) ? r.planCode : null, interval: r.billingInterval, seats: r.seats, paymentReference: r.paymentReference,
   };
 }
 

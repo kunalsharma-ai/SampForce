@@ -32,6 +32,7 @@ const read = (req: IncomingMessage) =>
 
 export function billingEnv(url: string): Record<string, string> {
   return {
+    ONLINE_PAYMENTS_ENABLED: 'true',
     STRIPE_SECRET_KEY: 'sk_test_fixture',
     STRIPE_WEBHOOK_SECRET,
     STRIPE_API_BASE_URL: url,

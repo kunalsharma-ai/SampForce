@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Billing' };
 export default function BillingPage() {
   return (
     <div className="max-w-6xl">
-      <PageHeader title="Billing" description="Your plan, seats, usage against plan allowances, and invoices from the payment provider." />
+      <PageHeader title="Billing" description="Your plan, seats, usage against plan allowances, and invoices." />
       <RequirePermission permission="billing:read">
         <Suspense>
           <BillingWorkspace />

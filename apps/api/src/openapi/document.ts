@@ -22,9 +22,12 @@ import {
   immersiveQuerySchema,
   reportDefinitionSchema,
   reportInputSchema,
+  invoiceRequestSchema,
   operatorLoginSchema,
+  operatorPaymentSchema,
   operatorPlanSchema,
   operatorStatusSchema,
+  operatorVoidSchema,
   roleInputSchema,
   seatsSchema,
   supportGrantSchema,
@@ -328,8 +331,10 @@ export function buildOpenApiDocument(): object {
 
   // Phase 6: billing, custom roles, onboarding, support access and the operator console.
   action('get', '/billing', 'Billing', 'Plan, seats, usage against allowances and what can be bought here (billing:read)');
-  action('get', '/billing/invoices', 'Billing', 'Invoices recorded from provider webhooks (billing:read)');
-  action('post', '/billing/checkout', 'Billing', 'Start hosted checkout; returns the provider URL (billing:manage)', checkoutSchema);
+  action('get', '/billing/invoices', 'Billing', 'Offline invoices and invoices recorded from provider webhooks (billing:read)');
+  action('post', '/billing/checkout', 'Billing', 'Start hosted checkout; returns the provider URL. 503 ONLINE_PAYMENTS_OFF unless ONLINE_PAYMENTS_ENABLED (billing:manage)', checkoutSchema);
+  r.registerPath({ method: 'post', path: '/billing/invoice-requests', tags: ['Billing'], summary: 'Pay offline: issue an invoice at rate-card prices; one open at a time. The plan starts when an operator records the payment (billing:manage)', security: secured, request: body(invoiceRequestSchema), responses: { 201: ok('Invoice'), ...errors } });
+  r.registerPath({ method: 'post', path: '/billing/invoice-requests/{id}/cancel', tags: ['Billing'], summary: 'Withdraw an unpaid offline invoice (billing:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Canceled'), ...notFound, ...errors } });
   action('post', '/billing/portal', 'Billing', 'Stripe customer portal URL (billing:manage)');
   action('post', '/billing/seats', 'Billing', 'Change seats; Stripe prorates now, Razorpay from the next cycle (billing:manage)', seatsSchema);
   action('post', '/billing/plan', 'Billing', 'Change plan; refuses downgrades current usage does not fit (billing:manage)', changePlanSchema);
@@ -359,6 +364,14 @@ export function buildOpenApiDocument(): object {
   op('get', '/tenants/{id}', 'one workspace; members and audit log only under a support grant');
   op('post', '/tenants/{id}/plan', 'override plan, seats and status (ADMIN)', operatorPlanSchema);
   op('post', '/tenants/{id}/status', 'suspend or reactivate (ADMIN)', operatorStatusSchema);
+  op('get', '/invoices/open', 'offline invoices waiting for payment, across workspaces');
+  for (const [path, summary, schema] of [
+    ['paid', 'record the offline payment of an open invoice; starts or renews the plan it names (ADMIN)', operatorPaymentSchema],
+    ['void', 'void an open offline invoice (ADMIN)', operatorVoidSchema],
+  ] as const) {
+    r.registerPath({ method: 'post', path: `/operator/tenants/{id}/invoices/{invoiceId}/${path}`, tags: ['Operator'], summary: `Operator console: ${summary}`,
+      request: { params: z.object({ id: z.string().uuid(), invoiceId: z.string().uuid() }), ...body(schema) }, responses: { 200: ok('Workspace'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled or not found'), 409: json(error, 'Invoice not open') } });
+  }
   op('get', '/audit-log', 'platform audit log');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.

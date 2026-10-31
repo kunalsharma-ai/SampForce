@@ -212,6 +212,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Stripe adapter: hosted Checkout with seat quantity and promotion codes, optional Stripe Tax, Customer Portal, prorated seat and plan changes, cancel at period end and withdraw | Implemented, tested against a local fixture only. Not run against Stripe test mode |
 | Razorpay adapter: subscription payment link, seat and plan changes from the next cycle, cancel at cycle end | Implemented, tested against a local fixture only. Some request fields unconfirmed (see docs/BILLING.md) |
 | Signed webhooks (raw-body HMAC, Stripe timestamp tolerance), idempotent per event id, subscription re-read from the provider, invoices recorded, payment-failure notifications | Implemented, tested (bad, tampered, stale and duplicate deliveries) |
+| Offline payments (2026-10-31, ADR 0013): online checkout off by default; invoice requests at rate-card prices; operator records the bank transfer (ADMIN, both audit logs); renewal from period end; period end to grace period, unpaid or Free | Implemented, tested (API + e2e) |
 | Dunning: grace period then Free allowances, restored on payment; trial expiry back to Free; both in the worker with notifications | Implemented, tested |
 | Downgrade guard: plan changes refused while members or pipelines exceed the target plan | Implemented, tested |
 | Billing page: plan and status, seats, usage meters, plan cards with interval toggle, checkout or trial, portal, cancel, invoices; says plainly when checkout is not configured | Implemented, tested (e2e + axe) |
@@ -318,10 +319,11 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 ## After Phase 8
 
 All eight roadmap phases are complete. Before general availability: install the chart on staging and run every
-runbook there; run Stripe and Razorpay in test mode (docs/BILLING.md); connect a real Okta or Entra tenant for SSO and
+runbook there; connect a real Okta or Entra tenant for SSO and
 SCIM; run the AI evals with a real key; measure the 3D views on real devices; commission the external pen test with
-docs/security/PENTEST_PREP.md; create the approved prices in Stripe or Razorpay. The rate card was approved on
-2026-10-31, and production publishes it (`PRICING_PUBLISHED=true` in the Helm chart).
+docs/security/PENTEST_PREP.md; set `OFFLINE_PAYMENT_INSTRUCTIONS` to the real bank details. The rate card was approved
+on 2026-10-31 and production publishes it; payments are offline only (ADR 0013), so Stripe and Razorpay test-mode runs
+are needed only before online checkout is turned on.
 
 ## Original continuation instructions (Phase 8, done)
 

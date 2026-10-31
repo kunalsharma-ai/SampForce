@@ -14,7 +14,7 @@ async function load(): Promise<PublicPricing> {
     // Fall through to the static catalogue.
   }
   return {
-    published: false, currency: 'USD', trialDays: 14, graceDays: 14, salesContact: null,
+    published: false, currency: 'USD', trialDays: 14, graceDays: 14, salesContact: null, onlinePayments: false,
     plans: PLAN_CATALOG.map((p) => ({ ...p, entitlements: PLAN_ENTITLEMENTS[p.code], selfServe: p.code !== 'free' && p.code !== 'enterprise_plus', buyOnline: false })),
   };
 }
@@ -49,8 +49,12 @@ export default async function PricingPage() {
             <dd className="mt-1 text-muted-foreground">AI credits and automation runs reset monthly. When one is used up, that feature pauses until the next month or an upgrade. DealFlow does not charge for overage automatically.</dd>
           </div>
           <div>
-            <dt className="font-medium">What if a payment fails?</dt>
-            <dd className="mt-1 text-muted-foreground">Paid features stay on for {pricing.graceDays} days while the payment method is updated. After that, Free plan limits apply until the invoice is paid. No data is deleted.</dd>
+            <dt className="font-medium">{pricing.onlinePayments ? 'What if a payment fails?' : 'What if a renewal is not paid in time?'}</dt>
+            <dd className="mt-1 text-muted-foreground">
+              {pricing.onlinePayments
+                ? `Paid features stay on for ${pricing.graceDays} days while the payment method is updated. After that, Free plan limits apply until the invoice is paid. No data is deleted.`
+                : `Paid features stay on for ${pricing.graceDays} days after the paid period ends. After that, Free plan limits apply until the renewal invoice is paid. No data is deleted.`}
+            </dd>
           </div>
           <div>
             <dt className="font-medium">Is single sign-on included?</dt>
@@ -58,7 +62,11 @@ export default async function PricingPage() {
           </div>
           <div>
             <dt className="font-medium">How do I pay?</dt>
-            <dd className="mt-1 text-muted-foreground">On the payment provider’s secure checkout page. DealFlow stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.</dd>
+            <dd className="mt-1 text-muted-foreground">
+              {pricing.onlinePayments
+                ? 'On the payment provider’s secure checkout page. DealFlow stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.'
+                : 'By bank transfer against an invoice. Choose a plan under Billing in your workspace to get an invoice with payment details; the plan starts as soon as the payment is confirmed. DealFlow never asks for card numbers. Prices exclude taxes.'}
+            </dd>
           </div>
         </dl>
       </section>
