@@ -26,12 +26,14 @@ launch accepting payment offline (bank transfer against an invoice) and keep onl
   end of the current period; anything else starts a new period on the day the money arrived (no proration; any
   credit for unused time is handled by hand). Recorded in the workspace audit log and the platform audit log, and
   billing managers are notified. SUPPORT operators can see open invoices but not mark them paid or void them.
+- Billing managers get a renewal reminder (in-app notification) once, 7 days before an invoice-paid period ends,
+  unless cancellation is scheduled.
 - The billing worker ends offline periods: with a scheduled cancellation the workspace moves to Free; otherwise it
   becomes past due, with the grace period (`BILLING_GRACE_DAYS`) counted from the end of the paid period, then
   unpaid (Free allowances, no data removed) until a renewal is paid.
 
 **Consequences.** No card data or payment processor is involved, so nothing about payments needs a provider test
 run before launch. The cost is manual work: someone at Sampledge must watch the bank account and record each
-payment, and there is no automatic renewal reminder before a period ends (the workspace is notified when it ends).
+payment. Reminders are in-app notifications only, since DealFlow does not send email yet.
 DealFlow's invoice is a payment request, not a tax invoice: Sampledge issues any tax invoice its accounting
 requires outside DealFlow.

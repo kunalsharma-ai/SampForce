@@ -31,5 +31,6 @@ Settings: the console value wins. `OFFLINE_PAYMENT_INSTRUCTIONS` (deployment con
 fallback for when nothing is saved in the console. `ONLINE_PAYMENTS_ENABLED=false` keeps Stripe and Razorpay checkout
 off.
 
-When a paid period ends without a renewal, the workspace is past due and keeps paid features for
+Seven days before a paid period ends, the workspace's billing managers get an in-app reminder to request and pay
+the renewal invoice. When a paid period ends without a renewal, the workspace is past due and keeps paid features for
 `BILLING_GRACE_DAYS`, then falls back to Free allowances until a renewal is paid. Nothing is deleted.

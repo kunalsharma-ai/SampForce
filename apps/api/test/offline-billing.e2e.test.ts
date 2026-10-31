@@ -128,6 +128,20 @@ describe('offline payment', () => {
     expect(after.currentPeriodEnd!.getTime()).toBe(addMonths(before.currentPeriodEnd!, 1).getTime());
   });
 
+  it('reminds billing managers once, a week before the paid period ends', async () => {
+    const reminders = async () => ((await api(owner).get('/notifications').expect(200)).body as { items?: { type: string }[] } | { type: string }[]);
+    const count = async () => JSON.stringify(await reminders()).split('Request the renewal invoice under Billing').length - 1;
+    const before = await count();
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { currentPeriodEnd: new Date(Date.now() + 10 * DAY) } }));
+    await app.get(BillingService).runDue(true);
+    expect(await count()).toBe(before);
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { currentPeriodEnd: new Date(Date.now() + 3 * DAY) } }));
+    await app.get(BillingService).runDue(true);
+    await app.get(BillingService).runDue(true);
+    expect(await count()).toBe(before + 1);
+    expect((await sub()).status).toBe('ACTIVE');
+  });
+
   it('starts the grace period when a paid period ends unrenewed, then pauses paid features', async () => {
     const ended = new Date(Date.now() - DAY);
     await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { currentPeriodEnd: ended } }));

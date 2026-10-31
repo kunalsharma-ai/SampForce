@@ -211,4 +211,5 @@ offline invoice per workspace, and the `offline_invoice_number_seq` sequence for
 `20261031000300_offline_provider` (the enum value on its own, since it cannot be used in the transaction that adds
 it) and `20261031000400_offline_invoices`. `20261031000500_platform_settings` adds `platform_settings` (key, value,
 who changed it): deployment-wide values edited in the operator console, such as the payment instructions. It has no
-`tenant_id` and no RLS; only the operator API writes it.
+`tenant_id` and no RLS; only the operator API writes it. `20261031000600_renewal_reminder` adds
+`subscriptions.renewal_reminded_at`, so the 7-day renewal reminder is sent once per period end.

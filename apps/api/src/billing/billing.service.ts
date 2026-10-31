@@ -30,6 +30,8 @@ import { BillingProviders } from './billing-providers';
 import { BillingProviderError, InvalidSignatureError, type ParsedEvent, type ProviderSubscription } from './providers';
 
 const DAY = 86_400_000;
+/** Invoice-paid plans: billing managers are reminded this many days before the paid period ends. */
+export const RENEWAL_REMINDER_DAYS = 7;
 const MINUTE = 60_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const monthStart = () => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
@@ -526,6 +528,9 @@ export class BillingService {
       Prisma.sql`SELECT tenant_id FROM subscriptions
                  WHERE (status = 'TRIALING' AND trial_ends_at < now() AND provider_subscription_id IS NULL)
                     OR (provider = 'OFFLINE' AND status = 'ACTIVE' AND current_period_end < now())
+                    OR (provider = 'OFFLINE' AND status = 'ACTIVE' AND NOT cancel_at_period_end
+                        AND current_period_end < now() + make_interval(days => ${RENEWAL_REMINDER_DAYS}::int)
+                        AND (renewal_reminded_at IS NULL OR renewal_reminded_at < current_period_end - make_interval(days => ${RENEWAL_REMINDER_DAYS + 1}::int)))
                     OR (status = 'PAST_DUE' AND past_due_since < ${graceStart})
                  LIMIT 200`,
     );
@@ -557,6 +562,20 @@ export class BillingService {
                 body: `The paid period has ended. Paid features stay on for ${this.env.BILLING_GRACE_DAYS} days from its end; request and pay the renewal invoice under Billing before then.`, link: '/app/billing',
               });
             }
+            return 1;
+          }
+          if (
+            sub && sub.provider === 'OFFLINE' && sub.status === 'ACTIVE' && !sub.cancelAtPeriodEnd && sub.currentPeriodEnd &&
+            sub.currentPeriodEnd.getTime() - Date.now() < RENEWAL_REMINDER_DAYS * DAY &&
+            // Not yet reminded for this period end (a reminder for an earlier end is older than the window).
+            (!sub.renewalRemindedAt || sub.renewalRemindedAt.getTime() < sub.currentPeriodEnd.getTime() - (RENEWAL_REMINDER_DAYS + 1) * DAY)
+          ) {
+            await tx.subscription.update({ where: { tenantId }, data: { renewalRemindedAt: new Date() } });
+            const name = PLAN_CATALOG.find((p) => p.code === sub.planCode)?.name ?? sub.planCode;
+            await this.notifyBilling(tx, tenantId, {
+              type: 'billing.renewal_reminder', title: `${name} is paid until ${sub.currentPeriodEnd.toISOString().slice(0, 10)}`,
+              body: 'Request the renewal invoice under Billing and pay it before then to keep paid features without a break.', link: '/app/billing',
+            });
             return 1;
           }
           const lapsed = await tx.subscription.updateMany({ where: { tenantId, status: 'PAST_DUE', pastDueSince: { lt: graceStart } }, data: { status: 'UNPAID' } });
