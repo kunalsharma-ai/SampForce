@@ -1503,6 +1503,10 @@ model Quote {
   firstViewedAt         DateTime?   @map("first_viewed_at") @db.Timestamptz(3)
   lastViewedAt          DateTime?   @map("last_viewed_at") @db.Timestamptz(3)
   viewCount             Int         @default(0) @map("view_count")
+  /// Bid template look (key from @dealflow/types BID_TEMPLATES); null uses the plain default.
+  templateKey           String?     @map("template_key")
+  /// Accent colour override (#rrggbb) for the online proposal and PDF.
+  accentColor           String?     @map("accent_color")
   createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 

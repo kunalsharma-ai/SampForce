@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { OwnerRef } from './crm';
+import { bidAccentSchema, bidTemplateKeySchema, type BidStyle } from './bids';
 
 /**
  * Catalogue, price books, quotes and contracts. Unit prices always come from a price book; people
@@ -69,6 +70,9 @@ export const quoteInputSchema = z.object({
   lines: z.array(quoteLineInputSchema).max(200).default([]),
   /** Proposal sections shown above the price table: executive summary, scope and so on. */
   sections: z.array(z.object({ heading: z.string().trim().min(1, 'Give the section a heading').max(120), body: z.string().trim().max(8000) })).max(20).optional(),
+  /** Bid template look (see bids.ts); null clears it back to the workspace brand. */
+  templateKey: bidTemplateKeySchema.nullable().optional(),
+  accentColor: bidAccentSchema.nullable().optional(),
 });
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 export const quoteUpdateSchema = quoteInputSchema.omit({ opportunityId: true, priceBookId: true }).partial();
@@ -201,6 +205,8 @@ export type ProposalSendInput = z.infer<typeof proposalSendSchema>;
 /** What the customer sees on the online proposal page. */
 export interface PublicProposal {
   seller: { name: string; logoDataUrl: string | null; header: string | null; footer: string | null; brandColor: string | null };
+  /** The bid template look: accent colour, typeface and cover style. */
+  style: BidStyle;
   reference: string;
   title: string;
   preparedFor: string | null;
@@ -267,6 +273,8 @@ export interface QuoteRow {
   contractId: string | null;
   lines: QuoteLineRow[];
   sections: ProposalSection[];
+  templateKey: string | null;
+  accentColor: string | null;
   /** The online proposal link: whether it is live, and when it was opened (opens can include email security scanners). */
   share: { enabled: boolean; firstViewedAt: string | null; lastViewedAt: string | null; viewCount: number };
   createdAt: string;

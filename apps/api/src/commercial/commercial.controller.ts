@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Header, HttpCode, NotFoundException, Par
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
+  bidStyle,
   commercialSettingsSchema,
   type ContractInput,
   contractInputSchema,
@@ -195,9 +196,9 @@ export class QuotesController {
   async pdf(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Res() res: Response) {
     const quote = await this.quotes.get(auth, id);
     const [tenant, settings] = await this.prisma.run(auth, (tx) =>
-      Promise.all([tx.tenant.findFirstOrThrow({ where: { id: auth.tenantId }, select: { name: true } }), tx.commercialSettings.findUnique({ where: { tenantId: auth.tenantId } })]),
+      Promise.all([tx.tenant.findFirstOrThrow({ where: { id: auth.tenantId }, select: { name: true, brandColor: true } }), tx.commercialSettings.findUnique({ where: { tenantId: auth.tenantId } })]),
     );
-    const pdf = await renderQuotePdf(quote, { name: tenant.name, logoDataUrl: settings?.logoDataUrl, header: settings?.proposalHeader, footer: settings?.proposalFooter });
+    const pdf = await renderQuotePdf(quote, { name: tenant.name, logoDataUrl: settings?.logoDataUrl, header: settings?.proposalHeader, footer: settings?.proposalFooter, style: bidStyle(quote.templateKey, quote.accentColor, tenant.brandColor) });
     res.setHeader('content-type', 'application/pdf');
     res.setHeader('content-disposition', `attachment; filename="${quote.reference.replace(/\s+/g, '-')}.pdf"`);
     res.setHeader('cache-control', 'no-store');

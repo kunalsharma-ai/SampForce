@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
-import type { ProposalSection, ProposalSendInput, PublicProposal, QuoteRow } from '@dealflow/types';
+import { bidStyle, type ProposalSection, type ProposalSendInput, type PublicProposal, type QuoteRow } from '@dealflow/types';
 import { CardPaymentsService } from '../apps/card-payments.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -136,6 +136,7 @@ export class ProposalsService {
       const expired = q.status === 'SENT' && !!validUntil && validUntil < new Date().toISOString().slice(0, 10);
       return {
         seller: { name: tenant.name, logoDataUrl: settings?.logoDataUrl ?? null, header: settings?.proposalHeader ?? null, footer: settings?.proposalFooter ?? null, brandColor: tenant.brandColor },
+        style: bidStyle(q.templateKey, q.accentColor, tenant.brandColor),
         reference: `Q-${String(q.number).padStart(4, '0')}${q.version > 1 ? ` v${q.version}` : ''}`,
         title: q.title,
         preparedFor: q.opportunity.company?.name ?? null,
@@ -159,7 +160,7 @@ export class ProposalsService {
   async publicPdf(token: string): Promise<{ pdf: Buffer; filename: string } | null> {
     const p = await this.view(token, { count: false });
     if (!p) return null;
-    return { pdf: await renderQuotePdf(publicToRow(p), { name: p.seller.name, logoDataUrl: p.seller.logoDataUrl, header: p.seller.header, footer: p.seller.footer }), filename: `${p.reference.replace(/\s+/g, '-')}.pdf` };
+    return { pdf: await renderQuotePdf(publicToRow(p), { name: p.seller.name, logoDataUrl: p.seller.logoDataUrl, header: p.seller.header, footer: p.seller.footer, style: p.style }), filename: `${p.reference.replace(/\s+/g, '-')}.pdf` };
   }
 }
 

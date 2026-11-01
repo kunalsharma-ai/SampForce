@@ -72464,7 +72464,7 @@
         "tags": [
           "Quotes"
         ],
-        "summary": "Create a draft; prices come from the price book (quotes:write)",
+        "summary": "Create a draft; prices come from the price book; templateKey and accentColor set the bid look (quotes:write)",
         "security": [
           {
             "cookieAuth": []
@@ -72619,6 +72619,31 @@
                       ]
                     },
                     "maxItems": 20
+                  },
+                  "templateKey": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "corporate-executive",
+                      "minimal-premium",
+                      "modern-blue",
+                      "dark-luxury",
+                      "global-enterprise",
+                      "technology-proposal",
+                      "market-research-bid",
+                      "consulting-proposal",
+                      "healthcare-research",
+                      "financial-services"
+                    ]
+                  },
+                  "accentColor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^#[0-9a-fA-F]{6}$"
                   }
                 },
                 "required": [
@@ -73287,6 +73312,31 @@
                       ]
                     },
                     "maxItems": 20
+                  },
+                  "templateKey": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "corporate-executive",
+                      "minimal-premium",
+                      "modern-blue",
+                      "dark-luxury",
+                      "global-enterprise",
+                      "technology-proposal",
+                      "market-research-bid",
+                      "consulting-proposal",
+                      "healthcare-research",
+                      "financial-services"
+                    ]
+                  },
+                  "accentColor": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^#[0-9a-fA-F]{6}$"
                   }
                 }
               }
@@ -75352,7 +75402,7 @@
         "tags": [
           "Quotes"
         ],
-        "summary": "Public: the online proposal; each load counts as a view unless preview=1 (no auth)",
+        "summary": "Public: the online proposal, with its bid look in style; each load counts as a view unless preview=1 (no auth)",
         "parameters": [
           {
             "schema": {

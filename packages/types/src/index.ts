@@ -7,6 +7,7 @@ export * from './ai';
 export * from './dashboard';
 export * from './forecast';
 export * from './commercial';
+export * from './bids';
 export * from './marketing';
 export * from './revenue';
 export * from './errors';

@@ -11,6 +11,8 @@ import {
   Skeleton,
 } from '@dealflow/ui';
 import {
+  BID_TEMPLATES,
+  bidTemplate,
   type ContractRow,
   lineTotals,
   type ProposalSection,
@@ -25,6 +27,7 @@ import { useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { ProposalSections, ProposalSharing } from './proposal-panel';
+import { AccentPicker } from '@/components/bids/accent-picker';
 import { api, downloadFile } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
@@ -79,6 +82,8 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
   const [sections, setSections] = useState<ProposalSection[]>(() =>
     q.sections.map((x) => ({ ...x })),
   );
+  const [templateKey, setTemplateKey] = useState<string | null>(q.templateKey);
+  const [accentColor, setAccentColor] = useState<string | null>(q.accentColor);
   const [updateDeal, setUpdateDeal] = useState(true);
   const [initial] = useState(() =>
     JSON.stringify({
@@ -88,9 +93,11 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
       notes: q.notes ?? '',
       terms: q.terms ?? '',
       sections: q.sections,
+      templateKey: q.templateKey,
+      accentColor: q.accentColor,
     }),
   );
-  const dirty = JSON.stringify({ lines, title, validUntil, notes, terms, sections }) !== initial;
+  const dirty = JSON.stringify({ lines, title, validUntil, notes, terms, sections, templateKey, accentColor }) !== initial;
 
   const refresh = async (next?: QuoteRow) => {
     await qc.invalidateQueries({ queryKey: ['quotes'] });
@@ -106,6 +113,8 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
           notes,
           terms,
           sections,
+          templateKey,
+          accentColor,
           lines: lines.map((l) => ({
             productId: l.productId,
             quantity: Number(l.quantity),
@@ -399,6 +408,34 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                   onChange={(e) => setValidUntil(e.target.value)}
                 />
               </Field>
+              <Field id="quote-template" label="Bid template" hint="The look of the online proposal and PDF.">
+                <Select
+                  id="quote-template"
+                  value={templateKey ?? ''}
+                  disabled={!editable}
+                  onChange={(e) => {
+                    setTemplateKey(e.target.value || null);
+                    setAccentColor(null);
+                  }}
+                >
+                  <option value="">Plain (workspace brand)</option>
+                  {BID_TEMPLATES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {bidTemplate(templateKey) ? (
+                <AccentPicker
+                  value={accentColor}
+                  templateAccent={bidTemplate(templateKey)!.style.accent}
+                  disabled={!editable}
+                  onChange={setAccentColor}
+                />
+              ) : (
+                <div />
+              )}
               <Field id="quote-notes" label="Notes for the customer" className="sm:col-span-2">
                 <Textarea
                   id="quote-notes"

@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, Skeleton } from '@dealflow/ui';
-import type { PublicProposal } from '@dealflow/types';
+import { bidStyle, textOn, type PublicProposal } from '@dealflow/types';
 import { CreditCard, Download } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatAmount } from '@/lib/revenue';
@@ -167,29 +167,47 @@ function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicPropo
 
 /** The proposal itself: shared by the link view and the client portal, which bring their own actions. */
 export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; banner?: React.ReactNode; actions?: React.ReactNode }) {
+  // The bid template look: accent for bands and rules, a serif or sans heading face, and a cover style.
+  // Text stays in the theme's colours so a pale accent never makes it unreadable.
+  const style = p.style ?? bidStyle(null, null, p.seller.brandColor);
+  const heading = style.font === 'serif' ? 'font-serif' : '';
+  const banded = style.cover === 'band' || style.cover === 'dark';
+  const bandText = style.cover === 'dark' ? '#ffffff' : textOn(style.accent);
   return (
     <article
       className="space-y-6"
-      style={
-        p.seller.brandColor
-          ? ({ '--proposal-accent': p.seller.brandColor } as React.CSSProperties)
-          : undefined
-      }
+      data-template={style.templateKey ?? 'default'}
+      data-cover={style.cover}
+      style={{ '--proposal-accent': style.accent } as React.CSSProperties}
     >
       <header
-        className="space-y-2 border-b-4 pb-4"
-        style={{ borderColor: 'var(--proposal-accent, currentColor)' }}
+        className={
+          banded
+            ? 'space-y-2 rounded-lg p-6'
+            : style.cover === 'split'
+              ? 'space-y-2 border-l-8 py-2 pl-5'
+              : 'space-y-2 border-b-2 pb-4'
+        }
+        style={
+          banded
+            ? {
+                background: style.cover === 'dark' ? '#111111' : style.accent,
+                color: bandText,
+                borderTop: style.cover === 'dark' ? `4px solid ${style.accent}` : undefined,
+              }
+            : { borderColor: 'var(--proposal-accent)' }
+        }
       >
         {p.seller.logoDataUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- the seller's stored logo as a data URL
           <img
             src={p.seller.logoDataUrl}
             alt={`${p.seller.name} logo`}
-            className="h-14 max-w-60 object-contain"
+            className={banded ? 'h-14 max-w-60 rounded bg-white p-1 object-contain' : 'h-14 max-w-60 object-contain'}
           />
         )}
-        <p className="text-sm font-medium">{p.seller.name}</p>
-        {p.seller.header && <p className="text-xs text-muted-foreground">{p.seller.header}</p>}
+        <p className={`text-sm font-medium ${heading}`}>{p.seller.name}</p>
+        {p.seller.header && <p className={banded ? 'text-xs' : 'text-xs text-muted-foreground'}>{p.seller.header}</p>}
       </header>
 
       {banner}
@@ -202,7 +220,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{p.title}</h1>
+          <h1 className={`text-2xl font-semibold tracking-tight ${heading}`}>{p.title}</h1>
           {p.status === 'ACCEPTED' && <Badge tone="success">Accepted</Badge>}
           {p.status === 'DECLINED' && <Badge tone="neutral">Declined</Badge>}
           {p.expired && <Badge tone="warning">Past its valid date</Badge>}
@@ -216,13 +234,17 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       {p.sections.map((s, i) => (
         <section key={i} className="space-y-1">
-          <h2 className="text-lg font-semibold">{s.heading}</h2>
+          <h2 className={`border-l-4 pl-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
+            {s.heading}
+          </h2>
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{s.body}</p>
         </section>
       ))}
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Pricing</h2>
+        <h2 className={`border-l-4 pl-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
+          Pricing
+        </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
@@ -277,7 +299,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
             <span>Tax</span>
             <span>{formatAmount(p.taxTotal, p.currency)}</span>
           </p>
-          <p className="flex justify-between border-t border-border pt-1 font-semibold">
+          <p className="flex justify-between border-t-2 pt-1 font-semibold" style={{ borderColor: 'var(--proposal-accent)' }}>
             <span>Total</span>
             <span>{formatAmount(p.total, p.currency)}</span>
           </p>
@@ -286,7 +308,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       {p.terms && (
         <section className="space-y-1">
-          <h2 className="text-lg font-semibold">Terms</h2>
+          <h2 className={`text-lg font-semibold ${heading}`}>Terms</h2>
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.terms}</p>
         </section>
       )}

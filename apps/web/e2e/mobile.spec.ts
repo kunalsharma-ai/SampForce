@@ -54,3 +54,18 @@ test('on a phone the split view opens deals as a full-screen panel and the calen
   await expect(page.getByRole('list', { name: /Deals closing in/ }).getByRole('link', { name: 'Pocket deal' })).toBeVisible();
   await expect(page.getByRole('table')).toHaveCount(0);
 });
+
+test('on a phone the bid studio stacks, with the preview behind a toggle', async ({ page }) => {
+  await signUp(page, 'Phone Bids');
+  await page.goto('/app/quotes/templates');
+  await expect(page.getByRole('list', { name: 'Bid templates' }).getByRole('listitem')).toHaveCount(10);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await page.goto('/app/quotes/quick?template=modern-blue');
+  await expect(page.getByRole('button', { name: /Step 1 of 4: Client/ })).toBeVisible();
+  const preview = page.getByRole('region', { name: "Live preview of the customer's proposal" });
+  await expect(preview).toBeHidden();
+  await page.getByRole('button', { name: 'Show preview' }).click();
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('article')).toHaveAttribute('data-template', 'modern-blue');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+});
