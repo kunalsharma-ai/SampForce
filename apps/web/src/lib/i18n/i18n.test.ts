@@ -10,6 +10,8 @@ import {
   LANGUAGES,
   LEAD_STATUSES,
   NEXT_ACTION_LABELS,
+  SSO_ERRORS,
+  THEMES,
   TIMELINE_KIND_LABELS,
 } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
@@ -97,6 +99,14 @@ describe('page phrases', () => {
     ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
     ['deal health signals', [...source('../../../../api/src/ai/scoring.ts').matchAll(/risk\('\w+', '([^']+)'/g)].map((m) => m[1]!)],
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
+    // Sign-in errors and the validation messages of the shared auth schemas, shown through t.maybe() on the auth pages.
+    ['single sign-on errors', Object.values(SSO_ERRORS)],
+    // Theme descriptions and the readability check labels come from the shared appearance module.
+    ['theme descriptions', THEMES.map((th) => th.description)],
+    ['contrast check labels', [...source('../../../../../packages/types/src/appearance.ts').matchAll(/\['([^']+)', '[\w-]+', '[\w-]+', [\d.]+\]/g)].map((m) => m[1]!)],
+    ['custom field validation messages', [...source('../../../../../packages/types/src/crm.ts').matchAll(/customFieldDefSchema[\s\S]*?CustomFieldDefInput/g)].flatMap((m) => [...m[0].matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!))],
+    ['workspace settings validation messages', [...source('../../app/app/settings/workspace-settings.tsx').matchAll(/(?:min|regex|length)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
+    ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)
     it(`has a phrase for every ${name}`, () => {

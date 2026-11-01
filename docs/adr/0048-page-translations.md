@@ -55,6 +55,23 @@ Still English, and why:
 - **Browser tab titles** (`metadata.title`), which are rendered on the server before the language is known.
 - **Text people typed**: record names, stage names, custom field names, tags and notes are never translated.
 
+## Scope of batch 2
+
+Translated: the signed-out pages (sign in, two-step verification, single sign-on and its errors, sign up, password
+reset, invitations and the marketing panel), the validation messages of the shared auth and custom field schemas,
+Settings (workspace, appearance, the Theme Studio with its preview, readability check and theme descriptions, custom
+fields, data import) and Sales Activities (tasks and the recent activity feed). New tables: `auth`, `settings`,
+`activities`.
+
+**Choosing a language before signing in.** The sign-in and sign-up pages have a language picker. It applies on the
+device straight away (`chooseSignedOut` in the regional store) and is remembered as the signed-out choice. On the first
+load after signing in, if the account has no language of its own (`source: 'default'`), the app saves the choice to
+the account and then clears it; an account that already chose a language keeps its own. A brand-new account therefore
+starts in the language its owner signed up in, on every device.
+
+Still English in these pages: the Theme Studio's automatic adjustment notes (sentences with colour values built in
+`@dealflow/types`), API error messages, and the per-row problems an import check returns from the server.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

@@ -11,18 +11,20 @@ import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { UploadZone } from '@/components/forms/upload-zone';
 import { useCustomFields } from '@/lib/crm';
-import { fmtLocale } from '@/lib/i18n/locale';
+import { type MessageKey, useT } from '@/lib/i18n';
 
 const MAX_BYTES = 2_000_000;
-const LABELS: Record<string, string> = {
+const LABELS: Record<string, MessageKey> = {
   fullName: 'Full name', companyName: 'Company', jobTitle: 'Job title', industry: 'Industry', email: 'Email', phone: 'Phone', country: 'Country (ISO)',
   city: 'City', timezone: 'Time zone', website: 'Website', source: 'Source', campaignSource: 'Campaign', estimatedValue: 'Estimated value', currency: 'Currency',
   status: 'Status', tags: 'Tags', firstName: 'First name', lastName: 'Last name', name: 'Name', domain: 'Domain',
 };
+const VIEW: Record<ImportEntity, MessageKey> = { leads: 'View leads', contacts: 'View contacts', companies: 'View companies' };
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 const ALIASES: Record<string, string> = { name: 'fullName', fullname: 'fullName', company: 'companyName', companyname: 'companyName', organization: 'companyName', title: 'jobTitle', jobtitle: 'jobTitle', emailaddress: 'email', mobile: 'phone', phonenumber: 'phone', firstname: 'firstName', lastname: 'lastName', surname: 'lastName', website: 'website', url: 'website' };
 
 export function ImportWizard() {
+  const t = useT();
   const qc = useQueryClient();
   const initial = useSearchParams().get('entity');
   const [entity, setEntity] = useState<ImportEntity>(initial === 'contacts' || initial === 'companies' ? initial : 'leads');
@@ -38,8 +40,8 @@ export function ImportWizard() {
   const fields = useQuery({ queryKey: ['import-fields'], queryFn: () => api<Record<ImportEntity, string[]>>('/imports/fields'), staleTime: Infinity });
   const custom = useCustomFields(entity);
   const targets = useMemo(
-    () => [...(fields.data?.[entity] ?? []).map((f) => ({ value: f, label: LABELS[f] ?? f })), ...(custom.data ?? []).map((d) => ({ value: `customFields.${d.key}`, label: `${d.label} (custom)` }))],
-    [fields.data, custom.data, entity],
+    () => [...(fields.data?.[entity] ?? []).map((f) => ({ value: f, label: LABELS[f] ? t(LABELS[f]) : f })), ...(custom.data ?? []).map((d) => ({ value: `customFields.${d.key}`, label: t('{label} (custom)', { label: d.label }) }))],
+    [fields.data, custom.data, entity, t],
   );
   const rows = useMemo(() => (csv ? parseCsv(csv) : []), [csv]);
   const headers = rows[0] ?? [];
@@ -50,7 +52,7 @@ export function ImportWizard() {
     const next: Record<string, string> = {};
     for (const h of hs) {
       const n = norm(h);
-      let target = [...available].find((t) => norm(t) === n) ?? ALIASES[n];
+      let target = [...available].find((a) => norm(a) === n) ?? ALIASES[n];
       if (ent === 'companies' && (n === 'name' || n === 'company' || n === 'companyname')) target = 'name';
       if (target && available.has(target) && !Object.values(next).includes(target)) next[h] = target;
     }
@@ -63,7 +65,7 @@ export function ImportWizard() {
     setFileError(null);
     if (!file) return;
     if (file.size > MAX_BYTES) {
-      setFileError('This file is larger than 2 MB. Split it into smaller files.');
+      setFileError(t('This file is larger than 2 MB. Split it into smaller files.'));
       return;
     }
     const text = await file.text();
@@ -95,10 +97,10 @@ export function ImportWizard() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">1. Choose a file</CardTitle>
+          <CardTitle className="text-base">{t('1. Choose a file')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field id="import-entity" label="Import into">
+          <Field id="import-entity" label={t('Import into')}>
             <Select
               value={entity}
               onChange={(e) => {
@@ -109,18 +111,18 @@ export function ImportWizard() {
                 autoMap(headers, ent);
               }}
             >
-              <option value="leads">Leads</option>
-              <option value="contacts">Contacts</option>
-              <option value="companies">Companies</option>
+              <option value="leads">{t('Leads')}</option>
+              <option value="contacts">{t('Contacts')}</option>
+              <option value="companies">{t('Companies')}</option>
             </Select>
           </Field>
           <div className="space-y-1 sm:col-span-2">
-            <p className="text-sm font-medium">CSV file</p>
+            <p className="text-sm font-medium">{t('CSV file')}</p>
             <UploadZone
-              label="Choose a CSV file"
+              label={t('Choose a CSV file')}
               accept={['.csv', 'text/csv']}
               maxBytes={MAX_BYTES}
-              hint="CSV up to 2 MB. The first row must contain column names."
+              hint={t('CSV up to 2 MB. The first row must contain column names.')}
               file={fileName && !fileError ? { name: fileName, size: fileSize } : null}
               onFile={(f) => void onFile(f)}
             />
@@ -136,27 +138,27 @@ export function ImportWizard() {
       {headers.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">2. Match columns</CardTitle>
+            <CardTitle className="text-base">{t('2. Match columns')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
-                <caption className="sr-only">Column mapping</caption>
+                <caption className="sr-only">{t('Column mapping')}</caption>
                 <thead className="text-start text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="pb-2 font-medium">Column in file</th>
-                    <th scope="col" className="pb-2 font-medium">Sample values</th>
-                    <th scope="col" className="w-56 pb-2 font-medium">DealFlow field</th>
+                    <th scope="col" className="pb-2 font-medium">{t('Column in file')}</th>
+                    <th scope="col" className="pb-2 font-medium">{t('Sample values')}</th>
+                    <th scope="col" className="w-56 pb-2 font-medium">{t('DealFlow field')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {headers.map((h, i) => (
                     <tr key={`${h}-${i}`} className="border-t border-border">
-                      <td className="py-2 font-medium">{h || <span className="text-muted-foreground">(blank)</span>}</td>
+                      <td className="py-2 font-medium">{h || <span className="text-muted-foreground">{t('(blank)')}</span>}</td>
                       <td className="max-w-[16rem] truncate py-2 text-muted-foreground">{preview.map((r) => r[i]).filter(Boolean).join(' · ')}</td>
                       <td className="py-2">
                         <Select
-                          aria-label={`Field for column ${h}`}
+                          aria-label={t('Field for column {column}', { column: h })}
                           className="h-9"
                           value={mapping[h] ?? ''}
                           onChange={(e) => {
@@ -164,10 +166,10 @@ export function ImportWizard() {
                             setMapping((m) => ({ ...m, [h]: e.target.value }));
                           }}
                         >
-                          <option value="">Don’t import</option>
-                          {targets.map((t) => (
-                            <option key={t.value} value={t.value} disabled={Object.entries(mapping).some(([col, v]) => v === t.value && col !== h)}>
-                              {t.label}
+                          <option value="">{t('Don’t import')}</option>
+                          {targets.map((f) => (
+                            <option key={f.value} value={f.value} disabled={Object.entries(mapping).some(([col, v]) => v === f.value && col !== h)}>
+                              {f.label}
                             </option>
                           ))}
                         </Select>
@@ -177,20 +179,20 @@ export function ImportWizard() {
                 </tbody>
               </table>
             </div>
-            <Field id="import-dupes" label="When a row matches an existing record (same email or phone; for companies, same name or domain)">
+            <Field id="import-dupes" label={t('When a row matches an existing record (same email or phone; for companies, same name or domain)')}>
               <Select value={duplicateStrategy} onChange={(e) => { setDuplicateStrategy(e.target.value as 'skip' | 'create'); setChecked(null); }}>
-                <option value="skip">Skip the row</option>
-                <option value="create">Import it anyway</option>
+                <option value="skip">{t('Skip the row')}</option>
+                <option value="create">{t('Import it anyway')}</option>
               </Select>
             </Field>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" onClick={() => run.mutate(true)} disabled={run.isPending}>
-                Check file
+                {t('Check file')}
               </Button>
               <Button onClick={() => run.mutate(false)} disabled={!checked || checked.created === 0 || run.isPending || !!done}>
-                <FileUp aria-hidden /> Import {checked ? checked.created.toLocaleString(fmtLocale()) : ''} rows
+                <FileUp aria-hidden /> {t('Import {count} rows', { count: checked ? checked.created : '' })}
               </Button>
-              {!checked && <span className="text-xs text-muted-foreground">Check the file first; nothing is saved during the check.</span>}
+              {!checked && <span className="text-xs text-muted-foreground">{t('Check the file first; nothing is saved during the check.')}</span>}
             </div>
             {run.error && (
               <p role="alert" className="text-sm text-critical">
@@ -207,31 +209,32 @@ export function ImportWizard() {
 }
 
 function ResultCard({ result, entity }: { result: ImportResult; entity: ImportEntity }) {
+  const t = useT();
   return (
     <Card className={result.dryRun ? undefined : 'border-success/50'}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           {!result.dryRun && <CheckCircle2 className="size-4 text-success" aria-hidden />}
-          {result.dryRun ? '3. Check results' : 'Import complete'}
+          {result.dryRun ? t('3. Check results') : t('Import complete')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm" aria-live="polite">
         <div className="flex flex-wrap gap-2">
-          <Badge>{result.totalRows} rows</Badge>
+          <Badge>{t('{count} rows', { count: result.totalRows })}</Badge>
           <Badge tone="success">
-            {result.created} {result.dryRun ? 'ready to import' : 'imported'}
+            {result.dryRun ? t('{count} ready to import', { count: result.created }) : t('{count} imported', { count: result.created })}
           </Badge>
-          <Badge tone="warning">{result.skippedDuplicates} duplicates skipped</Badge>
-          <Badge tone={result.errors.length ? 'critical' : 'neutral'}>{result.errors.length} with errors</Badge>
+          <Badge tone="warning">{t('{count} duplicates skipped', { count: result.skippedDuplicates })}</Badge>
+          <Badge tone={result.errors.length ? 'critical' : 'neutral'}>{t('{count} with errors', { count: result.errors.length })}</Badge>
         </div>
         {result.errors.length > 0 && (
           <div className="max-h-60 overflow-auto rounded-md border border-border">
             <table className="w-full text-xs">
-              <caption className="sr-only">Rows with errors</caption>
+              <caption className="sr-only">{t('Rows with errors')}</caption>
               <thead className="sticky top-0 bg-muted text-start">
                 <tr>
-                  <th scope="col" className="px-3 py-1.5 font-medium">Row</th>
-                  <th scope="col" className="px-3 py-1.5 font-medium">Problem</th>
+                  <th scope="col" className="px-3 py-1.5 font-medium">{t('Row')}</th>
+                  <th scope="col" className="px-3 py-1.5 font-medium">{t('Problem')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -247,7 +250,7 @@ function ResultCard({ result, entity }: { result: ImportResult; entity: ImportEn
         )}
         {!result.dryRun && (
           <Button asChild variant="outline" size="sm">
-            <Link href={`/app/${entity}`}>View {entity}</Link>
+            <Link href={`/app/${entity}`}>{t(VIEW[entity])}</Link>
           </Button>
         )}
       </CardContent>

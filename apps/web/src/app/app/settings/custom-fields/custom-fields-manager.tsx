@@ -7,12 +7,14 @@ import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
-import { titleCase } from '@/lib/crm';
+import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
-const ENTITY_NAMES = { LEAD: 'Leads', CONTACT: 'Contacts', COMPANY: 'Companies', OPPORTUNITY: 'Deals' } as const;
+const ENTITY_NAMES: Record<(typeof CUSTOM_FIELD_ENTITIES)[number], MessageKey> = { LEAD: 'Leads', CONTACT: 'Contacts', COMPANY: 'Companies', OPPORTUNITY: 'Deals' };
+const TYPE_NAMES: Record<(typeof CUSTOM_FIELD_TYPES)[number], MessageKey> = { TEXT: 'Text', NUMBER: 'Number', DATE: 'Date', BOOLEAN: 'Yes / no', SELECT: 'Dropdown' };
 
 export function CustomFieldsManager() {
+  const t = useT();
   const qc = useQueryClient();
   const canManage = useCan('tenant:manage');
   const defs = useQuery({ queryKey: ['custom-fields', 'all'], queryFn: () => api<CustomFieldDef[]>('/custom-fields') });
@@ -32,22 +34,22 @@ export function CustomFieldsManager() {
           return (
             <Card key={entity}>
               <CardHeader>
-                <CardTitle className="text-base">{ENTITY_NAMES[entity]}</CardTitle>
+                <CardTitle className="text-base">{t(ENTITY_NAMES[entity])}</CardTitle>
               </CardHeader>
               <CardContent>
                 {rows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No custom fields.</p>
+                  <p className="text-sm text-muted-foreground">{t('No custom fields.')}</p>
                 ) : (
                   <ul className="divide-y divide-border">
                     {rows.map((d) => (
                       <li key={d.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
                         <span className="font-medium">{d.label}</span>
                         <code className="rounded bg-muted px-1.5 text-xs">{d.key}</code>
-                        <Badge>{titleCase(d.type)}</Badge>
-                        {d.required && <Badge tone="warning">Required</Badge>}
+                        <Badge>{t(TYPE_NAMES[d.type])}</Badge>
+                        {d.required && <Badge tone="warning">{t('Required')}</Badge>}
                         {d.options.length > 0 && <span className="text-xs text-muted-foreground">{d.options.join(', ')}</span>}
                         {canManage && (
-                          <Button variant="ghost" size="icon" className="ms-auto" aria-label={`Archive ${d.label}`} onClick={() => archive.mutate(d.id)} disabled={archive.isPending}>
+                          <Button variant="ghost" size="icon" className="ms-auto" aria-label={t('Archive {label}', { label: d.label })} onClick={() => archive.mutate(d.id)} disabled={archive.isPending}>
                             <Trash2 aria-hidden />
                           </Button>
                         )}
@@ -60,12 +62,13 @@ export function CustomFieldsManager() {
           );
         })
       )}
-      <p className="text-xs text-muted-foreground">Archiving hides a field from forms. Values already saved on records are kept.</p>
+      <p className="text-xs text-muted-foreground">{t('Archiving hides a field from forms. Values already saved on records are kept.')}</p>
     </div>
   );
 }
 
 function NewFieldForm() {
+  const t = useT();
   const qc = useQueryClient();
   const [entity, setEntity] = useState<(typeof CUSTOM_FIELD_ENTITIES)[number]>('LEAD');
   const [label, setLabel] = useState('');
@@ -92,7 +95,7 @@ function NewFieldForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Add a field</CardTitle>
+        <CardTitle className="text-base">{t('Add a field')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -102,35 +105,35 @@ function NewFieldForm() {
             const body = { entity, label, key: effectiveKey, type, required, options: type === 'SELECT' ? options.split(',').map((o) => o.trim()).filter(Boolean) : [] };
             const parsed = customFieldDefSchema.safeParse(body);
             if (!parsed.success) {
-              setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
+              setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), t.maybe(i.message)])));
               return;
             }
             setErrors({});
             create.mutate(parsed.data);
           }}
         >
-          <Field id="cf-entity" label="Record type">
+          <Field id="cf-entity" label={t('Record type')}>
             <Select value={entity} onChange={(e) => setEntity(e.target.value as typeof entity)}>
               {CUSTOM_FIELD_ENTITIES.map((en) => (
                 <option key={en} value={en}>
-                  {ENTITY_NAMES[en]}
+                  {t(ENTITY_NAMES[en])}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field id="cf-type" label="Type">
+          <Field id="cf-type" label={t('Type')}>
             <Select value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-              {CUSTOM_FIELD_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t === 'SELECT' ? 'Dropdown' : t === 'BOOLEAN' ? 'Yes / no' : titleCase(t)}
+              {CUSTOM_FIELD_TYPES.map((ty) => (
+                <option key={ty} value={ty}>
+                  {t(TYPE_NAMES[ty])}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field id="cf-label" label="Label" error={errors.label}>
+          <Field id="cf-label" label={t('Label')} error={errors.label}>
             <Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80} />
           </Field>
-          <Field id="cf-key" label="Key" error={errors.key} hint="Used in imports and the API">
+          <Field id="cf-key" label={t('Key')} error={errors.key} hint={t('Used in imports and the API')}>
             <Input
               value={effectiveKey}
               onChange={(e) => {
@@ -142,14 +145,14 @@ function NewFieldForm() {
           </Field>
           {type === 'SELECT' && (
             <div className="sm:col-span-2">
-              <Field id="cf-options" label="Options" error={errors.options} hint="Separate with commas">
+              <Field id="cf-options" label={t('Options')} error={errors.options} hint={t('Separate with commas')}>
                 <Input value={options} onChange={(e) => setOptions(e.target.value)} />
               </Field>
             </div>
           )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-            Required on new and edited records
+            {t('Required on new and edited records')}
           </label>
           <div className="flex items-center justify-end gap-2">
             {create.error && (
@@ -158,7 +161,7 @@ function NewFieldForm() {
               </p>
             )}
             <Button type="submit" disabled={create.isPending || !label.trim()}>
-              Add field
+              {t('Add field')}
             </Button>
           </div>
         </form>

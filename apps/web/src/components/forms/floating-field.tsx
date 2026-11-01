@@ -2,6 +2,7 @@
 
 import { cn } from '@dealflow/ui';
 import * as React from 'react';
+import { Tr } from '@/lib/i18n';
 
 /**
  * Field with a floating label: the label sits inside the input like a placeholder and moves up when the input has
@@ -41,7 +42,8 @@ export function FloatingField({
       </div>
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-xs text-critical">
-          {error}
+          {/* Schema messages ("Use at least 10 characters") are phrases; API messages pass through unchanged. */}
+          <Tr text={error} />
         </p>
       ) : hint ? (
         <p id={`${id}-hint`} className="text-xs text-muted-foreground">

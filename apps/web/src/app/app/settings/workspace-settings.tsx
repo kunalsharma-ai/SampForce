@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { api, ApiError } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 const formSchema = z.object({
@@ -20,6 +21,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function WorkspaceSettings() {
+  const t = useT();
   const canManage = useCan('tenant:manage');
   const qc = useQueryClient();
   const [saved, setSaved] = useState(false);
@@ -28,13 +30,13 @@ export function WorkspaceSettings() {
 
   useEffect(() => {
     if (tenant.data) {
-      const t = tenant.data;
+      const d = tenant.data;
       form.reset({
-        name: t.name,
-        brandColor: t.brandColor ?? '',
-        defaultCurrency: t.defaultCurrency,
-        defaultTimezone: t.defaultTimezone,
-        defaultLocale: t.defaultLocale,
+        name: d.name,
+        brandColor: d.brandColor ?? '',
+        defaultCurrency: d.defaultCurrency,
+        defaultTimezone: d.defaultTimezone,
+        defaultLocale: d.defaultLocale,
       });
     }
   }, [tenant.data, form]);
@@ -54,13 +56,14 @@ export function WorkspaceSettings() {
     },
   });
   const e = form.formState.errors;
+  const msg = (m?: string) => (m ? t.maybe(m) : undefined);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Workspace</CardTitle>
+        <CardTitle>{t('Workspace')}</CardTitle>
         <CardDescription>
-          {canManage ? 'Changes are recorded in the audit log.' : 'Only owners and administrators can change these settings.'}
+          {canManage ? t('Changes are recorded in the audit log.') : t('Only owners and administrators can change these settings.')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -77,30 +80,30 @@ export function WorkspaceSettings() {
           >
             <fieldset disabled={!canManage} className="contents">
               <div className="sm:col-span-2">
-                <Field id="ws-name" label="Workspace name" error={e.name?.message}>
+                <Field id="ws-name" label={t('Workspace name')} error={msg(e.name?.message)}>
                   <Input {...form.register('name')} />
                 </Field>
               </div>
-              <Field id="ws-brand" label="Brand colour" error={e.brandColor?.message} hint="Optional. Replaces the accent colour for everyone.">
+              <Field id="ws-brand" label={t('Brand colour')} error={msg(e.brandColor?.message)} hint={t('Optional. Replaces the accent colour for everyone.')}>
                 <Input placeholder="#00D9FF" {...form.register('brandColor')} />
               </Field>
-              <Field id="ws-currency" label="Default currency" error={e.defaultCurrency?.message}>
+              <Field id="ws-currency" label={t('Default currency')} error={msg(e.defaultCurrency?.message)}>
                 <Input {...form.register('defaultCurrency')} />
               </Field>
-              <Field id="ws-tz" label="Default time zone" error={e.defaultTimezone?.message} hint="IANA name, e.g. Asia/Kolkata">
+              <Field id="ws-tz" label={t('Default time zone')} error={msg(e.defaultTimezone?.message)} hint={t('IANA name, e.g. Asia/Kolkata')}>
                 <Input {...form.register('defaultTimezone')} />
               </Field>
-              <Field id="ws-locale" label="Default locale" error={e.defaultLocale?.message}>
+              <Field id="ws-locale" label={t('Default locale')} error={msg(e.defaultLocale?.message)}>
                 <Input {...form.register('defaultLocale')} />
               </Field>
             </fieldset>
             {canManage && (
               <div className="flex items-center gap-3 sm:col-span-2">
                 <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? 'Saving…' : 'Save changes'}
+                  {save.isPending ? t('Saving…') : t('Save changes')}
                 </Button>
                 <p role="status" className="text-sm text-muted-foreground">
-                  {saved ? 'Saved.' : save.error ? save.error.message : ''}
+                  {saved ? t('Saved.') : save.error ? save.error.message : ''}
                 </p>
               </div>
             )}
