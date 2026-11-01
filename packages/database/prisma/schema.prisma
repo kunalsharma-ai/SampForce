@@ -251,6 +251,8 @@ model Tenant {
   quotePayments          QuotePayment[]
   whatsappMessages       WhatsappMessage[]
   whatsappConsents       WhatsappConsent[]
+  smsMessages            SmsMessage[]
+  smsConsents            SmsConsent[]
 
   @@map("tenants")
 }
@@ -480,6 +482,8 @@ model Contact {
   prospects        Prospect[]
   whatsappMessages WhatsappMessage[]
   whatsappConsents WhatsappConsent[]
+  smsMessages      SmsMessage[]
+  smsConsents      SmsConsent[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -2850,6 +2854,8 @@ enum AppProvider {
   PAYMENTS
   /// The workspace's own WhatsApp Business Platform (Cloud API) number.
   WHATSAPP
+  /// The workspace's own Twilio account and SMS number.
+  TWILIO
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
@@ -2877,6 +2883,7 @@ model AppConnection {
   envelopes        SignatureEnvelope[]
   payments         QuotePayment[]
   whatsappMessages WhatsappMessage[]
+  smsMessages      SmsMessage[]
 
   @@unique([tenantId, provider])
   @@index([provider, externalAccountId])
@@ -3059,6 +3066,60 @@ model WhatsappConsent {
 
   @@index([tenantId, contactId, createdAt])
   @@map("whatsapp_consents")
+}
+
+/// One SMS to or from the workspace's Twilio number. Status beyond "accepted" comes only from Twilio's signed callbacks.
+model SmsMessage {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  connectionId String?   @map("connection_id") @db.Uuid
+  contactId    String?   @map("contact_id") @db.Uuid
+  /// in or out
+  direction    String
+  /// The other party's number in E.164 (+447700900123).
+  phone        String
+  /// Twilio's message SID (SM… or MM…).
+  twilioSid    String    @map("twilio_sid")
+  body         String
+  /// How many SMS segments Twilio bills for this message (estimated before sending, from Twilio after).
+  segments     Int       @default(1)
+  /// accepted, sent, delivered, undelivered, failed (outbound) or received (inbound)
+  status       String
+  error        String?
+  sentById     String?   @map("sent_by_id") @db.Uuid
+  /// manual, workflow or webhook
+  source       String
+  statusAt     DateTime? @map("status_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  contact    Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, twilioSid])
+  @@index([tenantId, phone, createdAt])
+  @@index([tenantId, contactId, createdAt])
+  @@map("sms_messages")
+}
+
+/// A contact's recorded agreement to receive SMS from the workspace. Every outbound SMS needs an active one.
+model SmsConsent {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  contactId    String    @map("contact_id") @db.Uuid
+  phone        String
+  source       String
+  recordedById String?   @map("recorded_by_id") @db.Uuid
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy    String?   @map("revoked_by")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, contactId, createdAt])
+  @@index([tenantId, phone])
+  @@map("sms_consents")
 }
 
 /// A workspace API key (Zapier, Make, n8n, scripts). Only the SHA-256 hash is stored. A key acts as its creator,

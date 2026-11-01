@@ -14,6 +14,8 @@ import {
   type SlackChannel,
   type TeamsChannel,
   type WhatsappTemplate,
+  SMS_MAX_LENGTH,
+  smsSegments,
   TRIGGER_EVENTS,
   type TriggerEvent,
   UPDATABLE_FIELDS,
@@ -579,6 +581,8 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
       {a.type === 'send_whatsapp' && <WhatsappStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
 
+      {a.type === 'send_sms' && <SmsStepFields action={a} readOnly={readOnly} onChange={onChange} />}
+
       {a.type === 'send_email' && (
         <>
           <p className="text-xs text-muted-foreground">
@@ -706,6 +710,33 @@ function WhatsappStepFields({ id, action: a, readOnly, onChange }: { id: string;
           }}
         />
       ))}
+    </>
+  );
+}
+
+function SmsStepFields({ action: a, readOnly, onChange }: { action: Extract<WorkflowAction, { type: 'send_sms' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
+  const sms = apps.data?.find((x) => x.key === 'twilio');
+  const seg = smsSegments(a.text);
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">
+        Sends one text to the contact’s number from your Twilio number after someone approves the run, and only if their SMS consent is recorded. People who replied STOP are skipped with a clear failure.
+      </p>
+      {sms && sms.state !== 'connected' && (
+        <p className="text-xs text-warning" role="status">
+          {sms.state === 'error' ? 'SMS needs new Twilio credentials in Integrations before this step can send.' : 'SMS (Twilio) is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+        </p>
+      )}
+      <TextField
+        label="Text"
+        multiline
+        value={a.text}
+        readOnly={readOnly}
+        maxLength={SMS_MAX_LENGTH}
+        hint={`${TEMPLATE_HINT} About ${seg.segments} segment${seg.segments === 1 ? '' : 's'} before the values are filled in.`}
+        onChange={(text) => onChange({ ...a, text })}
+      />
     </>
   );
 }

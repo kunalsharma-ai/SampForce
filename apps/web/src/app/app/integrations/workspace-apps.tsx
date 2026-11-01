@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
-import type { AppEventRow, AppStatus, PaymentsSettings, SlackChannel, TeamsSettings, WhatsappSettings } from '@dealflow/types';
+import type { AppEventRow, AppStatus, PaymentsSettings, SlackChannel, TeamsSettings, TwilioSettings, WhatsappSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -41,7 +41,7 @@ export function WorkspaceApps() {
           {OUTCOME[error] ?? `The connection did not complete (${error}).`}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : a.key === 'whatsapp' ? <WhatsappCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : a.key === 'whatsapp' ? <WhatsappCard key={a.key} app={a} /> : a.key === 'twilio' ? <TwilioCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
@@ -696,6 +696,139 @@ function WhatsappCard({ app }: { app: AppStatus }) {
           <div>
             <p className="mb-1 text-xs font-medium">Recent activity</p>
             <ul className="space-y-1 text-xs" aria-label="Recent WhatsApp activity">
+              {events.data.slice(0, 5).map((e) => (
+                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
+                  {relativeTime(e.createdAt)}: {e.summary}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TwilioCard({ app }: { app: AppStatus }) {
+  const qc = useQueryClient();
+  const canManage = useCan('integrations:manage');
+  const c = app.connection;
+  const settings = c?.settings as unknown as TwilioSettings | undefined;
+  const [accountSid, setAccountSid] = useState('');
+  const [authToken, setAuthToken] = useState('');
+  const [fromNumber, setFromNumber] = useState('');
+  const [editing, setEditing] = useState(false);
+  const s = app.state === 'error' ? { label: 'Needs new credentials', tone: 'critical' as const } : STATE[app.state];
+  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'twilio', 'events'], queryFn: () => api<AppEventRow[]>('/apps/twilio/events') });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['apps'] });
+  const save = useMutation({
+    mutationFn: () => api<AppStatus>('/apps/twilio/keys', { method: 'POST', json: { accountSid, authToken, fromNumber } }),
+    onSuccess: () => {
+      setAuthToken('');
+      setEditing(false);
+      return refresh();
+    },
+  });
+  const disconnect = useMutation({ mutationFn: () => api('/apps/twilio', { method: 'DELETE' }), onSuccess: refresh });
+  const error = save.error ?? disconnect.error;
+  const showForm = canManage && (!c || editing || app.state === 'error');
+  const ready = accountSid.trim() && authToken.trim() && fromNumber.trim();
+
+  return (
+    <Card role="region" aria-labelledby="app-twilio">
+      <CardHeader className="pb-2">
+        <CardTitle id="app-twilio" className="flex flex-wrap items-center gap-2 text-sm">
+          {app.name}
+          <Badge tone={s.tone}>{s.label}</Badge>
+          {settings?.trial && <Badge tone="warning">Trial account</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">
+          {app.description} Each text goes to one contact who has recorded SMS consent, after the sender confirms it or a person approves the workflow step. A STOP reply withdraws consent. There is no bulk sending.
+        </p>
+        {app.warnings.map((w) => (
+          <p key={w} className="text-xs text-warning">
+            {w}
+          </p>
+        ))}
+        {c && settings && (
+          <div className="space-y-2">
+            <p>
+              <strong>{settings.friendlyName}</strong> · {settings.fromNumber}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Credentials checked {relativeTime(c.connectedAt)}
+              {c.connectedBy ? ` by ${c.connectedBy}` : ''}. {settings.lastWebhookAt ? `Twilio’s signed requests confirmed ${relativeTime(settings.lastWebhookAt)}.` : 'Nothing received from Twilio yet.'}
+            </p>
+            {settings.trial && <p className="text-xs text-warning">Trial accounts text only numbers verified in the Twilio console, and Twilio adds a trial notice to each text. Upgrade the Twilio account before texting customers.</p>}
+            {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
+            <div className="space-y-1.5">
+              <Label htmlFor="tw-inbound-url">Inbound message URL</Label>
+              <Input id="tw-inbound-url" readOnly value={settings.inboundUrl} onFocus={(e) => e.currentTarget.select()} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              In the Twilio console, open Phone Numbers, {settings.fromNumber}, Messaging configuration, and set “A message comes in” to this URL with HTTP POST. Delivery status needs no setup: each text tells Twilio where to report it.
+            </p>
+          </div>
+        )}
+        {showForm && (
+          <form
+            className="space-y-2 rounded-md border border-dashed p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate();
+            }}
+          >
+            <p className="text-xs text-muted-foreground">
+              From the Twilio console: the Account SID and Auth Token, and a Twilio number on that account that can send SMS. DealFlow reads the account and the number to check them, sends nothing, then stores the token encrypted. The Auth Token also checks the signature on every request Twilio sends.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="tw-sid">Account SID</Label>
+                <Input id="tw-sid" autoComplete="off" placeholder="AC…" value={accountSid} onChange={(e) => setAccountSid(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tw-token">Auth Token</Label>
+                <Input id="tw-token" type="password" autoComplete="off" value={authToken} onChange={(e) => setAuthToken(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tw-number">Twilio number</Label>
+                <Input id="tw-number" inputMode="tel" autoComplete="off" placeholder="+447700900123" value={fromNumber} onChange={(e) => setFromNumber(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={save.isPending || !ready}>
+                {save.isPending ? 'Checking with Twilio…' : c ? 'Replace credentials' : 'Check and save'}
+              </Button>
+              {c && editing && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        )}
+        {canManage && c && !showForm && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Replace credentials
+            </Button>
+            <Button size="sm" variant="ghost" disabled={disconnect.isPending} onClick={() => window.confirm('Disconnect SMS? Sending stops and replies will no longer arrive here. Text history and consent records stay on each contact.') && disconnect.mutate()}>
+              Disconnect
+            </Button>
+          </div>
+        )}
+        {!canManage && <p className="text-xs text-muted-foreground">Workspace admins connect SMS.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-critical">
+            {error.message}
+          </p>
+        )}
+        {events.data && events.data.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium">Recent activity</p>
+            <ul className="space-y-1 text-xs" aria-label="Recent SMS activity">
               {events.data.slice(0, 5).map((e) => (
                 <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
                   {relativeTime(e.createdAt)}: {e.summary}

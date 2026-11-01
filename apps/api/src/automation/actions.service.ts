@@ -30,6 +30,7 @@ import { CommunicationService } from '../integrations/communication.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { loadContacts, loadLeads } from '../sequences/people';
 import { SequencesService } from '../sequences/sequences.service';
+import { TwilioService } from '../apps/twilio.service';
 import { WhatsappService } from '../apps/whatsapp.service';
 import { describeAction, type EvalContext, nextRoundRobin } from './engine';
 import { relatedLinks, renderTemplate } from './records';
@@ -74,6 +75,7 @@ export class WorkflowActions {
     private readonly audit: AuditService,
     private readonly apps: AppsService,
     private readonly whatsapp: WhatsappService,
+    private readonly twilio: TwilioService,
     private readonly moduleRef: ModuleRef,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -241,6 +243,18 @@ export class WorkflowActions {
         try {
           const m = await this.whatsapp.send(actor, { kind: 'template', contactId: id, templateName: action.templateName, language: action.language, params: action.params.map((p) => text(p).slice(0, 1024)), confirm: true }, meta, 'workflow');
           return { whatsappMessageId: m.id, template: action.templateName };
+        } catch (e) {
+          if (e instanceof AppError) throw new ActionError(e.message);
+          throw e;
+        }
+      }
+      case 'send_sms': {
+        // Reached only after a person approved this exact step; consent and opt-out are checked again here.
+        need('activities:write');
+        if (entity !== 'contact' || !id) throw new ActionError('Sending an SMS needs a contact (SMS consent is recorded on contacts).');
+        try {
+          const m = await this.twilio.send(actor, { contactId: id, text: text(action.text).slice(0, 1600), confirm: true }, meta, 'workflow');
+          return { smsMessageId: m.id, segments: m.segments };
         } catch (e) {
           if (e instanceof AppError) throw new ActionError(e.message);
           throw e;

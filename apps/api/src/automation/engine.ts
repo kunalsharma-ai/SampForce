@@ -226,6 +226,8 @@ export function describeAction(a: WorkflowAction): string {
       return `Email the record: "${a.subject}"`;
     case 'send_whatsapp':
       return `Send WhatsApp template "${a.templateName}" (${a.language})${a.params.length ? ` with ${a.params.join(', ')}` : ''}`;
+    case 'send_sms':
+      return `Send SMS: "${a.text.length > 60 ? `${a.text.slice(0, 57)}...` : a.text}"`;
     case 'post_to_chat':
       return `Post to ${a.app === 'teams' ? `Teams${a.channelName ? ` ${a.channelName}` : ''}` : `Slack${a.channelName ? ` #${a.channelName}` : ''}`}: "${a.text.length > 60 ? `${a.text.slice(0, 57)}...` : a.text}"`;
   }

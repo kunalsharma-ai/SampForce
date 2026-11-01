@@ -9,6 +9,7 @@ import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
 import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { ContactWhatsapp } from '@/components/whatsapp/contact-whatsapp';
+import { ContactSms } from '@/components/sms/contact-sms';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -67,6 +68,7 @@ export function ContactDetail({ id }: { id: string }) {
         <div className="space-y-4">
           <RecordIntelligencePanel entity="contact" id={id} name={c.fullName} />
           <ContactWhatsapp contactId={id} />
+          <ContactSms contactId={id} />
           <RecordSequences contactId={id} email={c.email} />
           <RecordTasks related={{ contactId: id }} />
           <CustomFieldList entity="contacts" values={c.customFields} />

@@ -57,6 +57,7 @@ const META: Record<AppKey, { name: string; description: string; provider: AppPro
   docusign: { name: 'DocuSign', description: 'Send contracts for e-signature; a completed envelope marks the contract signed.', provider: 'DOCUSIGN' },
   zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   whatsapp: { name: 'WhatsApp Business', description: 'Message contacts on WhatsApp from their record and from approved workflow steps, through your own WhatsApp Business number.', provider: 'WHATSAPP' },
+  twilio: { name: 'SMS (Twilio)', description: 'Text contacts from their record and from approved workflow steps, through your own Twilio number. Replies and STOP opt-outs come back to the contact.', provider: 'TWILIO' },
   teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
 
@@ -88,7 +89,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig(), payments: () => [], whatsapp: () => [] }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig(), payments: () => [], whatsapp: () => [], twilio: () => [] }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -120,7 +121,9 @@ export class AppsService {
                   ? ['No payment confirmation has arrived yet. Add the webhook below in your provider’s dashboard; payments are marked paid only when the provider confirms them.']
                   : key === 'whatsapp' && c && !(c.settings as { lastWebhookAt?: string | null }).lastWebhookAt
                     ? ['Replies and delivery status are Pending Configuration until Meta sends the first signed webhook. Add the callback URL and verify token below in your Meta app.']
-                    : [],
+                    : key === 'twilio' && c && !(c.settings as { lastWebhookAt?: string | null }).lastWebhookAt
+                      ? ['Replies and delivery status are Pending Configuration until Twilio sends the first signed request. Set the inbound URL below as your number’s “A message comes in” webhook.']
+                      : [],
           connection: c
             ? {
                 accountName: c.accountName,
@@ -138,8 +141,8 @@ export class AppsService {
   }
 
   connectUrl(auth: AuthContext, app: AppKey): { url: string } {
-    if (app === 'teams' || app === 'payments' || app === 'whatsapp') {
-      throw new BadRequestException({ code: 'NOT_OAUTH', message: app === 'teams' ? 'Microsoft Teams is connected by adding a channel with its Workflows URL.' : app === 'payments' ? 'Card payments are connected by saving your Stripe or Razorpay keys.' : 'WhatsApp Business is connected by saving your Cloud API number id, business account id, access token and App Secret.' });
+    if (app === 'teams' || app === 'payments' || app === 'whatsapp' || app === 'twilio') {
+      throw new BadRequestException({ code: 'NOT_OAUTH', message: app === 'teams' ? 'Microsoft Teams is connected by adding a channel with its Workflows URL.' : app === 'payments' ? 'Card payments are connected by saving your Stripe or Razorpay keys.' : app === 'twilio' ? 'SMS is connected by saving your Twilio Account SID, Auth Token and number.' : 'WhatsApp Business is connected by saving your Cloud API number id, business account id, access token and App Secret.' });
     }
     const missing = this.missingConfig(app);
     if (missing.length) {
@@ -153,7 +156,7 @@ export class AppsService {
   /** The OAuth redirect. The state must have been issued to the same signed-in person in the same workspace. */
   async completeConnect(auth: AuthContext, app: AppKey, code: string, rawState: string, meta: RequestMeta): Promise<void> {
     const state = verifyToken<AppState>(this.stateSecret(), rawState);
-    if (app === 'teams' || app === 'payments' || app === 'whatsapp' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
+    if (app === 'teams' || app === 'payments' || app === 'whatsapp' || app === 'twilio' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
       throw new BadRequestException({ code: 'OAUTH_STATE_INVALID', message: 'The connect link expired or belongs to another session. Try connecting again.' });
     }
     let install: { accountId: string; accountName: string; scopes: string[]; credentials: StoredSlack | StoredZoom | StoredDocusign };
