@@ -48,6 +48,14 @@ export default defineConfig({
       env: { SLACK_FIXTURE_PORT: '4500' },
     },
     {
+      // Local stand-in for Teams Workflows webhook URLs.
+      command: 'npx tsx test/fixtures/teams-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4600/health',
+      reuseExistingServer: !process.env.CI,
+      env: { TEAMS_FIXTURE_PORT: '4600' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',

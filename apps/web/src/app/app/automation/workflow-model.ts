@@ -25,7 +25,7 @@ export const ACTION_LABELS: Record<WorkflowAction['type'], string> = {
   add_engagement_points: 'Change their engagement score',
   send_webhook: 'Send to a webhook URL',
   send_email: 'Send an email',
-  post_to_chat: 'Post to Slack',
+  post_to_chat: 'Post to Slack or Teams',
 };
 
 export const EXTERNAL = new Set<WorkflowAction['type']>(['send_webhook', 'send_email']);

@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { type SlackSettings, slackSettingsSchema, slackTestSchema, z } from '@dealflow/types';
+import { type SlackSettings, slackSettingsSchema, slackTestSchema, type TeamsAddChannelInput, teamsAddChannelSchema, teamsChannelId, teamsSettingsSchema, teamsTestSchema, z } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
@@ -81,6 +81,47 @@ export class AppsController {
   test(@Auth() auth: AuthContext, @Body(new ZodPipe(slackTestSchema)) body: z.infer<typeof slackTestSchema>) {
     return this.wrap(() =>
       this.apps.postToSlack(auth.tenantId, { channelId: body.channelId ?? null, text: 'DealFlow is connected. Workflow messages will appear here.', actorUserId: auth.userId, source: 'test message' }),
+    );
+  }
+
+  // ───── Microsoft Teams ─────
+
+  /** Channels added for Teams, without their URLs (workflow editors pick from these). */
+  @Get('teams/channels')
+  @RequirePermissions('automation:manage')
+  async teamsChannels(@Auth() auth: AuthContext) {
+    const s = (await this.apps.status(auth)).find((a) => a.key === 'teams')!;
+    return (s.connection?.settings as { channels?: unknown[] } | undefined)?.channels ?? [];
+  }
+
+  /** Adds a channel by its Teams Workflows URL; Teams must accept a welcome card first. */
+  @Post('teams/channels')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @RequirePermissions('integrations:manage')
+  teamsAdd(@Auth() auth: AuthContext, @Body(new ZodPipe(teamsAddChannelSchema)) body: TeamsAddChannelInput, @Meta() meta: RequestMeta) {
+    return this.wrap(() => this.apps.teamsAddChannel(auth, body, meta));
+  }
+
+  @Delete('teams/channels/:id')
+  @RequirePermissions('integrations:manage')
+  teamsRemove(@Auth() auth: AuthContext, @Param('id', new ZodPipe(teamsChannelId)) id: string, @Meta() meta: RequestMeta) {
+    return this.wrap(() => this.apps.teamsRemoveChannel(auth, id, meta));
+  }
+
+  @Put('teams/settings')
+  @RequirePermissions('integrations:manage')
+  teamsSettings(@Auth() auth: AuthContext, @Body(new ZodPipe(teamsSettingsSchema)) body: z.infer<typeof teamsSettingsSchema>, @Meta() meta: RequestMeta) {
+    return this.wrap(() => this.apps.teamsDefault(auth, body.defaultChannelId, meta));
+  }
+
+  @Post('teams/test')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @RequirePermissions('integrations:manage')
+  teamsTest(@Auth() auth: AuthContext, @Body(new ZodPipe(teamsTestSchema)) body: z.infer<typeof teamsTestSchema>) {
+    return this.wrap(() =>
+      this.apps.postToTeams(auth.tenantId, { channelId: body.channelId ?? null, message: { text: 'DealFlow test message. Workflow updates will appear here.', link: null }, actorUserId: auth.userId, source: 'test message' }),
     );
   }
 

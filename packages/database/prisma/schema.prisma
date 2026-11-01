@@ -2829,6 +2829,7 @@ model ProspectSettings {
 
 enum AppProvider {
   SLACK
+  TEAMS
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the

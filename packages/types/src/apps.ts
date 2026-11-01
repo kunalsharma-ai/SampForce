@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack'] as const;
+export const APP_KEYS = ['slack', 'teams'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
@@ -59,3 +59,35 @@ export type SlackSettings = z.infer<typeof slackSettingsSchema>;
 
 export const slackTestSchema = z.object({ channelId: slackChannelId.optional() });
 export { slackChannelId };
+
+// ───── Microsoft Teams (Workflows webhooks, one URL per channel) ─────
+
+/** DealFlow's own id for a Teams channel added in Integrations. */
+const teamsChannelId = z.string().regex(/^tc_[a-f0-9]{12}$/, 'Choose a Teams channel');
+export { teamsChannelId };
+
+export interface TeamsChannel {
+  id: string;
+  name: string;
+  addedAt: string;
+  /** Set when Teams stopped accepting this channel's URL; cleared by the next successful post. */
+  lastError: string | null;
+}
+
+/** Stored in the connection's settings (the URLs themselves are sealed with the credentials). */
+export interface TeamsSettings {
+  channels: TeamsChannel[];
+  defaultChannelId: string | null;
+}
+
+export const teamsAddChannelSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  webhookUrl: z.string().trim().url('Paste the full workflow URL').max(2000),
+});
+export type TeamsAddChannelInput = z.infer<typeof teamsAddChannelSchema>;
+
+export const teamsSettingsSchema = z.object({ defaultChannelId: teamsChannelId.nullable() });
+export const teamsTestSchema = z.object({ channelId: teamsChannelId.optional() });
+
+/** Channel ids a "Post to chat" step may name: a Slack channel id, or a Teams channel added in Integrations. */
+export const chatChannelId = z.string().regex(/^([CG][A-Z0-9]{2,20}|tc_[a-f0-9]{12})$/);

@@ -198,3 +198,45 @@ test('connects Slack, sets a default channel and posts from a workflow (Slack st
     await expect(page.getByRole('list', { name: 'Recent Slack activity' })).toContainText('Posted to #deal-wins (workflow)', { timeout: 2_000 });
   }).toPass({ timeout: 25_000 });
 });
+
+test('adds a Teams channel, sends a test message and posts from a workflow (Teams stand-in)', async ({ page }) => {
+  await signUp(page, 'Teams Flow');
+  await page.goto('/app/integrations');
+  const teams = page.getByRole('region', { name: /Microsoft Teams/ });
+  await expect(teams.getByText('Not connected')).toBeVisible();
+
+  // A deleted workflow is refused and nothing is saved.
+  await teams.getByLabel('Channel name').fill('Old channel');
+  await teams.getByLabel('Workflow URL').fill('http://127.0.0.1:4600/workflows/deleted-flow/triggers/manual/paths/invoke?sig=x');
+  await teams.getByRole('button', { name: 'Add channel' }).click();
+  await expect(teams.getByRole('alert')).toContainText('no longer accepts messages');
+
+  await teams.getByLabel('Channel name').fill('Sales team');
+  await teams.getByLabel('Workflow URL').fill('http://127.0.0.1:4600/workflows/sales-flow/triggers/manual/paths/invoke?sig=x');
+  await teams.getByRole('button', { name: 'Add channel' }).click();
+  await expect(teams.getByText('Connected', { exact: true })).toBeVisible();
+  await expect(teams.getByRole('list', { name: 'Teams channels' })).toContainText('Sales team');
+  await teams.getByRole('button', { name: 'Send test message to Sales team' }).click();
+  await expect(teams.getByRole('status')).toContainText('Test message posted to Sales team.');
+  await expectNoA11yViolations(page);
+
+  await page.goto('/app/automation');
+  await page.getByRole('link', { name: 'New workflow' }).click();
+  await page.getByLabel('Name').fill('New leads to Teams');
+  await page.getByLabel('Trigger').selectOption('lead.created');
+  await page.getByRole('button', { name: 'Add the first step' }).click();
+  await page.getByLabel('Do this').selectOption('post_to_chat');
+  await page.getByLabel('App').selectOption('teams');
+  await page.getByLabel('Channel').selectOption({ label: 'Sales team' });
+  await page.getByLabel('Message').fill('New lead: {{record.fullName}}');
+  await page.getByRole('button', { name: 'Create workflow' }).click();
+  await expect(page).toHaveURL(/\/app\/automation\/[0-9a-f-]{36}$/);
+  await page.getByRole('button', { name: 'Activate' }).click();
+  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await apiPost(page, '/leads', { fullName: 'Grace Teams' });
+
+  await expect(async () => {
+    await page.goto('/app/integrations');
+    await expect(page.getByRole('list', { name: 'Recent Teams activity' })).toContainText('Posted to Sales team (workflow)', { timeout: 2_000 });
+  }).toPass({ timeout: 25_000 });
+});

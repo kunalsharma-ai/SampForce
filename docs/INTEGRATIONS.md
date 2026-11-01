@@ -11,7 +11,8 @@
 | Hunter.io email verification (Prospect Lists) | **Pending Configuration** without a key: the Verify button explains it needs one and no status is ever guessed. Tested against a local stand-in only. | Needs `HUNTER_API_KEY` (the same key as the Email Finder) |
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
 | Slack (workspace app: post to channels from workflows) | **Pending Configuration** until `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are set; then Not connected until an admin installs it. Implemented and tested against a local stand-in of Slack's Web API only. Not yet tested against Slack with a real app. | Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` (server secrets) |
-| Teams, Zoom, Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
+| Microsoft Teams (workspace app: post to channels from workflows) | **Not connected** until an admin adds a channel. A channel is saved only after Teams accepts a welcome card, so a listed channel has worked at least once. Implemented and tested against a local stand-in of Teams Workflows webhooks only; not yet tested against Teams. | No deployment secret. Each channel's Workflows URL is a workspace secret, stored encrypted |
+| Zoom, Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -82,6 +83,31 @@ How it behaves:
 - The Slack row on the operator Providers page shows whether the two secrets are set. There is no live check there,
   because Slack has no call that proves an app's client secret without a workspace installing it; the test message is
   the check.
+
+## Setting up Microsoft Teams
+
+Teams uses the **Workflows** app in Teams, which Microsoft recommends as it retires Office 365 connector webhooks.
+No Entra ID app registration or DealFlow-wide secret is needed.
+
+1. In Teams, open the channel, choose **Workflows** and the template **Send webhook alerts to a channel** (or build a
+   Power Automate flow with the trigger "When a Teams webhook request is received" and the action "Post card in a chat
+   or channel"). Copy the URL it shows.
+2. In DealFlow, Integrations, Microsoft Teams: enter a channel name and paste the URL, then **Add channel**. DealFlow
+   posts a welcome card first and saves the channel only if Teams accepts it.
+3. Add up to 20 channels and pick a default. Workflow steps "Post to Slack or Teams" with Microsoft Teams chosen post
+   an Adaptive Card with the message and an "Open in DealFlow" button.
+
+How it behaves:
+
+- Only `https` URLs on `*.logic.azure.com` or `*.powerplatform.com` are accepted, and they must resolve to public
+  addresses; redirects are refused. Old `webhook.office.com` URLs are refused with an explanation, because Microsoft is retiring them.
+- The URL is the secret: it is sealed with SecretBox, never returned to the browser, and only a 12-character
+  fingerprint goes to the audit log.
+- If Teams answers 401, 403, 404 or 410 (the workflow was deleted, turned off or its URL changed), that channel is
+  marked "Not accepting messages" and the app shows **Needs attention** until a post to it succeeds again or it is
+  removed. A 429 is reported as rate limiting.
+- Removing a channel deletes its URL; DealFlow cannot turn off the workflow in Teams, so the page reminds the admin to.
+- Record values cannot add their own links to the card (markdown link syntax is broken up).
 
 ## Behaviour
 

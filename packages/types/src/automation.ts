@@ -128,13 +128,13 @@ export const actionSchema = z.discriminatedUnion('type', [
   /** External: always requires an approval before it runs. */
   z.object({ type: z.literal('send_webhook'), url: z.string().url().max(2000) }),
   /**
-   * Posts a message to the workspace's connected chat app (Slack). Internal team channel, so no approval is needed;
+   * Posts a message to the workspace's connected chat app (Slack or Microsoft Teams). Internal team channel, so no approval is needed;
    * an empty channel uses the default chosen when the app was connected.
    */
   z.object({
     type: z.literal('post_to_chat'),
-    app: z.enum(['slack']).default('slack'),
-    channelId: z.string().regex(/^[CG][A-Z0-9]{2,20}$/).nullable().default(null),
+    app: z.enum(['slack', 'teams']).default('slack'),
+    channelId: z.string().regex(/^([CG][A-Z0-9]{2,20}|tc_[a-f0-9]{12})$/).nullable().default(null),
     channelName: z.string().max(80).nullable().default(null),
     text: z.string().trim().min(1).max(3000),
   }),
