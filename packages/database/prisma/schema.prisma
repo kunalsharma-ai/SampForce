@@ -243,6 +243,8 @@ model Tenant {
   emailThreadNotes       EmailThreadNote[]
   integrationSyncLogs    IntegrationSyncLog[]
   meetingRecords         MeetingRecord[]
+  appConnections         AppConnection[]
+  appEvents              AppEvent[]
 
   @@map("tenants")
 }
@@ -2823,4 +2825,60 @@ model ProspectSettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("prospect_settings")
+}
+
+enum AppProvider {
+  SLACK
+}
+
+/// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
+/// provider's OAuth. Tokens are envelope-encrypted (AES-256-GCM). Settings hold non-secret choices such as a channel.
+model AppConnection {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String           @map("tenant_id") @db.Uuid
+  provider             AppProvider
+  /// The provider's id for the connected account (Slack team id), used to route inbound events.
+  externalAccountId    String           @map("external_account_id")
+  accountName          String           @map("account_name")
+  scopes               String[]
+  credentialsEncrypted String           @map("credentials_encrypted")
+  settings             Json             @default("{}")
+  status               ConnectionStatus @default(CONNECTED)
+  lastError            String?          @map("last_error")
+  lastUsedAt           DateTime?        @map("last_used_at") @db.Timestamptz(3)
+  connectedById        String           @map("connected_by_id") @db.Uuid
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events AppEvent[]
+
+  @@unique([tenantId, provider])
+  @@index([provider, externalAccountId])
+  @@map("app_connections")
+}
+
+/// What DealFlow sent to or received from a connected app: one row per message, meeting, envelope or payment event.
+model AppEvent {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String      @map("tenant_id") @db.Uuid
+  connectionId String?     @map("connection_id") @db.Uuid
+  provider     AppProvider
+  /// e.g. message.sent, message.failed
+  kind         String
+  ok           Boolean
+  /// The provider's id for the thing (message ts, meeting id, envelope id).
+  externalId   String?     @map("external_id")
+  summary      String
+  detail       Json?
+  entityType   String?     @map("entity_type")
+  entityId     String?     @map("entity_id") @db.Uuid
+  actorUserId  String?     @map("actor_user_id") @db.Uuid
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, provider, createdAt(sort: Desc)])
+  @@map("app_events")
 }

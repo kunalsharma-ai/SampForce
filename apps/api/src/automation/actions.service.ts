@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { Prisma } from '@dealflow/database';
+import { AppError, AppsService } from '../apps/apps.service';
+import { slackEscape } from '../apps/slack';
 import { AuditService } from '../audit/audit.service';
 import { createHmac } from 'node:crypto';
 import {
@@ -68,6 +70,7 @@ export class WorkflowActions {
     private readonly notifications: NotificationsService,
     private readonly communication: CommunicationService,
     private readonly audit: AuditService,
+    private readonly apps: AppsService,
     private readonly moduleRef: ModuleRef,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -205,6 +208,19 @@ export class WorkflowActions {
         });
         if (res.status < 200 || res.status >= 300) throw new ActionError(`The endpoint answered ${res.status}.`);
         return { status: res.status, host: url.host };
+      }
+      case 'post_to_chat': {
+        // Record values are escaped so they cannot add Slack links or @mentions; the record link is added by DealFlow.
+        const link = recordLink(entity, id);
+        const url = link ? `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${link}` : null;
+        const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in DealFlow>` : '');
+        try {
+          const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
+          return { app: action.app, channel: r.channel, ts: r.ts };
+        } catch (e) {
+          if (e instanceof AppError) throw new ActionError(e.message);
+          throw e;
+        }
       }
       case 'send_email': {
         need('activities:write');

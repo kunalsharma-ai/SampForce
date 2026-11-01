@@ -23,6 +23,7 @@ import { assertRefs, badRef, notFound, ownerRefs } from '../crm/crm-helpers';
 import { TasksService } from '../crm/tasks.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
+import { SlicedSweep } from '../worker/sliced-sweep';
 
 const DAY = 86_400_000;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -35,7 +36,7 @@ const HOUR = 3_600_000;
 @Injectable()
 export class SuccessService {
   private readonly log = new Logger(SuccessService.name);
-  private lastSweep = 0;
+  private readonly sweeper = new SlicedSweep(HOUR);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -279,19 +280,17 @@ export class SuccessService {
 
   /** Worker job, at most hourly: recompute health in every workspace with active contracts. */
   async sweep(force = false): Promise<number> {
-    if (!force && Date.now() - this.lastSweep < HOUR) return 0;
-    this.lastSweep = Date.now();
-    const tenants = await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT DISTINCT tenant_id FROM contracts WHERE status = 'ACTIVE' AND company_id IS NOT NULL LIMIT 1000`);
-    let n = 0;
-    for (const t of tenants) {
-      try {
-        await this.prisma.run({ tenantId: t.tenant_id }, (tx) => this.refresh(tx, t.tenant_id));
-        n++;
-      } catch (err) {
-        this.log.error({ err: errorMessage(err), tenantId: t.tenant_id }, 'health sweep failed');
-      }
-    }
-    return n;
+    return this.sweeper.run(
+      force,
+      async () => (await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT DISTINCT tenant_id FROM contracts WHERE status = 'ACTIVE' AND company_id IS NOT NULL LIMIT 1000`)).map((t) => t.tenant_id),
+      async (tenantId) => {
+        try {
+          await this.prisma.run({ tenantId }, (tx) => this.refresh(tx, tenantId));
+        } catch (err) {
+          this.log.error({ err: errorMessage(err), tenantId }, 'health sweep failed');
+        }
+      },
+    );
   }
 }
 

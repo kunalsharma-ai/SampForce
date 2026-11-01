@@ -234,6 +234,8 @@ export class OperatorService {
         { off: 'No Connect button for Google', on: 'Each person connects their own Google account' }),
       row('microsoft', 'Microsoft 365 (Outlook, Graph)', 'Mailbox sending and sync, calendar, meeting links', [v('MICROSOFT_CLIENT_ID', e.MICROSOFT_CLIENT_ID), v('MICROSOFT_CLIENT_SECRET', e.MICROSOFT_CLIENT_SECRET), v('MICROSOFT_TENANT', e.MICROSOFT_TENANT, false)], null,
         { off: 'No Connect button for Microsoft', on: 'Each person connects their own Microsoft account' }),
+      row('slack', 'Slack', 'Workspace app: "Post to Slack" workflow steps', [v('SLACK_CLIENT_ID', e.SLACK_CLIENT_ID), v('SLACK_CLIENT_SECRET', e.SLACK_CLIENT_SECRET)], null,
+        { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Slack; the connection is verified with auth.test' }),
       row('anthropic', 'Anthropic (Claude)', 'AI agents, email assistant, proposals, meeting and voice readings', [v('ANTHROPIC_API_KEY', e.ANTHROPIC_API_KEY)], null,
         { off: 'AI features show as not configured', on: 'AI features available' }),
       row('smtp', 'Email (SMTP)', 'Password resets, invitations, client portal email', [v('SMTP_URL', e.SMTP_URL), v('MAIL_FROM', e.MAIL_FROM)], null,

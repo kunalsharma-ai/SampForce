@@ -224,6 +224,8 @@ export function describeAction(a: WorkflowAction): string {
       return `Send record to ${safeHost(a.url)}`;
     case 'send_email':
       return `Email the record: "${a.subject}"`;
+    case 'post_to_chat':
+      return `Post to Slack${a.channelName ? ` #${a.channelName}` : ''}: "${a.text.length > 60 ? `${a.text.slice(0, 57)}...` : a.text}"`;
   }
 }
 

@@ -28,3 +28,4 @@ export * from './voice';
 export * from './gamification';
 export * from './visitors';
 export * from './prospects';
+export * from './apps';

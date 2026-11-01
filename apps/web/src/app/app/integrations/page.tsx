@@ -4,13 +4,13 @@ import { Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { BrowserExtension } from './browser-extension';
 import { MailboxConnections, WebhooksManager } from './integrations-board';
+import { WorkspaceApps } from './workspace-apps';
 
 export const metadata: Metadata = { title: 'Integrations' };
 
 /** Integrations not built yet. Nothing here is shown as connected until its adapter exists and is tested. */
 const PLANNED: { category: string; items: { name: string; phase: string; needs: string }[] }[] = [
   { category: 'Collaboration', items: [
-    { name: 'Slack', phase: 'Later phase', needs: 'Slack app credentials' },
     { name: 'Microsoft Teams', phase: 'Later phase', needs: 'Entra ID app registration' },
     { name: 'Zoom', phase: 'Later phase', needs: 'Zoom OAuth app' },
   ] },
@@ -32,9 +32,12 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
 export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-8">
-      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, set up the browser extension, manage outbound webhooks, and see which integrations are still planned." />
+      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, set up the browser extension, manage outbound webhooks, and see which integrations are still planned." />
       <Suspense>
         <MailboxConnections />
+      </Suspense>
+      <Suspense>
+        <WorkspaceApps />
       </Suspense>
       <BrowserExtension />
       <WebhooksManager />

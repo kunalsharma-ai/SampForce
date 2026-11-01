@@ -82,6 +82,14 @@ export const apiEnvSchema = z.object({
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_TENANT: z.string().default('common'),
+  /**
+   * Workspace apps (Slack, and later Teams, Zoom, DocuSign, payments, WhatsApp). Each needs the platform's own app
+   * credentials here; a workspace admin then connects their account. Without them the app shows Pending Configuration.
+   */
+  SLACK_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
+  SLACK_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
+  SLACK_AUTH_BASE_URL: z.string().url().default('https://slack.com'),
+  SLACK_API_BASE_URL: z.string().url().default('https://slack.com/api'),
   /** Override provider endpoints (tests point these at a local fixture server). */
   GOOGLE_AUTH_BASE_URL: z.string().url().default('https://accounts.google.com'),
   GOOGLE_TOKEN_URL: z.string().url().default('https://oauth2.googleapis.com/token'),

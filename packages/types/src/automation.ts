@@ -127,6 +127,17 @@ export const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_engagement_points'), points: z.number().int().min(-50).max(50).refine((n) => n !== 0, 'Use a number other than 0') }),
   /** External: always requires an approval before it runs. */
   z.object({ type: z.literal('send_webhook'), url: z.string().url().max(2000) }),
+  /**
+   * Posts a message to the workspace's connected chat app (Slack). Internal team channel, so no approval is needed;
+   * an empty channel uses the default chosen when the app was connected.
+   */
+  z.object({
+    type: z.literal('post_to_chat'),
+    app: z.enum(['slack']).default('slack'),
+    channelId: z.string().regex(/^[CG][A-Z0-9]{2,20}$/).nullable().default(null),
+    channelName: z.string().max(80).nullable().default(null),
+    text: z.string().trim().min(1).max(3000),
+  }),
   /** External: one email to the record's address from the workflow owner's mailbox, after approval. */
   z.object({ type: z.literal('send_email'), subject: z.string().trim().min(1).max(200), body: z.string().min(1).max(10_000) }),
 ]);

@@ -8,6 +8,7 @@ import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
+import { SlicedSweep } from '../worker/sliced-sweep';
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -101,7 +102,7 @@ export function toDealFacts(r: FactRow): DealFacts {
 @Injectable()
 export class DealHealthService {
   private readonly log = new Logger(DealHealthService.name);
-  private lastSweep = 0;
+  private readonly sweeper = new SlicedSweep(HOUR);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -154,20 +155,17 @@ export class DealHealthService {
 
   /** Worker job, at most hourly: rescore open deals in every workspace. */
   async sweep(force = false): Promise<number> {
-    if (!force && Date.now() - this.lastSweep < HOUR) return 0;
-    this.lastSweep = Date.now();
-    // Every workspace has a subscription row, and that table is visible to the worker's narrow scan policy.
-    const tenants = await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT tenant_id FROM subscriptions LIMIT 5000`);
-    let n = 0;
-    for (const t of tenants) {
-      try {
-        await this.prisma.run({ tenantId: t.tenant_id }, (tx) => this.refresh(tx, t.tenant_id));
-        n++;
-      } catch (err) {
-        this.log.error({ err: errorMessage(err), tenantId: t.tenant_id }, 'deal health sweep failed');
-      }
-    }
-    return n;
+    return this.sweeper.run(
+      force,
+      async () => (await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT tenant_id FROM subscriptions LIMIT 5000`)).map((t) => t.tenant_id),
+      async (tenantId) => {
+        try {
+          await this.prisma.run({ tenantId }, (tx) => this.refresh(tx, tenantId));
+        } catch (err) {
+          this.log.error({ err: errorMessage(err), tenantId }, 'deal health sweep failed');
+        }
+      },
+    );
   }
 
   /** "Rescore now" from the at-risk page. */
