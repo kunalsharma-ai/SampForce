@@ -141,6 +141,8 @@ export const en = {
   'regional.days_other': '{count} days ago',
   'count.deals_one': '{count} deal',
   'count.deals_other': '{count} deals',
+  'count.countries_one': '{count} country',
+  'count.countries_other': '{count} countries',
   'count.openDealsClosing_one': '{count} open deal expected to close',
   'count.openDealsClosing_other': '{count} open deals expected to close',
   'count.unsavedChanges_one': '{count} unsaved change.',

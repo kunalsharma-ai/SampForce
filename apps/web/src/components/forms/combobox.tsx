@@ -23,6 +23,21 @@ interface AriaProps {
   'aria-label'?: string;
 }
 
+/**
+ * Closes the popup shortly after the input loses focus (so a click on an option still lands). Focusing the input again
+ * before then cancels the close; without that, tabbing away and straight back shut the list while it was in use.
+ */
+function useDeferredBlur() {
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancel = React.useCallback(() => clearTimeout(timer.current), []);
+  React.useEffect(() => cancel, [cancel]);
+  const schedule = (fn: () => void) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(fn, 120);
+  };
+  return { schedule, cancel };
+}
+
 /** Keyboard model shared by the single and multi comboboxes (ARIA 1.2 combobox with a listbox popup). */
 function useListNav(count: number, open: boolean) {
   const [active, setActive] = React.useState(0);
@@ -64,6 +79,7 @@ export function Combobox({
     [options, text],
   );
   const nav = useListNav(shown.length, open);
+  const blur = useDeferredBlur();
   const listRef = React.useRef<HTMLUListElement>(null);
   React.useEffect(() => {
     if (nav.active >= 0) listRef.current?.querySelector(`[data-index="${nav.active}"]`)?.scrollIntoView({ block: 'nearest' });
@@ -98,13 +114,16 @@ export function Combobox({
           setOpen(true);
           nav.setActive(0);
         }}
-        onFocus={(e) => e.target.select()}
+        onFocus={(e) => {
+          blur.cancel();
+          e.target.select();
+        }}
         onClick={openList}
         onBlur={() =>
-          setTimeout(() => {
+          blur.schedule(() => {
             setOpen(false);
             setText(null);
-          }, 120)
+          })
         }
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -219,6 +238,7 @@ export function MultiCombobox({
     return [...create, ...filtered].slice(0, MAX_SHOWN);
   }, [options, value, text, creatable, maxLength]);
   const nav = useListNav(shown.length, open && !full);
+  const blur = useDeferredBlur();
 
   const add = (v: string) => {
     const clean = v.trim().slice(0, maxLength);
@@ -290,12 +310,15 @@ export function MultiCombobox({
             setOpen(true);
             nav.setActive(0);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            blur.cancel();
+            setOpen(true);
+          }}
           onBlur={() =>
-            setTimeout(() => {
+            blur.schedule(() => {
               setOpen(false);
               if (creatable && text.trim()) add(text);
-            }, 120)
+            })
           }
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

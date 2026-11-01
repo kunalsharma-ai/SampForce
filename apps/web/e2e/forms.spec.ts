@@ -44,6 +44,21 @@ test('the lead form uses searchable country and currency pickers, a phone field 
   await expect(dialog.getByRole('button', { name: 'Remove tag spare' })).toBeVisible();
   await tags.press('Backspace');
   await expect(dialog.getByRole('button', { name: 'Remove tag spare' })).toHaveCount(0);
+  // Leaving a picker and coming straight back keeps its list open (a pending close from the blur is cancelled).
+  await country.focus();
+  await country.fill('fra');
+  await dialog.getByLabel('Full name *').focus();
+  await country.focus();
+  await country.fill('franc');
+  await page.waitForTimeout(300);
+  await expect(dialog.getByRole('option', { name: /^France/ })).toBeVisible();
+  // Escape closes the list but not the dialog around it.
+  await country.press('Escape');
+  await expect(dialog.getByRole('listbox')).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await country.fill('United Kingdom');
+  await country.press('Enter');
+  await expect(country).toHaveValue('United Kingdom');
   await axe(page);
 
   await dialog.getByRole('button', { name: 'Create lead' }).click();

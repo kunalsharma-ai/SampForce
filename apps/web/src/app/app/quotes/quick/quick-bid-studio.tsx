@@ -266,6 +266,8 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
     }
     if (!editable) return;
     if (timer.current) clearTimeout(timer.current);
+    // Say so as soon as there is something to save: "Saved at" must not show while a change waits for the timer.
+    setSave({ kind: 'saving' });
     timer.current = setTimeout(() => void flush(), SAVE_DELAY);
     return () => {
       if (timer.current) clearTimeout(timer.current);

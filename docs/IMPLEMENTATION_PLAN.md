@@ -188,7 +188,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 - Sending marketing email, visual journeys, landing-page builder, A/B tests and surveys. DealFlow has no system email sender yet; segments export to CSV instead.
 - E-signature provider adapters (DocuSign and similar need provider accounts and credentials). Signatures are recorded by a person.
 - Contract documents and file attachments, clause libraries and redlining.
-- Territories and territory-based routing.
+- Territories and territory-based routing. (Territories by country and the territory pipeline view were added later, ADR 0049; routing is still not built.)
 - A localisation framework (UI strings are English only; dates and money use en-US formatting).
 - Automatic exchange-rate feeds; rates are entered by a person.
 - Report builder and custom dashboards (moved to Phase 6, then to Phase 7).

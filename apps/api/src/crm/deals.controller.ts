@@ -10,12 +10,16 @@ import {
   listQuerySchema,
   type PipelineInput,
   pipelineInputSchema,
+  type TerritoryInput,
+  territoryInputSchema,
+  territoryUpdateSchema,
   z,
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealsService } from './deals.service';
 import { PipelinesService } from './pipelines.service';
+import { TerritoriesService } from './territories.service';
 
 const uuid = new ParseUUIDPipe();
 const boardQuerySchema = z.object({
@@ -34,7 +38,10 @@ const owner = (auth: AuthContext, q: ViewQuery) => ({ pipelineId: q.pipelineId, 
 @Controller('deals')
 @ApiKeyAccess()
 export class DealsController {
-  constructor(private readonly deals: DealsService) {}
+  constructor(
+    private readonly deals: DealsService,
+    private readonly territories: TerritoriesService,
+  ) {}
 
   @Get()
   @RequirePermissions('deals:read')
@@ -58,6 +65,13 @@ export class DealsController {
   @RequirePermissions('deals:read')
   forecast(@Auth() auth: AuthContext, @Query(new ZodPipe(viewQuerySchema)) q: ViewQuery) {
     return this.deals.forecast(auth, owner(auth, q));
+  }
+
+  /** Open pipeline and this quarter's results per sales territory (ADR 0049). */
+  @Get('territories')
+  @RequirePermissions('deals:read')
+  territoryView(@Auth() auth: AuthContext, @Query(new ZodPipe(viewQuerySchema)) q: ViewQuery) {
+    return this.territories.view(auth, owner(auth, q));
   }
 
   @Post()
@@ -147,5 +161,37 @@ export class PipelinesController {
   @RequirePermissions('pipelines:manage')
   remove(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
     return this.pipelines.remove(auth, id, meta);
+  }
+}
+
+/** Sales territories: anyone who reads deals sees them; owners and administrators define them. */
+@Controller('territories')
+@ApiKeyAccess()
+export class TerritoriesController {
+  constructor(private readonly territories: TerritoriesService) {}
+
+  @Get()
+  @RequirePermissions('deals:read')
+  list(@Auth() auth: AuthContext) {
+    return this.territories.list(auth);
+  }
+
+  @Post()
+  @RequirePermissions('tenant:manage')
+  create(@Auth() auth: AuthContext, @Body(new ZodPipe(territoryInputSchema)) body: TerritoryInput, @Meta() meta: RequestMeta) {
+    return this.territories.create(auth, body, meta);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('tenant:manage')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(territoryUpdateSchema)) body: Partial<TerritoryInput>, @Meta() meta: RequestMeta) {
+    return this.territories.update(auth, id, body, meta);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @RequirePermissions('tenant:manage')
+  remove(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.territories.remove(auth, id, meta);
   }
 }

@@ -131,6 +131,8 @@ export const de: Messages = {
   'regional.days_other': 'vor {count} Tagen',
   'count.deals_one': '{count} Verkaufschance',
   'count.deals_other': '{count} Verkaufschancen',
+  'count.countries_one': '{count} Land',
+  'count.countries_other': '{count} Länder',
   'count.openDealsClosing_one': '{count} offene Verkaufschance mit erwartetem Abschluss',
   'count.openDealsClosing_other': '{count} offene Verkaufschancen mit erwartetem Abschluss',
   'count.unsavedChanges_one': '{count} nicht gespeicherte Änderung.',

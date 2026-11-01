@@ -1,11 +1,14 @@
 'use client';
 
 import { Button, Card, cn, Input, Skeleton } from '@dealflow/ui';
-import type { DealRow } from '@dealflow/types';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { DealRow, TerritorySummary } from '@dealflow/types';
+import { ChevronLeft, ChevronRight, MapPinned } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { formatDate, formatMoney, useRecordList } from '@/lib/crm';
-import { type DealViewFilter, useDealForecast, useDealsClosing, usePriorityDeals, ymd } from '@/lib/deal-views';
+import { type DealViewFilter, useDealForecast, useDealsClosing, usePriorityDeals, useTerritoryView, ymd } from '@/lib/deal-views';
+import { countryName } from '@/components/forms/locale-data';
+import { useCan } from '@/lib/session';
 import { useIsPhone } from '@/lib/use-is-phone';
 import { initials, PriorityBadge, RiskIndicator } from './deal-badges';
 import { DealPanel } from './deal-panel';
@@ -172,6 +175,143 @@ export function ForecastView({ filter, onOpen }: { filter: DealViewFilter; onOpe
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+// ───────────── Territory ─────────────
+
+/** Country names in the reader's language, the first few in full and the rest counted. */
+function Countries({ codes, locale }: { codes: string[]; locale: string }) {
+  const t = useT();
+  if (codes.length === 0) return <span>{t('No countries yet')}</span>;
+  const names = codes.map((c) => countryName(c, locale)).sort((a, b) => a.localeCompare(b, locale));
+  const shown = names.slice(0, 6).join(', ');
+  return <span title={names.join(', ')}>{names.length > 6 ? t('{names} and {count} more', { names: shown, count: names.length - 6 }) : shown}</span>;
+}
+
+function TerritoryCard({ s, currency, onOpen, children }: { s: TerritorySummary; currency: string; onOpen: Open; children?: React.ReactNode }) {
+  const t = useT();
+  const money = (v: number) => formatMoney(v, currency);
+  const id = `territory-${s.territory?.id ?? 'none'}`;
+  const stat = (label: string, value: React.ReactNode, tone?: string) => (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn('tabular text-sm font-semibold', tone)}>{value}</dd>
+    </div>
+  );
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <section aria-labelledby={id} className="flex flex-1 flex-col gap-3">
+        <header className="space-y-0.5">
+          <h3 id={id} className="flex items-center gap-1.5 text-sm font-semibold">
+            <MapPinned className="size-4 text-primary" aria-hidden />
+            {s.territory ? s.territory.name : t('Not in a territory')}
+          </h3>
+          {s.territory && (
+            <p className="text-xs text-muted-foreground">
+              <Countries codes={s.territory.countries} locale={t.formatLocale} />
+              {s.territory.manager && <> · {t('Managed by {name}', { name: s.territory.manager.name })}</>}
+            </p>
+          )}
+        </header>
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+          {stat(t('Open deals'), s.openCount)}
+          {stat(t('Open value'), money(s.openValue))}
+          {stat(t('Weighted'), money(s.weightedValue))}
+          {stat(t('Overdue'), s.overdueCount, s.overdueCount ? 'text-critical' : undefined)}
+          {stat(t('Won this quarter'), s.wonCount ? `${s.wonCount} · ${money(s.wonValue)}` : '0', s.wonCount ? 'text-success' : undefined)}
+          {stat(t('Lost this quarter'), s.lostCount)}
+        </dl>
+        {s.otherCurrencyCount > 0 && (
+          <p className="text-xs text-muted-foreground">{t('{count} open deals in other currencies are counted but not added to the values.', { count: s.otherCurrencyCount })}</p>
+        )}
+        {children}
+        {s.owners.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5" aria-label={t('Owners of open deals')}>
+            {s.owners.map((o) => (
+              <li key={o.owner?.id ?? 'none'} className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs">
+                <span className="grid size-4 place-items-center rounded-full bg-primary/15 text-[9px] font-semibold text-primary" aria-hidden>
+                  {o.owner ? initials(o.owner.name) : '?'}
+                </span>
+                {o.owner?.name ?? t('Unassigned')} · {o.count}
+              </li>
+            ))}
+          </ul>
+        )}
+        {s.deals.length > 0 ? (
+          <ul className="divide-y divide-border rounded-md border border-border" aria-label={t('Largest open deals in {territory}', { territory: s.territory?.name ?? t('Not in a territory') })}>
+            {s.deals.map((d) => (
+              <li key={d.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm">
+                <span className="min-w-0">
+                  <DealLink deal={d} onOpen={onOpen} className="block truncate" />
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {d.company?.name ?? t('No company')} · {d.stage.name}
+                  </span>
+                </span>
+                <span className="tabular shrink-0 text-xs">{formatMoney(d.amount, d.currency)}</span>
+              </li>
+            ))}
+            {s.openCount > s.deals.length && <li className="px-2.5 py-1.5 text-xs text-muted-foreground">{t('and {count} more', { count: s.openCount - s.deals.length })}</li>}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">{t('No open deals.')}</p>
+        )}
+      </section>
+    </Card>
+  );
+}
+
+export function TerritoryView({ filter, onOpen }: { filter: DealViewFilter; onOpen: Open }) {
+  const q = useTerritoryView(filter);
+  const t = useT();
+  const canManage = useCan('tenant:manage');
+  if (q.isPending) return <Loading />;
+  if (q.error) return <Failed error={q.error} />;
+  const { territories, unassigned, currency, closedSince } = q.data;
+  const since = new Date(`${closedSince}T12:00:00`).toLocaleDateString(t.formatLocale, { day: 'numeric', month: 'long', year: 'numeric' });
+  const manage = canManage && (
+    <Link href="/app/settings/territories" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium hover:bg-muted">
+      {t('Manage territories')}
+    </Link>
+  );
+  return (
+    <section aria-labelledby="territory-heading" className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 id="territory-heading" className="text-base font-semibold">
+            {t('Pipeline by territory')}
+          </h2>
+          <p className="text-sm text-muted-foreground">{t('A deal belongs to the territory that holds its company’s country. Won and lost counts cover deals closed since {date}.', { date: since })}</p>
+        </div>
+        {manage}
+      </div>
+      {territories.length === 0 && (
+        <Card className="space-y-2 p-6 text-center text-sm text-muted-foreground">
+          <p>{t('No territories yet. Territories group countries so you can see pipeline by region.')}</p>
+          {!canManage && <p>{t('Ask an owner or administrator to set them up.')}</p>}
+        </Card>
+      )}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {territories.map((s) => (
+          <TerritoryCard key={s.territory!.id} s={s} currency={currency} onOpen={onOpen} />
+        ))}
+        {unassigned.openCount > 0 && (
+          <TerritoryCard s={unassigned} currency={currency} onOpen={onOpen}>
+            <ul className="space-y-0.5 text-xs text-muted-foreground" aria-label={t('Why these deals are not in a territory')}>
+              {unassigned.noCompany > 0 && <li>{t('{count} with no company', { count: unassigned.noCompany })}</li>}
+              {unassigned.noCountry > 0 && <li>{t('{count} whose company has no country', { count: unassigned.noCountry })}</li>}
+              {unassigned.uncoveredCountries.length > 0 && (
+                <li>
+                  {t('Countries no territory covers: {list}', {
+                    list: unassigned.uncoveredCountries.map((c) => `${countryName(c.country, t.formatLocale)} (${c.count})`).join(', '),
+                  })}
+                </li>
+              )}
+            </ul>
+          </TerritoryCard>
+        )}
       </div>
     </section>
   );

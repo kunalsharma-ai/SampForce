@@ -1,6 +1,6 @@
 'use client';
 
-import type { DealForecast, DealRow, Page, PriorityDeal } from '@dealflow/types';
+import type { DealForecast, DealRow, Page, PriorityDeal, TerritoryView } from '@dealflow/types';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from './api';
 
@@ -23,6 +23,11 @@ export function usePriorityDeals(f: DealViewFilter) {
 
 export function useDealForecast(f: DealViewFilter) {
   return useQuery({ queryKey: ['deal-views', 'forecast', f], queryFn: () => api<DealForecast>(`/deals/forecast${params(f)}`), placeholderData: keepPreviousData });
+}
+
+/** Open pipeline and this quarter's results per sales territory. */
+export function useTerritoryView(f: DealViewFilter) {
+  return useQuery({ queryKey: ['deal-views', 'territories', f], queryFn: () => api<TerritoryView>(`/deals/territories${params(f)}`), placeholderData: keepPreviousData });
 }
 
 /**

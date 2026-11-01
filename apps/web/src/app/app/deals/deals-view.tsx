@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Columns2, GanttChart, HeartPulse, KanbanSquare, LineChart, List, Sparkles } from 'lucide-react';
+import { CalendarDays, Columns2, GanttChart, HeartPulse, KanbanSquare, LineChart, List, MapPinned, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
@@ -8,7 +8,7 @@ import { DealsBoard } from '@/components/crm/deals-board';
 import { RecordList } from '@/components/crm/record-list';
 import { Select } from '@/components/crm/select';
 import { DealSheet } from '@/components/deals/deal-panel';
-import { CalendarView, ForecastView, PriorityView, SplitView, TimelineView } from '@/components/deals/views';
+import { CalendarView, ForecastView, PriorityView, SplitView, TerritoryView, TimelineView } from '@/components/deals/views';
 import { usePipelines } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
@@ -22,6 +22,7 @@ const VIEWS = [
   { key: 'calendar', label: 'Calendar', icon: CalendarDays },
   { key: 'forecast', label: 'Forecast', icon: LineChart },
   { key: 'priority', label: 'Priority', icon: Sparkles },
+  { key: 'territory', label: 'Territory', icon: MapPinned },
 ] as const satisfies readonly { key: string; label: MessageKey; icon: unknown }[];
 type View = (typeof VIEWS)[number]['key'];
 const isView = (v: string | null): v is View => VIEWS.some((x) => x.key === v);
@@ -141,6 +142,7 @@ export function DealsView() {
       {view === 'calendar' && <CalendarView filter={filter} onOpen={open} />}
       {view === 'forecast' && <ForecastView filter={filter} onOpen={open} />}
       {view === 'priority' && <PriorityView filter={filter} onOpen={open} />}
+      {view === 'territory' && <TerritoryView filter={filter} onOpen={open} />}
       {/* In split view the deal opens beside the list; on phones (no room) and in other views it slides over. */}
       <DealSheet id={view === 'split' ? null : dealId} onClose={() => setParams({ deal: null })} />
       {view === 'split' && <SplitPhoneSheet id={dealId} onClose={() => setParams({ deal: null })} />}
