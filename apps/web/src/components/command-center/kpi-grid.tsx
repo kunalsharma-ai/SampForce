@@ -3,13 +3,19 @@
 import { Card, cn, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
 import type { KpiKey, KpiValue } from '@dealflow/types';
 import { Info } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { formatKpi } from '@/lib/format';
+import { usePreferences } from '@/stores/preferences';
 import { AnimatedNumber } from './animated-number';
 
 const HIGHLIGHT: KpiKey[] = ['pipelineValue', 'weightedPipelineValue', 'closedWonRevenue', 'forecastRevenue'];
 
 export function KpiGrid({ kpis, currency }: { kpis: KpiValue[]; currency: string }) {
+  // Motion Off or Minimal, or Balanced with the device set to reduce motion, skips the entrance entirely:
+  // the cards render at full opacity straight away (a fade is still motion, and mid-fade text fails contrast).
+  const motionPref = usePreferences((s) => s.appearance.motion);
+  const osReduce = useReducedMotion();
+  const reduce = motionPref === 'off' || motionPref === 'minimal' || (motionPref === 'balanced' && !!osReduce);
   const ordered = [...kpis.filter((k) => HIGHLIGHT.includes(k.key)), ...kpis.filter((k) => !HIGHLIGHT.includes(k.key))];
   return (
     <section aria-labelledby="kpi-heading">
@@ -22,7 +28,7 @@ export function KpiGrid({ kpis, currency }: { kpis: KpiValue[]; currency: string
           return (
             <motion.li
               key={k.key}
-              initial={{ opacity: 0, y: 10 }}
+              initial={reduce ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.025, duration: 0.3 }}
               className={cn(highlight && 'col-span-2 md:col-span-1')}
