@@ -247,6 +247,7 @@ model Tenant {
   appEvents              AppEvent[]
   zoomMeetings           ZoomMeeting[]
   signatureEnvelopes     SignatureEnvelope[]
+  quotePayments          QuotePayment[]
 
   @@map("tenants")
 }
@@ -1410,11 +1411,12 @@ model Quote {
   createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
-  priceBook   PriceBook   @relation(fields: [priceBookId], references: [id])
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  priceBook   PriceBook      @relation(fields: [priceBookId], references: [id])
   lines       QuoteLine[]
   contracts   Contract[]
+  payments    QuotePayment[]
 
   @@unique([tenantId, number, version])
   @@index([tenantId, opportunityId])
@@ -2835,6 +2837,8 @@ enum AppProvider {
   TEAMS
   ZOOM
   DOCUSIGN
+  /// Card payments on quotes, into the workspace's own Stripe or Razorpay account.
+  PAYMENTS
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
@@ -2860,6 +2864,7 @@ model AppConnection {
   events       AppEvent[]
   zoomMeetings ZoomMeeting[]
   envelopes    SignatureEnvelope[]
+  payments     QuotePayment[]
 
   @@unique([tenantId, provider])
   @@index([provider, externalAccountId])
@@ -2957,4 +2962,32 @@ model SignatureEnvelope {
   @@unique([tenantId, envelopeId])
   @@index([tenantId, contractId])
   @@map("signature_envelopes")
+}
+
+/// A card payment request for an accepted quote, in the workspace's own Stripe or Razorpay account.
+model QuotePayment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  connectionId      String?   @map("connection_id") @db.Uuid
+  quoteId           String    @map("quote_id") @db.Uuid
+  /// stripe or razorpay
+  provider          String
+  /// Stripe Checkout Session id or Razorpay payment link id.
+  providerRef       String?   @map("provider_ref")
+  /// pending, paid, expired, failed
+  status            String    @default("pending")
+  amount            Decimal   @db.Decimal(18, 2)
+  currency          String    @db.Char(3)
+  payerEmail        String?   @map("payer_email")
+  providerPaymentId String?   @map("provider_payment_id")
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  quote      Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, quoteId])
+  @@map("quote_payments")
 }

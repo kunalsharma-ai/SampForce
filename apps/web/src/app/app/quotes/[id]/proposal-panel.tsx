@@ -17,6 +17,7 @@ import {
   PROPOSAL_TEMPLATES,
   type ProposalDraft,
   type ProposalSection,
+  type QuotePaymentRow,
   type QuoteRow,
   type RecommendationRow,
 } from '@dealflow/types';
@@ -360,10 +361,57 @@ export function ProposalSharing({
           )}
           <p>Opens are estimates: email security scanners can open links before a person does.</p>
         </div>
+        <CardPayments quote={q} />
         <ErrorText error={toggle.error ?? link.error} />
       </CardContent>
       {canSend && <SendDialog quote={q} open={open} onOpenChange={setOpen} onSent={onSent} />}
     </Card>
+  );
+}
+
+const PAYMENT_STATUS: Record<QuotePaymentRow['status'], { label: string; tone: 'neutral' | 'success' | 'warning' | 'critical' }> = {
+  pending: { label: 'Started, not confirmed', tone: 'neutral' },
+  paid: { label: 'Paid', tone: 'success' },
+  failed: { label: 'Failed', tone: 'critical' },
+  expired: { label: 'Expired', tone: 'neutral' },
+};
+
+/** Card payments the customer started from the online proposal. "Paid" only ever comes from the provider's signed webhook. */
+function CardPayments({ quote: q }: { quote: QuoteRow }) {
+  const payments = useQuery({
+    queryKey: ['quotes', 'payments', q.id],
+    queryFn: () => api<QuotePaymentRow[]>(`/apps/payments/quotes/${q.id}`),
+    enabled: q.status === 'ACCEPTED',
+  });
+  if (q.status !== 'ACCEPTED') return null;
+  const rows = payments.data ?? [];
+  return (
+    <div className="space-y-1 border-t border-border pt-3" aria-label="Card payments">
+      <p className="text-xs font-medium">Card payments</p>
+      {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          None yet. When card payments are set up under Integrations, the customer sees “Pay by
+          card” on this accepted proposal.
+        </p>
+      ) : (
+        <ul className="space-y-1 text-xs">
+          {rows.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-2">
+              <Badge tone={PAYMENT_STATUS[p.status].tone}>{PAYMENT_STATUS[p.status].label}</Badge>
+              <span className="tabular-nums">
+                {p.currency} {p.amount.toFixed(2)}
+              </span>
+              <span className="text-muted-foreground">
+                {p.provider === 'stripe' ? 'Stripe' : 'Razorpay'} ·{' '}
+                {p.paidAt ? `paid ${relativeTime(p.paidAt)}` : `started ${relativeTime(p.createdAt)}`}
+                {p.payerEmail ? ` · ${p.payerEmail}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ErrorText error={payments.error} />
+    </div>
   );
 }
 

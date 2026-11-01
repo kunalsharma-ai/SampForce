@@ -14,7 +14,8 @@
 | Microsoft Teams (workspace app: post to channels from workflows) | **Not connected** until an admin adds a channel. A channel is saved only after Teams accepts a welcome card, so a listed channel has worked at least once. Implemented and tested against a local stand-in of Teams Workflows webhooks only; not yet tested against Teams. | No deployment secret. Each channel's Workflows URL is a workspace secret, stored encrypted |
 | Zoom (workspace app: schedule meetings from records; import transcripts of recorded meetings) | **Pending Configuration** until `ZOOM_CLIENT_ID` and `ZOOM_CLIENT_SECRET` are set; transcript import is separately Pending Configuration until `ZOOM_WEBHOOK_SECRET_TOKEN` is set. Implemented and tested against a local stand-in of Zoom's OAuth, REST API v2 and event notifications only; not yet tested against Zoom. | Needs `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_WEBHOOK_SECRET_TOKEN` (server secrets) |
 | DocuSign (workspace app: send contracts for e-signature) | **Pending Configuration** until `DOCUSIGN_INTEGRATION_KEY` and `DOCUSIGN_SECRET_KEY` are set; automatic status updates are separately Pending Configuration until `DOCUSIGN_CONNECT_HMAC_KEY` is set ("Check status" works without it). Implemented and tested against a local stand-in of DocuSign's OAuth, eSignature REST API v2.1 and Connect only; not yet tested against DocuSign. | Needs `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY`, `DOCUSIGN_CONNECT_HMAC_KEY` (server secrets); `DOCUSIGN_AUTH_BASE_URL` for the demo environment |
-| Twilio, WhatsApp, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
+| Card payments on proposals (workspace app: customers pay accepted proposals into the workspace's own Stripe or Razorpay account) | **Not connected** until an admin saves keys; keys are saved only after a read that charges nothing succeeds. Shows a warning until the first signed webhook arrives. A proposal is marked paid only by the provider's signed webhook with the exact amount asked. Implemented and tested against a local stand-in of Stripe Checkout Sessions and Razorpay Payment Links only; not yet tested against either provider. | No deployment secret. Each workspace's keys and webhook secret are workspace secrets, stored encrypted |
+| Twilio, WhatsApp, Zapier | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -174,6 +175,47 @@ How it behaves:
   rotation matches). Envelopes DealFlow did not send are acknowledged and ignored. Status only moves forward, and a
   completed, declined or voided envelope stays that way.
 - A declined or voided envelope leaves the contract as a draft, with the reason shown.
+
+## Setting up card payments on proposals
+
+Card payments are a workspace app, and each workspace uses **its own** Stripe or Razorpay account: the money goes
+straight to the seller, and DealFlow never sees card details. This is separate from DealFlow's own subscription
+billing (`STRIPE_SECRET_KEY` and friends in docs/BILLING.md), which pays the DealFlow operator. No operator secret is
+needed.
+
+Stripe:
+
+1. In the Stripe dashboard, create a **restricted key** with **Checkout Sessions: Write** (a secret key also works).
+   Use test-mode keys first.
+2. In DealFlow, under Integrations, Card payments, choose Stripe, paste the key, and press **Check and save**. Paste
+   any `whsec_` value for now if the endpoint does not exist yet, then replace it in step 4.
+3. Copy the **Webhook URL** shown on the card. In Stripe, add a webhook endpoint with that URL and the events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+   and `checkout.session.expired`.
+4. Press **Replace keys** and paste the endpoint's signing secret. The webhook URL does not change.
+
+Razorpay:
+
+1. In Razorpay, Account & Settings, generate an API key (key id and secret). Use test mode first.
+2. Under Webhooks, add the Webhook URL from the DealFlow card with a secret you choose, and the events
+   `payment_link.paid`, `payment_link.expired` and `payment_link.cancelled`. Save the same secret in DealFlow.
+
+How it behaves:
+
+- "Pay by card" appears on the online proposal only when the quote is **accepted**, is the latest version, has a
+  total above zero and is shared. Before that the customer sees why they cannot pay yet. The rep's preview shows the
+  button turned off.
+- Each press creates a Stripe Checkout Session or a Razorpay Payment Link (expires after 24 hours) for the exact
+  quote total, with DealFlow's payment id in its metadata, and sends the customer to the provider's hosted page.
+- A payment counts only when the provider's webhook arrives with a valid signature (Stripe: `Stripe-Signature`,
+  timestamp within 5 minutes; Razorpay: `X-Razorpay-Signature`) **and** the amount and currency match what was asked.
+  A mismatch is logged and not counted. Retries are idempotent. The rep is notified and `quote.paid` is audited.
+- Each workspace's webhook URL carries a random id and is checked with that workspace's own secret, so one
+  workspace cannot confirm another's payment.
+- Three-decimal currencies (such as KWD) are refused rather than guessed. Refunds, partial payments, deposits and
+  instalments are not supported yet; refunds are made in the provider's dashboard and are not reflected here.
+- Disconnecting removes the button. Payments still in progress at that point are not recorded, so disconnect only
+  when none are open. Payment history stays on each quote.
 
 ## Behaviour
 

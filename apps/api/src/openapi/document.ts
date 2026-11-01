@@ -170,6 +170,7 @@ import {
   docusignListQuery,
   docusignSendSchema,
   docusignVoidSchema,
+  paymentsConnectSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -324,7 +325,7 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign']) }) };
+  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign', 'payments']) }) };
   action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
@@ -355,6 +356,11 @@ export function buildOpenApiDocument(): object {
     request: { params: idParam }, responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, ...notFound, ...errors } });
   r.registerPath({ method: 'post', path: '/apps/docusign/events', tags: ['Workspace apps'], summary: 'DocuSign Connect (JSON) envelope events; authenticated by X-DocuSign-Signature-N HMAC only; unknown envelopes are ignored',
     responses: { 200: ok('Acknowledged'), 401: { description: 'Signature check failed' }, 403: { description: 'DOCUSIGN_CONNECT_HMAC_KEY not set' } } });
+  action('post', '/apps/payments/keys', 'Workspace apps', "Save the workspace's own Stripe (restricted or secret key) or Razorpay keys plus webhook secret after a read that charges nothing proves them; sealed, never returned; 5 a minute (integrations:manage)", paymentsConnectSchema);
+  r.registerPath({ method: 'get', path: '/apps/payments/quotes/{quoteId}', tags: ['Workspace apps'], summary: 'Card payments started from one quote’s online proposal; paid only when the provider’s signed webhook confirmed the amount (quotes:read)', security: secured,
+    request: { params: z.object({ quoteId: z.string().uuid() }) }, responses: { 200: ok('Payments'), ...errors } });
+  r.registerPath({ method: 'post', path: '/apps/payments/webhooks/{hookId}', tags: ['Workspace apps'], summary: "One workspace's Stripe or Razorpay webhook; checked with that workspace's signing secret (Stripe-Signature with a 5-minute window, or X-Razorpay-Signature); retries are idempotent",
+    request: { params: z.object({ hookId: z.string().regex(/^[a-f0-9]{24}$/) }) }, responses: { 200: ok('Acknowledged'), 404: { description: 'Unknown endpoint or signature check failed' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);
@@ -490,6 +496,7 @@ export function buildOpenApiDocument(): object {
   action('get', '/quotes/{id}/share', 'Quotes', 'Whether the online proposal link is live, and the link (quotes:read)');
   action('post', '/quotes/{id}/share', 'Quotes', 'Turn the online proposal link on or off; only approved, sent, accepted or declined quotes (quotes:write)', z.object({ enabled: z.boolean() }));
   r.registerPath({ method: 'get', path: '/proposals/view/{token}', tags: ['Quotes'], summary: 'Public: the online proposal; each load counts as a view unless preview=1 (no auth)', request: { params: z.object({ token: z.string() }), query: z.object({ preview: z.literal('1').optional() }) }, responses: { 200: ok('Proposal'), 404: json(error, 'Not shared or not valid') } });
+  r.registerPath({ method: 'post', path: '/proposals/view/{token}/pay', tags: ['Quotes'], summary: "Public: open the seller's hosted Stripe or Razorpay payment page for an accepted, latest proposal; 10 a minute (no auth)", request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('{ url } of the hosted payment page'), 404: json(error, 'Not shared or not valid'), 409: json(error, 'PAYMENTS_OFF, CANNOT_PAY, ALREADY_PAID or PAYMENT_UNAVAILABLE') } });
   r.registerPath({ method: 'get', path: '/proposals/view/{token}/pdf', tags: ['Quotes'], summary: 'Public: the proposal as a PDF; not counted as a view (no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, 404: json(error, 'Not shared or not valid') } });
   r.registerPath({ method: 'get', path: '/quotes/{id}/pdf', tags: ['Quotes'], summary: 'PDF of the quote (quotes:read)', security: secured, request: { params: idParam },
     responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: z.string() } } }, ...notFound, ...errors } });

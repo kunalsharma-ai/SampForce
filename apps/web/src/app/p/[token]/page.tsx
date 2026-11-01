@@ -8,13 +8,13 @@ export default async function ProposalPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; payment?: string }>;
 }) {
   const { token } = await params;
-  const { preview } = await searchParams;
+  const { preview, payment } = await searchParams;
   return (
     <main className="mx-auto min-h-screen max-w-3xl bg-background px-4 py-10">
-      <ProposalView token={token} preview={preview === '1'} />
+      <ProposalView token={token} preview={preview === '1'} returnedFromPayment={payment === 'done'} />
     </main>
   );
 }

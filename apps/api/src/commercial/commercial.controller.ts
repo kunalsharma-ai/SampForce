@@ -271,6 +271,16 @@ export class PublicProposalsController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('view/:token/pay')
+  @HttpCode(200)
+  async pay(@Param('token') token: string) {
+    const out = await this.proposals.pay(token);
+    if (!out) throw new NotFoundException({ code: 'NOT_FOUND', message: 'This proposal link is not valid or is no longer shared.' });
+    return out;
+  }
+
+  @Public()
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('view/:token/pdf')
   async pdf(@Param('token') token: string, @Res() res: Response) {
