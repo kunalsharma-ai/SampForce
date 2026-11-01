@@ -7,8 +7,7 @@ const badgeVariants = cva('inline-flex items-center gap-1 rounded-full border px
     tone: {
       neutral: 'border-border bg-muted text-muted-foreground',
       primary: 'border-primary/30 bg-primary/10 text-primary',
-      // Royal Violet text is too dark on dark surfaces at badge size, so dark mode uses a lighter violet (about 7:1).
-      accent: 'border-accent/30 bg-accent/10 text-accent dark:text-[#b9a3ff]',
+      accent: 'border-accent/30 bg-accent/10 text-accent',
       success: 'border-success/30 bg-success/10 text-success',
       warning: 'border-warning/30 bg-warning/10 text-warning',
       critical: 'border-critical/30 bg-critical/10 text-critical',

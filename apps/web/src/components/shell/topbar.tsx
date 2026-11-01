@@ -41,6 +41,7 @@ import { CommandPalette } from './command-palette';
 import { CopilotPanel } from './copilot-panel';
 import { VoiceNoteButton } from '../voice/voice-note';
 import { NotificationsMenu } from './notifications-menu';
+import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
 
 const QUICK_CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
@@ -111,7 +112,7 @@ export function Topbar() {
       <button
         type="button"
         onClick={() => setSearchOpen(true)}
-        className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface/60 px-3 text-sm text-muted-foreground hover:bg-muted md:max-w-md"
+        className="flex h-control min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface/60 px-3 text-sm text-muted-foreground hover:bg-muted md:max-w-md"
       >
         <Search className="size-4" aria-hidden />
         <span className="flex-1 truncate text-left">Search<span className="hidden sm:inline"> DealFlow</span></span>
@@ -148,6 +149,7 @@ export function Topbar() {
         </span>
 
         <NotificationsMenu />
+        <ThemeSwitcher />
 
         <IconLink href="/app/activities" label="Tasks" icon={ListTodo} />
         <IconLink href="/app/meetings" label="Calendar" icon={CalendarDays} />

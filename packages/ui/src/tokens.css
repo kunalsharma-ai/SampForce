@@ -82,3 +82,126 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/*
+ * Theme engine (packages/types/src/appearance.ts). The engine writes every colour token above as an inline variable
+ * on <html>, plus the layout variables below; these defaults match the Balanced density and the signature theme.
+ */
+:root {
+  --secondary: 219 72% 47%;
+  --secondary-foreground: 0 0% 100%;
+  --info: 219 72% 47%;
+  --font-scale: 1;
+  --control-h: 2.5rem;
+  --control-h-sm: max(24px, calc(var(--control-h) - 0.5rem));
+  --card-pad: 1.25rem;
+  --cell-py: 0.625rem;
+  --layout-gap: 1.25rem;
+  --shadow-strength: 0.5;
+  --glass: 0.6;
+  --icon-stroke: 2;
+}
+.dark {
+  --secondary: 219 100% 65%;
+  --secondary-foreground: 230 58% 7%;
+  --info: 213 100% 68%;
+}
+
+html {
+  font-size: calc(100% * var(--font-scale));
+}
+
+/* Icon style: Lucide draws with stroke-width="2"; CSS overrides the attribute. */
+svg.lucide {
+  stroke-width: var(--icon-stroke);
+}
+
+/* Interface density: table rows across the app follow the chosen density. */
+main td,
+main th {
+  padding-top: var(--cell-py);
+  padding-bottom: var(--cell-py);
+}
+
+/* Cards: outlined (default), flat or elevated, with the chosen shadow strength. Always opaque, so text stays readable. */
+.df-card {
+  box-shadow: 0 1px 2px hsl(230 40% 4% / calc(0.08 * var(--shadow-strength)));
+}
+[data-card='flat'] .df-card {
+  border-color: transparent;
+  box-shadow: none;
+  background-color: hsl(var(--surface-raised));
+}
+[data-card='elevated'] .df-card {
+  border-color: hsl(var(--border) / 0.45);
+  box-shadow:
+    0 1px 2px hsl(230 40% 4% / calc(0.1 * var(--shadow-strength))),
+    0 10px 28px -10px hsl(230 40% 4% / calc(0.35 * var(--shadow-strength)));
+}
+
+/* Glass applies to overlays only (command palette, Copilot, menus, sheets), never to forms or tables. */
+.df-glass {
+  background-color: hsl(var(--popover) / calc(1 - var(--glass) * 0.28));
+  backdrop-filter: blur(calc(var(--glass) * 20px)) saturate(calc(1 + var(--glass) * 0.4));
+}
+
+/* Sidebar appearance. */
+.df-sidebar {
+  background-color: hsl(var(--surface) / calc(1 - var(--glass) * 0.5));
+  backdrop-filter: blur(calc(var(--glass) * 24px));
+}
+[data-sidebar='solid'] .df-sidebar {
+  background-color: hsl(var(--surface));
+  backdrop-filter: none;
+}
+[data-sidebar='tinted'] .df-sidebar {
+  background-color: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--surface)));
+  backdrop-filter: none;
+}
+
+/* Motion settings. Ambient drift runs only on Full; Minimal also stops keyframe animations (entrances, shimmer). */
+:root:not([data-motion='full']) .animate-drift {
+  animation: none;
+}
+[data-motion='minimal'] *,
+[data-motion='minimal'] *::before,
+[data-motion='minimal'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+
+/* Theme Studio live preview: its own card and sidebar style win over the page's. */
+[data-preview][data-card] .df-card {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--surface));
+  box-shadow: 0 1px 2px hsl(230 40% 4% / calc(0.08 * var(--shadow-strength)));
+}
+[data-preview][data-card='flat'] .df-card {
+  border-color: transparent;
+  box-shadow: none;
+  background-color: hsl(var(--surface-raised));
+}
+[data-preview][data-card='elevated'] .df-card {
+  border-color: hsl(var(--border) / 0.45);
+  box-shadow:
+    0 1px 2px hsl(230 40% 4% / calc(0.1 * var(--shadow-strength))),
+    0 10px 28px -10px hsl(230 40% 4% / calc(0.35 * var(--shadow-strength)));
+}
+[data-preview][data-sidebar] .df-sidebar {
+  background-color: hsl(var(--surface) / calc(1 - var(--glass) * 0.5));
+}
+[data-preview][data-sidebar='solid'] .df-sidebar {
+  background-color: hsl(var(--surface));
+}
+[data-preview][data-sidebar='tinted'] .df-sidebar {
+  background-color: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--surface)));
+}
+[data-preview] svg.lucide {
+  stroke-width: var(--icon-stroke);
+}
+[data-preview] td,
+[data-preview] th {
+  padding-top: var(--cell-py);
+  padding-bottom: var(--cell-py);
+}

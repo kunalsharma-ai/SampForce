@@ -213,3 +213,9 @@ it) and `20261031000400_offline_invoices`. `20261031000500_platform_settings` ad
 who changed it): deployment-wide values edited in the operator console, such as the payment instructions. It has no
 `tenant_id` and no RLS; only the operator API writes it. `20261031000600_renewal_reminder` adds
 `subscriptions.renewal_reminded_at`, so the 7-day renewal reminder is sent once per period end.
+
+**Theme engine (2026-11-01, ADR 0040).** Migration `20261101010000_theme_engine` adds `user_preferences` (one row per
+user: `appearance` JSON validated by `appearanceSchema`) and `user_saved_themes` (named themes, unique per user and
+name, at most 20 enforced by the API), plus `tenants.default_appearance`. The two user tables carry no `tenant_id` and
+no RLS, like `password_reset_tokens`: a person's theme follows them across workspaces, and the API only reads the
+caller's own rows (`apps/api/test/preferences.e2e.test.ts`).

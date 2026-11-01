@@ -16,8 +16,9 @@ export const viewport: Viewport = {
   ],
 };
 
-// Applies the saved theme and motion preference before first paint to avoid a flash.
-const preferenceBootstrap = `try{var p=JSON.parse(localStorage.getItem('dealflow:preferences')||'{}').state||{};var t=p.theme||'dark';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.dataset.motion=p.motion||'system';}catch(e){document.documentElement.classList.add('dark')}`;
+// Paints the last theme engine output (lib/appearance-engine.ts) before first paint, so a reload never flashes the
+// wrong theme. Falls back to the older stored theme setting, then to the signature dark theme.
+const preferenceBootstrap = `try{var r=document.documentElement,c=JSON.parse(localStorage.getItem('dealflow:appearance-paint')||'null');if(c){var d=c.mode==='dark'||(c.mode==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);r.classList.toggle('dark',d);var v=d?c.dark:c.light;for(var k in v)r.style.setProperty(k,v[k]);for(var a in c.attrs)r.dataset[a]=c.attrs[a];}else{var p=JSON.parse(localStorage.getItem('dealflow:preferences')||'{}').state||{};var t=(p.appearance&&p.appearance.mode)||p.theme||'dark';r.classList.toggle('dark',t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches));var m=(p.appearance&&p.appearance.motion)||p.motion||'balanced';r.dataset.motion=m==='reduced'?'minimal':m==='system'?'balanced':m;}}catch(e){document.documentElement.classList.add('dark')}`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Reading the request makes every page render per request, so Next.js can put the CSP nonce on its scripts.

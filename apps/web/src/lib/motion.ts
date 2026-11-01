@@ -11,13 +11,14 @@ function subscribeReduced(cb: () => void) {
   return () => m.removeEventListener('change', cb);
 }
 
-/** The motion the user wants: their DealFlow setting, or the operating system's when set to "system". */
+/** The motion the user wants: their DealFlow setting, combined with the operating system's for Balanced. */
 export function useMotionLevel(): MotionLevel {
-  const pref = usePreferences((s) => s.motion);
+  const pref = usePreferences((s) => s.appearance.motion);
   const systemReduced = useSyncExternalStore(subscribeReduced, () => window.matchMedia('(prefers-reduced-motion: reduce)').matches, () => false);
   if (pref === 'off') return 'off';
-  if (pref === 'reduced') return 'reduced';
+  if (pref === 'minimal') return 'reduced';
   if (pref === 'full') return 'full';
+  // Balanced: interface motion, unless the operating system asks for less.
   return systemReduced ? 'reduced' : 'full';
 }
 
@@ -41,7 +42,7 @@ export type SceneSupport = { mode: '3d' | '2d'; reason: string | null; ready: bo
  * view; the person can also pick 2D themselves. Reduced motion keeps 3D but stops automatic movement.
  */
 export function useSceneSupport(): SceneSupport {
-  const lowPower = usePreferences((s) => s.lowPower);
+  const lowPower = usePreferences((s) => s.appearance.lowPower);
   const [webgl, setWebgl] = useState<boolean | null>(null);
   useEffect(() => setWebgl(detectWebGL()), []);
   if (webgl === null) return { mode: '2d', reason: null, ready: false };

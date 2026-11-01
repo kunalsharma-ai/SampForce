@@ -11,7 +11,7 @@ import { usePreferences } from '@/stores/preferences';
 /** Pipeline value by stage, with an equivalent table view for screen readers and keyboard users. */
 export function PipelineChart({ pipeline, currency }: { pipeline: NonNullable<DashboardSummary['pipeline']>; currency: string }) {
   const [view, setView] = useState<'chart' | 'table'>('chart');
-  const animate = usePreferences((s) => s.motion !== 'off' && s.motion !== 'reduced');
+  const animate = usePreferences((s) => s.appearance.motion !== 'off' && s.appearance.motion !== 'minimal');
   const money = (n: number) => formatKpi(n, 'currency', currency);
   const empty = pipeline.stages.every((s) => s.dealCount === 0);
 

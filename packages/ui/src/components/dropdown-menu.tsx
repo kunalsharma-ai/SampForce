@@ -15,7 +15,7 @@ export const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-[14rem] overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95',
+        'z-50 min-w-[14rem] overflow-hidden rounded-lg border border-border df-glass bg-popover p-1 text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95',
         className,
       )}
       {...props}
@@ -46,3 +46,28 @@ export function DropdownMenuLabel({ className, ...props }: React.HTMLAttributes<
 export function DropdownMenuSeparator({ className }: { className?: string }) {
   return <DropdownMenuPrimitive.Separator className={cn('-mx-1 my-1 h-px bg-border', className)} />;
 }
+
+export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+
+/** A choice inside a radio group; screen readers announce it as checked or not. */
+export const DropdownMenuRadioItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.RadioItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.RadioItem>
+>(({ className, children, ...props }, ref) => (
+  <DropdownMenuPrimitive.RadioItem
+    ref={ref}
+    className={cn(
+      'relative flex cursor-default select-none items-center gap-2 rounded-md py-1.5 pl-7 pr-2 text-sm outline-none focus:bg-muted data-[disabled]:pointer-events-none data-[disabled]:opacity-60 [&_svg]:size-4',
+      className,
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex size-3.5 items-center justify-center">
+      <DropdownMenuPrimitive.ItemIndicator>
+        <span className="block size-2 rounded-full bg-primary" />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </span>
+    {children}
+  </DropdownMenuPrimitive.RadioItem>
+));
+DropdownMenuRadioItem.displayName = 'DropdownMenuRadioItem';

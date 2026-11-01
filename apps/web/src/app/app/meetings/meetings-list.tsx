@@ -80,7 +80,7 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
                   {m.attendees.slice(0, 6).join(', ')}
                   {m.attendees.length > 6 && ` +${m.attendees.length - 6}`}
                   {m.contactIds.map((id, i) => (
-                    <Link key={id} href={`/app/contacts/${id}`} className="ml-2 text-primary hover:underline">
+                    <Link key={id} href={`/app/contacts/${id}`} className="ml-2 text-primary underline underline-offset-2">
                       Contact {m.contactIds.length > 1 ? i + 1 : ''}
                     </Link>
                   ))}
