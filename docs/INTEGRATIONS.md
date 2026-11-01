@@ -10,7 +10,8 @@
 | Apollo.io (people search and email reveal for Prospect Lists and the extension) | **Mock Mode** without a key: search returns labelled sample people on `.example` domains that can never reach the CRM, exports or sequences. With a key it is **Pending Configuration** until the first successful call, then Connected. Tested against a local stand-in only; the request and response shapes follow Apollo's published docs and have not been checked against Apollo with a real key. | Needs `APOLLO_API_KEY` (server secret, a master key for `people/bulk_match`). Optional `APOLLO_API_BASE_URL`, `PROSPECT_DAILY_LIMIT` (provider calls per person per 24 hours, default 100) |
 | Hunter.io email verification (Prospect Lists) | **Pending Configuration** without a key: the Verify button explains it needs one and no status is ever guessed. Tested against a local stand-in only. | Needs `HUNTER_API_KEY` (the same key as the Email Finder) |
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
-| Slack, Teams, Zoom, Twilio, WhatsApp, Stripe, Razorpay, DocuSign, Zapier | Not built | Shown as "Not available yet" in the app |
+| Slack (workspace app: post to channels from workflows) | **Pending Configuration** until `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are set; then Not connected until an admin installs it. Implemented and tested against a local stand-in of Slack's Web API only. Not yet tested against Slack with a real app. | Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` (server secrets) |
+| Teams, Zoom, Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -52,6 +53,35 @@ first time someone connects or uses them.
    `Calendars.Read`. Some organisations require admin consent.
 4. Create a client secret. Set `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and `MICROSOFT_TENANT`
    (`common` for multi-tenant, or a directory id).
+
+## Setting up Slack
+
+Slack is a workspace app: one admin installs it for the whole DealFlow workspace, and workflows post to
+channels with a "Post to Slack" step. Nobody's personal Slack account is used.
+
+1. At api.slack.com/apps create an app ("From scratch"). Under **OAuth & Permissions** add the redirect URL
+   `<PUBLIC_WEB_URL>/api/v1/apps/slack/callback` and the bot scopes `chat:write`, `chat:write.public`,
+   `channels:read`, `groups:read`.
+2. Under **Basic Information** copy the Client ID and Client Secret into `SLACK_CLIENT_ID` and
+   `SLACK_CLIENT_SECRET` in the deployment's secret manager. Never put them in the web or extension bundles.
+3. Restart the API. Integrations then shows Slack as Not connected instead of Pending Configuration, and an admin
+   (integrations:manage) can press **Connect Slack**.
+4. After installing, pick a default channel and press **Send test message**. That is the first live call: until it
+   succeeds, treat Slack as untested. Private channels need the bot invited (`/invite @YourApp`).
+
+How it behaves:
+
+- The bot token is stored encrypted (SecretBox) in `app_connections`, one row per workspace, under row-level security.
+  It is never sent to the browser.
+- Every post and failure is recorded in `app_events` and shown as "Recent Slack activity". A revoked or uninstalled
+  app changes the status to **Needs reconnecting** and the workflow step fails with a clear reason instead of retrying
+  forever. Reconnecting clears it.
+- Message text from workflows is escaped (`&`, `<`, `>`), so record data cannot trigger `@channel` or fake links, and
+  each message ends with a link back to the record.
+- Disconnect revokes the token at Slack (`auth.revoke`) and deletes it.
+- The Slack row on the operator Providers page shows whether the two secrets are set. There is no live check there,
+  because Slack has no call that proves an app's client secret without a workspace installing it; the test message is
+  the check.
 
 ## Behaviour
 

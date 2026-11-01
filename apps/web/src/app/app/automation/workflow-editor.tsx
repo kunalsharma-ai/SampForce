@@ -9,7 +9,9 @@ import {
   TRIGGER_EVENT_KEYS,
   EMAIL_TRIGGER_CONFIDENCE,
   PERSON_ACTIONS,
+  type AppStatus,
   type SequenceRow,
+  type SlackChannel,
   TRIGGER_EVENTS,
   type TriggerEvent,
   UPDATABLE_FIELDS,
@@ -571,6 +573,8 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         />
       )}
 
+      {a.type === 'post_to_chat' && <SlackStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
+
       {a.type === 'send_email' && (
         <>
           <p className="text-xs text-muted-foreground">
@@ -581,6 +585,50 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         </>
       )}
     </div>
+  );
+}
+
+/** Slack channel and message for a "Post to Slack" step. Channels come from the workspace's Slack connection. */
+function SlackStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'post_to_chat' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
+  const slack = apps.data?.find((x) => x.key === 'slack');
+  const connected = slack?.state === 'connected';
+  const channels = useQuery({ enabled: connected && !readOnly, queryKey: ['apps', 'slack', 'channels'], queryFn: () => api<SlackChannel[]>('/apps/slack/channels') });
+  const fallback = (slack?.connection?.settings as { defaultChannelName?: string | null } | undefined)?.defaultChannelName;
+  return (
+    <>
+      {slack && !connected && (
+        <p className="text-xs text-warning" role="status">
+          {slack.state === 'pending_configuration'
+            ? 'Slack is Pending Configuration on this installation, so this step will fail until an operator adds the Slack app credentials and an admin connects Slack.'
+            : slack.state === 'error'
+              ? 'Slack needs reconnecting in Integrations before this step can post.'
+              : 'Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+        </p>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor={`${id}-channel`}>Channel</Label>
+        <Select
+          id={`${id}-channel`}
+          disabled={readOnly || !connected}
+          value={a.channelId ?? ''}
+          onChange={(e) => {
+            const ch = channels.data?.find((c) => c.id === e.target.value);
+            onChange({ ...a, channelId: ch?.id ?? null, channelName: ch?.name ?? null });
+          }}
+        >
+          <option value="">{fallback ? `Default channel (#${fallback})` : 'Default channel'}</option>
+          {a.channelId && !channels.data?.some((c) => c.id === a.channelId) && <option value={a.channelId}>#{a.channelName ?? a.channelId}</option>}
+          {channels.data?.map((c) => (
+            <option key={c.id} value={c.id}>
+              #{c.name}
+              {c.isPrivate ? ' (private)' : ''}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <TextField label="Message" multiline value={a.text} readOnly={readOnly} maxLength={3000} hint={`${TEMPLATE_HINT} A link to the record is added automatically.`} onChange={(text) => onChange({ ...a, text })} />
+    </>
   );
 }
 

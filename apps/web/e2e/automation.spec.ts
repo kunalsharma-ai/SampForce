@@ -157,3 +157,44 @@ test('email automation templates use email triggers, warn about estimated opens 
   await page.waitForLoadState('networkidle');
   await expectNoA11yViolations(page);
 });
+
+test('connects Slack, sets a default channel and posts from a workflow (Slack stand-in)', async ({ page }) => {
+  await signUp(page, 'Slack Flow');
+  await page.goto('/app/integrations');
+  const slack = page.getByRole('region', { name: /Slack/ });
+  await expect(slack.getByText('Not connected')).toBeVisible();
+  await slack.getByRole('button', { name: 'Connect Slack' }).click();
+  // The stand-in's consent screen approves and sends the browser back.
+  await expect(page).toHaveURL(/\/app\/integrations\?app=slack&app_connected=1/);
+  await expect(page.getByText('Connected. Choose a default channel below')).toBeVisible();
+  await expect(slack.getByText('Connected', { exact: true })).toBeVisible();
+  await expect(slack.getByText('Acme Sales')).toBeVisible();
+  await slack.getByLabel('Default channel').selectOption({ label: '#sales' });
+  await slack.getByRole('button', { name: 'Save' }).click();
+  await expect(slack.getByRole('button', { name: 'Send test message' })).toBeEnabled();
+  await slack.getByRole('button', { name: 'Send test message' }).click();
+  await expect(slack.getByText('Test message posted to #sales.')).toBeVisible();
+  await expect(slack.getByRole('list', { name: 'Recent Slack activity' })).toContainText('Posted to #sales (test message)');
+  await expectNoA11yViolations(page);
+
+  await page.goto('/app/automation');
+  await page.getByRole('link', { name: 'New workflow' }).click();
+  await page.getByLabel('Name').fill('New leads to Slack');
+  await page.getByLabel('Trigger').selectOption('lead.created');
+  await page.getByRole('button', { name: 'Add the first step' }).click();
+  await page.getByLabel('Do this').selectOption('post_to_chat');
+  await page.getByLabel('Channel').selectOption({ label: '#deal-wins' });
+  await page.getByLabel('Message').fill('New lead: {{record.fullName}}');
+  await expectNoA11yViolations(page);
+  await page.getByRole('button', { name: 'Create workflow' }).click();
+  await expect(page).toHaveURL(/\/app\/automation\/[0-9a-f-]{36}$/);
+  await page.getByRole('button', { name: 'Activate' }).click();
+  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await apiPost(page, '/leads', { fullName: 'Grace Slack' });
+
+  // The worker runs the workflow in the background; reload until the post shows in Slack's activity.
+  await expect(async () => {
+    await page.goto('/app/integrations');
+    await expect(page.getByRole('list', { name: 'Recent Slack activity' })).toContainText('Posted to #deal-wins (workflow)', { timeout: 2_000 });
+  }).toPass({ timeout: 25_000 });
+});

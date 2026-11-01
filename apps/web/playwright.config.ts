@@ -40,6 +40,14 @@ export default defineConfig({
       env: { FINDER_FIXTURE_PORT: '4300' },
     },
     {
+      // Local stand-in for the Slack Web API and its consent screen, so the Slack app connects end to end.
+      command: 'npx tsx test/fixtures/slack-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4500/health',
+      reuseExistingServer: !process.env.CI,
+      env: { SLACK_FIXTURE_PORT: '4500' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',
@@ -74,6 +82,11 @@ export default defineConfig({
         SMTP_URL: 'smtp://127.0.0.1:4400',
         MAIL_FROM: 'DealFlow <no-reply@dealflow.test>',
         PUBLIC_WEB_URL: 'http://localhost:3000',
+        // Not real Slack credentials: Slack calls go to the stand-in above.
+        SLACK_CLIENT_ID: 'slack-client-id',
+        SLACK_CLIENT_SECRET: 'slack-client-secret',
+        SLACK_AUTH_BASE_URL: 'http://127.0.0.1:4500',
+        SLACK_API_BASE_URL: 'http://127.0.0.1:4500/api',
       },
     },
     {
