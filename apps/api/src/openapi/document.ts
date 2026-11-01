@@ -185,6 +185,8 @@ import {
   updateNavigationSchema,
   bulkActionSchema,
   savedViewInputSchema,
+  dashboardFilterSchema,
+  dashboardLayoutSchema,
   savedViewUpdateSchema,
 } from '@dealflow/types';
 
@@ -255,7 +257,9 @@ export function buildOpenApiDocument(): object {
     responses: { 200: { description: 'Updated member' }, ...errors } });
 
   r.registerPath({ method: 'get', path: '/dashboard/summary', tags: ['Dashboard'], summary: 'Command Center KPIs from live data (dashboard:read)', security: secured,
-    responses: { 200: { description: 'KPIs, pipeline and recent activity' }, ...errors } });
+    request: { query: dashboardFilterSchema }, responses: { 200: { description: 'KPIs, pipeline and recent activity for the period, owner ("me" or a member id) and pipeline' }, ...errors } });
+  r.registerPath({ method: 'get', path: '/dashboard/charts', tags: ['Dashboard'], summary: 'Command Center chart series: revenue trajectory, stage conversion, win/loss, team, risk and goal (dashboard:read)', security: secured,
+    request: { query: dashboardFilterSchema }, responses: { 200: { description: 'Chart series computed from records in the period' }, ...errors } });
   r.registerPath({ method: 'get', path: '/audit-logs', tags: ['Audit'], summary: 'Audit log, newest first (audit:read)', security: secured,
     request: { query: cursorPageQuerySchema }, responses: { 200: { description: 'Cursor page of audit events' }, ...errors } });
   // ───── Core CRM ─────
@@ -838,6 +842,9 @@ export function buildOpenApiDocument(): object {
   action('post', '/views', 'Table views', 'Save a view of a list (at most 30 per list; NAME_TAKEN if you already use the name)', savedViewInputSchema);
   action('patch', '/views/{id}', 'Table views', 'Rename, share or update a view you created', savedViewUpdateSchema);
   action('delete', '/views/{id}', 'Table views', 'Delete a view you created');
+  action('get', '/me/dashboard-layout', 'Dashboard', 'Your saved Command Center layout in this workspace, or null for the default');
+  action('put', '/me/dashboard-layout', 'Dashboard', 'Save your Command Center layout: widget order, width, hidden widgets and filters', dashboardLayoutSchema);
+  action('delete', '/me/dashboard-layout', 'Dashboard', 'Reset your Command Center layout to the default');
   action('post', '/records/bulk', 'Table views', 'Assign, set status (leads) or delete up to 100 selected records; each goes through the normal rules and audit, and failures are listed', bulkActionSchema);
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({

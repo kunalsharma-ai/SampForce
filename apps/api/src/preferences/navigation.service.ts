@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import {
+  completeLayout,
+  type DashboardLayout,
+  dashboardLayoutSchema,
   type NavigationState,
   type NavItem,
   navItemSchema,
   pushRecent,
   type UpdateNavigationInput,
 } from '@dealflow/types';
-import type { Prisma } from '@dealflow/database';
+import { Prisma } from '@dealflow/database';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 
@@ -68,12 +71,38 @@ export class NavigationService {
     return this.get(auth);
   }
 
+  async getDashboardLayout(auth: AuthContext): Promise<{ layout: DashboardLayout | null }> {
+    const row = await this.prisma.run(auth, (tx) =>
+      tx.workspaceNavigation.findUnique({ where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } }, select: { dashboardLayout: true } }),
+    );
+    return { layout: readLayout(row?.dashboardLayout) };
+  }
+
+  /** Saves the layout; null returns to the default. */
+  async saveDashboardLayout(auth: AuthContext, layout: DashboardLayout | null): Promise<{ layout: DashboardLayout | null }> {
+    const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+    await this.prisma.run(auth, (tx) =>
+      tx.workspaceNavigation.upsert({
+        where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } },
+        create: { tenantId: auth.tenantId, userId: auth.userId, dashboardLayout: value },
+        update: { dashboardLayout: value },
+      }),
+    );
+    return this.getDashboardLayout(auth);
+  }
+
   async clearRecent(auth: AuthContext): Promise<NavigationState> {
     await this.prisma.run(auth, (tx) =>
       tx.workspaceNavigation.updateMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, data: { recent: [] } }),
     );
     return this.get(auth);
   }
+}
+
+/** The stored Command Center layout, or null for the default. Invalid stored layouts are treated as unset. */
+export function readLayout(v: Prisma.JsonValue | null | undefined): DashboardLayout | null {
+  const parsed = dashboardLayoutSchema.safeParse(v);
+  return parsed.success ? completeLayout(parsed.data) : null;
 }
 
 function dedupe(list: NavItem[]): NavItem[] {

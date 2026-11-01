@@ -26,7 +26,7 @@ export function PipelineChart({ pipeline, currency }: { pipeline: NonNullable<Da
           variant="ghost"
           size="sm"
           onClick={() => setView(view === 'chart' ? 'table' : 'chart')}
-          aria-label={view === 'chart' ? 'Show as table' : 'Show as chart'}
+          aria-label={view === 'chart' ? 'Pipeline by stage: show as table' : 'Pipeline by stage: show as chart'}
         >
           {view === 'chart' ? <Table2 aria-hidden /> : <BarChart3 aria-hidden />}
           {view === 'chart' ? 'Table' : 'Chart'}

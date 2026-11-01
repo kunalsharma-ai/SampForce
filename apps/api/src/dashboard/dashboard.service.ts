@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { ActivityItem, DashboardSummary, KpiValue } from '@dealflow/types';
+import { type ActivityItem, type DashboardFilter, type DashboardSummary, type KpiValue, PERIOD_DAYS as DAYS } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { growth, quarterBounds, ratio, round } from './kpi-math';
 
-const PERIOD_DAYS = 30;
 const DAY_MS = 86_400_000;
 
 const ACTION_LABELS: Record<string, string> = {
@@ -24,6 +23,7 @@ interface MoneyRow {
   won_value: Prisma.Decimal | null;
   won_count: bigint;
   won_prev_value: Prisma.Decimal | null;
+  lost_count: bigint;
   avg_cycle_days: number | null;
   quarter_won: Prisma.Decimal | null;
   quarter_weighted: Prisma.Decimal | null;
@@ -38,7 +38,12 @@ interface MoneyRow {
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async summary(auth: AuthContext, now = new Date()): Promise<DashboardSummary> {
+  async summary(auth: AuthContext, filter: DashboardFilter = { period: '30d' }, now = new Date()): Promise<DashboardSummary> {
+    const PERIOD_DAYS = DAYS[filter.period];
+    const owner = filter.ownerId === 'me' ? auth.userId : filter.ownerId;
+    const ownerSql = owner ? Prisma.sql`AND o.owner_id = ${owner}::uuid` : Prisma.empty;
+    const pipelineSql = filter.pipelineId ? Prisma.sql`AND o.pipeline_id = ${filter.pipelineId}::uuid` : Prisma.empty;
+    const scope = owner ? ' Filtered by owner.' : '';
     const periodStart = new Date(now.getTime() - PERIOD_DAYS * DAY_MS);
     const prevStart = new Date(periodStart.getTime() - PERIOD_DAYS * DAY_MS);
     const quarter = quarterBounds(now);
@@ -47,10 +52,17 @@ export class DashboardService {
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId } });
       const currency = tenant.defaultCurrency;
       const tid = auth.tenantId;
-      const leadBase = { tenantId: tid, deletedAt: null };
+      const leadBase = { tenantId: tid, deletedAt: null, ...(owner ? { ownerId: owner } : {}) };
+      const activityOwner = owner ? { ownerId: owner } : {};
+      const week = new Date(now.getTime() + 7 * DAY_MS);
+      const taskBase = { tenantId: tid, status: 'OPEN' as const, ...(owner ? { assigneeId: owner } : {}) };
+      const [overdueTasks, upcomingTasks] = await Promise.all([
+        tx.task.count({ where: { ...taskBase, dueAt: { lt: now } } }),
+        tx.task.count({ where: { ...taskBase, dueAt: { gte: now, lte: week } } }),
+      ]);
 
       const [aiAssisted, runsFinished, runsSucceeded] = await Promise.all([
-        tx.activity.count({ where: { tenantId: tid, deletedAt: null, aiAssisted: true, occurredAt: { gte: periodStart, lte: now } } }),
+        tx.activity.count({ where: { tenantId: tid, deletedAt: null, ...activityOwner, aiAssisted: true, occurredAt: { gte: periodStart, lte: now } } }),
         tx.workflowExecution.count({ where: { tenantId: tid, status: { in: ['SUCCEEDED', 'FAILED'] }, finishedAt: { gte: periodStart } } }),
         tx.workflowExecution.count({ where: { tenantId: tid, status: 'SUCCEEDED', finishedAt: { gte: periodStart } } }),
       ]);
@@ -59,7 +71,7 @@ export class DashboardService {
         tx.lead.count({ where: { ...leadBase, createdAt: { gte: periodStart } } }),
         tx.lead.count({ where: { ...leadBase, status: 'QUALIFIED' } }),
         tx.lead.count({ where: { ...leadBase, createdAt: { gte: periodStart }, status: 'CONVERTED' } }),
-        tx.activity.count({ where: { tenantId: tid, deletedAt: null, occurredAt: { gte: periodStart, lte: now } } }),
+        tx.activity.count({ where: { tenantId: tid, deletedAt: null, ...activityOwner, occurredAt: { gte: periodStart, lte: now } } }),
       ]);
 
       const [money] = await tx.$queryRaw<MoneyRow[]>`
@@ -71,6 +83,7 @@ export class DashboardService {
           COUNT(*) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart})             AS won_count,
           SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${prevStart}
                                  AND o.closed_at < ${periodStart})                              AS won_prev_value,
+          COUNT(*) FILTER (WHERE o.status = 'LOST' AND o.closed_at >= ${periodStart})            AS lost_count,
           AVG(EXTRACT(EPOCH FROM (o.closed_at - o.created_at)) / 86400.0)
             FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart})                    AS avg_cycle_days,
           SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${quarter.start}
@@ -80,14 +93,19 @@ export class DashboardService {
                     AND o.expected_close_date < ${quarter.end}::date)                            AS quarter_weighted
         FROM opportunities o
         JOIN pipeline_stages s ON s.id = o.stage_id
-        WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.currency = ${currency}`;
+        WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.currency = ${currency} ${ownerSql} ${pipelineSql}`;
 
       const n = (v: Prisma.Decimal | null | undefined) => (v ? Number(v) : 0);
       const wonValue = n(money?.won_value);
       const wonCount = Number(money?.won_count ?? 0);
       const openCount = Number(money?.open_count ?? 0);
       const forecast = n(money?.quarter_won) + n(money?.quarter_weighted);
-      const money_note = `Deals in ${currency} only.`;
+      const money_note = `Deals in ${currency} only.${scope}`;
+      const lostCount = Number(money?.lost_count ?? 0);
+      const winRate = ratio(wonCount, wonCount + lostCount);
+      const avgDeal = ratio(wonValue, wonCount);
+      const cycle = money?.avg_cycle_days ?? null;
+      const velocity = winRate !== null && avgDeal !== null && cycle ? (openCount * avgDeal * winRate) / Math.max(cycle, 1) : null;
 
       const kpis: KpiValue[] = [
         { key: 'totalLeads', label: 'Total leads', value: totalLeads, format: 'number', definition: 'All active (not deleted) leads.' },
@@ -104,11 +122,15 @@ export class DashboardService {
         { key: 'revenueGrowth', label: 'Revenue growth', value: round(growth(wonValue, n(money?.won_prev_value)), 4), format: 'percent', definition: `Closed-won revenue vs the previous ${PERIOD_DAYS} days.` },
         { key: 'activitiesCompleted', label: 'Team activities', value: activitiesCompleted, format: 'number', definition: `Calls, emails, meetings and notes logged in the last ${PERIOD_DAYS} days.` },
         { key: 'aiAssistedActivities', label: 'AI-assisted activities', value: aiAssisted, format: 'number', definition: `Activities in the last ${PERIOD_DAYS} days that an AI agent drafted and a person confirmed.` },
+        { key: 'winRate', label: 'Win rate', value: round(winRate, 4), format: 'percent', definition: `Deals won ÷ deals won or lost in the last ${PERIOD_DAYS} days. Empty until a deal closes.${scope}` },
+        { key: 'salesVelocity', label: 'Sales velocity', value: round(velocity), format: 'currency', definition: `Expected revenue per day: open deals × average won deal × win rate ÷ average sales cycle (days), all from the last ${PERIOD_DAYS} days. ${money_note}` },
+        { key: 'overdueTasks', label: 'Overdue tasks', value: overdueTasks, format: 'number', definition: `Open tasks past their due date.${scope}` },
+        { key: 'upcomingTasks', label: 'Due in 7 days', value: upcomingTasks, format: 'number', definition: `Open tasks due in the next 7 days.${scope}` },
         { key: 'automationSuccessRate', label: 'Automation success rate', value: round(ratio(runsSucceeded, runsFinished), 4), format: 'percent', definition: `Workflow runs that succeeded ÷ runs that finished (succeeded or failed) in the last ${PERIOD_DAYS} days. Empty until a run finishes.` },
       ];
 
       const pipeline = await tx.pipeline.findFirst({
-        where: { tenantId: tid, deletedAt: null },
+        where: { tenantId: tid, deletedAt: null, ...(filter.pipelineId ? { id: filter.pipelineId } : {}) },
         orderBy: [{ isDefault: 'desc' }, { position: 'asc' }],
         include: { stages: { orderBy: { position: 'asc' } } },
       });
@@ -116,7 +138,7 @@ export class DashboardService {
       if (pipeline) {
         const grouped = await tx.opportunity.groupBy({
           by: ['stageId'],
-          where: { tenantId: tid, pipelineId: pipeline.id, deletedAt: null, currency },
+          where: { tenantId: tid, pipelineId: pipeline.id, deletedAt: null, currency, ...(owner ? { ownerId: owner } : {}) },
           _count: { _all: true },
           _sum: { amount: true },
         });

@@ -3,6 +3,8 @@ import { Throttle } from '@nestjs/throttler';
 import {
   type Appearance,
   appearanceSchema,
+  type DashboardLayout,
+  dashboardLayoutSchema,
   type NavItem,
   navItemSchema,
   type SavedThemeInput,
@@ -74,6 +76,22 @@ export class PreferencesController {
   @Throttle({ default: { limit: 120, ttl: 60_000 } })
   visit(@Auth() auth: AuthContext, @Body(new ZodPipe(navItemSchema)) body: NavItem) {
     return this.nav.visit(auth, body);
+  }
+
+  /** The person's Command Center layout in this workspace (widgets, sizes, filters). */
+  @Get('dashboard-layout')
+  dashboardLayout(@Auth() auth: AuthContext) {
+    return this.nav.getDashboardLayout(auth);
+  }
+
+  @Put('dashboard-layout')
+  saveDashboardLayout(@Auth() auth: AuthContext, @Body(new ZodPipe(dashboardLayoutSchema)) body: DashboardLayout) {
+    return this.nav.saveDashboardLayout(auth, body);
+  }
+
+  @Delete('dashboard-layout')
+  resetDashboardLayout(@Auth() auth: AuthContext) {
+    return this.nav.saveDashboardLayout(auth, null);
   }
 
   @Delete('navigation/visits')
