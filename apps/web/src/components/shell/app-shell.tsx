@@ -4,10 +4,17 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skel
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { Minimize2 } from 'lucide-react';
 import { useAppearanceSync } from '@/lib/appearance-sync';
 import { useSession, useSignOut } from '@/lib/session';
+import { useRecordVisits } from '@/lib/workspace-nav';
+import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
+import { CustomizeMenuDialog } from './customize-menu';
+import { KeyboardShortcuts } from './keyboard-shortcuts';
+import { MobileBottomNav } from './mobile-nav';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 
@@ -16,6 +23,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // The workspace brand colour goes through the theme engine, which keeps it readable in both modes.
   useAppearanceSync(!!data, data?.tenant.brandColor ?? null);
+  useRecordVisits(!!data && !data.restriction);
+  const focus = useShell((s) => s.focus);
+  const setFocus = useShell((s) => s.setFocus);
+  useEffect(() => {
+    if (focus) document.documentElement.dataset.focus = 'on';
+    else delete document.documentElement.dataset.focus;
+  }, [focus]);
 
   return (
     <div className="flex min-h-screen">
@@ -31,7 +45,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Demo workspace: all records here are synthetic development data.
           </div>
         )}
-        <main id="main" className="flex-1 px-4 py-6 md:px-8">
+        {focus && (
+          <div role="status" className="flex items-center justify-center gap-3 border-b border-border/70 bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground">
+            Focus Workspace is on.
+            <button type="button" onClick={() => setFocus(false)} className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2">
+              <Minimize2 className="size-3.5" aria-hidden /> Exit focus (Ctrl .)
+            </button>
+          </div>
+        )}
+        <main id="main" className="flex-1 px-4 pb-24 pt-6 md:px-8 lg:pb-6">
           {isPending ? (
             <div className="space-y-4" aria-busy="true" aria-label="Loading workspace">
               <Skeleton className="h-8 w-64" />
@@ -53,6 +75,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       {data && <QuickCreateHost />}
+      {data && !data.restriction && <MobileBottomNav />}
+      {data && <CustomizeMenuDialog />}
+      <KeyboardShortcuts />
     </div>
   );
 }

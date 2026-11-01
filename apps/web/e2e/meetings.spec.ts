@@ -80,7 +80,7 @@ test('turns a calendar meeting into reviewed notes, tasks and a timeline summary
   await dialog.getByRole('button', { name: 'Cancel' }).click();
 
   await page.goto(`/app/deals/${deal.id}`);
-  await expect(page.getByRole('link', { name: 'Pilot kick-off', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Pilot kick-off', exact: true })).toBeVisible();
   await expect(page.getByText('Reviewed', { exact: true })).toBeVisible();
   await expect(page.getByText('Kick-off for the ops pilot.').first()).toBeVisible();
   await expect(page.getByText('Send the security questionnaire to Tom').first()).toBeVisible();

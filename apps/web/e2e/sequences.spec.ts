@@ -94,7 +94,7 @@ test('workspace variables and custom fields fill templates, templates group by c
   await page.goto('/app/sequences');
   await page.getByRole('tab', { name: 'Variables' }).click();
   await expect(page.getByText(/No variables yet/)).toBeVisible();
-  await page.getByLabel('Key').fill('booking_link');
+  await page.getByLabel('Key', { exact: true }).fill('booking_link');
   await page.getByLabel('Label').fill('Booking link');
   await page.getByLabel('Value').fill('https://cal.example.com/rep');
   await page.getByRole('button', { name: 'Save variable' }).click();
