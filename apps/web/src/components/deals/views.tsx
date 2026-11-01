@@ -9,6 +9,7 @@ import { type DealViewFilter, useDealForecast, useDealsClosing, usePriorityDeals
 import { useIsPhone } from '@/lib/use-is-phone';
 import { initials, PriorityBadge, RiskIndicator } from './deal-badges';
 import { DealPanel } from './deal-panel';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type Open = (id: string) => void;
 
@@ -187,7 +188,7 @@ export function CalendarView({ filter, onOpen }: { filter: DealViewFilter; onOpe
     for (const d of q.data?.items ?? []) m.set(d.expectedCloseDate!, [...(m.get(d.expectedCloseDate!) ?? []), d]);
     return m;
   }, [q.data]);
-  const title = month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const title = month.toLocaleDateString(fmtLocale(), { month: 'long', year: 'numeric' });
   const shift = (n: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
   const lead = (month.getDay() + 6) % 7; // Monday first
   const cells = Array.from({ length: Math.ceil((lead + last.getDate()) / 7) * 7 }, (_, i) => {
@@ -203,13 +204,13 @@ export function CalendarView({ filter, onOpen }: { filter: DealViewFilter; onOpe
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={() => shift(-1)} aria-label="Previous month">
-            <ChevronLeft aria-hidden />
+            <ChevronLeft className="rtl:-scale-x-100" aria-hidden />
           </Button>
           <h2 id="cal-heading" className="min-w-40 text-center text-base font-semibold" aria-live="polite">
             {title}
           </h2>
           <Button variant="ghost" size="icon" onClick={() => shift(1)} aria-label="Next month">
-            <ChevronRight aria-hidden />
+            <ChevronRight className="rtl:-scale-x-100" aria-hidden />
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -246,7 +247,7 @@ export function CalendarView({ filter, onOpen }: { filter: DealViewFilter; onOpe
           <thead>
             <tr>
               {WEEKDAYS.map((w) => (
-                <th key={w} scope="col" className="pb-1 text-left text-xs font-medium text-muted-foreground">
+                <th key={w} scope="col" className="pb-1 text-start text-xs font-medium text-muted-foreground">
                   {w}
                 </th>
               ))}
@@ -262,7 +263,7 @@ export function CalendarView({ filter, onOpen }: { filter: DealViewFilter; onOpe
                     <td key={key} className={cn('h-28 border border-border p-1 align-top', !c && 'bg-muted/20', c && ymd(c) === today && 'bg-primary/5')}>
                       {c && (
                         <>
-                          <span className={cn('text-xs', ymd(c) === today ? 'font-semibold text-primary' : 'text-muted-foreground')} aria-label={c.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}>
+                          <span className={cn('text-xs', ymd(c) === today ? 'font-semibold text-primary' : 'text-muted-foreground')} aria-label={c.toLocaleDateString(fmtLocale(), { weekday: 'long', month: 'long', day: 'numeric' })}>
                             {c.getDate()}
                           </span>
                           <ul className="mt-0.5 space-y-0.5">
@@ -321,10 +322,10 @@ export function TimelineView({ filter, onOpen }: { filter: DealViewFilter; onOpe
       ) : (
         <Card className="overflow-x-auto p-4">
           <div className="min-w-[640px]">
-            <div className="relative ml-48 h-6 border-b border-border text-xs text-muted-foreground" aria-hidden>
+            <div className="relative ms-48 h-6 border-b border-border text-xs text-muted-foreground" aria-hidden>
               {months.map((m) => (
                 <span key={m.toISOString()} className="absolute -translate-x-1/2" style={{ left: `${pos(m.getTime())}%` }}>
-                  {m.toLocaleDateString('en-US', { month: 'short' })}
+                  {m.toLocaleDateString(fmtLocale(), { month: 'short' })}
                 </span>
               ))}
             </div>
@@ -338,7 +339,7 @@ export function TimelineView({ filter, onOpen }: { filter: DealViewFilter; onOpe
                 const to = pos(overdue ? Date.now() : close);
                 return (
                   <li key={d.id} className="flex h-9 items-center border-b border-border/50 last:border-0">
-                    <div className="w-48 shrink-0 truncate pr-3 text-sm">
+                    <div className="w-48 shrink-0 truncate pe-3 text-sm">
                       <DealLink deal={d} onOpen={onOpen} />
                     </div>
                     <div className="relative h-5 flex-1">
@@ -391,7 +392,7 @@ export function SplitView({ filter, selected, onOpen }: { filter: DealViewFilter
                   type="button"
                   onClick={() => onOpen(d.id)}
                   aria-current={selected === d.id ? 'true' : undefined}
-                  className={cn('w-full border-b border-border px-3 py-2.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring', selected === d.id && 'bg-primary/10')}
+                  className={cn('w-full border-b border-border px-3 py-2.5 text-start hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring', selected === d.id && 'bg-primary/10')}
                 >
                   <span className="block truncate text-sm font-medium">{d.name}</span>
                   <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">

@@ -56,7 +56,7 @@ function Segments() {
             <ul className="divide-y divide-border text-sm">
               {segments.data.map((s) => (
                 <li key={s.id}>
-                  <button type="button" className="w-full py-2 text-left hover:text-primary" onClick={() => setEditing(s)} aria-current={editing !== 'new' && editing?.id === s.id}>
+                  <button type="button" className="w-full py-2 text-start hover:text-primary" onClick={() => setEditing(s)} aria-current={editing !== 'new' && editing?.id === s.id}>
                     <span className="font-medium">{s.name}</span>
                     <span className="block text-xs text-muted-foreground">
                       {s.entity === 'lead' ? 'Leads' : 'Contacts'} · {s.rules.rules.length} rule{s.rules.rules.length === 1 ? '' : 's'} · updated {relativeTime(s.updatedAt)}
@@ -215,7 +215,7 @@ function SegmentBuilder({ segment, onSaved }: { segment: SegmentRow | null; onSa
                   <li key={p.id} className="flex items-center gap-2 py-1">
                     <span>{p.name}</span>
                     <span className="text-xs text-muted-foreground">{p.email ?? 'no email'}</span>
-                    <Badge className="ml-auto" tone={p.marketingConsent === 'OPTED_IN' ? 'success' : p.marketingConsent === 'OPTED_OUT' ? 'critical' : 'neutral'}>
+                    <Badge className="ms-auto" tone={p.marketingConsent === 'OPTED_IN' ? 'success' : p.marketingConsent === 'OPTED_OUT' ? 'critical' : 'neutral'}>
                       {p.marketingConsent === 'OPTED_IN' ? 'Opted in' : p.marketingConsent === 'OPTED_OUT' ? 'Opted out' : 'Unknown'}
                     </Badge>
                   </li>
@@ -290,7 +290,7 @@ function FormCard({ form: f }: { form: LeadFormRow }) {
           <div className="flex items-center gap-2">
             <h3 className="font-semibold">{f.name}</h3>
             <Badge tone={f.active ? 'success' : 'neutral'}>{f.active ? 'Live' : 'Off'}</Badge>
-            <span className="ml-auto text-xs text-muted-foreground">{f.submissions} submissions</span>
+            <span className="ms-auto text-xs text-muted-foreground">{f.submissions} submissions</span>
           </div>
           <p className="text-xs text-muted-foreground">
             {f.fields.map((x) => x.label).join(', ')} · {f.consentText ? 'asks for marketing consent' : 'no consent question'}

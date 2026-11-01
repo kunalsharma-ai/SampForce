@@ -98,7 +98,7 @@ export function FinderWorkspace() {
           <ul className="divide-y divide-border rounded-md border border-border text-sm">
             {history.data.map((h) => (
               <li key={h.id}>
-                <button type="button" className="w-full px-3 py-2 text-left hover:bg-muted aria-[current=true]:bg-muted" aria-current={h.id === openId} onClick={() => setOpenId(h.id)}>
+                <button type="button" className="w-full px-3 py-2 text-start hover:bg-muted aria-[current=true]:bg-muted" aria-current={h.id === openId} onClick={() => setOpenId(h.id)}>
                   <span className="block font-medium">
                     {h.person ? `${h.person}, ` : ''}
                     {h.companyName}

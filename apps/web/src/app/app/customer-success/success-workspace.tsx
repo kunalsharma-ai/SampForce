@@ -58,7 +58,7 @@ function Customers() {
             type="button"
             aria-pressed={band === b}
             onClick={() => setBand(band === b ? '' : b)}
-            className={`rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 ${band === b ? 'border-primary ring-2 ring-primary/40' : 'border-border'}`}
+            className={`rounded-lg border bg-card p-4 text-start transition-colors hover:bg-muted/50 ${band === b ? 'border-primary ring-2 ring-primary/40' : 'border-border'}`}
           >
             <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <span className={`inline-block size-2.5 rounded-sm ${b === 'at_risk' ? 'bg-critical' : b === 'watch' ? 'bg-warning' : 'bg-success'}`} aria-hidden />
@@ -120,7 +120,7 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
               {CHURN_RISK[c.health.band].label} · health {c.health.score}/100
             </Badge>
             {c.openEscalations > 0 && <Badge tone="warning">{c.openEscalations} open escalation{c.openEscalations === 1 ? '' : 's'}</Badge>}
-            <span className="ml-auto text-xs text-muted-foreground">{c.owner?.name ?? 'Unassigned'}</span>
+            <span className="ms-auto text-xs text-muted-foreground">{c.owner?.name ?? 'Unassigned'}</span>
           </div>
           <p className="text-xs text-muted-foreground">
             {c.activeContracts} active contract{c.activeContracts === 1 ? '' : 's'} · {formatAmount(c.contractValue, c.currency)}
@@ -198,7 +198,7 @@ export function EscalationCard({ e, canWrite }: { e: EscalationRow; canWrite: bo
             <span className="font-semibold">{e.title}</span>
             <Badge tone={SEVERITY_TONE[e.severity]}>{e.severity.toLowerCase()}</Badge>
             <Badge tone={e.status === 'OPEN' ? 'warning' : 'success'}>{e.status === 'OPEN' ? 'Open' : 'Resolved'}</Badge>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="ms-auto text-xs text-muted-foreground">
               <Link href={`/app/companies/${e.company.id}`} className="hover:underline">
                 {e.company.name}
               </Link>{' '}

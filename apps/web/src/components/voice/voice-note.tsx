@@ -68,7 +68,7 @@ export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
               const s = noteStage(n);
               return (
                 <li key={n.id} className="flex flex-wrap items-start gap-2">
-                  <button type="button" className="min-w-0 flex-1 truncate text-left text-primary underline underline-offset-2" onClick={() => setOpenNote(n)}>
+                  <button type="button" className="min-w-0 flex-1 truncate text-start text-primary underline underline-offset-2" onClick={() => setOpenNote(n)}>
                     {n.summary || n.transcript?.slice(0, 80) || 'Untitled voice note'}
                   </button>
                   <Badge tone={s.tone}>{s.label}</Badge>
@@ -100,7 +100,7 @@ export function VoiceNoteDialog({ open, onOpenChange, record, initial }: { open:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-lg">
-        <div className="pr-8">
+        <div className="pe-8">
           <DialogTitle className="text-lg font-semibold">Voice note</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {where ? <>For {where}. </> : null}Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.
@@ -377,7 +377,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
           <h3 className="flex items-center gap-1.5 font-semibold">
             <AlertTriangle className="size-4 text-warning" aria-hidden /> Not done from a voice note
           </h3>
-          <ul className="list-disc pl-5">
+          <ul className="list-disc ps-5">
             {note.unsupported.map((u) => (
               <li key={u}>{u}</li>
             ))}
@@ -406,7 +406,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
                 )}
                 <Badge tone="primary">{VOICE_ACTION_LABELS[s.action.type]}</Badge>
                 {s.status === 'applied' && s.result && (
-                  <Link href={s.result.link} className="ml-auto inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2">
+                  <Link href={s.result.link} className="ms-auto inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2">
                     Saved <ExternalLink className="size-3" aria-hidden />
                   </Link>
                 )}
@@ -442,7 +442,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
             <Pencil aria-hidden /> Change the note
           </Button>
         )}
-        <Button variant="ghost" className="ml-auto text-critical" onClick={() => remove.mutate(undefined)} disabled={remove.isPending}>
+        <Button variant="ghost" className="ms-auto text-critical" onClick={() => remove.mutate(undefined)} disabled={remove.isPending}>
           <Trash2 aria-hidden /> Delete note
         </Button>
       </div>

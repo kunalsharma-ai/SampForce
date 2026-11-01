@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { ENQUIRY_FORM_EXAMPLE, formatDuration, installSnippet, useRecordWebActivity, useVisitor, useVisitorDashboard, useVisitorMutation, useVisitors, useVisitorSettings, visitorsApi, type VisitorSegment } from '@/lib/visitors';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type Tab = 'dashboard' | 'visitors' | 'settings';
 
@@ -114,7 +115,7 @@ function Dashboard() {
                   <ul className="divide-y divide-border text-sm" aria-label="High-intent visitors">
                     {d.highIntent.map((v) => (
                       <li key={v.id} className="flex items-center justify-between gap-2 py-2">
-                        <button type="button" className="text-left font-medium underline underline-offset-2" onClick={() => setOpen(v.id)}>
+                        <button type="button" className="text-start font-medium underline underline-offset-2" onClick={() => setOpen(v.id)}>
                           {v.label}
                         </button>
                         <span className="text-muted-foreground">{v.intent.score}/100 · {relativeTime(v.lastSeenAt)}</span>
@@ -203,10 +204,10 @@ function SimpleTable({ caption, head, rows, empty }: { caption: string; head: st
   return (
     <table className="w-full text-sm">
       <caption className="sr-only">{caption}</caption>
-      <thead className="text-left text-xs text-muted-foreground">
+      <thead className="text-start text-xs text-muted-foreground">
         <tr>
           {head.map((x, i) => (
-            <th key={x} scope="col" className={cn('py-1.5 font-medium', i > 0 && typeof rows[0]![i] === 'number' && 'text-right')}>{x}</th>
+            <th key={x} scope="col" className={cn('py-1.5 font-medium', i > 0 && typeof rows[0]![i] === 'number' && 'text-end')}>{x}</th>
           ))}
         </tr>
       </thead>
@@ -215,9 +216,9 @@ function SimpleTable({ caption, head, rows, empty }: { caption: string; head: st
           <tr key={i}>
             {r.map((c, j) =>
               j === 0 ? (
-                <th key={j} scope="row" className="max-w-[18rem] truncate py-1.5 text-left font-normal">{c}</th>
+                <th key={j} scope="row" className="max-w-[18rem] truncate py-1.5 text-start font-normal">{c}</th>
               ) : (
-                <td key={j} className={cn('py-1.5', typeof c === 'number' && 'text-right tabular-nums')}>{c}</td>
+                <td key={j} className={cn('py-1.5', typeof c === 'number' && 'text-end tabular-nums')}>{c}</td>
               ),
             )}
           </tr>
@@ -261,13 +262,13 @@ function VisitorList() {
         ) : (
           <table className="w-full min-w-[760px] text-sm">
             <caption className="sr-only">Website visitors</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-2 font-medium">Visitor</th>
                 <th scope="col" className="py-2 font-medium">Intent</th>
-                <th scope="col" className="py-2 text-right font-medium">Visits</th>
-                <th scope="col" className="py-2 text-right font-medium">Pages</th>
-                <th scope="col" className="py-2 text-right font-medium">Time</th>
+                <th scope="col" className="py-2 text-end font-medium">Visits</th>
+                <th scope="col" className="py-2 text-end font-medium">Pages</th>
+                <th scope="col" className="py-2 text-end font-medium">Time</th>
                 <th scope="col" className="py-2 font-medium">First source</th>
                 <th scope="col" className="py-2 font-medium">Last seen</th>
               </tr>
@@ -275,14 +276,14 @@ function VisitorList() {
             <tbody className="divide-y divide-border">
               {q.data.map((v) => (
                 <tr key={v.id}>
-                  <th scope="row" className="py-2 text-left font-normal">
+                  <th scope="row" className="py-2 text-start font-normal">
                     <button type="button" className="font-medium underline underline-offset-2" onClick={() => setOpen(v.id)}>{v.label}</button>
                     {v.identified && <span className="block text-xs text-muted-foreground">{v.identified.type === 'lead' ? 'Lead' : 'Contact'}{v.identified.email ? ` · ${v.identified.email}` : ''}</span>}
                   </th>
                   <td className="py-2"><IntentBadge v={v} /></td>
-                  <td className="py-2 text-right tabular-nums">{v.visits}</td>
-                  <td className="py-2 text-right tabular-nums">{v.pageViews}</td>
-                  <td className="py-2 text-right tabular-nums">{formatDuration(v.engagedSeconds)}</td>
+                  <td className="py-2 text-end tabular-nums">{v.visits}</td>
+                  <td className="py-2 text-end tabular-nums">{v.pageViews}</td>
+                  <td className="py-2 text-end tabular-nums">{formatDuration(v.engagedSeconds)}</td>
                   <td className="py-2">{v.campaign?.name ?? v.firstTouch?.source ?? v.firstTouch?.referrer ?? 'Direct'}</td>
                   <td className="py-2 text-muted-foreground">{relativeTime(v.lastSeenAt)}</td>
                 </tr>
@@ -384,7 +385,7 @@ function VisitorBody({ v }: { v: VisitorDetail }) {
         {v.sessions.map((s) => (
           <li key={s.id} className="rounded-md border border-border p-3">
             <p className="font-medium">
-              {formatDate(s.startedAt)} {new Date(s.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              {formatDate(s.startedAt)} {new Date(s.startedAt).toLocaleTimeString(fmtLocale(), { hour: 'numeric', minute: '2-digit' })}
               <span className="font-normal text-muted-foreground">
                 {s.referrer ? ` · from ${s.referrer}` : ''}
                 {s.utm?.campaign ? ` · ${s.utm.campaign}` : ''}
@@ -396,9 +397,9 @@ function VisitorBody({ v }: { v: VisitorDetail }) {
                 <li key={i} className="flex justify-between gap-2">
                   <span className="truncate">
                     {e.type === 'enquiry' ? <strong>Sent an enquiry</strong> : e.type === 'event' ? `Event: ${e.name}` : e.path}
-                    {e.label && <Badge className="ml-2">{e.label}</Badge>}
+                    {e.label && <Badge className="ms-2">{e.label}</Badge>}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{new Date(e.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{new Date(e.at).toLocaleTimeString(fmtLocale(), { hour: 'numeric', minute: '2-digit' })}</span>
                 </li>
               ))}
             </ul>
@@ -572,7 +573,7 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
         <CardContent className="space-y-2 overflow-x-auto text-sm">
           <table className="w-full min-w-[620px]">
             <caption className="sr-only">Important pages and their intent points</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-1.5 font-medium">Path</th>
                 <th scope="col" className="py-1.5 font-medium">Name</th>
@@ -584,16 +585,16 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
             <tbody>
               {form.importantPages.map((p, i) => (
                 <tr key={i}>
-                  <td className="py-1 pr-2"><Input aria-label={`Page ${i + 1} path`} disabled={disabled} className="h-9" value={p.pattern} onChange={(e) => setPage(i, { pattern: e.target.value })} /></td>
-                  <td className="py-1 pr-2"><Input aria-label={`Page ${i + 1} name`} disabled={disabled} className="h-9" value={p.label} onChange={(e) => setPage(i, { label: e.target.value })} /></td>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pe-2"><Input aria-label={`Page ${i + 1} path`} disabled={disabled} className="h-9" value={p.pattern} onChange={(e) => setPage(i, { pattern: e.target.value })} /></td>
+                  <td className="py-1 pe-2"><Input aria-label={`Page ${i + 1} name`} disabled={disabled} className="h-9" value={p.label} onChange={(e) => setPage(i, { label: e.target.value })} /></td>
+                  <td className="py-1 pe-2">
                     <Select aria-label={`Page ${i + 1} type`} disabled={disabled} className="h-9" value={p.kind} onChange={(e) => setPage(i, { kind: e.target.value as ImportantPage['kind'] })}>
                       {PAGE_KINDS.map((k) => (
                         <option key={k} value={k}>{PAGE_KIND_LABELS[k]}</option>
                       ))}
                     </Select>
                   </td>
-                  <td className="py-1 pr-2"><Input aria-label={`Page ${i + 1} intent points`} type="number" min={0} max={50} disabled={disabled} className="h-9 w-24" value={p.weight} onChange={(e) => setPage(i, { weight: Number(e.target.value) })} /></td>
+                  <td className="py-1 pe-2"><Input aria-label={`Page ${i + 1} intent points`} type="number" min={0} max={50} disabled={disabled} className="h-9 w-24" value={p.weight} onChange={(e) => setPage(i, { weight: Number(e.target.value) })} /></td>
                   <td className="py-1">{canManage && <Button type="button" size="sm" variant="ghost" aria-label={`Remove ${p.label || `page ${i + 1}`}`} onClick={() => set({ importantPages: form.importantPages.filter((_, j) => j !== i) })}>Remove</Button>}</td>
                 </tr>
               ))}

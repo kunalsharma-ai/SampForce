@@ -2,6 +2,7 @@ import type { DashboardRow, GalaxyGraph, GlobeData, PipelineFlow, PipelineReplay
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from './api';
 import { toQuery } from './crm';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /** Data hooks for the report builder, dashboards and the immersive views. */
 
@@ -56,19 +57,20 @@ export function useReplay(params: { pipelineId?: string; days: number }) {
 export function formatValue(v: number, currency: string | null): string {
   if (currency) {
     try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2 }).format(v);
+      return new Intl.NumberFormat(fmtLocale(), { style: 'currency', currency, maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2 }).format(v);
     } catch {
-      return `${currency} ${v.toLocaleString('en-US')}`;
+      return `${currency} ${v.toLocaleString(fmtLocale())}`;
     }
   }
-  return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  return v.toLocaleString(fmtLocale(), { maximumFractionDigits: 2 });
 }
 
-let regionNames: Intl.DisplayNames | null = null;
+let regionNames: { locale: string; names: Intl.DisplayNames } | null = null;
 export function countryName(code: string): string {
   try {
-    regionNames ??= new Intl.DisplayNames(['en'], { type: 'region' });
-    return regionNames.of(code) ?? code;
+    const locale = fmtLocale();
+    if (regionNames?.locale !== locale) regionNames = { locale, names: new Intl.DisplayNames([locale], { type: 'region' }) };
+    return regionNames.names.of(code) ?? code;
   } catch {
     return code;
   }

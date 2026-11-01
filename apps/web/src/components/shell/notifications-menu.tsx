@@ -26,14 +26,14 @@ export function NotificationsMenu() {
         <Button variant="ghost" size="icon" className="relative" aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}>
           <Bell aria-hidden />
           {unread > 0 && (
-            <span aria-hidden className="absolute right-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-critical px-1 text-[10px] font-semibold leading-4 text-background">
+            <span aria-hidden className="absolute end-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-critical px-1 text-[10px] font-semibold leading-4 text-background">
               {unread > 9 ? '9+' : unread}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <div className="flex items-center justify-between pr-1">
+        <div className="flex items-center justify-between pe-1">
           <DropdownMenuLabel>Notifications</DropdownMenuLabel>
           {unread > 0 && (
             <button type="button" className="rounded px-2 py-1 text-xs text-primary hover:underline" onClick={() => markRead.mutate('all')}>

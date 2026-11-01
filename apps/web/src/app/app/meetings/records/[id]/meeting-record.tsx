@@ -18,9 +18,10 @@ import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { uploadRecording, useMeetingRecord, useTranscriptionStatus } from '@/lib/meetings';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const SOURCE_LABEL = { notes: 'Notes', transcript: 'Transcript', recording: 'Transcribed recording' } as const;
-const when = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+const when = (iso: string) => new Date(iso).toLocaleString(fmtLocale(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 function useRecordMutation<T>(id: string, fn: (arg: T) => Promise<MeetingRecord>) {
@@ -62,7 +63,7 @@ export function MeetingRecordView({ id }: { id: string }) {
   return (
     <div className="max-w-5xl space-y-4">
       <Link href="/app/meetings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> Meetings
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> Meetings
       </Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
@@ -229,7 +230,7 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
                   type="file"
                   accept="audio/*,video/*"
                   disabled={!ready}
-                  className="block text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm disabled:opacity-60"
+                  className="block text-sm file:me-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-sm disabled:opacity-60"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
               </Field>

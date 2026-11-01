@@ -11,7 +11,7 @@ export const metadata: Metadata = {
  */
 export default function ExtensionPrivacyPage() {
   return (
-    <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_li]:mt-1 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5">
+    <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_li]:mt-1 [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:ps-5">
       <h1 className="text-4xl font-semibold tracking-tight">DealFlow lead capture: privacy</h1>
       <p className="text-muted-foreground">Last updated 1 November 2026</p>
       <p>

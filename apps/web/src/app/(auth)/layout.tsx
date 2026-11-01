@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <main className="relative grid min-h-screen lg:grid-cols-2">
       <AmbientBackground />
-      <section className="hidden flex-col justify-between border-r border-border/60 p-10 lg:flex">
+      <section className="hidden flex-col justify-between border-e border-border/60 p-10 lg:flex">
         <Logo />
         <div className="max-w-md space-y-4">
           <h2 className="text-4xl font-semibold leading-tight tracking-tight">

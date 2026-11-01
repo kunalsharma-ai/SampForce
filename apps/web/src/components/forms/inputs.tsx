@@ -4,6 +4,7 @@ import { cn } from '@dealflow/ui';
 import type { CountryCode } from 'libphonenumber-js';
 import { Minus, Plus } from 'lucide-react';
 import * as React from 'react';
+import { fmtLocale } from '@/lib/i18n/locale';
 import { Combobox, type ComboOption } from './combobox';
 import {
   countryOptions,
@@ -32,7 +33,7 @@ const shellClass =
 
 /** Searchable country picker; stores the ISO 3166-1 alpha-2 code. */
 export function CountrySelect(props: AriaProps & { value: string; onChange: (code: string) => void; disabled?: boolean }) {
-  const options = React.useMemo(() => countryOptions(), []);
+  const options = React.useMemo(() => countryOptions(fmtLocale()), []);
   return <Combobox {...props} options={options} placeholder="Search countries" />;
 }
 
@@ -82,7 +83,7 @@ export function PhoneInput({
         disabled={disabled}
         value={state.country}
         onChange={(e) => emit(e.target.value as CountryCode, state.national)}
-        className="w-24 shrink-0 border-r border-input bg-muted/40 px-2 text-sm focus-visible:outline-none"
+        className="w-24 shrink-0 border-e border-input bg-muted/40 px-2 text-sm focus-visible:outline-none"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -117,26 +118,27 @@ export function CurrencyInput({
   ...aria
 }: AriaProps & { value: string; onChange: (v: string) => void; currency: string; disabled?: boolean }) {
   const [focused, setFocused] = React.useState(false);
-  const symbol = currencySymbol(currency);
+  const locale = fmtLocale();
+  const symbol = currencySymbol(currency, locale);
   return (
     <div className={shellClass}>
-      <span className="flex shrink-0 items-center border-r border-input bg-muted/40 px-2.5 text-sm text-muted-foreground" aria-hidden>
+      <span className="flex shrink-0 items-center border-e border-input bg-muted/40 px-2.5 text-sm text-muted-foreground" aria-hidden>
         {symbol}
       </span>
       <input
         {...aria}
         inputMode="decimal"
         disabled={disabled}
-        value={focused ? value : formatAmountInput(value, currency)}
+        value={focused ? value : formatAmountInput(value, currency, locale)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onChange={(e) => {
-          const n = parseAmount(e.target.value);
+          const n = parseAmount(e.target.value, locale);
           onChange(n === null || /[.,]$/.test(e.target.value) ? e.target.value : String(n));
         }}
-        className={cn(inputClass, 'px-3 text-right tabular-nums')}
+        className={cn(inputClass, 'px-3 text-end tabular-nums')}
       />
-      <span className="flex shrink-0 items-center pr-2.5 text-xs text-muted-foreground">{currency}</span>
+      <span className="flex shrink-0 items-center pe-2.5 text-xs text-muted-foreground">{currency}</span>
     </div>
   );
 }
@@ -173,7 +175,7 @@ export function NumberStepper({
   const btn = 'grid w-9 shrink-0 place-items-center text-muted-foreground hover:bg-muted disabled:opacity-40';
   return (
     <div className={shellClass}>
-      <button type="button" tabIndex={-1} aria-label={`Decrease ${label}`} disabled={disabled || (n !== null && n <= min)} onClick={() => bump(-1)} className={cn(btn, 'border-r border-input')}>
+      <button type="button" tabIndex={-1} aria-label={`Decrease ${label}`} disabled={disabled || (n !== null && n <= min)} onClick={() => bump(-1)} className={cn(btn, 'border-e border-input')}>
         <Minus className="size-4" aria-hidden />
       </button>
       <input
@@ -196,11 +198,11 @@ export function NumberStepper({
         className={cn(inputClass, 'min-w-0 px-2 text-center tabular-nums')}
       />
       {suffix && (
-        <span className="flex shrink-0 items-center pr-1 text-sm text-muted-foreground" aria-hidden>
+        <span className="flex shrink-0 items-center pe-1 text-sm text-muted-foreground" aria-hidden>
           {suffix}
         </span>
       )}
-      <button type="button" tabIndex={-1} aria-label={`Increase ${label}`} disabled={disabled || (n !== null && n >= max)} onClick={() => bump(1)} className={cn(btn, 'border-l border-input')}>
+      <button type="button" tabIndex={-1} aria-label={`Increase ${label}`} disabled={disabled || (n !== null && n >= max)} onClick={() => bump(1)} className={cn(btn, 'border-s border-input')}>
         <Plus className="size-4" aria-hidden />
       </button>
     </div>

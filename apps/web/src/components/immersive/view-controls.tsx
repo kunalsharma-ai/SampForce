@@ -48,7 +48,7 @@ export function ViewModeSwitch({ view, label }: { view: ReturnType<typeof useVie
 export function FpsReadout({ fps }: { fps: { fps: number; dpr: number } | null }) {
   if (!fps) return null;
   return (
-    <p className="pointer-events-none absolute bottom-2 left-2 rounded bg-background/80 px-2 py-0.5 font-mono text-[11px] text-muted-foreground" aria-hidden>
+    <p className="pointer-events-none absolute bottom-2 start-2 rounded bg-background/80 px-2 py-0.5 font-mono text-[11px] text-muted-foreground" aria-hidden>
       {fps.fps} fps · {fps.dpr}× pixels
     </p>
   );

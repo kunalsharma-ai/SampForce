@@ -124,7 +124,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
             </span>
           </>
         )}
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ms-auto flex flex-wrap gap-2">
           <Button onClick={() => save.mutate()} disabled={!name.trim() || issues.length > 0 || save.isPending || (!dirty && !!id)}>
             <Save aria-hidden /> {id ? (dirty ? 'Save new version' : 'Saved') : 'Create workflow'}
           </Button>
@@ -163,7 +163,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
         <div role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
           {error.message}
           {error instanceof ApiError && error.details?.length ? (
-            <ul className="mt-1 list-disc pl-5">
+            <ul className="mt-1 list-disc ps-5">
               {error.details.map((d, i) => (
                 <li key={i}>{d.message}</li>
               ))}
@@ -209,7 +209,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
             {issues.length > 0 && (
               <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
                 <p className="font-medium">Fix these before saving:</p>
-                <ul className="list-disc pl-5">
+                <ul className="list-disc ps-5">
                   {issues.map((i) => (
                     <li key={i}>{i}</li>
                   ))}
@@ -301,8 +301,8 @@ function RunItem({ run, open: initiallyOpen }: { run: ExecutionRow; open: boolea
   const href = run.entityId && run.entityType && ['lead', 'contact', 'company', 'deal'].includes(run.entityType) ? `/app/${run.entityType === 'company' ? 'companies' : `${run.entityType}s`}/${run.entityId}` : null;
   return (
     <li className="rounded-md border border-border">
-      <button type="button" className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left text-sm" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        {open ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
+      <button type="button" className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-start text-sm" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {open ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="rtl:-scale-x-100 size-4" aria-hidden />}
         <Badge tone={EXECUTION_TONE[run.status]}>{EXECUTION_LABEL[run.status]}</Badge>
         <span>{TRIGGER_EVENTS[run.eventType as keyof typeof TRIGGER_EVENTS]?.label ?? run.eventType}</span>
         <span className="text-xs text-muted-foreground">v{run.version} · {relativeTime(run.startedAt)}</span>

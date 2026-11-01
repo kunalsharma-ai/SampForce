@@ -59,7 +59,7 @@ export function LoginForm() {
         <FloatingField id="password" label="Password" error={form.formState.errors.password?.message}>
           <Input type="password" autoComplete="current-password" {...form.register('password')} />
         </FloatingField>
-        <p className="-mt-2 text-right text-sm">
+        <p className="-mt-2 text-end text-sm">
           <Link href="/forgot-password" className="text-primary hover:underline">
             Forgot your password?
           </Link>

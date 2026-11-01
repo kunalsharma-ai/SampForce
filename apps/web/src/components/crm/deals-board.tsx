@@ -227,7 +227,7 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
             {...attributes}
             aria-describedby="board-instructions"
             aria-label={`Move ${deal.name}`}
-            className="-ml-1 mt-0.5 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            className="-ms-1 mt-0.5 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
           >
             <GripVertical className="size-4" aria-hidden />
           </button>
@@ -239,7 +239,7 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
         {canWrite && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="-mr-1 size-6" aria-label={`Move ${deal.name} to another stage`}>
+              <Button variant="ghost" size="icon" className="-me-1 size-6" aria-label={`Move ${deal.name} to another stage`}>
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>

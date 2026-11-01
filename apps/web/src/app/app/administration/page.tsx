@@ -23,7 +23,7 @@ export default function AdministrationPage() {
               <span className="block text-sm font-medium">Workspace security</span>
               <span className="block text-sm text-muted-foreground">Require two-step verification, set up single sign-on and SCIM provisioning.</span>
             </span>
-            <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+            <ChevronRight className="rtl:-scale-x-100 size-4 text-muted-foreground" aria-hidden />
           </Link>
         </CardContent>
       </Card>

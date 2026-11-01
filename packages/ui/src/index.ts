@@ -8,3 +8,4 @@ export * from './components/label';
 export * from './components/sheet';
 export * from './components/skeleton';
 export * from './components/tooltip';
+export * from './components/direction';

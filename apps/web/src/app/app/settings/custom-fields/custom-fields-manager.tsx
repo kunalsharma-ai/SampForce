@@ -47,7 +47,7 @@ export function CustomFieldsManager() {
                         {d.required && <Badge tone="warning">Required</Badge>}
                         {d.options.length > 0 && <span className="text-xs text-muted-foreground">{d.options.join(', ')}</span>}
                         {canManage && (
-                          <Button variant="ghost" size="icon" className="ml-auto" aria-label={`Archive ${d.label}`} onClick={() => archive.mutate(d.id)} disabled={archive.isPending}>
+                          <Button variant="ghost" size="icon" className="ms-auto" aria-label={`Archive ${d.label}`} onClick={() => archive.mutate(d.id)} disabled={archive.isPending}>
                             <Trash2 aria-hidden />
                           </Button>
                         )}

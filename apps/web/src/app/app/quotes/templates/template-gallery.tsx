@@ -76,7 +76,7 @@ export function TemplateGallery() {
                 type="button"
                 aria-pressed={selected.key === t.key}
                 onClick={() => choose(t)}
-                className="group w-full rounded-lg border border-border p-2 text-left transition-colors hover:bg-muted/50 aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="group w-full rounded-lg border border-border p-2 text-start transition-colors hover:bg-muted/50 aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <TemplateThumb template={t} accent={selected.key === t.key ? (accent ?? undefined) : undefined} />
                 <span className="mt-2 flex items-center justify-between gap-2 px-1">
@@ -105,7 +105,7 @@ export function TemplateGallery() {
                   href={startHref}
                   className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  Use template <ArrowRight className="size-4" aria-hidden />
+                  Use template <ArrowRight className="rtl:-scale-x-100 size-4" aria-hidden />
                 </Link>
               ) : (
                 <p className="text-xs text-muted-foreground">You can browse templates. Starting a bid needs permission to write quotes.</p>

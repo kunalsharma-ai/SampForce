@@ -25,31 +25,31 @@ function Stat({ label, value, note }: { label: string; value: string | number; n
 function CountCells({ c }: { c: AnalyticsCounts }) {
   return (
     <>
-      <td className="px-3 py-2 text-right tabular-nums">{c.sent}</td>
-      <td className="px-3 py-2 text-right tabular-nums">
+      <td className="px-3 py-2 text-end tabular-nums">{c.sent}</td>
+      <td className="px-3 py-2 text-end tabular-nums">
         {c.replied} <span className="text-xs text-muted-foreground">{pct(c.replied, c.sent)}</span>
       </td>
-      <td className="px-3 py-2 text-right tabular-nums">
+      <td className="px-3 py-2 text-end tabular-nums">
         {c.opened} <span className="text-xs text-muted-foreground">{pct(c.opened, c.sent)}</span>
       </td>
-      <td className="px-3 py-2 text-right tabular-nums">{c.clicked}</td>
-      <td className="px-3 py-2 text-right tabular-nums">{c.bounced}</td>
-      <td className="px-3 py-2 text-right tabular-nums">{c.unsubscribed}</td>
+      <td className="px-3 py-2 text-end tabular-nums">{c.clicked}</td>
+      <td className="px-3 py-2 text-end tabular-nums">{c.bounced}</td>
+      <td className="px-3 py-2 text-end tabular-nums">{c.unsubscribed}</td>
     </>
   );
 }
 
 function CountHead({ first }: { first: string }) {
   return (
-    <thead className="border-b border-border text-left text-xs text-muted-foreground">
+    <thead className="border-b border-border text-start text-xs text-muted-foreground">
       <tr>
         <th className="px-3 py-2 font-medium">{first}</th>
-        <th className="px-3 py-2 text-right font-medium">Sent</th>
-        <th className="px-3 py-2 text-right font-medium">Replied</th>
-        <th className="px-3 py-2 text-right font-medium">Opened (estimate)</th>
-        <th className="px-3 py-2 text-right font-medium">Clicked</th>
-        <th className="px-3 py-2 text-right font-medium">Bounced</th>
-        <th className="px-3 py-2 text-right font-medium">Unsubscribed</th>
+        <th className="px-3 py-2 text-end font-medium">Sent</th>
+        <th className="px-3 py-2 text-end font-medium">Replied</th>
+        <th className="px-3 py-2 text-end font-medium">Opened (estimate)</th>
+        <th className="px-3 py-2 text-end font-medium">Clicked</th>
+        <th className="px-3 py-2 text-end font-medium">Bounced</th>
+        <th className="px-3 py-2 text-end font-medium">Unsubscribed</th>
       </tr>
     </thead>
   );

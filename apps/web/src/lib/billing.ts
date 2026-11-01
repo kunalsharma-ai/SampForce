@@ -1,6 +1,7 @@
 import type { BillingOverview, InvoiceRow, OnboardingState, RoleRow, SupportGrantRow } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { api } from './api';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /** Data hooks for billing, onboarding, custom roles and support access. */
 
@@ -26,7 +27,7 @@ export function useSupportGrants(enabled = true) {
 
 /** Provider amounts are in minor units (cents, paise). */
 export function formatMinor(cents: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+  return new Intl.NumberFormat(fmtLocale(), { style: 'currency', currency }).format(cents / 100);
 }
 
 export const SUBSCRIPTION_STATUS = {

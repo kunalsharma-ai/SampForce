@@ -97,7 +97,7 @@ export function TemplateThumb({ template, accent }: { template: BidTemplate; acc
   );
   return (
     <div aria-hidden className="relative flex aspect-[4/3] flex-col gap-2 overflow-hidden rounded-md border border-border bg-white p-3 text-[#111] dark:bg-zinc-50">
-      {cover === 'split' && <span className="absolute inset-y-0 left-0 w-2" style={{ background: a }} />}
+      {cover === 'split' && <span className="absolute inset-y-0 start-0 w-2" style={{ background: a }} />}
       {(cover === 'band' || cover === 'dark') && (
         <div
           className="-mx-3 -mt-3 mb-1 px-3 py-3"
@@ -107,12 +107,12 @@ export function TemplateThumb({ template, accent }: { template: BidTemplate; acc
         </div>
       )}
       {(cover === 'minimal' || cover === 'split') && (
-        <div className={cover === 'split' ? 'pl-2' : ''}>
+        <div className={cover === 'split' ? 'ps-2' : ''}>
           <span className={`block text-[10px] font-semibold ${serif ? 'font-serif' : ''}`}>{template.name}</span>
           {cover === 'minimal' && <span className="mt-1 block h-0.5 w-10" style={{ background: a }} />}
         </div>
       )}
-      <div className={`space-y-1.5 ${cover === 'split' ? 'pl-2' : ''}`}>
+      <div className={`space-y-1.5 ${cover === 'split' ? 'ps-2' : ''}`}>
         <span className="block h-1.5 w-1/3 rounded-full" style={{ background: a }} />
         {line('90%')}
         {line('75%')}
@@ -120,7 +120,7 @@ export function TemplateThumb({ template, accent }: { template: BidTemplate; acc
         {line('85%')}
         {line('60%')}
       </div>
-      <div className={`mt-auto flex justify-end ${cover === 'split' ? 'pl-2' : ''}`}>{line('35%', true)}</div>
+      <div className={`mt-auto flex justify-end ${cover === 'split' ? 'ps-2' : ''}`}>{line('35%', true)}</div>
     </div>
   );
 }

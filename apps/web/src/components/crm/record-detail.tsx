@@ -86,7 +86,7 @@ export function RecordHeader({
   return (
     <div className="mb-6 space-y-3">
       <Link href={`/app/${entity}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> {label.many}
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {label.many}
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">

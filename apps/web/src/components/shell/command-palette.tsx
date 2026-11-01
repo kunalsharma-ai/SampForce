@@ -9,7 +9,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { fuzzyFilter } from '@/lib/fuzzy';
-import { moduleHref, MODULES, phaseLabel } from '@/lib/navigation';
+import { type MessageKey, useT } from '@/lib/i18n';
+import { moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
 import { useSession } from '@/lib/session';
 import { useNavigation } from '@/lib/workspace-nav';
 import { useCopilot } from '@/stores/copilot';
@@ -40,6 +41,7 @@ const CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[]
  */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
+  const t = useT();
   const { data: me } = useSession();
   const openCreate = useQuickCreate((s) => s.open);
   const { nav } = useNavigation();
@@ -95,7 +97,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     q,
     (c) => c.label,
   );
-  const modules = fuzzyFilter(MODULES, q, (m) => `${m.label} ${m.summary}`);
+  // Matches the translated name and the English one, so either finds the module.
+  const modules = fuzzyFilter(MODULES, q, (m) => `${t(moduleKey(m) as MessageKey)} ${m.label} ${m.summary}`);
   const acts = fuzzyFilter(actions, q, (a) => a.label);
 
   return (
@@ -140,7 +143,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                         <meta.icon className="size-4 text-muted-foreground" aria-hidden />
                         <span className="min-w-0 flex-1 truncate">
                           {h.title}
-                          {h.subtitle && <span className="ml-2 text-xs text-muted-foreground">{h.subtitle}</span>}
+                          {h.subtitle && <span className="ms-2 text-xs text-muted-foreground">{h.subtitle}</span>}
                         </span>
                         <span className="text-xs text-muted-foreground">{meta.label}</span>
                       </Command.Item>
@@ -180,11 +183,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               </Command.Group>
             )}
             {modules.length > 0 && (
-              <Command.Group heading="Modules">
+              <Command.Group heading={t('palette.modules')}>
                 {modules.map((m) => (
                   <Command.Item key={m.slug || 'home'} value={`module-${m.slug || 'home'}`} onSelect={() => go(moduleHref(m))} className={ITEM}>
                     <m.icon className="size-4 text-muted-foreground" aria-hidden />
-                    <span className="flex-1">{m.label}</span>
+                    <span className="flex-1">{t(moduleKey(m) as MessageKey)}</span>
                     {m.status === 'planned' && <span className="text-xs text-muted-foreground">{phaseLabel(m.phase)}</span>}
                   </Command.Item>
                 ))}

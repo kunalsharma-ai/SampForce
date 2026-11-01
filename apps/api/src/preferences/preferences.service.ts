@@ -4,6 +4,9 @@ import {
   MAX_SAVED_THEMES,
   normalizeAppearance,
   type PreferencesResponse,
+  normalizeRegional,
+  type Regional,
+  type RegionalResponse,
   type SavedTheme,
   type SavedThemeInput,
 } from '@dealflow/types';
@@ -71,6 +74,24 @@ export class PreferencesService {
       });
     });
     return this.get(auth);
+  }
+
+  /** The person's language and regional formats; DealFlow's defaults until they choose. */
+  async getRegional(auth: AuthContext): Promise<RegionalResponse> {
+    const row = await this.prisma.userRegionalSetting.findUnique({ where: { userId: auth.userId } });
+    if (!row) return { regional: normalizeRegional(null), source: 'default', updatedAt: null };
+    return { regional: normalizeRegional({ language: row.language, formatLocale: row.formatLocale }), source: 'user', updatedAt: row.updatedAt.toISOString() };
+  }
+
+  async saveRegional(auth: AuthContext, regional: Regional): Promise<RegionalResponse> {
+    const data = { language: regional.language, formatLocale: regional.formatLocale };
+    await this.prisma.userRegionalSetting.upsert({ where: { userId: auth.userId }, create: { userId: auth.userId, ...data }, update: data });
+    return this.getRegional(auth);
+  }
+
+  async resetRegional(auth: AuthContext): Promise<RegionalResponse> {
+    await this.prisma.userRegionalSetting.deleteMany({ where: { userId: auth.userId } });
+    return this.getRegional(auth);
   }
 
   async listThemes(auth: AuthContext): Promise<SavedTheme[]> {

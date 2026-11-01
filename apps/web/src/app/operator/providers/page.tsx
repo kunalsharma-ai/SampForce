@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useOperator } from '../operator-shell';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATE: Record<OperatorProviderRow['state'], { label: string; tone: 'neutral' | 'warning' | 'success' | 'critical' }> = {
   not_configured: { label: 'Not configured', tone: 'neutral' },
@@ -47,7 +48,7 @@ function ProviderCard({ p, admin }: { p: OperatorProviderRow; admin: boolean }) 
         </p>
         {p.lastCheck && (
           <p className="rounded-md border border-border bg-muted/30 p-2">
-            {p.lastCheck.ok ? 'Passed' : 'Failed'} on {new Date(p.lastCheck.at).toLocaleString()}
+            {p.lastCheck.ok ? 'Passed' : 'Failed'} on {new Date(p.lastCheck.at).toLocaleString(fmtLocale())}
             {p.lastCheck.by && ` by ${p.lastCheck.by}`}: {p.lastCheck.message}
             {p.lastCheck.stale && <span className="block text-muted-foreground">Made with a different key from the one set now, so it no longer counts. Run the check again.</span>}
           </p>

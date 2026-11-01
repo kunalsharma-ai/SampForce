@@ -36,7 +36,7 @@ export function MergeFieldBar({ onInsert, idBase = 'mf' }: { onInsert: (tag: str
   const groups = ['Custom fields', 'Workspace variables'] as const;
   return (
     <div className="flex flex-wrap items-center gap-1" aria-label="Insert a merge field">
-      <span className="mr-1 text-xs text-muted-foreground">Insert:</span>
+      <span className="me-1 text-xs text-muted-foreground">Insert:</span>
       {MERGE_FIELD_KEYS.map((k) => (
         <button
           key={k}

@@ -11,6 +11,7 @@ import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { UploadZone } from '@/components/forms/upload-zone';
 import { useCustomFields } from '@/lib/crm';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const MAX_BYTES = 2_000_000;
 const LABELS: Record<string, string> = {
@@ -141,7 +142,7 @@ export function ImportWizard() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
                 <caption className="sr-only">Column mapping</caption>
-                <thead className="text-left text-xs text-muted-foreground">
+                <thead className="text-start text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="pb-2 font-medium">Column in file</th>
                     <th scope="col" className="pb-2 font-medium">Sample values</th>
@@ -187,7 +188,7 @@ export function ImportWizard() {
                 Check file
               </Button>
               <Button onClick={() => run.mutate(false)} disabled={!checked || checked.created === 0 || run.isPending || !!done}>
-                <FileUp aria-hidden /> Import {checked ? checked.created.toLocaleString('en-US') : ''} rows
+                <FileUp aria-hidden /> Import {checked ? checked.created.toLocaleString(fmtLocale()) : ''} rows
               </Button>
               {!checked && <span className="text-xs text-muted-foreground">Check the file first; nothing is saved during the check.</span>}
             </div>
@@ -227,7 +228,7 @@ function ResultCard({ result, entity }: { result: ImportResult; entity: ImportEn
           <div className="max-h-60 overflow-auto rounded-md border border-border">
             <table className="w-full text-xs">
               <caption className="sr-only">Rows with errors</caption>
-              <thead className="sticky top-0 bg-muted text-left">
+              <thead className="sticky top-0 bg-muted text-start">
                 <tr>
                   <th scope="col" className="px-3 py-1.5 font-medium">Row</th>
                   <th scope="col" className="px-3 py-1.5 font-medium">Problem</th>

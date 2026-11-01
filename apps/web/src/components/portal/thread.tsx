@@ -20,7 +20,7 @@ export function MessageThread({ messages, mine, empty }: { messages: PortalMessa
   return (
     <ol className="space-y-3" aria-label="Messages">
       {messages.map((m) => (
-        <li key={m.id} className={cn('max-w-[85%] rounded-lg border p-3 text-sm', m.side === mine ? 'ml-auto border-primary/30 bg-primary/5' : 'border-border bg-muted/40')}>
+        <li key={m.id} className={cn('max-w-[85%] rounded-lg border p-3 text-sm', m.side === mine ? 'ms-auto border-primary/30 bg-primary/5' : 'border-border bg-muted/40')}>
           <p className="mb-1 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{m.author}</span>
             {m.side === 'team' && mine === 'customer' && ' · account team'} · <time dateTime={m.createdAt}>{relativeTime(m.createdAt)}</time>
@@ -75,7 +75,7 @@ export function DocumentList({ docs, mine, onRemove }: { docs: PortalDocument[];
             {fileSize(d.sizeBytes)} · {d.side === mine ? 'shared by you' : d.side === 'team' ? `from ${d.uploadedBy}, account team` : `from ${d.uploadedBy}`} · {relativeTime(d.createdAt)}
           </span>
           {onRemove && (
-            <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => onRemove(d)} aria-label={`Remove ${d.name}`}>
+            <Button type="button" size="sm" variant="ghost" className="ms-auto" onClick={() => onRemove(d)} aria-label={`Remove ${d.name}`}>
               Remove
             </Button>
           )}

@@ -7,6 +7,8 @@ import {
   dashboardLayoutSchema,
   type NavItem,
   navItemSchema,
+  type Regional,
+  regionalSchema,
   type SavedThemeInput,
   savedThemeInputSchema,
   type UpdateNavigationInput,
@@ -42,6 +44,23 @@ export class PreferencesController {
   @Delete('preferences/appearance')
   reset(@Auth() auth: AuthContext) {
     return this.prefs.reset(auth);
+  }
+
+  /** Language and regional formats. Readable while restricted, so the policy screen is in the person's language. */
+  @AllowRestricted()
+  @Get('regional')
+  getRegional(@Auth() auth: AuthContext) {
+    return this.prefs.getRegional(auth);
+  }
+
+  @Put('regional')
+  saveRegional(@Auth() auth: AuthContext, @Body(new ZodPipe(regionalSchema)) body: Regional) {
+    return this.prefs.saveRegional(auth, body);
+  }
+
+  @Delete('regional')
+  resetRegional(@Auth() auth: AuthContext) {
+    return this.prefs.resetRegional(auth);
   }
 
   @Get('themes')

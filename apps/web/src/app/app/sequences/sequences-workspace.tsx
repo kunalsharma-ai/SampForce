@@ -88,15 +88,15 @@ function SequenceList() {
             <p className="p-6 text-sm text-muted-foreground">No sequences yet. A sequence sends a few personal emails over days or weeks and stops when someone replies.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">Sequence</th>
-                  <th className="px-4 py-2 text-right font-medium">Steps</th>
-                  <th className="px-4 py-2 text-right font-medium">In progress</th>
-                  <th className="px-4 py-2 text-right font-medium">Sent</th>
-                  <th className="px-4 py-2 text-right font-medium">Replied</th>
-                  <th className="px-4 py-2 text-right font-medium">Opened*</th>
-                  <th className="px-4 py-2 text-right font-medium">Bounced</th>
+                  <th className="px-4 py-2 text-end font-medium">Steps</th>
+                  <th className="px-4 py-2 text-end font-medium">In progress</th>
+                  <th className="px-4 py-2 text-end font-medium">Sent</th>
+                  <th className="px-4 py-2 text-end font-medium">Replied</th>
+                  <th className="px-4 py-2 text-end font-medium">Opened*</th>
+                  <th className="px-4 py-2 text-end font-medium">Bounced</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -111,16 +111,16 @@ function SequenceList() {
                         {s.owner ? `By ${s.owner.name} · ` : ''}updated {formatDate(s.updatedAt)}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.steps.length}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.stats.active}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.stats.sent}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="px-4 py-2 text-end tabular-nums">{s.steps.length}</td>
+                    <td className="px-4 py-2 text-end tabular-nums">{s.stats.active}</td>
+                    <td className="px-4 py-2 text-end tabular-nums">{s.stats.sent}</td>
+                    <td className="px-4 py-2 text-end tabular-nums">
                       {s.stats.replied} <span className="text-xs text-muted-foreground">{pct(s.stats.replied, s.stats.sent)}</span>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="px-4 py-2 text-end tabular-nums">
                       {s.stats.opened} <span className="text-xs text-muted-foreground">{pct(s.stats.opened, s.stats.sent)}</span>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.stats.bounced}</td>
+                    <td className="px-4 py-2 text-end tabular-nums">{s.stats.bounced}</td>
                   </tr>
                 ))}
               </tbody>
@@ -393,7 +393,7 @@ function SuppressionList() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="ml-auto"
+                      className="ms-auto"
                       onClick={() => {
                         const reason = s.reason === 'UNSUBSCRIBED' ? window.prompt('This person unsubscribed. Why may they be emailed again?') : undefined;
                         if (s.reason === 'UNSUBSCRIBED' && !reason) return;

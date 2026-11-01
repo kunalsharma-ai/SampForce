@@ -12,8 +12,9 @@ import { api } from '@/lib/api';
 import { useIntegrations, useMeetings } from '@/lib/automation';
 import { useMeetingRecords } from '@/lib/meetings';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
-const fmt = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const fmt = (iso: string) => new Date(iso).toLocaleString(fmtLocale(), { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export function MeetingsList() {
   const meetings = useMeetings();
@@ -57,7 +58,7 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
                 <span className={`text-sm font-medium ${m.canceled ? 'line-through text-muted-foreground' : ''}`}>{m.title}</span>
                 {m.canceled && <Badge tone="neutral">Canceled</Badge>}
                 {m.platform && <Badge tone="neutral">{MEETING_PLATFORM_LABELS[m.platform]}</Badge>}
-                <span className="ml-auto flex flex-wrap gap-2">
+                <span className="ms-auto flex flex-wrap gap-2">
                   {!notes && m.joinUrl && !m.canceled && (
                     <a href={m.joinUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
                       Join <span className="sr-only">{m.title}</span>
@@ -80,7 +81,7 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
                   {m.attendees.slice(0, 6).join(', ')}
                   {m.attendees.length > 6 && ` +${m.attendees.length - 6}`}
                   {m.contactIds.map((id, i) => (
-                    <Link key={id} href={`/app/contacts/${id}`} className="ml-2 text-primary underline underline-offset-2">
+                    <Link key={id} href={`/app/contacts/${id}`} className="ms-2 text-primary underline underline-offset-2">
                       Contact {m.contactIds.length > 1 ? i + 1 : ''}
                     </Link>
                   ))}

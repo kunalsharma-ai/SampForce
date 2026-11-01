@@ -75,7 +75,7 @@ function InsightRow({ insight: i }: { insight: Insight }) {
       <p className="text-sm font-medium">
         {i.title}
         {delta !== null && delta !== 0 && (
-          <span className={`ml-1.5 inline-flex items-center text-xs ${delta > 0 ? 'text-success' : 'text-critical'}`}>
+          <span className={`ms-1.5 inline-flex items-center text-xs ${delta > 0 ? 'text-success' : 'text-critical'}`}>
             {delta > 0 ? <ArrowUpRight className="size-3" aria-hidden /> : <ArrowDownRight className="size-3" aria-hidden />}
             <span className="sr-only">{delta > 0 ? 'up' : 'down'} on the week before</span>
           </span>

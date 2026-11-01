@@ -1,6 +1,7 @@
 import type { CustomFieldDef, MemberRow, Page, PipelineRow } from '@dealflow/types';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from './api';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 export type CrmEntity = 'leads' | 'contacts' | 'companies' | 'deals';
 
@@ -65,13 +66,13 @@ export function useCustomFields(entity: CrmEntity) {
 
 export function formatMoney(value: number | null | undefined, currency = 'USD'): string {
   if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(fmtLocale(), { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(fmtLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export const LEAD_STATUS_TONE = {

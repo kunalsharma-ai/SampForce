@@ -58,12 +58,12 @@ export function ContractsWorkspace() {
 export function ContractTable({ rows, showCompany = true }: { rows: ContractRow[]; showCompany?: boolean }) {
   return (
     <table className="w-full text-sm">
-      <thead className="border-b border-border text-left text-xs text-muted-foreground">
+      <thead className="border-b border-border text-start text-xs text-muted-foreground">
         <tr>
           <th className="px-4 py-2 font-medium">Contract</th>
           {showCompany && <th className="px-4 py-2 font-medium">Company</th>}
           <th className="px-4 py-2 font-medium">Status</th>
-          <th className="px-4 py-2 text-right font-medium">Value</th>
+          <th className="px-4 py-2 text-end font-medium">Value</th>
           <th className="px-4 py-2 font-medium">Term</th>
         </tr>
       </thead>
@@ -90,17 +90,17 @@ export function ContractTable({ rows, showCompany = true }: { rows: ContractRow[
             <td className="px-4 py-2">
               <Badge tone={CONTRACT_STATUS[c.status].tone}>{CONTRACT_STATUS[c.status].label}</Badge>
               {c.renewalDue && (
-                <Badge tone="warning" className="ml-1">
+                <Badge tone="warning" className="ms-1">
                   Renewal due
                 </Badge>
               )}
               {c.renewalId && c.status === 'ACTIVE' && (
-                <Badge tone="primary" className="ml-1">
+                <Badge tone="primary" className="ms-1">
                   Renewal started
                 </Badge>
               )}
             </td>
-            <td className="px-4 py-2 text-right tabular-nums">{formatAmount(c.value, c.currency)}</td>
+            <td className="px-4 py-2 text-end tabular-nums">{formatAmount(c.value, c.currency)}</td>
             <td className="px-4 py-2">
               {formatDate(c.startDate)} to {c.endDate ? formatDate(c.endDate) : 'open-ended'}
               {c.daysToEnd !== null && c.status === 'ACTIVE' && <span className="block text-xs text-muted-foreground">{c.daysToEnd >= 0 ? `${c.daysToEnd} days left` : `ended ${-c.daysToEnd} days ago`}</span>}

@@ -1,6 +1,7 @@
 import type { AwardRow, BadgeInput, BadgeRow, CompetitionInput, CompetitionRow, GamificationMe, GamificationSettings, GamificationSettingsInput, Leaderboard, TeamInput, TeamRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 export function useGamificationMe() {
   return useQuery({ queryKey: ['gamification', 'me'], queryFn: () => api<GamificationMe>('/gamification/me') });
@@ -64,7 +65,7 @@ export function periodOptions(now = new Date()): { value: string; label: string 
   for (let i = 0; i < 6; i++) {
     const d = new Date(Date.UTC(y, m - i, 1));
     const value = d.toISOString().slice(0, 7);
-    out.push({ value, label: `${i === 0 ? 'This month' : i === 1 ? 'Last month' : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}${i < 2 ? ` (${d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })})` : ''}` });
+    out.push({ value, label: `${i === 0 ? 'This month' : i === 1 ? 'Last month' : d.toLocaleDateString(fmtLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' })}${i < 2 ? ` (${d.toLocaleDateString(fmtLocale(), { month: 'short', year: 'numeric', timeZone: 'UTC' })})` : ''}` });
   }
   const q = Math.floor(m / 3) + 1;
   out.push({ value: `${y}-Q${q}`, label: `This quarter (Q${q} ${y})` });

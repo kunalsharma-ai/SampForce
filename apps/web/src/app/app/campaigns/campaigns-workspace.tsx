@@ -39,16 +39,16 @@ export function CampaignsWorkspace() {
             <p className="p-6 text-sm text-muted-foreground">No campaigns yet.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">Campaign</th>
-                  <th className="px-4 py-2 text-right font-medium">Leads</th>
-                  <th className="px-4 py-2 text-right font-medium">Converted</th>
-                  <th className="px-4 py-2 text-right font-medium">Open pipeline</th>
-                  <th className="px-4 py-2 text-right font-medium">Won</th>
-                  <th className="px-4 py-2 text-right font-medium">Budget</th>
-                  <th className="px-4 py-2 text-right font-medium">Cost per lead</th>
-                  <th className="px-4 py-2 text-right font-medium">Won ÷ budget</th>
+                  <th className="px-4 py-2 text-end font-medium">Leads</th>
+                  <th className="px-4 py-2 text-end font-medium">Converted</th>
+                  <th className="px-4 py-2 text-end font-medium">Open pipeline</th>
+                  <th className="px-4 py-2 text-end font-medium">Won</th>
+                  <th className="px-4 py-2 text-end font-medium">Budget</th>
+                  <th className="px-4 py-2 text-end font-medium">Cost per lead</th>
+                  <th className="px-4 py-2 text-end font-medium">Won ÷ budget</th>
                   {canManage && <th className="sr-only">Edit</th>}
                 </tr>
               </thead>
@@ -67,16 +67,16 @@ export function CampaignsWorkspace() {
                         </span>
                         {r.otherCurrencyDeals > 0 && <span className="block text-xs text-warning">{r.otherCurrencyDeals} deal(s) in another currency are left out of the money figures.</span>}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.leads}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.converted}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{money(r.pipeline)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">
+                      <td className="px-4 py-2 text-end tabular-nums">{r.leads}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{r.converted}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{money(r.pipeline)}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">
                         {money(r.won)}
                         <span className="block text-xs text-muted-foreground">{r.wonDeals} deal{r.wonDeals === 1 ? '' : 's'}</span>
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{money(c.budget)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.costPerLead === null ? '—' : formatMoney(r.costPerLead, c.currency)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.returnOnSpend === null ? '—' : `${r.returnOnSpend}×`}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{money(c.budget)}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{r.costPerLead === null ? '—' : formatMoney(r.costPerLead, c.currency)}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{r.returnOnSpend === null ? '—' : `${r.returnOnSpend}×`}</td>
                       {canManage && (
                         <td className="px-4 py-2">
                           <Button size="sm" variant="ghost" onClick={() => setEditing(c)}>

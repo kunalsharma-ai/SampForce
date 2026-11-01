@@ -54,7 +54,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
             </nav>
           )}
           {me.data && (
-            <div className="ml-auto flex items-center gap-3 text-sm">
+            <div className="ms-auto flex items-center gap-3 text-sm">
               <span className="text-muted-foreground">
                 {me.data.name} · {me.data.role === 'ADMIN' ? 'Admin' : 'Support'}
               </span>

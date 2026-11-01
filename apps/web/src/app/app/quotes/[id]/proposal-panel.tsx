@@ -168,7 +168,7 @@ export function ProposalSections({
               </p>
             )}
             {suggestion.openQuestions.length > 0 && (
-              <ul className="list-disc pl-5 text-xs text-warning">
+              <ul className="list-disc ps-5 text-xs text-warning">
                 {suggestion.openQuestions.map((q) => (
                   <li key={q}>Open question: {q}</li>
                 ))}

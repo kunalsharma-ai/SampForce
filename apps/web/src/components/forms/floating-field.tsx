@@ -34,7 +34,7 @@ export function FloatingField({
         })}
         <label
           htmlFor={id}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all duration-150 motion-reduce:transition-none peer-focus:top-3.5 peer-focus:text-xs peer-focus:text-foreground peer-[:not(:placeholder-shown)]:top-3.5 peer-[:not(:placeholder-shown)]:text-xs peer-autofill:top-3.5 peer-autofill:text-xs"
+          className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all duration-150 motion-reduce:transition-none peer-focus:top-3.5 peer-focus:text-xs peer-focus:text-foreground peer-[:not(:placeholder-shown)]:top-3.5 peer-[:not(:placeholder-shown)]:text-xs peer-autofill:top-3.5 peer-autofill:text-xs"
         >
           {label}
         </label>

@@ -12,6 +12,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, formatMinor, INVOICE_STATUS, SUBSCRIPTION_STATUS } from '@/lib/billing';
 import { useOperator } from '../../operator-shell';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATUSES: SubscriptionState[] = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'UNPAID', 'CANCELED'];
 
@@ -82,7 +83,7 @@ export default function OperatorTenantPage() {
       <Card>
         <CardHeader>
           <CardTitle>Support view</CardTitle>
-          <CardDescription>{d.support ? `Granted by the workspace until ${new Date(d.supportAccessUntil!).toLocaleString()}. This view is logged.` : 'The workspace has not granted support access. Ask an owner to turn it on under Administration.'}</CardDescription>
+          <CardDescription>{d.support ? `Granted by the workspace until ${new Date(d.supportAccessUntil!).toLocaleString(fmtLocale())}. This view is logged.` : 'The workspace has not granted support access. Ask an owner to turn it on under Administration.'}</CardDescription>
         </CardHeader>
         {d.support && (
           <CardContent className="grid gap-6 lg:grid-cols-2">
@@ -101,7 +102,7 @@ export default function OperatorTenantPage() {
               <ul className="space-y-1 font-mono text-xs">
                 {d.support.audit.map((a, i) => (
                   <li key={i}>
-                    <span className="text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</span> {a.action} <span className="text-muted-foreground">({a.actorType.toLowerCase()})</span>
+                    <span className="text-muted-foreground">{new Date(a.createdAt).toLocaleString(fmtLocale())}</span> {a.action} <span className="text-muted-foreground">({a.actorType.toLowerCase()})</span>
                   </li>
                 ))}
               </ul>

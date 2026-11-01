@@ -50,7 +50,7 @@ export function RolesManager() {
               <div className="flex items-center gap-2">
                 <p className="font-medium">{r.name}</p>
                 <Badge tone={r.isSystem ? 'neutral' : 'accent'}>{r.isSystem ? 'System' : 'Custom'}</Badge>
-                <span className="ml-auto text-xs text-muted-foreground">
+                <span className="ms-auto text-xs text-muted-foreground">
                   {r.members} member{r.members === 1 ? '' : 's'}
                 </span>
               </div>
@@ -140,7 +140,7 @@ function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void
           Cancel
         </Button>
         {role && (
-          <Button type="button" variant="destructive" className="ml-auto" disabled={remove.isPending || role.members > 0} title={role.members > 0 ? 'Move its members to another role first' : undefined} onClick={() => remove.mutate()}>
+          <Button type="button" variant="destructive" className="ms-auto" disabled={remove.isPending || role.members > 0} title={role.members > 0 ? 'Move its members to another role first' : undefined} onClick={() => remove.mutate()}>
             Delete role
           </Button>
         )}

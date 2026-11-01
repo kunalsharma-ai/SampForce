@@ -6,7 +6,8 @@ import { ChevronsLeft, Clock, FileText, Handshake, type LucideIcon, SlidersHoriz
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { type ModuleDef, moduleHref, MODULES, phaseLabel } from '@/lib/navigation';
+import { type MessageKey, useT } from '@/lib/i18n';
+import { type ModuleDef, moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
 import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav';
 import { usePreferences } from '@/stores/preferences';
 import { useShell } from '@/stores/shell';
@@ -45,6 +46,7 @@ function NavLink({
   badge?: React.ReactNode;
   layoutId?: string;
 }) {
+  const { dir } = useT();
   const link = (
     <Link
       href={href}
@@ -74,19 +76,20 @@ function NavLink({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
+      <TooltipContent side={dir === 'rtl' ? 'left' : 'right'}>{label}</TooltipContent>
     </Tooltip>
   );
 }
 
 /** Removes a favourite. Shown on hover or keyboard focus. Adding is done from the page itself (top bar star). */
 function UnpinButton({ item, onToggle }: { item: NavItem; onToggle: (i: NavItem) => void }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={() => onToggle(item)}
-      aria-label={`Remove ${item.label} from favourites`}
-      title="Remove from favourites"
+      aria-label={t('nav.removeFavourite', { label: item.label })}
+      title={t('nav.removeFavouriteShort')}
       className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100"
     >
       <X className="size-3.5" aria-hidden />
@@ -112,13 +115,14 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const pins = useTogglePin();
   const modules = orderedModules(nav);
   const recent = nav.recent.filter((r) => r.href !== pathname).slice(0, RECENT_SHOWN);
+  const t = useT();
 
   return (
-    <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
+    <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
       {nav.pinned.length > 0 && (
         <section aria-labelledby={`${idPrefix}-fav`} data-nav-section="favourites">
           <GroupHeading collapsed={collapsed} id={`${idPrefix}-fav`}>
-            Favourites
+            {t('nav.favourites')}
           </GroupHeading>
           <ul className="space-y-0.5">
             {nav.pinned.map((p) => (
@@ -133,7 +137,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
       {!collapsed && recent.length > 0 && (
         <section aria-labelledby={`${idPrefix}-recent`} data-nav-section="recent">
           <GroupHeading collapsed={collapsed} id={`${idPrefix}-recent`}>
-            Recent
+            {t('nav.recent')}
           </GroupHeading>
           <ul className="space-y-0.5">
             {recent.map((r) => (
@@ -150,7 +154,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
         return (
           <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules">
             <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`}>
-              {group}
+              {t(`nav.group.${group}`)}
             </GroupHeading>
             <ul className="space-y-0.5">
               {list.map((m) => {
@@ -159,7 +163,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
                   <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
                     <NavLink
                       href={href}
-                      label={m.label}
+                      label={t(moduleKey(m) as MessageKey)}
                       icon={m.icon}
                       active={isActive(pathname, href)}
                       collapsed={collapsed}
@@ -188,16 +192,17 @@ export function Sidebar() {
   const collapsed = usePreferences((s) => s.sidebarCollapsed);
   const toggle = usePreferences((s) => s.toggleSidebar);
   const setCustomizeOpen = useShell((s) => s.setCustomizeOpen);
+  const t = useT();
   return (
     <aside
       data-shell="sidebar"
       className={cn(
-        'df-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border/70 transition-[width] duration-300 lg:flex',
+        'df-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-e border-border/70 transition-[width] duration-300 lg:flex',
         collapsed ? 'w-[68px]' : 'w-64',
       )}
     >
       <div className={cn('flex h-16 items-center px-4', collapsed && 'justify-center px-0')}>
-        <Link href="/app" aria-label="DealFlow Command Center">
+        <Link href="/app" aria-label={t('nav.home')}>
           <Logo compact={collapsed} />
         </Link>
       </div>
@@ -207,22 +212,22 @@ export function Sidebar() {
           type="button"
           onClick={() => setCustomizeOpen(true)}
           className="flex flex-1 items-center justify-center gap-2 rounded-md border border-border py-1.5 text-xs text-muted-foreground hover:bg-muted"
-          aria-label="Customize menu"
-          title="Customize menu"
+          aria-label={t('nav.customizeMenu')}
+          title={t('nav.customizeMenu')}
         >
           <SlidersHorizontal className="size-4" aria-hidden />
-          {!collapsed && 'Customize'}
+          {!collapsed && t('nav.customize')}
         </button>
         <button
           type="button"
           onClick={toggle}
           className="flex flex-1 items-center justify-center gap-2 rounded-md border border-border py-1.5 text-xs text-muted-foreground hover:bg-muted"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
           aria-expanded={!collapsed}
-          title="Toggle sidebar ( [ )"
+          title={t('nav.toggleSidebar')}
         >
-          <ChevronsLeft className={cn('size-4 transition-transform', collapsed && 'rotate-180')} aria-hidden />
-          {!collapsed && 'Collapse'}
+          <ChevronsLeft className={cn('size-4 transition-transform rtl:-scale-x-100', collapsed && 'rotate-180')} aria-hidden />
+          {!collapsed && t('nav.collapse')}
         </button>
       </div>
     </aside>

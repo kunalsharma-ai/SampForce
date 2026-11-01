@@ -106,7 +106,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
                     <p className="text-sm">
                       <span className="font-medium">{a.subject}</span>{' '}
                       <span className="text-muted-foreground">· {titleCase(a.type)}</span>
-                      {a.aiAssisted && <Badge tone="accent" className="ml-2">AI-assisted</Badge>}
+                      {a.aiAssisted && <Badge tone="accent" className="ms-2">AI-assisted</Badge>}
                     </p>
                     {a.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{a.body}</p>}
                     <p className="text-xs text-muted-foreground">
@@ -173,7 +173,7 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
                 <span className="flex-1">
                   {t.title}
                   {t.priority === 'HIGH' && (
-                    <Badge tone="critical" className="ml-1.5">
+                    <Badge tone="critical" className="ms-1.5">
                       High priority
                     </Badge>
                   )}

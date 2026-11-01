@@ -11,6 +11,7 @@ import { api, ApiError } from '@/lib/api';
 import { useRoles } from '@/lib/billing';
 import { useSecuritySettings } from '@/lib/security';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 function Copyable({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -187,7 +188,7 @@ function SingleSignOn({ s }: { s: SecuritySettings }) {
               onChange={(v) => set('enforced', v)}
             />
           </div>
-          {s.sso?.lastVerifiedAt && <p className="text-xs text-muted-foreground">Last successful sign-in through your provider: {new Date(s.sso.lastVerifiedAt).toLocaleString()}</p>}
+          {s.sso?.lastVerifiedAt && <p className="text-xs text-muted-foreground">Last successful sign-in through your provider: {new Date(s.sso.lastVerifiedAt).toLocaleString(fmtLocale())}</p>}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={save.isPending}>
               {save.isPending ? 'Checking provider…' : 'Save'}
@@ -242,7 +243,7 @@ function Scim({ s }: { s: SecuritySettings }) {
                 <span className="min-w-0 flex-1">
                   <span className="font-medium">{t.name}</span> <code className="text-xs text-muted-foreground">{t.prefix}…</code>
                   <span className="block text-xs text-muted-foreground">
-                    Created {new Date(t.createdAt).toLocaleDateString()} · {t.lastUsedAt ? `last used ${new Date(t.lastUsedAt).toLocaleString()}` : 'not used yet'}
+                    Created {new Date(t.createdAt).toLocaleDateString(fmtLocale())} · {t.lastUsedAt ? `last used ${new Date(t.lastUsedAt).toLocaleString(fmtLocale())}` : 'not used yet'}
                   </span>
                 </span>
                 <Button size="sm" variant="outline" onClick={() => window.confirm(`Revoke “${t.name}”? Provisioning with it stops at once.`) && revoke.mutate(t.id)} aria-label={`Revoke ${t.name}`}>

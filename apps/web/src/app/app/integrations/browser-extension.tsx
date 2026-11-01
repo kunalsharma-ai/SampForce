@@ -9,6 +9,7 @@ import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /** Connection codes for the DealFlow browser extension, which saves people from web pages as leads. */
 export function BrowserExtension() {
@@ -46,7 +47,7 @@ export function BrowserExtension() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          <ol className="list-decimal space-y-1 pl-5">
+          <ol className="list-decimal space-y-1 ps-5">
             <li>
               Install the extension. It is not in the Chrome Web Store yet: your DealFlow provider can share the package, which you load from <code className="text-xs">chrome://extensions</code> (or <code className="text-xs">edge://extensions</code>) with Developer mode on and <em>Load unpacked</em>.
             </li>
@@ -106,7 +107,7 @@ export function BrowserExtension() {
                   <span className="min-w-0 flex-1">
                     <span className="font-medium">{c.name}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {c.lastUsedAt ? `Last used ${relativeTime(c.lastUsedAt)}` : 'Not used yet'} · ends {new Date(c.expiresAt).toLocaleDateString()}
+                      {c.lastUsedAt ? `Last used ${relativeTime(c.lastUsedAt)}` : 'Not used yet'} · ends {new Date(c.expiresAt).toLocaleDateString(fmtLocale())}
                     </span>
                   </span>
                   {c.lastUsedAt ? <Badge tone="success">In use</Badge> : <Badge>Waiting</Badge>}

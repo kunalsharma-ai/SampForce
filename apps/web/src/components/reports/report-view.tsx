@@ -100,25 +100,25 @@ function ResultTable({ result, fmt, compact }: { result: ReportResult; fmt: (v: 
           {result.metricLabel}
           {result.groupLabel ? ` by ${result.groupLabel}` : ''}
         </caption>
-        <thead className="text-left text-xs text-muted-foreground">
+        <thead className="text-start text-xs text-muted-foreground">
           <tr>
             <th scope="col" className="py-2 font-medium">{result.groupLabel ?? 'Group'}</th>
-            <th scope="col" className="py-2 text-right font-medium">{result.metricLabel}</th>
+            <th scope="col" className="py-2 text-end font-medium">{result.metricLabel}</th>
           </tr>
         </thead>
         <tbody className="tabular">
           {result.rows.map((r, i) => (
             <tr key={r.key ?? `none-${i}`} className="border-t border-border">
-              <th scope="row" className="py-2 text-left font-normal">{r.label}</th>
-              <td className="py-2 text-right">{fmt(r.value)}</td>
+              <th scope="row" className="py-2 text-start font-normal">{r.label}</th>
+              <td className="py-2 text-end">{fmt(r.value)}</td>
             </tr>
           ))}
         </tbody>
         {result.rows.length > 1 && (
           <tfoot>
             <tr className="border-t border-border font-medium">
-              <th scope="row" className="py-2 text-left">All matching records</th>
-              <td className="py-2 text-right tabular">{fmt(result.total)}</td>
+              <th scope="row" className="py-2 text-start">All matching records</th>
+              <td className="py-2 text-end tabular">{fmt(result.total)}</td>
             </tr>
           </tfoot>
         )}

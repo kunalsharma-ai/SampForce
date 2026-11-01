@@ -179,7 +179,7 @@ function People() {
           <p className="p-6 text-sm text-muted-foreground">Nobody has portal access yet. Open a company and use the Client portal card to invite someone.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th className="px-5 py-2 font-medium">Person</th>
                 <th className="px-5 py-2 font-medium">Company</th>
@@ -253,7 +253,7 @@ function Inbox({ initial }: { initial: string | null }) {
               <ul className="divide-y divide-border" aria-label="Portal requests">
                 {list.data.map((r) => (
                   <li key={r.id}>
-                    <button type="button" aria-current={open === r.id ? 'true' : undefined} className="flex w-full flex-col gap-1 px-4 py-3 text-left text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-[current=true]:bg-muted/60" onClick={() => setOpen(r.id)}>
+                    <button type="button" aria-current={open === r.id ? 'true' : undefined} className="flex w-full flex-col gap-1 px-4 py-3 text-start text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-[current=true]:bg-muted/60" onClick={() => setOpen(r.id)}>
                       <span className="flex items-center gap-2">
                         <span className="flex-1 font-medium">{r.subject}</span>
                         <RequestStatus status={r.status} />

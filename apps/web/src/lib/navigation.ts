@@ -171,3 +171,8 @@ export function moduleHref(m: ModuleDef): string {
 export function findModule(slug: string): ModuleDef | undefined {
   return MODULES.find((m) => m.slug === slug);
 }
+
+/** The catalogue key for a module's name (lib/i18n/messages). */
+export function moduleKey(m: Pick<ModuleDef, 'slug'>): `module.${string}` {
+  return `module.${m.slug || 'home'}`;
+}

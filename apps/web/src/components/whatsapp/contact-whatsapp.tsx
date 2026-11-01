@@ -9,6 +9,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATUS: Record<WhatsappMessageRow['status'], { label: string; tone: 'neutral' | 'success' | 'critical' | 'primary' }> = {
   accepted: { label: 'Accepted by WhatsApp', tone: 'neutral' },
@@ -124,7 +125,7 @@ export function ContactWhatsapp({ contactId }: { contactId: string }) {
             {t.messages.length > 0 ? (
               <ul className="max-h-80 space-y-2 overflow-y-auto" aria-label="WhatsApp messages">
                 {t.messages.map((m) => (
-                  <li key={m.id} className={`rounded-md p-2 ${m.direction === 'out' ? 'ml-6 bg-primary/5' : 'mr-6 bg-muted'}`}>
+                  <li key={m.id} className={`rounded-md p-2 ${m.direction === 'out' ? 'ms-6 bg-primary/5' : 'me-6 bg-muted'}`}>
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Badge tone={STATUS[m.status].tone}>{STATUS[m.status].label}</Badge>
@@ -153,7 +154,7 @@ export function ContactWhatsapp({ contactId }: { contactId: string }) {
                   <Button type="submit" size="sm" disabled={sendReply.isPending || !reply.trim()}>
                     Send reply
                   </Button>
-                  <span className="text-xs text-muted-foreground">Free-form replies are open until {new Date(t.windowOpenUntil).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })} (24 hours after their last message).</span>
+                  <span className="text-xs text-muted-foreground">Free-form replies are open until {new Date(t.windowOpenUntil).toLocaleString(fmtLocale(), { dateStyle: 'medium', timeStyle: 'short' })} (24 hours after their last message).</span>
                 </div>
               </form>
             )}

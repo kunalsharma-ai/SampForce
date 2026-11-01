@@ -51,7 +51,7 @@ export function WorkflowList() {
                   <span className="font-medium">{w.name}</span>
                   <Badge tone={w.status === 'ACTIVE' ? 'success' : w.status === 'PAUSED' ? 'warning' : 'neutral'}>{w.status === 'ACTIVE' ? 'Active' : w.status === 'PAUSED' ? 'Paused' : 'Draft'}</Badge>
                   <span className="text-sm text-muted-foreground">{TRIGGER_EVENTS[w.triggerType]?.label}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
+                  <span className="ms-auto text-xs text-muted-foreground">
                     {w.runs30d} runs in 30 days{w.failures30d > 0 && <span className="text-critical"> · {w.failures30d} failed</span>} · v{w.version} · edited {relativeTime(w.updatedAt)}
                   </span>
                 </Link>

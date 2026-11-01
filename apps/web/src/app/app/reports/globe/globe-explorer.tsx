@@ -11,6 +11,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import anchors from '@/lib/geo/anchors.json';
 import { useMotionLevel } from '@/lib/motion';
 import { countryName, formatValue, useGlobe } from '@/lib/reports';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const GlobeScene = dynamic(() => import('@/components/immersive/globe-scene'), { ssr: false, loading: () => <Skeleton className="h-full w-full" /> });
 
@@ -31,7 +32,7 @@ export function GlobeExplorer() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showFps, setShowFps] = useState(false);
 
-  const fmt = (c: GlobeCountry, m: Metric, d: GlobeData) => (m === 'openValue' || m === 'wonValue' ? formatValue(c[m], d.currency) : c[m].toLocaleString('en-US'));
+  const fmt = (c: GlobeCountry, m: Metric, d: GlobeData) => (m === 'openValue' || m === 'wonValue' ? formatValue(c[m], d.currency) : c[m].toLocaleString(fmtLocale()));
   const { bars, offMap } = useMemo(() => {
     const rows = globe.data?.countries ?? [];
     const max = Math.max(0, ...rows.map((r) => r[metric]));
@@ -109,21 +110,21 @@ export function GlobeExplorer() {
               <div className="max-h-80 overflow-auto">
                 <table className="w-full text-sm">
                   <caption className="sr-only">{METRICS[metric]} by country</caption>
-                  <thead className="text-left text-xs text-muted-foreground">
+                  <thead className="text-start text-xs text-muted-foreground">
                     <tr>
                       <th scope="col" className="py-1 font-medium">Country</th>
-                      <th scope="col" className="py-1 text-right font-medium">{METRICS[metric]}</th>
+                      <th scope="col" className="py-1 text-end font-medium">{METRICS[metric]}</th>
                     </tr>
                   </thead>
                   <tbody className="tabular">
                     {sorted.map((c) => (
                       <tr key={c.country} className={cn('border-t border-border', c.country === selected && 'bg-muted')}>
-                        <th scope="row" className="py-1 text-left font-normal">
+                        <th scope="row" className="py-1 text-start font-normal">
                           <button type="button" className="hover:underline" onClick={() => setSelected(c.country)} aria-pressed={c.country === selected}>
                             {countryName(c.country)}
                           </button>
                         </th>
-                        <td className="py-1 text-right">{fmt(c, metric, d)}</td>
+                        <td className="py-1 text-end">{fmt(c, metric, d)}</td>
                       </tr>
                     ))}
                   </tbody>

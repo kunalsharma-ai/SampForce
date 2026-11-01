@@ -11,6 +11,7 @@ import { Textarea } from '@/components/crm/select';
 import { aiErrorMessage, agentReason, useAiStatus } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const EXAMPLES = ['Brief me on my week: what needs attention?', 'Summarise my open pipeline.', 'Which of my deals close this month?', 'What tasks are overdue?'];
 
@@ -75,7 +76,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent side="right" className="flex flex-col gap-4 p-0">
-        <div className="flex items-center gap-3 border-b border-border p-5 pr-12">
+        <div className="flex items-center gap-3 border-b border-border p-5 pe-12">
           <span className="grid size-10 place-items-center rounded-lg bg-accent/15 text-accent">
             <Bot className="size-5" aria-hidden />
           </span>
@@ -120,7 +121,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
                           type="button"
                           disabled={!!reason || ask.isPending}
                           onClick={() => submit(e)}
-                          className="w-full rounded-md border border-border bg-surface-raised/60 px-3 py-2 text-left text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                          className="w-full rounded-md border border-border bg-surface-raised/60 px-3 py-2 text-start text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {e}
                         </button>
@@ -137,13 +138,13 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               )}
               {turns.map((t, i) => (
                 <div key={i} className="space-y-2">
-                  <p className="ml-8 rounded-lg bg-primary/10 px-3 py-2 text-sm">{t.question}</p>
+                  <p className="ms-8 rounded-lg bg-primary/10 px-3 py-2 text-sm">{t.question}</p>
                   {t.error ? (
-                    <p role="alert" className="mr-8 rounded-lg border border-critical/40 px-3 py-2 text-sm text-critical">
+                    <p role="alert" className="me-8 rounded-lg border border-critical/40 px-3 py-2 text-sm text-critical">
                       {t.error}
                     </p>
                   ) : !t.answer ? (
-                    <p className="mr-8 flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                    <p className="me-8 flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                       <Loader2 className="size-4 animate-spin" aria-hidden /> Looking through your CRM…
                     </p>
                   ) : (
@@ -182,10 +183,10 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               <div className="flex items-center gap-2">
                 {credits && (
                   <span className="text-xs text-muted-foreground">
-                    {credits.remaining.toLocaleString()} of {credits.limit.toLocaleString()} AI credits left this month
+                    {credits.remaining.toLocaleString(fmtLocale())} of {credits.limit.toLocaleString(fmtLocale())} AI credits left this month
                   </span>
                 )}
-                <Button type="submit" size="sm" className="ml-auto" disabled={!question.trim() || ask.isPending || !!reason}>
+                <Button type="submit" size="sm" className="ms-auto" disabled={!question.trim() || ask.isPending || !!reason}>
                   <Send aria-hidden /> Ask
                 </Button>
               </div>
@@ -199,7 +200,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
 
 function AnswerView({ answer, onAction }: { answer: CopilotAnswer; onAction: (a: ProposedAction) => void }) {
   return (
-    <div className="mr-8 space-y-2 rounded-lg border border-border px-3 py-2">
+    <div className="me-8 space-y-2 rounded-lg border border-border px-3 py-2">
       <p className="whitespace-pre-wrap text-sm">{answer.answer}</p>
       {answer.citations.length > 0 && (
         <div className="flex flex-wrap gap-1.5" aria-label="Sources">

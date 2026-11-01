@@ -85,7 +85,7 @@ export function ChurnTrendCard() {
             </p>
             <details className="text-xs">
               <summary className="cursor-pointer text-muted-foreground">Show as table</summary>
-              <table className="mt-2 w-full text-left tabular-nums">
+              <table className="mt-2 w-full text-start tabular-nums">
                 <thead>
                   <tr className="text-muted-foreground">
                     <th className="py-1 font-medium">Day</th>
@@ -202,7 +202,7 @@ export function RetentionPanel({ c }: { c: CustomerRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold">Retention plan</h3>
         <span className="text-xs text-muted-foreground">Follow up: {c.plan.cadence.label.toLowerCase()}</span>
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ms-auto flex flex-wrap gap-2">
           {canAi && (
             <Button size="sm" variant="outline" onClick={() => brief.mutate()} disabled={brief.isPending}>
               <Sparkles aria-hidden /> {brief.isPending ? 'Writing…' : 'AI briefing'}
@@ -218,7 +218,7 @@ export function RetentionPanel({ c }: { c: CustomerRow }) {
       {c.plan.actions.length === 0 ? (
         <p className="text-xs text-muted-foreground">No risk signals, so no extra steps. Keep the regular check-ins.</p>
       ) : (
-        <ol className="list-decimal space-y-0.5 pl-5 text-xs" aria-label={`Suggested retention steps for ${c.company.name}`}>
+        <ol className="list-decimal space-y-0.5 ps-5 text-xs" aria-label={`Suggested retention steps for ${c.company.name}`}>
           {c.plan.actions.map((a) => (
             <li key={a.key}>
               <span className="font-medium">{a.title}</span> <span className="text-muted-foreground">({a.dueInDays === 0 ? 'today' : `within ${a.dueInDays} day${a.dueInDays === 1 ? '' : 's'}`}). {a.why}</span>
@@ -241,7 +241,7 @@ export function RetentionPanel({ c }: { c: CustomerRow }) {
           {brief.data.talkingPoints.length > 0 && (
             <>
               <h4 className="text-xs font-semibold">Talking points</h4>
-              <ul className="list-disc pl-5 text-xs">
+              <ul className="list-disc ps-5 text-xs">
                 {brief.data.talkingPoints.map((t) => (
                   <li key={t}>{t}</li>
                 ))}
@@ -314,7 +314,7 @@ function FollowUpDialog({ c, extra, onClose }: { c: CustomerRow; extra: { title:
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-2xl">
-        <div className="pr-8">
+        <div className="pe-8">
           <DialogTitle className="text-lg font-semibold">Follow-up schedule</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             For {c.company.name}. Suggested from the risk signals and a {c.plan.cadence.label.toLowerCase()} cadence. Untick or change anything; tasks are created only when you confirm.
@@ -325,7 +325,7 @@ function FollowUpDialog({ c, extra, onClose }: { c: CustomerRow; extra: { title:
             <p className="font-medium text-success">
               {create.data.created.length} task{create.data.created.length === 1 ? '' : 's'} created.
             </p>
-            <ul className="list-disc pl-5 text-xs">
+            <ul className="list-disc ps-5 text-xs">
               {create.data.created.map((t) => (
                 <li key={t.id}>
                   {t.title}, due {relativeTime(t.dueAt)}
