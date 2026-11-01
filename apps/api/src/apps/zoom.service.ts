@@ -16,6 +16,7 @@ import { ActivitiesService } from '../crm/activities.service';
 import { assertRefs } from '../crm/crm-helpers';
 import { claim, errorMessage } from '../worker/queue';
 import { AppError, AppsService, type StoredZoom } from './apps.service';
+import { refreshUnderLock } from './oauth-refresh';
 import { parseZoomVtt, ZoomClient, ZoomError } from './zoom';
 
 interface TranscriptSource {
@@ -409,51 +410,8 @@ export class ZoomService {
     }
   }
 
-  /** Serialised per connection: Zoom invalidates the old refresh token, so two refreshes at once would break it. */
-  private async refresh(
-    tenantId: string,
-    connectionId: string,
-    staleAccessToken?: string,
-  ): Promise<StoredZoom> {
-    const out = await this.prisma.run(
-      { tenantId },
-      async (tx): Promise<StoredZoom | { revoked: string }> => {
-        await tx.$executeRaw`SELECT 1 FROM app_connections WHERE id = ${connectionId}::uuid FOR UPDATE`;
-        const row = await tx.appConnection.findUniqueOrThrow({ where: { id: connectionId } });
-        const current = this.creds(row);
-        // Another request refreshed while this one waited for the lock.
-        if (current.expiresAt - 60_000 > Date.now() && current.accessToken !== staleAccessToken)
-          return current;
-        try {
-          const t = await this.zoom.refresh(current.refreshToken);
-          const next: StoredZoom = {
-            ...current,
-            accessToken: t.accessToken,
-            refreshToken: t.refreshToken,
-            expiresAt: t.expiresAt,
-          };
-          await tx.appConnection.update({
-            where: { id: connectionId },
-            data: {
-              credentialsEncrypted: this.box.seal(JSON.stringify(next)),
-              status: 'CONNECTED',
-              lastError: null,
-            },
-          });
-          return next;
-        } catch (e) {
-          if (!(e instanceof ZoomError && e.revoked)) throw e;
-          // Saved (the transaction commits), then reported to the caller below.
-          await tx.appConnection.update({
-            where: { id: connectionId },
-            data: { status: 'ERROR', lastError: e.message },
-          });
-          return { revoked: e.message };
-        }
-      },
-    );
-    if ('revoked' in out) throw new AppError(out.revoked);
-    return out;
+  private refresh(tenantId: string, connectionId: string, staleAccessToken?: string): Promise<StoredZoom> {
+    return refreshUnderLock<StoredZoom>(this.prisma, this.box, tenantId, connectionId, (rt) => this.zoom.refresh(rt), (e): e is ZoomError => e instanceof ZoomError && e.revoked, staleAccessToken);
   }
 
   private creds(conn: AppConnection): StoredZoom {

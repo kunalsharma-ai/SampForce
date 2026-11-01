@@ -8,13 +8,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
+import { ContractESignature } from '@/components/revenue/esignature';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { CONTRACT_STATUS, formatAmount, todayIso, useContract } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 
-const METHOD_LABEL: Record<string, string> = { wet_ink: 'Signed on paper', email_confirmation: 'Confirmed by email', external_esign: 'Signed in an external e-signature tool' };
+const METHOD_LABEL: Record<string, string> = { wet_ink: 'Signed on paper', email_confirmation: 'Confirmed by email', external_esign: 'Signed in an external e-signature tool', docusign: 'Signed with DocuSign' };
 
 export function ContractDetail({ id }: { id: string }) {
   const contract = useContract(id);
@@ -57,7 +58,10 @@ export function ContractDetail({ id }: { id: string }) {
             {c.terms && <p className="mt-4 whitespace-pre-wrap border-t border-border pt-4 text-sm">{c.terms}</p>}
           </CardContent>
         </Card>
-        <div className="space-y-4">{canWrite && <Actions c={c} />}</div>
+        <div className="space-y-4">
+          <ContractESignature c={c} />
+          {canWrite && <Actions c={c} />}
+        </div>
       </div>
     </div>
   );

@@ -246,6 +246,7 @@ model Tenant {
   appConnections         AppConnection[]
   appEvents              AppEvent[]
   zoomMeetings           ZoomMeeting[]
+  signatureEnvelopes     SignatureEnvelope[]
 
   @@map("tenants")
 }
@@ -1482,13 +1483,14 @@ model Contract {
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company     Company?     @relation(fields: [companyId], references: [id])
-  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
-  quote       Quote?       @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  renewedFrom Contract?    @relation("ContractRenewal", fields: [renewedFromId], references: [id], onDelete: SetNull)
-  renewal     Contract?    @relation("ContractRenewal")
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     Company?            @relation(fields: [companyId], references: [id])
+  opportunity Opportunity?        @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  quote       Quote?              @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  renewedFrom Contract?           @relation("ContractRenewal", fields: [renewedFromId], references: [id], onDelete: SetNull)
+  renewal     Contract?           @relation("ContractRenewal")
   escalations Escalation[]
+  envelopes   SignatureEnvelope[]
 
   @@unique([tenantId, number])
   @@index([tenantId, status, endDate])
@@ -2832,6 +2834,7 @@ enum AppProvider {
   SLACK
   TEAMS
   ZOOM
+  DOCUSIGN
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
@@ -2853,9 +2856,10 @@ model AppConnection {
   createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   events       AppEvent[]
   zoomMeetings ZoomMeeting[]
+  envelopes    SignatureEnvelope[]
 
   @@unique([tenantId, provider])
   @@index([provider, externalAccountId])
@@ -2923,4 +2927,34 @@ model ZoomMeeting {
   @@index([tenantId, startsAt])
   @@index([transcriptStatus])
   @@map("zoom_meetings")
+}
+
+/// A contract sent for e-signature through DocuSign. Status follows DocuSign Connect events.
+model SignatureEnvelope {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  connectionId   String?   @map("connection_id") @db.Uuid
+  contractId     String    @map("contract_id") @db.Uuid
+  /// DocuSign's envelope id.
+  envelopeId     String    @map("envelope_id")
+  /// sent, delivered, completed, declined, voided
+  status         String
+  signerName     String    @map("signer_name")
+  signerEmail    String    @map("signer_email")
+  sentById       String    @map("sent_by_id") @db.Uuid
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz(3)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(3)
+  declinedReason String?   @map("declined_reason")
+  voidedReason   String?   @map("voided_reason")
+  lastEventAt    DateTime? @map("last_event_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  contract   Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, envelopeId])
+  @@index([tenantId, contractId])
+  @@map("signature_envelopes")
 }

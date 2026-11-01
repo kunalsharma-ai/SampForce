@@ -9,6 +9,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { SlackClient, SlackError } from './slack';
 import { TeamsClient, TeamsError, type TeamsMessage } from './teams';
+import { DocusignClient } from './docusign';
 import { ZoomClient } from './zoom';
 
 interface AppState {
@@ -28,6 +29,16 @@ export interface StoredZoom {
   email: string;
 }
 
+/** DocuSign: OAuth tokens and the account's API base URI. */
+export interface StoredDocusign {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  accountId: string;
+  baseUri: string;
+  email: string;
+}
+
 interface StoredSlack {
   accessToken: string;
   botUserId: string | null;
@@ -42,6 +53,7 @@ const TEAMS_MAX_CHANNELS = 20;
 
 const META: Record<AppKey, { name: string; description: string; provider: AppProvider }> = {
   slack: { name: 'Slack', description: 'Post deal, lead and task updates to Slack channels from workflows.', provider: 'SLACK' },
+  docusign: { name: 'DocuSign', description: 'Send contracts for e-signature; a completed envelope marks the contract signed.', provider: 'DOCUSIGN' },
   zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
@@ -62,6 +74,7 @@ export class AppsService {
     readonly slack: SlackClient,
     readonly teams: TeamsClient,
     readonly zoom: ZoomClient,
+    readonly docusign: DocusignClient,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -73,7 +86,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig() }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig() }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -95,7 +108,13 @@ export class AppsService {
           description: m.description,
           state,
           missingConfig: missing,
-          warnings: key === 'zoom' && !missing.length && !this.zoom.webhookConfigured ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.'] : [],
+          warnings: missing.length
+            ? []
+            : key === 'zoom' && !this.zoom.webhookConfigured
+              ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.']
+              : key === 'docusign' && !this.docusign.connectConfigured
+                ? ['Signing status updates are Pending Configuration: an operator must add DOCUSIGN_CONNECT_HMAC_KEY. Until then contracts are not marked signed automatically.']
+                : [],
           connection: c
             ? {
                 accountName: c.accountName,
@@ -121,7 +140,8 @@ export class AppsService {
       throw new ConflictException({ code: 'PROVIDER_NOT_CONFIGURED', message: `${META[app].name} is Pending Configuration on this DealFlow installation. An operator must add ${missing.join(' and ')}.` });
     }
     const state = signToken(this.stateSecret(), { t: auth.tenantId, u: auth.userId, a: app, n: randomBytes(8).toString('hex'), exp: Date.now() + 10 * 60_000 } satisfies AppState);
-    return { url: app === 'zoom' ? this.zoom.authorizeUrl(state, this.redirectUri(app)) : this.slack.authorizeUrl(state, this.redirectUri(app)) };
+    const redirect = this.redirectUri(app);
+    return { url: app === 'zoom' ? this.zoom.authorizeUrl(state, redirect) : app === 'docusign' ? this.docusign.authorizeUrl(state, redirect) : this.slack.authorizeUrl(state, redirect) };
   }
 
   /** The OAuth redirect. The state must have been issued to the same signed-in person in the same workspace. */
@@ -130,8 +150,13 @@ export class AppsService {
     if (app === 'teams' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
       throw new BadRequestException({ code: 'OAUTH_STATE_INVALID', message: 'The connect link expired or belongs to another session. Try connecting again.' });
     }
-    let install: { accountId: string; accountName: string; scopes: string[]; credentials: StoredSlack | StoredZoom };
-    if (app === 'zoom') {
+    let install: { accountId: string; accountName: string; scopes: string[]; credentials: StoredSlack | StoredZoom | StoredDocusign };
+    if (app === 'docusign') {
+      const t = await this.docusign.exchangeCode(code);
+      // Learn the account and the API address it lives on (that also proves the token works).
+      const a = await this.docusign.account(t.accessToken);
+      install = { accountId: a.accountId, accountName: a.accountName, scopes: ['signature', 'extended'], credentials: { accessToken: t.accessToken, refreshToken: t.refreshToken, expiresAt: t.expiresAt, accountId: a.accountId, baseUri: a.baseUri, email: a.userEmail } };
+    } else if (app === 'zoom') {
       const t = await this.zoom.exchangeCode(code, this.redirectUri(app));
       // Prove the token works, and learn which Zoom account it belongs to (events are routed by account id).
       const me = await this.zoom.me(t.accessToken);

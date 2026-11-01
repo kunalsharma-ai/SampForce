@@ -238,6 +238,8 @@ export class OperatorService {
         { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Slack; the connection is verified with auth.test' }),
       row('zoom', 'Zoom', 'Workspace app: schedule Zoom meetings from records; transcripts of recorded meetings', [v('ZOOM_CLIENT_ID', e.ZOOM_CLIENT_ID), v('ZOOM_CLIENT_SECRET', e.ZOOM_CLIENT_SECRET), v('ZOOM_WEBHOOK_SECRET_TOKEN', e.ZOOM_WEBHOOK_SECRET_TOKEN, false)], null,
         { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Zoom account; transcript import also needs ZOOM_WEBHOOK_SECRET_TOKEN' }),
+      row('docusign', 'DocuSign', 'Workspace app: send contracts for e-signature; signed envelopes mark contracts signed', [v('DOCUSIGN_INTEGRATION_KEY', e.DOCUSIGN_INTEGRATION_KEY), v('DOCUSIGN_SECRET_KEY', e.DOCUSIGN_SECRET_KEY), v('DOCUSIGN_CONNECT_HMAC_KEY', e.DOCUSIGN_CONNECT_HMAC_KEY, false), v('DOCUSIGN_AUTH_BASE_URL', e.DOCUSIGN_AUTH_BASE_URL, false)], null,
+        { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their DocuSign account; status updates also need DOCUSIGN_CONNECT_HMAC_KEY' }),
       row('anthropic', 'Anthropic (Claude)', 'AI agents, email assistant, proposals, meeting and voice readings', [v('ANTHROPIC_API_KEY', e.ANTHROPIC_API_KEY)], null,
         { off: 'AI features show as not configured', on: 'AI features available' }),
       row('smtp', 'Email (SMTP)', 'Password resets, invitations, client portal email', [v('SMTP_URL', e.SMTP_URL), v('MAIL_FROM', e.MAIL_FROM)], null,

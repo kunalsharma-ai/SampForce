@@ -13,7 +13,8 @@
 | Slack (workspace app: post to channels from workflows) | **Pending Configuration** until `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are set; then Not connected until an admin installs it. Implemented and tested against a local stand-in of Slack's Web API only. Not yet tested against Slack with a real app. | Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` (server secrets) |
 | Microsoft Teams (workspace app: post to channels from workflows) | **Not connected** until an admin adds a channel. A channel is saved only after Teams accepts a welcome card, so a listed channel has worked at least once. Implemented and tested against a local stand-in of Teams Workflows webhooks only; not yet tested against Teams. | No deployment secret. Each channel's Workflows URL is a workspace secret, stored encrypted |
 | Zoom (workspace app: schedule meetings from records; import transcripts of recorded meetings) | **Pending Configuration** until `ZOOM_CLIENT_ID` and `ZOOM_CLIENT_SECRET` are set; transcript import is separately Pending Configuration until `ZOOM_WEBHOOK_SECRET_TOKEN` is set. Implemented and tested against a local stand-in of Zoom's OAuth, REST API v2 and event notifications only; not yet tested against Zoom. | Needs `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_WEBHOOK_SECRET_TOKEN` (server secrets) |
-| Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
+| DocuSign (workspace app: send contracts for e-signature) | **Pending Configuration** until `DOCUSIGN_INTEGRATION_KEY` and `DOCUSIGN_SECRET_KEY` are set; automatic status updates are separately Pending Configuration until `DOCUSIGN_CONNECT_HMAC_KEY` is set ("Check status" works without it). Implemented and tested against a local stand-in of DocuSign's OAuth, eSignature REST API v2.1 and Connect only; not yet tested against DocuSign. | Needs `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY`, `DOCUSIGN_CONNECT_HMAC_KEY` (server secrets); `DOCUSIGN_AUTH_BASE_URL` for the demo environment |
+| Twilio, WhatsApp, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -142,6 +143,37 @@ How it behaves:
   text and speaker segments in meeting notes, with the organiser's consent recorded. An expired link is reported
   and not retried; other failures are retried up to 3 times.
 - **App deauthorized** (the app was removed in Zoom) deletes the connection. Meeting history stays.
+
+## Setting up DocuSign
+
+DocuSign is a workspace app. An admin connects the company's DocuSign account once. Anyone who can edit contracts
+can then send a **draft** contract to one signer from the contract page. Sending needs an explicit confirmation
+("Email this contract to … now"). When the envelope is completed, the contract becomes Active, signed by the signer
+on the completion date, with "Signed with DocuSign" as the method.
+
+1. In DocuSign **Apps and Keys**, add an app (integration key) with **Authorization Code Grant**, and add a secret
+   key. Add the redirect URI `<PUBLIC_WEB_URL>/api/v1/apps/docusign/callback`.
+2. Under **Connect**, add an **HMAC key** (Connect, HMAC). DealFlow sets the status callback on each envelope and
+   asks DocuSign to sign it. No account-wide Connect configuration is needed.
+3. Set `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY` and `DOCUSIGN_CONNECT_HMAC_KEY` in the deployment's secret
+   manager. For the developer (demo) environment, also set `DOCUSIGN_AUTH_BASE_URL=https://account-d.docusign.com`.
+   Restart the API.
+4. A workspace admin presses **Connect DocuSign** under Integrations. Sending the first contract is the first live
+   call. Going live in DocuSign's production environment needs DocuSign's go-live review of the integration key.
+
+How it behaves:
+
+- The account and its API address (`base_uri`) come from DocuSign's userinfo. Only `https` addresses on
+  `docusign.net` or `docusign.com` are accepted. Tokens are sealed and refreshed under a row lock.
+- DealFlow renders the contract (name, customer, value, dates, terms) as a PDF, with hidden `/sn1/` and `/ds1/`
+  anchors where the signature and date fields go.
+- One open envelope per contract. **Void** (with a reason) and **Check status** are on the contract page.
+  **Download signed PDF** fetches the combined document and certificate from DocuSign on demand; DealFlow does not
+  store a copy.
+- Connect messages must carry a valid `X-DocuSign-Signature-N` (base64 HMAC-SHA256 of the body; any key in a
+  rotation matches). Envelopes DealFlow did not send are acknowledged and ignored. Status only moves forward, and a
+  completed, declined or voided envelope stays that way.
+- A declined or voided envelope leaves the contract as a draft, with the reason shown.
 
 ## Behaviour
 
