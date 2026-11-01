@@ -1,10 +1,15 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow } from '@dealflow/types';
+import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
 import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billing/billing.service';
+import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { HunterClient } from '../finder/hunter';
+import { DeepgramClient } from '../meetings/deepgram';
+import { ApolloClient } from '../prospects/apollo';
+import { currentCheck, keyFingerprint, PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
 import type { OperatorContext } from './operator-auth';
 
 type ScanTx = Prisma.TransactionClient;
@@ -21,6 +26,10 @@ export class OperatorService {
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
     private readonly billing: BillingService,
+    private readonly apollo: ApolloClient,
+    private readonly hunter: HunterClient,
+    private readonly deepgram: DeepgramClient,
+    @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
   async login(email: string, password: string, ip: string | null): Promise<OperatorContext> {
@@ -188,6 +197,65 @@ export class OperatorService {
       take: 200,
     });
     return rows.map((r) => ({ id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId, metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString() }));
+  }
+
+  // ───── Provider setup: which deployment secrets are set, and a no-cost live check for each data provider ─────
+
+  async providers(): Promise<OperatorProviderRow[]> {
+    const rows = await this.prisma.platformSetting.findMany({ where: { key: { startsWith: PROVIDER_CHECK_PREFIX } } });
+    const checks = new Map(rows.map((r) => [r.key.slice(PROVIDER_CHECK_PREFIX.length), readProviderCheck(r.value)]));
+    const e = this.env;
+    const v = (name: string, value: unknown, required = true) => ({ name, set: !!value, required });
+    const keyEnv: Partial<Record<OperatorProviderRow['key'], string | undefined>> = { apollo: e.APOLLO_API_KEY, hunter: e.HUNTER_API_KEY, deepgram: e.DEEPGRAM_API_KEY };
+    const row = (
+      key: OperatorProviderRow['key'], name: string, usedFor: string, env: OperatorProviderRow['env'], checkNote: string | null,
+      app: { off: string; on: string; verified?: string },
+    ): OperatorProviderRow => {
+      const configured = env.filter((x) => x.required).every((x) => x.set);
+      const stored = checks.get(key) ?? null;
+      const secret = keyEnv[key];
+      // A check made with a different key (or before fingerprints were kept) is shown, but proves nothing now.
+      const current = secret === undefined ? null : currentCheck(stored, secret);
+      const lastCheck = stored ? { ok: stored.ok, at: stored.at, message: stored.message, by: stored.by, stale: !current } : null;
+      const state = !configured ? 'not_configured' : !current ? 'configured' : current.ok ? 'verified' : 'failed';
+      return { key, name, usedFor, env, configured, checkable: checkNote !== null, checkNote, lastCheck, state, appStatus: !configured ? app.off : state === 'verified' && app.verified ? app.verified : app.on };
+    };
+    return [
+      row('apollo', 'Apollo.io', 'Prospect search and email reveal (Prospect Lists, browser extension)', [v('APOLLO_API_KEY', e.APOLLO_API_KEY)],
+        'Runs one people search for a single result (Apollo returns no email addresses from search, and nothing is revealed).',
+        { off: 'Mock Mode: labelled sample people', on: 'Pending Configuration until a call succeeds', verified: 'Connected in every workspace' }),
+      row('hunter', 'Hunter.io', 'Email verification on prospects; data provider for the Email Finder', [v('HUNTER_API_KEY', e.HUNTER_API_KEY)],
+        "Calls Hunter's account endpoint, which Hunter does not count as a search or verification.",
+        { off: 'Pending Configuration', on: 'Key set: each workspace shows Connected after its first verification' }),
+      row('deepgram', 'Deepgram', 'Transcription of meeting recordings and voice notes', [v('DEEPGRAM_API_KEY', e.DEEPGRAM_API_KEY), v('MEETING_UPLOAD_MAX_MB', e.MEETING_UPLOAD_MAX_MB, false)],
+        "Lists the key's Deepgram projects. Nothing is transcribed, so nothing is billed.",
+        { off: 'Pending Configuration', on: 'Configured, not yet verified until a workspace transcribes a recording' }),
+      row('google', 'Google (Gmail, Calendar)', 'Mailbox sending and sync, calendar, meeting links', [v('GOOGLE_CLIENT_ID', e.GOOGLE_CLIENT_ID), v('GOOGLE_CLIENT_SECRET', e.GOOGLE_CLIENT_SECRET)], null,
+        { off: 'No Connect button for Google', on: 'Each person connects their own Google account' }),
+      row('microsoft', 'Microsoft 365 (Outlook, Graph)', 'Mailbox sending and sync, calendar, meeting links', [v('MICROSOFT_CLIENT_ID', e.MICROSOFT_CLIENT_ID), v('MICROSOFT_CLIENT_SECRET', e.MICROSOFT_CLIENT_SECRET), v('MICROSOFT_TENANT', e.MICROSOFT_TENANT, false)], null,
+        { off: 'No Connect button for Microsoft', on: 'Each person connects their own Microsoft account' }),
+      row('anthropic', 'Anthropic (Claude)', 'AI agents, email assistant, proposals, meeting and voice readings', [v('ANTHROPIC_API_KEY', e.ANTHROPIC_API_KEY)], null,
+        { off: 'AI features show as not configured', on: 'AI features available' }),
+      row('smtp', 'Email (SMTP)', 'Password resets, invitations, client portal email', [v('SMTP_URL', e.SMTP_URL), v('MAIL_FROM', e.MAIL_FROM)], null,
+        { off: 'System email is not sent', on: 'System email is sent' }),
+    ];
+  }
+
+  async checkProvider(op: OperatorContext, key: ProviderCheckKey, ip: string | null): Promise<OperatorProviderRow> {
+    const client = { apollo: this.apollo, hunter: this.hunter, deepgram: this.deepgram }[key];
+    if (!client.configured) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: 'Set the key in the deployment secrets and restart the API first.' });
+    const fingerprint = keyFingerprint({ apollo: this.env.APOLLO_API_KEY, hunter: this.env.HUNTER_API_KEY, deepgram: this.env.DEEPGRAM_API_KEY }[key]);
+    let result: StoredCheck;
+    try {
+      result = { ok: true, at: new Date().toISOString(), message: await client.check(), by: op.email, key: fingerprint };
+    } catch (err) {
+      const message = err instanceof Error && err.name !== 'TimeoutError' ? err.message : 'The provider did not answer in time.';
+      result = { ok: false, at: new Date().toISOString(), message: message.slice(0, 300), by: op.email, key: fingerprint };
+    }
+    const k = PROVIDER_CHECK_PREFIX + key;
+    await this.prisma.platformSetting.upsert({ where: { key: k }, create: { key: k, value: JSON.stringify(result), updatedById: op.id }, update: { value: JSON.stringify(result), updatedById: op.id } });
+    await this.log(op.id, 'provider.checked', null, { provider: key, ok: result.ok, message: result.message }, ip);
+    return (await this.providers()).find((p) => p.key === key)!;
   }
 
   async log(operatorId: string | null, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {

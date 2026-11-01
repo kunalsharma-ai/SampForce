@@ -96,6 +96,12 @@ export class ApolloClient {
     return { people, hasMore: totalPages !== undefined ? input.page < totalPages : people.length === PER_PAGE };
   }
 
+  /** One people search for a single result, to prove the key works. It reveals no email addresses. */
+  async check(): Promise<string> {
+    const data = await this.post<{ people?: ApolloPerson[]; pagination?: { total_entries?: number }; total_entries?: number }>('/mixed_people/api_search', { q_organization_domains_list: ['apollo.io'], page: 1, per_page: 1 });
+    return `People search answered with ${data.people?.length ?? 0} result${data.people?.length === 1 ? '' : 's'}.`;
+  }
+
   /** Email addresses for people found by search. Personal emails are never requested. */
   async reveal(ids: string[]): Promise<Map<string, { email: string; emailStatus: EmailStatus | null }>> {
     const out = new Map<string, { email: string; emailStatus: EmailStatus | null }>();

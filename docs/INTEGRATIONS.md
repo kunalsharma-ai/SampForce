@@ -14,6 +14,26 @@
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
+## Checking keys after adding them (operator console)
+
+The operator console's **Providers** page (`/operator/providers`, ADR 0031) lists every provider, which of its
+deployment secrets are set or missing (names only, never values) and what workspaces show for it. After adding
+`APOLLO_API_KEY`, `HUNTER_API_KEY` or `DEEPGRAM_API_KEY` and restarting the API, an operator with the Admin role can
+press **Run live check**:
+
+| Provider | What the check calls | Cost |
+|---|---|---|
+| Apollo.io | One `mixed_people/api_search` for one result | Apollo returns no addresses from search and nothing is revealed. Whether a search uses credits depends on your Apollo plan, so check it there |
+| Hunter.io | `GET /account` | Not counted as a search or a verification by Hunter |
+| Deepgram | `GET /v1/projects` | Nothing is transcribed, so nothing is billed |
+
+The result (passed or failed, the provider's answer, who ran it and when) is stored and written to the operator log.
+A passed Apollo check moves every workspace from Pending Configuration to Connected. Hunter and Deepgram keep their
+per-workspace status, because each workspace's first real verification or transcription is what proves the feature.
+Each stored check carries a one-way fingerprint of the key it used, so changing the key makes the old result stale
+until the check is run again. Google, Microsoft, Anthropic and SMTP have no automatic check; they are confirmed the
+first time someone connects or uses them.
+
 ## Setting up Google
 
 1. In Google Cloud Console create an OAuth client of type "Web application".

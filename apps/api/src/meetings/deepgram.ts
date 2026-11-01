@@ -35,6 +35,17 @@ export class DeepgramClient {
     return this.env.MEETING_UPLOAD_MAX_MB * 1024 * 1024;
   }
 
+  /** Deepgram's free project list (GET /v1/projects), to prove the key works. Transcribes nothing. */
+  async check(): Promise<string> {
+    if (!this.env.DEEPGRAM_API_KEY) throw new TranscriptionError('Transcription is not configured.');
+    const res = await fetch(`${this.env.DEEPGRAM_API_BASE_URL.replace(/\/+$/, '')}/v1/projects`, { headers: { authorization: `Token ${this.env.DEEPGRAM_API_KEY}` }, signal: AbortSignal.timeout(10_000) });
+    if (res.status === 401 || res.status === 403) throw new TranscriptionError('Deepgram rejected the API key. Check DEEPGRAM_API_KEY.');
+    if (!res.ok) throw new TranscriptionError(`Deepgram answered ${res.status}.`);
+    const body = (await res.json().catch(() => null)) as { projects?: unknown[] } | null;
+    const n = body?.projects?.length ?? 0;
+    return `Key accepted (${n} project${n === 1 ? '' : 's'}).`;
+  }
+
   async transcribe(audio: ReadableStream<Uint8Array> | Uint8Array, contentType: string, opts: TranscriptionOptions = {}): Promise<TranscriptionResult> {
     if (!this.env.DEEPGRAM_API_KEY) throw new TranscriptionError('Transcription is not configured.');
     const diarize = opts.diarize ?? true;

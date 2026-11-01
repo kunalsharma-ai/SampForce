@@ -149,3 +149,29 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   await ops.getByRole('button', { name: 'Save' }).click();
   await expect(ops.getByText(/Not set\. Open invoices say/)).toBeVisible();
 });
+
+test('operator providers page shows which keys are missing and offers live checks only when a key is set', async ({ browser }) => {
+  const email = `ops-prov-${Date.now()}@platform.test`;
+  execFileSync('node', ['-r', '@swc-node/register', 'scripts/create-operator.ts'], {
+    cwd: '../api',
+    env: { ...process.env, DATABASE_URL: databaseUrl, OPERATOR_EMAIL: email, OPERATOR_PASSWORD: 'operator-password-1', OPERATOR_NAME: 'E2E Providers', OPERATOR_ROLE: 'ADMIN' },
+  });
+  const ops = await (await browser.newContext()).newPage();
+  await ops.goto('/operator/login');
+  await ops.getByLabel('Email').fill(email);
+  await ops.getByLabel('Password').fill('operator-password-1');
+  await ops.getByRole('button', { name: 'Sign in' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Providers' }).click();
+  await expect(ops.getByRole('heading', { level: 1, name: 'Providers' })).toBeVisible();
+  // The e2e deployment has no Apollo key, so the card says so and the check cannot run.
+  const apollo = ops.getByRole('region', { name: 'Apollo.io' });
+  await expect(apollo.getByText('Not configured')).toBeVisible();
+  await expect(apollo.getByRole('list', { name: 'Apollo.io deployment secrets' })).toContainText('APOLLO_API_KEYMissing');
+  await expect(apollo.getByText('Mock Mode: labelled sample people')).toBeVisible();
+  await expect(apollo.getByRole('button', { name: 'Run live check' })).toBeDisabled();
+  // Anthropic points at a local stand-in here; the page shows it as set without showing the value.
+  const anthropic = ops.getByRole('region', { name: 'Anthropic (Claude)' });
+  await expect(anthropic.getByRole('list')).toContainText('ANTHROPIC_API_KEYSet');
+  await expect(ops.locator('body')).not.toContainText('test-key-not-real');
+  await expectNoA11yViolations(ops);
+});

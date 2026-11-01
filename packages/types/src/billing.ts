@@ -294,3 +294,25 @@ export interface PlatformAuditRow {
   metadata: Record<string, unknown>;
   createdAt: string;
 }
+
+/** A provider in the operator console's provider setup list. Keys are deployment secrets, never shown or sent. */
+export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram'] as const;
+export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
+export interface OperatorProviderRow {
+  key: ProviderCheckKey | 'google' | 'microsoft' | 'anthropic' | 'smtp';
+  name: string;
+  usedFor: string;
+  /** The environment variables it reads, and whether each is set (values are never returned). */
+  env: { name: string; set: boolean; required: boolean }[];
+  configured: boolean;
+  /** Only providers with a no-cost check can be checked from the console. */
+  checkable: boolean;
+  /** What the check does and what it costs, in plain words. */
+  checkNote: string | null;
+  /** The last check run; `stale` when it used a different key from the one set now. */
+  lastCheck: { ok: boolean; at: string; message: string; by: string | null; stale: boolean } | null;
+  /** not_configured → configured (not checked) → verified, or failed when the last check failed. */
+  state: 'not_configured' | 'configured' | 'verified' | 'failed';
+  /** What workspaces see for it today. */
+  appStatus: string;
+}

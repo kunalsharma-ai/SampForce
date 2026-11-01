@@ -10,6 +10,8 @@ import {
   operatorStatusSchema,
   operatorVoidSchema,
   paymentInstructionsSchema,
+  PROVIDER_CHECK_KEYS,
+  type ProviderCheckKey,
   z,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
@@ -117,6 +119,20 @@ export class OperatorController {
   @OperatorRoles('ADMIN')
   paymentInstructions(@Operator() op: OperatorContext, @Body(new ZodPipe(paymentInstructionsSchema)) body: z.infer<typeof paymentInstructionsSchema>, @Req() req: Request) {
     return this.ops.setPaymentInstructions(op, body.instructions, ip(req));
+  }
+
+  @Get('providers')
+  providers() {
+    return this.ops.providers();
+  }
+
+  /** Runs one no-cost call with the deployment's key. Admins only: it spends a provider request. */
+  @Post('providers/:key/check')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  checkProvider(@Operator() op: OperatorContext, @Param('key', new ZodPipe(z.enum(PROVIDER_CHECK_KEYS))) key: ProviderCheckKey, @Req() req: Request) {
+    return this.ops.checkProvider(op, key, ip(req));
   }
 
   @Get('audit-log')
