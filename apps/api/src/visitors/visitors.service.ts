@@ -232,6 +232,12 @@ export class VisitorsService {
         const recent = await tx.webEvent.count({ where: { tenantId, type: 'enquiry', occurredAt: { gte: new Date(Date.now() - 10 * 60_000) }, data: { path: ['ipHash'], equals: ipHash } } });
         if (recent >= MAX_ENQUIRIES_PER_IP_PER_10_MIN) throw new HttpException({ code: 'RATE_LIMITED', message: 'Too many enquiries. Please try again later.' }, HttpStatus.TOO_MANY_REQUESTS);
       }
+      // A per-workspace ceiling as well, since a flood from many addresses passes the per-address check.
+      const today = await tx.webEvent.count({ where: { tenantId, type: 'enquiry', occurredAt: { gte: new Date(Date.now() - 86_400_000) } } });
+      if (today >= this.env.VISITOR_ENQUIRIES_PER_DAY) {
+        this.log.warn({ tenantId, limit: this.env.VISITOR_ENQUIRIES_PER_DAY }, 'website enquiry daily limit reached');
+        throw new HttpException({ code: 'RATE_LIMITED', message: 'Too many enquiries. Please try again later.' }, HttpStatus.TOO_MANY_REQUESTS);
+      }
       const visitor = e.visitorId ? await tx.webVisitor.findUnique({ where: { tenantId_clientId: { tenantId, clientId: e.visitorId } } }) : null;
       const consent = !!s.enquiryConsentText && e.consent;
       const linked = await this.linkPerson(tx, tenantId, s, e, consent, visitor?.campaignId ?? null, visitor?.firstTouch as Utm | null);

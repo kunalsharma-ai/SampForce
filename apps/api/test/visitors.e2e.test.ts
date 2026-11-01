@@ -200,3 +200,34 @@ describe('website visitor intelligence', () => {
     await pub().get(`/api/v1/public/track/${siteKey}/config`).set('origin', SITE).expect(404);
   });
 });
+
+describe('website enquiries: per-workspace daily ceiling', () => {
+  let app: INestApplication;
+  const saved = process.env.VISITOR_ENQUIRIES_PER_DAY;
+
+  beforeAll(async () => {
+    process.env.VISITOR_ENQUIRIES_PER_DAY = '2';
+    app = await startApp();
+  });
+  afterAll(async () => {
+    await app.close();
+    if (saved === undefined) delete process.env.VISITOR_ENQUIRIES_PER_DAY;
+    else process.env.VISITOR_ENQUIRIES_PER_DAY = saved;
+  });
+
+  it('refuses enquiries past the daily ceiling even when each comes from a new address', async () => {
+    const owner = await registerUser(app, 'Ceiling Co');
+    const s = (await api(owner).put('/visitors/settings', { enabled: true, consentMode: 'opt_in', allowedDomains: ['www.acme.test'], retentionDays: 90, createLeads: true, enquiryConsentText: 'Send me news.', highIntentScore: 50, importantPages: [{ pattern: '/pricing', label: 'Pricing', kind: 'pricing', weight: 20 }] }).expect(200)).body;
+    const pub = (path: string, body: object) => request(app.getHttpServer()).post(`/api/v1/public/track/${s.siteKey}/${path}`).set('origin', SITE).set('content-type', 'text/plain').send(JSON.stringify(body));
+    const visitorId = randomUUID();
+    await pub('collect', { visitorId, sessionId: randomUUID(), events: [{ type: 'page', path: '/' }] }).expect(200);
+    // Two enquiries already today, from other addresses (as a distributed flood would be).
+    await asTenant(owner.tenantId, async (tx) => {
+      const v = await tx.webVisitor.findFirstOrThrow({ where: { clientId: visitorId } });
+      await tx.webEvent.createMany({ data: ['a', 'b'].map((ipHash) => ({ tenantId: owner.tenantId, visitorId: v.id, type: 'enquiry', data: { ipHash } })) });
+    });
+    const res = await pub('enquiry', { visitorId, fullName: 'Late Larry', email: 'larry@late.test' }).expect(429);
+    expect(res.body.error.code).toBe('RATE_LIMITED');
+    expect(await asTenant(owner.tenantId, (tx) => tx.lead.count({ where: { email: 'larry@late.test' } }))).toBe(0);
+  });
+});

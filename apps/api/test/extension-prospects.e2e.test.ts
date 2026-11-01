@@ -70,6 +70,19 @@ describe('extension sign-in and prospect discovery (Mock Mode)', () => {
     ]);
   });
 
+  it('refuses sign-in from ordinary websites, so they cannot drive attempts or lockouts', async () => {
+    const u = await registerUser(app, 'Extension Origin');
+    const from = (origin: string) => request(app.getHttpServer()).post('/api/v1/extension/login').set('origin', origin).send({ email: u.email, password: 'wrong-password' });
+    expect((await from('https://evil.example').expect(403)).body.error.code).toBe('BAD_ORIGIN');
+    expect((await request(app.getHttpServer()).post('/api/v1/extension/login/mfa').set('origin', 'https://evil.example').send({ challenge: 'x'.repeat(20), code: '123456' }).expect(403)).body.error.code).toBe('BAD_ORIGIN');
+    // Refused before the password check, so nothing counts towards the lockout.
+    const user = await asTenant(u.tenantId, (tx) => tx.user.findFirstOrThrow({ where: { email: u.email } }));
+    expect(user).toMatchObject({ failedLoginCount: 0 });
+    // Firefox and the web app's own origin are allowed through to the password check.
+    await from('moz-extension://0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0').expect(401);
+    await from('http://localhost:3000').expect(401);
+  });
+
   it('asks for the second factor when the account has one', async () => {
     const u = await registerUser(app, 'Extension MFA');
     const setup = (await api(u).post('/auth/mfa/setup', { password: u.password }).expect(200)).body as { secret: string };

@@ -70,6 +70,8 @@ export const apiEnvSchema = z.object({
   APOLLO_API_BASE_URL: z.string().url().default('https://api.apollo.io/api/v1'),
   /** Default provider calls (searches, email reveals, verifications) one person may make per 24 hours. */
   PROSPECT_DAILY_LIMIT: z.coerce.number().int().min(0).max(5000).default(100),
+  /** Website enquiries one workspace accepts in 24 hours, across all visitors, so a flood cannot fill the CRM. */
+  VISITOR_ENQUIRIES_PER_DAY: z.coerce.number().int().min(1).max(100000).default(500),
   /** Optional speech-to-text for meeting recordings (Deepgram). Unset = paste a transcript or notes instead. */
   DEEPGRAM_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   DEEPGRAM_API_BASE_URL: z.string().url().default('https://api.deepgram.com'),
