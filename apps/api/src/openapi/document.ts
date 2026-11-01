@@ -287,6 +287,10 @@ export function buildOpenApiDocument(): object {
   action('post', '/leads/{id}/merge', 'Leads', 'Merge a duplicate into this lead (leads:write)', z.object({ duplicateId: z.string().uuid() }));
   action('post', '/leads/{id}/convert', 'Leads', 'Convert into contact, company and deal (leads, contacts, companies, deals:write)', leadConvertSchema);
   action('get', '/deals/board', 'Deals', 'Kanban board for a pipeline (deals:read)', undefined, { query: z.object({ pipelineId: z.string().uuid().optional(), perStage: z.number().int().optional() }) });
+  const dealViewQuery = { query: z.object({ pipelineId: z.string().uuid().optional(), ownerId: z.string().optional(), limit: z.number().int().optional() }) };
+  action('get', '/deals/priority', 'Deals', 'Open deals ranked for attention (health risk, close date, size, priority) with the reasons (deals:read)', undefined, dealViewQuery);
+  action('get', '/deals/forecast', 'Deals', 'Open deals by expected close month: overdue, next six months, later, undated; value and weighted value (deals:read)', undefined, dealViewQuery);
+  action('get', '/deals/{id}/history', 'Deals', 'Audit history of one deal, newest first (deals:read)');
   action('post', '/deals/{id}/move', 'Deals', 'Move to another stage; Lost needs a reason (deals:write)', dealMoveSchema);
   action('post', '/deals/{id}/clone', 'Deals', 'Clone into the first stage (deals:write)');
   action('post', '/deals/bulk-update', 'Deals', 'Reassign or move up to 200 deals (deals:write)', bulkDealUpdateSchema);

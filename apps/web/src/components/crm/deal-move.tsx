@@ -20,6 +20,8 @@ export function useMoveDeal() {
       void qc.invalidateQueries({ queryKey: ['board'] });
       void qc.invalidateQueries({ queryKey: ['deals', 'list'] });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
+      void qc.invalidateQueries({ queryKey: ['deal-views'] });
+      void qc.invalidateQueries({ queryKey: ['deals', 'history'] });
     },
   });
 }

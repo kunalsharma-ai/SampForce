@@ -235,3 +235,6 @@ shared rows in the current workspace; insert, update and delete policies require
 **Dashboard layouts (2026-11-01, ADR 0043).** Migration `20261101013000_dashboard_layout` adds the nullable JSON
 column `workspace_navigation.dashboard_layout` (validated by `dashboardLayoutSchema`). It is covered by the table's
 existing owner-only RLS policies; NULL means the default salesperson preset.
+
+**Deal priority (2026-11-01, ADR 0044).** Migration `20261101014000_deal_priority` adds the enum `DealPriority`
+(LOW, MEDIUM, HIGH) and the nullable column `opportunities.priority`, covered by the table's tenant isolation policy.

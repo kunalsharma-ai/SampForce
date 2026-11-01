@@ -23,6 +23,14 @@ const boardQuerySchema = z.object({
   perStage: z.coerce.number().int().min(1).max(200).default(50),
 });
 
+const viewQuerySchema = z.object({
+  pipelineId: z.string().uuid().optional(),
+  ownerId: z.union([z.literal('me'), z.string().uuid()]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+type ViewQuery = z.infer<typeof viewQuerySchema>;
+const owner = (auth: AuthContext, q: ViewQuery) => ({ pipelineId: q.pipelineId, ownerId: q.ownerId === 'me' ? auth.userId : q.ownerId, limit: q.limit });
+
 @Controller('deals')
 @ApiKeyAccess()
 export class DealsController {
@@ -38,6 +46,18 @@ export class DealsController {
   @RequirePermissions('deals:read')
   board(@Auth() auth: AuthContext, @Query(new ZodPipe(boardQuerySchema)) q: z.infer<typeof boardQuerySchema>) {
     return this.deals.board(auth, q.pipelineId, q.perStage);
+  }
+
+  @Get('priority')
+  @RequirePermissions('deals:read')
+  priority(@Auth() auth: AuthContext, @Query(new ZodPipe(viewQuerySchema)) q: ViewQuery) {
+    return this.deals.priority(auth, owner(auth, q));
+  }
+
+  @Get('forecast')
+  @RequirePermissions('deals:read')
+  forecast(@Auth() auth: AuthContext, @Query(new ZodPipe(viewQuerySchema)) q: ViewQuery) {
+    return this.deals.forecast(auth, owner(auth, q));
   }
 
   @Post()
@@ -57,6 +77,12 @@ export class DealsController {
   @RequirePermissions('deals:read')
   get(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.deals.get(auth, id);
+  }
+
+  @Get(':id/history')
+  @RequirePermissions('deals:read')
+  history(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    return this.deals.history(auth, id);
   }
 
   @Patch(':id')

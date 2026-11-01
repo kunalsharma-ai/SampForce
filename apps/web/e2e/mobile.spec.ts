@@ -39,3 +39,18 @@ test('lists become cards on a phone instead of a squeezed table', async ({ page 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
 });
+
+test('on a phone the split view opens deals as a full-screen panel and the calendar becomes a list', async ({ page }) => {
+  await signUp(page, 'Phone Deals');
+  const today = new Date();
+  const close = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const res = await page.request.post('/api/v1/deals', { data: { name: 'Pocket deal', amount: 900, expectedCloseDate: close }, headers: { origin: 'http://localhost:3000' } });
+  expect(res.ok()).toBe(true);
+  await page.goto('/app/deals?view=split');
+  await page.getByRole('list', { name: 'Deals' }).getByRole('button', { name: /Pocket deal/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Pocket deal' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.goto('/app/deals?view=calendar');
+  await expect(page.getByRole('list', { name: /Deals closing in/ }).getByRole('link', { name: 'Pocket deal' })).toBeVisible();
+  await expect(page.getByRole('table')).toHaveCount(0);
+});

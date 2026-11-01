@@ -57,6 +57,9 @@ export const listQuerySchema = z.object({
   contactId: z.string().uuid().optional(),
   pipelineId: z.string().uuid().optional(),
   stageId: z.string().uuid().optional(),
+  /** Deals only: expected close date on or after / on or before (YYYY-MM-DD). */
+  closeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  closeTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
 });
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
@@ -271,6 +274,9 @@ export interface PipelineRow {
   dealCount: number;
 }
 
+export const DEAL_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const;
+export type DealPriority = (typeof DEAL_PRIORITIES)[number];
+
 export const dealInputSchema = z.object({
   name: z.string().trim().min(1, 'Enter a deal name').max(200),
   amount: money.default(0),
@@ -287,6 +293,7 @@ export const dealInputSchema = z.object({
   companyId: uuidRef,
   contactId: uuidRef,
   ownerId: uuidRef,
+  priority: z.enum(DEAL_PRIORITIES).nullable().optional(),
   customFields: customFieldValuesSchema,
 });
 export const dealUpdateSchema = dealInputSchema.partial();
@@ -309,6 +316,9 @@ export interface DealRow {
   expectedCloseDate: string | null;
   closedAt: string | null;
   lossReason: string | null;
+  priority: DealPriority | null;
+  /** Latest stored health score (deal intelligence), or null when the deal has not been scored yet. */
+  health: { score: number; risk: 'low' | 'medium' | 'high'; computedAt: string } | null;
   pipeline: { id: string; name: string };
   stage: StageRow;
   company: { id: string; name: string } | null;
@@ -318,6 +328,36 @@ export interface DealRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One open deal in the priority view, with the reasons it ranks where it does. */
+export interface PriorityDeal {
+  deal: DealRow;
+  score: number;
+  reasons: string[];
+}
+
+/** Open deals grouped by expected close month (plus overdue and undated), for the forecast view. */
+export interface DealForecastBucket {
+  key: string;
+  label: string;
+  count: number;
+  value: number;
+  weighted: number;
+  deals: DealRow[];
+}
+export interface DealForecast {
+  currency: string;
+  buckets: DealForecastBucket[];
+}
+
+export interface DealHistoryItem {
+  id: string;
+  action: string;
+  actorName: string | null;
+  changes: Record<string, { from: unknown; to: unknown }> | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 export const bulkDealUpdateSchema = z.object({
