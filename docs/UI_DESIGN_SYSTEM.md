@@ -107,6 +107,7 @@ Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each la
 |---|---|---|
 | Sign up / sign in | **Built** | Shared Zod validation, server errors mapped to fields |
 | Command Center | **Built** | 19 KPIs with formula tooltips; period, owner and pipeline filters; executive and salesperson presets; customise mode (drag or move, half/full width, hide, saved per person, ADR 0043); revenue trajectory, stage conversion, win/loss, team, risk and goal charts, each with a table view and CSV; activity stream |
+| Quick Bid Studio | **Built** | Four steps (client, template, items and pricing, review and send) over a real draft quote with a live preview, inline validation and autosave; gallery of 10 bid templates with example previews and an accent picker; the look applies to the online proposal and PDF (ADR 0045) |
 | Settings | **Built** | Workspace (role-gated), quick appearance, motion and density |
 | Record lists | **Built** | Leads, contacts, companies, deals and accounts on the shared DataTable with saved views and bulk actions |
 | Shell and navigation | **Built** | Favourites, recent pages, customisable menu, Focus Workspace, shortcuts sheet, fuzzy command palette, mobile bottom bar |

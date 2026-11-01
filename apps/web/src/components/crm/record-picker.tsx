@@ -94,7 +94,7 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
         <button
           type="button"
           aria-label="Clear selection"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted"
+          className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
           onClick={() => {
             onChange(null);
             setText('');

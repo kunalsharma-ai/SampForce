@@ -238,3 +238,7 @@ existing owner-only RLS policies; NULL means the default salesperson preset.
 
 **Deal priority (2026-11-01, ADR 0044).** Migration `20261101014000_deal_priority` adds the enum `DealPriority`
 (LOW, MEDIUM, HIGH) and the nullable column `opportunities.priority`, covered by the table's tenant isolation policy.
+
+**Bid look on quotes (2026-11-01, ADR 0045).** Migration `20261101020000_quote_bid_style` adds the nullable columns
+`quotes.template_key` (a key from `BID_TEMPLATES`, validated by the API) and `quotes.accent_color` (`#rrggbb`, with a
+check constraint). Both are covered by the quotes table's existing tenant isolation policy and copied on revision.
