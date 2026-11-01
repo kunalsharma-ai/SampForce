@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
-import { assertPublicUrl, UnsafeTargetError } from '../common/net-guard';
+import { Agent as HttpsAgent } from 'node:https';
+import { assertPublicUrl, guardedLookup, publicFetch, UnsafeTargetError } from '../common/net-guard';
 
 /**
  * A minimal OpenID Connect relying party: discovery, the authorization-code flow with PKCE (S256), and
@@ -29,6 +30,8 @@ export class OidcError extends Error {
 const TIMEOUT_MS = 8000;
 const ALGS = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512', 'EdDSA'];
 
+const jwksAgent = new HttpsAgent({ lookup: guardedLookup(), keepAlive: true });
+
 const discoveryCache = new Map<string, { at: number; meta: ProviderMetadata }>();
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
@@ -47,7 +50,7 @@ export async function discover(issuer: string, allowPrivate: boolean, fresh = fa
   const url = await guardedUrl(`${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`, allowPrivate);
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'error' });
+    res = await publicFetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'error' }, allowPrivate);
   } catch {
     throw new OidcError('discovery', 'The identity provider could not be reached.');
   }
@@ -103,6 +106,7 @@ export async function exchangeCode(
   meta: ProviderMetadata,
   client: { clientId: string; clientSecret: string },
   params: { code: string; redirectUri: string; codeVerifier: string; nonce: string },
+  allowPrivate: boolean,
 ): Promise<VerifiedIdentity> {
   const body = new URLSearchParams({ grant_type: 'authorization_code', code: params.code, redirect_uri: params.redirectUri, code_verifier: params.codeVerifier });
   const headers: Record<string, string> = { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' };
@@ -117,7 +121,7 @@ export async function exchangeCode(
   }
   let res: Response;
   try {
-    res = await fetch(meta.token_endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'error' });
+    res = await publicFetch(meta.token_endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'error' }, allowPrivate);
   } catch {
     throw new OidcError('provider_error', 'The token endpoint could not be reached.');
   }
@@ -126,7 +130,8 @@ export async function exchangeCode(
 
   let jwks = jwksCache.get(meta.jwks_uri);
   if (!jwks) {
-    jwks = createRemoteJWKSet(new URL(meta.jwks_uri), { timeoutDuration: TIMEOUT_MS });
+    // The JWKS connection resolves through the same guard, so the key set cannot be fetched from an internal address.
+    jwks = createRemoteJWKSet(new URL(meta.jwks_uri), { timeoutDuration: TIMEOUT_MS, ...(allowPrivate ? {} : { agent: jwksAgent }) });
     jwksCache.set(meta.jwks_uri, jwks);
   }
   let payload: JWTPayload;

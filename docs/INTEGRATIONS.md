@@ -350,8 +350,9 @@ recordings are not stored either, and any successful transcription, meeting or v
   redelivered by hand. After `WEBHOOK_DISABLE_AFTER_FAILURES` (default 15) failures in a row the
   endpoint is switched off and admins are notified.
 - Targets must be public https URLs. Private, loopback, link-local and metadata addresses are refused
-  (checked at save time and before every delivery). Redirects are not followed. Known gap: a DNS
-  rebinding between the check and the request is not prevented; pin resolved addresses before launch.
+  (checked at save time and before every delivery). Redirects are not followed. The connection is made only
+  to the addresses that passed the check, so a DNS answer that changes after the check (DNS rebinding) cannot reach
+  an internal address.
 
 ## Testing
 

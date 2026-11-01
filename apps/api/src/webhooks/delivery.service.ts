@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
-import { assertPublicUrl } from '../common/net-guard';
+import { publicFetch } from '../common/net-guard';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
@@ -65,8 +65,7 @@ export class WebhookDeliverer {
     let responseCode: number | null = null;
     let error: string | null = null;
     try {
-      const url = await assertPublicUrl(d.webhook.url, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
-      const res = await fetch(url, {
+      const res = await publicFetch(d.webhook.url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -78,7 +77,7 @@ export class WebhookDeliverer {
         body,
         redirect: 'manual',
         signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
       responseCode = res.status;
       await res.body?.cancel().catch(() => undefined);
       if (res.status < 200 || res.status >= 300) error = `Endpoint answered ${res.status}`;

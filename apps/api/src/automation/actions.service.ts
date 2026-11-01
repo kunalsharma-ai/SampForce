@@ -18,7 +18,7 @@ import {
 } from '@dealflow/types';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
-import { assertPublicUrl } from '../common/net-guard';
+import { assertPublicUrl, publicFetch } from '../common/net-guard';
 import { PrismaService } from '../common/prisma.service';
 import { ActivitiesService } from '../crm/activities.service';
 import { CompaniesService } from '../crm/companies.service';
@@ -202,13 +202,13 @@ export class WorkflowActions {
         const body = JSON.stringify({ workflowId: run.workflowId, executionId: run.executionId, entityType: entity, entityId: id, record: ctx.record, sentAt: new Date().toISOString() });
         const t = Math.floor(Date.now() / 1000);
         const sig = createHmac('sha256', run.workflowId).update(`${t}.${body}`).digest('hex');
-        const res = await fetch(url, {
+        const res = await publicFetch(url, {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'user-agent': 'DealFlow-Automation/1.0', 'X-DealFlow-Workflow-Signature': `t=${t},v1=${sig}` },
           body,
           redirect: 'manual',
           signal: AbortSignal.timeout(10_000),
-        });
+        }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
         if (res.status < 200 || res.status >= 300) throw new ActionError(`The endpoint answered ${res.status}.`);
         return { status: res.status, host: url.host };
       }

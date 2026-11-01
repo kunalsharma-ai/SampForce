@@ -90,7 +90,7 @@ export class SsoService {
       const providerMeta = await discover(conn.issuer, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
       identity = await exchangeCode(providerMeta, { clientId: conn.clientId, clientSecret: this.box.open(conn.clientSecretEnc) }, {
         code: query.code, redirectUri: this.security.redirectUri, codeVerifier: st.v, nonce: st.n,
-      });
+      }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
     } catch (e) {
       if (e instanceof OidcError) throw new SsoFailure(e.reason === 'invalid_response' ? 'invalid_response' : 'provider_error', e.message);
       throw e;
