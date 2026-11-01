@@ -22,7 +22,7 @@ const sideClasses: Record<Side, string> = {
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { side?: Side; hideClose?: boolean }
->(({ className, children, side = 'center', hideClose, ...props }, ref) => (
+>(({ className, children, side = 'center', hideClose, onEscapeKeyDown, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
     <DialogPrimitive.Content
@@ -33,6 +33,13 @@ export const DialogContent = React.forwardRef<
         className,
       )}
       {...props}
+      onEscapeKeyDown={(e) => {
+        // Escape in an open picker closes the picker's list, not the dialog around it. The dialog hears Escape first
+        // (it listens in the capture phase), so it has to step aside here.
+        const target = e.target instanceof Element ? e.target : null;
+        if (target?.closest('[role="combobox"][aria-expanded="true"]')) e.preventDefault();
+        onEscapeKeyDown?.(e);
+      }}
     >
       {children}
       {!hideClose && (

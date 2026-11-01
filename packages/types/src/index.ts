@@ -35,3 +35,4 @@ export * from './appearance';
 export * from './regional';
 export * from './navigation';
 export * from './views';
+export * from './territories';

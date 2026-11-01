@@ -38,6 +38,8 @@ import {
   copilotRequestSchema,
   createActionItemsSchema,
   forecastQuerySchema,
+  territoryInputSchema,
+  territoryUpdateSchema,
   forecastSettingsSchema,
   campaignInputSchema,
   changePlanSchema,
@@ -291,6 +293,11 @@ export function buildOpenApiDocument(): object {
   const dealViewQuery = { query: z.object({ pipelineId: z.string().uuid().optional(), ownerId: z.string().optional(), limit: z.number().int().optional() }) };
   action('get', '/deals/priority', 'Deals', 'Open deals ranked for attention (health risk, close date, size, priority) with the reasons (deals:read)', undefined, dealViewQuery);
   action('get', '/deals/forecast', 'Deals', 'Open deals by expected close month: overdue, next six months, later, undated; value and weighted value (deals:read)', undefined, dealViewQuery);
+  action('get', '/deals/territories', 'Deals', 'Open pipeline, overdue deals and this quarter’s won and lost results per sales territory, plus the open deals no territory covers and why (deals:read)', undefined, dealViewQuery);
+  action('get', '/territories', 'Territories', 'Sales territories with their countries and manager (deals:read)');
+  action('post', '/territories', 'Territories', 'Create a territory; a country can be in one territory only (tenant:manage)', territoryInputSchema);
+  action('patch', '/territories/{id}', 'Territories', 'Rename, describe, change the manager or replace the countries (tenant:manage)', territoryUpdateSchema);
+  action('delete', '/territories/{id}', 'Territories', 'Delete a territory; deals and companies are not changed (tenant:manage)');
   action('get', '/deals/{id}/history', 'Deals', 'Audit history of one deal, newest first (deals:read)');
   action('post', '/deals/{id}/move', 'Deals', 'Move to another stage; Lost needs a reason (deals:write)', dealMoveSchema);
   action('post', '/deals/{id}/clone', 'Deals', 'Clone into the first stage (deals:write)');

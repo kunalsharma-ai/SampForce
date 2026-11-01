@@ -67,6 +67,7 @@ model User {
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
   savedViews         SavedView[]
+  managedTerritories Territory[]
 
   @@map("users")
 }
@@ -111,15 +112,15 @@ model UserSavedTheme {
 /// A person's own navigation in one workspace: pinned pages and records, recent visits, sidebar order and hidden
 /// modules. RLS limits rows to the current workspace AND the current user.
 model WorkspaceNavigation {
-  tenantId      String   @map("tenant_id") @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  pinned        Json     @default("[]")
-  recent        Json     @default("[]")
-  moduleOrder   String[] @default([]) @map("module_order")
-  hiddenModules String[] @default([]) @map("hidden_modules")
+  tenantId        String   @map("tenant_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  pinned          Json     @default("[]")
+  recent          Json     @default("[]")
+  moduleOrder     String[] @default([]) @map("module_order")
+  hiddenModules   String[] @default([]) @map("hidden_modules")
   /// Command Center widgets, sizes and filters (dashboardLayoutSchema); null means the default layout.
-  dashboardLayout Json?  @map("dashboard_layout")
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  dashboardLayout Json?    @map("dashboard_layout")
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -147,6 +148,38 @@ model SavedView {
   @@unique([tenantId, userId, entity, name])
   @@index([tenantId, entity])
   @@map("saved_views")
+}
+
+/// A sales territory: a named set of countries. A deal belongs to the territory that holds its company's country.
+model Territory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  description String?
+  managerId   String?  @map("manager_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  manager   User?              @relation(fields: [managerId], references: [id], onDelete: SetNull)
+  countries TerritoryCountry[]
+
+  @@unique([tenantId, name])
+  @@map("territories")
+}
+
+/// A country belongs to at most one territory per workspace.
+model TerritoryCountry {
+  tenantId    String @map("tenant_id") @db.Uuid
+  territoryId String @map("territory_id") @db.Uuid
+  country     String @db.Char(2)
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  territory Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@id([territoryId, country])
+  @@unique([tenantId, country])
+  @@map("territory_countries")
 }
 
 /// One-time password reset links. Only a SHA-256 hash of the token is stored; a link works once, for a short time.
@@ -244,6 +277,8 @@ model Tenant {
   subscription           Subscription?
   navigation             WorkspaceNavigation[]
   savedViews             SavedView[]
+  territories            Territory[]
+  territoryCountries     TerritoryCountry[]
   roles                  Role[]
   memberships            Membership[]
   teams                  Team[]

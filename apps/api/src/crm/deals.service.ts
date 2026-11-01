@@ -8,14 +8,15 @@ import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, re
 import { CustomFieldsService } from './custom-fields.service';
 
 const SORTABLE = ['name', 'amount', 'status', 'priority', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
-const include = {
+export const dealInclude = {
   pipeline: { select: { id: true, name: true } },
   stage: true,
   company: { select: { id: true, name: true } },
   contact: { select: { id: true, firstName: true, lastName: true } },
   healthScore: { select: { health: true, risk: true, computedAt: true } },
 } satisfies Prisma.OpportunityInclude;
-type DealWith = Prisma.OpportunityGetPayload<{ include: typeof include }>;
+const include = dealInclude;
+type DealWith = Prisma.OpportunityGetPayload<{ include: typeof dealInclude }>;
 
 export interface BoardColumn {
   stage: PipelineRow['stages'][number];
