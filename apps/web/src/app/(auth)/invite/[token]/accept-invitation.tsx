@@ -7,9 +7,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 
 export function AcceptInvitation({ token }: { token: string }) {
   const router = useRouter();
+  const t = useT();
   const preview = useQuery({ queryKey: ['invitation', token], queryFn: () => api<InvitationPreview>(`/auth/invitations/${encodeURIComponent(token)}`), retry: false });
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -21,12 +23,12 @@ export function AcceptInvitation({ token }: { token: string }) {
   if (preview.error) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Invitation unavailable</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('Invitation unavailable')}</h1>
         <p role="alert" className="text-sm text-muted-foreground">
           {preview.error.message}
         </p>
         <Button asChild variant="outline">
-          <Link href="/login">Go to sign in</Link>
+          <Link href="/login">{t('Go to sign in')}</Link>
         </Button>
       </div>
     );
@@ -38,10 +40,10 @@ export function AcceptInvitation({ token }: { token: string }) {
     setError(null);
     const next: Record<string, string> = {};
     if (!inv.hasAccount) {
-      if (!name.trim()) next.name = 'Enter your name';
+      if (!name.trim()) next.name = t('Enter your name');
       const p = passwordSchema.safeParse(password);
-      if (!p.success) next.password = p.error.issues[0]?.message ?? 'Choose a stronger password';
-    } else if (!password) next.password = 'Enter your password';
+      if (!p.success) next.password = t.maybe(p.error.issues[0]?.message ?? 'Choose a stronger password');
+    } else if (!password) next.password = t('Enter your password');
     setErrors(next);
     if (Object.keys(next).length) return;
     setBusy(true);
@@ -49,7 +51,7 @@ export function AcceptInvitation({ token }: { token: string }) {
       await api('/auth/invitations/accept', { method: 'POST', json: { token, password, ...(inv.hasAccount ? {} : { name }) } });
       router.replace('/app');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not reach DealFlow. Check your connection.');
+      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
       setBusy(false);
     }
   }
@@ -57,22 +59,22 @@ export function AcceptInvitation({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Join {inv.tenantName}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('Join {workspace}', { workspace: inv.tenantName })}</h1>
         <p className="text-sm text-muted-foreground">
-          You were invited as <strong>{inv.roleName}</strong> with {inv.email}.
+          {t('You were invited as {role} with {email}.', { role: inv.roleName, email: inv.email })}
         </p>
       </div>
       <form onSubmit={submit} noValidate className="space-y-4">
         {!inv.hasAccount && (
-          <Field id="name" label="Your name" error={errors.name}>
+          <Field id="name" label={t('Your name')} error={errors.name}>
             <Input autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
         )}
         <Field
           id="password"
-          label={inv.hasAccount ? 'Your DealFlow password' : 'Choose a password'}
+          label={inv.hasAccount ? t('Your DealFlow password') : t('Choose a password')}
           error={errors.password}
-          hint={inv.hasAccount ? 'You already have an account; confirm it is you.' : 'At least 10 characters, with a letter and a number.'}
+          hint={inv.hasAccount ? t('You already have an account; confirm it is you.') : t('At least 10 characters, with a letter and a number.')}
         >
           <Input type="password" autoComplete={inv.hasAccount ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
@@ -82,7 +84,7 @@ export function AcceptInvitation({ token }: { token: string }) {
           </p>
         )}
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Joining…' : `Join ${inv.tenantName}`}
+          {busy ? t('Joining…') : t('Join {workspace}', { workspace: inv.tenantName })}
         </Button>
       </form>
     </div>

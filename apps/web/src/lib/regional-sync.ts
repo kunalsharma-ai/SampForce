@@ -11,9 +11,25 @@ export const REGIONAL_KEY = ['me', 'regional'] as const;
 /** Applies the language and formats saved on the person's account (the device cache only bridges the first paint). */
 export function useRegionalSync(enabled: boolean) {
   const query = useQuery({ queryKey: REGIONAL_KEY, queryFn: () => api<RegionalResponse>('/me/regional'), enabled, staleTime: Infinity });
+  const qc = useQueryClient();
   useEffect(() => {
-    if (query.data) useRegional.getState().adopt(query.data.regional);
-  }, [query.data]);
+    if (!query.data) return;
+    const store = useRegional.getState();
+    const chosen = store.chosenSignedOut;
+    store.clearSignedOut();
+    // A language picked before signing in carries over to an account that has not chosen one yet.
+    if (chosen && query.data.source === 'default' && chosen !== query.data.regional.language) {
+      const next = { ...query.data.regional, language: chosen };
+      void api<RegionalResponse>('/me/regional', { method: 'PUT', json: next })
+        .then((res) => {
+          qc.setQueryData(REGIONAL_KEY, res);
+          useRegional.getState().adopt(res.regional);
+        })
+        .catch(() => useRegional.getState().adopt(query.data.regional));
+      return;
+    }
+    store.adopt(query.data.regional);
+  }, [query.data, qc]);
   return query;
 }
 

@@ -130,3 +130,64 @@ test('Arabic deals board stays accessible right to left', async ({ page }) => {
   await expect(main.getByRole('link', { name: 'صحة الصفقات' })).toBeVisible();
   await axe(page);
 });
+
+test('a language picked on the sign-up page carries over to the new account', async ({ page, browser }) => {
+  await page.goto('/signup');
+  await page.getByLabel('Language').selectOption('es');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  await expect(page.getByRole('heading', { name: 'Crea tu espacio de trabajo' })).toBeVisible();
+
+  // Validation messages from the shared schema are translated too.
+  await page.getByRole('button', { name: 'Empieza gratis' }).click();
+  await expect(page.getByText('Introduce tu nombre')).toBeVisible();
+
+  const email = `e2e-${Math.random().toString(36).slice(2, 10)}@example.com`;
+  await page.getByLabel('Tu nombre').fill('Test Person');
+  await page.getByLabel('Correo del trabajo').fill(email);
+  await page.getByLabel('Contraseña', { exact: true }).fill('correcthorse1');
+  await page.getByLabel('Nombre de la organización').fill('Idioma SL');
+  await page.getByRole('button', { name: 'Empieza gratis' }).click();
+  await expect(page).toHaveURL(/\/app/);
+  await expect(page.getByRole('heading', { name: 'Hola, Test' })).toBeVisible();
+
+  // The choice was saved to the account, so settings show it and the translated settings page passes axe.
+  await page.goto('/app/settings');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
+  await expect(main.getByText('Espacio de trabajo', { exact: true })).toBeVisible();
+  await expect(main.getByRole('group', { name: 'Densidad de la interfaz' })).toBeVisible();
+  await axe(page);
+
+  // Activities in Spanish: add a task and complete it.
+  await page.goto('/app/activities');
+  await expect(main.getByRole('heading', { name: 'Actividades de venta', level: 1 })).toBeVisible();
+  await main.getByLabel('Nueva tarea', { exact: true }).fill('Llamar a Lucía');
+  await main.getByRole('button', { name: 'Añadir tarea' }).click();
+  await main.getByRole('checkbox', { name: 'Completar Llamar a Lucía' }).click();
+  // A completed task leaves the open list and shows under Done.
+  await expect(main.getByRole('checkbox', { name: 'Completar Llamar a Lucía' })).toHaveCount(0);
+  await main.getByLabel('Estado').selectOption('DONE');
+  await expect(main.getByRole('checkbox', { name: 'Reabrir Llamar a Lucía' })).toBeChecked();
+  await axe(page);
+
+  // A fresh browser has no device cache: signing in brings the account's Spanish back.
+  const other = await browser.newContext();
+  const p2 = await other.newPage();
+  await p2.goto('/login');
+  await expect(p2.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await p2.getByLabel('Work email').fill(email);
+  await p2.getByLabel('Password', { exact: true }).fill('correcthorse1');
+  await p2.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(p2).toHaveURL(/\/app/);
+  await expect(p2.locator('html')).toHaveAttribute('lang', 'es');
+  await other.close();
+});
+
+test('the sign-in page in Arabic reads right to left and stays accessible', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Language').selectOption('ar');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
+  await expect(page.getByLabel('البريد الإلكتروني للعمل')).toBeVisible();
+  await axe(page);
+});
