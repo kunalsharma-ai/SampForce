@@ -10,6 +10,7 @@ import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { CommercialModule } from './commercial/commercial.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 import { CommonModule } from './common/common.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
@@ -80,6 +81,7 @@ import { redactUrl } from './observability/redact';
     PortalModule,
     MailModule,
     WorkerModule,
+    ApiKeysModule,
   ],
   controllers: [HealthController],
   providers: [

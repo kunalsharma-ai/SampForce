@@ -16,7 +16,9 @@
 | DocuSign (workspace app: send contracts for e-signature) | **Pending Configuration** until `DOCUSIGN_INTEGRATION_KEY` and `DOCUSIGN_SECRET_KEY` are set; automatic status updates are separately Pending Configuration until `DOCUSIGN_CONNECT_HMAC_KEY` is set ("Check status" works without it). Implemented and tested against a local stand-in of DocuSign's OAuth, eSignature REST API v2.1 and Connect only; not yet tested against DocuSign. | Needs `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY`, `DOCUSIGN_CONNECT_HMAC_KEY` (server secrets); `DOCUSIGN_AUTH_BASE_URL` for the demo environment |
 | Card payments on proposals (workspace app: customers pay accepted proposals into the workspace's own Stripe or Razorpay account) | **Not connected** until an admin saves keys; keys are saved only after a read that charges nothing succeeds. Shows a warning until the first signed webhook arrives. A proposal is marked paid only by the provider's signed webhook with the exact amount asked. Implemented and tested against a local stand-in of Stripe Checkout Sessions and Razorpay Payment Links only; not yet tested against either provider. | No deployment secret. Each workspace's keys and webhook secret are workspace secrets, stored encrypted |
 | WhatsApp Business (workspace app: one-to-one messages from contact records and approved workflow steps, through the workspace's own Cloud API number) | **Not connected** until an admin saves credentials; they are saved only after a read of the number succeeds (nothing is sent). Replies and delivery status are Pending Configuration until Meta's first signed webhook arrives. Implemented and tested against a local stand-in of Meta's Graph API (Cloud API) only; not yet tested against Meta. | No deployment secret. Each workspace's System User token and App Secret are workspace secrets, stored encrypted. Optional `WHATSAPP_API_BASE_URL` (default Graph API v21.0) |
-| Twilio, Zapier | Not built yet (Zapier in progress) | Shown as "Not available yet" in the app |
+| Workspace API keys (REST API for Zapier, Make, n8n and scripts) | Implemented and tested end to end against the local API. Keys are shown once and stored hashed; only CRM record, pipeline, activity and task routes accept them. | No deployment secret |
+| Zapier (triggers on REST hooks; create lead, contact and task actions) | **Pending Configuration** until an operator publishes the app in `integrations/zapier` and sets `ZAPIER_INVITE_URL`. Its functions are tested against a local DealFlow only; it has not been pushed to or run inside Zapier. | Optional `ZAPIER_INVITE_URL` |
+| Twilio | Not built yet | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -254,6 +256,31 @@ How it behaves:
   workspace has its own URL id and secret, so one workspace cannot write into another. Retries are stored once.
 - A refused token (Meta error 190 or a missing permission) marks the app Needs new credentials; replacing them keeps
   the callback URL and verify token.
+
+## Setting up Zapier and API keys
+
+API keys work as soon as this version is deployed:
+
+1. An admin opens Integrations, **API keys**, names the key, picks scopes (for example `leads:write` and
+   `deals:read`) and an optional expiry. The key is shown once; copy it into the tool that will use it.
+2. Call the API with `Authorization: Bearer dfk_…`. Only lead, contact, company, deal, pipeline, activity and task
+   routes accept keys; everything else answers 403 `API_KEY_NOT_ALLOWED`. A key never has more than its creator's
+   current role allows, and stops working if that person is suspended or removed.
+3. Revoke a key on the same page. It stops at once and its Zapier subscriptions are removed.
+
+The Zapier app needs a one-time publish by an operator (see `integrations/zapier/README.md`):
+
+1. `cd integrations/zapier && npm install && npx zapier login`
+2. `npx zapier register "DealFlow"` once, then `npx zapier push`.
+3. Invite users from the Zapier developer platform, or submit for public review.
+4. Set `ZAPIER_INVITE_URL` to the invite or directory link and restart the API. The Integrations page then shows
+   **Available** with a link, instead of Pending Configuration.
+5. Before calling it working, build a test Zap with a private invite: connect with a key, turn on "New Lead",
+   create a lead in DealFlow and check the Zap run, then run "Create Lead" and check the lead appears.
+
+Each trigger is a REST hook: turning a Zap on creates a webhook for that one event (marked "Made by a Zap" in the
+Webhooks list), and turning it off removes it. Samples in the Zap editor are your latest real records; if there
+are none yet, create one first.
 
 ## Behaviour
 

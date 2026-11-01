@@ -174,6 +174,8 @@ import {
   whatsappConnectSchema,
   whatsappConsentSchema,
   whatsappSendSchema,
+  apiKeyCreateSchema,
+  zapierSubscribeSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -321,6 +323,17 @@ export function buildOpenApiDocument(): object {
   action('delete', '/webhooks/{id}', 'Webhooks', 'Delete (integrations:manage)');
   r.registerPath({ method: 'post', path: '/webhooks/{id}/deliveries/{deliveryId}/redeliver', tags: ['Webhooks'], summary: 'Queue a failed delivery again (integrations:manage)', security: secured,
     request: { params: z.object({ id: z.string().uuid(), deliveryId: z.string().uuid() }) }, responses: { 202: ok('Queued'), ...notFound, ...errors } });
+  r.registerComponent('securitySchemes', 'apiKey', { type: 'http', scheme: 'bearer', description: 'A dfk_ workspace API key. It acts as the person who created it, limited to its scopes; only CRM record, pipeline, activity and task routes accept it.' });
+  action('get', '/api-keys', 'API keys', 'Workspace API keys, never the key itself (integrations:manage)');
+  action('post', '/api-keys', 'API keys', 'Create a key; the full key is returned once; scopes must be within your own role (integrations:manage)', apiKeyCreateSchema);
+  action('delete', '/api-keys/{id}', 'API keys', 'Revoke a key and remove its Zapier subscriptions (integrations:manage)');
+  action('get', '/api-keys/zapier', 'API keys', 'Whether the Zapier app is published for this deployment, and live Zapier subscriptions (integrations:manage)');
+  const keyed = [{ apiKey: [] }];
+  r.registerPath({ method: 'get', path: '/zapier/me', tags: ['Zapier'], summary: 'Test a key: workspace, user and scopes', security: keyed, responses: { 200: ok('Who the key acts as'), 401: { description: 'Invalid, revoked or expired key' } } });
+  r.registerPath({ method: 'post', path: '/zapier/hooks', tags: ['Zapier'], summary: 'REST-hook subscribe: deliver an event to a public https URL; the key needs the event\'s read scope', security: keyed, request: body(zapierSubscribeSchema), responses: { 201: ok('Subscription id'), ...errors } });
+  r.registerPath({ method: 'delete', path: '/zapier/hooks/{id}', tags: ['Zapier'], summary: 'REST-hook unsubscribe (only subscriptions made with this key)', security: keyed, request: { params: idParam }, responses: { 204: ok('Removed'), ...notFound } });
+  r.registerPath({ method: 'get', path: '/zapier/events/{id}', tags: ['Zapier'], summary: 'One event by id, shaped as its trigger payload with the current record (perform for a REST-hook delivery)', security: keyed, request: { params: idParam }, responses: { 200: ok('Record'), ...notFound } });
+  r.registerPath({ method: 'get', path: '/zapier/samples/{event}', tags: ['Zapier'], summary: 'Up to 3 recent real records for an event, shaped as its payload; empty when there are none (no invented data)', security: keyed, request: { params: z.object({ event: z.string() }) }, responses: { 200: ok('Payload samples'), ...errors } });
   action('get', '/integrations', 'Integrations', "Provider set-up and the caller's connections (activities:read)");
   r.registerPath({ method: 'post', path: '/integrations/{provider}/connect', tags: ['Integrations'], summary: 'Start OAuth; 409 when the provider is not configured (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Authorization URL'), ...errors } });

@@ -2,6 +2,7 @@ import { Badge, Card } from '@dealflow/ui';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { ApiKeysAndZapier } from './api-keys';
 import { BrowserExtension } from './browser-extension';
 import { MailboxConnections, WebhooksManager } from './integrations-board';
 import { WorkspaceApps } from './workspace-apps';
@@ -13,16 +14,12 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
   { category: 'Communication', items: [
     { name: 'Twilio (SMS, voice)', phase: 'Later phase', needs: 'Twilio account and number registration' },
   ] },
-  { category: 'Automation & developer', items: [
-    { name: 'Zapier / Make / n8n', phase: 'Later phase', needs: 'Partner app listing' },
-    { name: 'REST API keys', phase: 'Later phase', needs: 'None (native)' },
-  ] },
 ];
 
 export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-8">
-      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, set up the browser extension, manage outbound webhooks, and see which integrations are still planned." />
+      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned." />
       <Suspense>
         <MailboxConnections />
       </Suspense>
@@ -30,6 +27,7 @@ export default function IntegrationsPage() {
         <WorkspaceApps />
       </Suspense>
       <BrowserExtension />
+      <ApiKeysAndZapier />
       <WebhooksManager />
       <section aria-labelledby="planned-heading" className="space-y-4">
         <h2 id="planned-heading" className="text-base font-semibold">

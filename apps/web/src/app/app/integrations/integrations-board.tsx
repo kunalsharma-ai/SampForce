@@ -222,6 +222,7 @@ function HookCard({ hook: h, onToggle, onDelete, onRedeliver }: { hook: WebhookR
         <div className="flex flex-wrap items-center gap-2">
           <span className="break-all text-sm font-medium">{h.url}</span>
           <Badge tone={h.active ? 'success' : 'critical'}>{h.active ? 'On' : 'Off'}</Badge>
+          {h.source === 'zapier' && <Badge tone="primary">Made by a Zap</Badge>}
           {h.consecutiveFailures > 0 && <Badge tone="warning">{h.consecutiveFailures} failures in a row</Badge>}
           <div className="ml-auto flex gap-1">
             <Button size="sm" variant="outline" onClick={() => onToggle(!h.active)}>

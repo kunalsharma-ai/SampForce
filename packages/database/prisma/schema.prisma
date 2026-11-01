@@ -179,6 +179,7 @@ model Tenant {
   approvals              ApprovalRequest[]
   notifications          Notification[]
   webhooks               Webhook[]
+  apiKeys                ApiKey[]
   webhookDeliveries      WebhookDelivery[]
   integrationConnections IntegrationConnection[]
   emailMessages          EmailMessage[]
@@ -975,12 +976,16 @@ model Webhook {
   active              Boolean   @default(true)
   consecutiveFailures Int       @default(0) @map("consecutive_failures")
   disabledReason      String?   @map("disabled_reason")
+  /// manual (added under Integrations) or zapier (a REST-hook subscription made with an API key)
+  source              String    @default("manual")
+  apiKeyId            String?   @map("api_key_id") @db.Uuid
   createdById         String    @map("created_by_id") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKey     ApiKey?           @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
   deliveries WebhookDelivery[]
 
   @@index([tenantId, active])
@@ -3054,4 +3059,27 @@ model WhatsappConsent {
 
   @@index([tenantId, contactId, createdAt])
   @@map("whatsapp_consents")
+}
+
+/// A workspace API key (Zapier, Make, n8n, scripts). Only the SHA-256 hash is stored. A key acts as its creator,
+/// limited to its scopes and to the creator's current role; it stops working when revoked, expired, or when the
+/// creator leaves the workspace.
+model ApiKey {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String
+  prefix      String
+  keyHash     String    @unique @map("key_hash")
+  scopes      String[]
+  createdById String    @map("created_by_id") @db.Uuid
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  webhooks Webhook[]
+
+  @@index([tenantId, createdAt])
+  @@map("api_keys")
 }

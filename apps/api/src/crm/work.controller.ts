@@ -15,7 +15,7 @@ import {
   taskUpdateSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ActivitiesService } from './activities.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -56,6 +56,7 @@ function requirePermission(auth: AuthContext, permission: Permission) {
 }
 
 @Controller('activities')
+@ApiKeyAccess()
 export class ActivitiesController {
   constructor(private readonly activities: ActivitiesService) {}
 
@@ -80,6 +81,7 @@ export class ActivitiesController {
 }
 
 @Controller('tasks')
+@ApiKeyAccess()
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}
 

@@ -96,6 +96,8 @@ export const apiEnvSchema = z.object({
   ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
   ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
   ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
+  /** Invite link to the operator's DealFlow app in Zapier (integrations/zapier). Unset: Zapier is Pending Configuration. */
+  ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
   WHATSAPP_API_BASE_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
   // DocuSign workspace app (Authorization Code Grant). The Connect HMAC key verifies envelope status events.
