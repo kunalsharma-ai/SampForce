@@ -93,7 +93,10 @@ visible focus rings, chart ↔ table toggle, screen-reader values for animated n
 ## 6. Component inventory
 
 Phase 1 (`packages/ui`): Button, Input, Label/Field, Card, Badge, Skeleton, Tooltip, DropdownMenu, Dialog/Sheet.
-Phase 2: DataTable (TanStack Table with column config, saved views), Kanban board (dnd-kit, keyboard moves),
+Phase 2: DataTable (`components/data-table/`, TanStack Table; ADR 0042): sticky header and first column, resizable
+columns (mouse, touch, keyboard), show/hide and reorder columns, up to three sort keys (Shift-click), status and
+owner filters, search highlighting, saved views (private or shared), per-table density, row selection with bulk
+assign/status/delete, Up/Down row movement, and cards instead of a table on phones. Kanban board (dnd-kit, keyboard moves),
 Select/Combobox, DatePicker, Tabs, Toast, Record timeline, Empty states.
 Phase 3: Flow canvas nodes (React Flow), Approval card.
 Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each lazy-loaded with a fallback.
@@ -105,6 +108,7 @@ Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each la
 | Sign up / sign in | **Built** | Shared Zod validation, server errors mapped to fields |
 | Command Center | **Built** | 15 KPIs from the API with formula tooltips; pipeline chart/table; audited activity stream; roadmap card |
 | Settings | **Built** | Workspace (role-gated), quick appearance, motion and density |
+| Record lists | **Built** | Leads, contacts, companies, deals and accounts on the shared DataTable with saved views and bulk actions |
 | Shell and navigation | **Built** | Favourites, recent pages, customisable menu, Focus Workspace, shortcuts sheet, fuzzy command palette, mobile bottom bar |
 | Theme Studio | **Built** | 13 themes, colour and layout controls, live preview, readability check, saved themes, workspace default |
 | Team Management | **Built** | Members, inline role change (role-gated), role catalogue |

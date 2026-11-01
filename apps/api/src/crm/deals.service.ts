@@ -7,7 +7,7 @@ import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
-const SORTABLE = ['name', 'amount', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
+const SORTABLE = ['name', 'amount', 'status', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
 const include = {
   pipeline: { select: { id: true, name: true } },
   stage: true,

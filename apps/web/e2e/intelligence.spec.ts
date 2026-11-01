@@ -5,6 +5,10 @@ import { signUp } from './helpers';
 const ORIGIN = { origin: 'http://localhost:3000' };
 const DAY = 86_400_000;
 
+// Axe measures colour at the moment it runs. The Command Center tiles fade in one after another, so a scan during
+// that fade sees half-transparent text. Reduced motion shows them at rest, which is what the contrast check is about.
+test.use({ reducedMotion: 'reduce' });
+
 async function apiPost(page: Page, path: string, data: object) {
   const res = await page.request.post(`/api/v1${path}`, { data, headers: ORIGIN });
   expect(res.ok(), `${path}: ${res.status()} ${await res.text()}`).toBeTruthy();

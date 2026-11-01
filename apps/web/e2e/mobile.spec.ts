@@ -26,3 +26,16 @@ test('phones get a bottom bar with the main pages and a create button', async ({
   const pad = await page.locator('main').evaluate((m) => parseFloat(getComputedStyle(m).paddingBottom));
   expect(pad).toBeGreaterThanOrEqual(56);
 });
+
+test('lists become cards on a phone instead of a squeezed table', async ({ page }) => {
+  await signUp(page, 'Phone List Org');
+  const res = await page.request.post('/api/v1/leads', { data: { fullName: 'Pia Phone', companyName: 'Pocket Co' }, headers: { origin: 'http://localhost:3000' } });
+  expect(res.ok()).toBe(true);
+  await page.goto('/app/leads');
+  const list = page.getByRole('list', { name: 'Leads' });
+  await expect(list.getByRole('link', { name: 'Pia Phone' })).toBeVisible();
+  await expect(list).toContainText('Pocket Co');
+  await expect(page.getByRole('table')).toHaveCount(0);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(overflow).toBe(false);
+});

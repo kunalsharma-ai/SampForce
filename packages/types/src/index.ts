@@ -32,3 +32,4 @@ export * from './apps';
 export * from './api-keys';
 export * from './appearance';
 export * from './navigation';
+export * from './views';

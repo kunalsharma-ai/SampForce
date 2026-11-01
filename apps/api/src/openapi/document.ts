@@ -183,6 +183,9 @@ import {
   savedThemeInputSchema,
   navItemSchema,
   updateNavigationSchema,
+  bulkActionSchema,
+  savedViewInputSchema,
+  savedViewUpdateSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -831,6 +834,11 @@ export function buildOpenApiDocument(): object {
   action('patch', '/me/navigation', 'Navigation', 'Update favourites (at most 20), module order or hidden modules (Settings cannot be hidden)', updateNavigationSchema);
   action('post', '/me/navigation/visits', 'Navigation', 'Record a page visit at the front of the recent list (at most 15 kept)', navItemSchema);
   action('delete', '/me/navigation/visits', 'Navigation', 'Clear the recent list');
+  action('get', '/views', 'Table views', 'Saved views for one list (?entity=leads|contacts|companies|deals): your own and those shared in the workspace');
+  action('post', '/views', 'Table views', 'Save a view of a list (at most 30 per list; NAME_TAKEN if you already use the name)', savedViewInputSchema);
+  action('patch', '/views/{id}', 'Table views', 'Rename, share or update a view you created', savedViewUpdateSchema);
+  action('delete', '/views/{id}', 'Table views', 'Delete a view you created');
+  action('post', '/records/bulk', 'Table views', 'Assign, set status (leads) or delete up to 100 selected records; each goes through the normal rules and audit, and failures are listed', bulkActionSchema);
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: '3.1.0',

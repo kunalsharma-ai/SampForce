@@ -12,6 +12,7 @@ import { BillingModule } from './billing/billing.module';
 import { CommercialModule } from './commercial/commercial.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { PreferencesModule } from './preferences/preferences.module';
+import { ViewsModule } from './views/views.module';
 import { CommonModule } from './common/common.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
@@ -84,6 +85,7 @@ import { redactUrl } from './observability/redact';
     WorkerModule,
     ApiKeysModule,
     PreferencesModule,
+    ViewsModule,
   ],
   controllers: [HealthController],
   providers: [

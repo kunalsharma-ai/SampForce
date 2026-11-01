@@ -7,7 +7,7 @@ import { PrismaService } from '../common/prisma.service';
 import { assertRefs, diff, notFound, orderBy, ownerRefs, paging } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
-const SORTABLE = ['name', 'createdAt', 'updatedAt', 'industry', 'country'] as const;
+const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country'] as const;
 const include = {
   parent: { select: { id: true, name: true } },
   _count: { select: { contacts: { where: { deletedAt: null } }, opportunities: { where: { deletedAt: null, status: 'OPEN' as const } } } },
