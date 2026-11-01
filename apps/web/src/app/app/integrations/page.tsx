@@ -11,7 +11,6 @@ export const metadata: Metadata = { title: 'Integrations' };
 /** Integrations not built yet. Nothing here is shown as connected until its adapter exists and is tested. */
 const PLANNED: { category: string; items: { name: string; phase: string; needs: string }[] }[] = [
   { category: 'Collaboration', items: [
-    { name: 'Microsoft Teams', phase: 'Later phase', needs: 'Entra ID app registration' },
     { name: 'Zoom', phase: 'Later phase', needs: 'Zoom OAuth app' },
   ] },
   { category: 'Communication', items: [

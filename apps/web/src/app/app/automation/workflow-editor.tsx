@@ -12,6 +12,7 @@ import {
   type AppStatus,
   type SequenceRow,
   type SlackChannel,
+  type TeamsChannel,
   TRIGGER_EVENTS,
   type TriggerEvent,
   UPDATABLE_FIELDS,
@@ -573,7 +574,7 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         />
       )}
 
-      {a.type === 'post_to_chat' && <SlackStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
+      {a.type === 'post_to_chat' && <ChatStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
 
       {a.type === 'send_email' && (
         <>
@@ -588,22 +589,38 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
   );
 }
 
-/** Slack channel and message for a "Post to Slack" step. Channels come from the workspace's Slack connection. */
-function SlackStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'post_to_chat' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+/** App, channel and message for a "Post to Slack or Teams" step. Channels come from the workspace's connection. */
+function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'post_to_chat' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
-  const slack = apps.data?.find((x) => x.key === 'slack');
-  const connected = slack?.state === 'connected';
-  const channels = useQuery({ enabled: connected && !readOnly, queryKey: ['apps', 'slack', 'channels'], queryFn: () => api<SlackChannel[]>('/apps/slack/channels') });
-  const fallback = (slack?.connection?.settings as { defaultChannelName?: string | null } | undefined)?.defaultChannelName;
+  const target = apps.data?.find((x) => x.key === a.app);
+  const connected = target?.state === 'connected' || (a.app === 'teams' && target?.state === 'error');
+  const slackChannels = useQuery({ enabled: a.app === 'slack' && connected && !readOnly, queryKey: ['apps', 'slack', 'channels'], queryFn: () => api<SlackChannel[]>('/apps/slack/channels') });
+  const teamsChannels = useQuery({ enabled: a.app === 'teams' && connected && !readOnly, queryKey: ['apps', 'teams', 'channels'], queryFn: () => api<TeamsChannel[]>('/apps/teams/channels') });
+  const options =
+    a.app === 'slack'
+      ? (slackChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: `#${c.name}${c.isPrivate ? ' (private)' : ''}` }))
+      : (teamsChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: c.name }));
+  const settings = (target?.connection?.settings ?? {}) as { defaultChannelName?: string | null; defaultChannelId?: string | null; channels?: TeamsChannel[] };
+  const fallback = a.app === 'slack' ? (settings.defaultChannelName ? `#${settings.defaultChannelName}` : null) : (settings.channels?.find((c) => c.id === settings.defaultChannelId)?.name ?? null);
+  const name = a.app === 'slack' ? 'Slack' : 'Microsoft Teams';
   return (
     <>
-      {slack && !connected && (
+      <div className="space-y-1.5">
+        <Label htmlFor={`${id}-app`}>App</Label>
+        <Select id={`${id}-app`} disabled={readOnly} value={a.app} onChange={(e) => onChange({ ...a, app: e.target.value as 'slack' | 'teams', channelId: null, channelName: null })}>
+          <option value="slack">Slack</option>
+          <option value="teams">Microsoft Teams</option>
+        </Select>
+      </div>
+      {target && !connected && (
         <p className="text-xs text-warning" role="status">
-          {slack.state === 'pending_configuration'
-            ? 'Slack is Pending Configuration on this installation, so this step will fail until an operator adds the Slack app credentials and an admin connects Slack.'
-            : slack.state === 'error'
-              ? 'Slack needs reconnecting in Integrations before this step can post.'
-              : 'Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+          {target.state === 'pending_configuration'
+            ? `${name} is Pending Configuration on this installation, so this step will fail until an operator adds the app credentials and an admin connects it.`
+            : target.state === 'error'
+              ? `${name} needs reconnecting in Integrations before this step can post.`
+              : a.app === 'teams'
+                ? 'No Teams channels are added yet. An admin can add one in Integrations; until then this step fails with that message.'
+                : 'Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
         </p>
       )}
       <div className="space-y-1.5">
@@ -613,16 +630,15 @@ function SlackStepFields({ id, action: a, readOnly, onChange }: { id: string; ac
           disabled={readOnly || !connected}
           value={a.channelId ?? ''}
           onChange={(e) => {
-            const ch = channels.data?.find((c) => c.id === e.target.value);
+            const ch = options.find((c) => c.id === e.target.value);
             onChange({ ...a, channelId: ch?.id ?? null, channelName: ch?.name ?? null });
           }}
         >
-          <option value="">{fallback ? `Default channel (#${fallback})` : 'Default channel'}</option>
-          {a.channelId && !channels.data?.some((c) => c.id === a.channelId) && <option value={a.channelId}>#{a.channelName ?? a.channelId}</option>}
-          {channels.data?.map((c) => (
+          <option value="">{fallback ? `Default channel (${fallback})` : 'Default channel'}</option>
+          {a.channelId && !options.some((c) => c.id === a.channelId) && <option value={a.channelId}>{a.app === 'slack' ? '#' : ''}{a.channelName ?? a.channelId}</option>}
+          {options.map((c) => (
             <option key={c.id} value={c.id}>
-              #{c.name}
-              {c.isPrivate ? ' (private)' : ''}
+              {c.label}
             </option>
           ))}
         </Select>

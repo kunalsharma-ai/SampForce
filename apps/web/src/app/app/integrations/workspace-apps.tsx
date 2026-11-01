@@ -1,7 +1,7 @@
 'use client';
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Label, Skeleton } from '@dealflow/ui';
-import type { AppEventRow, AppStatus, SlackChannel } from '@dealflow/types';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
+import type { AppEventRow, AppStatus, SlackChannel, TeamsSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,7 +23,7 @@ const STATE: Record<AppStatus['state'], { label: string; tone: 'neutral' | 'succ
   error: { label: 'Needs reconnecting', tone: 'critical' },
 };
 
-/** Apps a workspace admin connects once for everyone: Slack first. */
+/** Apps a workspace admin connects once for everyone: Slack and Microsoft Teams. */
 export function WorkspaceApps() {
   const params = useSearchParams();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
@@ -41,7 +41,7 @@ export function WorkspaceApps() {
           {OUTCOME[error] ?? `The connection did not complete (${error}).`}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
@@ -150,6 +150,148 @@ function SlackCard({ app }: { app: AppStatus }) {
           <div>
             <p className="mb-1 text-xs font-medium">Recent activity</p>
             <ul className="space-y-1 text-xs" aria-label="Recent Slack activity">
+              {events.data.slice(0, 5).map((e) => (
+                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
+                  {relativeTime(e.createdAt)}: {e.summary}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Teams: each channel is added with a URL from the Teams Workflows app. Nothing is saved until Teams accepts a
+ * welcome card, so every listed channel has worked at least once.
+ */
+function TeamsCard({ app }: { app: AppStatus }) {
+  const qc = useQueryClient();
+  const canManage = useCan('integrations:manage');
+  const c = app.connection;
+  const settings = (c?.settings ?? { channels: [], defaultChannelId: null }) as unknown as TeamsSettings;
+  const channels = settings.channels ?? [];
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const [def, setDef] = useState(settings.defaultChannelId ?? '');
+  useEffect(() => setDef(settings.defaultChannelId ?? ''), [settings.defaultChannelId]);
+  const s = app.state === 'error' ? { label: 'Needs attention', tone: 'critical' as const } : STATE[app.state];
+  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'teams', 'events'], queryFn: () => api<AppEventRow[]>('/apps/teams/events') });
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['apps'] })]);
+  const add = useMutation({
+    mutationFn: () => api<AppStatus>('/apps/teams/channels', { method: 'POST', json: { name, webhookUrl: url } }),
+    onSuccess: () => {
+      setName('');
+      setUrl('');
+      return refresh();
+    },
+  });
+  const remove = useMutation({ mutationFn: (id: string) => api<AppStatus>(`/apps/teams/channels/${id}`, { method: 'DELETE' }), onSuccess: refresh });
+  const save = useMutation({ mutationFn: () => api<AppStatus>('/apps/teams/settings', { method: 'PUT', json: { defaultChannelId: def || null } }), onSuccess: refresh });
+  const test = useMutation({ mutationFn: (channelId: string) => api<{ channel: string }>('/apps/teams/test', { method: 'POST', json: { channelId } }), onSettled: () => refresh() });
+  const error = add.error ?? remove.error ?? save.error ?? test.error;
+
+  return (
+    <Card role="region" aria-labelledby="app-teams">
+      <CardHeader className="pb-2">
+        <CardTitle id="app-teams" className="flex flex-wrap items-center gap-2 text-sm">
+          {app.name}
+          <Badge tone={s.tone}>{s.label}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">{app.description} Add a “Post to Slack or Teams” step to any workflow and choose Microsoft Teams.</p>
+        {c?.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
+        {channels.length > 0 && (
+          <ul className="divide-y divide-border rounded-md border" aria-label="Teams channels">
+            {channels.map((ch) => (
+              <li key={ch.id} className="flex flex-wrap items-center gap-2 p-2">
+                <span className="font-medium">{ch.name}</span>
+                {ch.id === settings.defaultChannelId && <Badge>Default</Badge>}
+                {ch.lastError && <Badge tone="critical">Not accepting messages</Badge>}
+                <span className="text-xs text-muted-foreground">Added {relativeTime(ch.addedAt)}</span>
+                {canManage && (
+                  <span className="ml-auto flex gap-1">
+                    <Button size="sm" variant="outline" disabled={test.isPending} onClick={() => test.mutate(ch.id)} aria-label={`Send test message to ${ch.name}`}>
+                      Test
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={remove.isPending}
+                      aria-label={`Remove ${ch.name}`}
+                      onClick={() => window.confirm(`Remove ${ch.name}? Workflow steps that post there will fail. Also turn off its workflow in Teams.`) && remove.mutate(ch.id)}
+                    >
+                      Remove
+                    </Button>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {test.isSuccess && <p role="status" className="text-sm text-muted-foreground">Test message posted to {test.data.channel}.</p>}
+        {canManage && channels.length > 1 && (
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate();
+            }}
+          >
+            <div className="min-w-56 flex-1 space-y-1.5">
+              <Label htmlFor="teams-default-channel">Default Teams channel</Label>
+              <Select id="teams-default-channel" value={def} onChange={(e) => setDef(e.target.value)}>
+                {channels.map((ch) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button type="submit" size="sm" variant="outline" disabled={save.isPending || def === (settings.defaultChannelId ?? '')}>
+              Save
+            </Button>
+          </form>
+        )}
+        {canManage && (
+          <form
+            className="space-y-2 rounded-md border border-dashed p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              add.mutate();
+            }}
+          >
+            <p className="text-xs text-muted-foreground">
+              In Teams, open the channel’s <strong>Workflows</strong>, choose “Send webhook alerts to a channel”, and copy the URL it gives you. DealFlow posts a welcome card to check it before saving. The URL is stored encrypted.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-[12rem_1fr]">
+              <div className="space-y-1.5">
+                <Label htmlFor="teams-channel-name">Channel name</Label>
+                <Input id="teams-channel-name" value={name} maxLength={80} required onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="teams-webhook-url">Workflow URL</Label>
+                <Input id="teams-webhook-url" type="url" autoComplete="off" value={url} maxLength={2000} required onChange={(e) => setUrl(e.target.value)} />
+              </div>
+            </div>
+            <Button type="submit" size="sm" disabled={add.isPending || !name.trim() || !url.trim()}>
+              {add.isPending ? 'Checking with Teams…' : 'Add channel'}
+            </Button>
+          </form>
+        )}
+        {!canManage && <p className="text-xs text-muted-foreground">Workspace admins add Teams channels.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-critical">
+            {error.message}
+          </p>
+        )}
+        {events.data && events.data.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium">Recent activity</p>
+            <ul className="space-y-1 text-xs" aria-label="Recent Teams activity">
               {events.data.slice(0, 5).map((e) => (
                 <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
                   {relativeTime(e.createdAt)}: {e.summary}

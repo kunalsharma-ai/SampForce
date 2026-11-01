@@ -1,13 +1,14 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { type AppConnection, type AppProvider, Prisma, type TenantTx } from '@dealflow/database';
-import { APP_KEYS, type AppEventRow, type AppKey, type AppStatus, type SlackChannel, type SlackSettings } from '@dealflow/types';
+import { APP_KEYS, type AppEventRow, type AppKey, type AppStatus, type SlackChannel, type SlackSettings, type TeamsAddChannelInput, type TeamsChannel, type TeamsSettings } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox, signToken, verifyToken } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { SlackClient, SlackError } from './slack';
+import { TeamsClient, TeamsError, type TeamsMessage } from './teams';
 
 interface AppState {
   t: string;
@@ -22,8 +23,16 @@ interface StoredSlack {
   botUserId: string | null;
 }
 
+/** Teams: each channel's Workflows URL, by DealFlow channel id. The URL is the secret. */
+interface StoredTeams {
+  webhooks: Record<string, string>;
+}
+
+const TEAMS_MAX_CHANNELS = 20;
+
 const META: Record<AppKey, { name: string; description: string; provider: AppProvider }> = {
   slack: { name: 'Slack', description: 'Post deal, lead and task updates to Slack channels from workflows.', provider: 'SLACK' },
+  teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
 
 /** Thrown when an app call fails in a way a person must fix; workflow steps fail with this message. */
@@ -40,6 +49,7 @@ export class AppsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     readonly slack: SlackClient,
+    readonly teams: TeamsClient,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -51,7 +61,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig() }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [] }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -90,18 +100,21 @@ export class AppsService {
   }
 
   connectUrl(auth: AuthContext, app: AppKey): { url: string } {
+    if (app !== 'slack') {
+      throw new BadRequestException({ code: 'NOT_OAUTH', message: 'Microsoft Teams is connected by adding a channel with its Workflows URL.' });
+    }
     const missing = this.missingConfig(app);
     if (missing.length) {
       throw new ConflictException({ code: 'PROVIDER_NOT_CONFIGURED', message: `${META[app].name} is Pending Configuration on this DealFlow installation. An operator must add ${missing.join(' and ')}.` });
     }
     const state = signToken(this.stateSecret(), { t: auth.tenantId, u: auth.userId, a: app, n: randomBytes(8).toString('hex'), exp: Date.now() + 10 * 60_000 } satisfies AppState);
-    return { url: { slack: () => this.slack.authorizeUrl(state, this.redirectUri(app)) }[app]() };
+    return { url: this.slack.authorizeUrl(state, this.redirectUri(app)) };
   }
 
   /** The OAuth redirect. The state must have been issued to the same signed-in person in the same workspace. */
   async completeConnect(auth: AuthContext, app: AppKey, code: string, rawState: string, meta: RequestMeta): Promise<void> {
     const state = verifyToken<AppState>(this.stateSecret(), rawState);
-    if (!state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
+    if (app !== 'slack' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
       throw new BadRequestException({ code: 'OAUTH_STATE_INVALID', message: 'The connect link expired or belongs to another session. Try connecting again.' });
     }
     const install = await this.slack.exchangeCode(code, this.redirectUri(app));
@@ -129,11 +142,15 @@ export class AppsService {
   async disconnect(auth: AuthContext, app: AppKey, meta: RequestMeta): Promise<void> {
     const conn = await this.prisma.run(auth, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: META[app].provider } } }));
     if (!conn) return;
-    try {
-      await this.slack.revoke(this.creds(conn).accessToken);
-    } catch {
-      // The token is deleted below either way; Slack may already have revoked it.
+    if (app === 'slack') {
+      try {
+        await this.slack.revoke(this.creds(conn).accessToken);
+      } catch {
+        // The token is deleted below either way; Slack may already have revoked it.
+      }
     }
+    // Teams Workflows URLs cannot be revoked from outside; deleting them here is all DealFlow can do, and the
+    // Integrations page tells the admin to turn the workflow off in Teams as well.
     await this.prisma.run(auth, async (tx) => {
       await tx.appConnection.delete({ where: { id: conn.id } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.disconnected', entityType: 'app_connection', entityId: conn.id, metadata: { app, account: conn.accountName }, meta });
@@ -180,6 +197,133 @@ export class AppsService {
       await this.recordEvent(tenantId, conn, { kind: 'message.failed', ok: false, externalId: null, summary: `Not posted to ${label}: ${message}`, actorUserId: input.actorUserId, entityType: input.entityType, entityId: input.entityId });
       throw new AppError(message);
     }
+  }
+
+  // ───── Microsoft Teams ─────
+
+  /**
+   * Adds a channel by its Workflows URL. A welcome card is posted first: the channel is saved only if Teams accepts
+   * it, so a listed channel is one that has worked at least once.
+   */
+  async teamsAddChannel(auth: AuthContext, input: TeamsAddChannelInput, meta: RequestMeta): Promise<AppStatus> {
+    const existing = await this.prisma.run(auth, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: 'TEAMS' } } }));
+    const stored: StoredTeams = existing ? this.teamsCreds(existing) : { webhooks: {} };
+    const settings = existing ? teamsSettings(existing) : { channels: [], defaultChannelId: null };
+    const url = input.webhookUrl.trim();
+    const dupe = Object.entries(stored.webhooks).find(([, u]) => u === url);
+    if (dupe) throw new AppError(`That workflow URL is already added as "${settings.channels.find((c) => c.id === dupe[0])?.name ?? 'another channel'}".`);
+    if (settings.channels.length >= TEAMS_MAX_CHANNELS) throw new AppError(`A workspace can add up to ${TEAMS_MAX_CHANNELS} Teams channels.`);
+    try {
+      await this.teams.post(url, { text: `**DealFlow is connected to ${input.name}.** Workflow updates will appear in this channel.`, link: null });
+    } catch (e) {
+      if (e instanceof TeamsError) throw new AppError(e.message);
+      throw e;
+    }
+    const channel: TeamsChannel = { id: `tc_${randomBytes(6).toString('hex')}`, name: input.name, addedAt: new Date().toISOString(), lastError: null };
+    const next: TeamsSettings = { channels: [...settings.channels, channel], defaultChannelId: settings.defaultChannelId ?? channel.id };
+    const data = {
+      externalAccountId: 'workflows',
+      accountName: 'Microsoft Teams',
+      scopes: [],
+      credentialsEncrypted: this.box.seal(JSON.stringify({ webhooks: { ...stored.webhooks, [channel.id]: url } } satisfies StoredTeams)),
+      settings: next as unknown as Prisma.InputJsonValue,
+      status: teamsHealthy(next) ? ('CONNECTED' as const) : ('ERROR' as const),
+      lastUsedAt: new Date(),
+    };
+    await this.prisma.run(auth, async (tx) => {
+      const row = await tx.appConnection.upsert({
+        where: { tenantId_provider: { tenantId: auth.tenantId, provider: 'TEAMS' } },
+        create: { tenantId: auth.tenantId, provider: 'TEAMS', connectedById: auth.userId, lastError: null, ...data },
+        update: data,
+      });
+      // The URL itself is a secret: only a short fingerprint goes to the audit log.
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: existing ? 'app.channel_added' : 'app.connected', entityType: 'app_connection', entityId: row.id, metadata: { app: 'teams', channel: channel.name, channelId: channel.id, urlFingerprint: fingerprint(url) }, meta });
+    });
+    const conn = await this.requireConnection(auth.tenantId, 'teams');
+    await this.recordEvent(auth.tenantId, conn, { kind: 'channel.added', ok: true, externalId: channel.id, summary: `Added ${channel.name}; welcome card accepted by Teams`, actorUserId: auth.userId });
+    return (await this.status(auth)).find((s) => s.key === 'teams')!;
+  }
+
+  async teamsRemoveChannel(auth: AuthContext, channelId: string, meta: RequestMeta): Promise<AppStatus> {
+    const conn = await this.requireConnection(auth.tenantId, 'teams');
+    const settings = teamsSettings(conn);
+    const channel = settings.channels.find((c) => c.id === channelId);
+    if (!channel) throw new NotFoundException({ code: 'NOT_FOUND', message: 'That Teams channel is not in this workspace.' });
+    const stored = this.teamsCreds(conn);
+    delete stored.webhooks[channelId];
+    const channels = settings.channels.filter((c) => c.id !== channelId);
+    await this.prisma.run(auth, async (tx) => {
+      if (channels.length === 0) {
+        await tx.appConnection.delete({ where: { id: conn.id } });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.disconnected', entityType: 'app_connection', entityId: conn.id, metadata: { app: 'teams', lastChannel: channel.name }, meta });
+        return;
+      }
+      const next: TeamsSettings = { channels, defaultChannelId: settings.defaultChannelId === channelId ? channels[0]!.id : settings.defaultChannelId };
+      await tx.appConnection.update({
+        where: { id: conn.id },
+        data: { settings: next as unknown as Prisma.InputJsonValue, credentialsEncrypted: this.box.seal(JSON.stringify(stored)), status: teamsHealthy(next) ? 'CONNECTED' : 'ERROR', lastError: teamsHealthy(next) ? null : conn.lastError },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.channel_removed', entityType: 'app_connection', entityId: conn.id, metadata: { app: 'teams', channel: channel.name, channelId }, meta });
+    });
+    return (await this.status(auth)).find((s) => s.key === 'teams')!;
+  }
+
+  async teamsDefault(auth: AuthContext, defaultChannelId: string | null, meta: RequestMeta): Promise<AppStatus> {
+    const conn = await this.requireConnection(auth.tenantId, 'teams');
+    const settings = teamsSettings(conn);
+    if (defaultChannelId && !settings.channels.some((c) => c.id === defaultChannelId)) throw new AppError('Choose one of the Teams channels added here.');
+    await this.prisma.run(auth, async (tx) => {
+      await tx.appConnection.update({ where: { id: conn.id }, data: { settings: { ...settings, defaultChannelId } as unknown as Prisma.InputJsonValue } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.settings_changed', entityType: 'app_connection', entityId: conn.id, metadata: { app: 'teams', defaultChannelId }, meta });
+    });
+    return (await this.status(auth)).find((s) => s.key === 'teams')!;
+  }
+
+  /** Posts a card to a Teams channel and records it. `channelId` null means the default channel. */
+  async postToTeams(
+    tenantId: string,
+    input: { channelId: string | null; message: TeamsMessage; actorUserId: string | null; entityType?: string | null; entityId?: string | null; source: string },
+  ): Promise<{ channel: string }> {
+    const conn = await this.requireConnection(tenantId, 'teams');
+    const settings = teamsSettings(conn);
+    const id = input.channelId ?? settings.defaultChannelId;
+    if (!id) throw new AppError('Choose a Teams channel for this step, or set a default channel in Integrations.');
+    const channel = settings.channels.find((c) => c.id === id);
+    const url = this.teamsCreds(conn).webhooks[id];
+    if (!channel || !url) throw new AppError('That Teams channel was removed. Choose another channel for this step.');
+    try {
+      await this.teams.post(url, input.message);
+    } catch (e) {
+      const err = e instanceof TeamsError ? e : null;
+      const message = err?.message ?? 'Teams could not be reached.';
+      if (err?.revoked) await this.markTeamsChannel(tenantId, conn.id, id, message);
+      await this.recordEvent(tenantId, conn, { kind: 'message.failed', ok: false, externalId: id, summary: `Not posted to ${channel.name}: ${message}`, actorUserId: input.actorUserId, entityType: input.entityType, entityId: input.entityId });
+      if (err) throw new AppError(message);
+      throw e;
+    }
+    await this.markTeamsChannel(tenantId, conn.id, id, null);
+    await this.recordEvent(tenantId, conn, { kind: 'message.sent', ok: true, externalId: id, summary: `Posted to ${channel.name} (${input.source})`, actorUserId: input.actorUserId, entityType: input.entityType, entityId: input.entityId });
+    return { channel: channel.name };
+  }
+
+  /** Sets or clears one channel's error; the app shows Needs attention while any channel has one. */
+  private async markTeamsChannel(tenantId: string, connectionId: string, channelId: string, error: string | null): Promise<void> {
+    await this.prisma.run({ tenantId }, async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM app_connections WHERE id = ${connectionId}::uuid FOR UPDATE`;
+      const conn = await tx.appConnection.findUnique({ where: { id: connectionId } });
+      if (!conn) return;
+      const s = teamsSettings(conn);
+      const next: TeamsSettings = { ...s, channels: s.channels.map((c) => (c.id === channelId ? { ...c, lastError: error } : c)) };
+      const broken = next.channels.find((c) => c.lastError);
+      await tx.appConnection.update({
+        where: { id: connectionId },
+        data: { settings: next as unknown as Prisma.InputJsonValue, status: broken ? 'ERROR' : 'CONNECTED', lastError: broken ? `${broken.name}: ${broken.lastError}` : null, ...(error ? {} : { lastUsedAt: new Date() }) },
+      });
+    });
+  }
+
+  private teamsCreds(conn: AppConnection): StoredTeams {
+    return JSON.parse(this.box.open(conn.credentialsEncrypted)) as StoredTeams;
   }
 
   // ───── Shared ─────
@@ -238,6 +382,19 @@ export class AppsService {
   private stateSecret(): string {
     return `${this.env.JWT_ACCESS_SECRET}:app-oauth-state`;
   }
+}
+
+function teamsSettings(conn: AppConnection): TeamsSettings {
+  const s = conn.settings as Partial<TeamsSettings>;
+  return { channels: (s.channels ?? []).map((c) => ({ ...c, lastError: c.lastError ?? null })), defaultChannelId: s.defaultChannelId ?? null };
+}
+
+function teamsHealthy(s: TeamsSettings): boolean {
+  return !s.channels.some((c) => c.lastError);
+}
+
+function fingerprint(secret: string): string {
+  return createHash('sha256').update(secret).digest('hex').slice(0, 12);
 }
 
 function channelLabel(id: string, settings: Partial<SlackSettings>): string {

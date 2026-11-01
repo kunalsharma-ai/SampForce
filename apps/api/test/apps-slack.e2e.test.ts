@@ -20,7 +20,7 @@ describe('Slack without app credentials', () => {
     try {
       const owner = await registerUser(app, 'No Slack Ltd');
       const apps = (await api(owner).get('/apps').expect(200)).body;
-      expect(apps).toEqual([expect.objectContaining({ key: 'slack', state: 'pending_configuration', missingConfig: ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET'], connection: null })]);
+      expect(apps[0]).toEqual(expect.objectContaining({ key: 'slack', state: 'pending_configuration', missingConfig: ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET'], connection: null }));
       expect((await api(owner).post('/apps/slack/connect', {}).expect(409)).body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
     } finally {
       await app.close();

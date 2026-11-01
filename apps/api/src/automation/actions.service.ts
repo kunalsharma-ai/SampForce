@@ -3,6 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { Prisma } from '@dealflow/database';
 import { AppError, AppsService } from '../apps/apps.service';
 import { slackEscape } from '../apps/slack';
+import { teamsEscape } from '../apps/teams';
 import { AuditService } from '../audit/audit.service';
 import { createHmac } from 'node:crypto';
 import {
@@ -210,9 +211,18 @@ export class WorkflowActions {
         return { status: res.status, host: url.host };
       }
       case 'post_to_chat': {
-        // Record values are escaped so they cannot add Slack links or @mentions; the record link is added by DealFlow.
+        // Record values are escaped so they cannot add links or @mentions; the record link is added by DealFlow.
         const link = recordLink(entity, id);
         const url = link ? `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${link}` : null;
+        if (action.app === 'teams') {
+          try {
+            const r = await this.apps.postToTeams(actor.tenantId, { channelId: action.channelId, message: { text: teamsEscape(text(action.text)), link: url ? { title: 'Open in DealFlow', url } : null }, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
+            return { app: 'teams', channel: r.channel };
+          } catch (e) {
+            if (e instanceof AppError) throw new ActionError(e.message);
+            throw e;
+          }
+        }
         const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in DealFlow>` : '');
         try {
           const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });

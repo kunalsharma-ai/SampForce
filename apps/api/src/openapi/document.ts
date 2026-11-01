@@ -161,6 +161,10 @@ import {
   PROVIDER_CHECK_KEYS,
   slackSettingsSchema,
   slackTestSchema,
+  teamsAddChannelSchema,
+  teamsChannelId,
+  teamsSettingsSchema,
+  teamsTestSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -315,7 +319,7 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack']) }) };
+  const appParam = { params: z.object({ app: z.enum(['slack', 'teams']) }) };
   action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
@@ -328,6 +332,12 @@ export function buildOpenApiDocument(): object {
   action('get', '/apps/slack/channels', 'Workspace apps', 'Public and private Slack channels the bot can see (automation:manage)');
   action('put', '/apps/slack/settings', 'Workspace apps', 'Set the default channel for workflow posts (integrations:manage)', slackSettingsSchema);
   action('post', '/apps/slack/test', 'Workspace apps', 'Post a test message to a channel or the default channel; 5 a minute (integrations:manage)', slackTestSchema);
+  action('get', '/apps/teams/channels', 'Workspace apps', 'Teams channels added in Integrations, without their URLs (automation:manage)');
+  action('post', '/apps/teams/channels', 'Workspace apps', 'Add a Teams channel by its Workflows URL; saved only if Teams accepts a welcome card; 10 a minute (integrations:manage)', teamsAddChannelSchema);
+  r.registerPath({ method: 'delete', path: '/apps/teams/channels/{id}', tags: ['Workspace apps'], summary: 'Remove a Teams channel; removing the last one disconnects Teams (integrations:manage)', security: secured,
+    request: { params: z.object({ id: teamsChannelId }) }, responses: { 200: ok('App status'), ...notFound, ...errors } });
+  action('put', '/apps/teams/settings', 'Workspace apps', 'Set the default Teams channel (integrations:manage)', teamsSettingsSchema);
+  action('post', '/apps/teams/test', 'Workspace apps', 'Post a test card to a Teams channel; 5 a minute (integrations:manage)', teamsTestSchema);
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);
