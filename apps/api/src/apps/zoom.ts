@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { TranscriptSegment } from '@dealflow/types';
-import { assertPublicUrl } from '../common/net-guard';
+import { assertPublicUrl, publicFetch } from '../common/net-guard';
 import { API_ENV, type ApiEnv } from '../common/env';
 
 export interface ZoomTokens {
@@ -115,7 +115,7 @@ export class ZoomClient {
     let res: Response | null = null;
     for (let hop = 0; hop < 4; hop++) {
       const onZoom = /(^|\.)zoom\.us$/i.test(target.hostname) || hop === 0;
-      res = await fetch(target, { headers: onZoom ? { authorization: `Bearer ${downloadToken}` } : {}, redirect: 'manual', signal: AbortSignal.timeout(30_000) }).catch(() => {
+      res = await publicFetch(target, { headers: onZoom ? { authorization: `Bearer ${downloadToken}` } : {}, redirect: 'manual', signal: AbortSignal.timeout(30_000) }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS).catch(() => {
         throw new ZoomError('download_failed', 'Zoom could not be reached for the transcript.');
       });
       const next = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;

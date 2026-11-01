@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { assertPublicUrl, UnsafeTargetError } from '../common/net-guard';
+import { assertPublicUrl, publicFetch, UnsafeTargetError } from '../common/net-guard';
 import { API_ENV, type ApiEnv } from '../common/env';
 
 /**
@@ -77,8 +77,9 @@ export class TeamsClient {
     };
     let res: Response;
     try {
-      res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(card), redirect: 'error', signal: AbortSignal.timeout(10_000) });
+      res = await publicFetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(card), redirect: 'error', signal: AbortSignal.timeout(10_000) }, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
     } catch (e) {
+      if (e instanceof UnsafeTargetError) throw new TeamsError('invalid_url', e.message);
       throw new TeamsError('unavailable', e instanceof Error && e.name === 'TimeoutError' ? 'Teams did not answer in time.' : 'Teams could not be reached.');
     }
     await res.body?.cancel().catch(() => undefined);

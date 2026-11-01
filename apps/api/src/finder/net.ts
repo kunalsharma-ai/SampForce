@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { resolveMx } from 'node:dns/promises';
 import { API_ENV, type ApiEnv } from '../common/env';
-import { assertPublicUrl } from '../common/net-guard';
+import { publicFetch } from '../common/net-guard';
 
 const TIMEOUT_MS = 6000;
 const MAX_BYTES = 1_000_000;
@@ -46,8 +46,7 @@ export class FinderNet {
         if (fx) {
           res = await fetch(`${fx}/site/${u.host}${u.pathname}${u.search}`, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS) });
         } else {
-          await assertPublicUrl(target, false);
-          res = await fetch(target, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': FINDER_USER_AGENT, accept: 'text/html' } });
+          res = await publicFetch(target, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': FINDER_USER_AGENT, accept: 'text/html' } }, false);
         }
       } catch {
         return null;
