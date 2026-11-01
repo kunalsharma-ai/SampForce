@@ -7,7 +7,7 @@ import { PrismaService } from '../common/prisma.service';
 import { assertRefs, diff, notFound, orderBy, ownerRefs, paging, consentFields } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
-const SORTABLE = ['firstName', 'lastName', 'email', 'createdAt', 'updatedAt'] as const;
+const SORTABLE = ['firstName', 'lastName', 'email', 'jobTitle', 'createdAt', 'updatedAt'] as const;
 const include = { company: { select: { id: true, name: true } } } satisfies Prisma.ContactInclude;
 type ContactWith = Prisma.ContactGetPayload<{ include: typeof include }>;
 

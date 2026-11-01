@@ -49,7 +49,7 @@ export const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   q: z.string().trim().max(200).optional(),
-  sort: z.string().max(40).optional(),
+  sort: z.string().max(80).optional(),
   order: z.enum(['asc', 'desc']).default('desc'),
   ownerId: z.string().uuid().optional(),
   status: z.string().max(40).optional(),

@@ -23,6 +23,19 @@
     text-decoration-line: underline;
     text-underline-offset: 2px;
   }
+  /* A table can override the interface density for its rows (saved with the view). */
+  .df-table[data-density='comfortable'] {
+    --cell-py: 0.875rem;
+  }
+  .df-table[data-density='balanced'] {
+    --cell-py: 0.625rem;
+  }
+  .df-table[data-density='compact'] {
+    --cell-py: 0.4375rem;
+  }
+  .df-table[data-density='ultra'] {
+    --cell-py: 0.25rem;
+  }
   /* Focus Workspace (Ctrl .): only the page and the essentials of the top bar remain. */
   html[data-focus] [data-shell='sidebar'],
   html[data-focus] [data-shell='ambient'],

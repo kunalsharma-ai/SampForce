@@ -226,3 +226,8 @@ caller's own rows (`apps/api/test/preferences.e2e.test.ts`).
 `module_order` and `hidden_modules`. Forced RLS policy `own_navigation` requires both
 `tenant_id = app_current_tenant()` and `user_id = app_current_user()`, so members of the same workspace cannot read
 each other's favourites or history.
+
+**Saved table views (2026-11-01, ADR 0042).** Migration `20261101012000_saved_views` adds `saved_views` (tenant,
+creator, `entity` limited by a CHECK to leads/contacts/companies/deals, `name` unique per creator and list, `shared`,
+`config` JSON validated by `viewConfigSchema`). Forced RLS: `saved_views_read` allows the creator's own rows and
+shared rows in the current workspace; insert, update and delete policies require `user_id = app_current_user()`.

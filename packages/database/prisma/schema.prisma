@@ -65,6 +65,7 @@ model User {
   preferences        UserPreference?
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
+  savedViews         SavedView[]
 
   @@map("users")
 }
@@ -110,6 +111,27 @@ model WorkspaceNavigation {
 
   @@id([tenantId, userId])
   @@map("workspace_navigation")
+}
+
+/// A saved data table view (columns, widths, sort, filters, density) for one list. Visible to its creator, and to the
+/// whole workspace when shared; only the creator can change or delete it (enforced by RLS).
+model SavedView {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  entity    String
+  name      String
+  shared    Boolean  @default(false)
+  config    Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, entity, name])
+  @@index([tenantId, entity])
+  @@map("saved_views")
 }
 
 /// One-time password reset links. Only a SHA-256 hash of the token is stored; a link works once, for a short time.
@@ -206,6 +228,7 @@ model Tenant {
 
   subscription           Subscription?
   navigation             WorkspaceNavigation[]
+  savedViews             SavedView[]
   roles                  Role[]
   memberships            Membership[]
   teams                  Team[]

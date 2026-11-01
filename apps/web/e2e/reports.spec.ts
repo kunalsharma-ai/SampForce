@@ -36,7 +36,7 @@ test('build a report from a template, save it and pin it to a dashboard', async 
   await expect(page.getByText('No reports yet.')).toBeVisible();
   await expectNoA11yViolations(page);
 
-  await page.getByRole('link', { name: 'Open pipeline by stage' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Open pipeline by stage' }).click();
   await expect(page.getByRole('img', { name: /Bar chart of total amount by stage/ })).toBeVisible();
   await expect(page.getByText('2 deals match')).toBeVisible();
   await page.getByRole('button', { name: 'Table' }).click();
@@ -64,7 +64,7 @@ test('build a report from a template, save it and pin it to a dashboard', async 
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await page.getByRole('button', { name: 'Save dashboard' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Monday review' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open pipeline by stage' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Open pipeline by stage' })).toBeVisible();
   await expect(page.getByRole('img', { name: /Bar chart/ })).toBeVisible();
   await expectNoA11yViolations(page);
 });

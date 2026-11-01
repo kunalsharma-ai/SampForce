@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import type { ListQuery, OwnerRef } from '@dealflow/types';
+import { type ListQuery, type OwnerRef, parseSortParam } from '@dealflow/types';
 
 export function notFound(entity: string): NotFoundException {
   return new NotFoundException({ code: 'NOT_FOUND', message: `${entity} not found.` });
@@ -18,9 +18,17 @@ export function paging(q: Pick<ListQuery, 'page' | 'pageSize'>) {
   return { skip: (q.page - 1) * q.pageSize, take: q.pageSize };
 }
 
+/**
+ * Prisma ordering from the list query. `sort` is one field (direction from `order`) or up to three comma-separated
+ * fields, each prefixed with "-" for descending ("status,-createdAt"). Unknown fields are ignored; the id is always
+ * the final tie-breaker so pages are stable.
+ */
 export function orderBy<T extends string>(q: Pick<ListQuery, 'sort' | 'order'>, allowed: readonly T[], fallback: T) {
-  const field = (allowed as readonly string[]).includes(q.sort ?? '') ? (q.sort as T) : fallback;
-  return [{ [field]: q.order }, { id: q.order }] as Record<string, 'asc' | 'desc'>[];
+  const keys = parseSortParam(q.sort, q.order).filter((k) => (allowed as readonly string[]).includes(k.field));
+  const unique = keys.filter((k, i) => keys.findIndex((x) => x.field === k.field) === i);
+  const list = unique.length ? unique : [{ field: fallback, desc: q.order === 'desc' }];
+  const last = list[list.length - 1]!;
+  return [...list.map((k) => ({ [k.field]: k.desc ? 'desc' : 'asc' })), { id: last.desc ? 'desc' : 'asc' }] as Record<string, 'asc' | 'desc'>[];
 }
 
 /** Resolves user ids to display names. Users are global, so this never reveals tenant data. */
