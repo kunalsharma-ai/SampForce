@@ -219,3 +219,10 @@ user: `appearance` JSON validated by `appearanceSchema`) and `user_saved_themes`
 name, at most 20 enforced by the API), plus `tenants.default_appearance`. The two user tables carry no `tenant_id` and
 no RLS, like `password_reset_tokens`: a person's theme follows them across workspaces, and the API only reads the
 caller's own rows (`apps/api/test/preferences.e2e.test.ts`).
+
+**Personal navigation (2026-11-01, ADR 0041).** Migration `20261101011000_workspace_navigation` adds
+`workspace_navigation`, one row per person per workspace (primary key `tenant_id, user_id`) with `pinned` and
+`recent` (JSON lists of `{href, label, kind}`, validated by `navItemSchema`; links must be `/app/...` paths),
+`module_order` and `hidden_modules`. Forced RLS policy `own_navigation` requires both
+`tenant_id = app_current_tenant()` and `user_id = app_current_user()`, so members of the same workspace cannot read
+each other's favourites or history.

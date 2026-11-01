@@ -64,6 +64,7 @@ model User {
   gamificationAwards GamificationAward[]
   preferences        UserPreference?
   savedThemes        UserSavedTheme[]
+  navigation         WorkspaceNavigation[]
 
   @@map("users")
 }
@@ -91,6 +92,24 @@ model UserSavedTheme {
 
   @@unique([userId, name])
   @@map("user_saved_themes")
+}
+
+/// A person's own navigation in one workspace: pinned pages and records, recent visits, sidebar order and hidden
+/// modules. RLS limits rows to the current workspace AND the current user.
+model WorkspaceNavigation {
+  tenantId      String   @map("tenant_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  pinned        Json     @default("[]")
+  recent        Json     @default("[]")
+  moduleOrder   String[] @default([]) @map("module_order")
+  hiddenModules String[] @default([]) @map("hidden_modules")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, userId])
+  @@map("workspace_navigation")
 }
 
 /// One-time password reset links. Only a SHA-256 hash of the token is stored; a link works once, for a short time.
@@ -186,6 +205,7 @@ model Tenant {
   deletedAt             DateTime?         @map("deleted_at") @db.Timestamptz(3)
 
   subscription           Subscription?
+  navigation             WorkspaceNavigation[]
   roles                  Role[]
   memberships            Membership[]
   teams                  Team[]

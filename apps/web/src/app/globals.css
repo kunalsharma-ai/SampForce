@@ -23,6 +23,12 @@
     text-decoration-line: underline;
     text-underline-offset: 2px;
   }
+  /* Focus Workspace (Ctrl .): only the page and the essentials of the top bar remain. */
+  html[data-focus] [data-shell='sidebar'],
+  html[data-focus] [data-shell='ambient'],
+  html[data-focus] [data-secondary] {
+    display: none !important;
+  }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }

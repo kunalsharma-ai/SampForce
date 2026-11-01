@@ -1,7 +1,18 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
-import { type Appearance, appearanceSchema, type SavedThemeInput, savedThemeInputSchema } from '@dealflow/types';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import {
+  type Appearance,
+  appearanceSchema,
+  type NavItem,
+  navItemSchema,
+  type SavedThemeInput,
+  savedThemeInputSchema,
+  type UpdateNavigationInput,
+  updateNavigationSchema,
+} from '@dealflow/types';
 import { AllowRestricted, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { NavigationService } from './navigation.service';
 import { PreferencesService } from './preferences.service';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
@@ -9,7 +20,10 @@ const uuid = new ParseUUIDPipe({ version: '4' });
 /** The signed-in person's own interface settings and saved themes. Needs no workspace permission. */
 @Controller('me')
 export class PreferencesController {
-  constructor(private readonly prefs: PreferencesService) {}
+  constructor(
+    private readonly prefs: PreferencesService,
+    private readonly nav: NavigationService,
+  ) {}
 
   /** Readable while a security policy restricts the session, so the policy screen still uses the person's theme. */
   @AllowRestricted()
@@ -42,6 +56,29 @@ export class PreferencesController {
   @HttpCode(204)
   deleteTheme(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.prefs.deleteTheme(auth, id);
+  }
+
+  /** Pinned pages and records, recent visits and sidebar layout in the current workspace. */
+  @Get('navigation')
+  navigation(@Auth() auth: AuthContext) {
+    return this.nav.get(auth);
+  }
+
+  @Patch('navigation')
+  updateNavigation(@Auth() auth: AuthContext, @Body(new ZodPipe(updateNavigationSchema)) body: UpdateNavigationInput) {
+    return this.nav.update(auth, body);
+  }
+
+  @Post('navigation/visits')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  visit(@Auth() auth: AuthContext, @Body(new ZodPipe(navItemSchema)) body: NavItem) {
+    return this.nav.visit(auth, body);
+  }
+
+  @Delete('navigation/visits')
+  clearVisits(@Auth() auth: AuthContext) {
+    return this.nav.clearRecent(auth);
   }
 }
 

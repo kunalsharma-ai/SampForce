@@ -181,6 +181,8 @@ import {
   twilioConnectSchema,
   appearanceSchema,
   savedThemeInputSchema,
+  navItemSchema,
+  updateNavigationSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -825,6 +827,10 @@ export function buildOpenApiDocument(): object {
   action('delete', '/me/themes/{id}', 'Appearance', 'Delete a saved theme');
   action('put', '/tenants/current/appearance', 'Appearance', 'Set the workspace default appearance (tenant:manage, audited)', appearanceSchema);
   action('delete', '/tenants/current/appearance', 'Appearance', 'Remove the workspace default appearance (tenant:manage, audited)');
+  action('get', '/me/navigation', 'Navigation', 'The person’s favourites, recent pages and sidebar layout in the current workspace');
+  action('patch', '/me/navigation', 'Navigation', 'Update favourites (at most 20), module order or hidden modules (Settings cannot be hidden)', updateNavigationSchema);
+  action('post', '/me/navigation/visits', 'Navigation', 'Record a page visit at the front of the recent list (at most 15 kept)', navItemSchema);
+  action('delete', '/me/navigation/visits', 'Navigation', 'Clear the recent list');
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: '3.1.0',

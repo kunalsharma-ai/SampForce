@@ -52,10 +52,23 @@ Typography: Inter / system UI stack, tabular numerals for metrics. Spacing on a 
 
 ## 3. Layout
 
-- **Top bar:** logo (mobile), global search (Ctrl/⌘ K), Copilot, Create, notifications, tasks, calendar,
-  integration status, help, account menu (workspace switcher, settings, sign out).
-- **Sidebar:** 26 modules in five groups (Workspace, Engage, Intelligence, Revenue, Organization), collapsible
-  to icons with tooltips; planned modules carry a phase badge. On mobile it becomes a drawer.
+- **Top bar:** logo (mobile), global search and commands (Ctrl/⌘ K), a star that adds the current page to
+  favourites, Copilot, Create, notifications, theme switcher, Focus Workspace, keyboard shortcuts, tasks, calendar,
+  integrations, help, account menu (workspace switcher, settings, sign out).
+- **Sidebar:** Favourites and Recent (the last five pages, labelled by their heading) above the modules in five
+  groups (Workspace, Engage, Intelligence, Revenue, Organization). Collapsible to icons with tooltips (`[`);
+  planned modules carry a phase badge. **Customize menu** reorders modules within a group and hides ones the
+  person does not use (Settings is always shown; hidden modules stay in search). All of this is saved per person
+  per workspace at `/me/navigation` (ADR 0041). On mobile it becomes a drawer.
+- **Mobile bottom bar** (below `lg`): Home, Leads, Create, Deals, Tasks. `main` has bottom padding so content is
+  never hidden behind it.
+- **Command palette:** fuzzy matching (`lib/fuzzy.ts`: substrings and initials such as "qbs"), groups for records,
+  Favourites, Recent, Create, Modules (including hidden ones), Actions (Focus Workspace, light/dark, Theme Studio,
+  Customize menu, shortcuts) and "Ask Copilot" with the typed question.
+- **Focus Workspace** (Ctrl/⌘ .): hides the sidebar, ambient background and secondary top-bar icons, with a
+  banner to exit. Kept on this device.
+- **Keyboard shortcuts** (`?` opens the sheet): `g` then a letter goes to a page (h, l, c, o, d, q, t, m, r, s);
+  `n` then a letter creates (l, c, o, d, t). Letter shortcuts never fire while typing in a field.
 - **Content:** page header (title, description, actions) then cards. Max widths per page type keep line lengths
   readable.
 
@@ -92,6 +105,7 @@ Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each la
 | Sign up / sign in | **Built** | Shared Zod validation, server errors mapped to fields |
 | Command Center | **Built** | 15 KPIs from the API with formula tooltips; pipeline chart/table; audited activity stream; roadmap card |
 | Settings | **Built** | Workspace (role-gated), quick appearance, motion and density |
+| Shell and navigation | **Built** | Favourites, recent pages, customisable menu, Focus Workspace, shortcuts sheet, fuzzy command palette, mobile bottom bar |
 | Theme Studio | **Built** | 13 themes, colour and layout controls, live preview, readability check, saved themes, workspace default |
 | Team Management | **Built** | Members, inline role change (role-gated), role catalogue |
 | Administration | **Built** | Paginated audit log |

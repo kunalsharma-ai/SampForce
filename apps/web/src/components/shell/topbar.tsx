@@ -21,9 +21,12 @@ import {
   CalendarDays,
   Check,
   CircleHelp,
+  Keyboard,
   ListTodo,
   LogOut,
+  Maximize2,
   Menu,
+  Minimize2,
   Plug,
   Plus,
   Search,
@@ -31,13 +34,15 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Permission } from '@dealflow/types';
 import { useSession, useSignOut, useSwitchTenant } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
+import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
 import { CommandPalette } from './command-palette';
+import { FavouriteButton } from './favourite-button';
 import { CopilotPanel } from './copilot-panel';
 import { VoiceNoteButton } from '../voice/voice-note';
 import { NotificationsMenu } from './notifications-menu';
@@ -56,7 +61,7 @@ function IconLink({ href, label, icon: Icon }: { href: string; label: string; ic
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button asChild variant="ghost" size="icon" className="hidden md:inline-flex">
+        <Button asChild variant="ghost" size="icon" className="hidden md:inline-flex" data-secondary="">
           <Link href={href} aria-label={label}>
             <Icon aria-hidden />
           </Link>
@@ -72,21 +77,15 @@ export function Topbar() {
   const openCreate = useQuickCreate((s) => s.open);
   const signOut = useSignOut();
   const switchTenant = useSwitchTenant();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const searchOpen = useShell((s) => s.searchOpen);
+  const setSearchOpen = useShell((s) => s.setSearchOpen);
+  const focus = useShell((s) => s.focus);
+  const toggleFocus = useShell((s) => s.toggleFocus);
+  const setShortcutsOpen = useShell((s) => s.setShortcutsOpen);
   const copilotOpen = useCopilot((s) => s.open);
   const setCopilotOpen = useCopilot((s) => s.setOpen);
   const [navOpen, setNavOpen] = useState(false);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchOpen((v) => !v);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   const initials = data?.user.name
     .split(/\s+/)
@@ -105,7 +104,7 @@ export function Topbar() {
           <DialogTitle className="px-4 pb-4">
             <Logo />
           </DialogTitle>
-          <SidebarNav onNavigate={() => setNavOpen(false)} />
+          <SidebarNav onNavigate={() => setNavOpen(false)} idPrefix="mnav" />
         </DialogContent>
       </Dialog>
 
@@ -119,6 +118,7 @@ export function Topbar() {
         <kbd className="hidden rounded border border-border px-1.5 text-[10px] sm:inline">Ctrl K</kbd>
       </button>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
+      <FavouriteButton />
 
       <div className="ml-auto flex items-center gap-1">
         <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => setCopilotOpen(true)}>
@@ -129,7 +129,7 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" aria-label="Quick create">
+            <Button size="sm" aria-label="Quick create" className="hidden lg:inline-flex">
               <Plus aria-hidden />
               <span className="hidden sm:inline">Create</span>
             </Button>
@@ -144,12 +144,30 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <span className="hidden md:inline-flex">
+        <span className="hidden md:inline-flex" data-secondary="">
           <VoiceNoteButton record={null} variant="ghost" iconOnly label="Quick voice note" />
         </span>
 
         <NotificationsMenu />
-        <ThemeSwitcher />
+        <span data-secondary="" className="contents">
+          <ThemeSwitcher />
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" aria-pressed={focus} aria-label={focus ? 'Exit Focus Workspace' : 'Focus Workspace'} onClick={toggleFocus} className="hidden sm:inline-flex">
+              {focus ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{focus ? 'Exit Focus Workspace (Ctrl .)' : 'Focus Workspace (Ctrl .)'}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Keyboard shortcuts" onClick={() => setShortcutsOpen(true)} className="hidden md:inline-flex" data-secondary="">
+              <Keyboard aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
+        </Tooltip>
 
         <IconLink href="/app/activities" label="Tasks" icon={ListTodo} />
         <IconLink href="/app/meetings" label="Calendar" icon={CalendarDays} />

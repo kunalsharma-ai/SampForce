@@ -70,7 +70,7 @@ test('works a lead from capture to a won deal', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 }).getByText('Won')).toBeVisible();
 
   await page.goto('/app/accounts');
-  await expect(page.getByRole('link', { name: 'Hut Eight' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Hut Eight' })).toBeVisible();
 });
 
 test('moves a deal on the board with the keyboard', async ({ page }) => {
@@ -132,7 +132,7 @@ test('imports leads from CSV after a check, and finds them in search', async ({ 
   await expect(page.getByText('Import complete')).toBeVisible();
 
   await page.keyboard.press('Control+k');
-  await page.getByPlaceholder('Search leads, contacts, companies, deals or modules…').fill('hamilton');
+  await page.getByPlaceholder('Search records, pages and commands…').fill('hamilton');
   await page.getByRole('option', { name: /Margaret Hamilton/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: /Margaret Hamilton/ })).toBeVisible();
 });

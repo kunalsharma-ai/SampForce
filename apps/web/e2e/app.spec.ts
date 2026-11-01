@@ -34,7 +34,8 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
 
 test('every sidebar entry leads to a working page', async ({ page }) => {
   await signUp(page);
-  const nav = page.getByRole('navigation', { name: 'Main' });
+  // Module sections only: Favourites and Recent repeat some of the same links.
+  const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');
   for (const label of SIDEBAR) {
     await nav.getByRole('link', { name: new RegExp(`^${label.replace(/[&]/g, '\\&')}`) }).click();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -68,7 +69,7 @@ test('persists theme and motion preferences across reloads', async ({ page }) =>
 test('opens global search with the keyboard and navigates', async ({ page }) => {
   await signUp(page);
   await page.keyboard.press('Control+k');
-  await page.getByPlaceholder('Search leads, contacts, companies, deals or modules…').fill('billing');
+  await page.getByPlaceholder('Search records, pages and commands…').fill('billing');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/app\/billing/);
   await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
