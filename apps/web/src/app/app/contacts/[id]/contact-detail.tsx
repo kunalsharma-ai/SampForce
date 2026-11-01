@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
+import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -57,6 +58,7 @@ export function ContactDetail({ id }: { id: string }) {
           <RelatedDeals filter={{ contactId: id }} />
           <RecordEmails contactId={id} email={c.email} />
           <RecordMeetings target={{ contactId: id }} />
+          <RecordZoomMeetings target={{ contactId: id }} />
           <RecordVoiceNotes record={{ type: 'contact', id, name: c.fullName }} />
           <RecordWebActivityCard type="contact" id={id} />
           <ActivityTimeline related={{ contactId: id }} timeline={{ entity: 'contact', id }} />

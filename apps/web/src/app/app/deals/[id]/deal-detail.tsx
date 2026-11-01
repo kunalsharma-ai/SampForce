@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DealIntelligenceCard, ProposalButton } from '@/components/ai/record-ai';
 import { MeetingNotesButton, RecordMeetings } from '@/components/meetings/record-meetings';
+import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { DealHealthTrend } from '@/components/crm/deal-health-trend';
 import { RecordConversations } from '@/components/crm/record-conversations';
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
@@ -138,6 +139,7 @@ export function DealDetail({ id }: { id: string }) {
           <DealQuotes deal={{ id, name: d.name }} />
           <RecordConversations dealId={id} />
           <RecordMeetings target={{ dealId: id }} />
+          <RecordZoomMeetings target={{ dealId: id }} />
           <RecordVoiceNotes record={{ type: 'deal', id, name: d.name }} />
           <ActivityTimeline related={{ opportunityId: id }} timeline={{ entity: 'deal', id }} />
         </div>

@@ -245,6 +245,7 @@ model Tenant {
   meetingRecords         MeetingRecord[]
   appConnections         AppConnection[]
   appEvents              AppEvent[]
+  zoomMeetings           ZoomMeeting[]
 
   @@map("tenants")
 }
@@ -2830,6 +2831,7 @@ model ProspectSettings {
 enum AppProvider {
   SLACK
   TEAMS
+  ZOOM
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
@@ -2851,8 +2853,9 @@ model AppConnection {
   createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  events AppEvent[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events       AppEvent[]
+  zoomMeetings ZoomMeeting[]
 
   @@unique([tenantId, provider])
   @@index([provider, externalAccountId])
@@ -2882,4 +2885,42 @@ model AppEvent {
 
   @@index([tenantId, provider, createdAt(sort: Desc)])
   @@map("app_events")
+}
+
+/// A Zoom meeting scheduled from DealFlow. Only these meetings' transcripts are ever imported.
+model ZoomMeeting {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  connectionId       String?  @map("connection_id") @db.Uuid
+  /// Zoom's numeric meeting id, as text.
+  zoomMeetingId      String   @map("zoom_meeting_id")
+  hostEmail          String   @map("host_email")
+  topic              String
+  startsAt           DateTime @map("starts_at") @db.Timestamptz(3)
+  durationMinutes    Int      @map("duration_minutes")
+  joinUrl            String   @map("join_url")
+  /// The organiser chose cloud recording with the transcript imported afterwards.
+  recordToCloud      Boolean  @default(false) @map("record_to_cloud")
+  leadId             String?  @map("lead_id") @db.Uuid
+  contactId          String?  @map("contact_id") @db.Uuid
+  dealId             String?  @map("deal_id") @db.Uuid
+  createdById        String   @map("created_by_id") @db.Uuid
+  activityId         String?  @map("activity_id") @db.Uuid
+  meetingRecordId    String?  @map("meeting_record_id") @db.Uuid
+  /// none, waiting (recording on), ready (Zoom sent the transcript), imported, failed
+  transcriptStatus   String   @default("none") @map("transcript_status")
+  transcriptError    String?  @map("transcript_error")
+  /// Sealed {url, token} from Zoom's recording.transcript_completed event, cleared after import.
+  transcriptSource   String?  @map("transcript_source")
+  transcriptAttempts Int      @default(0) @map("transcript_attempts")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, zoomMeetingId])
+  @@index([tenantId, startsAt])
+  @@index([transcriptStatus])
+  @@map("zoom_meetings")
 }

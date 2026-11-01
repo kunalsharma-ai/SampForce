@@ -1,3 +1,4 @@
+import { ZoomService } from '../apps/zoom.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
@@ -33,6 +34,8 @@ export interface WorkerTick {
   /** Website tracking rows deleted under each workspace's retention period. */
   visitorRetention: number;
   prospectImports: number;
+  /** Zoom transcripts imported into meeting notes. */
+  zoomTranscripts: number;
 }
 
 /**
@@ -63,6 +66,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly gamification: GamificationService,
     private readonly visitors: VisitorsService,
     private readonly prospects: ProspectsService,
+    private readonly zoom: ZoomService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -115,7 +119,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const badges = await this.gamification.sweep();
     const visitorRetention = await this.visitors.sweep();
     const prospectImports = await this.prospects.sweep();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports };
+    const zoomTranscripts = await this.zoom.importDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

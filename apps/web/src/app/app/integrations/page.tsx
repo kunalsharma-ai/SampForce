@@ -10,9 +10,6 @@ export const metadata: Metadata = { title: 'Integrations' };
 
 /** Integrations not built yet. Nothing here is shown as connected until its adapter exists and is tested. */
 const PLANNED: { category: string; items: { name: string; phase: string; needs: string }[] }[] = [
-  { category: 'Collaboration', items: [
-    { name: 'Zoom', phase: 'Later phase', needs: 'Zoom OAuth app' },
-  ] },
   { category: 'Communication', items: [
     { name: 'Twilio (SMS, voice)', phase: 'Later phase', needs: 'Twilio account and number registration' },
     { name: 'WhatsApp Business Platform', phase: 'Later phase', needs: 'Meta Business verification' },

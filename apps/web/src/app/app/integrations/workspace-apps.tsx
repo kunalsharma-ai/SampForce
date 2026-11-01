@@ -23,7 +23,7 @@ const STATE: Record<AppStatus['state'], { label: string; tone: 'neutral' | 'succ
   error: { label: 'Needs reconnecting', tone: 'critical' },
 };
 
-/** Apps a workspace admin connects once for everyone: Slack and Microsoft Teams. */
+/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams and Zoom. */
 export function WorkspaceApps() {
   const params = useSearchParams();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
@@ -35,13 +35,13 @@ export function WorkspaceApps() {
       <h2 id="apps-heading" className="text-base font-semibold">
         Workspace apps
       </h2>
-      {app && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">Connected. Choose a default channel below, then send a test message.</p>}
+      {app && connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{app === 'zoom' ? 'Zoom is connected. Schedule meetings from any lead, contact or deal.' : 'Connected. Choose a default channel below, then send a test message.'}</p>}
       {app && error && (
         <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
           {OUTCOME[error] ?? `The connection did not complete (${error}).`}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' ? <ZoomCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
@@ -292,6 +292,84 @@ function TeamsCard({ app }: { app: AppStatus }) {
           <div>
             <p className="mb-1 text-xs font-medium">Recent activity</p>
             <ul className="space-y-1 text-xs" aria-label="Recent Teams activity">
+              {events.data.slice(0, 5).map((e) => (
+                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
+                  {relativeTime(e.createdAt)}: {e.summary}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Zoom: an admin connects the company's Zoom account; people then schedule meetings from records. */
+function ZoomCard({ app }: { app: AppStatus }) {
+  const qc = useQueryClient();
+  const canManage = useCan('integrations:manage');
+  const s = STATE[app.state];
+  const c = app.connection;
+  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'zoom', 'events'], queryFn: () => api<AppEventRow[]>('/apps/zoom/events') });
+  const connect = useMutation({ mutationFn: () => api<{ url: string }>('/apps/zoom/connect', { method: 'POST' }), onSuccess: ({ url }) => window.location.assign(url) });
+  const disconnect = useMutation({ mutationFn: () => api('/apps/zoom', { method: 'DELETE' }), onSuccess: () => qc.invalidateQueries({ queryKey: ['apps'] }) });
+  const error = connect.error ?? disconnect.error;
+  return (
+    <Card role="region" aria-labelledby="app-zoom">
+      <CardHeader className="pb-2">
+        <CardTitle id="app-zoom" className="flex flex-wrap items-center gap-2 text-sm">
+          {app.name}
+          <Badge tone={s.tone}>{s.label}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">{app.description} Meetings are created in each person’s own Zoom user, matched by their DealFlow email.</p>
+        {app.state === 'pending_configuration' && (
+          <p className="text-muted-foreground">An operator must add {app.missingConfig.join(' and ')} (the DealFlow Zoom app’s credentials) to the deployment before anyone can connect.</p>
+        )}
+        {app.warnings.map((w) => (
+          <p key={w} className="text-xs text-warning">
+            {w}
+          </p>
+        ))}
+        {c && (
+          <div className="space-y-1">
+            <p>
+              <strong>{c.accountName}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Connected {relativeTime(c.connectedAt)}
+              {c.connectedBy ? ` by ${c.connectedBy}` : ''}. {c.lastUsedAt ? `Last used ${relativeTime(c.lastUsedAt)}.` : 'Not used yet.'}
+            </p>
+            {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
+            <p className="text-xs text-muted-foreground">Only meetings scheduled from DealFlow with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.</p>
+          </div>
+        )}
+        {canManage && app.state !== 'pending_configuration' && (
+          <div className="flex flex-wrap gap-2">
+            {(!c || app.state === 'error') && (
+              <Button size="sm" onClick={() => connect.mutate()} disabled={connect.isPending}>
+                {c ? 'Reconnect Zoom' : 'Connect Zoom'}
+              </Button>
+            )}
+            {c && (
+              <Button size="sm" variant="ghost" disabled={disconnect.isPending} onClick={() => window.confirm('Disconnect Zoom? Scheduling from records stops; meetings already scheduled stay in Zoom.') && disconnect.mutate()}>
+                Disconnect
+              </Button>
+            )}
+          </div>
+        )}
+        {!canManage && <p className="text-xs text-muted-foreground">Workspace admins connect Zoom.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-critical">
+            {error.message}
+          </p>
+        )}
+        {events.data && events.data.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium">Recent activity</p>
+            <ul className="space-y-1 text-xs" aria-label="Recent Zoom activity">
               {events.data.slice(0, 5).map((e) => (
                 <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
                   {relativeTime(e.createdAt)}: {e.summary}

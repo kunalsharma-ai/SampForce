@@ -12,7 +12,8 @@
 | Outbound webhooks | Implemented and tested end to end (signing, retries, auto-disable, redelivery) | No credentials needed |
 | Slack (workspace app: post to channels from workflows) | **Pending Configuration** until `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` are set; then Not connected until an admin installs it. Implemented and tested against a local stand-in of Slack's Web API only. Not yet tested against Slack with a real app. | Needs `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` (server secrets) |
 | Microsoft Teams (workspace app: post to channels from workflows) | **Not connected** until an admin adds a channel. A channel is saved only after Teams accepts a welcome card, so a listed channel has worked at least once. Implemented and tested against a local stand-in of Teams Workflows webhooks only; not yet tested against Teams. | No deployment secret. Each channel's Workflows URL is a workspace secret, stored encrypted |
-| Zoom, Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
+| Zoom (workspace app: schedule meetings from records; import transcripts of recorded meetings) | **Pending Configuration** until `ZOOM_CLIENT_ID` and `ZOOM_CLIENT_SECRET` are set; transcript import is separately Pending Configuration until `ZOOM_WEBHOOK_SECRET_TOKEN` is set. Implemented and tested against a local stand-in of Zoom's OAuth, REST API v2 and event notifications only; not yet tested against Zoom. | Needs `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_WEBHOOK_SECRET_TOKEN` (server secrets) |
+| Twilio, WhatsApp, DocuSign, Zapier, card payments on quotes | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -108,6 +109,39 @@ How it behaves:
   removed. A 429 is reported as rate limiting.
 - Removing a channel deletes its URL; DealFlow cannot turn off the workflow in Teams, so the page reminds the admin to.
 - Record values cannot add their own links to the card (markdown link syntax is broken up).
+
+## Setting up Zoom
+
+Zoom is a workspace app: an admin connects the company's Zoom account once. People then schedule Zoom meetings from
+any lead, contact or deal, in their own Zoom user (matched by their DealFlow email), and the meeting is logged on the
+record. If the organiser chooses cloud recording and confirms participants' consent, the transcript is added to
+meeting notes after the meeting, ready for the existing AI meeting summary and review.
+
+1. In the Zoom App Marketplace, create a **General app**, choose **admin-managed**, and set the OAuth redirect URL
+   to `<PUBLIC_WEB_URL>/api/v1/apps/zoom/callback`.
+2. Add the scopes for: viewing users (`user:read:user:admin`), creating meetings for users
+   (`meeting:write:meeting:admin`), and reading cloud recordings (`cloud_recording:read:list_recording_files:admin`).
+   The scope names are from Zoom's granular-scope list at the time of writing; check them in the Marketplace.
+3. Under **Access**, turn on **Event subscription**. Use the endpoint URL `<PUBLIC_WEB_URL>/api/v1/apps/zoom/events`,
+   and subscribe to **Recording: Transcript files have completed** and **App deauthorized**. Turn on
+   "include a download token". Copy the **Secret Token**.
+4. Set `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_WEBHOOK_SECRET_TOKEN` in the deployment's secret manager and
+   restart the API. Then press **Validate** on the event subscription in Zoom. DealFlow answers Zoom's URL validation
+   challenge.
+5. A workspace admin presses **Connect Zoom** under Integrations. Scheduling the first meeting is the first live call.
+
+How it behaves:
+
+- Access and refresh tokens are sealed with SecretBox. Refreshes are serialised per connection (Zoom rotates refresh
+  tokens). A refused refresh shows **Needs reconnecting**.
+- If the person's email is not a user in the Zoom account, scheduling fails with that explanation. Nothing is created.
+- Events must carry a valid `x-zm-signature` (HMAC-SHA256 of `v0:{timestamp}:{body}`) no more than 5 minutes old.
+  Events for Zoom accounts or meetings DealFlow does not know are ignored. **Only meetings scheduled from DealFlow
+  with recording chosen are ever imported.**
+- The worker downloads the WebVTT transcript, at most 5 MB, following only checked public redirects. It stores the
+  text and speaker segments in meeting notes, with the organiser's consent recorded. An expired link is reported
+  and not retried; other failures are retried up to 3 times.
+- **App deauthorized** (the app was removed in Zoom) deletes the connection. Meeting history stays.
 
 ## Behaviour
 

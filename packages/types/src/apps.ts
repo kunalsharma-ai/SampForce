@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack', 'teams'] as const;
+export const APP_KEYS = ['slack', 'teams', 'zoom'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
@@ -19,6 +19,8 @@ export interface AppStatus {
   state: AppState;
   /** Deployment secrets still missing, by name (pending_configuration only). */
   missingConfig: string[];
+  /** Parts of the app that are Pending Configuration even when it can connect (e.g. Zoom transcripts without the event secret). */
+  warnings: string[];
   connection: {
     accountName: string;
     externalAccountId: string;
@@ -91,3 +93,54 @@ export const teamsTestSchema = z.object({ channelId: teamsChannelId.optional() }
 
 /** Channel ids a "Post to chat" step may name: a Slack channel id, or a Teams channel added in Integrations. */
 export const chatChannelId = z.string().regex(/^([CG][A-Z0-9]{2,20}|tc_[a-f0-9]{12})$/);
+
+// ───── Zoom (meetings scheduled from DealFlow, and their transcripts) ─────
+
+export type ZoomTranscriptStatus = 'none' | 'waiting' | 'ready' | 'imported' | 'failed';
+
+export interface ZoomMeetingRow {
+  id: string;
+  zoomMeetingId: string;
+  topic: string;
+  startsAt: string;
+  durationMinutes: number;
+  joinUrl: string;
+  hostEmail: string;
+  recordToCloud: boolean;
+  leadId: string | null;
+  contactId: string | null;
+  dealId: string | null;
+  createdBy: string | null;
+  transcriptStatus: ZoomTranscriptStatus;
+  transcriptError: string | null;
+  /** The meeting notes record holding the imported transcript. */
+  meetingRecordId: string | null;
+  createdAt: string;
+}
+
+export const zoomMeetingCreateSchema = z
+  .object({
+    topic: z.string().trim().min(1).max(200),
+    startsAt: z.string().datetime({ offset: true }),
+    durationMinutes: z.number().int().min(15).max(480),
+    /** IANA time zone shown to invitees in Zoom; the start time itself is absolute. */
+    timezone: z.string().trim().max(64).optional(),
+    leadId: z.string().uuid().optional(),
+    contactId: z.string().uuid().optional(),
+    dealId: z.string().uuid().optional(),
+    /**
+     * Turns on Zoom cloud recording so the transcript can be imported into meeting notes. Zoom tells participants the
+     * meeting is recorded; the organiser confirms they have the participants' consent.
+     */
+    recordToCloud: z.boolean().default(false),
+    recordingConsent: z.boolean().default(false),
+  })
+  .refine((v) => [v.leadId, v.contactId, v.dealId].filter(Boolean).length === 1, { message: 'Link the meeting to one lead, contact or deal', path: ['leadId'] })
+  .refine((v) => !v.recordToCloud || v.recordingConsent, { message: 'Confirm that participants agree to the recording', path: ['recordingConsent'] });
+export type ZoomMeetingCreate = z.infer<typeof zoomMeetingCreateSchema>;
+
+export const zoomMeetingListQuery = z.object({
+  leadId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  dealId: z.string().uuid().optional(),
+});
