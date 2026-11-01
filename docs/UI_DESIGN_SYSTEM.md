@@ -117,6 +117,7 @@ Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each la
 | Integrations | **Built (status board)** | All "Not connected" with credential requirements |
 | Planned modules | **Built (roadmap pages)** | Phase, capabilities, honest status |
 | Leads, Deals (Kanban) … | Phase 2+ | |
+| Deals: pipeline views | **Built** | Board, table, split, timeline, calendar, forecast and priority views; cards with owner, close date, priority and health; deal side panel with inline edits and history (ADR 0044) |
 
 ## 8. User journeys
 

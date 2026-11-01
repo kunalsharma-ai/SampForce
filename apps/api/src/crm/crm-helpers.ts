@@ -23,12 +23,15 @@ export function paging(q: Pick<ListQuery, 'page' | 'pageSize'>) {
  * fields, each prefixed with "-" for descending ("status,-createdAt"). Unknown fields are ignored; the id is always
  * the final tie-breaker so pages are stable.
  */
-export function orderBy<T extends string>(q: Pick<ListQuery, 'sort' | 'order'>, allowed: readonly T[], fallback: T) {
+export function orderBy<T extends string>(q: Pick<ListQuery, 'sort' | 'order'>, allowed: readonly T[], fallback: T, nullable: readonly T[] = []) {
   const keys = parseSortParam(q.sort, q.order).filter((k) => (allowed as readonly string[]).includes(k.field));
   const unique = keys.filter((k, i) => keys.findIndex((x) => x.field === k.field) === i);
   const list = unique.length ? unique : [{ field: fallback, desc: q.order === 'desc' }];
   const last = list[list.length - 1]!;
-  return [...list.map((k) => ({ [k.field]: k.desc ? 'desc' : 'asc' })), { id: last.desc ? 'desc' : 'asc' }] as Record<string, 'asc' | 'desc'>[];
+  // Empty values sort last in both directions for nullable columns, so "highest priority first" starts with real values.
+  const dir = (k: { field: string; desc: boolean }) =>
+    (nullable as readonly string[]).includes(k.field) ? { sort: k.desc ? 'desc' : 'asc', nulls: 'last' } : k.desc ? 'desc' : 'asc';
+  return [...list.map((k) => ({ [k.field]: dir(k) })), { id: last.desc ? 'desc' : 'asc' }] as Record<string, 'asc' | 'desc'>[];
 }
 
 /** Resolves user ids to display names. Users are global, so this never reveals tenant data. */

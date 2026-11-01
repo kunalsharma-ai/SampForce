@@ -19,11 +19,12 @@ import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, Dro
 import type { DealRow, StageRow } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GripVertical, MoreHorizontal } from 'lucide-react';
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { useCan } from '@/lib/session';
+import { initials, PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
+import { DealLink } from '@/components/deals/views';
 import { LossReasonDialog, useMoveDeal } from './deal-move';
 
 interface BoardColumn {
@@ -58,7 +59,7 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context })
   return { x: target.rect.left + (target.rect.width - collisionRect.width) / 2, y: target.rect.top + 48 };
 };
 
-export function DealsBoard({ pipelineId }: { pipelineId?: string }) {
+export function DealsBoard({ pipelineId, onOpen }: { pipelineId?: string; onOpen: (id: string) => void }) {
   const qc = useQueryClient();
   const canWrite = useCan('deals:write');
   const key = ['board', pipelineId ?? 'default'];
@@ -149,7 +150,7 @@ export function DealsBoard({ pipelineId }: { pipelineId?: string }) {
         <div className="overflow-x-auto rounded-md pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0} role="region" aria-label={`${board.data.pipeline.name} board`}>
           <div className="flex gap-3" role="list" aria-label={`${board.data.pipeline.name} stages`}>
             {board.data.columns.map((col) => (
-              <Column key={col.stage.id} column={col} stages={stages} canWrite={canWrite} onMove={request} />
+              <Column key={col.stage.id} column={col} stages={stages} canWrite={canWrite} onMove={request} onOpen={onOpen} />
             ))}
           </div>
         </div>
@@ -168,7 +169,7 @@ export function DealsBoard({ pipelineId }: { pipelineId?: string }) {
   );
 }
 
-function Column({ column, stages, canWrite, onMove }: { column: BoardColumn; stages: StageRow[]; canWrite: boolean; onMove: (d: DealRow, stageId: string) => void }) {
+function Column({ column, stages, canWrite, onMove, onOpen }: { column: BoardColumn; stages: StageRow[]; canWrite: boolean; onMove: (d: DealRow, stageId: string) => void; onOpen: (id: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.stage.id });
   const tone = column.stage.category === 'WON' ? 'success' : column.stage.category === 'LOST' ? 'critical' : 'neutral';
   const currency = column.deals[0]?.currency ?? 'USD';
@@ -192,7 +193,7 @@ function Column({ column, stages, canWrite, onMove }: { column: BoardColumn; sta
       </header>
       <ul className="flex min-h-24 flex-1 flex-col gap-2 p-2" aria-label={`Deals in ${column.stage.name}`}>
         {column.deals.map((d) => (
-          <DealCard key={d.id} deal={d} stages={stages} canWrite={canWrite} onMove={onMove} />
+          <DealCard key={d.id} deal={d} stages={stages} canWrite={canWrite} onMove={onMove} onOpen={onOpen} />
         ))}
         {column.deals.length === 0 && <li className="px-2 py-6 text-center text-xs text-muted-foreground">Drop deals here</li>}
         {column.total > column.deals.length && (
@@ -205,7 +206,7 @@ function Column({ column, stages, canWrite, onMove }: { column: BoardColumn; sta
   );
 }
 
-function DealCard({ deal, stages, canWrite, onMove }: { deal: DealRow; stages: StageRow[]; canWrite: boolean; onMove: (d: DealRow, stageId: string) => void }) {
+function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; stages: StageRow[]; canWrite: boolean; onMove: (d: DealRow, stageId: string) => void; onOpen: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, isDragging } = useDraggable({
     id: deal.id,
     data: { stageId: deal.stage.id },
@@ -232,9 +233,7 @@ function DealCard({ deal, stages, canWrite, onMove }: { deal: DealRow; stages: S
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <Link href={`/app/deals/${deal.id}`} className="block truncate text-sm font-medium hover:text-primary hover:underline">
-            {deal.name}
-          </Link>
+          <DealLink deal={deal} onOpen={onOpen} className="block truncate text-sm" />
           {deal.company && <p className="truncate text-xs text-muted-foreground">{deal.company.name}</p>}
         </div>
         {canWrite && (
@@ -257,9 +256,24 @@ function DealCard({ deal, stages, canWrite, onMove }: { deal: DealRow; stages: S
           </DropdownMenu>
         )}
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs">
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
         <span className="font-medium tabular-nums">{formatMoney(deal.amount, deal.currency)}</span>
-        <span className="text-muted-foreground">{deal.expectedCloseDate ? `Close ${formatDate(deal.expectedCloseDate)}` : deal.owner?.name}</span>
+        <span className={deal.status === 'OPEN' && deal.expectedCloseDate && deal.expectedCloseDate < new Date().toISOString().slice(0, 10) ? 'text-critical' : 'text-muted-foreground'}>
+          {deal.expectedCloseDate ? `Close ${formatDate(deal.expectedCloseDate)}` : 'No close date'}
+        </span>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <RiskIndicator health={deal.health} compact />
+          <PriorityBadge priority={deal.priority} />
+        </div>
+        <span
+          className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
+          title={deal.owner ? `Owner: ${deal.owner.name}` : 'Unassigned'}
+        >
+          <span aria-hidden>{initials(deal.owner?.name)}</span>
+          <span className="sr-only">{deal.owner ? `Owner: ${deal.owner.name}` : 'Unassigned'}</span>
+        </span>
       </div>
     </li>
   );

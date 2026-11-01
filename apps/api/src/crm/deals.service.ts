@@ -1,18 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
-import type { DealInput, DealMoveInput, DealRow, ListQuery, Page, PipelineRow } from '@dealflow/types';
+import type { DealForecast, DealHistoryItem, DealInput, DealMoveInput, DealRow, ListQuery, Page, PipelineRow, PriorityDeal } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
 
-const SORTABLE = ['name', 'amount', 'status', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
+const SORTABLE = ['name', 'amount', 'status', 'priority', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
 const include = {
   pipeline: { select: { id: true, name: true } },
   stage: true,
   company: { select: { id: true, name: true } },
   contact: { select: { id: true, firstName: true, lastName: true } },
+  healthScore: { select: { health: true, risk: true, computedAt: true } },
 } satisfies Prisma.OpportunityInclude;
 type DealWith = Prisma.OpportunityGetPayload<{ include: typeof include }>;
 
@@ -44,9 +45,12 @@ export class DealsService {
         ...(q.companyId ? { companyId: q.companyId } : {}),
         ...(q.contactId ? { contactId: q.contactId } : {}),
         ...(q.q ? { name: { contains: q.q, mode: 'insensitive' } } : {}),
+        ...(q.closeFrom || q.closeTo
+          ? { expectedCloseDate: { ...(q.closeFrom ? { gte: new Date(q.closeFrom) } : {}), ...(q.closeTo ? { lte: new Date(q.closeTo) } : {}) } }
+          : {}),
       };
       const [rows, total] = await Promise.all([
-        tx.opportunity.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
+        tx.opportunity.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt', ['priority', 'expectedCloseDate']), ...paging(q) }),
         tx.opportunity.count({ where }),
       ]);
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
@@ -96,6 +100,86 @@ export class DealsService {
     });
   }
 
+  /**
+   * Open deals ranked for attention: risk from the stored health score, how soon (or how overdue) the close date is,
+   * size relative to the other candidates, and the priority people set. Each deal carries the reasons for its rank.
+   */
+  priority(auth: AuthContext, f: { pipelineId?: string; ownerId?: string; limit: number }, now = new Date()): Promise<PriorityDeal[]> {
+    return this.prisma.run(auth, async (tx) => {
+      const rows = await tx.opportunity.findMany({
+        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
+        include,
+        orderBy: { amount: 'desc' },
+        take: 1000,
+      });
+      const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
+      const max = Math.max(1, ...rows.map((r) => r.amount.toNumber()));
+      const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      const ranked = rows.map((r) => {
+        const deal = toDealRow(r, owners);
+        return { deal, ...priorityScore(deal, max, today) };
+      });
+      ranked.sort((a, b) => b.score - a.score || b.deal.amount - a.deal.amount || a.deal.id.localeCompare(b.deal.id));
+      return ranked.slice(0, f.limit);
+    });
+  }
+
+  /** Open deals by expected close month for the next six months, with overdue and undated deals kept separate. */
+  forecast(auth: AuthContext, f: { pipelineId?: string; ownerId?: string }, now = new Date()): Promise<DealForecast> {
+    return this.prisma.run(auth, async (tx) => {
+      const rows = await tx.opportunity.findMany({
+        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
+        include,
+        orderBy: [{ expectedCloseDate: 'asc' }, { amount: 'desc' }],
+        take: 2000,
+      });
+      const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
+      const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true } });
+      const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const fmt = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const months = Array.from({ length: 6 }, (_, i) => new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, 1)));
+      const bucket = (key: string, label: string): DealForecast['buckets'][number] => ({ key, label, count: 0, value: 0, weighted: 0, deals: [] });
+      const buckets = new Map(
+        [bucket('overdue', 'Overdue'), ...months.map((m) => bucket(monthKey(m), fmt.format(m))), bucket('later', 'Later'), bucket('undated', 'No close date')].map((b) => [b.key, b]),
+      );
+      for (const r of rows) {
+        const deal = toDealRow(r, owners);
+        const d = r.expectedCloseDate;
+        const key = !d ? 'undated' : d < today ? 'overdue' : (buckets.has(monthKey(d)) ? monthKey(d) : 'later');
+        const b = buckets.get(key)!;
+        b.count += 1;
+        b.value += deal.amount;
+        b.weighted += (deal.amount * deal.effectiveProbability) / 100;
+        if (b.deals.length < 25) b.deals.push(deal);
+      }
+      return {
+        currency: tenant.defaultCurrency,
+        buckets: [...buckets.values()].map((b) => ({ ...b, value: Math.round(b.value * 100) / 100, weighted: Math.round(b.weighted * 100) / 100 })),
+      };
+    });
+  }
+
+  /** Audit history of one deal, newest first: who changed what and when. Visible to anyone who can read the deal. */
+  history(auth: AuthContext, id: string, limit = 50): Promise<DealHistoryItem[]> {
+    return this.prisma.run(auth, async (tx) => {
+      const deal = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, select: { id: true } });
+      if (!deal) throw notFound('Deal');
+      const rows = await tx.auditLog.findMany({
+        where: { tenantId: auth.tenantId, entityType: 'deal', entityId: id },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: limit,
+      });
+      const names = await ownerRefs(tx, rows.map((r) => r.actorUserId));
+      return rows.map((r) => {
+        const meta = (r.metadata ?? {}) as Record<string, unknown>;
+        const changes = meta.changes && typeof meta.changes === 'object' ? (meta.changes as DealHistoryItem['changes']) : null;
+        return { id: r.id, action: r.action, actorName: r.actorUserId ? (names.get(r.actorUserId)?.name ?? null) : null, changes, metadata: meta, createdAt: r.createdAt.toISOString() };
+      });
+    });
+  }
+
   get(auth: AuthContext, id: string): Promise<DealRow> {
     return this.prisma.run(auth, async (tx) => {
       const row = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, include });
@@ -118,6 +202,7 @@ export class DealsService {
           amount: input.amount,
           currency: input.currency ?? tenant.defaultCurrency,
           probability: input.probability ?? null,
+          priority: input.priority ?? null,
           expectedCloseDate: input.expectedCloseDate ? new Date(input.expectedCloseDate) : null,
           companyId: input.companyId ?? null,
           contactId: input.contactId ?? null,
@@ -231,7 +316,7 @@ export class DealsService {
       const row = await tx.opportunity.create({
         data: {
           tenantId: auth.tenantId, pipelineId: src.pipelineId, stageId: first.id, name: `${src.name} (copy)`, amount: src.amount,
-          currency: src.currency, probability: src.probability, companyId: src.companyId, contactId: src.contactId,
+          currency: src.currency, probability: src.probability, priority: src.priority, companyId: src.companyId, contactId: src.contactId,
           ownerId: auth.userId, customFields: src.customFields as Prisma.InputJsonValue,
         },
         include,
@@ -284,6 +369,8 @@ export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: s
     expectedCloseDate: r.expectedCloseDate ? r.expectedCloseDate.toISOString().slice(0, 10) : null,
     closedAt: iso(r.closedAt),
     lossReason: r.lossReason,
+    priority: r.priority,
+    health: r.healthScore ? { score: r.healthScore.health, risk: r.healthScore.risk as 'low' | 'medium' | 'high', computedAt: r.healthScore.computedAt.toISOString() } : null,
     pipeline: r.pipeline,
     stage: { id: r.stage.id, name: r.stage.name, position: r.stage.position, probability: r.stage.probability, category: r.stage.category },
     company: r.company,
@@ -294,4 +381,45 @@ export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: s
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
+}
+
+const RISK_POINTS = { high: 40, medium: 20, low: 0 } as const;
+const PRIORITY_POINTS = { HIGH: 15, MEDIUM: 5, LOW: 0 } as const;
+const DAY = 86_400_000;
+
+/** Deterministic attention score (0 to about 115) and the reasons behind it. Exported for unit tests. */
+export function priorityScore(deal: DealRow, maxAmount: number, today: number): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+  if (deal.health) {
+    score += RISK_POINTS[deal.health.risk];
+    if (deal.health.risk !== 'low') reasons.push(`${deal.health.risk === 'high' ? 'Critical' : 'At risk'}: health ${deal.health.score}`);
+  } else {
+    score += 10;
+    reasons.push('Not scored yet');
+  }
+  if (deal.expectedCloseDate) {
+    const days = Math.round((Date.parse(deal.expectedCloseDate) - today) / DAY);
+    if (days < 0) {
+      score += 30;
+      reasons.push(`Close date passed ${-days} ${days === -1 ? 'day' : 'days'} ago`);
+    } else if (days <= 14) {
+      score += 25;
+      reasons.push(days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`);
+    } else if (days <= 30) {
+      score += 15;
+      reasons.push(`Closes in ${days} days`);
+    }
+  } else {
+    score += 5;
+    reasons.push('No close date');
+  }
+  const size = Math.round((30 * deal.amount) / maxAmount);
+  score += size;
+  if (size >= 20) reasons.push('One of the largest open deals');
+  if (deal.priority) {
+    score += PRIORITY_POINTS[deal.priority];
+    if (deal.priority !== 'LOW') reasons.push(`Marked ${deal.priority.toLowerCase()} priority`);
+  }
+  return { score, reasons };
 }

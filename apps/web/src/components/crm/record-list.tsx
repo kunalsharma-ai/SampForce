@@ -14,6 +14,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { type TableColumn, useTableView } from '@/components/data-table/use-table-view';
 import { RecordFormDialog } from './record-form';
 import { Select } from './select';
+import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 
 const owner = <T extends { owner: { name: string } | null }>(): TableColumn<T> => ({ id: 'owner', header: 'Owner', cell: (r) => r.owner?.name ?? '—', text: (r) => r.owner?.name ?? null, size: 150 });
 const created = <T extends { createdAt: string }>(): TableColumn<T> => ({ id: 'createdAt', header: 'Created', sortKey: 'createdAt', cell: (r) => formatDate(r.createdAt), size: 130 });
@@ -57,6 +58,8 @@ const COLUMNS = {
     { id: 'status', header: 'Status', sortKey: 'status', cell: (r) => <Badge tone={DEAL_STATUS_TONE[r.status]}>{titleCase(r.status)}</Badge>, size: 110 },
     { id: 'company', header: 'Company', cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
     { id: 'close', header: 'Expected close', sortKey: 'expectedCloseDate', cell: (r) => formatDate(r.expectedCloseDate), size: 140 },
+    { id: 'priority', header: 'Priority', sortKey: 'priority', cell: (r) => (r.priority ? <PriorityBadge priority={r.priority} /> : '—'), text: (r) => (r.priority ? titleCase(r.priority) : null), size: 120 },
+    { id: 'health', header: 'Health', cell: (r) => <RiskIndicator health={r.health} />, size: 140, defaultHidden: true },
     owner<DealRow>(),
     created<DealRow>(),
     updated<DealRow>(),

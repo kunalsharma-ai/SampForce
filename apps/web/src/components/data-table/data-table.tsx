@@ -17,6 +17,7 @@ import { BulkBar } from './bulk-bar';
 import { Highlight } from './highlight';
 import { ColumnsDialog, DensityMenu, ViewsMenu } from './table-menus';
 import type { TableColumn, TableView } from './use-table-view';
+import { useIsPhone } from '@/lib/use-is-phone';
 
 const SELECT_W = 44;
 const DEFAULT_W = 160;
@@ -444,19 +445,6 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
       </div>
     </Card>
   );
-}
-
-/** True below the md breakpoint (768 px). Starts false so the server and first paint show the table. */
-function useIsPhone(): boolean {
-  const [phone, setPhone] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const on = () => setPhone(mq.matches);
-    on();
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  return phone;
 }
 
 /** A 24 px checkbox target (WCAG 2.5.8) at every density. */

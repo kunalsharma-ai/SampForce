@@ -101,7 +101,7 @@ test('moves a deal on the board with the keyboard', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'Proposal' }).click();
   await expect(page.getByRole('list', { name: 'Deals in Proposal' }).getByRole('link', { name: 'Keyboard deal' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await page.getByRole('button', { name: 'Table', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'Proposal' })).toBeVisible();
 });
 
