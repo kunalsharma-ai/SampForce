@@ -299,7 +299,7 @@ export interface PlatformAuditRow {
 export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram'] as const;
 export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
 export interface OperatorProviderRow {
-  key: ProviderCheckKey | 'google' | 'microsoft' | 'anthropic' | 'smtp' | 'slack';
+  key: ProviderCheckKey | 'google' | 'microsoft' | 'anthropic' | 'smtp' | 'slack' | 'zoom';
   name: string;
   usedFor: string;
   /** The environment variables it reads, and whether each is set (values are never returned). */

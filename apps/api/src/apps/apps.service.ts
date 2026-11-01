@@ -9,6 +9,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { SlackClient, SlackError } from './slack';
 import { TeamsClient, TeamsError, type TeamsMessage } from './teams';
+import { ZoomClient } from './zoom';
 
 interface AppState {
   t: string;
@@ -16,6 +17,15 @@ interface AppState {
   a: AppKey;
   n: string;
   exp: number;
+}
+
+/** Zoom: OAuth tokens. Zoom rotates the refresh token on every refresh. */
+export interface StoredZoom {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  userId: string;
+  email: string;
 }
 
 interface StoredSlack {
@@ -32,6 +42,7 @@ const TEAMS_MAX_CHANNELS = 20;
 
 const META: Record<AppKey, { name: string; description: string; provider: AppProvider }> = {
   slack: { name: 'Slack', description: 'Post deal, lead and task updates to Slack channels from workflows.', provider: 'SLACK' },
+  zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
 
@@ -50,6 +61,7 @@ export class AppsService {
     private readonly audit: AuditService,
     readonly slack: SlackClient,
     readonly teams: TeamsClient,
+    readonly zoom: ZoomClient,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -61,7 +73,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig(), teams: () => [] }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig() }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -83,6 +95,7 @@ export class AppsService {
           description: m.description,
           state,
           missingConfig: missing,
+          warnings: key === 'zoom' && !missing.length && !this.zoom.webhookConfigured ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.'] : [],
           connection: c
             ? {
                 accountName: c.accountName,
@@ -100,7 +113,7 @@ export class AppsService {
   }
 
   connectUrl(auth: AuthContext, app: AppKey): { url: string } {
-    if (app !== 'slack') {
+    if (app === 'teams') {
       throw new BadRequestException({ code: 'NOT_OAUTH', message: 'Microsoft Teams is connected by adding a channel with its Workflows URL.' });
     }
     const missing = this.missingConfig(app);
@@ -108,23 +121,32 @@ export class AppsService {
       throw new ConflictException({ code: 'PROVIDER_NOT_CONFIGURED', message: `${META[app].name} is Pending Configuration on this DealFlow installation. An operator must add ${missing.join(' and ')}.` });
     }
     const state = signToken(this.stateSecret(), { t: auth.tenantId, u: auth.userId, a: app, n: randomBytes(8).toString('hex'), exp: Date.now() + 10 * 60_000 } satisfies AppState);
-    return { url: this.slack.authorizeUrl(state, this.redirectUri(app)) };
+    return { url: app === 'zoom' ? this.zoom.authorizeUrl(state, this.redirectUri(app)) : this.slack.authorizeUrl(state, this.redirectUri(app)) };
   }
 
   /** The OAuth redirect. The state must have been issued to the same signed-in person in the same workspace. */
   async completeConnect(auth: AuthContext, app: AppKey, code: string, rawState: string, meta: RequestMeta): Promise<void> {
     const state = verifyToken<AppState>(this.stateSecret(), rawState);
-    if (app !== 'slack' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
+    if (app === 'teams' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
       throw new BadRequestException({ code: 'OAUTH_STATE_INVALID', message: 'The connect link expired or belongs to another session. Try connecting again.' });
     }
-    const install = await this.slack.exchangeCode(code, this.redirectUri(app));
-    // Prove the token works before saving it.
-    await this.slack.authTest(install.accessToken);
+    let install: { accountId: string; accountName: string; scopes: string[]; credentials: StoredSlack | StoredZoom };
+    if (app === 'zoom') {
+      const t = await this.zoom.exchangeCode(code, this.redirectUri(app));
+      // Prove the token works, and learn which Zoom account it belongs to (events are routed by account id).
+      const me = await this.zoom.me(t.accessToken);
+      install = { accountId: me.accountId, accountName: `Zoom account of ${me.email}`, scopes: t.scopes, credentials: { accessToken: t.accessToken, refreshToken: t.refreshToken, expiresAt: t.expiresAt, userId: me.id, email: me.email } };
+    } else {
+      const s = await this.slack.exchangeCode(code, this.redirectUri(app));
+      // Prove the token works before saving it.
+      await this.slack.authTest(s.accessToken);
+      install = { accountId: s.teamId, accountName: s.teamName, scopes: s.scopes, credentials: { accessToken: s.accessToken, botUserId: s.botUserId } };
+    }
     const data = {
-      externalAccountId: install.teamId,
-      accountName: install.teamName,
+      externalAccountId: install.accountId,
+      accountName: install.accountName,
       scopes: install.scopes,
-      credentialsEncrypted: this.box.seal(JSON.stringify({ accessToken: install.accessToken, botUserId: install.botUserId } satisfies StoredSlack)),
+      credentialsEncrypted: this.box.seal(JSON.stringify(install.credentials)),
       status: 'CONNECTED' as const,
       lastError: null,
       connectedById: auth.userId,
@@ -135,18 +157,19 @@ export class AppsService {
         create: { tenantId: auth.tenantId, provider: META[app].provider, ...data },
         update: data,
       });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.connected', entityType: 'app_connection', entityId: row.id, metadata: { app, account: install.teamName, accountId: install.teamId }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'app.connected', entityType: 'app_connection', entityId: row.id, metadata: { app, account: install.accountName, accountId: install.accountId }, meta });
     });
   }
 
   async disconnect(auth: AuthContext, app: AppKey, meta: RequestMeta): Promise<void> {
     const conn = await this.prisma.run(auth, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: META[app].provider } } }));
     if (!conn) return;
-    if (app === 'slack') {
+    if (app === 'slack' || app === 'zoom') {
       try {
-        await this.slack.revoke(this.creds(conn).accessToken);
+        const token = (JSON.parse(this.box.open(conn.credentialsEncrypted)) as { accessToken: string }).accessToken;
+        await (app === 'zoom' ? this.zoom.revoke(token) : this.slack.revoke(token));
       } catch {
-        // The token is deleted below either way; Slack may already have revoked it.
+        // The token is deleted below either way; the provider may already have revoked it.
       }
     }
     // Teams Workflows URLs cannot be revoked from outside; deleting them here is all DealFlow can do, and the
@@ -351,7 +374,7 @@ export class AppsService {
     }
   }
 
-  private async recordEvent(
+  async recordEvent(
     tenantId: string,
     conn: AppConnection,
     e: { kind: string; ok: boolean; externalId: string | null; summary: string; actorUserId: string | null; entityType?: string | null; entityId?: string | null; detail?: object },

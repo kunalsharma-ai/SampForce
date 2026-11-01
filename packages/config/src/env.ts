@@ -90,6 +90,12 @@ export const apiEnvSchema = z.object({
   SLACK_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
   SLACK_AUTH_BASE_URL: z.string().url().default('https://slack.com'),
   SLACK_API_BASE_URL: z.string().url().default('https://slack.com/api'),
+  // Zoom workspace app (General app, admin-managed). The webhook secret token verifies Zoom's event notifications.
+  ZOOM_CLIENT_ID: z.string().optional().transform((v) => v || undefined),
+  ZOOM_CLIENT_SECRET: z.string().optional().transform((v) => v || undefined),
+  ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
+  ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
+  ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
   /** Override provider endpoints (tests point these at a local fixture server). */
   GOOGLE_AUTH_BASE_URL: z.string().url().default('https://accounts.google.com'),
   GOOGLE_TOKEN_URL: z.string().url().default('https://oauth2.googleapis.com/token'),
