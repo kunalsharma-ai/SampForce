@@ -32,5 +32,6 @@ export * from './prospects';
 export * from './apps';
 export * from './api-keys';
 export * from './appearance';
+export * from './regional';
 export * from './navigation';
 export * from './views';

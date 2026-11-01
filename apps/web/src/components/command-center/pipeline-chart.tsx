@@ -61,21 +61,21 @@ export function PipelineChart({ pipeline, currency }: { pipeline: NonNullable<Da
         ) : (
           <table className="w-full text-sm">
             <caption className="sr-only">Deals and value by pipeline stage</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-2 font-medium">Stage</th>
-                <th scope="col" className="py-2 text-right font-medium">Probability</th>
-                <th scope="col" className="py-2 text-right font-medium">Deals</th>
-                <th scope="col" className="py-2 text-right font-medium">Value</th>
+                <th scope="col" className="py-2 text-end font-medium">Probability</th>
+                <th scope="col" className="py-2 text-end font-medium">Deals</th>
+                <th scope="col" className="py-2 text-end font-medium">Value</th>
               </tr>
             </thead>
             <tbody className="tabular">
               {pipeline.stages.map((s) => (
                 <tr key={s.stageId} className="border-t border-border">
-                  <th scope="row" className="py-2 text-left font-normal">{s.name}</th>
-                  <td className="py-2 text-right">{s.probability}%</td>
-                  <td className="py-2 text-right">{s.dealCount}</td>
-                  <td className="py-2 text-right">{money(s.value)}</td>
+                  <th scope="row" className="py-2 text-start font-normal">{s.name}</th>
+                  <td className="py-2 text-end">{s.probability}%</td>
+                  <td className="py-2 text-end">{s.dealCount}</td>
+                  <td className="py-2 text-end">{money(s.value)}</td>
                 </tr>
               ))}
             </tbody>

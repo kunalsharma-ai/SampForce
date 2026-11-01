@@ -1,10 +1,11 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TooltipProvider } from '@dealflow/ui';
+import { DirectionProvider, TooltipProvider } from '@dealflow/ui';
 import { MotionConfig } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/lib/api';
+import { useActiveLocale } from '@/lib/i18n';
 import { applyPaint, computePaint, isDarkMode, PAINT_CACHE_KEY } from '@/lib/appearance-engine';
 import { usePreferences } from '@/stores/preferences';
 
@@ -28,6 +29,17 @@ function useAppearancePaint() {
   }, [paint]);
 }
 
+/** Keeps <html lang dir> in step with the person's language (the layout's bootstrap script sets it before first paint). */
+function useDocumentLocale() {
+  const { language, dir } = useActiveLocale();
+  useEffect(() => {
+    const root = document.documentElement;
+    root.lang = language;
+    root.dir = dir;
+  }, [language, dir]);
+  return dir;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
     () =>
@@ -42,6 +54,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
   useAppearancePaint();
+  const dir = useDocumentLocale();
   const motion = usePreferences((s) => s.appearance.motion);
   // Full ignores the OS setting; Balanced follows it; Minimal and Off keep only essential fades (CSS handles Off).
   const reducedMotion = motion === 'full' ? 'never' : motion === 'balanced' ? 'user' : 'always';
@@ -49,7 +62,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <MotionConfig reducedMotion={reducedMotion}>
-        <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+        <DirectionProvider dir={dir}>
+          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+        </DirectionProvider>
       </MotionConfig>
     </QueryClientProvider>
   );

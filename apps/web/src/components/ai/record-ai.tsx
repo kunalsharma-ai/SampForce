@@ -27,7 +27,7 @@ function Signals({ signals, risk }: { signals: Signal[]; risk?: boolean }) {
     <ul className="space-y-1 text-sm" aria-label="Signals">
       {signals.map((s) => (
         <li key={s.key} className="flex gap-2">
-          <span className={`w-10 shrink-0 text-right tabular-nums ${risk ? 'text-critical' : s.points >= 0 ? 'text-success' : 'text-critical'}`}>
+          <span className={`w-10 shrink-0 text-end tabular-nums ${risk ? 'text-critical' : s.points >= 0 ? 'text-success' : 'text-critical'}`}>
             {risk ? `−${s.points}` : s.points >= 0 ? `+${s.points}` : s.points}
           </span>
           <span>

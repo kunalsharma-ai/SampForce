@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { formatDate, formatMoney, useMembers } from '@/lib/crm';
 import { todayIso, useExchangeRates, useRevenue, useTargets } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 function quarterOptions(): string[] {
   const now = new Date();
@@ -73,11 +74,11 @@ function Report({ a }: { a: RevenueAnalytics }) {
             <ul className="space-y-2 text-sm">
               {a.byMonth.map((m) => (
                 <li key={m.month} className="grid grid-cols-[5rem_1fr_7rem] items-center gap-2">
-                  <span className="text-muted-foreground">{new Date(`${m.month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                  <span className="text-muted-foreground">{new Date(`${m.month}-01T00:00:00`).toLocaleDateString(fmtLocale(), { month: 'short', year: 'numeric' })}</span>
                   <span className="h-3 rounded bg-muted" aria-hidden>
                     <span className="block h-3 rounded bg-primary" style={{ width: `${(m.won / maxMonth) * 100}%` }} />
                   </span>
-                  <span className="text-right tabular-nums">
+                  <span className="text-end tabular-nums">
                     {money(m.won)} <span className="text-xs text-muted-foreground">({m.deals})</span>
                   </span>
                 </li>
@@ -110,27 +111,27 @@ function Report({ a }: { a: RevenueAnalytics }) {
             <p className="text-sm text-muted-foreground">No closed deals or targets this quarter.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="pb-2 font-medium">Owner</th>
-                  <th className="pb-2 text-right font-medium">Won</th>
-                  <th className="pb-2 text-right font-medium">Deals</th>
-                  <th className="pb-2 text-right font-medium">Lost</th>
-                  <th className="pb-2 text-right font-medium">Win rate</th>
-                  <th className="pb-2 text-right font-medium">Target</th>
-                  <th className="pb-2 text-right font-medium">Attainment</th>
+                  <th className="pb-2 text-end font-medium">Won</th>
+                  <th className="pb-2 text-end font-medium">Deals</th>
+                  <th className="pb-2 text-end font-medium">Lost</th>
+                  <th className="pb-2 text-end font-medium">Win rate</th>
+                  <th className="pb-2 text-end font-medium">Target</th>
+                  <th className="pb-2 text-end font-medium">Attainment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {a.byOwner.map((o) => (
                   <tr key={o.owner?.id ?? 'none'}>
                     <td className="py-2">{o.owner?.name ?? 'Unassigned'}</td>
-                    <td className="py-2 text-right tabular-nums">{money(o.won)}</td>
-                    <td className="py-2 text-right tabular-nums">{o.deals}</td>
-                    <td className="py-2 text-right tabular-nums">{o.lost}</td>
-                    <td className="py-2 text-right tabular-nums">{pct(o.winRate)}</td>
-                    <td className="py-2 text-right tabular-nums">{money(o.target)}</td>
-                    <td className="py-2 text-right tabular-nums">{pct(o.attainment)}</td>
+                    <td className="py-2 text-end tabular-nums">{money(o.won)}</td>
+                    <td className="py-2 text-end tabular-nums">{o.deals}</td>
+                    <td className="py-2 text-end tabular-nums">{o.lost}</td>
+                    <td className="py-2 text-end tabular-nums">{pct(o.winRate)}</td>
+                    <td className="py-2 text-end tabular-nums">{money(o.target)}</td>
+                    <td className="py-2 text-end tabular-nums">{pct(o.attainment)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -156,7 +157,7 @@ function Report({ a }: { a: RevenueAnalytics }) {
                 <li key={f.period} className="flex flex-wrap gap-x-4 py-2">
                   <span className="font-medium">{f.period}</span>
                   <span className="text-muted-foreground">first snapshot {formatDate(f.snapshotAt)}</span>
-                  <span className="ml-auto tabular-nums">
+                  <span className="ms-auto tabular-nums">
                     predicted {money(f.predicted)} · actual {money(f.actual)} · {f.errorPercent === null ? '—' : `${f.errorPercent > 0 ? '+' : ''}${f.errorPercent}%`}
                   </span>
                 </li>
@@ -244,7 +245,7 @@ export function Targets({ period }: { period: string }) {
             {targets.data.map((t) => (
               <li key={t.id} className="flex items-center gap-2 py-1.5">
                 <span>{t.user?.name ?? 'Whole team'}</span>
-                <span className="ml-auto tabular-nums">{formatMoney(t.amount, base)}</span>
+                <span className="ms-auto tabular-nums">{formatMoney(t.amount, base)}</span>
                 {canManage && (
                   <Button size="sm" variant="ghost" onClick={() => remove.mutate(t.id)} aria-label={`Remove target for ${t.user?.name ?? 'whole team'}`}>
                     Remove
@@ -319,7 +320,7 @@ function Rates() {
                 <span>
                   1 {r.currency} = {r.rate} {base}
                 </span>
-                <span className="ml-auto text-muted-foreground">from {formatDate(r.effectiveDate)}</span>
+                <span className="ms-auto text-muted-foreground">from {formatDate(r.effectiveDate)}</span>
               </li>
             ))}
           </ul>

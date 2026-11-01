@@ -106,7 +106,7 @@ export function GalaxyExplorer() {
 function Legend() {
   const items: [string, string][] = [['chart-2', 'Company'], ['chart-6', 'Contact'], ['chart-1', 'Open deal'], ['chart-3', 'Won deal'], ['chart-5', 'Lost deal']];
   return (
-    <ul className="absolute right-2 top-2 flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-background/80 px-2 py-1 text-[11px] text-muted-foreground" aria-label="Legend">
+    <ul className="absolute end-2 top-2 flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-background/80 px-2 py-1 text-[11px] text-muted-foreground" aria-label="Legend">
       {items.map(([t, l]) => (
         <li key={t} className="inline-flex items-center gap-1">
           <span className="h-2 w-2 rounded-full" style={{ background: `hsl(var(--${t}))` }} aria-hidden />
@@ -180,7 +180,7 @@ function Details({ graph, id, onSelect }: { graph: GalaxyGraph; id: string | nul
             <ul className="max-h-40 space-y-1 overflow-auto">
               {neighbours.map((n) => (
                 <li key={n.id}>
-                  <button type="button" className="text-left hover:underline" onClick={() => onSelect(n.id)}>
+                  <button type="button" className="text-start hover:underline" onClick={() => onSelect(n.id)}>
                     {n.label} <span className="text-xs text-muted-foreground">({n.kind})</span>
                   </button>
                 </li>
@@ -216,14 +216,14 @@ function AccountList({ graph, query, setQuery, selectedId, onSelect }: { graph: 
             const kids = byCompany.get(c.id) ?? [];
             return (
               <li key={c.id}>
-                <button type="button" onClick={() => onSelect(c.id)} aria-pressed={selectedId === c.id} className={cn('w-full rounded px-1 text-left font-medium hover:bg-muted', selectedId === c.id && 'bg-muted')}>
+                <button type="button" onClick={() => onSelect(c.id)} aria-pressed={selectedId === c.id} className={cn('w-full rounded px-1 text-start font-medium hover:bg-muted', selectedId === c.id && 'bg-muted')}>
                   {c.label}
                 </button>
                 {kids.length > 0 && (
-                  <ul className="ml-3 border-l border-border pl-2 text-xs text-muted-foreground">
+                  <ul className="ms-3 border-s border-border ps-2 text-xs text-muted-foreground">
                     {kids.map((k) => (
                       <li key={k.id}>
-                        <button type="button" onClick={() => onSelect(k.id)} aria-pressed={selectedId === k.id} className={cn('w-full rounded px-1 text-left hover:bg-muted', selectedId === k.id && 'bg-muted text-foreground')}>
+                        <button type="button" onClick={() => onSelect(k.id)} aria-pressed={selectedId === k.id} className={cn('w-full rounded px-1 text-start hover:bg-muted', selectedId === k.id && 'bg-muted text-foreground')}>
                           {k.label} · {k.kind === 'deal' ? `deal, ${k.status?.toLowerCase()}` : 'contact'}
                         </button>
                       </li>

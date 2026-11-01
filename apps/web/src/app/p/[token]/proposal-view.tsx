@@ -185,7 +185,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
           banded
             ? 'space-y-2 rounded-lg p-6'
             : style.cover === 'split'
-              ? 'space-y-2 border-l-8 py-2 pl-5'
+              ? 'space-y-2 border-s-8 py-2 ps-5'
               : 'space-y-2 border-b-2 pb-4'
         }
         style={
@@ -234,7 +234,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       {p.sections.map((s, i) => (
         <section key={i} className="space-y-1">
-          <h2 className={`border-l-4 pl-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
+          <h2 className={`border-s-4 ps-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
             {s.heading}
           </h2>
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{s.body}</p>
@@ -242,41 +242,41 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
       ))}
 
       <section className="space-y-2">
-        <h2 className={`border-l-4 pl-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
+        <h2 className={`border-s-4 ps-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
           Pricing
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th className="pb-2 font-medium">Item</th>
-                <th className="pb-2 text-right font-medium">Qty</th>
-                <th className="pb-2 text-right font-medium">Unit price</th>
-                <th className="pb-2 text-right font-medium">Discount</th>
-                <th className="pb-2 text-right font-medium">Tax</th>
-                <th className="pb-2 text-right font-medium">Net</th>
+                <th className="pb-2 text-end font-medium">Qty</th>
+                <th className="pb-2 text-end font-medium">Unit price</th>
+                <th className="pb-2 text-end font-medium">Discount</th>
+                <th className="pb-2 text-end font-medium">Tax</th>
+                <th className="pb-2 text-end font-medium">Net</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {p.lines.map((l, i) => (
                 <tr key={i}>
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pe-2">
                     {l.name}
                     {l.description && (
                       <span className="block text-xs text-muted-foreground">{l.description}</span>
                     )}
                   </td>
-                  <td className="py-2 pr-2 text-right tabular-nums">{l.quantity}</td>
-                  <td className="py-2 pr-2 text-right tabular-nums">
+                  <td className="py-2 pe-2 text-end tabular-nums">{l.quantity}</td>
+                  <td className="py-2 pe-2 text-end tabular-nums">
                     {formatAmount(l.unitPrice, p.currency)}
                   </td>
-                  <td className="py-2 pr-2 text-right tabular-nums">
+                  <td className="py-2 pe-2 text-end tabular-nums">
                     {l.discountPercent ? `${l.discountPercent}%` : '—'}
                   </td>
-                  <td className="py-2 pr-2 text-right tabular-nums">
+                  <td className="py-2 pe-2 text-end tabular-nums">
                     {l.taxPercent ? `${l.taxPercent}%` : '—'}
                   </td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="py-2 text-end tabular-nums">
                     {formatAmount(l.netTotal, p.currency)}
                   </td>
                 </tr>
@@ -284,7 +284,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
             </tbody>
           </table>
         </div>
-        <div className="ml-auto max-w-64 space-y-1 text-sm tabular-nums">
+        <div className="ms-auto max-w-64 space-y-1 text-sm tabular-nums">
           <p className="flex justify-between">
             <span>Subtotal</span>
             <span>{formatAmount(p.subtotal, p.currency)}</span>

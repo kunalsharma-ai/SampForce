@@ -63,7 +63,7 @@ function ApprovalCard({ approval: a }: { approval: ApprovalRow }) {
             <h2 className="text-sm font-semibold">{a.title}</h2>
             <Badge tone={STATUS_TONE[a.status]}>{a.status.charAt(0) + a.status.slice(1).toLowerCase()}</Badge>
             {a.kind === 'quote_discount' ? <Badge tone="accent">Quote discount</Badge> : a.kind !== 'workflow.approval_step' && <Badge tone="accent">External action</Badge>}
-            <span className="ml-auto text-xs text-muted-foreground">{relativeTime(a.createdAt)}</span>
+            <span className="ms-auto text-xs text-muted-foreground">{relativeTime(a.createdAt)}</span>
           </div>
           {a.summary && <p className="text-sm text-muted-foreground">{a.summary}</p>}
           {action?.url && <p className="break-all text-xs">Endpoint: {action.url}</p>}

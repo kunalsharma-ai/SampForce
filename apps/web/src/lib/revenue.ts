@@ -19,6 +19,7 @@ import type {
 import { useQuery } from '@tanstack/react-query';
 import { api } from './api';
 import { toQuery } from './crm';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /** Data hooks for quotes, contracts, marketing, revenue analytics and customer success. */
 
@@ -106,7 +107,7 @@ export function useEscalations(params: { status?: 'OPEN' | 'RESOLVED'; companyId
 /** Money with cents, for quotes and contracts where every cent is part of the record. */
 export function formatAmount(value: number | null | undefined, currency: string): string {
   if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat(fmtLocale(), { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
 export const QUOTE_STATUS = {

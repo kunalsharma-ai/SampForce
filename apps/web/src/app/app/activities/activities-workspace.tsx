@@ -60,7 +60,7 @@ function TaskList() {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center gap-2 space-y-0">
-        <CardTitle className="mr-auto text-base">Tasks {overdue > 0 && <span className="ml-1 text-sm font-normal text-critical">· {overdue} overdue</span>}</CardTitle>
+        <CardTitle className="me-auto text-base">Tasks {overdue > 0 && <span className="ms-1 text-sm font-normal text-critical">· {overdue} overdue</span>}</CardTitle>
         <label htmlFor="task-scope" className="sr-only">
           Whose tasks
         </label>
@@ -136,7 +136,7 @@ function TaskList() {
                     <p className={`text-sm ${t.status === 'DONE' ? 'text-muted-foreground line-through' : ''}`}>
                       {t.title}
                       {t.priority === 'HIGH' && t.status !== 'DONE' && (
-                        <Badge tone="critical" className="ml-1.5">
+                        <Badge tone="critical" className="ms-1.5">
                           High priority
                         </Badge>
                       )}

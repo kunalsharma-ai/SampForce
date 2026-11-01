@@ -7,7 +7,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="relative flex min-h-screen flex-col">
       <AmbientBackground />
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2">
         Skip to content
       </a>
       <header className="border-b border-border/60">
@@ -18,7 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
             Pricing
           </Link>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <Link href="/login" className="rounded-md px-3 py-2 text-sm hover:bg-muted">
               Sign in
             </Link>

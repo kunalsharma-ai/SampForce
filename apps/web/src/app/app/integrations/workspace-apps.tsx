@@ -213,7 +213,7 @@ function TeamsCard({ app }: { app: AppStatus }) {
                 {ch.lastError && <Badge tone="critical">Not accepting messages</Badge>}
                 <span className="text-xs text-muted-foreground">Added {relativeTime(ch.addedAt)}</span>
                 {canManage && (
-                  <span className="ml-auto flex gap-1">
+                  <span className="ms-auto flex gap-1">
                     <Button size="sm" variant="outline" disabled={test.isPending} onClick={() => test.mutate(ch.id)} aria-label={`Send test message to ${ch.name}`}>
                       Test
                     </Button>

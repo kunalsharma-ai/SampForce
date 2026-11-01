@@ -24,11 +24,12 @@ import { Select, Textarea } from '@/components/crm/select';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { gamificationApi, periodOptions, useAwards, useBadges, useCompetitions, useGamificationMe, useGamificationMutation, useGamificationSettings, useLeaderboard, useTeams } from '@/lib/gamification';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const ICONS = { trophy: Trophy, medal: Medal, star: Star, flame: Flame, target: Target, rocket: Rocket, crown: Crown, phone: Phone } as const;
 const WINDOW_LABELS: Record<(typeof BADGE_WINDOWS)[number], string> = { month: 'in a month', quarter: 'in a quarter', year: 'in a year', all_time: 'all time' };
 const STATUS_TONE = { running: 'success', upcoming: 'primary', finished: 'neutral', cancelled: 'critical' } as const;
-const num = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+const num = (n: number) => n.toLocaleString(fmtLocale(), { maximumFractionDigits: 1 });
 
 type Tab = 'me' | 'leaderboards' | 'competitions' | 'badges' | 'settings';
 
@@ -137,21 +138,21 @@ function MyPerformance({ me }: { me: GamificationMe }) {
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
               <caption className="sr-only">Points by activity this month</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="py-2 font-medium">Activity</th>
-                  <th scope="col" className="py-2 text-right font-medium">Done</th>
-                  <th scope="col" className="py-2 text-right font-medium">Counted</th>
-                  <th scope="col" className="py-2 text-right font-medium">Points</th>
+                  <th scope="col" className="py-2 text-end font-medium">Done</th>
+                  <th scope="col" className="py-2 text-end font-medium">Counted</th>
+                  <th scope="col" className="py-2 text-end font-medium">Points</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {(s?.breakdown ?? []).filter((b) => b.count > 0 || b.points > 0).map((b) => (
                   <tr key={b.key}>
-                    <th scope="row" className="py-2 text-left font-normal">{b.key === 'revenue_won' ? 'Revenue won (per 1,000)' : SCORING_RULE_LABELS[b.key].label}</th>
-                    <td className="py-2 text-right">{num(b.count)}</td>
-                    <td className="py-2 text-right">{b.scored < b.count ? <span title="Above the daily limit or not counted under the current rules">{num(b.scored)}</span> : num(b.scored)}</td>
-                    <td className="py-2 text-right font-medium">{num(b.points)}</td>
+                    <th scope="row" className="py-2 text-start font-normal">{b.key === 'revenue_won' ? 'Revenue won (per 1,000)' : SCORING_RULE_LABELS[b.key].label}</th>
+                    <td className="py-2 text-end">{num(b.count)}</td>
+                    <td className="py-2 text-end">{b.scored < b.count ? <span title="Above the daily limit or not counted under the current rules">{num(b.scored)}</span> : num(b.scored)}</td>
+                    <td className="py-2 text-end font-medium">{num(b.points)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -286,29 +287,29 @@ function Leaderboards() {
             {view === 'people' ? (
               <table className="w-full min-w-[640px] text-sm">
                 <caption className="sr-only">People ranked by points, {b.period.label}</caption>
-                <thead className="text-left text-xs text-muted-foreground">
+                <thead className="text-start text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="py-2 font-medium">Rank</th>
                     <th scope="col" className="py-2 font-medium">Name</th>
-                    <th scope="col" className="py-2 text-right font-medium">Points</th>
-                    <th scope="col" className="py-2 text-right font-medium">Deals won</th>
-                    <th scope="col" className="py-2 text-right font-medium">Revenue won</th>
-                    <th scope="col" className="py-2 text-right font-medium">Activities</th>
-                    <th scope="col" className="py-2 text-right font-medium">Target</th>
-                    <th scope="col" className="py-2 text-right font-medium">Badges</th>
+                    <th scope="col" className="py-2 text-end font-medium">Points</th>
+                    <th scope="col" className="py-2 text-end font-medium">Deals won</th>
+                    <th scope="col" className="py-2 text-end font-medium">Revenue won</th>
+                    <th scope="col" className="py-2 text-end font-medium">Activities</th>
+                    <th scope="col" className="py-2 text-end font-medium">Target</th>
+                    <th scope="col" className="py-2 text-end font-medium">Badges</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {b.people.map((p) => (
                     <tr key={p.user.id}>
                       <td className="py-2">{p.rank <= 3 && p.points > 0 ? <span className="inline-flex items-center gap-1"><Trophy className={cn('size-4', p.rank === 1 ? 'text-warning' : 'text-muted-foreground')} aria-hidden />{p.rank}</span> : p.rank}</td>
-                      <th scope="row" className="py-2 text-left font-medium">{p.user.name}</th>
-                      <td className="py-2 text-right font-semibold">{num(p.points)}</td>
-                      <td className="py-2 text-right">{p.dealsWon}</td>
-                      <td className="py-2 text-right">{formatMoney(p.revenueWon, b.currency)}</td>
-                      <td className="py-2 text-right">{p.activities}</td>
-                      <td className="py-2 text-right">{p.attainment === null ? '—' : `${num(p.attainment)}%`}</td>
-                      <td className="py-2 text-right">{p.badges}</td>
+                      <th scope="row" className="py-2 text-start font-medium">{p.user.name}</th>
+                      <td className="py-2 text-end font-semibold">{num(p.points)}</td>
+                      <td className="py-2 text-end">{p.dealsWon}</td>
+                      <td className="py-2 text-end">{formatMoney(p.revenueWon, b.currency)}</td>
+                      <td className="py-2 text-end">{p.activities}</td>
+                      <td className="py-2 text-end">{p.attainment === null ? '—' : `${num(p.attainment)}%`}</td>
+                      <td className="py-2 text-end">{p.badges}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -318,27 +319,27 @@ function Leaderboards() {
             ) : (
               <table className="w-full min-w-[560px] text-sm">
                 <caption className="sr-only">Teams ranked by points, {b.period.label}</caption>
-                <thead className="text-left text-xs text-muted-foreground">
+                <thead className="text-start text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="py-2 font-medium">Rank</th>
                     <th scope="col" className="py-2 font-medium">Team</th>
-                    <th scope="col" className="py-2 text-right font-medium">Points</th>
-                    <th scope="col" className="py-2 text-right font-medium">Per member</th>
-                    <th scope="col" className="py-2 text-right font-medium">Members</th>
-                    <th scope="col" className="py-2 text-right font-medium">Deals won</th>
-                    <th scope="col" className="py-2 text-right font-medium">Revenue won</th>
+                    <th scope="col" className="py-2 text-end font-medium">Points</th>
+                    <th scope="col" className="py-2 text-end font-medium">Per member</th>
+                    <th scope="col" className="py-2 text-end font-medium">Members</th>
+                    <th scope="col" className="py-2 text-end font-medium">Deals won</th>
+                    <th scope="col" className="py-2 text-end font-medium">Revenue won</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {b.teams.map((t) => (
                     <tr key={t.team.id}>
                       <td className="py-2">{t.rank}</td>
-                      <th scope="row" className="py-2 text-left font-medium">{t.team.name}</th>
-                      <td className="py-2 text-right font-semibold">{num(t.points)}</td>
-                      <td className="py-2 text-right">{num(t.perMember)}</td>
-                      <td className="py-2 text-right">{t.members}</td>
-                      <td className="py-2 text-right">{t.dealsWon}</td>
-                      <td className="py-2 text-right">{formatMoney(t.revenueWon, b.currency)}</td>
+                      <th scope="row" className="py-2 text-start font-medium">{t.team.name}</th>
+                      <td className="py-2 text-end font-semibold">{num(t.points)}</td>
+                      <td className="py-2 text-end">{num(t.perMember)}</td>
+                      <td className="py-2 text-end">{t.members}</td>
+                      <td className="py-2 text-end">{t.dealsWon}</td>
+                      <td className="py-2 text-end">{formatMoney(t.revenueWon, b.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -779,7 +780,7 @@ function RulesForm({ settings }: { settings: GamificationSettings }) {
         <CardContent className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
             <caption className="sr-only">Scoring rules</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-2 font-medium">Activity</th>
                 <th scope="col" className="py-2 font-medium">Counts</th>
@@ -793,14 +794,14 @@ function RulesForm({ settings }: { settings: GamificationSettings }) {
                 const label = SCORING_RULE_LABELS[k].label;
                 return (
                   <tr key={k}>
-                    <th scope="row" className="py-2 pr-3 text-left font-normal">
+                    <th scope="row" className="py-2 pe-3 text-start font-normal">
                       <span className="block font-medium">{label}</span>
                       <span className="block text-xs text-muted-foreground">{SCORING_RULE_LABELS[k].unit}</span>
                     </th>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3">
                       <input type="checkbox" aria-label={`${label} counts`} checked={r.enabled} onChange={(e) => setRule(k, { enabled: e.target.checked })} />
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3">
                       <Input aria-label={`${label} points`} type="number" min={0} max={1000} step={1} className="h-9 w-24" value={r.points} onChange={(e) => setRule(k, { points: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
                     </td>
                     <td className="py-2">

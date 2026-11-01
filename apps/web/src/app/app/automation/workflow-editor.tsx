@@ -301,7 +301,7 @@ function StepCard({ node, definition, onChange, entity, readOnly, depth }: { nod
           <span className="font-mono text-[11px] text-muted-foreground">{node.id}</span>
           {external && <Badge tone="warning">Needs approval each run</Badge>}
           {!readOnly && (
-            <Button type="button" variant="ghost" size="icon" className="ml-auto" aria-label={`Delete step ${node.id}`} onClick={() => onChange(removeNode(definition, node.id))}>
+            <Button type="button" variant="ghost" size="icon" className="ms-auto" aria-label={`Delete step ${node.id}`} onClick={() => onChange(removeNode(definition, node.id))}>
               <Trash2 aria-hidden />
             </Button>
           )}

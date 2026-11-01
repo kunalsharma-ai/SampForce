@@ -53,7 +53,7 @@ export function DealHealthBoard() {
         <Button size="sm" variant={mine ? 'default' : 'outline'} aria-pressed={mine} onClick={() => setFilter({ mine: !mine })}>
           Only my deals
         </Button>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="ms-auto flex items-center gap-2 text-xs text-muted-foreground">
           {summary.data?.lastSweepAt && <span>Last scored {relativeTime(summary.data.lastSweepAt)}</span>}
           <Button size="sm" variant="outline" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
             <RefreshCw className={refresh.isPending ? 'animate-spin' : undefined} aria-hidden /> Score now
@@ -79,13 +79,13 @@ export function DealHealthBoard() {
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
               <caption className="sr-only">Open deals by health, lowest first</caption>
-              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="px-4 py-2 font-medium">Deal</th>
                   <th scope="col" className="px-4 py-2 font-medium">Health</th>
                   <th scope="col" className="px-4 py-2 font-medium">Why</th>
                   <th scope="col" className="px-4 py-2 font-medium">Owner</th>
-                  <th scope="col" className="px-4 py-2 text-right font-medium">Amount</th>
+                  <th scope="col" className="px-4 py-2 text-end font-medium">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -101,7 +101,7 @@ export function DealHealthBoard() {
                       </p>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <span className="mr-2 font-semibold tabular-nums">{r.health}</span>
+                      <span className="me-2 font-semibold tabular-nums">{r.health}</span>
                       <Badge tone={TONE[r.risk]}>{LABEL[r.risk]}</Badge>
                       {r.change7d !== null && r.change7d !== 0 && (
                         <p className={`text-xs ${r.change7d > 0 ? 'text-success' : 'text-critical'}`}>
@@ -112,7 +112,7 @@ export function DealHealthBoard() {
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{r.signals.length ? r.signals.map((s) => s.label).join(', ') : 'No risk signals'}</td>
                     <td className="px-4 py-3 text-xs">{r.owner?.name ?? 'Unassigned'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatMoney(r.deal.amount, r.deal.currency)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-end tabular-nums">{formatMoney(r.deal.amount, r.deal.currency)}</td>
                   </tr>
                 ))}
               </tbody>

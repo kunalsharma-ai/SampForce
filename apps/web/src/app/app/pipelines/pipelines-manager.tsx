@@ -104,7 +104,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
           {pipeline?.isDefault && <Badge tone="primary">Default</Badge>}
           {pipeline && <span className="text-xs text-muted-foreground">{pipeline.dealCount} deals</span>}
           {canManage && pipeline && !pipeline.isDefault && (
-            <div className="ml-auto flex gap-1">
+            <div className="ms-auto flex gap-1">
               <Button type="button" variant="ghost" size="sm" onClick={() => makeDefault.mutate()}>
                 <Star aria-hidden /> Make default
               </Button>
@@ -117,7 +117,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
         <CardContent className="space-y-3">
           <table className="w-full text-sm">
             <caption className="sr-only">Stages</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="pb-2 font-medium">Stage</th>
                 <th scope="col" className="w-28 pb-2 font-medium">Probability</th>
@@ -130,13 +130,13 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
             <tbody>
               {draft.stages.map((s, i) => (
                 <tr key={s.id ?? `new-${i}`}>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pe-2">
                     <Input aria-label={`Stage ${i + 1} name`} className="h-9" value={s.name} disabled={!canManage} onChange={(e) => setStage(i, { name: e.target.value })} />
                   </td>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pe-2">
                     <Input aria-label={`Stage ${i + 1} probability`} className="h-9" type="number" min={0} max={100} value={s.probability} disabled={!canManage} onChange={(e) => setStage(i, { probability: Number(e.target.value) })} />
                   </td>
-                  <td className="py-1 pr-2">
+                  <td className="py-1 pe-2">
                     <Select aria-label={`Stage ${i + 1} type`} className="h-9" value={s.category} disabled={!canManage} onChange={(e) => setStage(i, { category: e.target.value as DraftStage['category'] })}>
                       <option value="OPEN">Open</option>
                       <option value="WON">Won</option>
@@ -172,7 +172,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
               <Button type="button" variant="outline" size="sm" onClick={() => setDraft({ ...draft, stages: [...draft.stages, { name: '', probability: 50, category: 'OPEN' }] })}>
                 <Plus aria-hidden /> Add stage
               </Button>
-              <span className="ml-auto text-xs text-muted-foreground" aria-live="polite">
+              <span className="ms-auto text-xs text-muted-foreground" aria-live="polite">
                 {saved && !dirty ? 'Saved' : ''}
               </span>
               {onDone && (

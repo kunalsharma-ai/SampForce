@@ -18,6 +18,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { PRIORITY_LABEL, PriorityBadge, RiskIndicator } from './deal-badges';
 import { StageStepper } from './stage-stepper';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -80,7 +81,7 @@ export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headi
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="space-y-3 border-b border-border p-5 pr-12">
+      <header className="space-y-3 border-b border-border p-5 pe-12">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <Heading className="truncate text-xl font-semibold">{d.name}</Heading>
@@ -205,7 +206,7 @@ function OverviewTab({ deal }: { deal: DealRow }) {
     },
     onSuccess: (row) => {
       qc.setQueryData(['deals', 'detail', row.id], row);
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(fmtLocale()));
       refresh();
     },
   });

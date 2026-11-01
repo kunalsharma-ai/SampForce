@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const ICONS: Record<TimelineKind, typeof StickyNote> = {
   created: PlusCircle,
@@ -109,7 +110,7 @@ function TimelineRow({ item: i }: { item: TimelineItem }) {
             <span className="font-medium">{i.title}</span>
           )}
           {i.about && (
-            <Badge className="ml-2" tone="neutral">
+            <Badge className="ms-2" tone="neutral">
               <Link href={`${ABOUT_HREF[i.about.type]}${i.about.id}`} className="hover:underline">
                 {i.about.name}
               </Link>
@@ -119,7 +120,7 @@ function TimelineRow({ item: i }: { item: TimelineItem }) {
         {i.detail && <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{i.detail}</p>}
         <p className="text-xs text-muted-foreground">
           {i.actor ? `${i.actor.name} · ` : ''}
-          <time dateTime={i.at} title={new Date(i.at).toLocaleString()}>
+          <time dateTime={i.at} title={new Date(i.at).toLocaleString(fmtLocale())}>
             {relativeTime(i.at)}
           </time>
         </p>

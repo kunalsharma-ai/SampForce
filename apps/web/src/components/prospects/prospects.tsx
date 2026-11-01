@@ -103,28 +103,28 @@ function Lists() {
           ) : (
             <table className="w-full min-w-[640px] text-sm">
               <caption className="sr-only">Prospect lists</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="py-2 font-medium">List</th>
-                  <th scope="col" className="py-2 text-right font-medium">Prospects</th>
-                  <th scope="col" className="py-2 text-right font-medium">With email</th>
-                  <th scope="col" className="py-2 text-right font-medium">In CRM</th>
-                  <th scope="col" className="py-2 pl-4 font-medium">Assigned to</th>
+                  <th scope="col" className="py-2 text-end font-medium">Prospects</th>
+                  <th scope="col" className="py-2 text-end font-medium">With email</th>
+                  <th scope="col" className="py-2 text-end font-medium">In CRM</th>
+                  <th scope="col" className="py-2 ps-4 font-medium">Assigned to</th>
                   <th scope="col" className="py-2 font-medium">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {q.data.map((l) => (
                   <tr key={l.id}>
-                    <th scope="row" className="py-2 text-left font-normal">
+                    <th scope="row" className="py-2 text-start font-normal">
                       <Link href={`/app/prospects/${l.id}`} className="font-medium underline underline-offset-2">{l.name}</Link>
-                      {l.samples > 0 && <Badge tone="warning" className="ml-2">{l.samples} sample</Badge>}
+                      {l.samples > 0 && <Badge tone="warning" className="ms-2">{l.samples} sample</Badge>}
                       {l.description && <span className="block text-xs text-muted-foreground">{l.description}</span>}
                     </th>
-                    <td className="py-2 text-right tabular-nums">{l.prospects}</td>
-                    <td className="py-2 text-right tabular-nums">{l.withEmail}</td>
-                    <td className="py-2 text-right tabular-nums">{l.inCrm}</td>
-                    <td className="py-2 pl-4">{l.assignee?.name ?? <span className="text-muted-foreground">Nobody</span>}</td>
+                    <td className="py-2 text-end tabular-nums">{l.prospects}</td>
+                    <td className="py-2 text-end tabular-nums">{l.withEmail}</td>
+                    <td className="py-2 text-end tabular-nums">{l.inCrm}</td>
+                    <td className="py-2 ps-4">{l.assignee?.name ?? <span className="text-muted-foreground">Nobody</span>}</td>
                     <td className="py-2 text-muted-foreground">{relativeTime(l.updatedAt)}</td>
                   </tr>
                 ))}
@@ -224,19 +224,19 @@ function Limits() {
               </label>
               <table className="w-full max-w-xl">
                 <caption className="sr-only">Usage and limits by person</caption>
-                <thead className="text-left text-xs text-muted-foreground">
+                <thead className="text-start text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="py-1.5 font-medium">Person</th>
-                    <th scope="col" className="py-1.5 text-right font-medium">Used (24 h)</th>
-                    <th scope="col" className="py-1.5 pl-4 font-medium">Own limit</th>
+                    <th scope="col" className="py-1.5 text-end font-medium">Used (24 h)</th>
+                    <th scope="col" className="py-1.5 ps-4 font-medium">Own limit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {s.data.members.map((m) => (
                     <tr key={m.id}>
-                      <th scope="row" className="py-1.5 text-left font-normal">{m.name}</th>
-                      <td className="py-1.5 text-right tabular-nums">{m.used}</td>
-                      <td className="py-1.5 pl-4">
+                      <th scope="row" className="py-1.5 text-start font-normal">{m.name}</th>
+                      <td className="py-1.5 text-end tabular-nums">{m.used}</td>
+                      <td className="py-1.5 ps-4">
                         <Input aria-label={`Own limit for ${m.name}`} type="number" min={0} max={5000} placeholder="Default" className="h-9 w-28" value={current[m.id] ?? ''} onChange={(e) => (setSaved(false), setOverrides({ ...current, [m.id]: e.target.value }))} />
                       </td>
                     </tr>
@@ -405,7 +405,7 @@ export function ProspectListView({ id }: { id: string }) {
           ) : (
             <table className="w-full min-w-[860px] text-sm">
               <caption className="sr-only">Prospects in {list.name}</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="w-8 py-2">
                     <input type="checkbox" aria-label="Select all on this page" checked={allOnPage} onChange={() => setSelected(allOnPage ? new Set() : new Set(prospects.map((p) => p.id)))} />
@@ -425,18 +425,18 @@ export function ProspectListView({ id }: { id: string }) {
                     <td className="py-2">
                       <input type="checkbox" aria-label={`Select ${p.fullName}`} checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
                     </td>
-                    <th scope="row" className="py-2 pr-2 text-left font-normal">
+                    <th scope="row" className="py-2 pe-2 text-start font-normal">
                       <span className="font-medium">{p.fullName}</span>
                       {p.title && <span className="block text-xs text-muted-foreground">{p.title}</span>}
                     </th>
-                    <td className="py-2 pr-2">
+                    <td className="py-2 pe-2">
                       {p.companyName ?? '—'}
                       {(p.domain || p.industry) && <span className="block text-xs text-muted-foreground">{[p.domain, p.industry].filter(Boolean).join(' · ')}</span>}
                     </td>
-                    <td className="py-2 pr-2"><EmailBadge p={p} /></td>
-                    <td className="py-2 pr-2">{p.country ?? '—'}</td>
-                    <td className="py-2 pr-2 tabular-nums">{p.companySize ?? '—'}</td>
-                    <td className="py-2 pr-2">{p.sample ? <Badge tone="warning">Sample</Badge> : PROSPECT_SOURCE_LABELS[p.source]}</td>
+                    <td className="py-2 pe-2"><EmailBadge p={p} /></td>
+                    <td className="py-2 pe-2">{p.country ?? '—'}</td>
+                    <td className="py-2 pe-2 tabular-nums">{p.companySize ?? '—'}</td>
+                    <td className="py-2 pe-2">{p.sample ? <Badge tone="warning">Sample</Badge> : PROSPECT_SOURCE_LABELS[p.source]}</td>
                     <td className="py-2">
                       {p.crm ? <Link className="underline underline-offset-2" href={`/app/${p.crm.type === 'lead' ? 'leads' : 'contacts'}/${p.crm.id}`}>{p.crm.type === 'lead' ? 'Lead' : 'Contact'}</Link> : <span className="text-muted-foreground">Not yet</span>}
                     </td>
@@ -519,7 +519,7 @@ function BulkBar({ listId, ids, onDone }: { listId: string; ids: string[]; onDon
         </div>
         <Alert error={err} />
         {failures.length > 0 && (
-          <ul className="list-disc pl-5 text-xs text-muted-foreground" aria-label="Why some were not added">
+          <ul className="list-disc ps-5 text-xs text-muted-foreground" aria-label="Why some were not added">
             {failures.map((f) => (
               <li key={f}>{f}</li>
             ))}
@@ -545,19 +545,19 @@ function Performance({ id }: { id: string }) {
         ) : (
           <table className="w-full min-w-[640px]">
             <caption className="sr-only">Sequence results for this list</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 {['Sequence', 'Enrolled', 'Sent', 'Opened', 'Clicked', 'Replied', 'Bounced', 'Unsubscribed'].map((h, i) => (
-                  <th key={h} scope="col" className={cn('py-1.5 font-medium', i && 'text-right')}>{h}</th>
+                  <th key={h} scope="col" className={cn('py-1.5 font-medium', i && 'text-end')}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((r) => (
                 <tr key={r.sequence.id}>
-                  <th scope="row" className="py-1.5 text-left font-normal"><Link className="underline underline-offset-2" href={`/app/sequences/${r.sequence.id}`}>{r.sequence.name}</Link></th>
+                  <th scope="row" className="py-1.5 text-start font-normal"><Link className="underline underline-offset-2" href={`/app/sequences/${r.sequence.id}`}>{r.sequence.name}</Link></th>
                   {[r.enrolled, r.sent, r.opened, r.clicked, r.replied, r.bounced, r.unsubscribed].map((v, i) => (
-                    <td key={i} className="py-1.5 text-right tabular-nums">{v}</td>
+                    <td key={i} className="py-1.5 text-end tabular-nums">{v}</td>
                   ))}
                 </tr>
               ))}
@@ -646,7 +646,7 @@ function ImportDialog({ listId, onClose, onDone }: { listId: string; onClose: ()
       ) : invalid.length ? (
         <div className="space-y-2 text-sm">
           <p>These rows were not imported:</p>
-          <ul className="max-h-64 list-disc overflow-y-auto pl-5" aria-label="Rows not imported">
+          <ul className="max-h-64 list-disc overflow-y-auto ps-5" aria-label="Rows not imported">
             {invalid.map((r) => (
               <li key={r.row}>Row {r.row}: {r.message}</li>
             ))}
@@ -672,12 +672,12 @@ function ImportDialog({ listId, onClose, onDone }: { listId: string; onClose: ()
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <caption className="sr-only">First rows of the file</caption>
-              <thead className="text-left text-muted-foreground">
-                <tr>{preview.headers.map((h, i) => <th key={i} scope="col" className="py-1 pr-2 font-medium">{h}</th>)}</tr>
+              <thead className="text-start text-muted-foreground">
+                <tr>{preview.headers.map((h, i) => <th key={i} scope="col" className="py-1 pe-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {preview.sample.map((r, i) => (
-                  <tr key={i}>{preview.headers.map((_, j) => <td key={j} className="py-1 pr-2">{r[j]}</td>)}</tr>
+                  <tr key={i}>{preview.headers.map((_, j) => <td key={j} className="py-1 pe-2">{r[j]}</td>)}</tr>
                 ))}
               </tbody>
             </table>

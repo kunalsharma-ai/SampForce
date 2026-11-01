@@ -180,6 +180,7 @@ import {
   smsSendSchema,
   twilioConnectSchema,
   appearanceSchema,
+  regionalSchema,
   savedThemeInputSchema,
   navItemSchema,
   updateNavigationSchema,
@@ -833,6 +834,9 @@ export function buildOpenApiDocument(): object {
   action('get', '/me/preferences', 'Appearance', 'Effective appearance (own, else workspace default, else DealFlow default) and its source');
   action('put', '/me/preferences/appearance', 'Appearance', 'Save the person’s appearance settings', appearanceSchema);
   action('delete', '/me/preferences/appearance', 'Appearance', 'Forget the person’s settings and fall back to the workspace default');
+  action('get', '/me/regional', 'Appearance', 'The person’s language and regional formats (DealFlow defaults until they choose)');
+  action('put', '/me/regional', 'Appearance', 'Save language (en, es, fr, de, ar) and format locale (a BCP 47 tag, or null to follow the language)', regionalSchema);
+  action('delete', '/me/regional', 'Appearance', 'Forget the person’s language and formats');
   action('get', '/me/themes', 'Appearance', 'Named themes the person saved');
   action('post', '/me/themes', 'Appearance', 'Save a named theme (updates one with the same name; at most 20, else LIMIT_REACHED)', savedThemeInputSchema);
   action('delete', '/me/themes/{id}', 'Appearance', 'Delete a saved theme');

@@ -4,6 +4,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dea
 import type { CursorPage } from '@dealflow/types';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 interface AuditRow {
   id: string;
@@ -40,7 +41,7 @@ export function AuditLogTable() {
         ) : (
           <table className="w-full min-w-[640px] text-sm">
             <caption className="sr-only">Audit events, newest first</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-2 font-medium">When</th>
                 <th scope="col" className="py-2 font-medium">Actor</th>
@@ -53,7 +54,7 @@ export function AuditLogTable() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="py-2 tabular text-muted-foreground">
-                    <time dateTime={r.createdAt}>{new Date(r.createdAt).toLocaleString()}</time>
+                    <time dateTime={r.createdAt}>{new Date(r.createdAt).toLocaleString(fmtLocale())}</time>
                   </td>
                   <td className="py-2">{r.actorName ?? r.actorType.toLowerCase()}</td>
                   <td className="py-2 font-mono text-xs">{r.action}</td>

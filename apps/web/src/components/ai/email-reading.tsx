@@ -44,7 +44,7 @@ export function EmailReading({ emailId, from, onReply }: { emailId: string; from
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="size-4 text-accent" aria-hidden />
         <span className="font-medium">AI reading</span>
-        <Button type="button" size="sm" variant="outline" className="ml-auto" disabled={run.isPending || !!reason} onClick={() => run.mutate()}>
+        <Button type="button" size="sm" variant="outline" className="ms-auto" disabled={run.isPending || !!reason} onClick={() => run.mutate()}>
           {run.isPending ? 'Reading…' : a ? 'Read again' : 'Read with AI'}
         </Button>
       </div>

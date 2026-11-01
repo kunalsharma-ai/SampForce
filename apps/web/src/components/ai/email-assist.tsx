@@ -80,9 +80,9 @@ export function EmailAssist({
 
   return (
     <div className="rounded-lg border border-border">
-      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-start text-sm font-medium" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Sparkles className="size-4 text-accent" aria-hidden /> Write with AI
-        <ChevronDown className={`ml-auto size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+        <ChevronDown className={`ms-auto size-4 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
       {open && (
         <div className="space-y-3 border-t border-border p-3">
@@ -153,7 +153,7 @@ export function EmailAssist({
               {proposal.subject && <p className="font-medium">{proposal.subject}</p>}
               <p className="whitespace-pre-wrap">{proposal.body}</p>
               {proposal.warnings.length > 0 && (
-                <ul className="list-disc pl-5 text-xs text-warning">
+                <ul className="list-disc ps-5 text-xs text-warning">
                   {proposal.warnings.map((w) => (
                     <li key={w}>Check before sending: {w}</li>
                   ))}

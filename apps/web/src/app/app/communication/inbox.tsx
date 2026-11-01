@@ -56,6 +56,7 @@ import { useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan, useSession } from '@/lib/session';
 import { ComposeDialog } from './mailbox';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATUS_TONE: Record<InboxStatus, 'primary' | 'warning' | 'neutral'> = {
   OPEN: 'primary',
@@ -112,7 +113,7 @@ export function Inbox() {
             </p>
           )
         )}
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ms-auto flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setLogs(true)}>
             <History aria-hidden /> Sync log
           </Button>
@@ -136,7 +137,7 @@ export function Inbox() {
       >
         <div className="relative min-w-56 flex-1">
           <Search
-            className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground"
+            className="pointer-events-none absolute start-2.5 top-2.5 size-4 text-muted-foreground"
             aria-hidden
           />
           <Input
@@ -144,7 +145,7 @@ export function Inbox() {
             placeholder="Search subject, people or message text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-8"
+            className="h-9 ps-8"
           />
         </div>
         <Select
@@ -279,7 +280,7 @@ function ThreadItem({
         type="button"
         onClick={onOpen}
         aria-current={active || undefined}
-        className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 ${active ? 'bg-muted/60' : ''}`}
+        className={`flex w-full items-start gap-3 px-4 py-3 text-start hover:bg-muted/50 ${active ? 'bg-muted/60' : ''}`}
       >
         {t.lastDirection === 'INBOUND' ? (
           <ArrowDownLeft
@@ -374,7 +375,7 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
           onClick={onBack}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground lg:hidden"
         >
-          <ArrowLeft className="size-4" aria-hidden /> All conversations
+          <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All conversations
         </button>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">{t.subject}</h2>
@@ -621,7 +622,7 @@ function MessageItem({ m }: { m: InboxMessage }) {
     <li className="rounded-lg border border-border p-3">
       <button
         type="button"
-        className="flex w-full flex-wrap items-baseline gap-x-2 text-left"
+        className="flex w-full flex-wrap items-baseline gap-x-2 text-start"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
@@ -632,8 +633,8 @@ function MessageItem({ m }: { m: InboxMessage }) {
         )}
         <span className="text-sm font-medium">{m.from}</span>
         <span className="text-xs text-muted-foreground">to {m.to.join(', ')}</span>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {new Date(m.sentAt).toLocaleString()}
+        <span className="ms-auto text-xs text-muted-foreground">
+          {new Date(m.sentAt).toLocaleString(fmtLocale())}
         </span>
       </button>
       {open && (
@@ -723,31 +724,31 @@ function SyncLogDialog({
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="pb-2 font-medium">When</th>
                   <th className="pb-2 font-medium">Mailbox</th>
                   <th className="pb-2 font-medium">Result</th>
-                  <th className="pb-2 text-right font-medium">Emails</th>
-                  <th className="pb-2 text-right font-medium">Meetings</th>
+                  <th className="pb-2 text-end font-medium">Emails</th>
+                  <th className="pb-2 text-end font-medium">Meetings</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {logs.data?.map((l) => (
                   <tr key={l.id}>
-                    <td className="py-2 pr-2">
+                    <td className="py-2 pe-2">
                       {relativeTime(l.startedAt)}
                       <span className="block text-xs text-muted-foreground">
                         {l.trigger === 'manual' ? 'Started by hand' : 'Scheduled'}
                       </span>
                     </td>
-                    <td className="py-2 pr-2">{l.mailbox.accountEmail}</td>
-                    <td className="py-2 pr-2">
+                    <td className="py-2 pe-2">{l.mailbox.accountEmail}</td>
+                    <td className="py-2 pe-2">
                       <Badge tone={l.ok ? 'success' : 'critical'}>{l.ok ? 'OK' : 'Failed'}</Badge>
                       {l.error && <span className="block text-xs text-critical">{l.error}</span>}
                     </td>
-                    <td className="py-2 pr-2 text-right tabular-nums">{l.emails}</td>
-                    <td className="py-2 text-right tabular-nums">{l.meetings}</td>
+                    <td className="py-2 pe-2 text-end tabular-nums">{l.emails}</td>
+                    <td className="py-2 text-end tabular-nums">{l.meetings}</td>
                   </tr>
                 ))}
               </tbody>

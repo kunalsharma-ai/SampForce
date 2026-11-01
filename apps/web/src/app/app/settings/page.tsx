@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { AppearanceSettings } from './appearance-settings';
+import { RegionalSettings } from './regional-settings';
 import { WorkspaceSettings } from './workspace-settings';
 
 export const metadata: Metadata = { title: 'Settings' };
@@ -11,9 +12,10 @@ export const metadata: Metadata = { title: 'Settings' };
 export default function SettingsPage() {
   return (
     <div className="max-w-3xl space-y-6">
-      <PageHeader title="Settings" description="Workspace details, display preferences, custom fields and data import." />
+      <PageHeader title="Settings" description="Workspace details, display preferences, language and region, custom fields and data import." />
       <WorkspaceSettings />
       <AppearanceSettings />
+      <RegionalSettings />
       <Card>
         <CardHeader>
           <CardTitle>Data</CardTitle>
@@ -29,7 +31,7 @@ export default function SettingsPage() {
                 <span className="block text-sm font-medium">{l.title}</span>
                 <span className="block text-sm text-muted-foreground">{l.text}</span>
               </span>
-              <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+              <ChevronRight className="rtl:-scale-x-100 size-4 text-muted-foreground" aria-hidden />
             </Link>
           ))}
         </CardContent>

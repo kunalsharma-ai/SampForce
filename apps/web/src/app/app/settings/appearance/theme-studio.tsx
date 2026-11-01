@@ -119,7 +119,7 @@ export function ThemeStudio() {
                         <input type="radio" name="theme" value={t.id} checked={on} onChange={() => set({ themeId: t.id as ThemeId })} className="sr-only" />
                         <span aria-hidden className="mb-2 flex h-10 overflow-hidden rounded-md border border-border" style={{ background: p.background }}>
                           <span className="m-1.5 w-1/3 rounded" style={{ background: p.surface }} />
-                          <span className="my-1.5 flex flex-1 flex-col justify-center gap-1 pr-1.5">
+                          <span className="my-1.5 flex flex-1 flex-col justify-center gap-1 pe-1.5">
                             <span className="h-1.5 w-3/4 rounded-full" style={{ background: p.primary }} />
                             <span className="h-1.5 w-1/2 rounded-full" style={{ background: p.accent }} />
                             <span className="h-1.5 w-2/3 rounded-full" style={{ background: p.secondary }} />
@@ -446,7 +446,7 @@ function Preview({ paint, dark }: { paint: ReturnType<typeof computePaint>; dark
       style={previewStyle(paint, dark)}
     >
       <div className="flex">
-        <nav aria-label="Preview navigation" className="df-sidebar hidden w-32 shrink-0 space-y-1 border-r border-border p-2 text-xs sm:block">
+        <nav aria-label="Preview navigation" className="df-sidebar hidden w-32 shrink-0 space-y-1 border-e border-border p-2 text-xs sm:block">
           {[
             { icon: LayoutDashboard, label: 'Command' },
             { icon: Users, label: 'Leads' },
@@ -482,7 +482,7 @@ function Preview({ paint, dark }: { paint: ReturnType<typeof computePaint>; dark
                 <span key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: `hsl(var(--chart-${i + 1}))` }} />
               ))}
             </div>
-            <table className="mt-2 w-full text-left text-[11px]">
+            <table className="mt-2 w-full text-start text-[11px]">
               <caption className="sr-only">Sample deals</caption>
               <thead className="text-muted-foreground">
                 <tr>

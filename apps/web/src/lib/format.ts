@@ -1,6 +1,7 @@
 import type { KpiFormat } from '@dealflow/types';
+import { fmtLocale } from '@/lib/i18n/locale';
 
-export function formatKpi(value: number, format: KpiFormat, currency: string, locale = 'en-US'): string {
+export function formatKpi(value: number, format: KpiFormat, currency: string, locale = fmtLocale()): string {
   switch (format) {
     case 'currency':
       return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
@@ -13,14 +14,15 @@ export function formatKpi(value: number, format: KpiFormat, currency: string, lo
   }
 }
 
-export function relativeTime(iso: string, now = Date.now()): string {
+/** "3 days ago", "in 2 hours", "now", written in the person's format locale. */
+export function relativeTime(iso: string, now = Date.now(), locale = fmtLocale()): string {
   const diff = (new Date(iso).getTime() - now) / 1000;
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
   const units: [Intl.RelativeTimeFormatUnit, number][] = [
     ['day', 86_400],
     ['hour', 3_600],
     ['minute', 60],
   ];
   for (const [unit, secs] of units) if (Math.abs(diff) >= secs) return rtf.format(Math.round(diff / secs), unit);
-  return 'just now';
+  return rtf.format(0, 'second');
 }

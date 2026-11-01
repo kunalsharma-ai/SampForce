@@ -8,6 +8,7 @@ import { aiErrorMessage, useAiStatus, useAiUsage, useUpdateAiSettings } from '@/
 import { relativeTime } from '@/lib/format';
 import { titleCase } from '@/lib/crm';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const RUN_TONE = { SUCCEEDED: 'success', FAILED: 'critical', BLOCKED: 'warning', RUNNING: 'accent', QUEUED: 'neutral' } as const;
 
@@ -84,16 +85,16 @@ function CreditsCard({ status }: { status: AiStatus }) {
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         <p>
-          <span className="text-2xl font-semibold tabular-nums">{c.used.toLocaleString()}</span>
-          <span className="text-muted-foreground"> of {c.limit.toLocaleString()} used</span>
+          <span className="text-2xl font-semibold tabular-nums">{c.used.toLocaleString(fmtLocale())}</span>
+          <span className="text-muted-foreground"> of {c.limit.toLocaleString(fmtLocale())} used</span>
         </p>
         <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="AI credits used" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div className={`h-full ${pct >= 90 ? 'bg-critical' : pct >= 70 ? 'bg-warning' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
         </div>
         <p className="text-xs text-muted-foreground">
-          Plan allowance {c.allowance.toLocaleString()} ({c.seats} active seat{c.seats === 1 ? '' : 's'})
-          {status.settings.monthlyCreditCap !== null && `, capped at ${status.settings.monthlyCreditCap.toLocaleString()} by an admin`}. Resets on{' '}
-          {new Date(new Date(c.periodStart).setUTCMonth(new Date(c.periodStart).getUTCMonth() + 1)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}. When credits run out, AI calls stop until the next period; rule-based features keep working.
+          Plan allowance {c.allowance.toLocaleString(fmtLocale())} ({c.seats} active seat{c.seats === 1 ? '' : 's'})
+          {status.settings.monthlyCreditCap !== null && `, capped at ${status.settings.monthlyCreditCap.toLocaleString(fmtLocale())} by an admin`}. Resets on{' '}
+          {new Date(new Date(c.periodStart).setUTCMonth(new Date(c.periodStart).getUTCMonth() + 1)).toLocaleDateString(fmtLocale(), { month: 'short', day: 'numeric', timeZone: 'UTC' })}. When credits run out, AI calls stop until the next period; rule-based features keep working.
         </p>
       </CardContent>
     </Card>
@@ -235,23 +236,23 @@ function UsageSection() {
             <p className="text-sm text-muted-foreground">No AI calls yet this month.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="pb-2 font-medium">Agent</th>
-                  <th className="pb-2 text-right font-medium">Calls</th>
-                  <th className="pb-2 text-right font-medium">Tokens in / out</th>
-                  <th className="pb-2 text-right font-medium">Credits</th>
+                  <th className="pb-2 text-end font-medium">Calls</th>
+                  <th className="pb-2 text-end font-medium">Tokens in / out</th>
+                  <th className="pb-2 text-end font-medium">Credits</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {u.byAgent.map((r) => (
                   <tr key={r.agent}>
                     <td className="py-2">{name(r.agent)}</td>
-                    <td className="py-2 text-right tabular-nums">{r.calls}</td>
-                    <td className="py-2 text-right tabular-nums">
-                      {r.inputTokens.toLocaleString()} / {r.outputTokens.toLocaleString()}
+                    <td className="py-2 text-end tabular-nums">{r.calls}</td>
+                    <td className="py-2 text-end tabular-nums">
+                      {r.inputTokens.toLocaleString(fmtLocale())} / {r.outputTokens.toLocaleString(fmtLocale())}
                     </td>
-                    <td className="py-2 text-right tabular-nums">{r.credits}</td>
+                    <td className="py-2 text-end tabular-nums">{r.credits}</td>
                   </tr>
                 ))}
               </tbody>
@@ -272,7 +273,7 @@ function UsageSection() {
                 <li key={r.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 py-2">
                   <span className="font-medium">{name(r.agent)}</span>
                   <Badge tone={RUN_TONE[r.status]}>{titleCase(r.status)}</Badge>
-                  <span className="ml-auto text-xs text-muted-foreground">
+                  <span className="ms-auto text-xs text-muted-foreground">
                     {r.user?.name ?? 'Automatic'} · {r.creditsUsed} cr · {relativeTime(r.createdAt)}
                   </span>
                   {r.error && <span className="w-full text-xs text-critical">{r.error}</span>}

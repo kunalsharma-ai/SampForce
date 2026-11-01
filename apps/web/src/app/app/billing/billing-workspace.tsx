@@ -11,6 +11,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, formatMinor, INVOICE_STATUS, SUBSCRIPTION_STATUS, useBilling, useInvoices } from '@/lib/billing';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const usd = (n: number) => `$${n}`;
 const PROVIDER_LABEL: Record<BillingProviderKey | 'OFFLINE', string> = { STRIPE: 'Stripe', RAZORPAY: 'Razorpay', OFFLINE: 'Paid by invoice' };
@@ -207,8 +208,8 @@ function Meter({ label, m, unit }: { label: string; m: UsageMeter; unit?: string
     <div className="rounded-lg border border-border p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-lg font-semibold tabular">
-        {m.used.toLocaleString()}
-        <span className="text-sm font-normal text-muted-foreground"> / {m.limit === null ? 'no limit' : `${m.limit.toLocaleString()}${unit ?? ''}`}</span>
+        {m.used.toLocaleString(fmtLocale())}
+        <span className="text-sm font-normal text-muted-foreground"> / {m.limit === null ? 'no limit' : `${m.limit.toLocaleString(fmtLocale())}${unit ?? ''}`}</span>
       </p>
       {m.limit !== null && (
         <div className="mt-2 h-1.5 rounded-full bg-muted" role="progressbar" aria-label={label} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
@@ -258,7 +259,7 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
           Plans
         </h2>
         {!b.pricingPublished && <Badge tone="warning">Proposed launch pricing</Badge>}
-        <div className="ml-auto flex flex-wrap items-end gap-3">
+        <div className="ms-auto flex flex-wrap items-end gap-3">
           <div role="radiogroup" aria-label="Billing interval" className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
             {(['MONTH', 'YEAR'] as const).map((i) => (
               <button key={i} type="button" role="radio" aria-checked={interval === i} onClick={() => setInterval(i)} className={cn('rounded-md px-3 py-1 text-sm', interval === i ? 'bg-background shadow-sm' : 'text-muted-foreground')}>
@@ -378,8 +379,8 @@ function PlanCard({ p, b, interval, action }: { p: CatalogPlan; b: BillingOvervi
         <ul className="mt-3 flex-1 space-y-1 text-xs text-muted-foreground">
           <li>{ent.maxUsers ? `Up to ${ent.maxUsers} users` : 'Per-seat'}</li>
           <li>{ent.maxPipelines ?? 'Unlimited'} pipeline{ent.maxPipelines === 1 ? '' : 's'}</li>
-          <li>{ent.monthlyAiCredits.toLocaleString()} AI credits / user / month</li>
-          <li>{ent.automationRunsPerMonth.toLocaleString()} automation runs / month</li>
+          <li>{ent.monthlyAiCredits.toLocaleString(fmtLocale())} AI credits / user / month</li>
+          <li>{ent.automationRunsPerMonth.toLocaleString(fmtLocale())} automation runs / month</li>
           <li>{ent.customRoles ? 'Custom roles' : 'Standard roles'}</li>
         </ul>
         {action && <div className="mt-3">{action}</div>}
@@ -404,12 +405,12 @@ function Invoices() {
         ) : (
           <table className="w-full min-w-[560px] text-sm">
             <caption className="sr-only">Invoices</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-2 font-medium">Invoice</th>
                 <th scope="col" className="py-2 font-medium">Issued</th>
                 <th scope="col" className="py-2 font-medium">Status</th>
-                <th scope="col" className="py-2 text-right font-medium">Total</th>
+                <th scope="col" className="py-2 text-end font-medium">Total</th>
                 <th scope="col" className="py-2 font-medium"><span className="sr-only">Links</span></th>
               </tr>
             </thead>
@@ -419,8 +420,8 @@ function Invoices() {
                   <td className="py-2.5">{i.number ?? `${PROVIDER_LABEL[i.provider]} payment`}</td>
                   <td className="py-2.5 text-muted-foreground">{formatDate(i.issuedAt)}</td>
                   <td className="py-2.5"><Badge tone={INVOICE_STATUS[i.status].tone}>{INVOICE_STATUS[i.status].label}</Badge></td>
-                  <td className="py-2.5 text-right tabular">{formatMinor(i.totalCents, i.currency)}</td>
-                  <td className="py-2.5 text-right">
+                  <td className="py-2.5 text-end tabular">{formatMinor(i.totalCents, i.currency)}</td>
+                  <td className="py-2.5 text-end">
                     {(i.hostedUrl ?? i.pdfUrl) && (
                       <a href={(i.hostedUrl ?? i.pdfUrl)!} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">
                         View<span className="sr-only"> invoice {i.number ?? ''}</span>

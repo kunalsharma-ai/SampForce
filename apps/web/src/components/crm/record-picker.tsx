@@ -94,7 +94,7 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
         <button
           type="button"
           aria-label="Clear selection"
-          className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
+          className="absolute end-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
           onClick={() => {
             onChange(null);
             setText('');
@@ -124,7 +124,7 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
                 className="cursor-pointer rounded px-3 py-2 text-sm aria-selected:bg-muted"
               >
                 <span className="font-medium">{o.name}</span>
-                {o.sub && <span className="ml-2 text-xs text-muted-foreground">{o.sub}</span>}
+                {o.sub && <span className="ms-2 text-xs text-muted-foreground">{o.sub}</span>}
               </li>
             ))
           )}

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Field } from '@/components/revenue/tabs';
 import { api, ApiError } from '@/lib/api';
 import { useMfaStatus } from '@/lib/security';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type Step = { kind: 'idle' } | { kind: 'password' } | { kind: 'scan'; setup: MfaSetupResponse } | { kind: 'codes'; codes: string[] } | { kind: 'disable' } | { kind: 'regenerate' };
 
@@ -55,7 +56,7 @@ export function TwoStepCard() {
         {s?.canManage && step.kind === 'idle' && s.enabled && (
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              On since {s.enabledAt ? new Date(s.enabledAt).toLocaleDateString() : '—'}. {s.recoveryCodesRemaining} of 10 recovery codes left.
+              On since {s.enabledAt ? new Date(s.enabledAt).toLocaleDateString(fmtLocale()) : '—'}. {s.recoveryCodesRemaining} of 10 recovery codes left.
               {s.recoveryCodesRemaining <= 3 && ' Make new ones soon.'}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -167,7 +168,7 @@ function ScanStep({ setup, busy, onSubmit, onCancel }: { setup: MfaSetupResponse
   const grouped = setup.secret.match(/.{1,4}/g)?.join(' ') ?? setup.secret;
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(code); }}>
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+      <ol className="list-decimal space-y-1 ps-5 text-sm text-muted-foreground">
         <li>Open your authenticator app and add an account.</li>
         <li>Scan the QR code, or type the key below.</li>
         <li>Enter the 6-digit code the app shows.</li>

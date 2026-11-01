@@ -58,6 +58,10 @@ jobs:
         run: pnpm --filter @dealflow/web exec playwright install --with-deps chromium
       - name: End-to-end and accessibility tests
         run: pnpm test:e2e
+      - name: Component catalogue builds, and every story renders and passes axe (dark, light, right to left)
+        run: |
+          pnpm --filter @dealflow/web build-storybook
+          pnpm --filter @dealflow/web test:storybook
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

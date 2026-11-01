@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { AUTH_METHOD_LABEL, describeDevice, useSessions } from '@/lib/security';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /** The caller's live sessions, with sign-out for one device or all the others. */
 export function DeviceList() {
@@ -33,7 +34,7 @@ export function DeviceList() {
                     {describeDevice(s.userAgent)} {s.current && <Badge tone="success">This device</Badge>}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {AUTH_METHOD_LABEL[s.method]} · last active {new Date(s.lastActiveAt).toLocaleString()}
+                    {AUTH_METHOD_LABEL[s.method]} · last active {new Date(s.lastActiveAt).toLocaleString(fmtLocale())}
                     {s.ipAddress ? ` · ${s.ipAddress}` : ''}
                   </span>
                 </span>

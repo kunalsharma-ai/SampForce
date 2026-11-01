@@ -7,6 +7,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, useSupportGrants } from '@/lib/billing';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 /**
  * Time-boxed permission for DealFlow platform support to see this workspace's member list and audit
@@ -28,7 +29,7 @@ export function SupportAccess() {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Support access {active ? <Badge tone="warning">On until {new Date(active.expiresAt).toLocaleString()}</Badge> : <Badge>Off</Badge>}
+          Support access {active ? <Badge tone="warning">On until {new Date(active.expiresAt).toLocaleString(fmtLocale())}</Badge> : <Badge>Off</Badge>}
         </CardTitle>
         <CardDescription>Let DealFlow support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.</CardDescription>
       </CardHeader>

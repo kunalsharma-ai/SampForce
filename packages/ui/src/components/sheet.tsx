@@ -9,11 +9,12 @@ export const DialogClose = DialogPrimitive.Close;
 export const DialogTitle = DialogPrimitive.Title;
 export const DialogDescription = DialogPrimitive.Description;
 
+/** 'right' and 'left' are the end and start edges, so in right-to-left languages the panels swap sides. */
 type Side = 'right' | 'left' | 'center';
 
 const sideClasses: Record<Side, string> = {
-  right: 'inset-y-0 right-0 h-full w-full max-w-md border-l data-[state=open]:slide-in-from-right',
-  left: 'inset-y-0 left-0 h-full w-72 border-r data-[state=open]:slide-in-from-left',
+  right: 'inset-y-0 end-0 h-full w-full max-w-md border-s data-[state=open]:slide-in-from-right rtl:data-[state=open]:slide-in-from-left',
+  left: 'inset-y-0 start-0 h-full w-72 border-e data-[state=open]:slide-in-from-left rtl:data-[state=open]:slide-in-from-right',
   center: 'left-1/2 top-[15%] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border data-[state=open]:zoom-in-95',
 };
 
@@ -35,7 +36,7 @@ export const DialogContent = React.forwardRef<
     >
       {children}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <DialogPrimitive.Close className="absolute end-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <X className="size-4" aria-hidden />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

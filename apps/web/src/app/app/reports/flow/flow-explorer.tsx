@@ -99,21 +99,21 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
           <CardContent>
             <table className="w-full text-sm">
               <caption className="sr-only">Open deals, value and typical time in each stage</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="py-1 font-medium">Stage</th>
-                  <th scope="col" className="py-1 text-right font-medium">Open deals</th>
-                  <th scope="col" className="py-1 text-right font-medium">Open value</th>
-                  <th scope="col" className="py-1 text-right font-medium">Median days</th>
+                  <th scope="col" className="py-1 text-end font-medium">Open deals</th>
+                  <th scope="col" className="py-1 text-end font-medium">Open value</th>
+                  <th scope="col" className="py-1 text-end font-medium">Median days</th>
                 </tr>
               </thead>
               <tbody className="tabular">
                 {stages.map((s) => (
                   <tr key={s.id} className="border-t border-border">
-                    <th scope="row" className="py-1 text-left font-normal">{s.name}</th>
-                    <td className="py-1 text-right">{s.category === 'OPEN' ? s.openDeals : '—'}</td>
-                    <td className="py-1 text-right">{s.category === 'OPEN' ? formatValue(s.openValue, f.currency) : '—'}</td>
-                    <td className="py-1 text-right">{s.medianDays ?? '—'}</td>
+                    <th scope="row" className="py-1 text-start font-normal">{s.name}</th>
+                    <td className="py-1 text-end">{s.category === 'OPEN' ? s.openDeals : '—'}</td>
+                    <td className="py-1 text-end">{s.category === 'OPEN' ? formatValue(s.openValue, f.currency) : '—'}</td>
+                    <td className="py-1 text-end">{s.medianDays ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -128,11 +128,11 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
             ) : (
               <table className="w-full text-sm">
                 <caption className="sr-only">Deals that moved between stages</caption>
-                <thead className="text-left text-xs text-muted-foreground">
+                <thead className="text-start text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="py-1 font-medium">From</th>
                     <th scope="col" className="py-1 font-medium">To</th>
-                    <th scope="col" className="py-1 text-right font-medium">Deals</th>
+                    <th scope="col" className="py-1 text-end font-medium">Deals</th>
                   </tr>
                 </thead>
                 <tbody className="tabular">
@@ -140,7 +140,7 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
                     <tr key={`${t.from}-${t.to}`} className="border-t border-border">
                       <td className="py-1">{name.get(t.from) ?? 'Removed stage'}</td>
                       <td className="py-1">{name.get(t.to) ?? 'Removed stage'}</td>
-                      <td className="py-1 text-right">{t.deals}</td>
+                      <td className="py-1 text-end">{t.deals}</td>
                     </tr>
                   ))}
                 </tbody>

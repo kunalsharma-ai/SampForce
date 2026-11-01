@@ -118,7 +118,7 @@ export function ContactSms({ contactId }: { contactId: string }) {
             {t.messages.length > 0 ? (
               <ul className="max-h-80 space-y-2 overflow-y-auto" aria-label="Text messages">
                 {t.messages.map((m) => (
-                  <li key={m.id} className={`rounded-md p-2 ${m.direction === 'out' ? 'ml-6 bg-primary/5' : 'mr-6 bg-muted'}`}>
+                  <li key={m.id} className={`rounded-md p-2 ${m.direction === 'out' ? 'ms-6 bg-primary/5' : 'me-6 bg-muted'}`}>
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Badge tone={STATUS[m.status].tone}>{STATUS[m.status].label}</Badge>

@@ -16,7 +16,7 @@ export function ActivityStream({ items }: { items: ActivityItem[] }) {
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No activity yet.</p>
         ) : (
-          <ol className="relative space-y-4 border-l border-border pl-4" aria-live="polite">
+          <ol className="relative space-y-4 border-s border-border ps-4" aria-live="polite">
             <AnimatePresence initial={false}>
               {items.map((a) => (
                 <motion.li key={a.id} layout initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="relative">

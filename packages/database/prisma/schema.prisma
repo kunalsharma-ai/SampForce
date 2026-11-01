@@ -63,6 +63,7 @@ model User {
   resetTokens        PasswordResetToken[]
   gamificationAwards GamificationAward[]
   preferences        UserPreference?
+  regional           UserRegionalSetting?
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
   savedViews         SavedView[]
@@ -79,6 +80,18 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
+}
+
+/// A person's language and regional formats. Per person, like UserPreference, so it follows them across workspaces.
+model UserRegionalSetting {
+  userId       String   @id @map("user_id") @db.Uuid
+  language     String   @default("en")
+  formatLocale String?  @map("format_locale")
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_regional_settings")
 }
 
 /// Named custom themes a person saved in the Theme Studio.

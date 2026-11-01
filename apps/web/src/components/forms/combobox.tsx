@@ -128,16 +128,16 @@ export function Combobox({
             setText(null);
           }
         }}
-        className="flex h-control w-full rounded-md border border-input bg-surface py-2 pl-3 pr-14 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-critical"
+        className="flex h-control w-full rounded-md border border-input bg-surface py-2 ps-3 pe-14 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-critical"
       />
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden>
+      <span className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden>
         <ChevronsUpDown className="size-4" />
       </span>
       {clearable && value && !disabled && (
         <button
           type="button"
           aria-label="Clear selection"
-          className="absolute right-7 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
+          className="absolute end-7 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
           onClick={() => onChange('')}
         >
           <X className="size-3.5" aria-hidden />
@@ -164,7 +164,7 @@ export function Combobox({
               >
                 <Check className={cn('size-3.5 shrink-0', o.value === value ? 'opacity-100' : 'opacity-0')} aria-hidden />
                 <span className="truncate">{o.label}</span>
-                {o.hint && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{o.hint}</span>}
+                {o.hint && <span className="ms-auto shrink-0 text-xs text-muted-foreground">{o.hint}</span>}
               </li>
             ))
           )}
@@ -249,7 +249,7 @@ export function MultiCombobox({
       >
         <ul aria-label={aria['aria-label'] ? `${aria['aria-label']}: selected` : 'Selected'} className="contents">
           {value.map((v) => (
-            <li key={v} className="inline-flex items-center gap-0.5 rounded bg-muted py-0.5 pl-2 pr-0.5 text-xs font-medium">
+            <li key={v} className="inline-flex items-center gap-0.5 rounded bg-muted py-0.5 ps-2 pe-0.5 text-xs font-medium">
               {labelOf(v)}
               <button
                 type="button"
@@ -336,7 +336,7 @@ export function MultiCombobox({
               className={cn('flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm', i === nav.active && 'bg-muted')}
             >
               <span className="truncate">{o.label}</span>
-              {o.hint && <span className="ml-auto shrink-0 text-xs text-muted-foreground">{o.hint}</span>}
+              {o.hint && <span className="ms-auto shrink-0 text-xs text-muted-foreground">{o.hint}</span>}
             </li>
           ))}
         </ul>

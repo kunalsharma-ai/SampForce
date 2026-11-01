@@ -14,6 +14,7 @@ import { relativeTime } from '@/lib/format';
 import { Targets } from '../revenue/revenue-workspace';
 import { Assumptions, PlanSection, Trends } from './forecast-plan';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const CATEGORY = {
   won: { label: 'Won', tone: 'success' },
@@ -191,12 +192,12 @@ function Lines({ view }: { view: ForecastView }) {
           <p className="text-sm text-muted-foreground">No open or won deals with a close date in this period.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th className="pb-2 font-medium">Deal</th>
                 <th className="pb-2 font-medium">Category</th>
-                <th className="pb-2 text-right font-medium">Amount</th>
-                <th className="pb-2 text-right font-medium">Prob.</th>
+                <th className="pb-2 text-end font-medium">Amount</th>
+                <th className="pb-2 text-end font-medium">Prob.</th>
                 <th className="pb-2 font-medium">Close</th>
                 <th className="pb-2 font-medium">Owner</th>
               </tr>
@@ -204,21 +205,21 @@ function Lines({ view }: { view: ForecastView }) {
             <tbody className="divide-y divide-border">
               {view.lines.map((l) => (
                 <tr key={l.dealId}>
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pe-2">
                     <Link href={`/app/deals/${l.dealId}`} className="text-primary hover:underline">
                       {l.name}
                     </Link>
                     <span className="block text-xs text-muted-foreground">{l.stage}</span>
                   </td>
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pe-2">
                     <Badge tone={CATEGORY[l.category].tone}>{CATEGORY[l.category].label}</Badge>
                   </td>
-                  <td className="py-2 text-right tabular-nums">{formatMoney(l.amount, view.currency)}</td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="py-2 text-end tabular-nums">{formatMoney(l.amount, view.currency)}</td>
+                  <td className="py-2 text-end tabular-nums">
                     {l.status === 'WON' ? '—' : `${l.probability}%`}
                     {l.status === 'OPEN' && l.probabilitySource && <span className="block text-[11px] text-muted-foreground">{l.probabilitySource === 'deal' ? 'set on deal' : l.probabilitySource === 'history' ? 'win history' : 'stage'}</span>}
                   </td>
-                  <td className="py-2 pl-2">{formatDate(l.closeDate)}</td>
+                  <td className="py-2 ps-2">{formatDate(l.closeDate)}</td>
                   <td className="py-2">{l.owner?.name ?? 'Unassigned'}</td>
                 </tr>
               ))}
@@ -257,7 +258,7 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
   const rows = snapshots.data ?? [];
   const nameOf = (id: string) => {
     const s = rows.find((r) => r.id === id);
-    return s ? `${s.label ?? 'Snapshot'} · ${new Date(s.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
+    return s ? `${s.label ?? 'Snapshot'} · ${new Date(s.createdAt).toLocaleString(fmtLocale(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
   };
 
   return (
@@ -299,15 +300,15 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
                   <span className="text-xs text-muted-foreground">
                     {s.createdBy?.name ?? 'Someone'} · {relativeTime(s.createdAt)}
                   </span>
-                  <span className="ml-auto tabular-nums">Base {money(s.totals.base)}</span>
+                  <span className="ms-auto tabular-nums">Base {money(s.totals.base)}</span>
                   {s.id in verified ? (
                     verified[s.id] ? (
                       <Badge tone="success">
-                        <CheckCircle2 className="mr-1 size-3" aria-hidden /> Totals match
+                        <CheckCircle2 className="me-1 size-3" aria-hidden /> Totals match
                       </Badge>
                     ) : (
                       <Badge tone="critical">
-                        <XCircle className="mr-1 size-3" aria-hidden /> Totals differ
+                        <XCircle className="me-1 size-3" aria-hidden /> Totals differ
                       </Badge>
                     )
                   ) : (
@@ -405,7 +406,7 @@ function ComparisonView({ cmp, money }: { cmp: ForecastComparison; money: (v: nu
               <Link href={`/app/deals/${c.dealId}`} className="text-primary hover:underline">
                 {c.name}
               </Link>
-              <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+              <span className="ms-auto text-xs text-muted-foreground tabular-nums">
                 {fmtChange(c, c.from)} → {fmtChange(c, c.to)}
               </span>
             </li>

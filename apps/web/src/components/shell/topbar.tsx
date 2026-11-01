@@ -36,6 +36,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import type { Permission } from '@dealflow/types';
+import { useT } from '@/lib/i18n';
 import { useSession, useSignOut, useSwitchTenant } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
@@ -49,12 +50,12 @@ import { NotificationsMenu } from './notifications-menu';
 import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
 
-const QUICK_CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
-  { kind: 'leads', label: 'Lead', permission: 'leads:write' },
-  { kind: 'contacts', label: 'Contact', permission: 'contacts:write' },
-  { kind: 'companies', label: 'Company', permission: 'companies:write' },
-  { kind: 'deals', label: 'Deal', permission: 'deals:write' },
-  { kind: 'task', label: 'Task', permission: 'activities:write' },
+const QUICK_CREATE: { kind: QuickCreateKind; permission: Permission }[] = [
+  { kind: 'leads', permission: 'leads:write' },
+  { kind: 'contacts', permission: 'contacts:write' },
+  { kind: 'companies', permission: 'companies:write' },
+  { kind: 'deals', permission: 'deals:write' },
+  { kind: 'task', permission: 'activities:write' },
 ];
 
 function IconLink({ href, label, icon: Icon }: { href: string; label: string; icon: typeof Bell }) {
@@ -85,6 +86,7 @@ export function Topbar() {
   const copilotOpen = useCopilot((s) => s.open);
   const setCopilotOpen = useCopilot((s) => s.setOpen);
   const [navOpen, setNavOpen] = useState(false);
+  const t = useT();
 
 
   const initials = data?.user.name
@@ -96,7 +98,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border/70 bg-background/70 px-4 backdrop-blur-xl">
-      <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setNavOpen(true)}>
+      <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t('top.openNav')} onClick={() => setNavOpen(true)}>
         <Menu aria-hidden />
       </Button>
       <Dialog open={navOpen} onOpenChange={setNavOpen}>
@@ -114,38 +116,41 @@ export function Topbar() {
         className="flex h-control min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface/60 px-3 text-sm text-muted-foreground hover:bg-muted md:max-w-md"
       >
         <Search className="size-4" aria-hidden />
-        <span className="flex-1 truncate text-left">Search<span className="hidden sm:inline"> DealFlow</span></span>
+        <span className="flex-1 truncate text-start">
+          {t('top.search')}
+          <span className="hidden sm:inline"> {t('top.searchProduct')}</span>
+        </span>
         <kbd className="hidden rounded border border-border px-1.5 text-[10px] sm:inline">Ctrl K</kbd>
       </button>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
       <FavouriteButton />
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ms-auto flex items-center gap-1">
         <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => setCopilotOpen(true)}>
           <Bot aria-hidden />
-          <span className="hidden sm:inline">Copilot</span>
+          <span className="hidden sm:inline">{t('top.copilot')}</span>
         </Button>
         <CopilotPanel open={copilotOpen} onOpenChange={setCopilotOpen} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" aria-label="Quick create" className="hidden lg:inline-flex">
+            <Button size="sm" aria-label={t('top.quickCreate')} className="hidden lg:inline-flex">
               <Plus aria-hidden />
-              <span className="hidden sm:inline">Create</span>
+              <span className="hidden sm:inline">{t('top.create')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Quick create</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('top.quickCreate')}</DropdownMenuLabel>
             {QUICK_CREATE.map((item) => (
               <DropdownMenuItem key={item.kind} disabled={!data?.permissions.includes(item.permission)} onSelect={() => openCreate(item.kind)}>
-                <Plus aria-hidden /> {item.label}
+                <Plus aria-hidden /> {t(`kind.${item.kind}`)}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
         <span className="hidden md:inline-flex" data-secondary="">
-          <VoiceNoteButton record={null} variant="ghost" iconOnly label="Quick voice note" />
+          <VoiceNoteButton record={null} variant="ghost" iconOnly label={t('top.voiceNote')} />
         </span>
 
         <NotificationsMenu />
@@ -154,32 +159,32 @@ export function Topbar() {
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" aria-pressed={focus} aria-label={focus ? 'Exit Focus Workspace' : 'Focus Workspace'} onClick={toggleFocus} className="hidden sm:inline-flex">
+            <Button variant="ghost" size="icon" aria-pressed={focus} aria-label={focus ? t('top.focusExit') : t('top.focus')} onClick={toggleFocus} className="hidden sm:inline-flex">
               {focus ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{focus ? 'Exit Focus Workspace (Ctrl .)' : 'Focus Workspace (Ctrl .)'}</TooltipContent>
+          <TooltipContent>{focus ? t('top.focusExitHint') : t('top.focusHint')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Keyboard shortcuts" onClick={() => setShortcutsOpen(true)} className="hidden md:inline-flex" data-secondary="">
+            <Button variant="ghost" size="icon" aria-label={t('top.shortcuts')} onClick={() => setShortcutsOpen(true)} className="hidden md:inline-flex" data-secondary="">
               <Keyboard aria-hidden />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
+          <TooltipContent>{t('top.shortcutsHint')}</TooltipContent>
         </Tooltip>
 
-        <IconLink href="/app/activities" label="Tasks" icon={ListTodo} />
-        <IconLink href="/app/meetings" label="Calendar" icon={CalendarDays} />
-        <IconLink href="/app/integrations" label="Integrations" icon={Plug} />
-        <IconLink href="/app/help" label="Help center" icon={CircleHelp} />
+        <IconLink href="/app/activities" label={t('top.tasks')} icon={ListTodo} />
+        <IconLink href="/app/meetings" label={t('top.calendar')} icon={CalendarDays} />
+        <IconLink href="/app/integrations" label={t('top.integrations')} icon={Plug} />
+        <IconLink href="/app/help" label={t('top.help')} icon={CircleHelp} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Account menu"
-              className="ml-1 grid size-9 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-background"
+              aria-label={t('top.account')}
+              className="ms-1 grid size-9 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-background"
             >
               {initials ?? '…'}
             </button>
@@ -192,14 +197,14 @@ export function Topbar() {
                   <p className="truncate text-xs text-muted-foreground">{data.user.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('top.workspaces')}</DropdownMenuLabel>
                 {data.memberships.map((m) => (
                   <DropdownMenuItem
                     key={m.tenantId}
                     onSelect={() => m.tenantId !== data.tenant.id && void switchTenant(m.tenantId)}
                   >
                     <span className="flex-1 truncate">{m.tenantName}</span>
-                    {m.tenantId === data.tenant.id && <Check className="text-primary" aria-label="Current" />}
+                    {m.tenantId === data.tenant.id && <Check className="text-primary" aria-label={t('top.current')} />}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -207,16 +212,16 @@ export function Topbar() {
             )}
             <DropdownMenuItem asChild>
               <Link href="/app/account/security">
-                <ShieldCheck aria-hidden /> Account security
+                <ShieldCheck aria-hidden /> {t('top.security')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/app/settings">
-                <Settings aria-hidden /> Settings &amp; appearance
+                <Settings aria-hidden /> {t('top.settings')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void signOut()}>
-              <LogOut aria-hidden /> Sign out
+              <LogOut aria-hidden /> {t('top.signOut')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -88,7 +88,7 @@ export function LeadDetail({ id }: { id: string }) {
                   ['Email status', l.emailStatus && <EmailStatusBadge status={l.emailStatus} />],
                   ['Engagement score', l.engagementScore !== null ? `${l.engagementScore} / 100` : null],
                   ['Owner', l.owner?.name],
-                  ['Tags', l.tags.length ? l.tags.map((t) => <Badge key={t} className="mr-1">{t}</Badge>) : null],
+                  ['Tags', l.tags.length ? l.tags.map((t) => <Badge key={t} className="me-1">{t}</Badge>) : null],
                   ['Created', formatDate(l.createdAt)],
                 ]}
               />
@@ -141,7 +141,7 @@ function Duplicates({ id, canWrite }: { id: string; canWrite: boolean }) {
               <Badge>{d.entity === 'lead' ? 'Lead' : 'Contact'}</Badge>
               <span className="text-muted-foreground">{reason[d.reason]}</span>
               {d.entity === 'lead' && canWrite && (
-                <Button size="sm" variant="outline" className="ml-auto" disabled={merge.isPending} onClick={() => merge.mutate(d.id)}>
+                <Button size="sm" variant="outline" className="ms-auto" disabled={merge.isPending} onClick={() => merge.mutate(d.id)}>
                   Merge into this lead
                 </Button>
               )}

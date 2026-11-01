@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const SCOPE_LABEL: Record<ApiKeyScope, string> = {
   'leads:read': 'Read leads',
@@ -104,11 +105,11 @@ export function ApiKeysAndZapier() {
                   <span className="text-xs text-muted-foreground">
                     {k.scopes.length} scope{k.scopes.length === 1 ? '' : 's'} · created {relativeTime(k.createdAt)}
                     {k.createdBy ? ` by ${k.createdBy}` : ''} · {k.lastUsedAt ? `last used ${relativeTime(k.lastUsedAt)}` : 'never used'}
-                    {k.expiresAt ? ` · expires ${new Date(k.expiresAt).toLocaleDateString('en-GB')}` : ''}
+                    {k.expiresAt ? ` · expires ${new Date(k.expiresAt).toLocaleDateString(fmtLocale())}` : ''}
                     {k.hooks ? ` · ${k.hooks} Zap trigger${k.hooks === 1 ? '' : 's'}` : ''}
                   </span>
                   {!k.revokedAt && (
-                    <Button size="sm" variant="ghost" className="ml-auto" disabled={revoke.isPending} aria-label={`Revoke ${k.name}`} onClick={() => window.confirm(`Revoke ${k.name}? Anything using it stops working now${k.hooks ? `, and its ${k.hooks} Zap trigger${k.hooks === 1 ? ' is' : 's are'} removed` : ''}.`) && revoke.mutate(k.id)}>
+                    <Button size="sm" variant="ghost" className="ms-auto" disabled={revoke.isPending} aria-label={`Revoke ${k.name}`} onClick={() => window.confirm(`Revoke ${k.name}? Anything using it stops working now${k.hooks ? `, and its ${k.hooks} Zap trigger${k.hooks === 1 ? ' is' : 's are'} removed` : ''}.`) && revoke.mutate(k.id)}>
                       Revoke
                     </Button>
                   )}

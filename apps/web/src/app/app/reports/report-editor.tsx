@@ -30,6 +30,7 @@ import { api, downloadFile } from '@/lib/api';
 import { useMembers } from '@/lib/crm';
 import { useReport, useReportResult } from '@/lib/reports';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const METRIC_LABEL = {
   count: 'Count of records',
@@ -446,7 +447,7 @@ function Editor({ report }: { report?: ReportRow }) {
             <CardTitle>{name.trim() || 'Preview'}</CardTitle>
             {result.data && (
               <p className="text-sm text-muted-foreground">
-                {result.data.records.toLocaleString('en-US')}{' '}
+                {result.data.records.toLocaleString(fmtLocale())}{' '}
                 {plural(entity.noun, result.data.records)} match
                 {result.data.records === 1 ? 'es' : ''}
                 {result.isFetching ? ' · updating…' : ''}

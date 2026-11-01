@@ -9,5 +9,6 @@ coverage
 !.env.example
 playwright-report
 test-results
+storybook-static
 packages/database/generated
 apps/api/evals/results/

@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type Target = { leadId?: string; contactId?: string; dealId?: string };
 
@@ -141,7 +142,7 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
                 <li key={m.id} className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{m.topic}</span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(m.startsAt).toLocaleString()} · {m.durationMinutes} min
+                    {new Date(m.startsAt).toLocaleString(fmtLocale())} · {m.durationMinutes} min
                   </span>
                   <a href={m.joinUrl} target="_blank" rel="noreferrer noopener" className="text-xs text-primary underline underline-offset-2">
                     Join link

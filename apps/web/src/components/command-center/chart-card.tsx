@@ -67,10 +67,10 @@ export function ChartCard({
           <div className="max-h-60 overflow-auto">
             <table className="w-full text-sm">
               <caption className="sr-only">{table.caption}</caption>
-              <thead className="sticky top-0 bg-surface text-left text-xs text-muted-foreground">
+              <thead className="sticky top-0 bg-surface text-start text-xs text-muted-foreground">
                 <tr>
                   {table.header.map((h, i) => (
-                    <th key={h} scope="col" className={`py-2 pr-2 font-medium ${table.numeric?.includes(i) ? 'text-right' : ''}`}>
+                    <th key={h} scope="col" className={`py-2 pe-2 font-medium ${table.numeric?.includes(i) ? 'text-end' : ''}`}>
                       {h}
                     </th>
                   ))}
@@ -81,11 +81,11 @@ export function ChartCard({
                   <tr key={ri} className="border-t border-border">
                     {r.map((c, ci) =>
                       ci === 0 ? (
-                        <th key={ci} scope="row" className="py-2 pr-2 text-left font-normal">
+                        <th key={ci} scope="row" className="py-2 pe-2 text-start font-normal">
                           {c}
                         </th>
                       ) : (
-                        <td key={ci} className={`py-2 pr-2 ${table.numeric?.includes(ci) ? 'text-right' : ''}`}>
+                        <td key={ci} className={`py-2 pe-2 ${table.numeric?.includes(ci) ? 'text-end' : ''}`}>
                           {c}
                         </td>
                       ),

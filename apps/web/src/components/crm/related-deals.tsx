@@ -26,7 +26,7 @@ export function RelatedDeals({ filter }: { filter: { companyId: string } | { con
                 </Link>
                 <Badge tone={DEAL_STATUS_TONE[d.status]}>{titleCase(d.status)}</Badge>
                 <span className="text-muted-foreground">{d.stage.name}</span>
-                <span className="ml-auto tabular-nums">{formatMoney(d.amount, d.currency)}</span>
+                <span className="ms-auto tabular-nums">{formatMoney(d.amount, d.currency)}</span>
               </li>
             ))}
           </ul>
@@ -56,7 +56,7 @@ export function RelatedContacts({ companyId }: { companyId: string }) {
                   {c.fullName}
                 </Link>
                 <span className="text-muted-foreground">{c.jobTitle}</span>
-                <span className="ml-auto text-muted-foreground">{c.email}</span>
+                <span className="ms-auto text-muted-foreground">{c.email}</span>
               </li>
             ))}
           </ul>

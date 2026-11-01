@@ -26,7 +26,7 @@ export function ContractDetail({ id }: { id: string }) {
   return (
     <div className="space-y-4">
       <Link href="/app/contracts" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> All contracts
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All contracts
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">

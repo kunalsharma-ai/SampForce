@@ -413,7 +413,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
   return (
     <div className="space-y-4">
       <Link href="/app/quotes" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> All quotes
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All quotes
       </Link>
 
       <nav aria-label="Bid steps">
@@ -438,7 +438,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                     void flush();
                     go(i);
                   }}
-                  className="flex w-full items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-60 aria-[current=step]:border-primary aria-[current=step]:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-center gap-2 rounded-md border border-border px-3 py-2 text-start text-sm disabled:cursor-not-allowed disabled:opacity-60 aria-[current=step]:border-primary aria-[current=step]:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span
                     aria-hidden
@@ -545,7 +545,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                         aria-pressed={checked}
                         disabled={disabled}
                         onClick={() => chooseTemplate(key)}
-                        className="rounded-md border border-border p-1.5 text-left text-xs aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="rounded-md border border-border p-1.5 text-start text-xs aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {t ? <TemplateThumb template={t} accent={checked ? (draft.accentColor ?? undefined) : undefined} /> : <span className="grid aspect-[4/3] place-items-center rounded-md border border-dashed border-border text-muted-foreground">Plain</span>}
                         <span className="mt-1 block truncate font-medium">{t?.name ?? 'Plain (workspace brand)'}</span>
@@ -642,14 +642,14 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                               <label htmlFor={`qb-line-${i}-qty`} className="text-xs text-muted-foreground">
                                 Quantity
                               </label>
-                              <Input id={`qb-line-${i}-qty`} inputMode="decimal" value={l.quantity} disabled={disabled} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-right" {...described(`qb-line-${i}-qty`)} />
+                              <Input id={`qb-line-${i}-qty`} inputMode="decimal" value={l.quantity} disabled={disabled} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-end" {...described(`qb-line-${i}-qty`)} />
                               {errorFor(`qb-line-${i}-qty`)}
                             </div>
                             <div className="w-24 space-y-1">
                               <label htmlFor={`qb-line-${i}-disc`} className="text-xs text-muted-foreground">
                                 Discount %
                               </label>
-                              <Input id={`qb-line-${i}-disc`} inputMode="decimal" value={l.discountPercent} disabled={disabled} onChange={(e) => setLine(i, { discountPercent: e.target.value })} className="h-9 text-right" {...described(`qb-line-${i}-disc`)} />
+                              <Input id={`qb-line-${i}-disc`} inputMode="decimal" value={l.discountPercent} disabled={disabled} onChange={(e) => setLine(i, { discountPercent: e.target.value })} className="h-9 text-end" {...described(`qb-line-${i}-disc`)} />
                               {errorFor(`qb-line-${i}-disc`)}
                               {over && !err(`qb-line-${i}-disc`) && <p className="text-[11px] text-warning">Needs approval</p>}
                             </div>
@@ -670,7 +670,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                             </div>
                             <span className="self-end pb-2 text-xs text-muted-foreground">at {formatAmount(priceOf(l.productId) ?? null, currency)} each</span>
                             {editable && (
-                              <Button type="button" size="icon" variant="ghost" className="ml-auto self-end" aria-label={`Remove ${name}`} onClick={() => update({ lines: draft.lines.filter((_, j) => j !== i) })}>
+                              <Button type="button" size="icon" variant="ghost" className="ms-auto self-end" aria-label={`Remove ${name}`} onClick={() => update({ lines: draft.lines.filter((_, j) => j !== i) })}>
                                 <Trash2 className="size-4" aria-hidden />
                               </Button>
                             )}
@@ -748,11 +748,11 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
             <ErrorText error={create.error} />
             <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
               <Button type="button" variant="ghost" disabled={step === 0} onClick={() => { void flush(); go(step - 1); }}>
-                <ArrowLeft aria-hidden /> Back
+                <ArrowLeft className="rtl:-scale-x-100" aria-hidden /> Back
               </Button>
               {step < 3 && (
                 <Button type="button" onClick={next} disabled={create.isPending}>
-                  {step === 0 && !quoteRow ? (create.isPending ? 'Creating…' : 'Create draft and continue') : 'Continue'} <ArrowRight aria-hidden />
+                  {step === 0 && !quoteRow ? (create.isPending ? 'Creating…' : 'Create draft and continue') : 'Continue'} <ArrowRight className="rtl:-scale-x-100" aria-hidden />
                 </Button>
               )}
             </div>

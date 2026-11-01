@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useOperator } from '../operator-shell';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const SOURCE: Record<OperatorSettings['paymentInstructionsSource'], string> = {
   console: 'Set here',
@@ -39,7 +40,7 @@ export default function OperatorSettingsPage() {
           <CardTitle>Payment instructions</CardTitle>
           <CardDescription>
             Shown on every invoice waiting for payment: your bank account details and anything the payer must quote. Workspaces see the change immediately. {SOURCE[s.paymentInstructionsSource]}
-            {s.updatedBy && s.paymentInstructionsSource === 'console' && ` Last changed by ${s.updatedBy} on ${new Date(s.updatedAt!).toLocaleString()}.`}
+            {s.updatedBy && s.paymentInstructionsSource === 'console' && ` Last changed by ${s.updatedBy} on ${new Date(s.updatedAt!).toLocaleString(fmtLocale())}.`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -32,6 +32,7 @@ import { ENROLLMENT_LABEL, ENROLLMENT_TONE, pct, SEQUENCE_TONE, useEnrollments, 
 import { useCan, useSession } from '@/lib/session';
 import { EmailAssist } from '@/components/ai/email-assist';
 import { insertAt, MergeFieldBar, PreviewPanel } from '../merge-fields';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type Tab = 'steps' | 'rules' | 'settings' | 'people' | 'results';
 type Draft = Pick<SequenceRow, 'name' | 'description' | 'steps' | 'rules' | 'settings'>;
@@ -196,7 +197,7 @@ function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onD
         <CardTitle className="text-sm">{STEP_LABEL[step.type]}</CardTitle>
         <span className="text-xs text-muted-foreground">Day {day}</span>
         {!readOnly && (
-          <div className="ml-auto flex gap-1">
+          <div className="ms-auto flex gap-1">
             <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Move step ${index + 1} up`} disabled={!onUp} onClick={onUp}>
               <ArrowUp className="h-4 w-4" aria-hidden />
             </Button>
@@ -277,7 +278,7 @@ function EmailStep({ step, readOnly, test, onChange }: { step: EmailStepT; readO
             </div>
             <span className="text-xs text-muted-foreground">About half the people get each version. The Results tab compares them.</span>
             {!readOnly && (
-              <Button type="button" size="sm" variant="ghost" className="ml-auto" onClick={() => { setShown('A'); onChange({ ...step, variantB: null }); }}>
+              <Button type="button" size="sm" variant="ghost" className="ms-auto" onClick={() => { setShown('A'); onChange({ ...step, variantB: null }); }}>
                 Stop testing, keep version A
               </Button>
             )}
@@ -576,12 +577,12 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
             <p className="p-6 text-sm text-muted-foreground">Nobody here yet.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">Person</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 font-medium">Next</th>
-                  <th className="px-4 py-2 text-right font-medium">Sent</th>
+                  <th className="px-4 py-2 text-end font-medium">Sent</th>
                   <th className="px-4 py-2 font-medium">Activity</th>
                   <th className="sr-only">Actions</th>
                 </tr>
@@ -604,8 +605,8 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
                         <Badge tone={ENROLLMENT_TONE[r.status]}>{ENROLLMENT_LABEL[r.status]}</Badge>
                         {r.lastError && <span className="block max-w-xs text-xs text-warning">{r.lastError}</span>}
                       </td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground">{r.nextStep ? `Step ${r.nextStep}${r.nextRunAt ? `, ${new Date(r.nextRunAt).toLocaleString()}` : ''}` : '—'}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.sent}</td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{r.nextStep ? `Step ${r.nextStep}${r.nextRunAt ? `, ${new Date(r.nextRunAt).toLocaleString(fmtLocale())}` : ''}` : '—'}</td>
+                      <td className="px-4 py-2 text-end tabular-nums">{r.sent}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
                         {[r.repliedAt && `Replied ${formatDate(r.repliedAt)}`, r.clickedAt && 'Clicked', !r.clickedAt && r.openedAt && 'Opened*'].filter(Boolean).join(' · ') || '—'}
                       </td>
@@ -650,14 +651,14 @@ function leader(variants: { variant: EmailVariant; counts: EmailCounts }[]): Ema
 function StatsRow({ label, c, sub, lead }: { label: string; c: EmailCounts; sub?: boolean; lead?: boolean }) {
   return (
     <tr className={sub ? 'bg-muted/30' : undefined}>
-      <td className={`px-4 py-2 ${sub ? 'pl-8 text-muted-foreground' : ''}`}>
+      <td className={`px-4 py-2 ${sub ? 'ps-8 text-muted-foreground' : ''}`}>
         {label} {lead && <Badge tone="success">Ahead on replies</Badge>}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums">{c.sent}</td>
-      <td className="px-4 py-2 text-right tabular-nums">{c.replied} <span className="text-xs text-muted-foreground">{pct(c.replied, c.sent)}</span></td>
-      <td className="px-4 py-2 text-right tabular-nums">{c.clicked} <span className="text-xs text-muted-foreground">{pct(c.clicked, c.sent)}</span></td>
-      <td className="px-4 py-2 text-right tabular-nums">{c.opened} <span className="text-xs text-muted-foreground">{pct(c.opened, c.sent)}</span></td>
-      <td className="px-4 py-2 text-right tabular-nums">{c.bounced}</td>
+      <td className="px-4 py-2 text-end tabular-nums">{c.sent}</td>
+      <td className="px-4 py-2 text-end tabular-nums">{c.replied} <span className="text-xs text-muted-foreground">{pct(c.replied, c.sent)}</span></td>
+      <td className="px-4 py-2 text-end tabular-nums">{c.clicked} <span className="text-xs text-muted-foreground">{pct(c.clicked, c.sent)}</span></td>
+      <td className="px-4 py-2 text-end tabular-nums">{c.opened} <span className="text-xs text-muted-foreground">{pct(c.opened, c.sent)}</span></td>
+      <td className="px-4 py-2 text-end tabular-nums">{c.bounced}</td>
     </tr>
   );
 }
@@ -697,14 +698,14 @@ function ResultsTab({ seq }: { seq: SequenceRow }) {
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+              <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">Email step</th>
-                  <th className="px-4 py-2 text-right font-medium">Sent</th>
-                  <th className="px-4 py-2 text-right font-medium">Replied</th>
-                  <th className="px-4 py-2 text-right font-medium">Clicked</th>
-                  <th className="px-4 py-2 text-right font-medium">Opened*</th>
-                  <th className="px-4 py-2 text-right font-medium">Bounced</th>
+                  <th className="px-4 py-2 text-end font-medium">Sent</th>
+                  <th className="px-4 py-2 text-end font-medium">Replied</th>
+                  <th className="px-4 py-2 text-end font-medium">Clicked</th>
+                  <th className="px-4 py-2 text-end font-medium">Opened*</th>
+                  <th className="px-4 py-2 text-end font-medium">Bounced</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

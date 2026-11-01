@@ -10,12 +10,13 @@ import { useMotionLevel } from '@/lib/motion';
 import { formatValue, useReplay } from '@/lib/reports';
 import { WindowControls } from '../window-controls';
 import { buildTimeline } from './replay-model';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const DAY = 86_400_000;
 const COL_W = 150;
 const DOT = 9;
 const PER_ROW = 12;
-const fmtDay = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDay = (t: number) => new Date(t).toLocaleDateString(fmtLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function ReplayExplorer() {
   const [pipelineId, setPipelineId] = useState<string | undefined>();
@@ -164,17 +165,17 @@ function Player({ r }: { r: PipelineReplay }) {
         <CardContent>
           <table className="w-full text-sm">
             <caption className="sr-only">Deals in each stage on {fmtDay(t)}</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-1 font-medium">Stage</th>
-                <th scope="col" className="py-1 text-right font-medium">Deals</th>
+                <th scope="col" className="py-1 text-end font-medium">Deals</th>
               </tr>
             </thead>
             <tbody className="tabular">
               {stages.map((s) => (
                 <tr key={s.id} className="border-t border-border">
-                  <th scope="row" className="py-1 text-left font-normal">{s.name}</th>
-                  <td className="py-1 text-right">{byStage.get(s.id)?.length ?? 0}</td>
+                  <th scope="row" className="py-1 text-start font-normal">{s.name}</th>
+                  <td className="py-1 text-end">{byStage.get(s.id)?.length ?? 0}</td>
                 </tr>
               ))}
             </tbody>

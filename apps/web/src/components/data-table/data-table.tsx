@@ -18,6 +18,7 @@ import { Highlight } from './highlight';
 import { ColumnsDialog, DensityMenu, ViewsMenu } from './table-menus';
 import type { TableColumn, TableView } from './use-table-view';
 import { useIsPhone } from '@/lib/use-is-phone';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 const SELECT_W = 44;
 const DEFAULT_W = 160;
@@ -142,19 +143,19 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
       <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
         <div className="relative min-w-0 basis-full sm:max-w-xs sm:flex-1 sm:basis-auto">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
             aria-label={`Search ${p.caption.toLowerCase()}`}
             placeholder="Search…"
-            className="pl-9"
+            className="ps-9"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
         </div>
         {p.filters}
-        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ms-auto sm:w-auto">
           <ViewsMenu view={view} />
           <ColumnsDialog view={view} />
           <DensityMenu view={view} />
@@ -236,7 +237,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
               {view.config.sort.length > 1 &&
                 `, sorted by ${view.config.sort.map((s) => `${view.columns.find((c) => c.id === s.id)?.header} ${s.desc ? 'descending' : 'ascending'}`).join(', then ')}`}
             </caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
                   {hg.headers.map((h) => {
@@ -245,7 +246,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                       first?: boolean;
                       select?: boolean;
                     };
-                    const sticky = meta.select ? 'left-0 z-30' : meta.first ? 'z-30' : 'z-20';
+                    const sticky = meta.select ? 'start-0 z-30' : meta.first ? 'z-30' : 'z-20';
                     if (meta.select) {
                       const all = table.getIsAllPageRowsSelected();
                       return (
@@ -278,7 +279,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                         className={cn(
                           'group/th sticky top-0 border-b border-border bg-muted px-4 font-medium',
                           sticky,
-                          col.align === 'right' && 'text-right',
+                          col.align === 'right' && 'text-end',
                         )}
                         style={{ width: h.getSize(), ...(meta.first ? { left: firstLeft } : {}) }}
                       >
@@ -368,7 +369,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                         return (
                           <td
                             key={cell.id}
-                            className={cn('sticky left-0 z-10 border-b border-border px-3', bg)}
+                            className={cn('sticky start-0 z-10 border-b border-border px-3', bg)}
                           >
                             <RowCheckbox
                               checked={r.getIsSelected()}
@@ -391,7 +392,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                             'truncate border-b border-border px-4',
                             bg,
                             meta.first && 'sticky z-10',
-                            col.align === 'right' && 'text-right tabular-nums',
+                            col.align === 'right' && 'text-end tabular-nums',
                           )}
                           style={meta.first ? { left: firstLeft } : undefined}
                         >
@@ -417,7 +418,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
       )}
       <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground">
         <span aria-live="polite">
-          {total === 0 ? 'No records' : `${from}–${to} of ${total.toLocaleString('en-US')}`}
+          {total === 0 ? 'No records' : `${from}–${to} of ${total.toLocaleString(fmtLocale())}`}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -427,7 +428,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
             disabled={view.page <= 1}
             onClick={() => view.setPage(view.page - 1)}
           >
-            <ChevronLeft aria-hidden />
+            <ChevronLeft className="rtl:-scale-x-100" aria-hidden />
           </Button>
           <span>
             Page {view.page} of {pages}
@@ -439,7 +440,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
             disabled={view.page >= pages}
             onClick={() => view.setPage(view.page + 1)}
           >
-            <ChevronRight aria-hidden />
+            <ChevronRight className="rtl:-scale-x-100" aria-hidden />
           </Button>
         </div>
       </div>
@@ -509,8 +510,8 @@ function ResizeHandle({
         }
       }}
       className={cn(
-        'absolute right-0 top-0 h-full w-2 cursor-col-resize touch-none select-none opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover/th:opacity-60',
-        'after:absolute after:inset-y-1.5 after:right-0.5 after:w-0.5 after:rounded after:bg-primary',
+        'absolute end-0 top-0 h-full w-2 cursor-col-resize touch-none select-none opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover/th:opacity-60',
+        'after:absolute after:inset-y-1.5 after:end-0.5 after:w-0.5 after:rounded after:bg-primary',
         active && 'opacity-100',
       )}
     />

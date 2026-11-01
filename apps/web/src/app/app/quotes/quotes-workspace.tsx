@@ -99,12 +99,12 @@ function QuoteList() {
 export function QuoteTable({ rows, showDeal = true }: { rows: QuoteRow[]; showDeal?: boolean }) {
   return (
     <table className="w-full text-sm">
-      <thead className="border-b border-border text-left text-xs text-muted-foreground">
+      <thead className="border-b border-border text-start text-xs text-muted-foreground">
         <tr>
           <th className="px-4 py-2 font-medium">Quote</th>
           {showDeal && <th className="px-4 py-2 font-medium">Deal</th>}
           <th className="px-4 py-2 font-medium">Status</th>
-          <th className="px-4 py-2 text-right font-medium">Total</th>
+          <th className="px-4 py-2 text-end font-medium">Total</th>
           <th className="px-4 py-2 font-medium">Valid until</th>
         </tr>
       </thead>
@@ -133,12 +133,12 @@ export function QuoteTable({ rows, showDeal = true }: { rows: QuoteRow[]; showDe
             <td className="px-4 py-2">
               <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
               {q.expired && (
-                <Badge tone="warning" className="ml-1">
+                <Badge tone="warning" className="ms-1">
                   Past valid date
                 </Badge>
               )}
             </td>
-            <td className="px-4 py-2 text-right tabular-nums">
+            <td className="px-4 py-2 text-end tabular-nums">
               {formatAmount(q.total, q.currency)}
             </td>
             <td className="px-4 py-2">{formatDate(q.validUntil)}</td>
@@ -268,11 +268,11 @@ function Products({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="pb-2 font-medium">Product</th>
                   {activeBooks.map((b) => (
-                    <th key={b.id} className="pb-2 text-right font-medium">
+                    <th key={b.id} className="pb-2 text-end font-medium">
                       {b.name} ({b.currency})
                     </th>
                   ))}
@@ -281,7 +281,7 @@ function Products({
               <tbody className="divide-y divide-border">
                 {products.map((p) => (
                   <tr key={p.id}>
-                    <td className="py-2 pr-2">
+                    <td className="py-2 pe-2">
                       <span className="font-medium">{p.name}</span>
                       <span className="block text-xs text-muted-foreground">
                         {[p.sku, `per ${p.unit}`, !p.active && 'inactive']
@@ -292,7 +292,7 @@ function Products({
                     {activeBooks.map((b) => {
                       const price = p.prices.find((x) => x.priceBookId === b.id);
                       return (
-                        <td key={b.id} className="py-2 text-right">
+                        <td key={b.id} className="py-2 text-end">
                           {canManage ? (
                             <PriceInput
                               label={`${p.name} price in ${b.name}`}
@@ -384,7 +384,7 @@ function PriceInput({
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && commit()}
-      className="ml-auto h-8 w-28 text-right tabular-nums"
+      className="ms-auto h-8 w-28 text-end tabular-nums"
     />
   );
 }
@@ -429,7 +429,7 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
                 <Badge>{b.currency}</Badge>
                 {b.isDefault && <Badge tone="primary">Default</Badge>}
                 {!b.active && <Badge tone="warning">Inactive</Badge>}
-                <span className="ml-auto text-xs text-muted-foreground">{b.entryCount} prices</span>
+                <span className="ms-auto text-xs text-muted-foreground">{b.entryCount} prices</span>
               </li>
             ))}
           </ul>
@@ -501,7 +501,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
             {rates.data.map((r) => (
               <li key={r.id} className="flex py-2">
                 <span>{r.name}</span>
-                <span className="ml-auto tabular-nums">{r.rate}%</span>
+                <span className="ms-auto tabular-nums">{r.rate}%</span>
               </li>
             ))}
           </ul>

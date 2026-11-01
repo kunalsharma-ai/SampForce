@@ -415,7 +415,7 @@ function Requests() {
             <ul className="divide-y divide-border">
               {list.data.map((r) => (
                 <li key={r.id}>
-                  <button type="button" className="flex w-full flex-wrap items-center gap-3 px-5 py-3 text-left text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" onClick={() => setOpen(r.id)}>
+                  <button type="button" className="flex w-full flex-wrap items-center gap-3 px-5 py-3 text-start text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" onClick={() => setOpen(r.id)}>
                     <span className="flex-1">
                       <span className="block font-medium">{r.subject}</span>
                       <span className="text-xs text-muted-foreground">

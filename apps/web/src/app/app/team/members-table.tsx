@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useCan, useSession } from '@/lib/session';
 import { RolesManager } from './roles-manager';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 interface RoleRow {
   key: string;
@@ -48,7 +49,7 @@ export function MembersTable() {
           ) : (
             <table className="w-full min-w-[520px] text-sm">
               <caption className="sr-only">Workspace members</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="py-2 font-medium">Name</th>
                   <th scope="col" className="py-2 font-medium">Email</th>
@@ -60,7 +61,7 @@ export function MembersTable() {
                 {members.data?.map((m) => (
                   <tr key={m.membershipId} className="border-t border-border">
                     <td className="py-2.5 font-medium">
-                      {m.name} {m.userId === me?.user.id && <Badge className="ml-1">You</Badge>}
+                      {m.name} {m.userId === me?.user.id && <Badge className="ms-1">You</Badge>}
                       <span className="mt-1 flex flex-wrap gap-1">
                         {m.status === 'SUSPENDED' && <Badge tone="warning">Suspended</Badge>}
                         {m.mfaEnabled ? <Badge tone="success">Two-step on</Badge> : <Badge>Two-step off</Badge>}
@@ -87,7 +88,7 @@ export function MembersTable() {
                         m.roleName
                       )}
                     </td>
-                    <td className="py-2.5 text-muted-foreground">{new Date(m.joinedAt).toLocaleDateString()}</td>
+                    <td className="py-2.5 text-muted-foreground">{new Date(m.joinedAt).toLocaleDateString(fmtLocale())}</td>
                   </tr>
                 ))}
               </tbody>

@@ -181,14 +181,14 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         href="/app/quotes"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="size-4" aria-hidden /> All quotes
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All quotes
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{q.reference}</h1>
         <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
         {!q.isLatest && <Badge tone="warning">Superseded by a newer version</Badge>}
         {q.expired && <Badge tone="warning">Past valid date</Badge>}
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ms-auto flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -221,14 +221,14 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
               )}
               {(editable ? lines.length > 0 : q.lines.length > 0) && (
                 <table className="w-full text-sm">
-                  <thead className="text-left text-xs text-muted-foreground">
+                  <thead className="text-start text-xs text-muted-foreground">
                     <tr>
                       <th className="pb-2 font-medium">Product</th>
-                      <th className="pb-2 text-right font-medium">Qty</th>
-                      <th className="pb-2 text-right font-medium">Unit price</th>
-                      <th className="pb-2 text-right font-medium">Discount %</th>
+                      <th className="pb-2 text-end font-medium">Qty</th>
+                      <th className="pb-2 text-end font-medium">Unit price</th>
+                      <th className="pb-2 text-end font-medium">Discount %</th>
                       <th className="pb-2 font-medium">Tax</th>
-                      <th className="pb-2 text-right font-medium">Net</th>
+                      <th className="pb-2 text-end font-medium">Net</th>
                       {editable && <th className="sr-only">Remove</th>}
                     </tr>
                   </thead>
@@ -241,7 +241,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                             threshold !== undefined && Number(l.discountPercent) > threshold;
                           return (
                             <tr key={i}>
-                              <td className="py-2 pr-2">
+                              <td className="py-2 pe-2">
                                 <Select
                                   aria-label={`Line ${i + 1} product`}
                                   value={l.productId}
@@ -258,37 +258,37 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                                   ))}
                                 </Select>
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-2 pe-2">
                                 <Input
                                   aria-label={`Line ${i + 1} quantity`}
                                   value={l.quantity}
                                   onChange={(e) => set({ quantity: e.target.value })}
                                   inputMode="decimal"
-                                  className="ml-auto h-9 w-20 text-right"
+                                  className="ms-auto h-9 w-20 text-end"
                                 />
                               </td>
-                              <td className="py-2 pr-2 text-right tabular-nums">
+                              <td className="py-2 pe-2 text-end tabular-nums">
                                 {formatAmount(priceOf(l.productId) ?? null, q.currency)}
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-2 pe-2">
                                 <Input
                                   aria-label={`Line ${i + 1} discount percent`}
                                   aria-describedby={over ? `over-${i}` : undefined}
                                   value={l.discountPercent}
                                   onChange={(e) => set({ discountPercent: e.target.value })}
                                   inputMode="decimal"
-                                  className="ml-auto h-9 w-20 text-right"
+                                  className="ms-auto h-9 w-20 text-end"
                                 />
                                 {over && (
                                   <span
                                     id={`over-${i}`}
-                                    className="block text-right text-[11px] text-warning"
+                                    className="block text-end text-[11px] text-warning"
                                   >
                                     Needs approval
                                   </span>
                                 )}
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-2 pe-2">
                                 <Select
                                   aria-label={`Line ${i + 1} tax rate`}
                                   value={l.taxRateId}
@@ -305,10 +305,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                                     ))}
                                 </Select>
                               </td>
-                              <td className="py-2 text-right tabular-nums">
+                              <td className="py-2 text-end tabular-nums">
                                 {formatAmount(lineTotals(calc[i]!).net, q.currency)}
                               </td>
-                              <td className="py-2 pl-2">
+                              <td className="py-2 ps-2">
                                 <Button
                                   type="button"
                                   size="icon"
@@ -324,18 +324,18 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                         })
                       : q.lines.map((l) => (
                           <tr key={l.id}>
-                            <td className="py-2 pr-2">{l.name}</td>
-                            <td className="py-2 pr-2 text-right tabular-nums">{l.quantity}</td>
-                            <td className="py-2 pr-2 text-right tabular-nums">
+                            <td className="py-2 pe-2">{l.name}</td>
+                            <td className="py-2 pe-2 text-end tabular-nums">{l.quantity}</td>
+                            <td className="py-2 pe-2 text-end tabular-nums">
                               {formatAmount(l.unitPrice, q.currency)}
                             </td>
-                            <td className="py-2 pr-2 text-right tabular-nums">
+                            <td className="py-2 pe-2 text-end tabular-nums">
                               {l.discountPercent}%
                             </td>
-                            <td className="py-2 pr-2">
+                            <td className="py-2 pe-2">
                               {l.taxPercent ? `${l.taxPercent}%` : 'No tax'}
                             </td>
-                            <td className="py-2 text-right tabular-nums">
+                            <td className="py-2 text-end tabular-nums">
                               {formatAmount(l.netTotal, q.currency)}
                             </td>
                           </tr>
@@ -641,7 +641,7 @@ function Versions({ id, current }: { id: string; current: string }) {
                 </Link>
               )}
               <Badge tone={QUOTE_STATUS[v.status].tone}>{QUOTE_STATUS[v.status].label}</Badge>
-              <span className="ml-auto tabular-nums">{formatAmount(v.total, v.currency)}</span>
+              <span className="ms-auto tabular-nums">{formatAmount(v.total, v.currency)}</span>
             </li>
           ))}
         </ul>

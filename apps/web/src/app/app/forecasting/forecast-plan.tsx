@@ -86,26 +86,26 @@ function People({ p, money }: { p: ForecastPlan; money: (v: number) => string })
           <p className="text-sm text-muted-foreground">No deals or personal targets in this period.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th className="pb-2 font-medium">Person</th>
-                <th className="pb-2 text-right font-medium">Target</th>
-                <th className="pb-2 text-right font-medium">Won</th>
-                <th className="pb-2 text-right font-medium">Base</th>
-                <th className="pb-2 text-right font-medium">Gap</th>
+                <th className="pb-2 text-end font-medium">Target</th>
+                <th className="pb-2 text-end font-medium">Won</th>
+                <th className="pb-2 text-end font-medium">Base</th>
+                <th className="pb-2 text-end font-medium">Gap</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {p.byOwner.map((o) => (
                 <tr key={o.owner?.id ?? 'none'}>
-                  <td className="py-2 pr-2">{o.owner?.name ?? 'Unassigned'}</td>
-                  <td className="py-2 text-right tabular-nums">{o.target.amount === null ? '—' : money(o.target.amount)}</td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="py-2 pe-2">{o.owner?.name ?? 'Unassigned'}</td>
+                  <td className="py-2 text-end tabular-nums">{o.target.amount === null ? '—' : money(o.target.amount)}</td>
+                  <td className="py-2 text-end tabular-nums">
                     {money(o.totals.won)}
                     {o.attainment !== null && <span className="block text-xs text-muted-foreground">{o.attainment}%</span>}
                   </td>
-                  <td className="py-2 text-right tabular-nums">{money(o.totals.base)}</td>
-                  <td className={`py-2 text-right tabular-nums ${o.gap !== null && o.gap > 0 ? 'text-critical' : ''}`}>{o.gap === null ? '—' : signedGap(o.gap, money)}</td>
+                  <td className="py-2 text-end tabular-nums">{money(o.totals.base)}</td>
+                  <td className={`py-2 text-end tabular-nums ${o.gap !== null && o.gap > 0 ? 'text-critical' : ''}`}>{o.gap === null ? '—' : signedGap(o.gap, money)}</td>
                 </tr>
               ))}
             </tbody>
@@ -133,19 +133,19 @@ function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) 
             <p className="flex items-center gap-2 font-medium">
               <Icon className="size-4 text-muted-foreground" aria-hidden />
               {title}
-              <span className="ml-auto tabular-nums text-muted-foreground">
+              <span className="ms-auto tabular-nums text-muted-foreground">
                 {r.count} deal{r.count === 1 ? '' : 's'} · {money(r.amount)}
               </span>
             </p>
             {r.deals.length > 0 && (
-              <ul className="mt-1 space-y-0.5 pl-6">
+              <ul className="mt-1 space-y-0.5 ps-6">
                 {r.deals.slice(0, 4).map((d) => (
                   <li key={d.id} className="flex gap-2 text-xs">
                     <Link href={`/app/deals/${d.id}`} className="truncate text-primary underline underline-offset-2">
                       {d.name}
                     </Link>
                     <span className="text-muted-foreground">{d.detail}</span>
-                    <span className="ml-auto tabular-nums text-muted-foreground">{money(d.amount)}</span>
+                    <span className="ms-auto tabular-nums text-muted-foreground">{money(d.amount)}</span>
                   </li>
                 ))}
               </ul>
@@ -194,27 +194,27 @@ export function Assumptions({ period }: { period: string }) {
         )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="mb-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Win rate by stage, deals closed in the last {s.historyMonths} months</caption>
-            <thead className="text-left text-xs text-muted-foreground">
+            <caption className="mb-2 text-start text-xs font-semibold uppercase tracking-wider text-muted-foreground">Win rate by stage, deals closed in the last {s.historyMonths} months</caption>
+            <thead className="text-start text-xs text-muted-foreground">
               <tr>
                 <th className="pb-2 font-medium">Stage</th>
-                <th className="pb-2 text-right font-medium">Stage probability</th>
-                <th className="pb-2 text-right font-medium">Won</th>
-                <th className="pb-2 text-right font-medium">Lost</th>
-                <th className="pb-2 text-right font-medium">Win rate</th>
+                <th className="pb-2 text-end font-medium">Stage probability</th>
+                <th className="pb-2 text-end font-medium">Won</th>
+                <th className="pb-2 text-end font-medium">Lost</th>
+                <th className="pb-2 text-end font-medium">Win rate</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {plan.data.stageRates.map((r) => (
                 <tr key={r.stageId}>
-                  <td className="py-1.5 pr-2">
+                  <td className="py-1.5 pe-2">
                     {r.stage}
                     <span className="block text-xs text-muted-foreground">{r.pipeline}</span>
                   </td>
-                  <td className="py-1.5 text-right tabular-nums">{r.stageProbability}%</td>
-                  <td className="py-1.5 text-right tabular-nums">{r.won}</td>
-                  <td className="py-1.5 text-right tabular-nums">{r.lost}</td>
-                  <td className="py-1.5 text-right tabular-nums">
+                  <td className="py-1.5 text-end tabular-nums">{r.stageProbability}%</td>
+                  <td className="py-1.5 text-end tabular-nums">{r.won}</td>
+                  <td className="py-1.5 text-end tabular-nums">{r.lost}</td>
+                  <td className="py-1.5 text-end tabular-nums">
                     {r.rate === null ? '—' : `${r.rate}%`}
                     {r.rate !== null && !r.usable && <span className="block text-xs text-muted-foreground">too few to use</span>}
                   </td>
@@ -331,29 +331,29 @@ function TrendView({ t }: { t: ForecastTrends }) {
       </figure>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs text-muted-foreground">
+          <thead className="text-start text-xs text-muted-foreground">
             <tr>
               <th className="pb-2 font-medium">Period</th>
-              <th className="pb-2 text-right font-medium">Won</th>
-              <th className="pb-2 text-right font-medium">Won / lost</th>
-              <th className="pb-2 text-right font-medium">Win rate</th>
-              <th className="pb-2 text-right font-medium">Avg. cycle</th>
-              <th className="pb-2 text-right font-medium">First forecast</th>
-              <th className="pb-2 text-right font-medium">Accuracy</th>
+              <th className="pb-2 text-end font-medium">Won</th>
+              <th className="pb-2 text-end font-medium">Won / lost</th>
+              <th className="pb-2 text-end font-medium">Win rate</th>
+              <th className="pb-2 text-end font-medium">Avg. cycle</th>
+              <th className="pb-2 text-end font-medium">First forecast</th>
+              <th className="pb-2 text-end font-medium">Accuracy</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {t.points.map((p) => (
               <tr key={p.period}>
                 <td className="py-1.5">{p.period}</td>
-                <td className="py-1.5 text-right tabular-nums">{money(p.won)}</td>
-                <td className="py-1.5 text-right tabular-nums">
+                <td className="py-1.5 text-end tabular-nums">{money(p.won)}</td>
+                <td className="py-1.5 text-end tabular-nums">
                   {p.wonCount} / {p.lostCount}
                 </td>
-                <td className="py-1.5 text-right tabular-nums">{p.winRate === null ? '—' : `${p.winRate}%`}</td>
-                <td className="py-1.5 text-right tabular-nums">{p.avgCycleDays === null ? '—' : `${p.avgCycleDays} days`}</td>
-                <td className="py-1.5 text-right tabular-nums">{p.forecastAtStart === null ? '—' : money(p.forecastAtStart)}</td>
-                <td className="py-1.5 text-right tabular-nums">
+                <td className="py-1.5 text-end tabular-nums">{p.winRate === null ? '—' : `${p.winRate}%`}</td>
+                <td className="py-1.5 text-end tabular-nums">{p.avgCycleDays === null ? '—' : `${p.avgCycleDays} days`}</td>
+                <td className="py-1.5 text-end tabular-nums">{p.forecastAtStart === null ? '—' : money(p.forecastAtStart)}</td>
+                <td className="py-1.5 text-end tabular-nums">
                   {p.errorPercent === null ? (p.forecastAtStart !== null ? <span className="text-xs text-muted-foreground">in progress</span> : '—') : `${p.errorPercent > 0 ? '+' : ''}${p.errorPercent}%`}
                 </td>
               </tr>

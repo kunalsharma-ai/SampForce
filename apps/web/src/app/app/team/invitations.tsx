@@ -115,7 +115,7 @@ export function Invitations() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <caption className="sr-only">Invitations</caption>
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="text-start text-xs text-muted-foreground">
                 <tr>
                   <th scope="col" className="py-2 font-medium">Email</th>
                   <th scope="col" className="py-2 font-medium">Role</th>
@@ -135,7 +135,7 @@ export function Invitations() {
                       <Badge tone={STATUS_TONE[i.status]}>{i.status.charAt(0).toUpperCase() + i.status.slice(1)}</Badge>
                     </td>
                     <td className="py-2 text-muted-foreground">{formatDate(i.expiresAt)}</td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-end">
                       {canManage && i.status === 'pending' && (
                         <Button variant="ghost" size="sm" onClick={() => revoke.mutate(i.id)} disabled={revoke.isPending}>
                           <X aria-hidden /> Revoke

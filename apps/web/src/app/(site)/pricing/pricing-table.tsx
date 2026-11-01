@@ -5,6 +5,7 @@ import type { PublicPricing } from '@dealflow/types';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 export function PricingTable({ pricing }: { pricing: PublicPricing }) {
   const [annual, setAnnual] = useState(true);
@@ -38,8 +39,8 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
                 {[
                   e.maxUsers ? `Up to ${e.maxUsers} users` : 'Choose your number of seats',
                   `${e.maxPipelines ?? 'Unlimited'} pipeline${e.maxPipelines === 1 ? '' : 's'}`,
-                  `${e.monthlyAiCredits.toLocaleString()} AI credits per user per month`,
-                  `${e.automationRunsPerMonth.toLocaleString()} automation runs per month`,
+                  `${e.monthlyAiCredits.toLocaleString(fmtLocale())} AI credits per user per month`,
+                  `${e.automationRunsPerMonth.toLocaleString(fmtLocale())} automation runs per month`,
                   e.customRoles ? 'Custom roles and permissions' : 'Standard roles',
                   'Single sign-on (OpenID Connect) and SCIM',
                 ].map((f) => (
