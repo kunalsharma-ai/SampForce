@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { renderEmailDesign, type EmailDesign } from '@dealflow/types';
 
 /**
  * Signed tokens for sequence tracking and unsubscribe links. A token carries the tenant id and the sent
@@ -74,6 +75,33 @@ export interface BuiltEmail {
   headers: Record<string, string>;
 }
 
+const UNSUB_TEXT = 'If you would rather not hear from me again, unsubscribe here:';
+const unsubHtml = (url: string) => `<p style="margin:2em 0 0;font-size:12px;color:#666">If you would rather not hear from me again, <a href="${escapeHtml(url)}">unsubscribe here</a>.</p>`;
+const pixelHtml = (url: string) => `<img src="${escapeHtml(url)}" width="1" height="1" alt="" style="display:block;border:0">`;
+const unsubHeaders = (signer: TrackingSigner, token: string) => ({
+  'List-Unsubscribe': `<${signer.unsubscribePostUrl(token)}>`,
+  'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+});
+
+/**
+ * A designed sequence email (ADR 0050): the design's HTML with merge fields filled in, tracked links when click
+ * tracking is on, the unsubscribe line and the open pixel; and its plain-text part with the unsubscribe line.
+ */
+export function buildDesignedSequenceEmail(
+  design: EmailDesign,
+  merge: (text: string) => string,
+  opts: { signer: TrackingSigner; token: string; trackOpens: boolean; trackClicks: boolean },
+): BuiltEmail {
+  const { signer, token } = opts;
+  const unsub = signer.unsubscribePageUrl(token);
+  const r = renderEmailDesign(design, {
+    merge,
+    link: opts.trackClicks ? (url) => signer.clickUrl(token, url) : undefined,
+    appendHtml: unsubHtml(unsub) + (opts.trackOpens ? pixelHtml(signer.openUrl(token)) : ''),
+  });
+  return { body: `${r.text.trimEnd()}\n\n${UNSUB_TEXT} ${unsub}`, html: r.html, headers: unsubHeaders(signer, token) };
+}
+
 /**
  * Turns a rendered plain-text sequence email into what is sent: the text part with an unsubscribe line,
  * an HTML part when open or click tracking is on, and List-Unsubscribe headers.
@@ -81,12 +109,8 @@ export interface BuiltEmail {
 export function buildSequenceEmail(text: string, opts: { signer: TrackingSigner; token: string; trackOpens: boolean; trackClicks: boolean }): BuiltEmail {
   const { signer, token } = opts;
   const unsub = signer.unsubscribePageUrl(token);
-  const footer = `If you would rather not hear from me again, unsubscribe here: ${unsub}`;
-  const body = `${text.trimEnd()}\n\n${footer}`;
-  const headers = {
-    'List-Unsubscribe': `<${signer.unsubscribePostUrl(token)}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
+  const body = `${text.trimEnd()}\n\n${UNSUB_TEXT} ${unsub}`;
+  const headers = unsubHeaders(signer, token);
   if (!opts.trackOpens && !opts.trackClicks) return { body, headers };
 
   const link = (url: string) => {
@@ -107,8 +131,8 @@ export function buildSequenceEmail(text: string, opts: { signer: TrackingSigner;
     .split(/\n{2,}/)
     .map((p) => `<p style="margin:0 0 1em">${toHtml(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
-  const footerHtml = `<p style="margin:2em 0 0;font-size:12px;color:#666">If you would rather not hear from me again, <a href="${escapeHtml(unsub)}">unsubscribe here</a>.</p>`;
-  const pixel = opts.trackOpens ? `<img src="${escapeHtml(signer.openUrl(token))}" width="1" height="1" alt="" style="display:block;border:0">` : '';
+  const footerHtml = unsubHtml(unsub);
+  const pixel = opts.trackOpens ? pixelHtml(signer.openUrl(token)) : '';
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222">${paragraphs}${footerHtml}${pixel}</body></html>`;
   return { body, html, headers };
 }

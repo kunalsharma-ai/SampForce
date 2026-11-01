@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { Prisma, type IntegrationConnection, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
-import { MERGE_FIELDS, nextSendSlot, pickVariant, renderMerge, type MergeField, type SequenceTestSendInput, type SequenceTestSendResult, type EmailEvent, type EnrollmentStatus, type RuleAction } from '@dealflow/types';
+import { emailDesignSchema, emailDesignStrings, MERGE_FIELDS, renderEmailDesign, nextSendSlot, pickVariant, renderMerge, type EmailDesign, type MergeField, type SequenceTestSendInput, type SequenceTestSendResult, type EmailEvent, type EnrollmentStatus, type RuleAction } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -15,7 +15,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
 import { loadPerson, personSubject, senderValues, variableValues } from './people';
 import { SequencesService, seqRules, seqSettings, seqSteps } from './sequences.service';
-import { buildSequenceEmail, TrackingSigner } from './tracking';
+import { buildDesignedSequenceEmail, buildSequenceEmail, TrackingSigner } from './tracking';
 
 const DAY = 86_400_000;
 const MINUTE = 60_000;
@@ -72,9 +72,11 @@ export class SequenceRunner implements OnModuleInit {
       const version = input.variant === 'B' && step.variantB ? step.variantB : step;
       let subject = version.subject;
       let body = version.body;
+      let design: EmailDesign | null = null;
       if (version.templateId) {
         const t = await tx.emailTemplate.findFirst({ where: { id: version.templateId, tenantId: auth.tenantId } });
         subject ||= t?.subject ?? '';
+        if (!body) design = templateDesign(t?.design);
         body ||= t?.body ?? '';
       }
       if (!subject || !body) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'This email has no subject or body yet.' });
@@ -87,17 +89,19 @@ export class SequenceRunner implements OnModuleInit {
       }
       const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
       const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, conn.accountEmail) };
-      const first = [renderMerge(subject, values), renderMerge(body, values)];
+      const first = [renderMerge(subject, values), renderMerge(design ? emailDesignStrings(design).join('\n') : body, values)];
       const missing = [...new Set(first.flatMap((r) => r.missing))] as MergeField[];
       // In a test, show gaps visibly instead of leaving them blank.
       for (const m of missing) values[m] = `[${MERGE_FIELDS[m]} missing]`;
       const index = seqSteps(seq).filter((st) => st.type === 'email').findIndex((st) => st.id === step.id) + 1;
-      return { conn, seq, index, missing, subject: renderMerge(subject, values).text, body: renderMerge(body, values).text };
+      const merge = (text: string) => renderMerge(text, values).text;
+      const label = input.variant === 'B' ? ', version B' : '';
+      const note = `Test of email ${index}${label} in the sequence "${seq.name}", sent only to you. Opens and clicks are not tracked in tests, and the real email adds an unsubscribe link.`;
+      const rendered = design ? renderEmailDesign(design, { merge, appendHtml: `<p style="margin:2em 0 0;font-size:12px;color:#666">${escapeText(note)}</p>` }) : null;
+      return { conn, seq, missing, note, subject: merge(subject), body: rendered ? rendered.text : merge(body), html: rendered?.html };
     });
-    const version = input.variant === 'B' ? ', version B' : '';
-    const footer = `\n\n--\nTest of email ${prep.index}${version} in the sequence "${prep.seq.name}", sent only to you. Opens and clicks are not tracked in tests, and the real email adds an unsubscribe link.`;
     const subject = `[Test] ${prep.subject}`;
-    await this.communication.deliver(auth, prep.conn, { to: prep.conn.accountEmail, subject, body: prep.body + footer }, {}, meta, {
+    await this.communication.deliver(auth, prep.conn, { to: prep.conn.accountEmail, subject, body: `${prep.body}\n\n--\n${prep.note}`, ...(prep.html ? { html: prep.html } : {}) }, {}, meta, {
       action: 'sequence.test_sent',
       metadata: { sequenceId, stepId: input.stepId, variant: input.variant },
     });
@@ -184,23 +188,26 @@ export class SequenceRunner implements OnModuleInit {
       const version = variant === 'B' && step.variantB ? step.variantB : step;
       let subject = version.subject;
       let body = version.body;
+      let design: EmailDesign | null = null;
       if (version.templateId) {
         const t = await tx.emailTemplate.findFirst({ where: { id: version.templateId, tenantId } });
         if (!t && (!subject || !body)) return { kind: 'pause' as const, pause: 'The template for this step was deleted. Edit the step, then resume.' };
         subject ||= t?.subject ?? '';
+        // A designed template is sent as HTML unless the step writes its own text.
+        if (!body) design = templateDesign(t?.design);
         body ||= t?.body ?? '';
       }
       const user = await tx.user.findUnique({ where: { id: e.senderId }, select: { name: true, email: true } });
       const values = { ...(await variableValues(tx, tenantId)), ...person.values, ...senderValues(user, conn.accountEmail) };
       const s = renderMerge(subject, values);
-      const b = renderMerge(body, values);
+      const b = renderMerge(design ? emailDesignStrings(design).join('\n') : body, values);
       const missing = [...new Set([...s.missing, ...b.missing])];
       if (missing.length) return { kind: 'pause' as const, pause: `Missing ${missing.join(', ')} with no fallback. Fill it in on the record or add a fallback like {{${missing[0]}|there}}, then resume.` };
       if ((await this.communication.sentInLastDay(tx, conn.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) return { kind: 'later' as const, later: 60 };
       const sentBySequence = await tx.sequenceMessage.count({ where: { tenantId, senderId: e.senderId, sentAt: { gte: new Date(Date.now() - DAY) }, enrollment: { sequenceId: e.sequenceId } } });
       if (sentBySequence >= settings.dailyLimit) return { kind: 'later' as const, later: 60 };
       const msg = await tx.sequenceMessage.create({ data: { tenantId, enrollmentId: id, stepId: step.id, variant, senderId: e.senderId, toAddress: e.email, subject: s.text.slice(0, 500) } });
-      return { kind: 'send' as const, conn, msg, subject: s.text, body: b.text };
+      return { kind: 'send' as const, conn, msg, subject: s.text, body: b.text, design, values };
     });
 
     if (prep.kind === 'stop') return void (await finish(prep.stop, prep.why));
@@ -208,7 +215,10 @@ export class SequenceRunner implements OnModuleInit {
     if (prep.kind === 'later') return void (await set({ nextRunAt: new Date(Date.now() + prep.later * MINUTE) }));
 
     const token = this.signer.token(tenantId, prep.msg.id);
-    const built = buildSequenceEmail(prep.body, { signer: this.signer, token, trackOpens: settings.trackOpens, trackClicks: settings.trackClicks });
+    const tracking = { signer: this.signer, token, trackOpens: settings.trackOpens, trackClicks: settings.trackClicks };
+    const built = prep.design
+      ? buildDesignedSequenceEmail(prep.design, (text) => renderMerge(text, prep.values).text, tracking)
+      : buildSequenceEmail(prep.body, tracking);
     try {
       const sent = await this.communication.deliver(
         actor,
@@ -445,3 +455,12 @@ export class SequenceRunner implements OnModuleInit {
     });
   }
 }
+
+/** A stored template design, or null when there is none or it no longer parses (the plain-text body is sent then). */
+function templateDesign(raw: unknown): EmailDesign | null {
+  if (!raw) return null;
+  const parsed = emailDesignSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+const escapeText = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

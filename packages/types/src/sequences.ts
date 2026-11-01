@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { OwnerRef } from './crm';
 import { LEAD_STATUSES } from './crm';
+import { emailDesignSchema, emailDesignStrings, renderEmailDesign, type EmailDesign } from './email-design';
 
 /**
  * Email templates and sequences. A sequence is a person-built list of steps (emails, tasks and
@@ -91,18 +92,30 @@ export interface EmailVariableRow {
 
 // ───────────── Templates ─────────────
 
-const unknownTags = (v: { subject: string; body: string }, ctx: z.RefinementCtx) => {
-  for (const [path, text] of [['subject', v.subject], ['body', v.body]] as const) {
+const unknownTags = (v: { subject: string; body: string; design?: EmailDesign | null }, ctx: z.RefinementCtx) => {
+  const parts = [['subject', v.subject], ['body', v.body], ...(v.design ? [['design', emailDesignStrings(v.design).join('\n')] as const] : [])] as const;
+  for (const [path, text] of parts) {
     const bad = mergeTags(text).filter((t) => !isMergeTag(t));
     if (bad.length) ctx.addIssue({ code: 'custom', path: [path], message: `Unknown merge field ${bad.map((b) => `{{${b}}}`).join(', ')}` });
   }
 };
 
+/**
+ * The plain-text version of a designed template, with merge fields left as typed. It is stored as the template's
+ * body, so lists, the composer and AI help keep working on designed templates.
+ */
+export function designedTemplateBody(design: EmailDesign): string {
+  return renderEmailDesign(design, { keepTags: true }).text.slice(0, 20_000);
+}
+
 export const emailTemplateInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Enter a name').max(120),
     subject: z.string().trim().min(1, 'Enter a subject').max(200),
-    body: z.string().trim().min(1, 'Write the email').max(20_000),
+    /** Plain text. For a designed template it is filled in from the design, so it can be left empty. */
+    body: z.string().trim().max(20_000).default(''),
+    /** Blocks for a designed (HTML) email; null for a plain-text template. */
+    design: emailDesignSchema.nullable().default(null),
     /** Shared templates are visible to the whole workspace; only people with marketing:manage can share. */
     shared: z.boolean().default(false),
     /** Free-text grouping such as "Cold outreach" or "Follow-up". */
@@ -110,7 +123,10 @@ export const emailTemplateInputSchema = z
     /** Optional marketing campaign the template belongs to. */
     campaignId: z.string().uuid().nullable().default(null),
   })
-  .superRefine(unknownTags);
+  .superRefine((v, ctx) => {
+    if (!v.design && !v.body) ctx.addIssue({ code: 'custom', path: ['body'], message: 'Write the email' });
+    unknownTags(v, ctx);
+  });
 export type EmailTemplateInput = z.infer<typeof emailTemplateInputSchema>;
 
 export interface EmailTemplateRow {
@@ -118,6 +134,8 @@ export interface EmailTemplateRow {
   name: string;
   subject: string;
   body: string;
+  /** Set for a designed template: sequences send it as HTML, with `body` as the plain-text part. */
+  design: EmailDesign | null;
   shared: boolean;
   category: string | null;
   campaign: { id: string; name: string } | null;
@@ -130,7 +148,9 @@ export interface EmailTemplateRow {
 
 export const templatePreviewSchema = z.object({
   subject: z.string().max(200),
-  body: z.string().max(20_000),
+  body: z.string().max(20_000).default(''),
+  /** Renders this design as HTML too, with the person's details filled in. */
+  design: emailDesignSchema.nullable().optional(),
   leadId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),
 });
@@ -138,6 +158,8 @@ export const templatePreviewSchema = z.object({
 export interface TemplatePreview {
   subject: string;
   body: string;
+  /** The email as HTML, for a designed template. */
+  html: string | null;
   missing: string[];
   recipient: { name: string; email: string | null } | null;
 }

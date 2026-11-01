@@ -36,3 +36,4 @@ export * from './regional';
 export * from './navigation';
 export * from './views';
 export * from './territories';
+export * from './email-design';

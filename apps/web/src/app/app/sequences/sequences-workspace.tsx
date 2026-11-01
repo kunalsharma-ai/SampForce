@@ -1,13 +1,14 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { DEFAULT_EVENT_RULES, type EmailTemplateRow } from '@dealflow/types';
+import { DEFAULT_EVENT_RULES, designedTemplateBody, EMAIL_BLOCK_LABELS, emailDesignSchema, starterEmailDesign, type EmailDesign, type EmailTemplateRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Copy, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { EmailAssist } from '@/components/ai/email-assist';
+import { EmailDesigner } from '@/components/email-designer/email-designer';
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -195,6 +196,7 @@ function TemplateLibrary() {
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                   {t.name}
                   {t.shared ? <Badge tone="primary">Shared</Badge> : <Badge>Only you</Badge>}
+                  {t.design && <Badge tone="accent">Designed</Badge>}
                   {t.category && <Badge tone="neutral">{t.category}</Badge>}
                   {t.usedBy > 0 && <Badge tone="accent">In {t.usedBy} sequence{t.usedBy === 1 ? '' : 's'}</Badge>}
                 </CardTitle>
@@ -235,14 +237,30 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
     category: template?.category ?? '',
     campaignId: template?.campaign?.id ?? '',
   });
+  // The design is kept while switching to plain text and back, so nothing is lost by looking at the other format.
+  const [design, setDesign] = useState<EmailDesign | null>(template?.design ?? null);
+  const [designed, setDesigned] = useState(!!template?.design);
+  const [designError, setDesignError] = useState<string | null>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const last = useRef<'subject' | 'body'>('body');
+  const switchFormat = (next: boolean) => {
+    if (next === designed) return;
+    if (next && !design) {
+      // Start the design from what is written so far.
+      const start = starterEmailDesign();
+      const first = start.blocks[0]!;
+      setDesign(v.body.trim() && first.type === 'text' ? { ...start, blocks: [{ ...first, text: v.body.trim() }, ...start.blocks.slice(1)] } : start);
+    }
+    if (!next && design && !v.body.trim()) setV({ ...v, body: designedTemplateBody(design) });
+    setDesignError(null);
+    setDesigned(next);
+  };
   const save = useMutation({
     mutationFn: () =>
       api(template ? `/email-templates/${template.id}` : '/email-templates', {
         method: template ? 'PUT' : 'POST',
-        json: { ...v, category: v.category.trim() || null, campaignId: v.campaignId || null },
+        json: { ...v, body: designed ? '' : v.body, design: designed ? design : null, category: v.category.trim() || null, campaignId: v.campaignId || null },
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['email-templates'] });
@@ -270,6 +288,11 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
+            if (designed && design) {
+              const problem = designProblem(design);
+              setDesignError(problem);
+              if (problem) return;
+            }
             save.mutate();
           }}
         >
@@ -279,25 +302,65 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
           <Field id="tpl-subject" label="Subject">
             <Input id="tpl-subject" ref={subjectRef} required maxLength={200} value={v.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => setV({ ...v, subject: e.target.value })} />
           </Field>
-          <Field id="tpl-body" label="Email" hint="Plain text. Links become clickable. An unsubscribe line is added to every sequence email.">
-            <Textarea
-              id="tpl-body"
-              ref={bodyRef}
-              required
-              rows={9}
-              maxLength={20_000}
-              value={v.body}
-              onFocus={() => (last.current = 'body')}
-              onChange={(e) => setV({ ...v, body: e.target.value })}
+          <div className="flex flex-wrap items-center gap-2">
+            <span id="tpl-format" className="text-sm font-medium">
+              Format
+            </span>
+            <div className="inline-flex rounded-md border border-border p-0.5" role="group" aria-labelledby="tpl-format">
+              {(
+                [
+                  [false, 'Plain text'],
+                  [true, 'Designed'],
+                ] as const
+              ).map(([value, name]) => (
+                <button
+                  key={name}
+                  type="button"
+                  aria-pressed={designed === value}
+                  onClick={() => switchFormat(value)}
+                  className={`rounded px-2.5 py-1 text-xs font-medium ${designed === value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {designed ? 'Blocks, colours and buttons, sent as HTML with a plain-text version.' : 'A personal-looking email. Links become clickable.'}
+            </span>
+          </div>
+          {designed && design ? (
+            <EmailDesigner
+              idBase="tpl-design"
+              value={design}
+              onChange={(d) => {
+                setDesign(d);
+                setDesignError(null);
+              }}
+              error={designError}
             />
-          </Field>
-          <MergeFieldBar idBase="tpl" onInsert={insert} />
-          <EmailAssist
-            asTemplate
-            subject={v.subject}
-            body={v.body}
-            onApply={(x) => setV({ ...v, ...(x.subject !== undefined ? { subject: x.subject } : {}), ...(x.body !== undefined ? { body: x.body } : {}) })}
-          />
+          ) : (
+            <>
+            <Field id="tpl-body" label="Email" hint="Plain text. Links become clickable. An unsubscribe line is added to every sequence email.">
+              <Textarea
+                id="tpl-body"
+                ref={bodyRef}
+                required
+                rows={9}
+                maxLength={20_000}
+                value={v.body}
+                onFocus={() => (last.current = 'body')}
+                onChange={(e) => setV({ ...v, body: e.target.value })}
+              />
+            </Field>
+            <MergeFieldBar idBase="tpl" onInsert={insert} />
+            <EmailAssist
+              asTemplate
+              subject={v.subject}
+              body={v.body}
+              onApply={(x) => setV({ ...v, ...(x.subject !== undefined ? { subject: x.subject } : {}), ...(x.body !== undefined ? { body: x.body } : {}) })}
+            />
+            </>
+          )}
           <p className="text-xs text-muted-foreground">
             Add a fallback after a bar for fields that may be empty, for example {'{{first_name|there}}'}. Custom fields use {'{{custom.key}}'} and workspace variables use {'{{var.key}}'}.
           </p>
@@ -328,7 +391,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
               <input type="checkbox" checked={v.shared} onChange={(e) => setV({ ...v, shared: e.target.checked })} /> Share with the whole workspace
             </label>
           )}
-          <PreviewPanel subject={v.subject} body={v.body} />
+          <PreviewPanel subject={v.subject} body={designed ? '' : v.body} design={designed ? design : null} />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" disabled={save.isPending}>
               Save template
@@ -347,6 +410,16 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
       </CardContent>
     </Card>
   );
+}
+
+/** The first thing that stops a design from saving, named by its block, or null. */
+function designProblem(design: EmailDesign): string | null {
+  const r = emailDesignSchema.safeParse(design);
+  if (r.success) return null;
+  const issue = r.error.issues[0]!;
+  const [where, index] = issue.path;
+  const block = where === 'blocks' && typeof index === 'number' ? design.blocks[index] : undefined;
+  return block ? `${EMAIL_BLOCK_LABELS[block.type]} block ${Number(index) + 1}: ${issue.message}.` : `${issue.message}.`;
 }
 
 // ───────────── Do-not-email list ─────────────

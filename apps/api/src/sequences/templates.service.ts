@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
-import type { EmailTemplate, TenantTx } from '@dealflow/database';
-import { mergeTags, renderMerge, type EmailTemplateInput, type EmailTemplateRow, type SequenceStep, type TemplatePreview, type EmailVariableInput, type EmailVariableRow } from '@dealflow/types';
+import { Prisma, type EmailTemplate, type TenantTx } from '@dealflow/database';
+import { designedTemplateBody, emailDesignSchema, emailDesignStrings, mergeTags, renderEmailDesign, renderMerge, type EmailDesign, type EmailTemplateInput, type EmailTemplateRow, type SequenceStep, type TemplatePreview, type EmailVariableInput, type EmailVariableRow } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -41,7 +41,7 @@ export class TemplatesService {
     if (input.shared) this.assertCanShare(auth);
     return this.prisma.run(auth, async (tx) => {
       await this.check(tx, auth.tenantId, input);
-      const t = await tx.emailTemplate.create({ data: { ...input, tenantId: auth.tenantId, ownerId: auth.userId } });
+      const t = await tx.emailTemplate.create({ data: { ...stored(input), tenantId: auth.tenantId, ownerId: auth.userId } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.created', entityType: 'email_template', entityId: t.id, metadata: { name: t.name, shared: t.shared }, meta });
       return (await this.rows(tx, auth.tenantId, [t]))[0]!;
     });
@@ -52,7 +52,7 @@ export class TemplatesService {
       const t = await this.editable(tx, auth, id);
       if (input.shared !== t.shared) this.assertCanShare(auth);
       await this.check(tx, auth.tenantId, input);
-      const updated = await tx.emailTemplate.update({ where: { id: t.id }, data: input });
+      const updated = await tx.emailTemplate.update({ where: { id: t.id }, data: stored(input) });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.updated', entityType: 'email_template', entityId: t.id, metadata: { name: updated.name, shared: updated.shared }, meta });
       return (await this.rows(tx, auth.tenantId, [updated]))[0]!;
     });
@@ -63,7 +63,7 @@ export class TemplatesService {
     return this.prisma.run(auth, async (tx) => {
       const t = await this.visible(tx, auth, id);
       const copy = await tx.emailTemplate.create({
-        data: { tenantId: auth.tenantId, ownerId: auth.userId, name: `${t.name} (copy)`.slice(0, 120), subject: t.subject, body: t.body, category: t.category, campaignId: t.campaignId, shared: false },
+        data: { tenantId: auth.tenantId, ownerId: auth.userId, name: `${t.name} (copy)`.slice(0, 120), subject: t.subject, body: t.body, design: t.design ?? Prisma.DbNull, category: t.category, campaignId: t.campaignId, shared: false },
       });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.created', entityType: 'email_template', entityId: copy.id, metadata: { name: copy.name, copiedFrom: t.id }, meta });
       return (await this.rows(tx, auth.tenantId, [copy]))[0]!;
@@ -80,7 +80,8 @@ export class TemplatesService {
 
   /** Custom fields and variables must exist, and a campaign must belong to the workspace. */
   private async check(tx: TenantTx, tenantId: string, input: EmailTemplateInput): Promise<void> {
-    const missing = await undefinedTags(tx, tenantId, [...mergeTags(input.subject), ...mergeTags(input.body)]);
+    const designed = input.design ? emailDesignStrings(input.design).join('\n') : '';
+    const missing = await undefinedTags(tx, tenantId, [...mergeTags(input.subject), ...mergeTags(input.body), ...mergeTags(designed)]);
     if (missing.length) throw new BadRequestException({ code: 'UNKNOWN_MERGE_FIELD', message: `{{${missing[0]}}} does not exist. Add the custom field or email variable first.` });
     if (input.campaignId && !(await tx.campaign.findFirst({ where: { id: input.campaignId, tenantId }, select: { id: true } }))) throw notFound('Campaign');
   }
@@ -95,8 +96,8 @@ export class TemplatesService {
     });
   }
 
-  /** Renders a subject and body for a real lead or contact (or with blanks), using the caller as sender. */
-  preview(auth: AuthContext, input: { subject: string; body: string; leadId?: string; contactId?: string }): Promise<TemplatePreview> {
+  /** Renders a subject and body (and a design as HTML) for a real lead or contact, or with blanks, using the caller as sender. */
+  preview(auth: AuthContext, input: { subject: string; body: string; design?: EmailDesign | null; leadId?: string; contactId?: string }): Promise<TemplatePreview> {
     return this.prisma.run(auth, async (tx) => {
       const person = await loadPerson(tx, auth.tenantId, input);
       if ((input.leadId || input.contactId) && !person) throw notFound(input.leadId ? 'Lead' : 'Contact');
@@ -104,10 +105,12 @@ export class TemplatesService {
       const mailbox = await tx.integrationConnection.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, status: 'CONNECTED' }, select: { accountEmail: true } });
       const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, mailbox?.accountEmail) };
       const subject = renderMerge(input.subject, values);
-      const body = renderMerge(input.body, values);
+      const body = renderMerge(input.design ? emailDesignStrings(input.design).join('\n') : input.body, values);
+      const designed = input.design ? renderEmailDesign(input.design, { merge: (text) => renderMerge(text, values).text }) : null;
       return {
         subject: subject.text,
-        body: body.text,
+        body: designed ? designed.text : body.text,
+        html: designed?.html ?? null,
         missing: [...new Set([...subject.missing, ...body.missing])],
         recipient: person ? { name: person.name, email: person.email } : null,
       };
@@ -155,6 +158,7 @@ export class TemplatesService {
       name: r.name,
       subject: r.subject,
       body: r.body,
+      design: storedDesign(r.design),
       shared: r.shared,
       category: r.category,
       campaign: r.campaignId ? (campaigns.get(r.campaignId) ?? null) : null,
@@ -165,6 +169,21 @@ export class TemplatesService {
     }));
   }
 
+}
+
+/** What is written for a template: a designed one keeps its blocks and stores their plain-text version as the body. */
+function stored(input: EmailTemplateInput) {
+  return {
+    ...input,
+    body: input.design ? designedTemplateBody(input.design) : input.body,
+    design: input.design ? (input.design as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+  };
+}
+
+function storedDesign(raw: Prisma.JsonValue): EmailDesign | null {
+  if (!raw) return null;
+  const parsed = emailDesignSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 /** Workspace email variables. Everyone who can read sequences sees them; marketing managers change them. */
