@@ -12,7 +12,7 @@
 | End-to-end (production builds) | Playwright (Chromium desktop + Pixel 7) | `apps/web/e2e` | Every push |
 | Accessibility | axe-core via Playwright, WCAG 2.0/2.1/2.2 A+AA tags, light and dark | `apps/web/e2e/app.spec.ts` | Every push |
 | Component catalogue | Storybook build + Playwright: every story renders without errors and passes axe in dark, light and Arabic (RTL) | `apps/web/e2e/catalogue.storybook.ts` | Every push |
-| Localisation | Vitest: every catalogue has every key, matching placeholders and every plural form the language uses | `apps/web/src/lib/i18n/i18n.test.ts` | Every push |
+| Localisation | Vitest: every catalogue has every key, matching placeholders and every plural form the language uses; every page phrase has four translations with the same placeholders and sits in one table; every label that reaches pages as data (type label maps, statuses, API KPI, onboarding and signal labels read from the API source) has a phrase. Playwright: German shell, Arabic RTL with axe, Spanish Command Center and lead create-to-detail workflow with axe, Arabic deals board with axe | `apps/web/src/lib/i18n/i18n.test.ts`, `apps/web/e2e/regional.spec.ts` | Every push |
 | Migration | `prisma migrate deploy` on an empty DB | CI step | Every push |
 | Performance | `scripts/load/run.mjs` against a seeded workspace (`seed:load`); results in docs/perf | Phase 8 (manual; not in CI) | Before releases |
 | Security | `pnpm audit --prod`, secret scan, CSP-violation check in the browser suite; CodeQL and ZAP not set up | Phase 8 | Before releases |

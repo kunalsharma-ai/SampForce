@@ -11,9 +11,11 @@ import { CompanyPortal } from '@/components/portal/company-portal';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { formatDate, useRecord } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 
 export function CompanyDetail({ id }: { id: string }) {
   const company = useRecord<CompanyRow>('companies', id);
+  const t = useT();
   if (company.isPending) return <DetailSkeleton />;
   if (company.error) return <DetailError error={company.error} />;
   const c = company.data;
@@ -39,7 +41,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <RecordIntelligencePanel entity="company" id={id} name={c.name} />
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">{t('Details')}</CardTitle>
             </CardHeader>
             <CardContent>
               <DetailList

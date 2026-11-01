@@ -1,13 +1,29 @@
 import type { LanguageCode } from '@dealflow/types';
 import { ar } from './messages/ar';
 import { de } from './messages/de';
-import { en, type MessageKey, type Messages } from './messages/en';
+import { en, type Messages, type ShellKey } from './messages/en';
 import { es } from './messages/es';
 import { fr } from './messages/fr';
+import { PHRASES, type PhraseKey } from './phrases';
 
-export type { MessageKey };
+/** A dotted shell key (`nav.favourites`) or a page phrase keyed by its English text (`'Owner'`). */
+export type MessageKey = ShellKey | PhraseKey;
 
-export const CATALOGUES: Record<LanguageCode, Messages> = { en, es, fr, de, ar };
+const COLUMN: Record<Exclude<LanguageCode, 'en'>, number> = { es: 0, fr: 1, de: 2, ar: 3 };
+function phrases(lang: LanguageCode): Record<PhraseKey, string> {
+  const out = {} as Record<PhraseKey, string>;
+  for (const [key, row] of Object.entries(PHRASES) as [PhraseKey, readonly string[]][]) out[key] = lang === 'en' ? key : row[COLUMN[lang]]!;
+  return out;
+}
+
+export type Catalogue = Messages & Record<PhraseKey, string>;
+export const CATALOGUES: Record<LanguageCode, Catalogue> = {
+  en: { ...en, ...phrases('en') },
+  es: { ...es, ...phrases('es') },
+  fr: { ...fr, ...phrases('fr') },
+  de: { ...de, ...phrases('de') },
+  ar: { ...ar, ...phrases('ar') },
+};
 
 /** Keys that have plural forms, written without the `_one`/`_other` suffix. */
 export type PluralKey = MessageKey extends infer K ? (K extends `${infer B}_other` ? B : never) : never;
@@ -30,7 +46,7 @@ function interpolate(text: string, vars: Vars | undefined, locale: string): stri
  * test makes impossible for shipped keys) and fills `{name}` placeholders. Numbers are written in `formatLocale`.
  */
 export function translate(language: LanguageCode, key: MessageKey, vars?: Vars, formatLocale: string = language): string {
-  const text = CATALOGUES[language]?.[key] ?? en[key] ?? key;
+  const text = CATALOGUES[language]?.[key] ?? CATALOGUES.en[key] ?? key;
   return interpolate(text, vars, formatLocale);
 }
 

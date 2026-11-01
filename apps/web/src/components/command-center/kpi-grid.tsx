@@ -5,6 +5,7 @@ import type { KpiKey, KpiValue } from '@dealflow/types';
 import { Info } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { formatKpi } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { usePreferences } from '@/stores/preferences';
 import { AnimatedNumber } from './animated-number';
 
@@ -16,11 +17,12 @@ export function KpiGrid({ kpis, currency }: { kpis: KpiValue[]; currency: string
   const motionPref = usePreferences((s) => s.appearance.motion);
   const osReduce = useReducedMotion();
   const reduce = motionPref === 'off' || motionPref === 'minimal' || (motionPref === 'balanced' && !!osReduce);
+  const t = useT();
   const ordered = [...kpis.filter((k) => HIGHLIGHT.includes(k.key)), ...kpis.filter((k) => !HIGHLIGHT.includes(k.key))];
   return (
     <section aria-labelledby="kpi-heading">
       <h2 id="kpi-heading" className="sr-only">
-        Key performance indicators
+        {t('Key performance indicators')}
       </h2>
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {ordered.map((k, i) => {
@@ -41,10 +43,10 @@ export function KpiGrid({ kpis, currency }: { kpis: KpiValue[]; currency: string
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t.maybe(k.label)}</p>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" className="rounded text-muted-foreground hover:text-foreground" aria-label={`How ${k.label} is calculated`}>
+                      <button type="button" className="rounded text-muted-foreground hover:text-foreground" aria-label={t('How {kpi} is calculated', { kpi: t.maybe(k.label) })}>
                         <Info className="size-3.5" aria-hidden />
                       </button>
                     </TooltipTrigger>
@@ -60,7 +62,7 @@ export function KpiGrid({ kpis, currency }: { kpis: KpiValue[]; currency: string
                 </p>
                 {k.value === null && (
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {k.availableFrom ? `Available with ${k.availableFrom}` : 'Not enough data yet'}
+                    {k.availableFrom ? t('Available with {module}', { module: k.availableFrom }) : t('Not enough data yet')}
                   </p>
                 )}
               </Card>

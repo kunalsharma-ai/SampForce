@@ -8,6 +8,7 @@ import { useId, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, titleCase, toQuery } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { RecordTimeline } from './record-timeline';
 import { Select, Textarea } from './select';
@@ -22,6 +23,7 @@ const ICONS = { CALL: Phone, EMAIL: Mail, MEETING: Users, NOTE: StickyNote } as 
  */
 export function ActivityTimeline({ related, timeline }: { related: RelatedRef; timeline?: { entity: TimelineEntity; id: string } }) {
   const qc = useQueryClient();
+  const tr = useT();
   const formId = useId();
   const canWrite = useCan('activities:write');
   const key = ['activities', related];
@@ -43,7 +45,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> {timeline ? 'Timeline' : 'Activity'}
+          <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> {timeline ? tr('Timeline') : tr('Activity')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -57,24 +59,24 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
           >
             <div className="flex gap-2">
               <label htmlFor={`${formId}-type`} className="sr-only">
-                Activity type
+                {tr('Activity type')}
               </label>
               <Select id={`${formId}-type`} className="w-32" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
                 {ACTIVITY_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {titleCase(t)}
+                    {tr.maybe(titleCase(t))}
                   </option>
                 ))}
               </Select>
               <label htmlFor={`${formId}-subject`} className="sr-only">
-                Subject
+                {tr('Subject')}
               </label>
-              <Input id={`${formId}-subject`} placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
+              <Input id={`${formId}-subject`} placeholder={tr('Subject')} value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
             </div>
             <label htmlFor={`${formId}-body`} className="sr-only">
-              Details
+              {tr('Details')}
             </label>
-            <Textarea id={`${formId}-body`} placeholder="Details (optional)" value={body} onChange={(e) => setBody(e.target.value)} className="min-h-[64px]" />
+            <Textarea id={`${formId}-body`} placeholder={tr('Details (optional)')} value={body} onChange={(e) => setBody(e.target.value)} className="min-h-[64px]" />
             {log.error && (
               <p role="alert" className="text-sm text-critical">
                 {log.error.message}
@@ -82,7 +84,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
             )}
             <div className="flex justify-end">
               <Button type="submit" size="sm" disabled={!subject.trim() || log.isPending}>
-                Log {type.toLowerCase()}
+                {tr.maybe(`Log ${type.toLowerCase()}`)}
               </Button>
             </div>
           </form>
@@ -92,7 +94,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
         ) : list.isPending ? (
           <Skeleton className="h-20" />
         ) : list.data?.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No activity yet.</p>
+          <p className="text-sm text-muted-foreground">{tr('No activity yet.')}</p>
         ) : (
           <ol className="space-y-3">
             {list.data?.items.map((a) => {
@@ -105,12 +107,12 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
                   <div className="min-w-0 flex-1">
                     <p className="text-sm">
                       <span className="font-medium">{a.subject}</span>{' '}
-                      <span className="text-muted-foreground">· {titleCase(a.type)}</span>
-                      {a.aiAssisted && <Badge tone="accent" className="ms-2">AI-assisted</Badge>}
+                      <span className="text-muted-foreground">· {tr.maybe(titleCase(a.type))}</span>
+                      {a.aiAssisted && <Badge tone="accent" className="ms-2">{tr('AI-assisted')}</Badge>}
                     </p>
                     {a.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{a.body}</p>}
                     <p className="text-xs text-muted-foreground">
-                      {a.owner?.name ?? 'Unknown'} · <time dateTime={a.occurredAt}>{relativeTime(a.occurredAt)}</time>
+                      {a.owner?.name ?? tr('Unknown')} · <time dateTime={a.occurredAt}>{relativeTime(a.occurredAt)}</time>
                     </p>
                   </div>
                 </li>
@@ -128,6 +130,7 @@ type TaskRelated = { leadId: string } | { contactId: string } | { opportunityId:
 /** Open tasks linked to a record, with quick add and complete. */
 export function RecordTasks({ related }: { related: TaskRelated }) {
   const qc = useQueryClient();
+  const tr = useT();
   const formId = useId();
   const canWrite = useCan('activities:write');
   const list = useQuery({ queryKey: ['tasks', 'record', related], queryFn: () => api<TaskRow[]>(`/tasks${toQuery({ scope: 'all', ...related })}`) });
@@ -151,21 +154,21 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <CalendarClock className="size-4 text-muted-foreground" aria-hidden /> Open tasks
+          <CalendarClock className="size-4 text-muted-foreground" aria-hidden /> {tr('Open tasks')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {list.isPending ? (
           <Skeleton className="h-12" />
         ) : list.data?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No open tasks.</p>
+          <p className="text-sm text-muted-foreground">{tr('No open tasks.')}</p>
         ) : (
           <ul className="space-y-2">
             {list.data?.map((t) => (
               <li key={t.id} className="flex items-start gap-2 text-sm">
                 <input
                   type="checkbox"
-                  aria-label={`Complete ${t.title}`}
+                  aria-label={tr('Complete {title}', { title: t.title })}
                   className="mt-0.5 size-4 accent-[hsl(var(--primary))]"
                   disabled={!canWrite || complete.isPending}
                   onChange={() => complete.mutate(t.id)}
@@ -174,11 +177,11 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
                   {t.title}
                   {t.priority === 'HIGH' && (
                     <Badge tone="critical" className="ms-1.5">
-                      High priority
+                      {tr('High priority')}
                     </Badge>
                   )}
                   <span className={`block text-xs ${t.overdue ? 'text-critical' : 'text-muted-foreground'}`}>
-                    {t.dueAt ? `${t.overdue ? 'Overdue · ' : 'Due '}${formatDate(t.dueAt)}` : 'No due date'} · {t.assignee?.name ?? 'Unassigned'}
+                    {t.dueAt ? tr(t.overdue ? 'Overdue · {date}' : 'Due {date}', { date: formatDate(t.dueAt) }) : tr('No due date')} · {t.assignee?.name ?? tr('Unassigned')}
                   </span>
                 </span>
               </li>
@@ -194,15 +197,15 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
             }}
           >
             <label htmlFor={`${formId}-title`} className="sr-only">
-              New task
+              {tr('create.task')}
             </label>
-            <Input id={`${formId}-title`} placeholder="Add a task…" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-2" maxLength={200} />
+            <Input id={`${formId}-title`} placeholder={tr('Add a task…')} value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-2" maxLength={200} />
             <label htmlFor={`${formId}-due`} className="sr-only">
-              Due date
+              {tr('Due date')}
             </label>
             <Input id={`${formId}-due`} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
             <Button type="submit" size="sm" variant="outline" disabled={!title.trim() || add.isPending}>
-              Add
+              {tr('Add')}
             </Button>
             {add.error && (
               <p role="alert" className="col-span-2 text-sm text-critical">

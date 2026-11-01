@@ -18,7 +18,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { PRIORITY_LABEL, PriorityBadge, RiskIndicator } from './deal-badges';
 import { StageStepper } from './stage-stepper';
-import { fmtLocale } from '@/lib/i18n/locale';
+import { type MessageKey, useT } from '@/lib/i18n';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -27,7 +27,7 @@ const TABS = [
   { key: 'quotes', label: 'Quotes' },
   { key: 'insights', label: 'AI insights' },
   { key: 'history', label: 'History' },
-] as const;
+] as const satisfies readonly { key: string; label: MessageKey }[];
 type Tab = (typeof TABS)[number]['key'];
 
 /** Opens a deal over the current view (pipeline, calendar, forecast...) so people can work on it without leaving. */
@@ -44,6 +44,7 @@ export function DealSheet({ id, onClose }: { id: string | null; onClose: () => v
 /** The deal workspace: summary and stage at the top, then tabs. Used in the slide-over and in the split view. */
 export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headingAs?: React.ElementType }) {
   const deal = useRecord<DealRow>('deals', id);
+  const t = useT();
   const [tab, setTab] = useState<Tab>('overview');
   const base = useId();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -54,14 +55,14 @@ export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headi
         <Skeleton className="h-7 w-2/3" />
         <Skeleton className="h-5 w-1/3" />
         <Skeleton className="h-40" />
-        {Heading !== 'h2' && <DialogTitle className="sr-only">Loading deal</DialogTitle>}
+        {Heading !== 'h2' && <DialogTitle className="sr-only">{t('Loading deal')}</DialogTitle>}
       </div>
     );
   }
   if (deal.error) {
     return (
       <div className="p-6">
-        <Heading className="text-lg font-semibold">Deal unavailable</Heading>
+        <Heading className="text-lg font-semibold">{t('Deal unavailable')}</Heading>
         <p role="alert" className="mt-2 text-sm text-critical">
           {deal.error.message}
         </p>
@@ -91,39 +92,39 @@ export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headi
             </p>
           </div>
           <Link href={`/app/deals/${d.id}`} className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
-            Open full page <ExternalLink className="size-3.5" aria-hidden />
+            {t('Open full page')} <ExternalLink className="size-3.5" aria-hidden />
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={DEAL_STATUS_TONE[d.status]}>{titleCase(d.status)}</Badge>
+          <Badge tone={DEAL_STATUS_TONE[d.status]}>{t.maybe(titleCase(d.status))}</Badge>
           <PriorityBadge priority={d.priority} />
           <RiskIndicator health={d.health} />
-          {d.owner && <span className="text-xs text-muted-foreground">Owner: {d.owner.name}</span>}
+          {d.owner && <span className="text-xs text-muted-foreground">{t('Owner: {name}', { name: d.owner.name })}</span>}
         </div>
         <StageStepper deal={d} />
       </header>
 
-      <div role="tablist" aria-label="Deal sections" className="flex gap-1 overflow-x-auto border-b border-border px-3">
-        {TABS.map((t, i) => (
+      <div role="tablist" aria-label={t('Deal sections')} className="flex gap-1 overflow-x-auto border-b border-border px-3">
+        {TABS.map((tb, i) => (
           <button
-            key={t.key}
+            key={tb.key}
             ref={(el) => {
               tabRefs.current[i] = el;
             }}
             type="button"
             role="tab"
-            id={`${base}-tab-${t.key}`}
-            aria-selected={tab === t.key}
+            id={`${base}-tab-${tb.key}`}
+            aria-selected={tab === tb.key}
             aria-controls={`${base}-panel`}
-            tabIndex={tab === t.key ? 0 : -1}
-            onClick={() => setTab(t.key)}
+            tabIndex={tab === tb.key ? 0 : -1}
+            onClick={() => setTab(tb.key)}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
               '-mb-px shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              tab === t.key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+              tab === tb.key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
           >
-            {t.label}
+            {t(tb.label)}
           </button>
         ))}
       </div>
@@ -174,6 +175,7 @@ export function useRefreshDealViews() {
 function OverviewTab({ deal }: { deal: DealRow }) {
   const canWrite = useCan('deals:write');
   const members = useMembers();
+  const t = useT();
   const qc = useQueryClient();
   const refresh = useRefreshDealViews();
   const [draft, setDraft] = useState<Draft>(() => toDraft(deal));
@@ -189,8 +191,8 @@ function OverviewTab({ deal }: { deal: DealRow }) {
   const amount = Number(draft.amount);
   const probability = draft.probability === '' ? null : Number(draft.probability);
   const errors = {
-    amount: draft.amount.trim() === '' || !Number.isFinite(amount) || amount < 0 ? 'Enter an amount of 0 or more' : undefined,
-    probability: probability !== null && (!Number.isInteger(probability) || probability < 0 || probability > 100) ? 'Use a whole number from 0 to 100, or leave it empty' : undefined,
+    amount: draft.amount.trim() === '' || !Number.isFinite(amount) || amount < 0 ? t('Enter an amount of 0 or more') : undefined,
+    probability: probability !== null && (!Number.isInteger(probability) || probability < 0 || probability > 100) ? t('Use a whole number from 0 to 100, or leave it empty') : undefined,
   };
   const valid = !errors.amount && !errors.probability;
 
@@ -206,7 +208,7 @@ function OverviewTab({ deal }: { deal: DealRow }) {
     },
     onSuccess: (row) => {
       qc.setQueryData(['deals', 'detail', row.id], row);
-      setSavedAt(new Date().toLocaleTimeString(fmtLocale()));
+      setSavedAt(new Date().toLocaleTimeString(t.formatLocale));
       refresh();
     },
   });
@@ -225,29 +227,29 @@ function OverviewTab({ deal }: { deal: DealRow }) {
       }}
     >
       <fieldset disabled={!canWrite || save.isPending} className="grid gap-4 sm:grid-cols-2">
-        <legend className="sr-only">Deal details</legend>
-        <Field id={`amount-${deal.id}`} label={`Amount (${deal.currency})`} error={errors.amount}>
+        <legend className="sr-only">{t('Deal details')}</legend>
+        <Field id={`amount-${deal.id}`} label={t('Amount ({currency})', { currency: deal.currency })} error={errors.amount}>
           <Input inputMode="decimal" value={draft.amount} onChange={set('amount')} />
         </Field>
-        <Field id={`close-${deal.id}`} label="Expected close">
+        <Field id={`close-${deal.id}`} label={t('Expected close')}>
           <Input type="date" value={draft.expectedCloseDate} onChange={set('expectedCloseDate')} />
         </Field>
-        <Field id={`prob-${deal.id}`} label="Probability %" hint={`Empty uses the stage’s ${deal.stage.probability}%`} error={errors.probability}>
+        <Field id={`prob-${deal.id}`} label={t('Probability %')} hint={t('Empty uses the stage’s {probability}%', { probability: deal.stage.probability })} error={errors.probability}>
           <Input inputMode="numeric" value={draft.probability} onChange={set('probability')} placeholder={String(deal.stage.probability)} />
         </Field>
-        <Field id={`priority-${deal.id}`} label="Priority">
+        <Field id={`priority-${deal.id}`} label={t('Priority')}>
           <Select value={draft.priority} onChange={set('priority')}>
-            <option value="">Not set</option>
+            <option value="">{t('Not set')}</option>
             {[...DEAL_PRIORITIES].reverse().map((p) => (
               <option key={p} value={p}>
-                {PRIORITY_LABEL[p]}
+                {t(PRIORITY_LABEL[p])}
               </option>
             ))}
           </Select>
         </Field>
-        <Field id={`owner-${deal.id}`} label="Owner">
+        <Field id={`owner-${deal.id}`} label={t('Owner')}>
           <Select value={draft.ownerId} onChange={set('ownerId')}>
-            <option value="">Unassigned</option>
+            <option value="">{t('Unassigned')}</option>
             {(members.data ?? []).map((m) => (
               <option key={m.userId} value={m.userId}>
                 {m.name}
@@ -259,15 +261,15 @@ function OverviewTab({ deal }: { deal: DealRow }) {
       {canWrite && (
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={!changed.length || !valid || save.isPending}>
-            {save.isPending ? 'Saving…' : 'Save changes'}
+            {save.isPending ? t('Saving…') : t('Save changes')}
           </Button>
           {changed.length > 0 && (
             <Button type="button" variant="ghost" size="sm" onClick={() => setDraft(original)}>
-              Discard
+              {t('Discard')}
             </Button>
           )}
           <p role="status" className="text-xs text-muted-foreground">
-            {save.isError ? '' : savedAt ? `Saved at ${savedAt}.` : changed.length ? `${changed.length} unsaved ${changed.length === 1 ? 'change' : 'changes'}.` : ''}
+            {save.isError ? '' : savedAt ? t('Saved at {time}.', { time: savedAt }) : changed.length ? t.plural('count.unsavedChanges', changed.length) : ''}
           </p>
         </div>
       )}
@@ -284,12 +286,12 @@ function OverviewTab({ deal }: { deal: DealRow }) {
             ['Created', formatDate(deal.createdAt)],
             ['Closed', deal.closedAt ? formatDate(deal.closedAt) : null],
             ['Loss reason', deal.lossReason],
-          ] as const
+          ] as const satisfies readonly (readonly [MessageKey, unknown])[]
         )
           .filter(([, v]) => v)
           .map(([k, v]) => (
             <div key={k}>
-              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dt className="text-xs text-muted-foreground">{t(k)}</dt>
               <dd>{v}</dd>
             </div>
           ))}
@@ -298,7 +300,7 @@ function OverviewTab({ deal }: { deal: DealRow }) {
   );
 }
 
-const ACTION_LABEL: Record<string, string> = {
+const ACTION_LABEL: Record<string, MessageKey> = {
   'deal.created': 'Created the deal',
   'deal.updated': 'Updated the deal',
   'deal.stage_changed': 'Moved the deal',
@@ -306,10 +308,11 @@ const ACTION_LABEL: Record<string, string> = {
   'deal.assigned': 'Changed the owner',
   'deal.deleted': 'Deleted the deal',
 };
-const FIELD_LABEL: Record<string, string> = { amount: 'Amount', expectedCloseDate: 'Expected close', probability: 'Probability', priority: 'Priority', ownerId: 'Owner', name: 'Name', companyId: 'Company', contactId: 'Contact' };
-const show = (v: unknown) => (v === null || v === undefined || v === '' ? 'empty' : String(v));
+const FIELD_LABEL: Record<string, MessageKey> = { amount: 'Amount', expectedCloseDate: 'Expected close', probability: 'Probability', priority: 'Priority', ownerId: 'Owner', name: 'Name', companyId: 'Company', contactId: 'Contact' };
+const show = (v: unknown, empty: string) => (v === null || v === undefined || v === '' ? empty : String(v));
 
 function HistoryTab({ id }: { id: string }) {
+  const t = useT();
   const q = useQuery({ queryKey: ['deals', 'history', id], queryFn: () => api<DealHistoryItem[]>(`/deals/${id}/history`) });
   if (q.isPending) return <Skeleton className="h-40" />;
   if (q.error)
@@ -318,15 +321,15 @@ function HistoryTab({ id }: { id: string }) {
         {q.error.message}
       </p>
     );
-  if (q.data.length === 0) return <p className="text-sm text-muted-foreground">No changes recorded yet.</p>;
+  if (q.data.length === 0) return <p className="text-sm text-muted-foreground">{t('No changes recorded yet.')}</p>;
   return (
-    <ol className="space-y-3" aria-label="Deal history">
+    <ol className="space-y-3" aria-label={t('Deal history')}>
       {q.data.map((h) => {
         const stage = h.action === 'deal.stage_changed' ? (h.metadata as { from?: string; to?: string }) : null;
         return (
           <li key={h.id} className="rounded-md border border-border p-3 text-sm">
             <p>
-              <span className="font-medium">{h.actorName ?? 'System'}</span> · {ACTION_LABEL[h.action] ?? h.action}
+              <span className="font-medium">{h.actorName ?? t('System')}</span> · {ACTION_LABEL[h.action] ? t(ACTION_LABEL[h.action]!) : h.action}
               <span className="text-muted-foreground"> · {relativeTime(h.createdAt)}</span>
             </p>
             {stage?.to && (
@@ -339,7 +342,7 @@ function HistoryTab({ id }: { id: string }) {
               <ul className="mt-1 space-y-0.5 text-muted-foreground">
                 {Object.entries(h.changes).map(([k, c]) => (
                   <li key={k}>
-                    {FIELD_LABEL[k] ?? k}: {k === 'ownerId' ? 'changed' : `${show(c.from)} → ${show(c.to)}`}
+                    {FIELD_LABEL[k] ? t(FIELD_LABEL[k]!) : k}: {k === 'ownerId' ? t('changed') : `${show(c.from, t('empty'))} → ${show(c.to, t('empty'))}`}
                   </li>
                 ))}
               </ul>

@@ -13,6 +13,7 @@ import { phoneProblem } from '@/components/forms/locale-data';
 import { Segmented } from '@/components/forms/segmented';
 import { useFormDraft } from '@/components/forms/use-form-draft';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { type PickerValue, RecordPicker } from './record-picker';
 import { Select, Textarea } from './select';
 
@@ -29,6 +30,7 @@ interface Props {
 /** Create/edit dialog for leads, contacts, companies and deals, including the workspace's custom fields. */
 export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial, onSaved }: Props) {
   const mode = recordId ? 'edit' : 'create';
+  const t = useT();
   const qc = useQueryClient();
   const formId = useId();
   const [values, setValues] = useState<Record<string, unknown>>(initial ?? {});
@@ -86,7 +88,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       if (err instanceof ApiError && err.details?.length) {
         setErrors(Object.fromEntries(err.details.map((d) => [d.path.startsWith('customFields.') ? `cf.${d.path.slice(13)}` : d.path, d.message])));
       }
-      setFormError(err instanceof Error ? err.message : 'Could not save.');
+      setFormError(err instanceof Error ? err.message : t('Could not save.'));
     } finally {
       setSaving(false);
     }
@@ -96,16 +98,16 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{mode === 'create' ? `New ${label.toLowerCase()}` : `Edit ${label.toLowerCase()}`}</DialogTitle>
-        <DialogDescription className="mb-4 text-sm text-muted-foreground">Fields marked * are required.</DialogDescription>
+        <DialogTitle className="text-lg font-semibold">{t.maybe(mode === 'create' ? `New ${label.toLowerCase()}` : `Edit ${label.toLowerCase()}`)}</DialogTitle>
+        <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('Fields marked * are required.')}</DialogDescription>
         {draft.offer && (
           <div role="status" className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
-            <span className="flex-1">You have an unsaved {label.toLowerCase()} from {relativeTime(draft.offer.savedAt.toISOString())}.</span>
+            <span className="flex-1">{t.maybe(`You have an unsaved ${label.toLowerCase()} from {when}.`, { when: relativeTime(draft.offer.savedAt.toISOString()) })}</span>
             <Button type="button" size="sm" variant="outline" onClick={() => { const v = draft.take(); if (v) setValues(v); }}>
-              Restore draft
+              {t('Restore draft')}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={draft.discard}>
-              Discard
+              {t('Discard')}
             </Button>
           </div>
         )}
@@ -117,7 +119,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
           ))}
           {custom.data && custom.data.length > 0 && (
             <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
-              <legend className="mb-2 text-sm font-medium text-muted-foreground">Custom fields</legend>
+              <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
               {custom.data.map((d) => (
                 <CustomFieldControl key={d.id} def={d} id={`${formId}-cf-${d.key}`} value={values[`cf.${d.key}`]} onChange={(v) => set(`cf.${d.key}`, v)} error={errors[`cf.${d.key}`]} />
               ))}
@@ -130,10 +132,10 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
           )}
           <div className="flex justify-end gap-2 sm:col-span-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : mode === 'create' ? `Create ${label.toLowerCase()}` : 'Save changes'}
+              {saving ? t('Saving…') : mode === 'create' ? t.maybe(`Create ${label.toLowerCase()}`) : t('Save changes')}
             </Button>
           </div>
         </form>
@@ -143,29 +145,32 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
 }
 
 function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: string; values: Record<string, unknown>; set: (n: string, v: unknown) => void; error?: string }) {
-  const label = spec.required ? `${spec.label} *` : spec.label;
+  const t = useT();
+  const name = t(spec.label);
+  const label = spec.required ? `${name} *` : name;
+  const hint = spec.hint ? t(spec.hint) : undefined;
   const v = values[spec.name];
   const str = v === null || v === undefined ? '' : String(v);
   switch (spec.type) {
     case 'select':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <Select value={str} onChange={(e) => set(spec.name, e.target.value)}>
-            <option value="">Default</option>
+            <option value="">{t('Default')}</option>
             {spec.options?.map((o) => (
               <option key={o.value} value={o.value}>
-                {o.label}
+                {t(o.label)}
               </option>
             ))}
           </Select>
         </Field>
       );
     case 'owner':
-      return <OwnerField id={id} label={label} value={str} onChange={(x) => set(spec.name, x)} error={error} hint={spec.hint} />;
+      return <OwnerField id={id} label={label} value={str} onChange={(x) => set(spec.name, x)} error={error} hint={hint} />;
     case 'company':
     case 'contact':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <RecordPicker entity={spec.type === 'company' ? 'companies' : 'contacts'} value={(v as PickerValue | null) ?? null} onChange={(x) => set(spec.name, x)} />
         </Field>
       );
@@ -173,19 +178,19 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
       return <PipelineField id={id} values={values} set={set} error={error} />;
     case 'country':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <CountrySelect value={str} onChange={(x) => set(spec.name, x)} />
         </Field>
       );
     case 'currency':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
-          <CurrencySelect value={str} onChange={(x) => set(spec.name, x)} placeholder="Search currencies" />
+        <Field id={id} label={label} error={error} hint={hint}>
+          <CurrencySelect value={str} onChange={(x) => set(spec.name, x)} placeholder={t('Search currencies')} />
         </Field>
       );
     case 'timezone':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <TimeZoneSelect value={str} onChange={(x) => set(spec.name, x)} />
         </Field>
       );
@@ -193,51 +198,51 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
       return <MoneyField id={id} label={label} spec={spec} value={str} currency={String(values[spec.currencyField ?? 'currency'] ?? '')} set={set} error={error} />;
     case 'percent':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
-          <NumberStepper value={str} onChange={(x) => set(spec.name, x)} min={0} max={100} step={5} suffix="%" label={spec.label.replace(/\s*\(.*\)$/, '').toLowerCase()} />
+        <Field id={id} label={label} error={error} hint={hint}>
+          <NumberStepper value={str} onChange={(x) => set(spec.name, x)} min={0} max={100} step={5} suffix="%" label={t.language === 'en' ? spec.label.replace(/\s*\(.*\)$/, '').toLowerCase() : name.replace(/\s*\(.*\)$/, '')} />
         </Field>
       );
     case 'tel':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <PhoneInput value={str} onChange={(x) => set(spec.name, x)} />
         </Field>
       );
     case 'tags':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
-          <MultiCombobox value={Array.isArray(v) ? (v as string[]) : str ? str.split(',').map((t) => t.trim()).filter(Boolean) : []} onChange={(x) => set(spec.name, x)} creatable max={20} itemLabel="tag" placeholder="Type a tag" />
+        <Field id={id} label={label} error={error} hint={hint}>
+          <MultiCombobox value={Array.isArray(v) ? (v as string[]) : str ? str.split(',').map((t) => t.trim()).filter(Boolean) : []} onChange={(x) => set(spec.name, x)} creatable max={20} itemLabel={t('tag')} placeholder={t('Type a tag')} />
         </Field>
       );
     case 'priority':
       return (
         <Segmented
-          legend={spec.label}
+          legend={name}
           name={id}
           value={(str || 'NONE') as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'}
           onChange={(x) => set(spec.name, x === 'NONE' ? '' : x)}
           options={[
-            { value: 'NONE', label: 'Not set' },
-            { value: 'LOW', label: 'Low' },
-            { value: 'MEDIUM', label: 'Medium' },
-            { value: 'HIGH', label: 'High' },
+            { value: 'NONE', label: t('Not set') },
+            { value: 'LOW', label: t('Low') },
+            { value: 'MEDIUM', label: t('Medium') },
+            { value: 'HIGH', label: t('High') },
           ]}
         />
       );
     case 'textarea':
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <Textarea value={str} onChange={(e) => set(spec.name, e.target.value)} />
         </Field>
       );
     default:
       return (
-        <Field id={id} label={label} error={error} hint={spec.hint}>
+        <Field id={id} label={label} error={error} hint={hint}>
           <Input
             type={spec.type}
             inputMode={spec.type === 'number' ? 'decimal' : undefined}
             required={spec.required}
-            placeholder={spec.placeholder}
+            placeholder={spec.placeholder ? t(spec.placeholder) : undefined}
             value={str}
             onChange={(e) => set(spec.name, e.target.value)}
           />
@@ -249,8 +254,9 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
 function MoneyField({ id, label, spec, value, currency, set, error }: { id: string; label: string; spec: FieldSpec; value: string; currency: string; set: (n: string, v: unknown) => void; error?: string }) {
   const tenant = useQuery({ queryKey: ['tenant'], queryFn: () => api<TenantDetails>('/tenants/current'), staleTime: 300_000 });
   const code = currency || tenant.data?.defaultCurrency || 'USD';
+  const t = useT();
   return (
-    <Field id={id} label={label} error={error} hint={spec.hint}>
+    <Field id={id} label={label} error={error} hint={spec.hint ? t(spec.hint) : undefined}>
       <CurrencyInput value={value} onChange={(x) => set(spec.name, x)} currency={code} />
     </Field>
   );
@@ -258,10 +264,11 @@ function MoneyField({ id, label, spec, value, currency, set, error }: { id: stri
 
 function OwnerField({ id, label, value, onChange, error, hint }: { id: string; label: string; value: string; onChange: (v: string) => void; error?: string; hint?: string }) {
   const members = useMembers();
+  const t = useT();
   return (
     <Field id={id} label={label} error={error} hint={hint}>
       <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{members.isPending ? 'Loading…' : 'Me (default)'}</option>
+        <option value="">{members.isPending ? t('Loading…') : t('Me (default)')}</option>
         {members.data?.map((m) => (
           <option key={m.userId} value={m.userId}>
             {m.name}
@@ -274,22 +281,23 @@ function OwnerField({ id, label, value, onChange, error, hint }: { id: string; l
 
 function PipelineField({ id, values, set, error }: { id: string; values: Record<string, unknown>; set: (n: string, v: unknown) => void; error?: string }) {
   const pipelines = usePipelines();
+  const t = useT();
   const selected = pipelines.data?.find((p) => p.id === values.pipelineId) ?? pipelines.data?.find((p) => p.isDefault);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field id={id} label="Pipeline" error={error}>
+      <Field id={id} label={t('Pipeline')} error={error}>
         <Select value={selected?.id ?? ''} onChange={(e) => { set('pipelineId', e.target.value); set('stageId', ''); }}>
           {pipelines.data?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
-              {p.isDefault ? ' (default)' : ''}
+              {p.isDefault ? t(' (default)') : ''}
             </option>
           ))}
         </Select>
       </Field>
-      <Field id={`${id}-stage`} label="Stage">
+      <Field id={`${id}-stage`} label={t('Stage')}>
         <Select value={String(values.stageId ?? '')} onChange={(e) => set('stageId', e.target.value)}>
-          <option value="">First open stage</option>
+          <option value="">{t('First open stage')}</option>
           {selected?.stages.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} · {s.probability}%
@@ -302,10 +310,11 @@ function PipelineField({ id, values, set, error }: { id: string; values: Record<
 }
 
 function CustomFieldControl({ def, id, value, onChange, error }: { def: CustomFieldDef; id: string; value: unknown; onChange: (v: unknown) => void; error?: string }) {
+  const t = useT();
   const label = def.required ? `${def.label} *` : def.label;
   const str = value === null || value === undefined ? '' : String(value);
   if (def.type === 'SELECT' || def.type === 'BOOLEAN') {
-    const options = def.type === 'BOOLEAN' ? [{ v: 'true', l: 'Yes' }, { v: 'false', l: 'No' }] : def.options.map((o) => ({ v: o, l: o }));
+    const options = def.type === 'BOOLEAN' ? [{ v: 'true', l: t('Yes') }, { v: 'false', l: t('No') }] : def.options.map((o) => ({ v: o, l: o }));
     return (
       <Field id={id} label={label} error={error}>
         <Select value={str} onChange={(e) => onChange(e.target.value)}>

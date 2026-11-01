@@ -20,10 +20,12 @@ import { DealQuotes } from '@/components/revenue/record-commercial';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { api } from '@/lib/api';
 import { DEAL_STATUS_TONE, formatDate, formatMoney, titleCase, useRecord } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 export function DealDetail({ id }: { id: string }) {
   const deal = useRecord<DealRow>('deals', id);
+  const t = useT();
   const canWrite = useCan('deals:write');
   const router = useRouter();
   const qc = useQueryClient();
@@ -49,7 +51,7 @@ export function DealDetail({ id }: { id: string }) {
         row={d as unknown as Record<string, unknown>}
         badges={
           <>
-            <Badge tone={DEAL_STATUS_TONE[d.status]}>{titleCase(d.status)}</Badge>
+            <Badge tone={DEAL_STATUS_TONE[d.status]}>{t.maybe(titleCase(d.status))}</Badge>
             <PriorityBadge priority={d.priority} />
             <RiskIndicator health={d.health} />
           </>
@@ -57,10 +59,10 @@ export function DealDetail({ id }: { id: string }) {
         actions={
           <>
             <ProposalButton dealId={id} />
-            <MeetingNotesButton target={{ dealId: id }} label="Meeting notes" />
+            <MeetingNotesButton target={{ dealId: id }} label={t('Meeting notes')} />
             {canWrite && (
               <Button variant="outline" size="sm" onClick={() => clone.mutate()} disabled={clone.isPending}>
-                <Copy aria-hidden /> Clone
+                <Copy aria-hidden /> {t('Clone')}
               </Button>
             )}
           </>
@@ -69,7 +71,7 @@ export function DealDetail({ id }: { id: string }) {
 
       <Card className="mb-4">
         <CardContent className="p-4">
-          <h2 className="sr-only">Stage</h2>
+          <h2 className="sr-only">{t('Stage')}</h2>
           <StageStepper deal={d} />
         </CardContent>
       </Card>
@@ -78,21 +80,21 @@ export function DealDetail({ id }: { id: string }) {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">{t('Details')}</CardTitle>
             </CardHeader>
             <CardContent>
               <DetailList
                 items={[
                   ['Amount', formatMoney(d.amount, d.currency)],
-                  ['Probability', `${d.effectiveProbability}%${d.probability === null ? ' (from stage)' : ''}`],
+                  ['Probability', `${d.effectiveProbability}%${d.probability === null ? t(' (from stage)') : ''}`],
                   ['Expected close', formatDate(d.expectedCloseDate)],
                   ['Closed', d.closedAt ? formatDate(d.closedAt) : null],
                   ['Loss reason', d.lossReason],
-                  ['Priority', d.priority ? titleCase(d.priority) : 'Not set'],
+                  ['Priority', d.priority ? t.maybe(titleCase(d.priority)) : t('Not set')],
                   ['Company', d.company && <Link className="text-primary hover:underline" href={`/app/companies/${d.company.id}`}>{d.company.name}</Link>],
                   ['Primary contact', d.contact && <Link className="text-primary hover:underline" href={`/app/contacts/${d.contact.id}`}>{d.contact.name}</Link>],
                   ['Owner', d.owner?.name],
-                  ['Source lead', d.sourceLeadId && <Link className="text-primary hover:underline" href={`/app/leads/${d.sourceLeadId}`}>View lead</Link>],
+                  ['Source lead', d.sourceLeadId && <Link className="text-primary hover:underline" href={`/app/leads/${d.sourceLeadId}`}>{t('View lead')}</Link>],
                   ['Created', formatDate(d.createdAt)],
                 ]}
               />

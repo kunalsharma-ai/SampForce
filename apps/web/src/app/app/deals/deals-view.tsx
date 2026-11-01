@@ -10,6 +10,7 @@ import { Select } from '@/components/crm/select';
 import { DealSheet } from '@/components/deals/deal-panel';
 import { CalendarView, ForecastView, PriorityView, SplitView, TimelineView } from '@/components/deals/views';
 import { usePipelines } from '@/lib/crm';
+import { type MessageKey, useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { useIsPhone } from '@/lib/use-is-phone';
 
@@ -21,13 +22,14 @@ const VIEWS = [
   { key: 'calendar', label: 'Calendar', icon: CalendarDays },
   { key: 'forecast', label: 'Forecast', icon: LineChart },
   { key: 'priority', label: 'Priority', icon: Sparkles },
-] as const;
+] as const satisfies readonly { key: string; label: MessageKey; icon: unknown }[];
 type View = (typeof VIEWS)[number]['key'];
 const isView = (v: string | null): v is View => VIEWS.some((x) => x.key === v);
 const STORE = 'df-deals-view';
 
 export function DealsView() {
   const router = useRouter();
+  const t = useT();
   const pathname = usePathname();
   const params = useSearchParams();
   const { data: session } = useSession();
@@ -70,7 +72,7 @@ export function DealsView() {
   const filter = { pipelineId, ownerId: mine ? session?.user.id : undefined };
 
   const toggle = (
-    <div role="group" aria-label="View" className="inline-flex flex-wrap rounded-md border border-border p-0.5">
+    <div role="group" aria-label={t('View')} className="inline-flex flex-wrap rounded-md border border-border p-0.5">
       {VIEWS.map(({ key, label, icon: Icon }) => (
         <button
           key={key}
@@ -79,7 +81,7 @@ export function DealsView() {
           onClick={() => choose(key)}
           className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded px-2.5 text-xs font-medium text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Icon className="size-3.5" aria-hidden /> {label}
+          <Icon className="size-3.5" aria-hidden /> {t(label)}
         </button>
       ))}
     </div>
@@ -91,10 +93,10 @@ export function DealsView() {
         {(pipelines.data?.length ?? 0) > 1 && (
           <>
             <label htmlFor="deals-pipeline" className="text-xs font-medium text-muted-foreground">
-              Pipeline
+              {t('Pipeline')}
             </label>
             <Select id="deals-pipeline" className="h-8 w-48 text-xs" value={pipelineId ?? (view === 'board' ? pipelines.data?.find((p) => p.isDefault)?.id : '')} onChange={(e) => setParams({ pipeline: e.target.value || null })}>
-              {view !== 'board' && <option value="">All pipelines</option>}
+              {view !== 'board' && <option value="">{t('All pipelines')}</option>}
               {pipelines.data?.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -106,11 +108,11 @@ export function DealsView() {
         {view !== 'board' && (
           <>
             <label htmlFor="deals-owner" className="text-xs font-medium text-muted-foreground">
-              Owner
+              {t('Owner')}
             </label>
             <Select id="deals-owner" className="h-8 w-36 text-xs" value={mine ? 'me' : ''} onChange={(e) => setParams({ owner: e.target.value || null })}>
-              <option value="">Everyone</option>
-              <option value="me">Just me</option>
+              <option value="">{t('Everyone')}</option>
+              <option value="me">{t('Just me')}</option>
             </Select>
           </>
         )}
@@ -126,7 +128,7 @@ export function DealsView() {
           <>
             {toggle}
             <Link href="/app/deals/health" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium hover:bg-muted">
-              <HeartPulse className="size-3.5" aria-hidden /> Deal health
+              <HeartPulse className="size-3.5" aria-hidden /> {t('Deal health')}
             </Link>
           </>
         }

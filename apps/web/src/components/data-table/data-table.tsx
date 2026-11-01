@@ -18,7 +18,7 @@ import { Highlight } from './highlight';
 import { ColumnsDialog, DensityMenu, ViewsMenu } from './table-menus';
 import type { TableColumn, TableView } from './use-table-view';
 import { useIsPhone } from '@/lib/use-is-phone';
-import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 const SELECT_W = 44;
 const DEFAULT_W = 160;
@@ -45,6 +45,7 @@ interface Props<T extends { id: string }> {
  */
 export function DataTable<T extends { id: string }>(p: Props<T>) {
   const { view } = p;
+  const t = useT();
   const [text, setText] = useState(view.config.q);
   const latest = useRef(view);
   latest.current = view;
@@ -147,8 +148,8 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
             aria-hidden
           />
           <Input
-            aria-label={`Search ${p.caption.toLowerCase()}`}
-            placeholder="Search…"
+            aria-label={t('Search {caption}', { caption: t.language === 'en' ? p.caption.toLowerCase() : t.maybe(p.caption) })}
+            placeholder={t('Search…')}
             className="ps-9"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -193,7 +194,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                     <RowCheckbox
                       checked={r.getIsSelected()}
                       onChange={r.getToggleSelectedHandler()}
-                      label={`Select ${head?.text?.(r.original) ?? 'row'}`}
+                      label={t('Select {name}', { name: head?.text?.(r.original) ?? t('row') })}
                     />
                   )}
                   <div className="min-w-0 flex-1">
@@ -210,7 +211,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                     <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
                       {rest.slice(0, 4).map((c) => (
                         <div key={c.id} className="min-w-0">
-                          <dt className="sr-only">{c.header}</dt>
+                          <dt className="sr-only">{t.maybe(c.header)}</dt>
                           <dd className="truncate text-muted-foreground">
                             {c.cell(r.original, q)}
                           </dd>
@@ -233,9 +234,9 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
             style={{ width: table.getTotalSize(), minWidth: '100%' }}
           >
             <caption className="sr-only">
-              {p.caption}
+              {t.maybe(p.caption)}
               {view.config.sort.length > 1 &&
-                `, sorted by ${view.config.sort.map((s) => `${view.columns.find((c) => c.id === s.id)?.header} ${s.desc ? 'descending' : 'ascending'}`).join(', then ')}`}
+                t(', sorted by {keys}', { keys: view.config.sort.map((s) => t(s.desc ? '{column} descending' : '{column} ascending', { column: t.maybe(view.columns.find((c) => c.id === s.id)?.header ?? '') })).join(t(', then ')) })}
             </caption>
             <thead className="text-start text-xs text-muted-foreground">
               {table.getHeaderGroups().map((hg) => (
@@ -263,7 +264,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                             checked={all}
                             indeterminate={!all && table.getIsSomePageRowsSelected()}
                             onChange={table.getToggleAllPageRowsSelectedHandler()}
-                            label="Select all rows on this page"
+                            label={t('Select all rows on this page')}
                           />
                         </th>
                       );
@@ -286,11 +287,11 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                         {col.sortKey ? (
                           <button
                             type="button"
-                            title="Click to sort. Shift-click to add another sort."
+                            title={t('Click to sort. Shift-click to add another sort.')}
                             onClick={(e) => view.toggleSort(col.id, e.shiftKey)}
                             className="inline-flex max-w-full items-center gap-1 rounded hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <span className="truncate">{col.header}</span>
+                            <span className="truncate">{t.maybe(col.header)}</span>
                             {s &&
                               (s.desc ? (
                                 <ArrowDown className="size-3 shrink-0" aria-hidden />
@@ -300,17 +301,17 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                             {s && view.config.sort.length > 1 && (
                               <span
                                 className="text-[10px] tabular-nums"
-                                aria-label={`sort ${si + 1}`}
+                                aria-label={t('sort {n}', { n: si + 1 })}
                               >
                                 {si + 1}
                               </span>
                             )}
                           </button>
                         ) : (
-                          <span className="block truncate">{col.header}</span>
+                          <span className="block truncate">{t.maybe(col.header)}</span>
                         )}
                         <ResizeHandle
-                          label={`Resize ${col.header} column`}
+                          label={t('Resize {column} column', { column: t.maybe(col.header) })}
                           width={h.getSize()}
                           onPointerDown={h.getResizeHandler()}
                           onKeyResize={(d) => view.setWidth(col.id, h.getSize() + d)}
@@ -374,7 +375,7 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                             <RowCheckbox
                               checked={r.getIsSelected()}
                               onChange={r.getToggleSelectedHandler()}
-                              label={`Select ${visible[0]?.text?.(r.original) ?? 'row'}`}
+                              label={t('Select {name}', { name: visible[0]?.text?.(r.original) ?? t('row') })}
                             />
                           </td>
                         );
@@ -418,25 +419,25 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
       )}
       <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground">
         <span aria-live="polite">
-          {total === 0 ? 'No records' : `${from}–${to} of ${total.toLocaleString(fmtLocale())}`}
+          {total === 0 ? t('No records') : t('{from}–{to} of {total}', { from, to, total })}
         </span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Previous page"
+            aria-label={t('Previous page')}
             disabled={view.page <= 1}
             onClick={() => view.setPage(view.page - 1)}
           >
             <ChevronLeft className="rtl:-scale-x-100" aria-hidden />
           </Button>
           <span>
-            Page {view.page} of {pages}
+            {t('Page {page} of {pages}', { page: view.page, pages })}
           </span>
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Next page"
+            aria-label={t('Next page')}
             disabled={view.page >= pages}
             onClick={() => view.setPage(view.page + 1)}
           >

@@ -9,11 +9,13 @@ import { Select } from '@/components/crm/select';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { ENROLLMENT_LABEL, ENROLLMENT_TONE, useEnrollments, useSequences } from '@/lib/sequences';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 /** The sequences a lead or contact is in, with a quick way to add them to one. */
 export function RecordSequences({ leadId, contactId, email }: { leadId?: string; contactId?: string; email: string | null }) {
   const canRead = useCan('sequences:read');
+  const t = useT();
   const canWrite = useCan('sequences:write');
   const qc = useQueryClient();
   const rows = useEnrollments({ leadId, contactId });
@@ -29,7 +31,7 @@ export function RecordSequences({ leadId, contactId, email }: { leadId?: string;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Sequences</CardTitle>
+        <CardTitle className="text-base">{t('module.sequences')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {rows.data?.length ? (
@@ -39,18 +41,18 @@ export function RecordSequences({ leadId, contactId, email }: { leadId?: string;
                 <Link href={`/app/sequences/${r.sequence.id}`} className="font-medium hover:underline">
                   {r.sequence.name}
                 </Link>
-                <Badge tone={ENROLLMENT_TONE[r.status]}>{ENROLLMENT_LABEL[r.status]}</Badge>
-                <span className="text-xs text-muted-foreground">{r.sent} sent</span>
+                <Badge tone={ENROLLMENT_TONE[r.status]}>{t.maybe(ENROLLMENT_LABEL[r.status])}</Badge>
+                <span className="text-xs text-muted-foreground">{t('{count} sent', { count: r.sent })}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground">Not in any sequence.</p>
+          <p className="text-muted-foreground">{t('Not in any sequence.')}</p>
         )}
         {canWrite && email && active.length > 0 && (
           <div className="flex items-end gap-2">
-            <Select aria-label="Sequence to add them to" value={choice} onChange={(e) => setChoice(e.target.value)} className="h-8">
-              <option value="">Add to a sequence…</option>
+            <Select aria-label={t('Sequence to add them to')} value={choice} onChange={(e) => setChoice(e.target.value)} className="h-8">
+              <option value="">{t('Add to a sequence…')}</option>
               {active.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -58,13 +60,13 @@ export function RecordSequences({ leadId, contactId, email }: { leadId?: string;
               ))}
             </Select>
             <Button size="sm" disabled={!choice || enroll.isPending} onClick={() => enroll.mutate()}>
-              Add
+              {t('Add')}
             </Button>
           </div>
         )}
         {enroll.data && (
           <p role="status" className="text-xs">
-            {enroll.data.enrolled ? 'Added. The first email goes out in the next send window.' : `Not added: ${skipped ? ENROLL_SKIP_LABELS[skipped.reason] : 'skipped'}.`}
+            {enroll.data.enrolled ? t('Added. The first email goes out in the next send window.') : t('Not added: {reason}.', { reason: skipped ? t.maybe(ENROLL_SKIP_LABELS[skipped.reason]) : t('skipped') })}
           </p>
         )}
         <ErrorText error={enroll.error} />

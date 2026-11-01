@@ -5,11 +5,13 @@ import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { LossReasonDialog, useMoveDeal } from '@/components/crm/deal-move';
 import { usePipelines } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 /** The deal's pipeline as a row of stage buttons; choosing one moves the deal (asking why when it is lost). */
 export function StageStepper({ deal }: { deal: DealRow }) {
   const pipelines = usePipelines();
+  const t = useT();
   const canWrite = useCan('deals:write');
   const move = useMoveDeal();
   const [losing, setLosing] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function StageStepper({ deal }: { deal: DealRow }) {
 
   return (
     <div>
-      <ol className="flex flex-wrap gap-1.5" aria-label="Pipeline stages">
+      <ol className="flex flex-wrap gap-1.5" aria-label={t('Pipeline stages')}>
         {stages.map((s) => {
           const current = s.id === deal.stage.id;
           const passed = s.position < deal.stage.position && deal.stage.category === 'OPEN' && s.category === 'OPEN';

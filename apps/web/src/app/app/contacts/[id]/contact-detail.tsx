@@ -18,9 +18,11 @@ import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { formatDate, useRecord } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 
 export function ContactDetail({ id }: { id: string }) {
   const contact = useRecord<ContactRow>('contacts', id);
+  const t = useT();
   if (contact.isPending) return <DetailSkeleton />;
   if (contact.error) return <DetailError error={contact.error} />;
   const c = contact.data;
@@ -37,7 +39,7 @@ export function ContactDetail({ id }: { id: string }) {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">{t('Details')}</CardTitle>
             </CardHeader>
             <CardContent>
               <DetailList
@@ -48,7 +50,7 @@ export function ContactDetail({ id }: { id: string }) {
                   ['Job title', c.jobTitle],
                   ['Country', c.country],
                   ['Time zone', c.timezone],
-                  ['Marketing consent', consentLabel(c.marketingConsent, c.consentSource)],
+                  ['Marketing consent', consentLabel(c.marketingConsent, c.consentSource, t.maybe)],
                   ['Email status', c.emailStatus && <EmailStatusBadge status={c.emailStatus} />],
                   ['Engagement score', c.engagementScore !== null ? `${c.engagementScore} / 100` : null],
                   ['Owner', c.owner?.name],

@@ -1,5 +1,6 @@
 import { Badge } from '@dealflow/ui';
 import { EMAIL_STATUS_LABELS, type EmailStatus } from '@dealflow/types';
+import { Tr } from '@/lib/i18n';
 
 const TONE: Record<EmailStatus, 'success' | 'warning' | 'critical' | 'neutral'> = {
   valid: 'success',
@@ -13,5 +14,5 @@ const TONE: Record<EmailStatus, 'success' | 'warning' | 'critical' | 'neutral'> 
 
 /** The last known state of an address. Bounced and flagged addresses should be checked before anyone writes again. */
 export function EmailStatusBadge({ status }: { status: EmailStatus }) {
-  return <Badge tone={TONE[status]}>{EMAIL_STATUS_LABELS[status]}</Badge>;
+  return <Badge tone={TONE[status]}><Tr text={EMAIL_STATUS_LABELS[status]} /></Badge>;
 }

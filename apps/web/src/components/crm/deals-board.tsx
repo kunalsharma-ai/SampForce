@@ -22,6 +22,7 @@ import { GripVertical, MoreHorizontal } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { initials, PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 import { DealLink } from '@/components/deals/views';
@@ -61,6 +62,7 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context })
 
 export function DealsBoard({ pipelineId, onOpen }: { pipelineId?: string; onOpen: (id: string) => void }) {
   const qc = useQueryClient();
+  const t = useT();
   const canWrite = useCan('deals:write');
   const key = ['board', pipelineId ?? 'default'];
   const board = useQuery({ queryKey: key, queryFn: () => api<Board>(`/deals/board${pipelineId ? `?pipelineId=${pipelineId}` : ''}`) });
@@ -74,14 +76,14 @@ export function DealsBoard({ pipelineId, onOpen }: { pipelineId?: string; onOpen
   );
 
   const dealsById = useMemo(() => new Map(board.data?.columns.flatMap((c) => c.deals.map((d) => [d.id, d])) ?? []), [board.data]);
-  const stageName = (id: string | number | undefined) => board.data?.columns.find((c) => c.stage.id === id)?.stage.name ?? 'no stage';
-  const dealName = (id: string | number) => dealsById.get(String(id))?.name ?? 'Deal';
+  const stageName = (id: string | number | undefined) => board.data?.columns.find((c) => c.stage.id === id)?.stage.name ?? t('no stage');
+  const dealName = (id: string | number) => dealsById.get(String(id))?.name ?? t('Deal');
 
   const announcements: Announcements = {
-    onDragStart: ({ active }) => `Picked up ${dealName(active.id)}. Use the left and right arrow keys to choose a stage, space to drop, escape to cancel.`,
-    onDragOver: ({ active, over }) => (over ? `${dealName(active.id)} is over ${stageName(over.id)}.` : `${dealName(active.id)} is not over a stage.`),
-    onDragEnd: ({ active, over }) => (over ? `${dealName(active.id)} dropped in ${stageName(over.id)}.` : `${dealName(active.id)} was dropped outside the board.`),
-    onDragCancel: ({ active }) => `Moving ${dealName(active.id)} was cancelled.`,
+    onDragStart: ({ active }) => t('Picked up {deal}. Use the left and right arrow keys to choose a stage, space to drop, escape to cancel.', { deal: dealName(active.id) }),
+    onDragOver: ({ active, over }) => (over ? t('{deal} is over {stage}.', { deal: dealName(active.id), stage: stageName(over.id) }) : t('{deal} is not over a stage.', { deal: dealName(active.id) })),
+    onDragEnd: ({ active, over }) => (over ? t('{deal} dropped in {stage}.', { deal: dealName(active.id), stage: stageName(over.id) }) : t('{deal} was dropped outside the board.', { deal: dealName(active.id) })),
+    onDragCancel: ({ active }) => t('Moving {deal} was cancelled.', { deal: dealName(active.id) }),
   };
 
   /** Moves the card in the cached board immediately, then confirms with the API. */
@@ -105,7 +107,7 @@ export function DealsBoard({ pipelineId, onOpen }: { pipelineId?: string; onOpen
       {
         onError: (e) => {
           qc.setQueryData(key, previous);
-          setError(`Could not move “${deal.name}”: ${e.message}`);
+          setError(t('Could not move “{deal}”: {error}', { deal: deal.name, error: e.message }));
         },
       },
     );
@@ -143,12 +145,12 @@ export function DealsBoard({ pipelineId, onOpen }: { pipelineId?: string; onOpen
         </p>
       )}
       <p id="board-instructions" className="sr-only">
-        To move a deal with the keyboard, focus its handle and press space. Use the left and right arrow keys to choose a stage, then press space again. Each card also has a Move menu.
+        {t('To move a deal with the keyboard, focus its handle and press space. Use the left and right arrow keys to choose a stage, then press space again. Each card also has a Move menu.')}
       </p>
       <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={onDragEnd} accessibility={{ announcements, screenReaderInstructions: { draggable: '' } }}>
         {/* Focusable so keyboard users can scroll the board horizontally even when it has no cards. */}
-        <div className="overflow-x-auto rounded-md pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0} role="region" aria-label={`${board.data.pipeline.name} board`}>
-          <div className="flex gap-3" role="list" aria-label={`${board.data.pipeline.name} stages`}>
+        <div className="overflow-x-auto rounded-md pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0} role="region" aria-label={t('{pipeline} board', { pipeline: board.data.pipeline.name })}>
+          <div className="flex gap-3" role="list" aria-label={t('{pipeline} stages', { pipeline: board.data.pipeline.name })}>
             {board.data.columns.map((col) => (
               <Column key={col.stage.id} column={col} stages={stages} canWrite={canWrite} onMove={request} onOpen={onOpen} />
             ))}
@@ -173,6 +175,7 @@ function Column({ column, stages, canWrite, onMove, onOpen }: { column: BoardCol
   const { setNodeRef, isOver } = useDroppable({ id: column.stage.id });
   const tone = column.stage.category === 'WON' ? 'success' : column.stage.category === 'LOST' ? 'critical' : 'neutral';
   const currency = column.deals[0]?.currency ?? 'USD';
+  const t = useT();
   return (
     <section
       role="listitem"
@@ -188,17 +191,17 @@ function Column({ column, stages, canWrite, onMove, onOpen }: { column: BoardCol
           <Badge tone={tone}>{column.stage.probability}%</Badge>
         </div>
         <p className="text-xs text-muted-foreground">
-          {column.total} {column.total === 1 ? 'deal' : 'deals'} · {formatMoney(column.value, currency)}
+          {t.plural('count.deals', column.total)} · {formatMoney(column.value, currency)}
         </p>
       </header>
-      <ul className="flex min-h-24 flex-1 flex-col gap-2 p-2" aria-label={`Deals in ${column.stage.name}`}>
+      <ul className="flex min-h-24 flex-1 flex-col gap-2 p-2" aria-label={t('Deals in {stage}', { stage: column.stage.name })}>
         {column.deals.map((d) => (
           <DealCard key={d.id} deal={d} stages={stages} canWrite={canWrite} onMove={onMove} onOpen={onOpen} />
         ))}
-        {column.deals.length === 0 && <li className="px-2 py-6 text-center text-xs text-muted-foreground">Drop deals here</li>}
+        {column.deals.length === 0 && <li className="px-2 py-6 text-center text-xs text-muted-foreground">{t('Drop deals here')}</li>}
         {column.total > column.deals.length && (
           <li className="px-2 py-1 text-center text-xs text-muted-foreground">
-            Showing {column.deals.length} of {column.total}. Use the list view to see all.
+            {t('Showing {shown} of {total}. Use the list view to see all.', { shown: column.deals.length, total: column.total })}
           </li>
         )}
       </ul>
@@ -212,6 +215,7 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
     data: { stageId: deal.stage.id },
     disabled: !canWrite,
   });
+  const t = useT();
   return (
     <li
       ref={setNodeRef}
@@ -226,7 +230,7 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
             {...listeners}
             {...attributes}
             aria-describedby="board-instructions"
-            aria-label={`Move ${deal.name}`}
+            aria-label={t('Move {deal}', { deal: deal.name })}
             className="-ms-1 mt-0.5 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
           >
             <GripVertical className="size-4" aria-hidden />
@@ -239,12 +243,12 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
         {canWrite && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="-me-1 size-6" aria-label={`Move ${deal.name} to another stage`}>
+              <Button variant="ghost" size="icon" className="-me-1 size-6" aria-label={t('Move {deal} to another stage', { deal: deal.name })}>
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Move to</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('Move to')}</DropdownMenuLabel>
               {stages
                 .filter((s) => s.id !== deal.stage.id)
                 .map((s) => (
@@ -259,7 +263,7 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
       <div className="mt-2 flex items-center justify-between gap-2 text-xs">
         <span className="font-medium tabular-nums">{formatMoney(deal.amount, deal.currency)}</span>
         <span className={deal.status === 'OPEN' && deal.expectedCloseDate && deal.expectedCloseDate < new Date().toISOString().slice(0, 10) ? 'text-critical' : 'text-muted-foreground'}>
-          {deal.expectedCloseDate ? `Close ${formatDate(deal.expectedCloseDate)}` : 'No close date'}
+          {deal.expectedCloseDate ? t('Close {date}', { date: formatDate(deal.expectedCloseDate) }) : t('No close date')}
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
@@ -269,10 +273,10 @@ function DealCard({ deal, stages, canWrite, onMove, onOpen }: { deal: DealRow; s
         </div>
         <span
           className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary"
-          title={deal.owner ? `Owner: ${deal.owner.name}` : 'Unassigned'}
+          title={deal.owner ? t('Owner: {name}', { name: deal.owner.name }) : t('Unassigned')}
         >
           <span aria-hidden>{initials(deal.owner?.name)}</span>
-          <span className="sr-only">{deal.owner ? `Owner: ${deal.owner.name}` : 'Unassigned'}</span>
+          <span className="sr-only">{deal.owner ? t('Owner: {name}', { name: deal.owner.name }) : t('Unassigned')}</span>
         </span>
       </div>
     </li>
