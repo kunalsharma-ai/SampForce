@@ -176,6 +176,9 @@ import {
   whatsappSendSchema,
   apiKeyCreateSchema,
   zapierSubscribeSchema,
+  smsConsentSchema,
+  smsSendSchema,
+  twilioConnectSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -389,6 +392,17 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ hookId: z.string() }), query: z.object({ 'hub.mode': z.string().optional(), 'hub.verify_token': z.string().optional(), 'hub.challenge': z.string().optional() }) }, responses: { 200: { description: 'The challenge, as text' }, 403: { description: 'Verification failed' } } });
   r.registerPath({ method: 'post', path: '/apps/whatsapp/webhooks/{hookId}', tags: ['Workspace apps'], summary: "Meta's signed deliveries (X-Hub-Signature-256 with the workspace's App Secret): inbound messages, STOP opt-outs and delivery status; retries are idempotent",
     request: { params: z.object({ hookId: z.string() }) }, responses: { 200: ok('Acknowledged'), 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
+  action('post', '/apps/twilio/keys', 'Workspace apps', 'Save the workspace’s Twilio Account SID, Auth Token and SMS number after reads prove them; sends nothing (integrations:manage)', twilioConnectSchema);
+  r.registerPath({ method: 'get', path: '/apps/twilio/contacts/{contactId}', tags: ['Workspace apps'], summary: 'SMS panel for a contact: number, consent, STOP opt-out and texts (contacts:read)', security: secured,
+    request: { params: z.object({ contactId: z.string().uuid() }) }, responses: { 200: ok('SMS thread'), ...notFound, ...errors } });
+  action('post', '/apps/twilio/consents', 'Workspace apps', 'Record that a contact agreed to texts and how; needs confirm: true; refused while they have replied STOP (contacts:write)', smsConsentSchema);
+  r.registerPath({ method: 'delete', path: '/apps/twilio/consents/{contactId}', tags: ['Workspace apps'], summary: "Withdraw a contact's SMS consent (contacts:write)", security: secured,
+    request: { params: z.object({ contactId: z.string().uuid() }) }, responses: { 200: ok('SMS thread'), ...errors } });
+  action('post', '/apps/twilio/messages', 'Workspace apps', 'Send one SMS to one contact with recorded consent who has not replied STOP; needs confirm: true; 30 a minute (activities:write)', smsSendSchema);
+  r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/inbound', tags: ['Workspace apps'], summary: "Twilio's inbound SMS webhook for the workspace's number (form-encoded, X-Twilio-Signature with the Auth Token); STOP withdraws consent; answers empty TwiML; retries are idempotent",
+    request: { params: z.object({ hookId: z.string() }) }, responses: { 200: { description: 'Empty TwiML' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
+  r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/status', tags: ['Workspace apps'], summary: "Twilio's status callback for texts DealFlow sent (signed); status only moves forward",
+    request: { params: z.object({ hookId: z.string() }) }, responses: { 204: { description: 'Recorded' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);

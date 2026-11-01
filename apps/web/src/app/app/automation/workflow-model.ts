@@ -27,9 +27,10 @@ export const ACTION_LABELS: Record<WorkflowAction['type'], string> = {
   send_email: 'Send an email',
   post_to_chat: 'Post to Slack or Teams',
   send_whatsapp: 'Send a WhatsApp template',
+  send_sms: 'Send an SMS',
 };
 
-export const EXTERNAL = new Set<WorkflowAction['type']>(['send_webhook', 'send_email', 'send_whatsapp']);
+export const EXTERNAL = new Set<WorkflowAction['type']>(['send_webhook', 'send_email', 'send_whatsapp', 'send_sms']);
 
 /** Fields conditions commonly use, per record type. Free text is allowed too. */
 export const CONDITION_FIELDS: Record<string, { value: string; label: string }[]> = {
@@ -219,6 +220,8 @@ export function defaultAction(type: WorkflowAction['type']): WorkflowAction {
       return { type, app: 'slack', channelId: null, channelName: null, text: 'Update on {{record.fullName}}' };
     case 'send_whatsapp':
       return { type, templateName: '', language: 'en', params: [] };
+    case 'send_sms':
+      return { type, text: 'Hi {{record.firstName}}, ' };
   }
 }
 

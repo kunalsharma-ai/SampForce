@@ -148,13 +148,18 @@ export const actionSchema = z.discriminatedUnion('type', [
     language: z.string().trim().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/).default('en'),
     params: z.array(z.string().trim().min(1).max(1024)).max(20).default([]),
   }),
+  /**
+   * External: one SMS to the contact's number from the workspace's Twilio number, after approval, and only if their
+   * SMS consent is recorded and they have not replied STOP. The text may use {{record.*}}.
+   */
+  z.object({ type: z.literal('send_sms'), text: z.string().trim().min(1).max(1600) }),
   /** External: one email to the record's address from the workflow owner's mailbox, after approval. */
   z.object({ type: z.literal('send_email'), subject: z.string().trim().min(1).max(200), body: z.string().min(1).max(10_000) }),
 ]);
 export type WorkflowAction = z.infer<typeof actionSchema>;
-export const EXTERNAL_ACTIONS = ['send_webhook', 'send_email', 'send_whatsapp'] as const;
+export const EXTERNAL_ACTIONS = ['send_webhook', 'send_email', 'send_whatsapp', 'send_sms'] as const;
 /** Actions that only make sense for a lead or contact. */
-export const PERSON_ACTIONS = new Set<WorkflowAction['type']>(['stop_sequences', 'enroll_in_sequence', 'flag_email', 'add_engagement_points', 'send_whatsapp']);
+export const PERSON_ACTIONS = new Set<WorkflowAction['type']>(['stop_sequences', 'enroll_in_sequence', 'flag_email', 'add_engagement_points', 'send_whatsapp', 'send_sms']);
 
 // ───────────── Nodes and definition ─────────────
 

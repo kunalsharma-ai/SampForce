@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Integrations' };
 /** Integrations not built yet. Nothing here is shown as connected until its adapter exists and is tested. */
 const PLANNED: { category: string; items: { name: string; phase: string; needs: string }[] }[] = [
   { category: 'Communication', items: [
-    { name: 'Twilio (SMS, voice)', phase: 'Later phase', needs: 'Twilio account and number registration' },
+    { name: 'Twilio voice calls', phase: 'Later phase', needs: 'Twilio Voice and call recording consent rules' },
   ] },
 ];
 

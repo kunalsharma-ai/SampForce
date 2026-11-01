@@ -18,7 +18,8 @@
 | WhatsApp Business (workspace app: one-to-one messages from contact records and approved workflow steps, through the workspace's own Cloud API number) | **Not connected** until an admin saves credentials; they are saved only after a read of the number succeeds (nothing is sent). Replies and delivery status are Pending Configuration until Meta's first signed webhook arrives. Implemented and tested against a local stand-in of Meta's Graph API (Cloud API) only; not yet tested against Meta. | No deployment secret. Each workspace's System User token and App Secret are workspace secrets, stored encrypted. Optional `WHATSAPP_API_BASE_URL` (default Graph API v21.0) |
 | Workspace API keys (REST API for Zapier, Make, n8n and scripts) | Implemented and tested end to end against the local API. Keys are shown once and stored hashed; only CRM record, pipeline, activity and task routes accept them. | No deployment secret |
 | Zapier (triggers on REST hooks; create lead, contact and task actions) | **Pending Configuration** until an operator publishes the app in `integrations/zapier` and sets `ZAPIER_INVITE_URL`. Its functions are tested against a local DealFlow only; it has not been pushed to or run inside Zapier. | Optional `ZAPIER_INVITE_URL` |
-| Twilio | Not built yet | Shown as "Not available yet" in the app |
+| SMS through Twilio (workspace app: one-to-one texts from contact records and approved workflow steps, through the workspace's own Twilio number) | **Not connected** until an admin saves credentials; they are saved only after reads of the account and number succeed (nothing is sent). Replies and delivery status are Pending Configuration until Twilio's first signed request arrives. Implemented and tested against a local stand-in of Twilio's REST API only; not yet tested against Twilio. | No deployment secret. Each workspace's Auth Token is a workspace secret, stored encrypted. Optional `TWILIO_API_BASE_URL` |
+| Twilio voice calls | Not built yet | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -256,6 +257,33 @@ How it behaves:
   workspace has its own URL id and secret, so one workspace cannot write into another. Retries are stored once.
 - A refused token (Meta error 190 or a missing permission) marks the app Needs new credentials; replacing them keeps
   the callback URL and verify token.
+
+## Setting up SMS (Twilio)
+
+Each workspace uses its own Twilio account and number. There is no DealFlow-wide Twilio secret.
+
+1. In the Twilio console, note the **Account SID** and **Auth Token**, and buy or choose a number with SMS
+   capability. For US numbers, complete A2P 10DLC registration first, or carriers will filter the texts (error 30007
+   or 30034). Trial accounts can only text verified numbers and add a trial notice.
+2. In DealFlow, an admin opens Integrations, **SMS (Twilio)**, and saves the three values. DealFlow reads the
+   account and checks the number belongs to it and can send SMS. Nothing is sent. The Auth Token is stored
+   encrypted and never shown again.
+3. Copy the **Inbound message URL** into the number's Messaging configuration, "A message comes in", HTTP POST.
+   Status callbacks need no setup: each text tells Twilio where to report its status.
+4. The card shows Pending Configuration for replies and delivery status until Twilio's first signed request
+   arrives. Then send a test text to your own phone and reply to it.
+
+Rules the app enforces:
+
+- A text goes to one contact, only with a recorded SMS consent (who recorded it, when, and how the person agreed),
+  and only after the sender ticks a confirmation. The `send_sms` workflow step is an external action: every run
+  waits for a person's approval, and consent is checked again when it runs. AI agents cannot send texts.
+- A STOP reply (STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT, or Twilio's `OptOutType=STOP`) withdraws consent.
+  Consent cannot be recorded again until the person texts START, matching how Twilio blocks the number.
+- Every request from Twilio is checked with `X-Twilio-Signature` (HMAC-SHA1 with the Auth Token over the exact URL
+  and the sorted form fields). Status only moves forward; undelivered and failed are final and notify the sender.
+- The segment count (GSM-7 or UCS-2) is shown before sending, since Twilio bills per segment.
+- Numbers must be written with their country code; DealFlow never guesses a country.
 
 ## Setting up Zapier and API keys
 

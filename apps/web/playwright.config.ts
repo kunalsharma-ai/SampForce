@@ -88,6 +88,14 @@ export default defineConfig({
       env: { WHATSAPP_FIXTURE_PORT: '4950' },
     },
     {
+      // Local stand-in for Twilio's REST API (SMS).
+      command: 'npx tsx test/fixtures/twilio-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4960/health',
+      reuseExistingServer: !process.env.CI,
+      env: { TWILIO_FIXTURE_PORT: '4960' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',
@@ -143,6 +151,8 @@ export default defineConfig({
         RAZORPAY_API_BASE_URL: 'http://127.0.0.1:4900',
         // WhatsApp uses each workspace's own Meta credentials; this sends its Graph API calls to the stand-in above.
         WHATSAPP_API_BASE_URL: 'http://127.0.0.1:4950',
+        // SMS uses each workspace's own Twilio credentials; this sends its REST calls to the stand-in above.
+        TWILIO_API_BASE_URL: 'http://127.0.0.1:4960',
       },
     },
     {

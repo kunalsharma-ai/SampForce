@@ -100,6 +100,8 @@ export const apiEnvSchema = z.object({
   ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
   WHATSAPP_API_BASE_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
+  /** Twilio's REST API; tests point it at a local stand-in. */
+  TWILIO_API_BASE_URL: z.string().url().default('https://api.twilio.com'),
   // DocuSign workspace app (Authorization Code Grant). The Connect HMAC key verifies envelope status events.
   // Use https://account-d.docusign.com for the developer (demo) environment.
   DOCUSIGN_INTEGRATION_KEY: z.string().optional().transform((v) => v || undefined),
