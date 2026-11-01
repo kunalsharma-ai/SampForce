@@ -119,6 +119,8 @@ test('keyboard shortcuts, Focus Workspace and search actions', async ({ page }) 
   await expect(page.locator('html')).not.toHaveClass(/dark/);
   await page.keyboard.press('Control+k');
   await page.getByPlaceholder('Search records, pages and commands…').fill('which deals are at risk');
-  await page.getByRole('option', { name: /Ask Copilot/ }).click();
+  // A question is offered to Copilot first, so Enter asks it.
+  await expect(page.getByRole('option').first()).toHaveText(/Ask Copilot/);
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'DealFlow Copilot' })).toBeVisible();
 });

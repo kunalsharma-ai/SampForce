@@ -11,6 +11,9 @@ describe('fuzzyScore', () => {
     expect(fuzzyScore('Quick Bid Studio', 'sbq')).toBeNull();
     expect(fuzzyScore('Leads', 'deals')).toBeNull();
   });
+  it('does not let scattered letters in a long text match a sentence', () => {
+    expect(fuzzyScore('Email Finder Find and verify work emails for contacts at target companies', 'which deals slip this month')).toBeNull();
+  });
   it('needs every word', () => {
     expect(fuzzyScore('Email & Communication', 'email comm')).not.toBeNull();
     expect(fuzzyScore('Email & Communication', 'email deal')).toBeNull();

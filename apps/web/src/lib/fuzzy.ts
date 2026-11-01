@@ -19,18 +19,27 @@ function wordScore(t: string, w: string): number | null {
   const at = t.indexOf(w);
   if (at === 0) return 100 + w.length;
   if (at > 0) return (/[\s\-/&]/.test(t[at - 1]!) ? 80 : 60) + w.length;
-  // Subsequence: reward letters that start words and runs of consecutive letters.
-  let score = 0;
-  let pos = -1;
-  let run = 0;
-  for (const ch of w) {
-    const next = t.indexOf(ch, pos + 1);
-    if (next === -1) return null;
-    run = next === pos + 1 ? run + 1 : 0;
-    score += 1 + run + (next === 0 || /[\s\-/&]/.test(t[next - 1]!) ? 3 : 0);
-    pos = next;
+  // Subsequence: reward letters that start words and runs of consecutive letters. The letters must sit close
+  // together (a span of at most four times the word), so long texts do not match every query by accident.
+  let best: number | null = null;
+  for (let start = t.indexOf(w[0]!); start !== -1; start = t.indexOf(w[0]!, start + 1)) {
+    let score = 0;
+    let pos = start - 1;
+    let run = 0;
+    let ok = true;
+    for (const ch of w) {
+      const next = t.indexOf(ch, pos + 1);
+      if (next === -1 || next - start >= w.length * 4) {
+        ok = false;
+        break;
+      }
+      run = next === pos + 1 ? run + 1 : 0;
+      score += 1 + run + (next === 0 || /[\s\-/&]/.test(t[next - 1]!) ? 3 : 0);
+      pos = next;
+    }
+    if (ok) best = Math.max(best ?? 0, Math.min(score, 50));
   }
-  return Math.min(score, 50);
+  return best;
 }
 
 /** Filters and sorts items by how well `text(item)` matches the query; keeps the original order for ties. */

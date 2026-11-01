@@ -78,6 +78,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   };
 
   const q = query.trim();
+  // A question (several words, or ending in "?") goes to Copilot first, so Enter asks it rather than opening a page.
+  const question = q.endsWith('?') || q.split(/\s+/).length >= 4;
   const dark = mode === 'dark' || (mode === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const actions = [
     { id: 'focus', label: shell.focus ? 'Exit Focus Workspace' : 'Turn on Focus Workspace', icon: Maximize2, run: shell.toggleFocus },
@@ -109,6 +111,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             className="h-12 w-full border-b border-border bg-transparent px-4 text-sm outline-none placeholder:text-muted-foreground"
           />
           <Command.List className="max-h-96 overflow-y-auto p-2">
+            {question && (
+              <Command.Group heading="Copilot">
+                <Command.Item value="ask-copilot" onSelect={() => run(() => ask(q))} className={ITEM}>
+                  <Bot className="size-4 text-accent" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">Ask Copilot: “{q}”</span>
+                </Command.Item>
+              </Command.Group>
+            )}
             {debounced.length >= 2 && (
               <Command.Group heading="Records">
                 {hits.isFetching && !hits.data ? (
@@ -190,7 +200,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 ))}
               </Command.Group>
             )}
-            {q.length >= 3 && (
+            {!question && q.length >= 3 && (
               <Command.Group heading="Copilot">
                 <Command.Item value="ask-copilot" onSelect={() => run(() => ask(q))} className={ITEM}>
                   <Bot className="size-4 text-accent" aria-hidden />
