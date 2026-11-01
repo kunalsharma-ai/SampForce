@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { FloatingField } from '@/components/forms/floating-field';
 import { api, ApiError } from '@/lib/api';
 
 /** Only same-app relative paths are accepted as post-login redirects. */
@@ -52,12 +53,12 @@ export function LoginForm() {
         <p className="text-sm text-muted-foreground">Welcome back to your revenue workspace.</p>
       </div>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <Field id="email" label="Work email" error={form.formState.errors.email?.message}>
+        <FloatingField id="email" label="Work email" error={form.formState.errors.email?.message}>
           <Input type="email" autoComplete="email" {...form.register('email')} />
-        </Field>
-        <Field id="password" label="Password" error={form.formState.errors.password?.message}>
+        </FloatingField>
+        <FloatingField id="password" label="Password" error={form.formState.errors.password?.message}>
           <Input type="password" autoComplete="current-password" {...form.register('password')} />
-        </Field>
+        </FloatingField>
         <p className="-mt-2 text-right text-sm">
           <Link href="/forgot-password" className="text-primary hover:underline">
             Forgot your password?

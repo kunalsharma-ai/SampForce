@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { RecordPicker, type PickerValue } from '@/components/crm/record-picker';
 import { Select } from '@/components/crm/select';
+import { UploadZone } from '@/components/forms/upload-zone';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
@@ -685,22 +686,26 @@ function Branding({ canManage }: { canManage: boolean }) {
               <p className="text-xs text-muted-foreground">No logo yet.</p>
             )}
             {canManage && (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  aria-label="Upload a logo"
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  className="text-xs"
-                  onChange={(e) => pick(e.target.files?.[0])}
+              <>
+                <UploadZone
+                  label="Upload a logo"
+                  accept={['image/png', 'image/jpeg']}
+                  maxBytes={250_000}
+                  hint="PNG or JPEG up to 250 KB. It is printed on proposals and their PDFs."
+                  onFile={pick}
                 />
                 {shownLogo && (
                   <Button type="button" size="sm" variant="ghost" onClick={() => setLogo(null)}>
                     Remove logo
                   </Button>
                 )}
-              </div>
+              </>
             )}
-            {fileError && <p className="text-xs text-critical">{fileError}</p>}
+            {fileError && (
+              <p role="alert" className="text-xs text-critical">
+                {fileError}
+              </p>
+            )}
           </div>
           <Field
             id="proposal-header"

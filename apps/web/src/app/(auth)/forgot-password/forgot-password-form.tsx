@@ -1,11 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, Input } from '@dealflow/ui';
+import { Button, Input } from '@dealflow/ui';
 import { type PasswordResetRequestInput, passwordResetRequestSchema } from '@dealflow/types';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { FloatingField } from '@/components/forms/floating-field';
 import { api, ApiError } from '@/lib/api';
 
 /** Asks for a reset link. The page says the same thing whether or not the address has an account. */
@@ -39,9 +40,9 @@ export function ForgotPasswordForm() {
         </div>
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <Field id="email" label="Work email" error={form.formState.errors.email?.message}>
+          <FloatingField id="email" label="Work email" error={form.formState.errors.email?.message}>
             <Input type="email" autoComplete="email" {...form.register('email')} />
-          </Field>
+          </FloatingField>
           {error && (
             <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
               {error}

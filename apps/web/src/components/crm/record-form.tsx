@@ -1,12 +1,18 @@
 'use client';
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
-import type { CustomFieldDef } from '@dealflow/types';
-import { useQueryClient } from '@tanstack/react-query';
+import type { CustomFieldDef, TenantDetails } from '@dealflow/types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { type CrmEntity, ENTITY_LABEL, useCustomFields, useMembers, usePipelines } from '@/lib/crm';
 import { FIELDS, type FieldSpec, SCHEMAS, toPayload } from '@/lib/crm-fields';
+import { MultiCombobox } from '@/components/forms/combobox';
+import { CountrySelect, CurrencyInput, CurrencySelect, NumberStepper, PhoneInput, TimeZoneSelect } from '@/components/forms/inputs';
+import { phoneProblem } from '@/components/forms/locale-data';
+import { Segmented } from '@/components/forms/segmented';
+import { useFormDraft } from '@/components/forms/use-form-draft';
+import { relativeTime } from '@/lib/format';
 import { type PickerValue, RecordPicker } from './record-picker';
 import { Select, Textarea } from './select';
 
@@ -41,14 +47,26 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
 
   const set = (name: string, v: unknown) => setValues((prev) => ({ ...prev, [name]: v }));
   const fields = FIELDS[entity].filter((f) => !(f.createOnly && mode === 'edit'));
+  // Draft recovery for new records: what was typed survives a closed dialog or a reload on this device.
+  const draft = useFormDraft<Record<string, unknown>>(open && mode === 'create' ? `create-${entity}` : null, values, (v) =>
+    Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
+  );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     const payload = toPayload(entity, values, mode, custom.data?.map((d) => d.key));
     const parsed = SCHEMAS[entity][mode === 'create' ? 'create' : 'update'].safeParse(payload);
-    if (!parsed.success) {
-      setErrors(Object.fromEntries(parsed.error.issues.map((i: { path: (string | number)[]; message: string }) => [String(i.path[0]), i.message])));
+    const problems: Record<string, string> = parsed.success
+      ? {}
+      : Object.fromEntries(parsed.error.issues.map((i: { path: (string | number)[]; message: string }) => [String(i.path[0]), i.message]));
+    for (const f of fields) {
+      const p = f.type === 'tel' ? phoneProblem(values[f.name] as string) : null;
+      if (p && !problems[f.name]) problems[f.name] = p;
+    }
+    if (Object.keys(problems).length) {
+      setErrors(problems);
+      requestAnimationFrame(() => document.getElementById(`${formId}-${Object.keys(problems)[0]}`)?.focus());
       return;
     }
     setErrors({});
@@ -59,6 +77,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
         json: payload,
       });
       const row = (entity === 'leads' && mode === 'create' ? (raw as { lead: { id: string } }).lead : raw) as { id: string };
+      draft.clear();
       await qc.invalidateQueries({ queryKey: [entity] });
       if (entity === 'deals') await qc.invalidateQueries({ queryKey: ['board'] });
       onOpenChange(false);
@@ -79,6 +98,17 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{mode === 'create' ? `New ${label.toLowerCase()}` : `Edit ${label.toLowerCase()}`}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">Fields marked * are required.</DialogDescription>
+        {draft.offer && (
+          <div role="status" className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
+            <span className="flex-1">You have an unsaved {label.toLowerCase()} from {relativeTime(draft.offer.savedAt.toISOString())}.</span>
+            <Button type="button" size="sm" variant="outline" onClick={() => { const v = draft.take(); if (v) setValues(v); }}>
+              Restore draft
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={draft.discard}>
+              Discard
+            </Button>
+          </div>
+        )}
         <form id={formId} onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
             <div key={f.name} className={f.wide ? 'sm:col-span-2' : undefined}>
@@ -141,6 +171,59 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
       );
     case 'pipeline':
       return <PipelineField id={id} values={values} set={set} error={error} />;
+    case 'country':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <CountrySelect value={str} onChange={(x) => set(spec.name, x)} />
+        </Field>
+      );
+    case 'currency':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <CurrencySelect value={str} onChange={(x) => set(spec.name, x)} placeholder="Search currencies" />
+        </Field>
+      );
+    case 'timezone':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <TimeZoneSelect value={str} onChange={(x) => set(spec.name, x)} />
+        </Field>
+      );
+    case 'money':
+      return <MoneyField id={id} label={label} spec={spec} value={str} currency={String(values[spec.currencyField ?? 'currency'] ?? '')} set={set} error={error} />;
+    case 'percent':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <NumberStepper value={str} onChange={(x) => set(spec.name, x)} min={0} max={100} step={5} suffix="%" label={spec.label.replace(/\s*\(.*\)$/, '').toLowerCase()} />
+        </Field>
+      );
+    case 'tel':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <PhoneInput value={str} onChange={(x) => set(spec.name, x)} />
+        </Field>
+      );
+    case 'tags':
+      return (
+        <Field id={id} label={label} error={error} hint={spec.hint}>
+          <MultiCombobox value={Array.isArray(v) ? (v as string[]) : str ? str.split(',').map((t) => t.trim()).filter(Boolean) : []} onChange={(x) => set(spec.name, x)} creatable max={20} itemLabel="tag" placeholder="Type a tag" />
+        </Field>
+      );
+    case 'priority':
+      return (
+        <Segmented
+          legend={spec.label}
+          name={id}
+          value={(str || 'NONE') as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'}
+          onChange={(x) => set(spec.name, x === 'NONE' ? '' : x)}
+          options={[
+            { value: 'NONE', label: 'Not set' },
+            { value: 'LOW', label: 'Low' },
+            { value: 'MEDIUM', label: 'Medium' },
+            { value: 'HIGH', label: 'High' },
+          ]}
+        />
+      );
     case 'textarea':
       return (
         <Field id={id} label={label} error={error} hint={spec.hint}>
@@ -151,7 +234,7 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
       return (
         <Field id={id} label={label} error={error} hint={spec.hint}>
           <Input
-            type={spec.type === 'tags' ? 'text' : spec.type}
+            type={spec.type}
             inputMode={spec.type === 'number' ? 'decimal' : undefined}
             required={spec.required}
             placeholder={spec.placeholder}
@@ -161,6 +244,16 @@ function FieldControl({ spec, id, values, set, error }: { spec: FieldSpec; id: s
         </Field>
       );
   }
+}
+
+function MoneyField({ id, label, spec, value, currency, set, error }: { id: string; label: string; spec: FieldSpec; value: string; currency: string; set: (n: string, v: unknown) => void; error?: string }) {
+  const tenant = useQuery({ queryKey: ['tenant'], queryFn: () => api<TenantDetails>('/tenants/current'), staleTime: 300_000 });
+  const code = currency || tenant.data?.defaultCurrency || 'USD';
+  return (
+    <Field id={id} label={label} error={error} hint={spec.hint}>
+      <CurrencyInput value={value} onChange={(x) => set(spec.name, x)} currency={code} />
+    </Field>
+  );
 }
 
 function OwnerField({ id, label, value, onChange, error, hint }: { id: string; label: string; value: string; onChange: (v: string) => void; error?: string; hint?: string }) {

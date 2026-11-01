@@ -1,12 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, Input } from '@dealflow/ui';
+import { Button, Input } from '@dealflow/ui';
 import { type RegisterInput, registerSchema } from '@dealflow/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { FloatingField } from '@/components/forms/floating-field';
 import { api, ApiError } from '@/lib/api';
 
 export function SignupForm() {
@@ -38,18 +39,18 @@ export function SignupForm() {
         <p className="text-sm text-muted-foreground">Free for up to 2 users. No card required.</p>
       </div>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <Field id="name" label="Your name" error={errors.name?.message}>
+        <FloatingField id="name" label="Your name" error={errors.name?.message}>
           <Input autoComplete="name" {...form.register('name')} />
-        </Field>
-        <Field id="email" label="Work email" error={errors.email?.message}>
+        </FloatingField>
+        <FloatingField id="email" label="Work email" error={errors.email?.message}>
           <Input type="email" autoComplete="email" {...form.register('email')} />
-        </Field>
-        <Field id="password" label="Password" error={errors.password?.message} hint="At least 10 characters, with a letter and a number.">
+        </FloatingField>
+        <FloatingField id="password" label="Password" error={errors.password?.message} hint="At least 10 characters, with a letter and a number.">
           <Input type="password" autoComplete="new-password" {...form.register('password')} />
-        </Field>
-        <Field id="organizationName" label="Organization name" error={errors.organizationName?.message}>
+        </FloatingField>
+        <FloatingField id="organizationName" label="Organization name" error={errors.organizationName?.message}>
           <Input autoComplete="organization" {...form.register('organizationName')} />
-        </Field>
+        </FloatingField>
         {error && (
           <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
             {error}
