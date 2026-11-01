@@ -11,20 +11,22 @@ import {
 } from '@dealflow/types';
 import type { ZodTypeAny } from 'zod';
 import type { CrmEntity } from './crm';
+import type { MessageKey } from './i18n/translate';
 
 export type FieldType =
   | 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'textarea' | 'select' | 'company' | 'contact' | 'owner' | 'tags' | 'pipeline'
   // Form library controls (design spec Part 7).
   | 'country' | 'currency' | 'money' | 'percent' | 'timezone' | 'priority';
 
+/** Labels, hints, placeholders and option labels are catalogue phrases, so every one is translated. */
 export interface FieldSpec {
   name: string;
-  label: string;
+  label: MessageKey;
   type: FieldType;
   required?: boolean;
-  options?: { value: string; label: string }[];
-  placeholder?: string;
-  hint?: string;
+  options?: { value: string; label: MessageKey }[];
+  placeholder?: MessageKey;
+  hint?: MessageKey;
   /** Only shown when creating (e.g. pipeline and stage, which change via "move"). */
   createOnly?: boolean;
   wide?: boolean;
@@ -57,7 +59,7 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
       name: 'status',
       label: 'Status',
       type: 'select',
-      options: LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => ({ value: s, label: s.charAt(0) + s.slice(1).toLowerCase() })),
+      options: LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => ({ value: s, label: (s.charAt(0) + s.slice(1).toLowerCase()) as MessageKey })),
     },
     { name: 'source', label: 'Source', type: 'text', placeholder: 'Website, referral, event…' },
     { name: 'estimatedValue', label: 'Estimated value', type: 'money', currencyField: 'currency' },
@@ -193,7 +195,7 @@ export function toPayload(entity: CrmEntity, values: Record<string, unknown>, mo
 }
 
 /** "Opted in (form: Webinar sign-up)" for detail pages. */
-export function consentLabel(consent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT', source: string | null): string {
-  const label = consent === 'OPTED_IN' ? 'Opted in' : consent === 'OPTED_OUT' ? 'Opted out' : 'Not asked';
+export function consentLabel(consent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT', source: string | null, tr: (text: string) => string = (x) => x): string {
+  const label = tr(consent === 'OPTED_IN' ? 'Opted in' : consent === 'OPTED_OUT' ? 'Opted out' : 'Not asked');
   return source && consent !== 'UNKNOWN' ? `${label} (${source.replace(/^form:/, 'form: ')})` : label;
 }

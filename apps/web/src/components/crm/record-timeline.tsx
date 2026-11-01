@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
-import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 const ICONS: Record<TimelineKind, typeof StickyNote> = {
   created: PlusCircle,
@@ -41,6 +41,7 @@ const ABOUT_HREF = { lead: '/app/leads/', contact: '/app/contacts/', deal: '/app
  */
 export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: string }) {
   const [kind, setKind] = useState<TimelineKind | 'all'>('all');
+  const t = useT();
   const q = useInfiniteQuery({
     queryKey: ['timeline', entity, id, kind],
     initialPageParam: undefined as string | undefined,
@@ -57,15 +58,15 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Show">
+      <div className="flex flex-wrap gap-1" role="group" aria-label={t('Show')}>
         <Button size="sm" variant={kind === 'all' ? 'default' : 'ghost'} className="h-7" aria-pressed={kind === 'all'} onClick={() => setKind('all')}>
-          Everything
+          {t('Everything')}
         </Button>
         {FILTERS[entity]
           .filter((k) => !hidden.includes(k))
           .map((k) => (
             <Button key={k} size="sm" variant={kind === k ? 'default' : 'ghost'} className="h-7" aria-pressed={kind === k} onClick={() => setKind(k)}>
-              {TIMELINE_KIND_LABELS[k]}
+              {t.maybe(TIMELINE_KIND_LABELS[k])}
             </Button>
           ))}
       </div>
@@ -76,9 +77,9 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
           {q.error.message}
         </p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing here yet.</p>
+        <p className="text-sm text-muted-foreground">{t('Nothing here yet.')}</p>
       ) : (
-        <ol className="space-y-3" aria-label="Timeline, newest first">
+        <ol className="space-y-3" aria-label={t('Timeline, newest first')}>
           {items.map((i) => (
             <TimelineRow key={i.id} item={i} />
           ))}
@@ -86,7 +87,7 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
       )}
       {q.hasNextPage && (
         <Button size="sm" variant="outline" onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage}>
-          {q.isFetchingNextPage ? 'Loading…' : 'Show older'}
+          {q.isFetchingNextPage ? t('Loading…') : t('Show older')}
         </Button>
       )}
     </div>
@@ -94,6 +95,7 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
 }
 
 function TimelineRow({ item: i }: { item: TimelineItem }) {
+  const t = useT();
   const Icon = i.direction === 'in' ? ArrowDownLeft : i.direction === 'out' && i.kind === 'email' ? ArrowUpRight : ICONS[i.kind];
   return (
     <li className="flex gap-3">
@@ -120,7 +122,7 @@ function TimelineRow({ item: i }: { item: TimelineItem }) {
         {i.detail && <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{i.detail}</p>}
         <p className="text-xs text-muted-foreground">
           {i.actor ? `${i.actor.name} · ` : ''}
-          <time dateTime={i.at} title={new Date(i.at).toLocaleString(fmtLocale())}>
+          <time dateTime={i.at} title={new Date(i.at).toLocaleString(t.formatLocale)}>
             {relativeTime(i.at)}
           </time>
         </p>

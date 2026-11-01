@@ -5,23 +5,25 @@ import { INBOX_STATUS_LABELS } from '@dealflow/types';
 import Link from 'next/link';
 import { useInboxThreads } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 /** Inbox conversations linked to a deal, so its email history sits on the record. */
 export function RecordConversations({ dealId }: { dealId: string }) {
   const canRead = useCan('activities:read');
+  const tr = useT();
   const threads = useInboxThreads({ dealId }, canRead);
   if (!canRead) return null;
   const items = threads.data?.items ?? [];
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Conversations</CardTitle>
+        <CardTitle className="text-base">{tr('Conversations')}</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No email conversations linked yet. Link one from the inbox.
+            {tr('No email conversations linked yet. Link one from the inbox.')}
           </p>
         ) : (
           <ul className="space-y-2 text-sm">
@@ -42,7 +44,7 @@ export function RecordConversations({ dealId }: { dealId: string }) {
                         : 'primary'
                   }
                 >
-                  {INBOX_STATUS_LABELS[t.status]}
+                  {tr.maybe(INBOX_STATUS_LABELS[t.status])}
                 </Badge>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {relativeTime(t.lastMessageAt)}

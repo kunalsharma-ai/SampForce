@@ -9,12 +9,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 const TONE: Record<DealRisk, 'success' | 'warning' | 'critical'> = { low: 'success', medium: 'warning', high: 'critical' };
 const LABEL: Record<DealRisk, string> = DEAL_RISK_LABELS;
 
 export function DealHealthBoard() {
   const qc = useQueryClient();
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const risk = (DEAL_RISKS as readonly string[]).includes(params.get('risk') ?? '') ? (params.get('risk') as DealRisk) : undefined;
@@ -40,27 +42,27 @@ export function DealHealthBoard() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Risk">
+        <div className="flex flex-wrap gap-1" role="group" aria-label={t('Risk')}>
           <Button size="sm" variant={!risk ? 'default' : 'ghost'} aria-pressed={!risk} onClick={() => setFilter({ risk: undefined })}>
-            All
+            {t('All')}
           </Button>
           {(['high', 'medium', 'low'] as const).map((r) => (
             <Button key={r} size="sm" variant={risk === r ? 'default' : 'ghost'} aria-pressed={risk === r} onClick={() => setFilter({ risk: r })}>
-              {LABEL[r]} {summary.data ? `(${summary.data.counts[r]})` : ''}
+              {t.maybe(LABEL[r])} {summary.data ? `(${summary.data.counts[r].toLocaleString(t.formatLocale)})` : ''}
             </Button>
           ))}
         </div>
         <Button size="sm" variant={mine ? 'default' : 'outline'} aria-pressed={mine} onClick={() => setFilter({ mine: !mine })}>
-          Only my deals
+          {t('Only my deals')}
         </Button>
         <div className="ms-auto flex items-center gap-2 text-xs text-muted-foreground">
-          {summary.data?.lastSweepAt && <span>Last scored {relativeTime(summary.data.lastSweepAt)}</span>}
+          {summary.data?.lastSweepAt && <span>{t('Last scored {when}', { when: relativeTime(summary.data.lastSweepAt) })}</span>}
           <Button size="sm" variant="outline" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
-            <RefreshCw className={refresh.isPending ? 'animate-spin' : undefined} aria-hidden /> Score now
+            <RefreshCw className={refresh.isPending ? 'animate-spin' : undefined} aria-hidden /> {t('Score now')}
           </Button>
         </div>
       </div>
-      {summary.data && summary.data.unscored > 0 && <p className="text-xs text-muted-foreground">{summary.data.unscored} new open deal(s) are not scored yet; they are included in the next hourly run or when you score now.</p>}
+      {summary.data && summary.data.unscored > 0 && <p className="text-xs text-muted-foreground">{t('{count} new open deal(s) are not scored yet; they are included in the next hourly run or when you score now.', { count: summary.data.unscored })}</p>}
       {refresh.error && (
         <p role="alert" className="text-sm text-critical">
           {refresh.error.message}
@@ -73,19 +75,19 @@ export function DealHealthBoard() {
           {rows.error.message}
         </p>
       ) : rows.data.length === 0 ? (
-        <Card className="p-5 text-sm text-muted-foreground">No deals match. {summary.data?.lastSweepAt ? '' : 'Deals are scored within the hour, or press Score now.'}</Card>
+        <Card className="p-5 text-sm text-muted-foreground">{t('No deals match.')} {summary.data?.lastSweepAt ? '' : t('Deals are scored within the hour, or press Score now.')}</Card>
       ) : (
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
-              <caption className="sr-only">Open deals by health, lowest first</caption>
+              <caption className="sr-only">{t('Open deals by health, lowest first')}</caption>
               <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-2 font-medium">Deal</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Health</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Why</th>
-                  <th scope="col" className="px-4 py-2 font-medium">Owner</th>
-                  <th scope="col" className="px-4 py-2 text-end font-medium">Amount</th>
+                  <th scope="col" className="px-4 py-2 font-medium">{t('Deal')}</th>
+                  <th scope="col" className="px-4 py-2 font-medium">{t('Health')}</th>
+                  <th scope="col" className="px-4 py-2 font-medium">{t('Why')}</th>
+                  <th scope="col" className="px-4 py-2 font-medium">{t('Owner')}</th>
+                  <th scope="col" className="px-4 py-2 text-end font-medium">{t('Amount')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -97,21 +99,21 @@ export function DealHealthBoard() {
                       </Link>
                       <p className="text-xs text-muted-foreground">
                         {r.deal.stage}
-                        {r.deal.expectedCloseDate ? ` · closes ${formatDate(r.deal.expectedCloseDate)}` : ''}
+                        {r.deal.expectedCloseDate ? t(' · closes {date}', { date: formatDate(r.deal.expectedCloseDate) }) : ''}
                       </p>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="me-2 font-semibold tabular-nums">{r.health}</span>
-                      <Badge tone={TONE[r.risk]}>{LABEL[r.risk]}</Badge>
+                      <Badge tone={TONE[r.risk]}>{t.maybe(LABEL[r.risk])}</Badge>
                       {r.change7d !== null && r.change7d !== 0 && (
                         <p className={`text-xs ${r.change7d > 0 ? 'text-success' : 'text-critical'}`}>
                           {r.change7d > 0 ? '+' : ''}
-                          {r.change7d} in 7 days
+                          {t('{change} in 7 days', { change: r.change7d })}
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{r.signals.length ? r.signals.map((s) => s.label).join(', ') : 'No risk signals'}</td>
-                    <td className="px-4 py-3 text-xs">{r.owner?.name ?? 'Unassigned'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{r.signals.length ? r.signals.map((s) => t.maybe(s.label)).join(', ') : t('No risk signals')}</td>
+                    <td className="px-4 py-3 text-xs">{r.owner?.name ?? t('Unassigned')}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-end tabular-nums">{formatMoney(r.deal.amount, r.deal.currency)}</td>
                   </tr>
                 ))}

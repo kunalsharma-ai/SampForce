@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, Info, Sparkles, TrendingUp
 import Link from 'next/link';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 
@@ -18,19 +19,20 @@ export function SalesInsights() {
   const [scope, setScope] = useState<InsightScope>('mine');
   const canAi = useCan('ai:use');
   const ask = useCopilot((s) => s.ask);
+  const t = useT();
   const feed = useQuery({ queryKey: ['insights', scope], queryFn: () => api<InsightFeed>(`/insights?scope=${scope}`), refetchInterval: 300_000 });
 
   return (
     <Card className="h-full">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0">
         <div>
-          <CardTitle>This week</CardTitle>
-          <CardDescription>Last 7 days compared with the 7 before.</CardDescription>
+          <CardTitle>{t('This week')}</CardTitle>
+          <CardDescription>{t('Last 7 days compared with the 7 before.')}</CardDescription>
         </div>
-        <div className="flex items-center gap-1" role="group" aria-label="Whose numbers">
+        <div className="flex items-center gap-1" role="group" aria-label={t('Whose numbers')}>
           {(['mine', 'team'] as const).map((s) => (
             <Button key={s} size="sm" variant={scope === s ? 'default' : 'ghost'} className="h-7" aria-pressed={scope === s} onClick={() => setScope(s)}>
-              {s === 'mine' ? 'Mine' : 'Team'}
+              {s === 'mine' ? t('Mine') : t('Team')}
             </Button>
           ))}
         </div>
@@ -43,7 +45,7 @@ export function SalesInsights() {
             {feed.error.message}
           </p>
         ) : feed.data.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing to report yet. Insights appear as deals, emails and tasks are recorded.</p>
+          <p className="text-sm text-muted-foreground">{t('Nothing to report yet. Insights appear as deals, emails and tasks are recorded.')}</p>
         ) : (
           <ul className="space-y-3">
             {feed.data.items.map((i) => (
@@ -58,7 +60,7 @@ export function SalesInsights() {
             className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent"
             onClick={() => ask(scope === 'team' ? "Brief me on the team's week: what needs attention, and what went well?" : 'Brief me on my week: what needs attention, and what should I do first?')}
           >
-            <Sparkles aria-hidden /> Ask Copilot for a briefing
+            <Sparkles aria-hidden /> {t('Ask Copilot for a briefing')}
           </Button>
         )}
       </CardContent>
@@ -70,6 +72,7 @@ function InsightRow({ insight: i }: { insight: Insight }) {
   const Icon = ICON[i.tone];
   const m = i.metric;
   const delta = m && m.previous !== null ? m.current - m.previous : null;
+  const t = useT();
   const body = (
     <>
       <p className="text-sm font-medium">
@@ -77,7 +80,7 @@ function InsightRow({ insight: i }: { insight: Insight }) {
         {delta !== null && delta !== 0 && (
           <span className={`ms-1.5 inline-flex items-center text-xs ${delta > 0 ? 'text-success' : 'text-critical'}`}>
             {delta > 0 ? <ArrowUpRight className="size-3" aria-hidden /> : <ArrowDownRight className="size-3" aria-hidden />}
-            <span className="sr-only">{delta > 0 ? 'up' : 'down'} on the week before</span>
+            <span className="sr-only">{delta > 0 ? t('up on the week before') : t('down on the week before')}</span>
           </span>
         )}
       </p>

@@ -12,54 +12,59 @@ import { downloadFile } from '@/lib/api';
 import { useCan } from '@/lib/session';
 import { DataTable } from '@/components/data-table/data-table';
 import { type TableColumn, useTableView } from '@/components/data-table/use-table-view';
+import { type MessageKey, Tr, useT } from '@/lib/i18n';
+
 import { RecordFormDialog } from './record-form';
 import { Select } from './select';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 
-const owner = <T extends { owner: { name: string } | null }>(): TableColumn<T> => ({ id: 'owner', header: 'Owner', cell: (r) => r.owner?.name ?? '—', text: (r) => r.owner?.name ?? null, size: 150 });
-const created = <T extends { createdAt: string }>(): TableColumn<T> => ({ id: 'createdAt', header: 'Created', sortKey: 'createdAt', cell: (r) => formatDate(r.createdAt), size: 130 });
-const updated = <T extends { updatedAt?: string }>(): TableColumn<T> => ({ id: 'updatedAt', header: 'Updated', sortKey: 'updatedAt', cell: (r) => (r.updatedAt ? formatDate(r.updatedAt) : '—'), size: 130, defaultHidden: true });
+/** Column headers are catalogue phrases; the table translates them when it renders. */
+const h = (key: MessageKey): string => key;
+
+const owner = <T extends { owner: { name: string } | null }>(): TableColumn<T> => ({ id: 'owner', header: h('Owner'), cell: (r) => r.owner?.name ?? '—', text: (r) => r.owner?.name ?? null, size: 150 });
+const created = <T extends { createdAt: string }>(): TableColumn<T> => ({ id: 'createdAt', header: h('Created'), sortKey: 'createdAt', cell: (r) => formatDate(r.createdAt), size: 130 });
+const updated = <T extends { updatedAt?: string }>(): TableColumn<T> => ({ id: 'updatedAt', header: h('Updated'), sortKey: 'updatedAt', cell: (r) => (r.updatedAt ? formatDate(r.updatedAt) : '—'), size: 130, defaultHidden: true });
 
 const COLUMNS = {
   leads: [
-    { id: 'fullName', header: 'Name', sortKey: 'fullName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
-    { id: 'company', header: 'Company', sortKey: 'companyName', cell: (r) => r.companyName ?? '—', text: (r) => r.companyName, size: 180 },
-    { id: 'email', header: 'Email', cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
-    { id: 'status', header: 'Status', sortKey: 'status', cell: (r) => <Badge tone={LEAD_STATUS_TONE[r.status]}>{titleCase(r.status)}</Badge>, size: 130 },
-    { id: 'value', header: 'Est. value', sortKey: 'estimatedValue', cell: (r) => formatMoney(r.estimatedValue, r.currency ?? 'USD'), align: 'right', size: 130 },
+    { id: 'fullName', header: h('Name'), sortKey: 'fullName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
+    { id: 'company', header: h('Company'), sortKey: 'companyName', cell: (r) => r.companyName ?? '—', text: (r) => r.companyName, size: 180 },
+    { id: 'email', header: h('Email'), cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
+    { id: 'status', header: h('Status'), sortKey: 'status', cell: (r) => <Badge tone={LEAD_STATUS_TONE[r.status]}><Tr text={titleCase(r.status)} /></Badge>, size: 130 },
+    { id: 'value', header: h('Est. value'), sortKey: 'estimatedValue', cell: (r) => formatMoney(r.estimatedValue, r.currency ?? 'USD'), align: 'right', size: 130 },
     owner<LeadRow>(),
     created<LeadRow>(),
     updated<LeadRow>(),
   ] satisfies TableColumn<LeadRow>[],
   contacts: [
-    { id: 'name', header: 'Name', sortKey: 'firstName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
-    { id: 'title', header: 'Job title', sortKey: 'jobTitle', cell: (r) => r.jobTitle ?? '—', text: (r) => r.jobTitle, size: 180 },
-    { id: 'company', header: 'Company', cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
-    { id: 'email', header: 'Email', sortKey: 'email', cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
-    { id: 'phone', header: 'Phone', cell: (r) => r.phone ?? '—', text: (r) => r.phone, size: 150 },
+    { id: 'name', header: h('Name'), sortKey: 'firstName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
+    { id: 'title', header: h('Job title'), sortKey: 'jobTitle', cell: (r) => r.jobTitle ?? '—', text: (r) => r.jobTitle, size: 180 },
+    { id: 'company', header: h('Company'), cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
+    { id: 'email', header: h('Email'), sortKey: 'email', cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
+    { id: 'phone', header: h('Phone'), cell: (r) => r.phone ?? '—', text: (r) => r.phone, size: 150 },
     owner<ContactRow>(),
     created<ContactRow>(),
     updated<ContactRow>(),
   ] satisfies TableColumn<ContactRow>[],
   companies: [
-    { id: 'name', header: 'Name', sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
-    { id: 'domain', header: 'Domain', sortKey: 'domain', cell: (r) => r.domain ?? '—', text: (r) => r.domain, size: 170 },
-    { id: 'industry', header: 'Industry', sortKey: 'industry', cell: (r) => r.industry ?? '—', text: (r) => r.industry, size: 160 },
-    { id: 'contacts', header: 'Contacts', cell: (r) => r.contactCount, align: 'right', size: 110 },
-    { id: 'deals', header: 'Open deals', cell: (r) => r.openDealCount, align: 'right', size: 110 },
+    { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
+    { id: 'domain', header: h('Domain'), sortKey: 'domain', cell: (r) => r.domain ?? '—', text: (r) => r.domain, size: 170 },
+    { id: 'industry', header: h('Industry'), sortKey: 'industry', cell: (r) => r.industry ?? '—', text: (r) => r.industry, size: 160 },
+    { id: 'contacts', header: h('Contacts'), cell: (r) => r.contactCount, align: 'right', size: 110 },
+    { id: 'deals', header: h('Open deals'), cell: (r) => r.openDealCount, align: 'right', size: 110 },
     owner<CompanyRow>(),
     created<CompanyRow>(),
     updated<CompanyRow>(),
   ] satisfies TableColumn<CompanyRow>[],
   deals: [
-    { id: 'name', header: 'Deal', sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 220 },
-    { id: 'amount', header: 'Amount', sortKey: 'amount', cell: (r) => formatMoney(r.amount, r.currency), align: 'right', size: 130 },
-    { id: 'stage', header: 'Stage', cell: (r) => r.stage.name, size: 150 },
-    { id: 'status', header: 'Status', sortKey: 'status', cell: (r) => <Badge tone={DEAL_STATUS_TONE[r.status]}>{titleCase(r.status)}</Badge>, size: 110 },
-    { id: 'company', header: 'Company', cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
-    { id: 'close', header: 'Expected close', sortKey: 'expectedCloseDate', cell: (r) => formatDate(r.expectedCloseDate), size: 140 },
-    { id: 'priority', header: 'Priority', sortKey: 'priority', cell: (r) => (r.priority ? <PriorityBadge priority={r.priority} /> : '—'), text: (r) => (r.priority ? titleCase(r.priority) : null), size: 120 },
-    { id: 'health', header: 'Health', cell: (r) => <RiskIndicator health={r.health} />, size: 140, defaultHidden: true },
+    { id: 'name', header: h('Deal'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 220 },
+    { id: 'amount', header: h('Amount'), sortKey: 'amount', cell: (r) => formatMoney(r.amount, r.currency), align: 'right', size: 130 },
+    { id: 'stage', header: h('Stage'), cell: (r) => r.stage.name, size: 150 },
+    { id: 'status', header: h('Status'), sortKey: 'status', cell: (r) => <Badge tone={DEAL_STATUS_TONE[r.status]}><Tr text={titleCase(r.status)} /></Badge>, size: 110 },
+    { id: 'company', header: h('Company'), cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
+    { id: 'close', header: h('Expected close'), sortKey: 'expectedCloseDate', cell: (r) => formatDate(r.expectedCloseDate), size: 140 },
+    { id: 'priority', header: h('Priority'), sortKey: 'priority', cell: (r) => (r.priority ? <PriorityBadge priority={r.priority} /> : '—'), text: (r) => (r.priority ? titleCase(r.priority) : null), size: 120 },
+    { id: 'health', header: h('Health'), cell: (r) => <RiskIndicator health={r.health} />, size: 140, defaultHidden: true },
     owner<DealRow>(),
     created<DealRow>(),
     updated<DealRow>(),
@@ -88,6 +93,7 @@ interface Props {
 
 export function RecordList({ entity, title, description, fixedStatus, headerExtra, hideTable }: Props) {
   const router = useRouter();
+  const t = useT();
   const view = useTableView<{ id: string }>(entity, COLUMNS[entity] as unknown as TableColumn<{ id: string }>[], DEFAULT_SORT);
   const members = useMembers();
   const status = view.config.filters.status ?? '';
@@ -104,15 +110,15 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
   return (
     <div>
       <PageHeader
-        title={title ?? label.many}
-        description={description}
+        title={t.maybe(title ?? label.many)}
+        description={t.maybe(description)}
         actions={
           <div className="flex flex-wrap gap-2">
             {headerExtra}
             {canWrite && importable && (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/app/settings/import?entity=${entity}`}>
-                  <Upload aria-hidden /> Import
+                  <Upload aria-hidden /> {t('Import')}
                 </Link>
               </Button>
             )}
@@ -129,12 +135,12 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                     .finally(() => setExporting(false));
                 }}
               >
-                <Download aria-hidden /> {exporting ? 'Exporting…' : 'Export CSV'}
+                <Download aria-hidden /> {exporting ? t('Exporting…') : t('Export CSV')}
               </Button>
             )}
             {canWrite && (
               <Button size="sm" onClick={() => setCreating(true)}>
-                <Plus aria-hidden /> New {label.one.toLowerCase()}
+                <Plus aria-hidden /> {t.maybe(`New ${label.one.toLowerCase()}`)}
               </Button>
             )}
           </div>
@@ -147,7 +153,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
       )}
       {!hideTable && (
         <DataTable
-          caption={title ?? label.many}
+          caption={t.maybe(title ?? label.many)}
           view={view}
           noun={label}
           data={list.data}
@@ -160,24 +166,24 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
               {filters && (
                 <>
                   <label htmlFor={`${entity}-status`} className="sr-only">
-                    Filter by status
+                    {t('Filter by status')}
                   </label>
                   <Select id={`${entity}-status`} className="h-control min-w-0 flex-1 sm:w-40 sm:flex-none" value={status} onChange={(e) => view.setFilter({ status: e.target.value || undefined })}>
-                    <option value="">All statuses</option>
+                    <option value="">{t('All statuses')}</option>
                     {filters.map((f) => (
                       <option key={f.value} value={f.value}>
-                        {f.label}
+                        {t.maybe(f.label)}
                       </option>
                     ))}
                   </Select>
                 </>
               )}
               <label htmlFor={`${entity}-owner`} className="sr-only">
-                Filter by owner
+                {t('Filter by owner')}
               </label>
               <Select id={`${entity}-owner`} className="h-control min-w-0 flex-1 sm:w-40 sm:flex-none" value={view.config.filters.ownerId ?? ''} onChange={(e) => view.setFilter({ ownerId: e.target.value || undefined })}>
-                <option value="">Any owner</option>
-                <option value="me">Owned by me</option>
+                <option value="">{t('Any owner')}</option>
+                <option value="me">{t('Owned by me')}</option>
                 {members.data
                   ?.filter((m) => m.status === 'ACTIVE')
                   .map((m) => (
@@ -190,13 +196,13 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
           }
           empty={
             view.config.q || status || view.config.filters.ownerId ? (
-              'No records match these filters.'
+              t('No records match these filters.')
             ) : (
               <span>
-                No {label.many.toLowerCase()} yet.{' '}
+                {t.maybe(`No ${label.many.toLowerCase()} yet.`)}{' '}
                 {canWrite && (
                   <button type="button" className="text-primary underline underline-offset-4" onClick={() => setCreating(true)}>
-                    Create the first one
+                    {t('Create the first one')}
                   </button>
                 )}
               </span>

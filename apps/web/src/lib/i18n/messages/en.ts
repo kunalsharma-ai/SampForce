@@ -135,12 +135,18 @@ export const en = {
   'regional.saved': 'Saved to your account.',
   'regional.saveError': 'Your settings could not be saved. Check your connection and try again.',
   'regional.reset': 'Use defaults',
-  'regional.coverage': 'Menus, navigation and these settings are translated. Other pages are still in English while their translations are written.',
+  'regional.coverage': 'Menus, navigation, the Command Center and the lead, contact, company and deal pages are translated. Other pages are still in English while their translations are written.',
   'regional.rtl': 'This language reads right to left, so the layout is mirrored.',
   'regional.days_one': '{count} day ago',
   'regional.days_other': '{count} days ago',
+  'count.deals_one': '{count} deal',
+  'count.deals_other': '{count} deals',
+  'count.openDealsClosing_one': '{count} open deal expected to close',
+  'count.openDealsClosing_other': '{count} open deals expected to close',
+  'count.unsavedChanges_one': '{count} unsaved change.',
+  'count.unsavedChanges_other': '{count} unsaved changes.',
 } as const;
 
-export type MessageKey = keyof typeof en;
-/** A complete catalogue. Plural keys beyond `_one`/`_other` are optional extras for languages that need them. */
-export type Messages = Record<MessageKey, string> & Partial<Record<`${string}_${'zero' | 'two' | 'few' | 'many'}`, string>>;
+export type ShellKey = keyof typeof en;
+/** A complete shell catalogue. Plural keys beyond `_one`/`_other` are optional extras for languages that need them. */
+export type Messages = Record<ShellKey, string> & Partial<Record<`${string}_${'zero' | 'two' | 'few' | 'many'}`, string>>;

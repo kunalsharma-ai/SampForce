@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { useQuickCreate } from '@/stores/quick-create';
 import { RecordFormDialog } from './record-form';
 
@@ -20,6 +21,7 @@ export function QuickCreateHost() {
 
 function TaskDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const t = useT();
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
   const create = useMutation({
@@ -32,8 +34,8 @@ function TaskDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-6">
-        <DialogTitle className="text-lg font-semibold">New task</DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-muted-foreground">Assigned to you. Link tasks to a record from its page.</DialogDescription>
+        <DialogTitle className="text-lg font-semibold">{t('create.task')}</DialogTitle>
+        <DialogDescription className="mt-1 text-sm text-muted-foreground">{t('Assigned to you. Link tasks to a record from its page.')}</DialogDescription>
         <form
           className="mt-4 space-y-4"
           onSubmit={(e) => {
@@ -41,10 +43,10 @@ function TaskDialog({ onClose }: { onClose: () => void }) {
             if (title.trim()) create.mutate();
           }}
         >
-          <Field id="qc-task-title" label="Title *">
+          <Field id="qc-task-title" label={t('Title *')}>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus />
           </Field>
-          <Field id="qc-task-due" label="Due date">
+          <Field id="qc-task-due" label={t('Due date')}>
             <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
           {create.error && (
@@ -54,10 +56,10 @@ function TaskDialog({ onClose }: { onClose: () => void }) {
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button type="submit" disabled={!title.trim() || create.isPending}>
-              Create task
+              {t('Create task')}
             </Button>
           </div>
         </form>

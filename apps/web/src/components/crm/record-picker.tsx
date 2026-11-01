@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { api } from '@/lib/api';
 import { toQuery } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 
 export interface PickerValue {
   id: string;
@@ -28,6 +29,7 @@ type Option = { id: string; name?: string; fullName?: string; email?: string | n
 /** ARIA combobox that searches records of one type as you type. */
 export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria }: Props) {
   const listId = useId();
+  const tr = useT();
   const [text, setText] = useState(value?.name ?? '');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -65,7 +67,7 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
         aria-autocomplete="list"
         aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
         autoComplete="off"
-        placeholder={placeholder ?? 'Search…'}
+        placeholder={placeholder ?? tr('Search…')}
         value={text}
         onChange={(e) => {
           setText(e.target.value);
@@ -93,7 +95,7 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
       {value && (
         <button
           type="button"
-          aria-label="Clear selection"
+          aria-label={tr('Clear selection')}
           className="absolute end-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted"
           onClick={() => {
             onChange(null);
@@ -106,9 +108,9 @@ export function RecordPicker({ id, entity, value, onChange, placeholder, ...aria
       {open && (
         <ul id={listId} role="listbox" className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-popover p-1 shadow-lg">
           {results.isPending ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Searching…</li>
+            <li className="px-3 py-2 text-sm text-muted-foreground">{tr('Searching…')}</li>
           ) : options.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">No matches</li>
+            <li className="px-3 py-2 text-sm text-muted-foreground">{tr('No matches')}</li>
           ) : (
             options.map((o, i) => (
               <li

@@ -4,6 +4,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import { BarChart3, Download, Table2 } from 'lucide-react';
 import { useState } from 'react';
 import { downloadCsv } from '@/lib/dashboard';
+import { useT } from '@/lib/i18n';
 
 export interface TableSpec {
   caption: string;
@@ -38,6 +39,7 @@ export function ChartCard({
   children: React.ReactNode;
 }) {
   const [view, setView] = useState<'chart' | 'table'>('chart');
+  const t = useT();
   return (
     <Card className="flex h-full flex-col">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0">
@@ -46,11 +48,11 @@ export function ChartCard({
           <CardDescription>{description}</CardDescription>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setView(view === 'chart' ? 'table' : 'chart')} aria-label={`${title}: ${view === 'chart' ? 'show as table' : 'show as chart'}`}>
+          <Button variant="ghost" size="sm" onClick={() => setView(view === 'chart' ? 'table' : 'chart')} aria-label={view === 'chart' ? t('{title}: show as table', { title }) : t('{title}: show as chart', { title })}>
             {view === 'chart' ? <Table2 aria-hidden /> : <BarChart3 aria-hidden />}
-            <span className="hidden sm:inline">{view === 'chart' ? 'Table' : 'Chart'}</span>
+            <span className="hidden sm:inline">{view === 'chart' ? t('Table') : t('Chart')}</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => downloadCsv(filename, table.header, table.rows)} aria-label={`${title}: download CSV`} disabled={table.rows.length === 0}>
+          <Button variant="ghost" size="sm" onClick={() => downloadCsv(filename, table.header, table.rows)} aria-label={t('{title}: download CSV', { title })} disabled={table.rows.length === 0}>
             <Download aria-hidden />
             <span className="hidden sm:inline">CSV</span>
           </Button>
@@ -60,7 +62,7 @@ export function ChartCard({
         {empty ? (
           <p className="py-8 text-center text-sm text-muted-foreground">{empty}</p>
         ) : view === 'chart' ? (
-          <div className="h-60" role="img" aria-label={`${summary} Switch to table view for exact values.`}>
+          <div className="h-60" role="img" aria-label={`${summary} ${t('Switch to table view for exact values.')}`}>
             {children}
           </div>
         ) : (

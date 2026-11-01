@@ -76,3 +76,57 @@ test('Arabic mirrors the layout right to left and stays accessible', async ({ pa
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await axe(page);
 });
+
+test('Spanish translates the Command Center and the lead workflow end to end', async ({ page }) => {
+  await signUp(page, 'Ventas Iberia');
+  await page.goto('/app/settings');
+  await page.getByTestId('regional-settings').getByLabel('Language').selectOption('es');
+  await page.getByTestId('regional-settings').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+  // Command Center: chrome, KPI names from the API and the onboarding checklist.
+  await page.goto('/app');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('button', { name: 'Personalizar diseño' })).toBeVisible();
+  await expect(main.getByText('Leads totales')).toBeVisible();
+  await expect(main.getByText('Prepara tu espacio de trabajo')).toBeVisible();
+
+  // Leads list: header, column names and filters.
+  await page.goto('/app/leads');
+  await expect(main.getByRole('heading', { name: 'Leads', level: 1 })).toBeVisible();
+  await expect(main.getByRole('columnheader', { name: 'Nombre' })).toBeVisible();
+  await expect(main.getByLabel('Filtrar por estado')).toBeVisible();
+
+  // Create a lead through the translated form; it is saved and opens in Spanish.
+  await main.getByRole('button', { name: 'Nuevo lead' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Los campos marcados con * son obligatorios.')).toBeVisible();
+  await dialog.getByLabel('Nombre completo *').fill('Lucía Fernández');
+  await dialog.getByLabel('Empresa', { exact: true }).fill('Iberia Logística');
+  await dialog.getByRole('button', { name: 'Crear lead' }).click();
+  await expect(page).toHaveURL(/\/app\/leads\/[\w-]+$/);
+  await expect(main.getByRole('heading', { name: 'Lucía Fernández' })).toBeVisible();
+  await expect(main.getByText('Nuevo', { exact: true })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Detalles' })).toBeVisible();
+  await expect(main.getByRole('button', { name: 'Convertir' })).toBeVisible();
+  await axe(page);
+
+  // Back on the list the new row shows its translated status, and the pager is in Spanish.
+  await page.goto('/app/leads');
+  await expect(main.getByRole('link', { name: 'Lucía Fernández' })).toBeVisible();
+  await expect(main.getByText('1–1 de 1')).toBeVisible();
+});
+
+test('Arabic deals board stays accessible right to left', async ({ page }) => {
+  await signUp(page, 'Arabic Deals');
+  await page.goto('/app/settings');
+  await page.getByTestId('regional-settings').getByLabel('Language').selectOption('ar');
+  await page.getByTestId('regional-settings').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await page.goto('/app/deals');
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { name: 'الصفقات', level: 1 })).toBeVisible();
+  await expect(main.getByRole('group', { name: 'العرض' }).getByRole('button', { name: 'اللوحة' })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'صحة الصفقات' })).toBeVisible();
+  await axe(page);
+});

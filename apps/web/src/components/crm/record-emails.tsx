@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ComposeDialog } from '@/app/app/communication/mailbox';
 import { useEmails, useIntegrations } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 /** Email history for one contact or lead, with a compose button when a mailbox is connected. */
@@ -20,6 +21,7 @@ export function RecordEmails({
   email: string | null;
 }) {
   const emails = useEmails({ contactId, leadId });
+  const t = useT();
   const integrations = useIntegrations();
   const canSend = useCan('activities:write');
   const [compose, setCompose] = useState(false);
@@ -27,10 +29,10 @@ export function RecordEmails({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">Email</CardTitle>
+        <CardTitle className="text-base">{t('Email')}</CardTitle>
         {canSend && email && connected && (
           <Button size="sm" variant="outline" onClick={() => setCompose(true)}>
-            <Mail aria-hidden /> Send email
+            <Mail aria-hidden /> {t('Send email')}
           </Button>
         )}
       </CardHeader>
@@ -40,9 +42,9 @@ export function RecordEmails({
             {emails.data.slice(0, 10).map((e) => (
               <li key={e.id} className="flex items-start gap-2 text-sm">
                 {e.direction === 'INBOUND' ? (
-                  <ArrowDownLeft className="mt-0.5 size-4 text-primary" aria-label="Received" />
+                  <ArrowDownLeft className="mt-0.5 size-4 text-primary" aria-label={t('Received')} />
                 ) : (
-                  <ArrowUpRight className="mt-0.5 size-4 text-accent" aria-label="Sent" />
+                  <ArrowUpRight className="mt-0.5 size-4 text-accent" aria-label={t('Sent')} />
                 )}
                 <span className="min-w-0 flex-1">
                   {e.conversationId ? (
@@ -67,7 +69,7 @@ export function RecordEmails({
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No email yet.
+            {t('No email yet.')}
             {!connected && (
               <>
                 {' '}
@@ -75,9 +77,9 @@ export function RecordEmails({
                   href="/app/integrations"
                   className="text-primary underline underline-offset-2"
                 >
-                  Connect a mailbox
+                  {t('Connect a mailbox')}
                 </Link>{' '}
-                to sync and send.
+                {t('to sync and send.')}
               </>
             )}
           </p>

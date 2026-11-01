@@ -9,15 +9,18 @@ import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { type CrmEntity, ENTITY_LABEL, useCustomFields } from '@/lib/crm';
 import { toFormValues } from '@/lib/crm-fields';
+import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { RecordFormDialog } from './record-form';
 
-export function DetailList({ items }: { items: [string, React.ReactNode][] }) {
+/** Label and value pairs. Labels are catalogue phrases; custom field names (data) pass through `t.maybe`. */
+export function DetailList({ items }: { items: [MessageKey | { text: string }, React.ReactNode][] }) {
+  const t = useT();
   return (
     <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
       {items.map(([label, value]) => (
-        <div key={label} className="min-w-0">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
+        <div key={typeof label === 'string' ? label : label.text} className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{typeof label === 'string' ? t(label) : label.text}</dt>
           <dd className="truncate text-sm">{value === null || value === undefined || value === '' ? '—' : value}</dd>
         </div>
       ))}
@@ -27,17 +30,18 @@ export function DetailList({ items }: { items: [string, React.ReactNode][] }) {
 
 export function CustomFieldList({ entity, values }: { entity: CrmEntity; values: Record<string, unknown> }) {
   const defs = useCustomFields(entity);
+  const t = useT();
   if (!defs.data?.length) return null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Custom fields</CardTitle>
+        <CardTitle className="text-base">{t('Custom fields')}</CardTitle>
       </CardHeader>
       <CardContent>
         <DetailList
           items={defs.data.map((d) => {
             const v = values[d.key];
-            return [d.label, typeof v === 'boolean' ? (v ? 'Yes' : 'No') : (v as React.ReactNode)];
+            return [{ text: d.label }, typeof v === 'boolean' ? (v ? t('Yes') : t('No')) : (v as React.ReactNode)];
           })}
         />
       </CardContent>
@@ -66,6 +70,7 @@ export function RecordHeader({
   editable?: boolean;
 }) {
   const canWrite = useCan(`${entity}:write` as 'leads:write');
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +84,14 @@ export function RecordHeader({
       await qc.invalidateQueries({ queryKey: [entity] });
       router.push(`/app/${entity}`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not delete.');
+      setError(e instanceof ApiError ? e.message : t('Could not delete.'));
     }
   }
 
   return (
     <div className="mb-6 space-y-3">
       <Link href={`/app/${entity}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {label.many}
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t.maybe(label.many)}
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
@@ -100,11 +105,11 @@ export function RecordHeader({
           {actions}
           {canWrite && editable && row && (
             <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-              <Pencil aria-hidden /> Edit
+              <Pencil aria-hidden /> {t('Edit')}
             </Button>
           )}
           {canWrite && (
-            <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} aria-label={`Delete ${label.one.toLowerCase()}`}>
+            <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} aria-label={t.maybe(`Delete ${label.one.toLowerCase()}`)}>
               <Trash2 aria-hidden />
             </Button>
           )}
@@ -122,9 +127,9 @@ export function RecordHeader({
       )}
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent className="p-6">
-          <DialogTitle className="text-lg font-semibold">Delete this {label.one.toLowerCase()}?</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t.maybe(`Delete this ${label.one.toLowerCase()}?`)}</DialogTitle>
           <DialogDescription className="mt-2 text-sm text-muted-foreground">
-            “{title}” will be removed from lists and search. The change is recorded in the audit log.
+            {t('“{title}” will be removed from lists and search. The change is recorded in the audit log.', { title })}
           </DialogDescription>
           {error && (
             <p role="alert" className="mt-3 text-sm text-critical">
@@ -133,10 +138,10 @@ export function RecordHeader({
           )}
           <div className="mt-6 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirm(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button variant="destructive" onClick={() => void remove()}>
-              Delete
+              {t('Delete')}
             </Button>
           </div>
         </DialogContent>
@@ -157,14 +162,15 @@ export function DetailSkeleton() {
 
 export function DetailError({ error }: { error: Error }) {
   const notFound = error instanceof ApiError && error.status === 404;
+  const t = useT();
   return (
     <Card className="max-w-lg">
       <CardContent className="space-y-3 p-6">
         <p role="alert" className="font-medium">
-          {notFound ? 'This record does not exist or was deleted.' : error.message}
+          {notFound ? t('This record does not exist or was deleted.') : error.message}
         </p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/app">Back to the Command Center</Link>
+          <Link href="/app">{t('Back to the Command Center')}</Link>
         </Button>
       </CardContent>
     </Card>

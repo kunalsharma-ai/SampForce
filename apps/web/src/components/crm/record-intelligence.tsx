@@ -9,6 +9,7 @@ import { useId, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 
@@ -21,6 +22,7 @@ const TREND_TONE = { none: 'neutral', rising: 'success', steady: 'neutral', decl
  */
 export function RecordIntelligencePanel({ entity, id, name }: { entity: TimelineEntity; id: string; name: string }) {
   const canAi = useCan('ai:use');
+  const t = useT();
   const ask = useCopilot((s) => s.ask);
   const intel = useQuery({ queryKey: ['record-intelligence', entity, id], queryFn: () => api<RecordIntelligence>(`/intelligence/${entity}/${id}`) });
   const d = intel.data;
@@ -29,11 +31,11 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Lightbulb className="size-4 text-muted-foreground" aria-hidden /> Sales intelligence
+          <Lightbulb className="size-4 text-muted-foreground" aria-hidden /> {t('Sales intelligence')}
         </CardTitle>
         {canAi && (
           <Button size="sm" variant="outline" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => ask(`Summarise our relationship with ${name} (${entity} ${id}): what has happened, how engaged they are, who matters, and what I should do next.`)}>
-            <Sparkles aria-hidden /> Summarise with Copilot
+            <Sparkles aria-hidden /> {t('Summarise with Copilot')}
           </Button>
         )}
       </CardHeader>
@@ -50,31 +52,31 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
               <div className="flex flex-wrap gap-1">
                 {d!.flags.map((f) => (
                   <Badge key={f.key} tone={f.key === 'high_intent' ? 'success' : 'warning'}>
-                    {f.label}
+                    {t.maybe(f.label)}
                   </Badge>
                 ))}
               </div>
             )}
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Engagement, last 30 days</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('Engagement, last 30 days')}</p>
               <p>
-                <span className="font-semibold tabular-nums">{d!.engagement.last30}</span> touches ({d!.engagement.previous30} the 30 days before){' '}
-                <Badge tone={TREND_TONE[d!.engagement.trend]}>{TREND[d!.engagement.trend]}</Badge>
+                {t('{count} touches ({previous} the 30 days before)', { count: d!.engagement.last30, previous: d!.engagement.previous30 })}{' '}
+                <Badge tone={TREND_TONE[d!.engagement.trend]}>{t(TREND[d!.engagement.trend])}</Badge>
               </p>
               <p className="text-xs text-muted-foreground">
-                Last heard from them: {d!.engagement.lastInboundAt ? relativeTime(d!.engagement.lastInboundAt) : 'never by email'} · Last emailed: {d!.engagement.lastOutboundAt ? relativeTime(d!.engagement.lastOutboundAt) : 'never'}
+                {t('Last heard from them: {when}', { when: d!.engagement.lastInboundAt ? relativeTime(d!.engagement.lastInboundAt) : t('never by email') })} · {t('Last emailed: {when}', { when: d!.engagement.lastOutboundAt ? relativeTime(d!.engagement.lastOutboundAt) : t('never') })}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Buying signals</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('Buying signals')}</p>
               {d!.buyingSignals.length === 0 ? (
-                <p className="text-muted-foreground">None recently.</p>
+                <p className="text-muted-foreground">{t('None recently.')}</p>
               ) : (
                 <ul className="space-y-1">
                   {d!.buyingSignals.map((s) => (
                     <li key={s.key}>
-                      <span className="font-medium">{s.label}</span>
-                      {!s.confirmed && <span className="text-xs text-muted-foreground"> (estimate)</span>}
+                      <span className="font-medium">{t.maybe(s.label)}</span>
+                      {!s.confirmed && <span className="text-xs text-muted-foreground">{t(' (estimate)')}</span>}
                       {s.detail && <span className="text-muted-foreground">: {s.detail}</span>}{' '}
                       <time className="text-xs text-muted-foreground" dateTime={s.at}>
                         {relativeTime(s.at)}
@@ -86,9 +88,9 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
             </div>
             {d!.decisionMakers && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Senior people at the company (by job title)</p>
+                <p className="text-xs font-medium text-muted-foreground">{t('Senior people at the company (by job title)')}</p>
                 {d!.decisionMakers.length === 0 ? (
-                  <p className="text-muted-foreground">None recorded. Add the people who sign off.</p>
+                  <p className="text-muted-foreground">{t('None recorded. Add the people who sign off.')}</p>
                 ) : (
                   <ul className="space-y-0.5">
                     {d!.decisionMakers.map((m) => (
@@ -97,7 +99,7 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
                           {m.name}
                         </Link>{' '}
                         <span className="text-muted-foreground">
-                          {m.jobTitle} · {m.lastEngagedAt ? `last engaged ${relativeTime(m.lastEngagedAt)}` : 'not engaged yet'}
+                          {m.jobTitle} · {m.lastEngagedAt ? t('last engaged {when}', { when: relativeTime(m.lastEngagedAt) }) : t('not engaged yet')}
                         </span>
                       </li>
                     ))}
@@ -107,26 +109,26 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
             )}
             {d!.account && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Account value{entity !== 'company' ? ` (${d!.account.companyName})` : ''}</p>
+                <p className="text-xs font-medium text-muted-foreground">{t('Account value')}{entity !== 'company' ? ` (${d!.account.companyName})` : ''}</p>
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                  <dt className="text-muted-foreground">Won</dt>
+                  <dt className="text-muted-foreground">{t('Won')}</dt>
                   <dd className="tabular-nums">
-                    {formatMoney(d!.account.wonTotal, d!.account.currency)} ({d!.account.wonDeals} deal{d!.account.wonDeals === 1 ? '' : 's'})
+                    {formatMoney(d!.account.wonTotal, d!.account.currency)} ({t.plural('count.deals', d!.account.wonDeals)})
                   </dd>
-                  <dt className="text-muted-foreground">Open pipeline</dt>
+                  <dt className="text-muted-foreground">{t('Open pipeline')}</dt>
                   <dd className="tabular-nums">{formatMoney(d!.account.openPipeline, d!.account.currency)}</dd>
-                  <dt className="text-muted-foreground">Active contracts</dt>
+                  <dt className="text-muted-foreground">{t('Active contracts')}</dt>
                   <dd className="tabular-nums">{formatMoney(d!.account.activeContractValue, d!.account.currency)}</dd>
                   {d!.account.customerSince && (
                     <>
-                      <dt className="text-muted-foreground">Customer since</dt>
+                      <dt className="text-muted-foreground">{t('Customer since')}</dt>
                       <dd>{formatDate(d!.account.customerSince)}</dd>
                     </>
                   )}
                 </dl>
-                {d!.account.otherCurrency > 0 && <p className="text-xs text-muted-foreground">{d!.account.otherCurrency} record(s) in other currencies are not in these totals.</p>}
-                {d!.account.renewalWithin60Days && <p className="text-xs text-warning">A contract ends within 60 days.</p>}
-                {d!.account.notYetBought.length > 0 && <p className="text-xs text-muted-foreground">Not bought yet: {d!.account.notYetBought.join(', ')}</p>}
+                {d!.account.otherCurrency > 0 && <p className="text-xs text-muted-foreground">{t('{count} record(s) in other currencies are not in these totals.', { count: d!.account.otherCurrency })}</p>}
+                {d!.account.renewalWithin60Days && <p className="text-xs text-warning">{t('A contract ends within 60 days.')}</p>}
+                {d!.account.notYetBought.length > 0 && <p className="text-xs text-muted-foreground">{t('Not bought yet: {items}', { items: d!.account.notYetBought.join(', ') })}</p>}
               </div>
             )}
           </>
@@ -139,6 +141,7 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
 
 function RecordNextActions({ entity, id }: { entity: TimelineEntity; id: string }) {
   const qc = useQueryClient();
+  const t = useT();
   const canTask = useCan('activities:write');
   const focus = { type: entity, id };
   const list = useQuery({ queryKey: ['next-actions', entity, id], queryFn: () => api<NextActionList>(`/next-actions?recordType=${entity}&recordId=${id}`) });
@@ -151,7 +154,7 @@ function RecordNextActions({ entity, id }: { entity: TimelineEntity; id: string 
   if (list.isPending || list.error || list.data.items.length === 0) return null;
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground">Suggested next actions</p>
+      <p className="text-xs font-medium text-muted-foreground">{t('Suggested next actions')}</p>
       <ul className="divide-y divide-border">
         {list.data.items.slice(0, 4).map((i) => (
           <RecordAction key={i.key} item={i} focus={focus} canTask={canTask} onDone={refresh} onDismiss={() => dismiss.mutate(i.key)} />
@@ -163,6 +166,7 @@ function RecordNextActions({ entity, id }: { entity: TimelineEntity; id: string 
 
 function RecordAction({ item, focus, canTask, onDone, onDismiss }: { item: NextAction; focus: { type: TimelineEntity; id: string }; canTask: boolean; onDone: () => void; onDismiss: () => void }) {
   const id = useId();
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item.suggestedTask?.title ?? '');
   const accept = useMutation({
@@ -175,7 +179,7 @@ function RecordAction({ item, focus, canTask, onDone, onDismiss }: { item: NextA
   return (
     <li className="space-y-1 py-2">
       <p>
-        <span className="font-medium">{item.title}</span> <Badge>{NEXT_ACTION_LABELS[item.kind]}</Badge>
+        <span className="font-medium">{item.title}</span> <Badge>{t.maybe(NEXT_ACTION_LABELS[item.kind])}</Badge>
       </p>
       <p className="text-xs text-muted-foreground">{item.reason}</p>
       {editing ? (
@@ -187,22 +191,22 @@ function RecordAction({ item, focus, canTask, onDone, onDismiss }: { item: NextA
           }}
         >
           <label htmlFor={`${id}-t`} className="sr-only">
-            Task title
+            {t('Task title')}
           </label>
           <Input id={`${id}-t`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} className="h-8 min-w-40 flex-1" />
           <Button type="submit" size="sm" disabled={!title.trim() || accept.isPending}>
-            Create task
+            {t('Create task')}
           </Button>
         </form>
       ) : (
         <div className="flex gap-1">
           {item.suggestedTask && canTask && (
             <Button size="sm" variant="outline" className="h-7" onClick={() => setEditing(true)}>
-              Make it a task
+              {t('Make it a task')}
             </Button>
           )}
-          <Button size="sm" variant="ghost" className="h-7" onClick={onDismiss} aria-label={`Hide "${item.title}"`}>
-            Hide
+          <Button size="sm" variant="ghost" className="h-7" onClick={onDismiss} aria-label={t('Hide "{title}"', { title: item.title })}>
+            {t('Hide')}
           </Button>
         </div>
       )}

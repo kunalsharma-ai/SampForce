@@ -4,19 +4,21 @@ import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@deal
 import type { ContactRow, DealRow } from '@dealflow/types';
 import Link from 'next/link';
 import { DEAL_STATUS_TONE, formatMoney, titleCase, useRecordList } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 
 export function RelatedDeals({ filter }: { filter: { companyId: string } | { contactId: string } }) {
+  const t = useT();
   const deals = useRecordList<DealRow>('deals', { ...filter, pageSize: 50, sort: 'createdAt', order: 'desc' });
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Deals {deals.data ? <span className="text-muted-foreground">({deals.data.total})</span> : null}</CardTitle>
+        <CardTitle className="text-base">{t('module.deals')} {deals.data ? <span className="text-muted-foreground">({deals.data.total})</span> : null}</CardTitle>
       </CardHeader>
       <CardContent>
         {deals.isPending ? (
           <Skeleton className="h-12" />
         ) : deals.data?.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No deals yet.</p>
+          <p className="text-sm text-muted-foreground">{t('No deals yet.')}</p>
         ) : (
           <ul className="divide-y divide-border">
             {deals.data?.items.map((d) => (
@@ -24,7 +26,7 @@ export function RelatedDeals({ filter }: { filter: { companyId: string } | { con
                 <Link href={`/app/deals/${d.id}`} className="font-medium text-primary hover:underline">
                   {d.name}
                 </Link>
-                <Badge tone={DEAL_STATUS_TONE[d.status]}>{titleCase(d.status)}</Badge>
+                <Badge tone={DEAL_STATUS_TONE[d.status]}>{t.maybe(titleCase(d.status))}</Badge>
                 <span className="text-muted-foreground">{d.stage.name}</span>
                 <span className="ms-auto tabular-nums">{formatMoney(d.amount, d.currency)}</span>
               </li>
@@ -37,17 +39,18 @@ export function RelatedDeals({ filter }: { filter: { companyId: string } | { con
 }
 
 export function RelatedContacts({ companyId }: { companyId: string }) {
+  const t = useT();
   const contacts = useRecordList<ContactRow>('contacts', { companyId, pageSize: 50, sort: 'firstName', order: 'asc' });
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Contacts {contacts.data ? <span className="text-muted-foreground">({contacts.data.total})</span> : null}</CardTitle>
+        <CardTitle className="text-base">{t('module.contacts')} {contacts.data ? <span className="text-muted-foreground">({contacts.data.total})</span> : null}</CardTitle>
       </CardHeader>
       <CardContent>
         {contacts.isPending ? (
           <Skeleton className="h-12" />
         ) : contacts.data?.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No contacts at this company yet.</p>
+          <p className="text-sm text-muted-foreground">{t('No contacts at this company yet.')}</p>
         ) : (
           <ul className="divide-y divide-border">
             {contacts.data?.items.map((c) => (
