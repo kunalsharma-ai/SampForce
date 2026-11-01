@@ -595,7 +595,7 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'post', path: '/email-templates', tags: ['Sequences'], summary: 'Create a template; sharing needs marketing:manage (sequences:write)', security: secured, request: body(emailTemplateInputSchema), responses: { 201: ok('Template'), ...errors } });
   action('put', '/email-templates/{id}', 'Sequences', 'Update a template (owner or marketing:manage)', emailTemplateInputSchema);
   r.registerPath({ method: 'delete', path: '/email-templates/{id}', tags: ['Sequences'], summary: 'Delete a template not used by a sequence (sequences:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
-  action('post', '/email-templates/preview', 'Sequences', 'Render a subject and body for a lead or contact, listing empty merge fields (sequences:read)', templatePreviewSchema);
+  action('post', '/email-templates/preview', 'Sequences', 'Render a subject and body (and a design as HTML) for a lead or contact, listing empty merge fields (sequences:read)', templatePreviewSchema);
   action('get', '/sequences', 'Sequences', 'Sequences with totals (sequences:read)');
   r.registerPath({ method: 'post', path: '/sequences', tags: ['Sequences'], summary: 'Create a draft sequence (sequences:write)', security: secured, request: body(sequenceInputSchema), responses: { 201: ok('Sequence'), ...errors } });
   action('get', '/sequences/{id}', 'Sequences', 'Sequence (sequences:read)');

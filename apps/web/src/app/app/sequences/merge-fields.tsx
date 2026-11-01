@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@dealflow/ui';
-import { MERGE_FIELD_KEYS, MERGE_FIELDS, mergeTagLabel, type MergeField, type SequenceTestSendResult, type TemplatePreview } from '@dealflow/types';
+import { MERGE_FIELD_KEYS, MERGE_FIELDS, mergeTagLabel, type EmailDesign, type MergeField, type SequenceTestSendResult, type TemplatePreview } from '@dealflow/types';
 import { useMutation } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -108,11 +108,12 @@ export interface TestSendTarget {
 }
 
 /** Renders the email for a real lead so people see exactly what goes out, including empty fields. */
-export function PreviewPanel({ subject, body, idBase = 'tpl', test }: { subject: string; body: string; idBase?: string; test?: TestSendTarget }) {
+export function PreviewPanel({ subject, body, design, idBase = 'tpl', test }: { subject: string; body: string; design?: EmailDesign | null; idBase?: string; test?: TestSendTarget }) {
   const [lead, setLead] = useState<PickerValue | null>(null);
   const preview = useMutation({
-    mutationFn: () => api<TemplatePreview>('/email-templates/preview', { method: 'POST', json: { subject, body, leadId: lead?.id } }),
+    mutationFn: () => api<TemplatePreview>('/email-templates/preview', { method: 'POST', json: { subject, body, design: design ?? undefined, leadId: lead?.id } }),
   });
+  const ready = !!subject && (!!body || !!design);
   const send = useMutation({
     mutationFn: () => api<SequenceTestSendResult>(`/sequences/${test!.seqId}/test-send`, { method: 'POST', json: { stepId: test!.stepId, variant: test!.variant, leadId: lead?.id } }),
   });
@@ -127,11 +128,11 @@ export function PreviewPanel({ subject, body, idBase = 'tpl', test }: { subject:
           </label>
           <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder="Search leads (optional)" />
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={() => preview.mutate()} disabled={preview.isPending || !subject || !body}>
+        <Button type="button" size="sm" variant="outline" onClick={() => preview.mutate()} disabled={preview.isPending || !ready}>
           Preview
         </Button>
         {test && (
-          <Button type="button" size="sm" variant="outline" onClick={() => send.mutate()} disabled={send.isPending || test.dirty || !subject || !body}>
+          <Button type="button" size="sm" variant="outline" onClick={() => send.mutate()} disabled={send.isPending || test.dirty || !ready}>
             <Send className="h-4 w-4" aria-hidden /> Send me a test
           </Button>
         )}
@@ -152,7 +153,11 @@ export function PreviewPanel({ subject, body, idBase = 'tpl', test }: { subject:
             </p>
           )}
           <p className="font-medium">{preview.data.subject || <span className="text-muted-foreground">(empty subject)</span>}</p>
-          <p className="whitespace-pre-wrap">{preview.data.body}</p>
+          {preview.data.html ? (
+            <iframe title={`Email preview for ${preview.data.recipient?.name ?? 'a blank lead'}`} srcDoc={preview.data.html} sandbox="" className="h-[560px] w-full rounded border border-border bg-white" />
+          ) : (
+            <p className="whitespace-pre-wrap">{preview.data.body}</p>
+          )}
           {preview.data.missing.length > 0 && (
             <p role="alert" className="text-xs text-warning">
               Empty with no fallback: {preview.data.missing.map((m) => mergeTagLabel(m, labels)).join(', ')}. A sequence pauses for people like this instead of sending a gap.

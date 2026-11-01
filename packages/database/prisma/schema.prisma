@@ -2153,6 +2153,8 @@ model EmailTemplate {
   name       String
   subject    String
   body       String
+  /// Blocks for a designed (HTML) email (ADR 0050); null for plain text. `body` holds its plain-text version.
+  design     Json?
   shared     Boolean  @default(false)
   category   String?
   campaignId String?  @map("campaign_id") @db.Uuid
