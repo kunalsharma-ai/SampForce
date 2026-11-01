@@ -12,7 +12,10 @@ import {
 import type { ZodTypeAny } from 'zod';
 import type { CrmEntity } from './crm';
 
-export type FieldType = 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'textarea' | 'select' | 'company' | 'contact' | 'owner' | 'tags' | 'pipeline';
+export type FieldType =
+  | 'text' | 'email' | 'tel' | 'url' | 'number' | 'date' | 'textarea' | 'select' | 'company' | 'contact' | 'owner' | 'tags' | 'pipeline'
+  // Form library controls (design spec Part 7).
+  | 'country' | 'currency' | 'money' | 'percent' | 'timezone' | 'priority';
 
 export interface FieldSpec {
   name: string;
@@ -25,6 +28,8 @@ export interface FieldSpec {
   /** Only shown when creating (e.g. pipeline and stage, which change via "move"). */
   createOnly?: boolean;
   wide?: boolean;
+  /** For money fields: the field holding the currency code. */
+  currencyField?: string;
 }
 
 const owner: FieldSpec = { name: 'ownerId', label: 'Owner', type: 'owner', hint: 'Defaults to you' };
@@ -39,7 +44,7 @@ const consent: FieldSpec = {
     { value: 'OPTED_OUT', label: 'Opted out' },
   ],
 };
-const country: FieldSpec = { name: 'country', label: 'Country', type: 'text', placeholder: 'US', hint: '2-letter ISO code' };
+const country: FieldSpec = { name: 'country', label: 'Country', type: 'country' };
 
 export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
   leads: [
@@ -55,13 +60,13 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
       options: LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => ({ value: s, label: s.charAt(0) + s.slice(1).toLowerCase() })),
     },
     { name: 'source', label: 'Source', type: 'text', placeholder: 'Website, referral, event…' },
-    { name: 'estimatedValue', label: 'Estimated value', type: 'number' },
-    { name: 'currency', label: 'Currency', type: 'text', placeholder: 'USD' },
+    { name: 'estimatedValue', label: 'Estimated value', type: 'money', currencyField: 'currency' },
+    { name: 'currency', label: 'Currency', type: 'currency' },
     { name: 'industry', label: 'Industry', type: 'text' },
     country,
     { name: 'city', label: 'City', type: 'text' },
     { name: 'website', label: 'Website', type: 'url' },
-    { name: 'tags', label: 'Tags', type: 'tags', hint: 'Separate with commas', wide: true },
+    { name: 'tags', label: 'Tags', type: 'tags', hint: 'Press Enter or type a comma after each tag. Up to 20.', wide: true },
     consent,
     owner,
   ],
@@ -73,7 +78,7 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
     { name: 'jobTitle', label: 'Job title', type: 'text' },
     { name: 'companyId', label: 'Company', type: 'company' },
     country,
-    { name: 'timezone', label: 'Time zone', type: 'text', placeholder: 'America/New_York' },
+    { name: 'timezone', label: 'Time zone', type: 'timezone' },
     consent,
     owner,
   ],
@@ -87,11 +92,12 @@ export const FIELDS: Record<CrmEntity, FieldSpec[]> = {
   ],
   deals: [
     { name: 'name', label: 'Deal name', type: 'text', required: true, wide: true },
-    { name: 'amount', label: 'Amount', type: 'number' },
-    { name: 'currency', label: 'Currency', type: 'text', placeholder: 'Workspace default' },
+    { name: 'amount', label: 'Amount', type: 'money', currencyField: 'currency' },
+    { name: 'currency', label: 'Currency', type: 'currency', hint: 'Leave empty for the workspace default' },
     { name: 'pipelineId', label: 'Pipeline and stage', type: 'pipeline', createOnly: true, wide: true },
     { name: 'expectedCloseDate', label: 'Expected close', type: 'date' },
-    { name: 'probability', label: 'Probability override (%)', type: 'number', hint: 'Leave empty to use the stage probability' },
+    { name: 'probability', label: 'Probability override (%)', type: 'percent', hint: 'Leave empty to use the stage probability' },
+    { name: 'priority', label: 'Priority', type: 'priority', wide: true },
     { name: 'companyId', label: 'Company', type: 'company' },
     { name: 'contactId', label: 'Primary contact', type: 'contact' },
     owner,
@@ -116,7 +122,7 @@ export function toFormValues(entity: CrmEntity, row: Record<string, unknown>): R
       const ref = (f.name === 'parentCompanyId' ? row.parentCompany : row.company) as Ref;
       out[f.name] = ref ? { id: ref.id, name: ref.name } : null;
     } else if (f.type === 'contact') out.contactId = (row.contact as Ref) ?? null;
-    else if (f.type === 'tags') out.tags = ((row.tags as string[]) ?? []).join(', ');
+    else if (f.type === 'tags') out.tags = [...((row.tags as string[]) ?? [])];
     else if (f.type === 'pipeline') continue;
     else out[f.name] = row[f.name] ?? '';
   }
@@ -142,12 +148,21 @@ export function toPayload(entity: CrmEntity, values: Record<string, unknown>, mo
         out.ownerId = v ? v : undefined;
         break;
       case 'tags':
-        out.tags = String(v ?? '')
-          .split(',')
+        out.tags = (Array.isArray(v) ? (v as string[]) : String(v ?? '').split(','))
           .map((t) => t.trim())
           .filter(Boolean);
         break;
+      case 'currency':
+        out.currency = v ? v : entity === 'leads' ? empty : undefined;
+        break;
+      case 'country':
+      case 'timezone':
+      case 'priority':
+        out[f.name] = v ? v : empty;
+        break;
       case 'number':
+      case 'money':
+      case 'percent':
         out[f.name] = v === '' || v === undefined || v === null ? (f.name === 'amount' ? undefined : empty) : Number(v);
         break;
       case 'pipeline':

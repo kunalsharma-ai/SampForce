@@ -9,6 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
+import { UploadZone } from '@/components/forms/upload-zone';
 import { useCustomFields } from '@/lib/crm';
 
 const MAX_BYTES = 2_000_000;
@@ -25,6 +26,7 @@ export function ImportWizard() {
   const initial = useSearchParams().get('entity');
   const [entity, setEntity] = useState<ImportEntity>(initial === 'contacts' || initial === 'companies' ? initial : 'leads');
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileSize, setFileSize] = useState(0);
   const [csv, setCsv] = useState('');
   const [fileError, setFileError] = useState<string | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -65,6 +67,7 @@ export function ImportWizard() {
     }
     const text = await file.text();
     setFileName(file.name);
+    setFileSize(file.size);
     setCsv(text);
     autoMap(parseCsv(text)[0] ?? [], entity);
   }
@@ -110,14 +113,22 @@ export function ImportWizard() {
               <option value="companies">Companies</option>
             </Select>
           </Field>
-          <Field id="import-file" label="CSV file" error={fileError ?? undefined} hint={fileName ?? 'The first row must contain column names'}>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium"
-              onChange={(e) => void onFile(e.target.files?.[0])}
+          <div className="space-y-1 sm:col-span-2">
+            <p className="text-sm font-medium">CSV file</p>
+            <UploadZone
+              label="Choose a CSV file"
+              accept={['.csv', 'text/csv']}
+              maxBytes={MAX_BYTES}
+              hint="CSV up to 2 MB. The first row must contain column names."
+              file={fileName && !fileError ? { name: fileName, size: fileSize } : null}
+              onFile={(f) => void onFile(f)}
             />
-          </Field>
+            {fileError && (
+              <p role="alert" className="text-xs text-critical">
+                {fileError}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

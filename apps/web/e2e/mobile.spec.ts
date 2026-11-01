@@ -69,3 +69,16 @@ test('on a phone the bid studio stacks, with the preview behind a toggle', async
   await expect(preview.locator('article')).toHaveAttribute('data-template', 'modern-blue');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
+
+test('on a phone the record form pickers fit the screen and still work', async ({ page }) => {
+  await signUp(page, 'Phone Forms');
+  await page.goto('/app/leads');
+  await page.getByRole('button', { name: 'New lead' }).click();
+  const dialog = page.getByRole('dialog');
+  const country = dialog.getByRole('combobox', { name: 'Country' });
+  await country.fill('india');
+  await dialog.getByRole('option', { name: /^India/ }).click();
+  await expect(country).toHaveValue('India');
+  await dialog.getByLabel('Phone', { exact: true }).fill('98765 43210');
+  expect(await dialog.evaluate((d) => d.scrollWidth <= d.clientWidth + 1)).toBe(true);
+});

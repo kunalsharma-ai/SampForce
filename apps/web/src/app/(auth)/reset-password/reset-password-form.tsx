@@ -1,11 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Field, Input } from '@dealflow/ui';
+import { Button, Input } from '@dealflow/ui';
 import { passwordSchema } from '@dealflow/types';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { FloatingField } from '@/components/forms/floating-field';
 import { z } from 'zod';
 import { api, ApiError } from '@/lib/api';
 
@@ -75,12 +76,12 @@ export function ResetPasswordForm() {
         </div>
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <Field id="password" label="New password" error={form.formState.errors.password?.message}>
+          <FloatingField id="password" label="New password" error={form.formState.errors.password?.message}>
             <Input type="password" autoComplete="new-password" {...form.register('password')} />
-          </Field>
-          <Field id="confirm" label="Type it again" error={form.formState.errors.confirm?.message}>
+          </FloatingField>
+          <FloatingField id="confirm" label="Type it again" error={form.formState.errors.confirm?.message}>
             <Input type="password" autoComplete="new-password" {...form.register('confirm')} />
-          </Field>
+          </FloatingField>
           {error && (
             <div role="alert" className="space-y-1 rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
               <p>{error}</p>
