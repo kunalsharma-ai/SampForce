@@ -48,6 +48,7 @@ import { HunterClient } from '../finder/hunter';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim } from '../worker/queue';
 import { SequencesService } from '../sequences/sequences.service';
+import { currentCheck, PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from '../operator/provider-checks';
 import { ApolloClient, ProviderError } from './apollo';
 import { sampleEmail, sampleSearch } from './sample-provider';
 
@@ -609,14 +610,17 @@ export class ProspectsService {
     );
   }
 
-  private providers(s: { apolloLiveAt: Date | null; hunterLiveAt: Date | null } | null): ProspectProviderStatus {
+  private providers(s: { apolloLiveAt: Date | null; hunterLiveAt: Date | null } | null, apolloCheck: StoredCheck | null = null): ProspectProviderStatus {
     const mode = (configured: boolean, liveAt: Date | null | undefined) => (!configured ? 'mock' : liveAt ? 'live' : 'pending') as 'mock' | 'live' | 'pending';
-    const a = mode(this.apollo.configured, s?.apolloLiveAt);
+    // A successful people search from the operator console's provider check proves the same call works here too.
+    const checked = apolloCheck?.ok ? new Date(apolloCheck.at) : null;
+    const apolloLiveAt = [s?.apolloLiveAt, checked].filter((d): d is Date => !!d).sort((x, y) => y.getTime() - x.getTime())[0] ?? null;
+    const a = mode(this.apollo.configured, apolloLiveAt);
     const h = mode(this.hunter.configured, s?.hunterLiveAt);
     return {
       apollo: {
         mode: a,
-        detail: a === 'mock' ? 'Mock Mode: no APOLLO_API_KEY is set, so searches return labelled sample people on .example domains. They cannot be added to the CRM, enrolled or exported.' : a === 'pending' ? 'Pending Configuration: a key is set but no Apollo call has succeeded in this workspace yet.' : `Connected: last successful call ${s!.apolloLiveAt!.toISOString().slice(0, 10)}.`,
+        detail: a === 'mock' ? 'Mock Mode: no APOLLO_API_KEY is set, so searches return labelled sample people on .example domains. They cannot be added to the CRM, enrolled or exported.' : a === 'pending' ? 'Pending Configuration: a key is set but no Apollo call has succeeded in this workspace yet.' : `Connected: last successful call ${apolloLiveAt!.toISOString().slice(0, 10)}.`,
       },
       hunter: {
         mode: h === 'mock' ? 'pending' : h,
@@ -636,7 +640,7 @@ export class ProspectsService {
         const byUser = new Map(used.map((u) => [u.userId, u._sum.units ?? 0]));
         members = m.map((x) => ({ id: x.userId, name: x.user.name, used: byUser.get(x.userId) ?? 0, limit: this.limitFor(s, x.userId) }));
       }
-      return { dailyLimit: s?.dailyLimit ?? this.env.PROSPECT_DAILY_LIMIT, userLimits: (s?.userLimits ?? {}) as Record<string, number>, providers: this.providers(s), members };
+      return { dailyLimit: s?.dailyLimit ?? this.env.PROSPECT_DAILY_LIMIT, userLimits: (s?.userLimits ?? {}) as Record<string, number>, providers: this.providers(s, currentCheck(readProviderCheck((await tx.platformSetting.findUnique({ where: { key: `${PROVIDER_CHECK_PREFIX}apollo` } }))?.value), this.env.APOLLO_API_KEY)), members };
     });
   }
 

@@ -23,8 +23,16 @@ export class HunterClient {
   private async get<T>(path: string, params: Record<string, string>): Promise<T> {
     const q = new URLSearchParams({ ...params, api_key: this.env.HUNTER_API_KEY! });
     const res = await fetch(`${this.env.HUNTER_API_BASE_URL}${path}?${q}`, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new Error(`Hunter answered ${res.status}`);
+    if (res.status === 401 || res.status === 403) throw new Error(`Hunter rejected the API key (${res.status}). Check HUNTER_API_KEY.`);
+    if (!res.ok) throw new Error(`Hunter answered ${res.status}.`);
     return ((await res.json()) as { data: T }).data;
+  }
+
+  /** Hunter's free account call (GET /account), to prove the key works. Uses no searches or verifications. */
+  async check(): Promise<string> {
+    const a = await this.get<{ plan_name?: string; requests?: { verifications?: { used?: number; available?: number } } }>('/account', {});
+    const v = a.requests?.verifications;
+    return [`Key accepted${a.plan_name ? ` (${a.plan_name} plan)` : ''}.`, v?.available !== undefined ? `Verifications this month: ${v.used ?? 0} of ${v.available}.` : ''].filter(Boolean).join(' ');
   }
 
   /** People Hunter knows at a domain, or the company's domain when only its name is known. */

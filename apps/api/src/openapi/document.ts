@@ -158,6 +158,7 @@ import {
   portalResetSchema,
   portalSettingsSchema,
   portalUserUpdateSchema,
+  PROVIDER_CHECK_KEYS,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -643,6 +644,11 @@ export function buildOpenApiDocument(): object {
   }
   op('get', '/settings', 'deployment settings: payment instructions on offline invoices and where they come from');
   op('post', '/settings/payment-instructions', 'set the bank details shown on open offline invoices; empty falls back to OFFLINE_PAYMENT_INSTRUCTIONS (ADMIN)', paymentInstructionsSchema);
+  op('get', '/providers', 'provider keys this deployment has (set or missing, never values), the last live check and what workspaces show');
+  r.registerPath({ method: 'post', path: '/operator/providers/{key}/check', tags: ['Operator'],
+    summary: 'Operator console: run a no-cost live check for apollo, hunter or deepgram and store the result; logged (ADMIN, 10 a minute)',
+    request: { params: z.object({ key: z.enum(PROVIDER_CHECK_KEYS) }) },
+    responses: { 200: ok('Provider row with the new check'), 400: json(error, 'Key not set, or not a checkable provider'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled') } });
   op('get', '/audit-log', 'platform audit log');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.

@@ -73,6 +73,9 @@ export async function startFinderFixture(port = 0): Promise<FinderFixture> {
     if (u.pathname.startsWith('/hunter/')) {
       hunterCalls.push(`${u.pathname}?${[...u.searchParams.keys()].sort().join(',')}`);
       if (u.searchParams.get('api_key') !== 'hunter-test-key') return send(401, JSON.stringify({ errors: [{ id: 'authentication_failed' }] }), 'application/json');
+      if (u.pathname === '/hunter/account') {
+        return send(200, JSON.stringify({ data: { email: 'ops@example.test', plan_name: 'Free', requests: { searches: { used: 0, available: 25 }, verifications: { used: 3, available: 50 } } } }), 'application/json');
+      }
       if (u.pathname === '/hunter/domain-search') {
         const domain = u.searchParams.get('domain') ?? HUNTER_COMPANIES[(u.searchParams.get('company') ?? '').toLowerCase()] ?? null;
         return send(200, JSON.stringify({ data: { domain, emails: (domain && HUNTER_DOMAINS[domain]) || [] } }), 'application/json');
