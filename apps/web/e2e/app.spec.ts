@@ -28,7 +28,7 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
   await expect(page.getByTestId('kpi-automationSuccessRate')).toContainText('Not enough data yet');
   await expect(page.getByText('created the workspace')).toBeVisible();
   // Accessible table alternative to the chart.
-  await page.getByRole('button', { name: 'Show as table' }).click();
+  await page.getByRole('button', { name: 'Pipeline by stage: show as table' }).click();
   await expect(page.getByRole('rowheader', { name: 'Closed Won' })).toBeVisible();
 });
 

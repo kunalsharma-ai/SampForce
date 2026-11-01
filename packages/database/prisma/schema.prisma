@@ -104,6 +104,8 @@ model WorkspaceNavigation {
   recent        Json     @default("[]")
   moduleOrder   String[] @default([]) @map("module_order")
   hiddenModules String[] @default([]) @map("hidden_modules")
+  /// Command Center widgets, sizes and filters (dashboardLayoutSchema); null means the default layout.
+  dashboardLayout Json?  @map("dashboard_layout")
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
