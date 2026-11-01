@@ -62,8 +62,35 @@ model User {
   recoveryCodes      MfaRecoveryCode[]
   resetTokens        PasswordResetToken[]
   gamificationAwards GamificationAward[]
+  preferences        UserPreference?
+  savedThemes        UserSavedTheme[]
 
   @@map("users")
+}
+
+/// A person's own interface settings (theme, density, motion...). Follows the person across devices and workspaces.
+model UserPreference {
+  userId     String   @id @map("user_id") @db.Uuid
+  appearance Json
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+/// Named custom themes a person saved in the Theme Studio.
+model UserSavedTheme {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  settings  Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("user_saved_themes")
 }
 
 /// One-time password reset links. Only a SHA-256 hash of the token is stored; a link works once, for a short time.
@@ -152,6 +179,8 @@ model Tenant {
   requireMfa            Boolean           @default(false) @map("require_mfa")
   /// Mirrors sso_connections.enabled AND enforced, readable wherever the tenant row is (sign-in, switcher).
   ssoEnforced           Boolean           @default(false) @map("sso_enforced")
+  /// Workspace default appearance (theme engine settings) for members who have not picked their own.
+  defaultAppearance     Json?             @map("default_appearance")
   createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt             DateTime?         @map("deleted_at") @db.Timestamptz(3)

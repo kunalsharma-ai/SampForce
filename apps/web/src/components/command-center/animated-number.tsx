@@ -7,8 +7,8 @@ import { usePreferences } from '@/stores/preferences';
 /** Counts up to `value`. Renders the final value immediately when motion is reduced or off. */
 export function AnimatedNumber({ value, format }: { value: number; format: (n: number) => string }) {
   const systemReduced = useReducedMotion();
-  const pref = usePreferences((s) => s.motion);
-  const still = pref === 'off' || pref === 'reduced' || (pref === 'system' && systemReduced);
+  const pref = usePreferences((s) => s.appearance.motion);
+  const still = pref === 'off' || pref === 'minimal' || (pref === 'balanced' && !!systemReduced);
   const [display, setDisplay] = useState(still ? value : 0);
   const from = useRef(0);
 

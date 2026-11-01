@@ -73,14 +73,14 @@ function MfaPolicy({ s }: { s: SecuritySettings }) {
       <CardContent className="space-y-3 text-sm">
         <p>
           {s.membersWithoutMfa === 0 ? 'Every active member has it on.' : `${s.membersWithoutMfa} active member${s.membersWithoutMfa === 1 ? ' has' : 's have'} not turned it on yet.`}{' '}
-          <Link href="/app/team" className="text-primary hover:underline">
+          <Link href="/app/team" className="text-primary underline underline-offset-2">
             See members
           </Link>
         </p>
         {!s.callerHasMfa && !s.requireMfa && (
           <p className="text-muted-foreground">
             Turn it on for your own account first, on{' '}
-            <Link href="/app/account/security" className="text-primary hover:underline">
+            <Link href="/app/account/security" className="text-primary underline underline-offset-2">
               Account security
             </Link>
             .

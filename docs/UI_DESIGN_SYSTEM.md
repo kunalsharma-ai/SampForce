@@ -10,25 +10,45 @@
    motion the user controls.
 4. **Explain AI.** Every recommendation shows its evidence and the approval it needs.
 
-## 2. Tokens (`packages/ui/src/tokens.css`)
+## 2. Tokens and themes (`packages/ui/src/tokens.css`, `packages/types/src/appearance.ts`)
 
-| Token | Dark (signature) | Light | Use |
-|---|---|---|---|
-| background | Midnight Navy `#070B1A` | `hsl(225 40% 98%)` | Page |
-| surface | Deep Space Blue `#10172D` | white | Cards, sidebar |
-| primary | Electric Cyan `#00D9FF` | `hsl(191 100% 26%)` | Primary actions, focus ring, active nav |
-| accent | Royal Violet `#8057FF` | `hsl(254 100% 60%)` | AI surfaces (Copilot, agents) |
-| success | Emerald `#00D49A` | `hsl(163 100% 24%)` | Positive states |
-| warning | Amber `#FFB547` | `hsl(32 100% 30%)` | Demo banner, attention |
-| critical | Coral Red `#FF6178` | `hsl(351 75% 42%)` | Errors, destructive |
-| foreground | Frost White `#F5F8FF` | `hsl(228 45% 10%)` | Text |
-| muted-foreground | Cool Slate `#9DAAC8` | `hsl(225 20% 36%)` | Secondary text |
+Colours are CSS variables holding HSL triplets, consumed through the Tailwind preset (`bg-surface`, `text-primary`,
+`bg-secondary`, `text-info`...). The theme engine (ADR 0040) writes them on `<html>` from the chosen theme:
 
-Light-mode values were darkened until every text/background pair passes WCAG AA 4.5:1 (verified by the
-axe suite). Tenants can override `primary` with a brand colour (Settings → Workspace); the shell converts it
-to the token format at runtime. Phase 6 adds a contrast check on save.
+| Theme | Character |
+|---|---|
+| DealFlow Signature (default) | Midnight navy, electric cyan, royal violet |
+| Obsidian Intelligence | Black, charcoal, electric violet |
+| Midnight Sapphire | Navy, royal blue, cyan |
+| Aurora Enterprise | Deep indigo, teal, violet |
+| Arctic Professional | White, slate, blue |
+| Pearl Executive | Pearl white, champagne, graphite |
+| Emerald Command | Forest green, mint, charcoal |
+| Titanium Silver | Metallic grey, ice blue |
+| Solar Horizon | Warm ivory, amber, deep navy |
+| Rose Quartz | Soft rose, plum, neutral grey |
+| Cyber Graphite | Graphite, electric cyan |
+| Oceanic Intelligence | Marine blue, turquoise |
+| Custom Brand Studio | The person's own primary, secondary, accent and backgrounds |
 
-Typography: Inter / system UI stack, tabular numerals for metrics. Radius 12px. Spacing on a 4px grid.
+Every theme has light and dark variants. Derived tokens: `background`, `surface`, `surface-raised`, `muted`,
+`border`, `input`, `ring`, `foreground`, `muted-foreground`, `primary`/`secondary`/`accent` with `-foreground`,
+`success`, `warning`, `critical`, `info`, `popover`, `chart-1`..`chart-6`. Text colours are pushed to 4.5:1 against
+every surface and their own tint, body text to 7:1, charts to 3:1 (unit-tested for every theme and chart palette).
+
+Layout variables: `--radius`, `--font-scale` (root font size), `--control-h` / `--control-h-sm` (`h-control`,
+`h-control-sm`; small floors at 24 px), `--card-pad` (`p-card`), `--cell-py` (table rows), `--layout-gap`
+(`gap-layout`), `--shadow-strength`, `--glass`, `--icon-stroke`. Data attributes on `<html>`: `data-theme`,
+`data-motion`, `data-density`, `data-card`, `data-sidebar`, `data-background`.
+
+Density: Comfortable 44 px controls, Balanced 40 px (default), Compact 36 px, Ultra compact 32 px.
+Glass (`.df-glass`) is only for overlays and the sidebar; cards (`.df-card`) are always opaque.
+
+Settings are saved to the person's account (`GET /me/preferences`, `PUT /me/preferences/appearance`), named themes
+at `/me/themes`, and admins can set a workspace default at `PUT /tenants/current/appearance`. The Theme Studio is
+at Settings → Theme Studio (`/app/settings/appearance`); the top bar palette button switches mode and theme.
+
+Typography: Inter / system UI stack, tabular numerals for metrics. Spacing on a 4px grid.
 
 ## 3. Layout
 
@@ -43,13 +63,13 @@ Typography: Inter / system UI stack, tabular numerals for metrics. Radius 12px. 
 
 | Setting | Behaviour |
 |---|---|
-| System (default) | Follows `prefers-reduced-motion` |
-| Full | Page transitions, staggered card entrance, animated KPI counters, spring sidebar indicator, chart animation, ambient drift |
-| Reduced | Final values render immediately; no drift or counters; essential fades only |
+| Full | Page transitions, staggered entrances, animated KPI counters, chart animation, ambient drift; ignores the OS setting |
+| Balanced (default) | Interface transitions and counters, no ambient drift; follows `prefers-reduced-motion` |
+| Minimal | Final values render immediately; keyframe animations stop; essential fades only |
 | Off | All CSS transitions/animations neutralised; Motion configured with `reducedMotion="always"` |
-| Low-power (toggle) | Removes ambient background; Phase 7 swaps 3D scenes for 2D |
+| Low-power (toggle) | Removes the ambient background and swaps 3D scenes for 2D |
 
-Preferences persist per device today; Phase 2 stores them on the user profile so they follow the user.
+Motion and every other appearance setting are saved to the person's account and follow them across devices.
 
 ## 5. Accessibility (target WCAG 2.2 AA)
 
@@ -71,7 +91,8 @@ Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each la
 |---|---|---|
 | Sign up / sign in | **Built** | Shared Zod validation, server errors mapped to fields |
 | Command Center | **Built** | 15 KPIs from the API with formula tooltips; pipeline chart/table; audited activity stream; roadmap card |
-| Settings | **Built** | Workspace (role-gated), appearance and motion |
+| Settings | **Built** | Workspace (role-gated), quick appearance, motion and density |
+| Theme Studio | **Built** | 13 themes, colour and layout controls, live preview, readability check, saved themes, workspace default |
 | Team Management | **Built** | Members, inline role change (role-gated), role catalogue |
 | Administration | **Built** | Paginated audit log |
 | Billing | **Built (read-only)** | Current plan; proposed rate card clearly labelled |

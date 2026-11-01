@@ -4,7 +4,8 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skel
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
-import { hexToHslTriplet, useSession, useSignOut } from '@/lib/session';
+import { useAppearanceSync } from '@/lib/appearance-sync';
+import { useSession, useSignOut } from '@/lib/session';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { Sidebar } from './sidebar';
@@ -13,10 +14,11 @@ import { Topbar } from './topbar';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { data, isPending, error } = useSession();
   const pathname = usePathname();
-  const brand = data?.tenant.brandColor ? hexToHslTriplet(data.tenant.brandColor) : null;
+  // The workspace brand colour goes through the theme engine, which keeps it readable in both modes.
+  useAppearanceSync(!!data, data?.tenant.brandColor ?? null);
 
   return (
-    <div className="flex min-h-screen" style={brand ? ({ '--primary': brand, '--ring': brand } as React.CSSProperties) : undefined}>
+    <div className="flex min-h-screen">
       <a href="#main" className="sr-only z-50 rounded-md bg-primary px-3 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
         Skip to content
       </a>

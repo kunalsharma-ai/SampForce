@@ -179,6 +179,8 @@ import {
   smsConsentSchema,
   smsSendSchema,
   twilioConnectSchema,
+  appearanceSchema,
+  savedThemeInputSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -813,6 +815,16 @@ export function buildOpenApiDocument(): object {
   scim('put', '/Users/{id}', 'Replace a user');
   scim('patch', '/Users/{id}', 'Update a user (active, name, emails, externalId)');
   scim('delete', '/Users/{id}', 'Remove a user from the workspace');
+
+  // Theme engine (ADR 0040): the signed-in person's own settings; no workspace permission needed.
+  action('get', '/me/preferences', 'Appearance', 'Effective appearance (own, else workspace default, else DealFlow default) and its source');
+  action('put', '/me/preferences/appearance', 'Appearance', 'Save the person’s appearance settings', appearanceSchema);
+  action('delete', '/me/preferences/appearance', 'Appearance', 'Forget the person’s settings and fall back to the workspace default');
+  action('get', '/me/themes', 'Appearance', 'Named themes the person saved');
+  action('post', '/me/themes', 'Appearance', 'Save a named theme (updates one with the same name; at most 20, else LIMIT_REACHED)', savedThemeInputSchema);
+  action('delete', '/me/themes/{id}', 'Appearance', 'Delete a saved theme');
+  action('put', '/tenants/current/appearance', 'Appearance', 'Set the workspace default appearance (tenant:manage, audited)', appearanceSchema);
+  action('delete', '/tenants/current/appearance', 'Appearance', 'Remove the workspace default appearance (tenant:manage, audited)');
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: '3.1.0',

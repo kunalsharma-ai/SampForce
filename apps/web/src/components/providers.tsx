@@ -3,22 +3,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@dealflow/ui';
 import { MotionConfig } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/lib/api';
+import { applyPaint, computePaint, isDarkMode, PAINT_CACHE_KEY } from '@/lib/appearance-engine';
 import { usePreferences } from '@/stores/preferences';
 
-function usePreferenceAttributes() {
-  const { theme, motion, lowPower } = usePreferences();
+/** Paints the theme engine's tokens on <html> whenever the settings (or the OS colour scheme) change. */
+function useAppearancePaint() {
+  const appearance = usePreferences((s) => s.appearance);
+  const brandColor = usePreferences((s) => s.brandColor);
+  const paint = useMemo(() => computePaint(appearance, brandColor), [appearance, brandColor]);
   useEffect(() => {
     const root = document.documentElement;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => root.classList.toggle('dark', theme === 'dark' || (theme === 'system' && media.matches));
+    const apply = () => applyPaint(root, paint, isDarkMode(paint.mode, media.matches));
     apply();
+    try {
+      localStorage.setItem(PAINT_CACHE_KEY, JSON.stringify(paint));
+    } catch {
+      // Storage full or blocked: the page still paints, only the next first paint may flash.
+    }
     media.addEventListener('change', apply);
-    root.dataset.motion = motion;
-    root.dataset.lowPower = String(lowPower);
     return () => media.removeEventListener('change', apply);
-  }, [theme, motion, lowPower]);
+  }, [paint]);
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -34,9 +41,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
-  usePreferenceAttributes();
-  const motion = usePreferences((s) => s.motion);
-  const reducedMotion = motion === 'full' ? 'never' : motion === 'system' ? 'user' : 'always';
+  useAppearancePaint();
+  const motion = usePreferences((s) => s.appearance.motion);
+  // Full ignores the OS setting; Balanced follows it; Minimal and Off keep only essential fades (CSS handles Off).
+  const reducedMotion = motion === 'full' ? 'never' : motion === 'balanced' ? 'user' : 'always';
 
   return (
     <QueryClientProvider client={client}>
