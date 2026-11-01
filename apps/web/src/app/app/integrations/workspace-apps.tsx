@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
-import type { AppEventRow, AppStatus, PaymentsSettings, SlackChannel, TeamsSettings } from '@dealflow/types';
+import type { AppEventRow, AppStatus, PaymentsSettings, SlackChannel, TeamsSettings, WhatsappSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,7 +23,7 @@ const STATE: Record<AppStatus['state'], { label: string; tone: 'neutral' | 'succ
   error: { label: 'Needs reconnecting', tone: 'critical' },
 };
 
-/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams, Zoom, DocuSign and card payments. */
+/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams, Zoom, DocuSign, card payments and WhatsApp. */
 export function WorkspaceApps() {
   const params = useSearchParams();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
@@ -41,7 +41,7 @@ export function WorkspaceApps() {
           {OUTCOME[error] ?? `The connection did not complete (${error}).`}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : a.key === 'whatsapp' ? <WhatsappCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
@@ -553,6 +553,149 @@ function PaymentsCard({ app }: { app: AppStatus }) {
           <div>
             <p className="mb-1 text-xs font-medium">Recent activity</p>
             <ul className="space-y-1 text-xs" aria-label="Recent card payment activity">
+              {events.data.slice(0, 5).map((e) => (
+                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
+                  {relativeTime(e.createdAt)}: {e.summary}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** WhatsApp Business through the workspace's own Cloud API number in Meta. */
+function WhatsappCard({ app }: { app: AppStatus }) {
+  const qc = useQueryClient();
+  const canManage = useCan('integrations:manage');
+  const c = app.connection;
+  const settings = c?.settings as unknown as WhatsappSettings | undefined;
+  const [phoneNumberId, setPhoneNumberId] = useState('');
+  const [wabaId, setWabaId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [editing, setEditing] = useState(false);
+  const s = app.state === 'error' ? { label: 'Needs new credentials', tone: 'critical' as const } : STATE[app.state];
+  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'whatsapp', 'events'], queryFn: () => api<AppEventRow[]>('/apps/whatsapp/events') });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['apps'] });
+  const save = useMutation({
+    mutationFn: () => api<AppStatus>('/apps/whatsapp/keys', { method: 'POST', json: { phoneNumberId, wabaId, accessToken, appSecret } }),
+    onSuccess: () => {
+      setAccessToken('');
+      setAppSecret('');
+      setEditing(false);
+      return refresh();
+    },
+  });
+  const disconnect = useMutation({ mutationFn: () => api('/apps/whatsapp', { method: 'DELETE' }), onSuccess: refresh });
+  const error = save.error ?? disconnect.error;
+  const showForm = canManage && (!c || editing || app.state === 'error');
+  const ready = phoneNumberId.trim() && wabaId.trim() && accessToken.trim() && appSecret.trim();
+
+  return (
+    <Card role="region" aria-labelledby="app-whatsapp">
+      <CardHeader className="pb-2">
+        <CardTitle id="app-whatsapp" className="flex flex-wrap items-center gap-2 text-sm">
+          {app.name}
+          <Badge tone={s.tone}>{s.label}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">
+          {app.description} Messages are one to one: a template needs the contact’s recorded consent, free-form replies are allowed for 24 hours after they write, and a STOP reply withdraws consent. There is no bulk sending.
+        </p>
+        {app.warnings.map((w) => (
+          <p key={w} className="text-xs text-warning">
+            {w}
+          </p>
+        ))}
+        {c && settings && (
+          <div className="space-y-2">
+            <p>
+              <strong>{settings.verifiedName}</strong> · {settings.displayPhoneNumber}
+              {settings.qualityRating && <span className="text-xs text-muted-foreground"> · quality {settings.qualityRating.toLowerCase()}</span>}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Credentials checked {relativeTime(c.connectedAt)}
+              {c.connectedBy ? ` by ${c.connectedBy}` : ''}. {settings.lastWebhookAt ? `Webhook confirmed ${relativeTime(settings.lastWebhookAt)}.` : 'No webhook received yet.'}
+            </p>
+            {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-callback-url">Callback URL</Label>
+                <Input id="wa-callback-url" readOnly value={settings.webhookUrl} onFocus={(e) => e.currentTarget.select()} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-verify-token">Verify token</Label>
+                <Input id="wa-verify-token" readOnly value={settings.verifyToken} onFocus={(e) => e.currentTarget.select()} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">In your Meta app, open WhatsApp, Configuration, enter both, and subscribe to the <code>messages</code> field.</p>
+          </div>
+        )}
+        {showForm && (
+          <form
+            className="space-y-2 rounded-md border border-dashed p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate();
+            }}
+          >
+            <p className="text-xs text-muted-foreground">
+              From WhatsApp Manager and your Meta app: the phone number id, the WhatsApp Business Account id, a System User access token with <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code>, and the App Secret (used to check webhook signatures). DealFlow reads the number to check them, sends nothing, then stores the token and secret encrypted.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-phone-id">Phone number id</Label>
+                <Input id="wa-phone-id" inputMode="numeric" autoComplete="off" value={phoneNumberId} onChange={(e) => setPhoneNumberId(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-waba-id">WhatsApp Business Account id</Label>
+                <Input id="wa-waba-id" inputMode="numeric" autoComplete="off" value={wabaId} onChange={(e) => setWabaId(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-token">Access token</Label>
+                <Input id="wa-token" type="password" autoComplete="off" placeholder="EA…" value={accessToken} onChange={(e) => setAccessToken(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wa-app-secret">App Secret</Label>
+                <Input id="wa-app-secret" type="password" autoComplete="off" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={save.isPending || !ready}>
+                {save.isPending ? 'Checking with WhatsApp…' : c ? 'Replace credentials' : 'Check and save'}
+              </Button>
+              {c && editing && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        )}
+        {canManage && c && !showForm && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Replace credentials
+            </Button>
+            <Button size="sm" variant="ghost" disabled={disconnect.isPending} onClick={() => window.confirm('Disconnect WhatsApp? Sending stops and replies will no longer arrive here. Message history and consent records stay on each contact.') && disconnect.mutate()}>
+              Disconnect
+            </Button>
+          </div>
+        )}
+        {!canManage && <p className="text-xs text-muted-foreground">Workspace admins connect WhatsApp Business.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-critical">
+            {error.message}
+          </p>
+        )}
+        {events.data && events.data.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium">Recent activity</p>
+            <ul className="space-y-1 text-xs" aria-label="Recent WhatsApp activity">
               {events.data.slice(0, 5).map((e) => (
                 <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
                   {relativeTime(e.createdAt)}: {e.summary}

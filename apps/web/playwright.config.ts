@@ -80,6 +80,14 @@ export default defineConfig({
       env: { CARD_PAYMENTS_FIXTURE_PORT: '4900' },
     },
     {
+      // Local stand-in for Meta's WhatsApp Cloud API (Graph API).
+      command: 'npx tsx test/fixtures/whatsapp-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4950/health',
+      reuseExistingServer: !process.env.CI,
+      env: { WHATSAPP_FIXTURE_PORT: '4950' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',
@@ -133,6 +141,8 @@ export default defineConfig({
         // Card payments use each workspace's own keys; these send its Stripe and Razorpay calls to the stand-in above.
         STRIPE_API_BASE_URL: 'http://127.0.0.1:4900',
         RAZORPAY_API_BASE_URL: 'http://127.0.0.1:4900',
+        // WhatsApp uses each workspace's own Meta credentials; this sends its Graph API calls to the stand-in above.
+        WHATSAPP_API_BASE_URL: 'http://127.0.0.1:4950',
       },
     },
     {

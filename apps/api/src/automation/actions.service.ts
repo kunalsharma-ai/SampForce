@@ -30,6 +30,7 @@ import { CommunicationService } from '../integrations/communication.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { loadContacts, loadLeads } from '../sequences/people';
 import { SequencesService } from '../sequences/sequences.service';
+import { WhatsappService } from '../apps/whatsapp.service';
 import { describeAction, type EvalContext, nextRoundRobin } from './engine';
 import { relatedLinks, renderTemplate } from './records';
 
@@ -72,6 +73,7 @@ export class WorkflowActions {
     private readonly communication: CommunicationService,
     private readonly audit: AuditService,
     private readonly apps: AppsService,
+    private readonly whatsapp: WhatsappService,
     private readonly moduleRef: ModuleRef,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
@@ -227,6 +229,18 @@ export class WorkflowActions {
         try {
           const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
           return { app: action.app, channel: r.channel, ts: r.ts };
+        } catch (e) {
+          if (e instanceof AppError) throw new ActionError(e.message);
+          throw e;
+        }
+      }
+      case 'send_whatsapp': {
+        // Reached only after a person approved this exact step; consent and the template are checked again here.
+        need('activities:write');
+        if (entity !== 'contact' || !id) throw new ActionError('Sending on WhatsApp needs a contact (WhatsApp consent is recorded on contacts).');
+        try {
+          const m = await this.whatsapp.send(actor, { kind: 'template', contactId: id, templateName: action.templateName, language: action.language, params: action.params.map((p) => text(p).slice(0, 1024)), confirm: true }, meta, 'workflow');
+          return { whatsappMessageId: m.id, template: action.templateName };
         } catch (e) {
           if (e instanceof AppError) throw new ActionError(e.message);
           throw e;

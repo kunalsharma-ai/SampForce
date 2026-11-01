@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments'] as const;
+export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
@@ -221,3 +221,101 @@ export interface QuotePaymentRow {
   paidAt: string | null;
   createdAt: string;
 }
+
+// ───── WhatsApp Business (the workspace's own WhatsApp Business Platform Cloud API number) ─────
+
+/** Saved with the connection (the access token and app secret are sealed separately and never returned). */
+export interface WhatsappSettings {
+  phoneNumberId: string;
+  wabaId: string;
+  displayPhoneNumber: string;
+  verifiedName: string;
+  qualityRating: string | null;
+  /** Callback URL and verify token to enter in the Meta app's WhatsApp webhook configuration. */
+  webhookUrl: string;
+  verifyToken: string;
+  /** When the first signed webhook arrived; delivery status and replies arrive only through webhooks. */
+  lastWebhookAt: string | null;
+}
+
+const graphId = z.string().trim().regex(/^\d{5,25}$/, 'Paste the numeric id from WhatsApp Manager');
+
+export const whatsappConnectSchema = z.object({
+  phoneNumberId: graphId,
+  wabaId: graphId,
+  /** A System User access token with whatsapp_business_messaging and whatsapp_business_management. */
+  accessToken: z.string().trim().regex(/^EA[A-Za-z0-9]{20,1000}$/, 'Paste a Meta access token (it starts with EA)'),
+  /** The Meta app's App Secret, used to check the X-Hub-Signature-256 header on webhooks. */
+  appSecret: z.string().trim().regex(/^[a-f0-9]{32}$/, 'Paste the 32-character App Secret from the Meta app settings'),
+});
+export type WhatsappConnectInput = z.infer<typeof whatsappConnectSchema>;
+
+export interface WhatsappTemplate {
+  name: string;
+  language: string;
+  category: string;
+  /** The body text with {{1}}, {{2}}… placeholders. */
+  body: string;
+  /** How many body placeholders the template has. */
+  params: number;
+}
+
+export type WhatsappMessageStatus = 'accepted' | 'sent' | 'delivered' | 'read' | 'failed' | 'received';
+
+export interface WhatsappMessageRow {
+  id: string;
+  direction: 'in' | 'out';
+  kind: 'template' | 'text' | 'other';
+  body: string;
+  templateName: string | null;
+  status: WhatsappMessageStatus;
+  error: string | null;
+  sentBy: string | null;
+  source: 'manual' | 'workflow' | 'webhook';
+  createdAt: string;
+  statusAt: string | null;
+}
+
+export interface WhatsappConsentRow {
+  phone: string;
+  source: string;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+/** Everything the contact page needs for the WhatsApp panel. */
+export interface WhatsappThread {
+  /** The contact's number in international digits, or null with the reason it cannot be used. */
+  phone: string | null;
+  phoneProblem: string | null;
+  consent: WhatsappConsentRow | null;
+  /** Free-form replies are allowed until this time (24 hours after their last message); otherwise only templates. */
+  windowOpenUntil: string | null;
+  messages: WhatsappMessageRow[];
+}
+
+export const whatsappConsentSchema = z.object({
+  contactId: z.string().uuid(),
+  /** How the person agreed, for the record (for example "Ticked the WhatsApp box on the demo form, 3 Nov"). */
+  source: z.string().trim().min(5, 'Say how they agreed').max(200),
+  confirm: z.literal(true, { errorMap: () => ({ message: 'Confirm that this person agreed to receive WhatsApp messages' }) }),
+});
+
+export const whatsappSendSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('template'),
+    contactId: z.string().uuid(),
+    templateName: z.string().trim().regex(/^[a-z0-9_]{1,512}$/),
+    language: z.string().trim().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/),
+    params: z.array(z.string().trim().min(1).max(1024)).max(20).default([]),
+    /** Sending messages the customer; the person confirms it explicitly. */
+    confirm: z.literal(true, { errorMap: () => ({ message: 'Confirm that the message should be sent' }) }),
+  }),
+  z.object({
+    kind: z.literal('text'),
+    contactId: z.string().uuid(),
+    text: z.string().trim().min(1).max(4096),
+    confirm: z.literal(true, { errorMap: () => ({ message: 'Confirm that the message should be sent' }) }),
+  }),
+]);
+export type WhatsappSendInput = z.infer<typeof whatsappSendSchema>;
