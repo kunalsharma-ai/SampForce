@@ -37,6 +37,7 @@ import {
 } from '@dealflow/types';
 import { Prisma, type Prospect, type TenantTx } from '@dealflow/database';
 import { Workbook } from 'exceljs';
+import { assertSafeZip, UnsafeZipError } from './zip-guard';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -391,7 +392,8 @@ export class ProspectsService {
     let table: string[][];
     try {
       table = kind === 'csv' ? parseCsv(file.data.toString('utf8')) : await readXlsx(file.data);
-    } catch {
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
       throw new BadRequestException({ code: 'UNREADABLE_FILE', message: 'That file could not be read. Check it opens in a spreadsheet program.' });
     }
     table = table.filter((r) => r.some((c) => c.trim() !== ''));
@@ -864,6 +866,12 @@ export class ProspectsService {
 }
 
 async function readXlsx(data: Buffer): Promise<string[][]> {
+  try {
+    assertSafeZip(data);
+  } catch (e) {
+    if (e instanceof UnsafeZipError) throw new BadRequestException({ code: 'INVALID_FILE', message: `That spreadsheet could not be read safely (${e.message}). Save it again as .xlsx or export it as CSV.` });
+    throw e;
+  }
   const wb = new Workbook();
   await wb.xlsx.load(data as unknown as ArrayBuffer);
   const ws = wb.worksheets[0];
