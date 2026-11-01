@@ -64,6 +64,14 @@ export default defineConfig({
       env: { ZOOM_FIXTURE_PORT: '4700' },
     },
     {
+      // Local stand-in for DocuSign OAuth and the eSignature REST API.
+      command: 'npx tsx test/fixtures/docusign-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4800/health',
+      reuseExistingServer: !process.env.CI,
+      env: { DOCUSIGN_FIXTURE_PORT: '4800' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',
@@ -109,6 +117,11 @@ export default defineConfig({
         ZOOM_WEBHOOK_SECRET_TOKEN: 'zoom-webhook-secret',
         ZOOM_AUTH_BASE_URL: 'http://127.0.0.1:4700',
         ZOOM_API_BASE_URL: 'http://127.0.0.1:4700/v2',
+        // Not real DocuSign credentials: DocuSign calls go to the stand-in above.
+        DOCUSIGN_INTEGRATION_KEY: 'ds-integration-key',
+        DOCUSIGN_SECRET_KEY: 'ds-secret-key',
+        DOCUSIGN_CONNECT_HMAC_KEY: 'ds-connect-hmac-key',
+        DOCUSIGN_AUTH_BASE_URL: 'http://127.0.0.1:4800',
       },
     },
     {

@@ -17,7 +17,6 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
   { category: 'Payments & documents', items: [
     { name: 'Stripe (your own account)', phase: 'Later phase', needs: 'Stripe account and webhook secret' },
     { name: 'Razorpay (your own account)', phase: 'Later phase', needs: 'Razorpay account' },
-    { name: 'DocuSign', phase: 'Later phase', needs: 'DocuSign developer account' },
   ] },
   { category: 'Automation & developer', items: [
     { name: 'Zapier / Make / n8n', phase: 'Later phase', needs: 'Partner app listing' },

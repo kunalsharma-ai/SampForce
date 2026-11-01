@@ -96,6 +96,12 @@ export const apiEnvSchema = z.object({
   ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
   ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
   ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
+  // DocuSign workspace app (Authorization Code Grant). The Connect HMAC key verifies envelope status events.
+  // Use https://account-d.docusign.com for the developer (demo) environment.
+  DOCUSIGN_INTEGRATION_KEY: z.string().optional().transform((v) => v || undefined),
+  DOCUSIGN_SECRET_KEY: z.string().optional().transform((v) => v || undefined),
+  DOCUSIGN_CONNECT_HMAC_KEY: z.string().optional().transform((v) => v || undefined),
+  DOCUSIGN_AUTH_BASE_URL: z.string().url().default('https://account.docusign.com'),
   /** Override provider endpoints (tests point these at a local fixture server). */
   GOOGLE_AUTH_BASE_URL: z.string().url().default('https://accounts.google.com'),
   GOOGLE_TOKEN_URL: z.string().url().default('https://oauth2.googleapis.com/token'),

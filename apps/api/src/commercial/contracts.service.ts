@@ -119,8 +119,7 @@ export class ContractsService {
     return this.prisma.run(auth, async (tx) => {
       const c = await this.find(tx, auth.tenantId, id);
       if (c.status !== 'DRAFT') throw new ConflictException({ code: 'INVALID_TRANSITION', message: 'Only a draft contract can be signed.' });
-      await tx.contract.update({ where: { id }, data: { status: 'ACTIVE', signedBy: input.signedBy, signedAt: new Date(input.signedAt), signatureMethod: input.method } });
-      if (c.renewedFromId) await tx.contract.updateMany({ where: { id: c.renewedFromId, status: { in: ['ACTIVE', 'EXPIRED'] } }, data: { status: 'RENEWED' } });
+      await applyContractSignature(tx, c, { signedBy: input.signedBy, signedAt: new Date(input.signedAt), method: input.method });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contract.signed', entityType: 'contract', entityId: id, metadata: input, meta });
       return (await this.rows(tx, [await this.find(tx, auth.tenantId, id)]))[0]!;
     });
@@ -209,6 +208,12 @@ export class ContractsService {
     const names = await ownerRefs(tx, rows.map((r) => r.ownerId));
     return rows.map((c) => toContractRow(c, names));
   }
+}
+
+/** Makes a draft contract active as signed; a renewal also closes the contract it renews. Used by manual signing and DocuSign. */
+export async function applyContractSignature(tx: TenantTx, c: { id: string; renewedFromId: string | null }, s: { signedBy: string; signedAt: Date; method: string }): Promise<void> {
+  await tx.contract.update({ where: { id: c.id }, data: { status: 'ACTIVE', signedBy: s.signedBy.slice(0, 200), signedAt: s.signedAt, signatureMethod: s.method } });
+  if (c.renewedFromId) await tx.contract.updateMany({ where: { id: c.renewedFromId, status: { in: ['ACTIVE', 'EXPIRED'] } }, data: { status: 'RENEWED' } });
 }
 
 export function toContractRow(c: ContractWith, names: Map<string, { id: string; name: string }>): ContractRow {

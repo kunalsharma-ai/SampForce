@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack', 'teams', 'zoom'] as const;
+export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
@@ -144,3 +144,36 @@ export const zoomMeetingListQuery = z.object({
   contactId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
 });
+
+// ───── DocuSign (contracts sent for e-signature) ─────
+
+export type EnvelopeStatus = 'sent' | 'delivered' | 'completed' | 'declined' | 'voided';
+
+export interface SignatureEnvelopeRow {
+  id: string;
+  contractId: string;
+  envelopeId: string;
+  status: EnvelopeStatus;
+  signerName: string;
+  signerEmail: string;
+  sentBy: string | null;
+  sentAt: string;
+  completedAt: string | null;
+  declinedReason: string | null;
+  voidedReason: string | null;
+  lastEventAt: string | null;
+}
+
+export const docusignSendSchema = z.object({
+  contractId: z.string().uuid(),
+  signerName: z.string().trim().min(1).max(100),
+  signerEmail: z.string().trim().toLowerCase().email().max(254),
+  emailSubject: z.string().trim().min(1).max(100).optional(),
+  message: z.string().trim().max(2000).optional(),
+  /** Sending emails the customer; the person confirms it explicitly. */
+  confirm: z.literal(true, { errorMap: () => ({ message: 'Confirm that the contract should be emailed for signature' }) }),
+});
+export type DocusignSendInput = z.infer<typeof docusignSendSchema>;
+
+export const docusignVoidSchema = z.object({ reason: z.string().trim().min(1, 'Give a reason').max(200) });
+export const docusignListQuery = z.object({ contractId: z.string().uuid().optional() });

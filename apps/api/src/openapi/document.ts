@@ -167,6 +167,9 @@ import {
   teamsTestSchema,
   zoomMeetingCreateSchema,
   zoomMeetingListQuery,
+  docusignListQuery,
+  docusignSendSchema,
+  docusignVoidSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -321,7 +324,7 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom']) }) };
+  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign']) }) };
   action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
@@ -344,6 +347,14 @@ export function buildOpenApiDocument(): object {
   action('get', '/apps/zoom/meetings', 'Workspace apps', 'Zoom meetings scheduled from DealFlow, with transcript status (activities:read)', undefined, { query: zoomMeetingListQuery });
   r.registerPath({ method: 'post', path: '/apps/zoom/events', tags: ['Workspace apps'], summary: "Zoom event notifications (endpoint.url_validation, recording.transcript_completed, app_deauthorized); authenticated by Zoom's x-zm-signature only. Transcripts are imported only for recorded meetings scheduled from DealFlow",
     responses: { 200: ok('Handled, or the URL validation answer'), 401: { description: 'Signature check failed' }, 403: { description: 'ZOOM_WEBHOOK_SECRET_TOKEN not set' } } });
+  action('post', '/apps/docusign/envelopes', 'Workspace apps', 'Email a draft contract to one signer for e-signature through DocuSign; needs confirm: true; one open envelope per contract (contracts:write)', docusignSendSchema);
+  action('get', '/apps/docusign/envelopes', 'Workspace apps', 'Envelopes sent from DealFlow and their status (contracts:read)', undefined, { query: docusignListQuery });
+  action('post', '/apps/docusign/envelopes/{id}/void', 'Workspace apps', 'Void an envelope still out for signature (contracts:write)', docusignVoidSchema);
+  action('post', '/apps/docusign/envelopes/{id}/check', 'Workspace apps', 'Read the envelope status from DocuSign; a completed envelope signs the draft contract (contracts:read)');
+  r.registerPath({ method: 'get', path: '/apps/docusign/envelopes/{id}/document', tags: ['Workspace apps'], summary: 'Download the signed PDF with its certificate of completion, fetched from DocuSign (contracts:read)', security: secured,
+    request: { params: idParam }, responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, ...notFound, ...errors } });
+  r.registerPath({ method: 'post', path: '/apps/docusign/events', tags: ['Workspace apps'], summary: 'DocuSign Connect (JSON) envelope events; authenticated by X-DocuSign-Signature-N HMAC only; unknown envelopes are ignored',
+    responses: { 200: ok('Acknowledged'), 401: { description: 'Signature check failed' }, 403: { description: 'DOCUSIGN_CONNECT_HMAC_KEY not set' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);
