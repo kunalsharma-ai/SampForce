@@ -129,7 +129,7 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" aria-label="Quick create">
+            <Button size="sm" aria-label="Quick create" className="hidden lg:inline-flex">
               <Plus aria-hidden />
               <span className="hidden sm:inline">Create</span>
             </Button>

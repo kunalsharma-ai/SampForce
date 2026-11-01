@@ -66,7 +66,7 @@ export function KeyboardShortcuts() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">Keyboard shortcuts</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           Letter shortcuts work anywhere except while you are typing in a field. On a Mac, use ⌘ instead of Ctrl.

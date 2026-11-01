@@ -58,7 +58,7 @@ export function CustomizeMenuDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="flex max-h-[85vh] flex-col">
+      <DialogContent className="flex max-h-[80vh] flex-col p-6">
         <DialogTitle className="text-lg font-semibold">Customize menu</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           Reorder modules within each section and hide the ones you do not use. Hidden modules are still found by search. Saved for you in this workspace.

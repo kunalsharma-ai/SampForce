@@ -23,6 +23,7 @@ export function FavouriteButton() {
           aria-label={label}
           aria-pressed={pinned}
           disabled={full || pins.pending}
+          className="hidden sm:inline-flex"
           onClick={() => {
             const heading = document.querySelector('main h1')?.textContent?.trim() || document.title || 'Page';
             pins.toggle({ href: pathname, label: heading.slice(0, 120), kind: navKindForPath(pathname) });

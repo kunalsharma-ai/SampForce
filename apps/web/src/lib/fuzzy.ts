@@ -19,6 +19,9 @@ function wordScore(t: string, w: string): number | null {
   const at = t.indexOf(w);
   if (at === 0) return 100 + w.length;
   if (at > 0) return (/[\s\-/&]/.test(t[at - 1]!) ? 80 : 60) + w.length;
+  // Initials: "qbs" for "Quick Bid Studio", "qp" for "Quotes & Proposals".
+  const initials = t.split(/[\s\-/&]+/).filter(Boolean).map((x) => x[0]).join('');
+  if (w.length >= 2 && isSubsequence(w, initials)) return 70 + w.length;
   // Subsequence: reward letters that start words and runs of consecutive letters. The letters must sit close
   // together (a span of at most four times the word), so long texts do not match every query by accident.
   let best: number | null = null;
@@ -40,6 +43,15 @@ function wordScore(t: string, w: string): number | null {
     if (ok) best = Math.max(best ?? 0, Math.min(score, 50));
   }
   return best;
+}
+
+function isSubsequence(w: string, t: string): boolean {
+  let pos = 0;
+  for (const ch of w) {
+    pos = t.indexOf(ch, pos) + 1;
+    if (pos === 0) return false;
+  }
+  return true;
 }
 
 /** Filters and sorts items by how well `text(item)` matches the query; keeps the original order for ties. */

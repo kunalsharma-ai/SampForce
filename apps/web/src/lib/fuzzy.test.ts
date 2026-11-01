@@ -9,6 +9,7 @@ describe('fuzzyScore', () => {
     expect(fuzzyScore('Quick Bid Studio', 'bid')).not.toBeNull();
     expect(fuzzyScore('Quick Bid Studio', 'qbs')).not.toBeNull();
     expect(fuzzyScore('Quick Bid Studio', 'sbq')).toBeNull();
+    expect(fuzzyScore('Quotes & Proposals', 'qp')).not.toBeNull();
     expect(fuzzyScore('Leads', 'deals')).toBeNull();
   });
   it('does not let scattered letters in a long text match a sentence', () => {
