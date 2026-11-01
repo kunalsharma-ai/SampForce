@@ -96,6 +96,8 @@ export const apiEnvSchema = z.object({
   ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
   ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
   ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
+  /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
+  WHATSAPP_API_BASE_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
   // DocuSign workspace app (Authorization Code Grant). The Connect HMAC key verifies envelope status events.
   // Use https://account-d.docusign.com for the developer (demo) environment.
   DOCUSIGN_INTEGRATION_KEY: z.string().optional().transform((v) => v || undefined),

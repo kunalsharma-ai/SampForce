@@ -171,6 +171,9 @@ import {
   docusignSendSchema,
   docusignVoidSchema,
   paymentsConnectSchema,
+  whatsappConnectSchema,
+  whatsappConsentSchema,
+  whatsappSendSchema,
 } from '@dealflow/types';
 
 extendZodWithOpenApi(z);
@@ -325,7 +328,7 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 200: ok('Counts of new emails and meetings'), ...errors } });
   r.registerPath({ method: 'delete', path: '/integrations/{provider}', tags: ['Integrations'], summary: 'Disconnect and delete stored tokens (activities:write)', security: secured,
     request: { params: z.object({ provider: z.enum(['google', 'microsoft']) }) }, responses: { 204: ok('Disconnected'), ...errors } });
-  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign', 'payments']) }) };
+  const appParam = { params: z.object({ app: z.enum(['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp']) }) };
   action('get', '/apps', 'Workspace apps', 'Workspace-wide apps (Slack) with Pending Configuration, Not connected, Connected or Needs reconnecting; never returns tokens (any member)');
   r.registerPath({ method: 'post', path: '/apps/{app}/connect', tags: ['Workspace apps'], summary: 'Start the OAuth install; 409 PROVIDER_NOT_CONFIGURED while the app is Pending Configuration (integrations:manage)', security: secured,
     request: appParam, responses: { 200: ok('Authorization URL'), ...errors } });
@@ -361,6 +364,18 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ quoteId: z.string().uuid() }) }, responses: { 200: ok('Payments'), ...errors } });
   r.registerPath({ method: 'post', path: '/apps/payments/webhooks/{hookId}', tags: ['Workspace apps'], summary: "One workspace's Stripe or Razorpay webhook; checked with that workspace's signing secret (Stripe-Signature with a 5-minute window, or X-Razorpay-Signature); retries are idempotent",
     request: { params: z.object({ hookId: z.string().regex(/^[a-f0-9]{24}$/) }) }, responses: { 200: ok('Acknowledged'), 404: { description: 'Unknown endpoint or signature check failed' } } });
+  action('post', '/apps/whatsapp/keys', 'Workspace apps', "Save the workspace's own WhatsApp Cloud API number id, business account id, System User token and App Secret after a read that sends nothing proves them; sealed, never returned; 5 a minute (integrations:manage)", whatsappConnectSchema);
+  action('get', '/apps/whatsapp/templates', 'Workspace apps', 'Approved templates on the number whose only variables are in the body (activities:read)');
+  r.registerPath({ method: 'get', path: '/apps/whatsapp/contacts/{contactId}', tags: ['Workspace apps'], summary: "A contact's WhatsApp number, consent, 24-hour reply window and messages (contacts:read)", security: secured,
+    request: { params: z.object({ contactId: z.string().uuid() }) }, responses: { 200: ok('WhatsApp thread'), ...notFound, ...errors } });
+  action('post', '/apps/whatsapp/consents', 'Workspace apps', 'Record that a contact agreed to WhatsApp messages and how; needs confirm: true; required before any template (contacts:write)', whatsappConsentSchema);
+  r.registerPath({ method: 'delete', path: '/apps/whatsapp/consents/{contactId}', tags: ['Workspace apps'], summary: "Withdraw a contact's WhatsApp consent (contacts:write)", security: secured,
+    request: { params: z.object({ contactId: z.string().uuid() }) }, responses: { 200: ok('WhatsApp thread'), ...errors } });
+  action('post', '/apps/whatsapp/messages', 'Workspace apps', 'Send one WhatsApp message to one contact: an approved template (needs consent) or free text within 24 hours of their last message; needs confirm: true; 30 a minute (activities:write)', whatsappSendSchema);
+  r.registerPath({ method: 'get', path: '/apps/whatsapp/webhooks/{hookId}', tags: ['Workspace apps'], summary: "Meta's webhook verification: echoes hub.challenge only for this workspace's verify token",
+    request: { params: z.object({ hookId: z.string() }), query: z.object({ 'hub.mode': z.string().optional(), 'hub.verify_token': z.string().optional(), 'hub.challenge': z.string().optional() }) }, responses: { 200: { description: 'The challenge, as text' }, 403: { description: 'Verification failed' } } });
+  r.registerPath({ method: 'post', path: '/apps/whatsapp/webhooks/{hookId}', tags: ['Workspace apps'], summary: "Meta's signed deliveries (X-Hub-Signature-256 with the workspace's App Secret): inbound messages, STOP opt-outs and delivery status; retries are idempotent",
+    request: { params: z.object({ hookId: z.string() }) }, responses: { 200: ok('Acknowledged'), 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);

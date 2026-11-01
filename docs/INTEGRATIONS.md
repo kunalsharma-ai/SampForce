@@ -15,7 +15,8 @@
 | Zoom (workspace app: schedule meetings from records; import transcripts of recorded meetings) | **Pending Configuration** until `ZOOM_CLIENT_ID` and `ZOOM_CLIENT_SECRET` are set; transcript import is separately Pending Configuration until `ZOOM_WEBHOOK_SECRET_TOKEN` is set. Implemented and tested against a local stand-in of Zoom's OAuth, REST API v2 and event notifications only; not yet tested against Zoom. | Needs `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_WEBHOOK_SECRET_TOKEN` (server secrets) |
 | DocuSign (workspace app: send contracts for e-signature) | **Pending Configuration** until `DOCUSIGN_INTEGRATION_KEY` and `DOCUSIGN_SECRET_KEY` are set; automatic status updates are separately Pending Configuration until `DOCUSIGN_CONNECT_HMAC_KEY` is set ("Check status" works without it). Implemented and tested against a local stand-in of DocuSign's OAuth, eSignature REST API v2.1 and Connect only; not yet tested against DocuSign. | Needs `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY`, `DOCUSIGN_CONNECT_HMAC_KEY` (server secrets); `DOCUSIGN_AUTH_BASE_URL` for the demo environment |
 | Card payments on proposals (workspace app: customers pay accepted proposals into the workspace's own Stripe or Razorpay account) | **Not connected** until an admin saves keys; keys are saved only after a read that charges nothing succeeds. Shows a warning until the first signed webhook arrives. A proposal is marked paid only by the provider's signed webhook with the exact amount asked. Implemented and tested against a local stand-in of Stripe Checkout Sessions and Razorpay Payment Links only; not yet tested against either provider. | No deployment secret. Each workspace's keys and webhook secret are workspace secrets, stored encrypted |
-| Twilio, WhatsApp, Zapier | Not built yet (in progress, one at a time) | Shown as "Not available yet" in the app |
+| WhatsApp Business (workspace app: one-to-one messages from contact records and approved workflow steps, through the workspace's own Cloud API number) | **Not connected** until an admin saves credentials; they are saved only after a read of the number succeeds (nothing is sent). Replies and delivery status are Pending Configuration until Meta's first signed webhook arrives. Implemented and tested against a local stand-in of Meta's Graph API (Cloud API) only; not yet tested against Meta. | No deployment secret. Each workspace's System User token and App Secret are workspace secrets, stored encrypted. Optional `WHATSAPP_API_BASE_URL` (default Graph API v21.0) |
+| Twilio, Zapier | Not built yet (Zapier in progress) | Shown as "Not available yet" in the app |
 
 Without credentials the Integrations page says which variables are missing and offers no Connect button.
 
@@ -216,6 +217,43 @@ How it behaves:
   instalments are not supported yet; refunds are made in the provider's dashboard and are not reflected here.
 - Disconnecting removes the button. Payments still in progress at that point are not recorded, so disconnect only
   when none are open. Payment history stays on each quote.
+
+## Setting up WhatsApp Business
+
+Each workspace uses **its own** WhatsApp Business Platform (Cloud API) number in Meta. DealFlow never sends from a
+shared number, and there is no operator secret.
+
+1. In Meta Business Manager, have a Meta app with the WhatsApp product, a registered business phone number, and a
+   **System User** with an access token that has `whatsapp_business_messaging` and `whatsapp_business_management`.
+2. In DealFlow, under Integrations, WhatsApp Business, enter the **phone number id**, the **WhatsApp Business
+   Account id**, the token and the app's **App Secret**, then press **Check and save**. DealFlow reads the number and
+   checks that it belongs to that business account; nothing is sent.
+3. Copy the **Callback URL** and **Verify token** from the card into the Meta app (WhatsApp, Configuration) and
+   subscribe to the `messages` field. Meta's verification request is answered automatically. The warning on the card
+   clears when the first signed webhook arrives.
+
+How it behaves:
+
+- **Consent first.** A business-initiated message must be an approved template, and DealFlow sends one only if the
+  contact's WhatsApp consent is recorded (who recorded it, when, and how the person agreed). A reply of STOP (or
+  UNSUBSCRIBE, OPT OUT) withdraws it and notifies the contact's owner. Consent can also be withdrawn by hand.
+- **The 24-hour window.** Free-form replies are allowed only within 24 hours of the contact's last message, as
+  WhatsApp requires; otherwise only a template.
+- **Numbers.** Only phone numbers written with a country code (`+44…` or `0044…`) are used. DealFlow never guesses a
+  country. Inbound messages are linked to a contact only when exactly one contact has that number; others are kept
+  unlinked, and the admin who connected WhatsApp is notified.
+- **One to one only.** Every send is one message to one contact, confirmed by the sender ("Send this WhatsApp
+  message to +… now"), or a workflow step that needs an approval for each run. There is no bulk send, and AI agents
+  cannot send WhatsApp messages.
+- **Status.** "Accepted by WhatsApp" is all DealFlow knows when it sends. Sent, Delivered, Read and Failed come only
+  from Meta's signed status webhooks and only move forward. Read appears only if the person has read receipts on.
+- **Templates.** Approved templates whose only variables are in the body are offered. Templates with media headers
+  or button variables are not supported yet. Media messages received are shown as "(image message: open WhatsApp to
+  see it)"; DealFlow does not download media.
+- Webhooks must carry a valid `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with the App Secret). Each
+  workspace has its own URL id and secret, so one workspace cannot write into another. Retries are stored once.
+- A refused token (Meta error 190 or a missing permission) marks the app Needs new credentials; replacing them keeps
+  the callback URL and verify token.
 
 ## Behaviour
 

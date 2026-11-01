@@ -138,13 +138,23 @@ export const actionSchema = z.discriminatedUnion('type', [
     channelName: z.string().max(80).nullable().default(null),
     text: z.string().trim().min(1).max(3000),
   }),
+  /**
+   * External: one approved WhatsApp template to the contact's number, after approval, and only if their WhatsApp
+   * consent is recorded. Params fill the template's {{1}}, {{2}}… in order and may use {{record.*}}.
+   */
+  z.object({
+    type: z.literal('send_whatsapp'),
+    templateName: z.string().trim().regex(/^[a-z0-9_]{1,512}$/, 'Use the template name as it appears in WhatsApp Manager'),
+    language: z.string().trim().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/).default('en'),
+    params: z.array(z.string().trim().min(1).max(1024)).max(20).default([]),
+  }),
   /** External: one email to the record's address from the workflow owner's mailbox, after approval. */
   z.object({ type: z.literal('send_email'), subject: z.string().trim().min(1).max(200), body: z.string().min(1).max(10_000) }),
 ]);
 export type WorkflowAction = z.infer<typeof actionSchema>;
-export const EXTERNAL_ACTIONS = ['send_webhook', 'send_email'] as const;
+export const EXTERNAL_ACTIONS = ['send_webhook', 'send_email', 'send_whatsapp'] as const;
 /** Actions that only make sense for a lead or contact. */
-export const PERSON_ACTIONS = new Set<WorkflowAction['type']>(['stop_sequences', 'enroll_in_sequence', 'flag_email', 'add_engagement_points']);
+export const PERSON_ACTIONS = new Set<WorkflowAction['type']>(['stop_sequences', 'enroll_in_sequence', 'flag_email', 'add_engagement_points', 'send_whatsapp']);
 
 // ───────────── Nodes and definition ─────────────
 

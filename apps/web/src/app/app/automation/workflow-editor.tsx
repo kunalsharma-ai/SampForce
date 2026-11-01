@@ -13,6 +13,7 @@ import {
   type SequenceRow,
   type SlackChannel,
   type TeamsChannel,
+  type WhatsappTemplate,
   TRIGGER_EVENTS,
   type TriggerEvent,
   UPDATABLE_FIELDS,
@@ -576,6 +577,8 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
       {a.type === 'post_to_chat' && <ChatStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
 
+      {a.type === 'send_whatsapp' && <WhatsappStepFields id={id} action={a} readOnly={readOnly} onChange={onChange} />}
+
       {a.type === 'send_email' && (
         <>
           <p className="text-xs text-muted-foreground">
@@ -644,6 +647,65 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
         </Select>
       </div>
       <TextField label="Message" multiline value={a.text} readOnly={readOnly} maxLength={3000} hint={`${TEMPLATE_HINT} A link to the record is added automatically.`} onChange={(text) => onChange({ ...a, text })} />
+    </>
+  );
+}
+
+/** An approved WhatsApp template and its values. Templates come from the workspace's own WhatsApp Business account. */
+function WhatsappStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'send_whatsapp' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
+  const wa = apps.data?.find((x) => x.key === 'whatsapp');
+  const connected = wa?.state === 'connected';
+  const templates = useQuery({ enabled: connected && !readOnly, queryKey: ['apps', 'whatsapp', 'templates'], queryFn: () => api<WhatsappTemplate[]>('/apps/whatsapp/templates') });
+  const key = a.templateName ? `${a.templateName}|${a.language}` : '';
+  const chosen = templates.data?.find((t) => `${t.name}|${t.language}` === key);
+  const count = chosen?.params ?? a.params.length;
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">
+        Sends one approved template to the contact’s WhatsApp number after someone approves the run, and only if their WhatsApp consent is recorded on the contact. People who replied STOP are skipped with a clear failure.
+      </p>
+      {wa && !connected && (
+        <p className="text-xs text-warning" role="status">
+          {wa.state === 'error' ? 'WhatsApp needs new credentials in Integrations before this step can send.' : 'WhatsApp Business is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+        </p>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor={`${id}-template`}>Template</Label>
+        <Select
+          id={`${id}-template`}
+          disabled={readOnly || !connected}
+          value={key}
+          onChange={(e) => {
+            const t = templates.data?.find((x) => `${x.name}|${x.language}` === e.target.value);
+            onChange({ ...a, templateName: t?.name ?? '', language: t?.language ?? 'en', params: t ? Array.from({ length: t.params }, (_, i) => a.params[i] ?? '') : [] });
+          }}
+        >
+          <option value="">Choose an approved template</option>
+          {key && !chosen && <option value={key}>{`${a.templateName} (${a.language})`}</option>}
+          {(templates.data ?? []).map((t) => (
+            <option key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>
+              {`${t.name} (${t.language}, ${t.category.toLowerCase()})`}
+            </option>
+          ))}
+        </Select>
+        {chosen && <p className="whitespace-pre-wrap rounded-md bg-muted p-2 text-xs">{chosen.body}</p>}
+        {templates.error && <p className="text-xs text-critical">{templates.error.message}</p>}
+      </div>
+      {Array.from({ length: count }, (_, i) => (
+        <TextField
+          key={i}
+          label={`Value for {{${i + 1}}}`}
+          value={a.params[i] ?? ''}
+          readOnly={readOnly}
+          maxLength={1024}
+          hint={i === 0 ? TEMPLATE_HINT : undefined}
+          onChange={(v) => {
+            const params = Array.from({ length: count }, (_, j) => (j === i ? v : (a.params[j] ?? '')));
+            onChange({ ...a, params });
+          }}
+        />
+      ))}
     </>
   );
 }

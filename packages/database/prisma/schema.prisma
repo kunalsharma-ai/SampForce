@@ -248,6 +248,8 @@ model Tenant {
   zoomMeetings           ZoomMeeting[]
   signatureEnvelopes     SignatureEnvelope[]
   quotePayments          QuotePayment[]
+  whatsappMessages       WhatsappMessage[]
+  whatsappConsents       WhatsappConsent[]
 
   @@map("tenants")
 }
@@ -472,9 +474,11 @@ model Contact {
   activities    Activity[]
   tasks         Task[]
 
-  portalUsers PortalUser[]
-  webVisitors WebVisitor[]
-  prospects   Prospect[]
+  portalUsers      PortalUser[]
+  webVisitors      WebVisitor[]
+  prospects        Prospect[]
+  whatsappMessages WhatsappMessage[]
+  whatsappConsents WhatsappConsent[]
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
@@ -2839,6 +2843,8 @@ enum AppProvider {
   DOCUSIGN
   /// Card payments on quotes, into the workspace's own Stripe or Razorpay account.
   PAYMENTS
+  /// The workspace's own WhatsApp Business Platform (Cloud API) number.
+  WHATSAPP
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
@@ -2860,11 +2866,12 @@ model AppConnection {
   createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  events       AppEvent[]
-  zoomMeetings ZoomMeeting[]
-  envelopes    SignatureEnvelope[]
-  payments     QuotePayment[]
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events           AppEvent[]
+  zoomMeetings     ZoomMeeting[]
+  envelopes        SignatureEnvelope[]
+  payments         QuotePayment[]
+  whatsappMessages WhatsappMessage[]
 
   @@unique([tenantId, provider])
   @@index([provider, externalAccountId])
@@ -2990,4 +2997,61 @@ model QuotePayment {
 
   @@index([tenantId, quoteId])
   @@map("quote_payments")
+}
+
+/// WhatsApp messages to and from the workspace's own WhatsApp Business number. Outbound rows are created when
+/// Meta accepts the send; status moves forward only through the signed webhook. Inbound rows come from the webhook
+/// and are matched to a contact by phone number when one matches exactly.
+model WhatsappMessage {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  connectionId String?   @map("connection_id") @db.Uuid
+  contactId    String?   @map("contact_id") @db.Uuid
+  /// in or out
+  direction    String
+  /// International number, digits only.
+  phone        String
+  /// Meta's message id (wamid.…).
+  waMessageId  String    @map("wa_message_id")
+  /// template, text or other
+  kind         String
+  body         String
+  templateName String?   @map("template_name")
+  /// accepted, sent, delivered, read, failed (outbound) or received (inbound)
+  status       String
+  error        String?
+  sentById     String?   @map("sent_by_id") @db.Uuid
+  /// manual, workflow or webhook
+  source       String
+  statusAt     DateTime? @map("status_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  contact    Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, waMessageId])
+  @@index([tenantId, contactId, createdAt])
+  @@index([tenantId, phone, createdAt])
+  @@map("whatsapp_messages")
+}
+
+/// A contact's agreement to receive WhatsApp messages, recorded by a person with how they agreed. Required before
+/// any business-initiated (template) message. A STOP reply or a person revoking it sets revokedAt.
+model WhatsappConsent {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  contactId    String    @map("contact_id") @db.Uuid
+  phone        String
+  source       String
+  recordedById String?   @map("recorded_by_id") @db.Uuid
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy    String?   @map("revoked_by")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, contactId, createdAt])
+  @@map("whatsapp_consents")
 }
