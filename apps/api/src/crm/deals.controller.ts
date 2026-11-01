@@ -12,7 +12,7 @@ import {
   pipelineInputSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealsService } from './deals.service';
 import { PipelinesService } from './pipelines.service';
@@ -24,6 +24,7 @@ const boardQuerySchema = z.object({
 });
 
 @Controller('deals')
+@ApiKeyAccess()
 export class DealsController {
   constructor(private readonly deals: DealsService) {}
 
@@ -86,6 +87,7 @@ export class DealsController {
 }
 
 @Controller('pipelines')
+@ApiKeyAccess()
 export class PipelinesController {
   constructor(private readonly pipelines: PipelinesService) {}
 

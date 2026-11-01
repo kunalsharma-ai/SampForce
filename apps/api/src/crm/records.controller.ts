@@ -16,7 +16,7 @@ import {
   listQuerySchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CompaniesService } from './companies.service';
 import { ContactsService } from './contacts.service';
@@ -26,6 +26,7 @@ const uuid = new ParseUUIDPipe();
 const mergeSchema = z.object({ duplicateId: z.string().uuid() });
 
 @Controller('leads')
+@ApiKeyAccess()
 export class LeadsController {
   constructor(private readonly leads: LeadsService) {}
 
@@ -90,6 +91,7 @@ export class LeadsController {
 }
 
 @Controller('contacts')
+@ApiKeyAccess()
 export class ContactsController {
   constructor(private readonly contacts: ContactsService) {}
 
@@ -126,6 +128,7 @@ export class ContactsController {
 }
 
 @Controller('companies')
+@ApiKeyAccess()
 export class CompaniesController {
   constructor(private readonly companies: CompaniesService) {}
 

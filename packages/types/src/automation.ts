@@ -323,7 +323,10 @@ export const webhookInputSchema = z.object({
 });
 export interface WebhookRow {
   id: string;
+  /** For a Zapier subscription only the host is shown: the full URL is Zapier's secret for that Zap. */
   url: string;
+  /** manual (added here) or zapier (made by the Zapier app with an API key, removed when the Zap is turned off). */
+  source: 'manual' | 'zapier';
   events: DomainEventType[];
   active: boolean;
   consecutiveFailures: number;

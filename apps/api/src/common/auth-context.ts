@@ -18,8 +18,11 @@ export interface AuthContext {
    * (the profile, two-step verification setup, sessions, switching workspace).
    */
   restriction?: 'mfa_enrolment' | 'sso_required';
-  /** Set when the caller is the browser extension, which may only use routes marked @ExtensionAccess. */
-  via?: 'extension';
+  /**
+   * Set when the caller is the browser extension (only routes marked @ExtensionAccess) or a workspace API key
+   * (only routes marked @ApiKeyAccess). For an API key, sessionId is the key's id.
+   */
+  via?: 'extension' | 'api_key';
 }
 
 export interface RequestMeta {
@@ -41,6 +44,10 @@ export const AllowRestricted = () => SetMetadata(ALLOW_RESTRICTED, true);
 export const EXTENSION_ACCESS = 'dealflow:extensionAccess';
 /** Reachable with a browser extension token. Every other route refuses one. */
 export const ExtensionAccess = () => SetMetadata(EXTENSION_ACCESS, true);
+
+export const API_KEY_ACCESS = 'dealflow:apiKeyAccess';
+/** Reachable with a workspace API key (Zapier, scripts). Every other route refuses one. */
+export const ApiKeyAccess = () => SetMetadata(API_KEY_ACCESS, true);
 
 export const REQUIRED_PERMISSIONS = 'dealflow:permissions';
 /** Every listed permission must be granted by the caller's role in the active tenant. */

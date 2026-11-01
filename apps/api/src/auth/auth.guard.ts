@@ -6,10 +6,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { EXTENSION_SCOPES, EXTENSION_TOKEN_PREFIX } from '@dealflow/types';
+import { API_KEY_PREFIX, EXTENSION_SCOPES, EXTENSION_TOKEN_PREFIX } from '@dealflow/types';
 import { createHash } from 'node:crypto';
 import {
   ALLOW_RESTRICTED,
+  API_KEY_ACCESS,
   type AuthContext,
   EXTENSION_ACCESS,
   type AuthedRequest,
@@ -40,9 +41,10 @@ export class AuthGuard implements CanActivate {
 
     const header = req.get('authorization');
     const extensionToken = header?.startsWith(`Bearer ${EXTENSION_TOKEN_PREFIX}`) ? header.slice(7) : undefined;
-    // An extension token is used on its own, never alongside the cookie: the origin check lets it through
-    // from the extension's own origin, so it must not carry the person's web session with it.
-    const raw: string | undefined = extensionToken ? undefined :
+    const apiKey = header?.startsWith(`Bearer ${API_KEY_PREFIX}`) ? header.slice(7) : undefined;
+    // An extension token or API key is used on its own, never alongside the cookie: the origin check lets it
+    // through, so it must not carry the person's web session with it.
+    const raw: string | undefined = extensionToken || apiKey ? undefined :
       (req.cookies as Record<string, string> | undefined)?.[ACCESS_COOKIE] ??
       (header?.startsWith('Bearer ') ? header.slice(7) : undefined);
 
@@ -102,6 +104,10 @@ export class AuthGuard implements CanActivate {
     }
 
     if (extensionToken) req.auth = await this.extensionAuth(extensionToken);
+    if (apiKey) {
+      req.auth = await this.apiKeyAuth(apiKey);
+      if (!req.auth && !isPublic) throw new UnauthorizedException({ code: 'INVALID_API_KEY', message: 'This API key is not valid, has expired or was revoked.' });
+    }
 
     if (isPublic) return true;
     if (!req.auth) {
@@ -129,6 +135,10 @@ export class AuthGuard implements CanActivate {
       throw new ForbiddenException({ code: 'EXTENSION_NOT_ALLOWED', message: 'The browser extension cannot do this. Use DealFlow in your browser.' });
     }
 
+    if (req.auth.via === 'api_key' && !this.reflector.getAllAndOverride<boolean>(API_KEY_ACCESS, targets)) {
+      throw new ForbiddenException({ code: 'API_KEY_NOT_ALLOWED', message: 'API keys cannot do this. Sign in to DealFlow in your browser.' });
+    }
+
     const required =
       this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS, targets) ?? [];
     const missing = required.filter((p) => !req.auth!.permissions.includes(p));
@@ -140,6 +150,41 @@ export class AuthGuard implements CanActivate {
       });
     }
     return true;
+  }
+
+  /**
+   * A workspace API key: acts as the person who created it, limited to the key's scopes and that person's current
+   * role, in the key's workspace only. Revoked, expired, or a creator who left: no access.
+   */
+  private async apiKeyAuth(key: string): Promise<AuthContext | undefined> {
+    if (!/^dfk_[A-Za-z0-9_-]{30,80}$/.test(key)) return undefined;
+    const hash = createHash('sha256').update(key).digest('hex');
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.api_key_hash', ${hash}, true)`;
+      return tx.apiKey.findUnique({ where: { keyHash: hash } });
+    });
+    if (!row || row.revokedAt || (row.expiresAt && row.expiresAt <= new Date())) return undefined;
+    const membership = await this.prisma.run({ tenantId: row.tenantId, userId: row.createdById }, (tx) =>
+      tx.membership.findFirst({
+        where: { tenantId: row.tenantId, userId: row.createdById, status: 'ACTIVE', tenant: { status: 'ACTIVE', deletedAt: null }, user: { status: 'ACTIVE' } },
+        include: { role: true },
+      }),
+    );
+    if (!membership) return undefined;
+    if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > 60_000) {
+      await this.prisma.run({ tenantId: row.tenantId }, (tx) => tx.apiKey.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }));
+    }
+    const scopes = new Set(row.scopes);
+    return {
+      userId: row.createdById,
+      tenantId: row.tenantId,
+      sessionId: row.id,
+      membershipId: membership.id,
+      roleKey: membership.role.key,
+      permissions: membership.role.permissions.filter((p) => scopes.has(p)),
+      authMethod: 'password',
+      via: 'api_key',
+    };
   }
 
   /** A browser extension connection: a session of its own, limited to the extension scopes. */

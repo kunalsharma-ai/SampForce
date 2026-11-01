@@ -1,6 +1,6 @@
 import { type CanActivate, type ExecutionContext, ForbiddenException, Inject, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { EXTENSION_TOKEN_PREFIX } from '@dealflow/types';
+import { EXTENSION_TOKEN_PREFIX, API_KEY_PREFIX } from '@dealflow/types';
 import type { Request } from 'express';
 import { API_ENV, type ApiEnv } from './env';
 
@@ -35,6 +35,8 @@ export class OriginGuard implements CanActivate {
     // The browser extension sends its own token in a header and never the cookie (AuthGuard ignores the
     // cookie when that header is present), so a request from its chrome-extension:// origin is not CSRF.
     if (req.get('authorization')?.startsWith(`Bearer ${EXTENSION_TOKEN_PREFIX}`)) return true;
+    // Likewise an API key (Zapier, scripts): sent in a header, never with the cookie.
+    if (req.get('authorization')?.startsWith(`Bearer ${API_KEY_PREFIX}`)) return true;
     const origin = req.get('origin');
     if (!origin || this.allowed.has(origin)) return true;
     throw new ForbiddenException({ code: 'BAD_ORIGIN', message: 'Request origin is not allowed.' });

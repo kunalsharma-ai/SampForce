@@ -53,6 +53,7 @@ export class WebhooksService {
     return this.prisma.run(auth, async (tx) => {
       const before = await tx.webhook.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
       if (!before) throw notFound('Webhook');
+      if (before.source === 'zapier' && (input.url || input.events)) throw new BadRequestException({ code: 'ZAPIER_MANAGED', message: 'This subscription is managed by Zapier. Change it in the Zap, or delete it here.' });
       const row = await tx.webhook.update({
         where: { id },
         data: {
@@ -106,7 +107,8 @@ export class WebhooksService {
 export function toWebhookRow(r: WebhookWith): WebhookRow {
   return {
     id: r.id,
-    url: r.url,
+    url: r.source === 'zapier' ? `${safeHost(r.url)} (Zapier)` : r.url,
+    source: r.source === 'zapier' ? 'zapier' : 'manual',
     events: r.events as DomainEventType[],
     active: r.active,
     consecutiveFailures: r.consecutiveFailures,
@@ -122,4 +124,12 @@ export function toWebhookRow(r: WebhookWith): WebhookRow {
       createdAt: d.createdAt.toISOString(),
     })),
   };
+}
+
+function safeHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'zapier';
+  }
 }

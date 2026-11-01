@@ -88,6 +88,12 @@ export class WebhookDeliverer {
 
     await this.prisma.run(ctx, async (tx) => {
       const attempts = d.attempts + 1;
+      // A REST-hook client (Zapier) answers 410 Gone when the Zap was turned off: that subscription ends here.
+      if (responseCode === 410 && d.webhook.source === 'zapier') {
+        await tx.webhookDelivery.update({ where: { id: d.id }, data: { status: 'FAILED', attempts, responseCode, lastError: 'The Zap was turned off (410 Gone); subscription removed' } });
+        await tx.webhook.update({ where: { id: d.webhookId }, data: { active: false, deletedAt: new Date(), disabledReason: 'Removed: Zapier answered 410 Gone' } });
+        return;
+      }
       if (!error) {
         await tx.webhookDelivery.update({ where: { id: d.id }, data: { status: 'SUCCEEDED', attempts, responseCode, lastError: null, deliveredAt: new Date() } });
         await tx.webhook.update({ where: { id: d.webhookId }, data: { consecutiveFailures: 0 } });
