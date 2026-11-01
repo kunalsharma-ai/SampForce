@@ -2,7 +2,7 @@
 
 import { Badge, Button, Card, CardContent, Skeleton } from '@dealflow/ui';
 import type { PublicProposal } from '@dealflow/types';
-import { Download } from 'lucide-react';
+import { CreditCard, Download } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatAmount } from '@/lib/revenue';
 
@@ -20,7 +20,7 @@ const fmtDate = (iso: string) =>
   });
 
 /** The customer's view of a proposal. It talks only to the public proposal endpoints; the rep previews it with ?preview=1, which is not counted. */
-export function ProposalView({ token, preview }: { token: string; preview: boolean }) {
+export function ProposalView({ token, preview, returnedFromPayment = false }: { token: string; preview: boolean; returnedFromPayment?: boolean }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const loaded = useRef(false);
   const base = `/api/v1/proposals/view/${encodeURIComponent(token)}`;
@@ -48,6 +48,25 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
       );
   }, [base, preview]);
 
+  const p = state.kind === 'ready' ? state.p : null;
+  const waitingForConfirmation = returnedFromPayment && !!p?.payment && !p.payment.paid;
+  // Back from the provider's page: the payment counts only once the provider's webhook confirms it, so check a few times.
+  useEffect(() => {
+    if (!waitingForConfirmation) return;
+    let tries = 0;
+    const id = window.setInterval(() => {
+      tries += 1;
+      fetch(`${base}?preview=1`)
+        .then((r) => (r.ok ? (r.json() as Promise<PublicProposal>) : null))
+        .then((next) => {
+          if (next?.payment?.paid) setState({ kind: 'ready', p: next });
+        })
+        .catch(() => undefined);
+      if (tries >= 10) window.clearInterval(id);
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [waitingForConfirmation, base]);
+
   if (state.kind === 'loading') return <Skeleton className="h-96 w-full" />;
   if (state.kind === 'missing')
     return (
@@ -68,6 +87,14 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
       }
       actions={
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          {state.p.payment && (
+            <PayByCard
+              base={base}
+              p={state.p}
+              preview={preview}
+              waiting={waitingForConfirmation}
+            />
+          )}
           <Button asChild variant="outline" size="sm">
             <a href={`${base}/pdf`} download>
               <Download aria-hidden /> Download PDF
@@ -79,6 +106,62 @@ export function ProposalView({ token, preview }: { token: string; preview: boole
         </div>
       }
     />
+  );
+}
+
+const PROVIDER_NAME = { stripe: 'Stripe', razorpay: 'Razorpay' } as const;
+
+/** Card payment into the seller's own Stripe or Razorpay account, on the provider's hosted page. */
+function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicProposal; preview: boolean; waiting: boolean }) {
+  const pay = p.payment!;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = PROVIDER_NAME[pay.provider];
+  if (pay.paid)
+    return (
+      <p className="flex items-center gap-2 text-sm" role="status">
+        <Badge tone="success">Paid</Badge>
+        {pay.paidAt && `Payment confirmed by ${name} on ${fmtDate(pay.paidAt)}.`}
+      </p>
+    );
+  if (waiting)
+    return (
+      <p className="text-sm" role="status">
+        Thank you. {name} is confirming your payment; this page updates when it does. You will not
+        be charged twice if you leave.
+      </p>
+    );
+  if (!pay.available) return pay.reason ? <p className="text-xs text-muted-foreground">{pay.reason}</p> : null;
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(`${base}/pay`, { method: 'POST' });
+      const body = (await r.json().catch(() => null)) as { url?: string; error?: { message: string } } | null;
+      if (r.ok && body?.url) {
+        window.location.assign(body.url);
+        return;
+      }
+      setError(body?.error?.message ?? 'Card payment is not available right now.');
+    } catch {
+      setError('Card payment could not be started. Please try again.');
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="space-y-1">
+      <Button size="sm" onClick={start} disabled={busy || preview} aria-describedby="pay-note">
+        <CreditCard aria-hidden /> {busy ? 'Opening payment page…' : `Pay ${formatAmount(p.total, p.currency)} by card`}
+      </Button>
+      <p id="pay-note" className="text-xs text-muted-foreground">
+        {preview ? 'Preview: your customer sees this button. It is turned off here.' : `You pay on ${name}'s secure page. ${p.seller.name} never sees your card details.`}
+      </p>
+      {error && (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

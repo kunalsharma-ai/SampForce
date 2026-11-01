@@ -72,6 +72,14 @@ export default defineConfig({
       env: { DOCUSIGN_FIXTURE_PORT: '4800' },
     },
     {
+      // Local stand-in for a workspace's own Stripe or Razorpay account, with hosted pay pages.
+      command: 'npx tsx test/fixtures/card-payments-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4900/health',
+      reuseExistingServer: !process.env.CI,
+      env: { CARD_PAYMENTS_FIXTURE_PORT: '4900' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',
@@ -122,6 +130,9 @@ export default defineConfig({
         DOCUSIGN_SECRET_KEY: 'ds-secret-key',
         DOCUSIGN_CONNECT_HMAC_KEY: 'ds-connect-hmac-key',
         DOCUSIGN_AUTH_BASE_URL: 'http://127.0.0.1:4800',
+        // Card payments use each workspace's own keys; these send its Stripe and Razorpay calls to the stand-in above.
+        STRIPE_API_BASE_URL: 'http://127.0.0.1:4900',
+        RAZORPAY_API_BASE_URL: 'http://127.0.0.1:4900',
       },
     },
     {

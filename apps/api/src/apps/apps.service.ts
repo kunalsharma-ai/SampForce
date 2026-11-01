@@ -53,6 +53,7 @@ const TEAMS_MAX_CHANNELS = 20;
 
 const META: Record<AppKey, { name: string; description: string; provider: AppProvider }> = {
   slack: { name: 'Slack', description: 'Post deal, lead and task updates to Slack channels from workflows.', provider: 'SLACK' },
+  payments: { name: 'Card payments', description: 'Let customers pay accepted proposals by card, into your own Stripe or Razorpay account.', provider: 'PAYMENTS' },
   docusign: { name: 'DocuSign', description: 'Send contracts for e-signature; a completed envelope marks the contract signed.', provider: 'DOCUSIGN' },
   zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
@@ -86,7 +87,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig() }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig(), payments: () => [] }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -114,7 +115,9 @@ export class AppsService {
               ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.']
               : key === 'docusign' && !this.docusign.connectConfigured
                 ? ['Signing status updates are Pending Configuration: an operator must add DOCUSIGN_CONNECT_HMAC_KEY. Until then contracts are not marked signed automatically.']
-                : [],
+                : key === 'payments' && c && !(c.settings as { lastWebhookAt?: string | null }).lastWebhookAt
+                  ? ['No payment confirmation has arrived yet. Add the webhook below in your provider’s dashboard; payments are marked paid only when the provider confirms them.']
+                  : [],
           connection: c
             ? {
                 accountName: c.accountName,
@@ -132,8 +135,8 @@ export class AppsService {
   }
 
   connectUrl(auth: AuthContext, app: AppKey): { url: string } {
-    if (app === 'teams') {
-      throw new BadRequestException({ code: 'NOT_OAUTH', message: 'Microsoft Teams is connected by adding a channel with its Workflows URL.' });
+    if (app === 'teams' || app === 'payments') {
+      throw new BadRequestException({ code: 'NOT_OAUTH', message: app === 'teams' ? 'Microsoft Teams is connected by adding a channel with its Workflows URL.' : 'Card payments are connected by saving your Stripe or Razorpay keys.' });
     }
     const missing = this.missingConfig(app);
     if (missing.length) {
@@ -147,7 +150,7 @@ export class AppsService {
   /** The OAuth redirect. The state must have been issued to the same signed-in person in the same workspace. */
   async completeConnect(auth: AuthContext, app: AppKey, code: string, rawState: string, meta: RequestMeta): Promise<void> {
     const state = verifyToken<AppState>(this.stateSecret(), rawState);
-    if (app === 'teams' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
+    if (app === 'teams' || app === 'payments' || !state || state.exp < Date.now() || state.a !== app || state.t !== auth.tenantId || state.u !== auth.userId) {
       throw new BadRequestException({ code: 'OAUTH_STATE_INVALID', message: 'The connect link expired or belongs to another session. Try connecting again.' });
     }
     let install: { accountId: string; accountName: string; scopes: string[]; credentials: StoredSlack | StoredZoom | StoredDocusign };

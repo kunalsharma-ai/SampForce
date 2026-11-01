@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign'] as const;
+export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
@@ -177,3 +177,47 @@ export type DocusignSendInput = z.infer<typeof docusignSendSchema>;
 
 export const docusignVoidSchema = z.object({ reason: z.string().trim().min(1, 'Give a reason').max(200) });
 export const docusignListQuery = z.object({ contractId: z.string().uuid().optional() });
+
+// ───── Card payments on quotes (the workspace's own Stripe or Razorpay account) ─────
+
+export type CardPaymentProvider = 'stripe' | 'razorpay';
+export type QuotePaymentStatus = 'pending' | 'paid' | 'expired' | 'failed';
+
+/** Saved with the connection (keys are sealed separately and never returned). */
+export interface PaymentsSettings {
+  provider: CardPaymentProvider;
+  mode: 'test' | 'live';
+  /** Where the workspace must point its provider webhook. */
+  webhookUrl: string;
+  /** When the first signed webhook arrived; payments are confirmed only through webhooks. */
+  lastWebhookAt: string | null;
+}
+
+export const paymentsConnectSchema = z.discriminatedUnion('provider', [
+  z.object({
+    provider: z.literal('stripe'),
+    /** A restricted key (rk_) with Checkout Sessions write is recommended; a secret key (sk_) also works. */
+    secretKey: z.string().trim().regex(/^(sk|rk)_(test|live)_[A-Za-z0-9]{10,200}$/, 'Paste a Stripe secret or restricted key (sk_… or rk_…)'),
+    webhookSecret: z.string().trim().regex(/^whsec_[A-Za-z0-9]{10,200}$/, 'Paste the webhook signing secret (whsec_…)'),
+  }),
+  z.object({
+    provider: z.literal('razorpay'),
+    keyId: z.string().trim().regex(/^rzp_(test|live)_[A-Za-z0-9]{6,40}$/, 'Paste the Razorpay key id (rzp_test_… or rzp_live_…)'),
+    keySecret: z.string().trim().min(10).max(200),
+    webhookSecret: z.string().trim().min(8, 'Enter the webhook secret you set in Razorpay').max(200),
+  }),
+]);
+export type PaymentsConnectInput = z.infer<typeof paymentsConnectSchema>;
+
+export interface QuotePaymentRow {
+  id: string;
+  quoteId: string;
+  provider: CardPaymentProvider;
+  status: QuotePaymentStatus;
+  amount: number;
+  currency: string;
+  payerEmail: string | null;
+  providerPaymentId: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}

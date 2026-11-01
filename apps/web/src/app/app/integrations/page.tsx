@@ -14,10 +14,6 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
     { name: 'Twilio (SMS, voice)', phase: 'Later phase', needs: 'Twilio account and number registration' },
     { name: 'WhatsApp Business Platform', phase: 'Later phase', needs: 'Meta Business verification' },
   ] },
-  { category: 'Payments & documents', items: [
-    { name: 'Stripe (your own account)', phase: 'Later phase', needs: 'Stripe account and webhook secret' },
-    { name: 'Razorpay (your own account)', phase: 'Later phase', needs: 'Razorpay account' },
-  ] },
   { category: 'Automation & developer', items: [
     { name: 'Zapier / Make / n8n', phase: 'Later phase', needs: 'Partner app listing' },
     { name: 'REST API keys', phase: 'Later phase', needs: 'None (native)' },

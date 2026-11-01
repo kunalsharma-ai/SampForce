@@ -218,6 +218,8 @@ export interface PublicProposal {
   taxTotal: number;
   total: number;
   terms: string | null;
+  /** Card payment on an accepted proposal, when the seller has connected Stripe or Razorpay. */
+  payment?: { available: boolean; provider: 'stripe' | 'razorpay'; paid: boolean; paidAt: string | null; reason: string | null };
 }
 
 export interface QuoteLineRow {

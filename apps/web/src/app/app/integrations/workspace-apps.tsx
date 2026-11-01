@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
-import type { AppEventRow, AppStatus, SlackChannel, TeamsSettings } from '@dealflow/types';
+import type { AppEventRow, AppStatus, PaymentsSettings, SlackChannel, TeamsSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -23,7 +23,7 @@ const STATE: Record<AppStatus['state'], { label: string; tone: 'neutral' | 'succ
   error: { label: 'Needs reconnecting', tone: 'critical' },
 };
 
-/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams, Zoom and DocuSign. */
+/** Apps a workspace admin connects once for everyone: Slack, Microsoft Teams, Zoom, DocuSign and card payments. */
 export function WorkspaceApps() {
   const params = useSearchParams();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
@@ -41,7 +41,7 @@ export function WorkspaceApps() {
           {OUTCOME[error] ?? `The connection did not complete (${error}).`}
         </p>
       )}
-      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : null))}
+      {apps.isPending ? <Skeleton className="h-32" /> : apps.data?.map((a) => (a.key === 'slack' ? <SlackCard key={a.key} app={a} /> : a.key === 'teams' ? <TeamsCard key={a.key} app={a} /> : a.key === 'zoom' || a.key === 'docusign' ? <OAuthAppCard key={a.key} app={a} /> : a.key === 'payments' ? <PaymentsCard key={a.key} app={a} /> : null))}
     </section>
   );
 }
@@ -388,6 +388,171 @@ function OAuthAppCard({ app }: { app: AppStatus }) {
           <div>
             <p className="mb-1 text-xs font-medium">Recent activity</p>
             <ul className="space-y-1 text-xs" aria-label={`Recent ${app.name} activity`}>
+              {events.data.slice(0, 5).map((e) => (
+                <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
+                  {relativeTime(e.createdAt)}: {e.summary}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const PAYMENT_EVENTS: Record<'stripe' | 'razorpay', { name: string; keyHelp: string; hookHelp: string; events: string }> = {
+  stripe: {
+    name: 'Stripe',
+    keyHelp: 'In Stripe, create a restricted key with write access to Checkout Sessions (a secret key also works).',
+    hookHelp: 'In Stripe, add a webhook endpoint with the URL below, then paste its signing secret.',
+    events: 'checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired',
+  },
+  razorpay: {
+    name: 'Razorpay',
+    keyHelp: 'In Razorpay, generate an API key under Account & Settings.',
+    hookHelp: 'In Razorpay, add a webhook with the URL below and a secret you choose, then paste that secret.',
+    events: 'payment_link.paid, payment_link.expired, payment_link.cancelled',
+  },
+};
+
+/** Card payments on accepted proposals, into this workspace's own Stripe or Razorpay account. */
+function PaymentsCard({ app }: { app: AppStatus }) {
+  const qc = useQueryClient();
+  const canManage = useCan('integrations:manage');
+  const c = app.connection;
+  const settings = c?.settings as unknown as PaymentsSettings | undefined;
+  const [provider, setProvider] = useState<'stripe' | 'razorpay'>(settings?.provider ?? 'stripe');
+  const [secretKey, setSecretKey] = useState('');
+  const [keyId, setKeyId] = useState('');
+  const [keySecret, setKeySecret] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [editing, setEditing] = useState(false);
+  const s = STATE[app.state];
+  const copy = PAYMENT_EVENTS[provider];
+  const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'payments', 'events'], queryFn: () => api<AppEventRow[]>('/apps/payments/events') });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['apps'] });
+  const save = useMutation({
+    mutationFn: () => api<AppStatus>('/apps/payments/keys', { method: 'POST', json: provider === 'stripe' ? { provider, secretKey, webhookSecret } : { provider, keyId, keySecret, webhookSecret } }),
+    onSuccess: () => {
+      setSecretKey('');
+      setKeySecret('');
+      setWebhookSecret('');
+      setEditing(false);
+      return refresh();
+    },
+  });
+  const disconnect = useMutation({ mutationFn: () => api('/apps/payments', { method: 'DELETE' }), onSuccess: refresh });
+  const error = save.error ?? disconnect.error;
+  const showForm = canManage && (!c || editing);
+  const ready = webhookSecret.trim() && (provider === 'stripe' ? secretKey.trim() : keyId.trim() && keySecret.trim());
+
+  return (
+    <Card role="region" aria-labelledby="app-payments">
+      <CardHeader className="pb-2">
+        <CardTitle id="app-payments" className="flex flex-wrap items-center gap-2 text-sm">
+          {app.name}
+          <Badge tone={s.tone}>{s.label}</Badge>
+          {settings && <Badge tone={settings.mode === 'live' ? 'success' : 'neutral'}>{settings.mode === 'live' ? 'Live mode' : 'Test mode'}</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">
+          {app.description} Customers pay on {settings ? PAYMENT_EVENTS[settings.provider].name : 'Stripe or Razorpay'}’s hosted page, so DealFlow never handles card details. A proposal is marked paid only when the provider’s signed webhook confirms the amount.
+        </p>
+        {app.warnings.map((w) => (
+          <p key={w} className="text-xs text-warning">
+            {w}
+          </p>
+        ))}
+        {c && settings && (
+          <div className="space-y-1">
+            <p>
+              <strong>{c.accountName}</strong> · {PAYMENT_EVENTS[settings.provider].name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Keys checked {relativeTime(c.connectedAt)}
+              {c.connectedBy ? ` by ${c.connectedBy}` : ''}. {settings.lastWebhookAt ? `Last confirmation received ${relativeTime(settings.lastWebhookAt)}.` : 'No confirmation received yet.'}
+            </p>
+            {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
+            <div className="space-y-1.5">
+              <Label htmlFor="payments-webhook-url">Webhook URL</Label>
+              <Input id="payments-webhook-url" readOnly value={settings.webhookUrl} onFocus={(e) => e.currentTarget.select()} />
+              <p className="text-xs text-muted-foreground">Send these events: {PAYMENT_EVENTS[settings.provider].events}.</p>
+            </div>
+          </div>
+        )}
+        {showForm && (
+          <form
+            className="space-y-2 rounded-md border border-dashed p-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="payments-provider">Provider</Label>
+              <Select id="payments-provider" value={provider} onChange={(e) => setProvider(e.target.value as 'stripe' | 'razorpay')}>
+                <option value="stripe">Stripe</option>
+                <option value="razorpay">Razorpay</option>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {copy.keyHelp} {copy.hookHelp} {!c && 'The webhook URL appears here after the keys are saved; it stays the same if you replace them.'} Keys are checked with a read that charges nothing, then stored encrypted and never shown again. Use test keys first.
+            </p>
+            {provider === 'stripe' ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="payments-secret-key">Restricted or secret key</Label>
+                <Input id="payments-secret-key" type="password" autoComplete="off" placeholder="rk_test_…" value={secretKey} onChange={(e) => setSecretKey(e.target.value)} />
+              </div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="payments-key-id">Key id</Label>
+                  <Input id="payments-key-id" autoComplete="off" placeholder="rzp_test_…" value={keyId} onChange={(e) => setKeyId(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="payments-key-secret">Key secret</Label>
+                  <Input id="payments-key-secret" type="password" autoComplete="off" value={keySecret} onChange={(e) => setKeySecret(e.target.value)} />
+                </div>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="payments-webhook-secret">Webhook secret</Label>
+              <Input id="payments-webhook-secret" type="password" autoComplete="off" placeholder={provider === 'stripe' ? 'whsec_…' : ''} value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={save.isPending || !ready}>
+                {save.isPending ? `Checking with ${copy.name}…` : c ? 'Replace keys' : 'Check and save'}
+              </Button>
+              {c && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        )}
+        {canManage && c && !editing && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Replace keys
+            </Button>
+            <Button size="sm" variant="ghost" disabled={disconnect.isPending} onClick={() => window.confirm('Turn off card payments? Customers will no longer see “Pay by card”, and payments still in progress will not be recorded here. Payment history stays on each quote.') && disconnect.mutate()}>
+              Disconnect
+            </Button>
+          </div>
+        )}
+        {!canManage && <p className="text-xs text-muted-foreground">Workspace admins set up card payments.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-critical">
+            {error.message}
+          </p>
+        )}
+        {events.data && events.data.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium">Recent activity</p>
+            <ul className="space-y-1 text-xs" aria-label="Recent card payment activity">
               {events.data.slice(0, 5).map((e) => (
                 <li key={e.id} className={e.ok ? 'text-muted-foreground' : 'text-critical'}>
                   {relativeTime(e.createdAt)}: {e.summary}

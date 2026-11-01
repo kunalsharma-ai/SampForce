@@ -1,6 +1,7 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import type { ProposalSection, ProposalSendInput, PublicProposal, QuoteRow } from '@dealflow/types';
+import { CardPaymentsService } from '../apps/card-payments.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -26,6 +27,7 @@ export class ProposalsService {
     private readonly communication: CommunicationService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    private readonly payments: CardPaymentsService,
     @Inject(API_ENV) env: ApiEnv,
   ) {
     const secret = env.TRACKING_SECRET ?? createHmac('sha256', env.JWT_ACCESS_SECRET).update('dealflow-tracking-secret').digest('hex');
@@ -82,12 +84,26 @@ export class ProposalsService {
     return this.load(t.tenantId, t.messageId, { count: opts.count, shared: true });
   }
 
+  /** "Pay by card" on the public link: only for a shared, accepted, latest version with the workspace's own payments app connected. */
+  async pay(token: string): Promise<{ url: string } | null> {
+    const t = this.signer.verify(token);
+    if (!t) return null;
+    return this.payments.start(t.tenantId, t.messageId, token);
+  }
+
   /** The client portal shows a company's sent proposals to its signed-in people, whether or not the public link is on. */
   forPortal(tenantId: string, quoteId: string, companyId: string): Promise<PublicProposal | null> {
     return this.load(tenantId, quoteId, { count: false, shared: false, companyId });
   }
 
-  private load(tenantId: string, quoteId: string, opts: { count: boolean; shared: boolean; companyId?: string }): Promise<PublicProposal | null> {
+  private async load(tenantId: string, quoteId: string, opts: { count: boolean; shared: boolean; companyId?: string }): Promise<PublicProposal | null> {
+    const p = await this.loadQuote(tenantId, quoteId, opts);
+    if (!p || !opts.shared) return p;
+    const payment = await this.payments.forProposal(tenantId, { id: quoteId, status: p.status, isLatest: !p.superseded, total: p.total, currency: p.currency, expired: p.expired });
+    return payment ? { ...p, payment } : p;
+  }
+
+  private loadQuote(tenantId: string, quoteId: string, opts: { count: boolean; shared: boolean; companyId?: string }): Promise<PublicProposal | null> {
     return this.prisma.run({ tenantId }, async (tx) => {
       const q = await tx.quote.findFirst({
         where: {
@@ -117,6 +133,7 @@ export class ProposalsService {
         }
       }
       const validUntil = q.validUntil?.toISOString().slice(0, 10) ?? null;
+      const expired = q.status === 'SENT' && !!validUntil && validUntil < new Date().toISOString().slice(0, 10);
       return {
         seller: { name: tenant.name, logoDataUrl: settings?.logoDataUrl ?? null, header: settings?.proposalHeader ?? null, footer: settings?.proposalFooter ?? null, brandColor: tenant.brandColor },
         reference: `Q-${String(q.number).padStart(4, '0')}${q.version > 1 ? ` v${q.version}` : ''}`,
@@ -124,7 +141,7 @@ export class ProposalsService {
         preparedFor: q.opportunity.company?.name ?? null,
         createdAt: q.createdAt.toISOString(),
         validUntil,
-        expired: q.status === 'SENT' && !!validUntil && validUntil < new Date().toISOString().slice(0, 10),
+        expired,
         status: q.status,
         superseded: !q.isLatest,
         currency: q.currency,

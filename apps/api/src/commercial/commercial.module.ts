@@ -1,3 +1,4 @@
+import { AppsModule } from '../apps/apps.module';
 import { Module } from '@nestjs/common';
 import { AutomationModule } from '../automation/automation.module';
 import { CatalogService } from './catalog.service';
@@ -7,7 +8,7 @@ import { ProposalsService } from './proposals.service';
 import { QuotesService } from './quotes.service';
 
 @Module({
-  imports: [AutomationModule],
+  imports: [AutomationModule, AppsModule],
   controllers: [CatalogController, QuotesController, ContractsController, PublicProposalsController],
   providers: [CatalogService, QuotesService, ContractsService, ProposalsService],
   exports: [QuotesService, ContractsService, ProposalsService],
