@@ -2,7 +2,7 @@
 
 import { CalendarDays, Columns2, GanttChart, HeartPulse, KanbanSquare, LineChart, List, MapPinned, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { DealsBoard } from '@/components/crm/deals-board';
 import { RecordList } from '@/components/crm/record-list';
@@ -12,6 +12,7 @@ import { CalendarView, ForecastView, PriorityView, SplitView, TerritoryView, Tim
 import { usePipelines } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { replaceQuery } from '@/lib/url-query';
 import { useIsPhone } from '@/lib/use-is-phone';
 
 const VIEWS = [
@@ -29,9 +30,7 @@ const isView = (v: string | null): v is View => VIEWS.some((x) => x.key === v);
 const STORE = 'df-deals-view';
 
 export function DealsView() {
-  const router = useRouter();
   const t = useT();
-  const pathname = usePathname();
   const params = useSearchParams();
   const { data: session } = useSession();
   const pipelines = usePipelines();
@@ -40,14 +39,7 @@ export function DealsView() {
   const pipelineId = params.get('pipeline') ?? undefined;
   const mine = params.get('owner') === 'me';
 
-  const setParams = (patch: Record<string, string | null>) => {
-    const next = new URLSearchParams(params);
-    for (const [k, v] of Object.entries(patch)) {
-      if (v === null) next.delete(k);
-      else next.set(k, v);
-    }
-    router.replace(`${pathname}${next.size ? `?${next}` : ''}`, { scroll: false });
-  };
+  const setParams = replaceQuery;
 
   // Reopen the last view used on this device when the URL does not name one.
   useEffect(() => {

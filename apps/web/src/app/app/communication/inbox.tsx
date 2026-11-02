@@ -38,7 +38,7 @@ import {
   Search,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { EmailReading, INTENT_TONE } from '@/components/ai/email-reading';
 import { RecordPicker } from '@/components/crm/record-picker';
@@ -55,6 +55,7 @@ import {
 import { useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan, useSession } from '@/lib/session';
+import { replaceQuery } from '@/lib/url-query';
 import { ComposeDialog } from './mailbox';
 import { type Translator, useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
@@ -71,8 +72,6 @@ const STATUS_TONE: Record<InboxStatus, 'primary' | 'warning' | 'neutral'> = {
  */
 export function Inbox() {
   const t = useT();
-  const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const selected = params.get('conversation');
   const integrations = useIntegrations();
@@ -87,8 +86,7 @@ export function Inbox() {
   }, [search]);
   const threads = useInboxThreads(filters);
   const connected = integrations.data?.filter((p) => p.connection?.status === 'CONNECTED') ?? [];
-  const select = (id: string | null) =>
-    router.replace(id ? `${pathname}?conversation=${id}` : pathname, { scroll: false });
+  const select = (id: string | null) => replaceQuery({ conversation: id });
   const set = (patch: InboxFilters) => setFilters((f) => ({ ...f, ...patch }));
 
   return (

@@ -5,11 +5,12 @@ import { DEAL_RISKS, DEAL_RISK_LABELS, type DealHealthRow, type DealHealthSummar
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { replaceQuery } from '@/lib/url-query';
 
 const TONE: Record<DealRisk, 'success' | 'warning' | 'critical'> = { low: 'success', medium: 'warning', high: 'critical' };
 const LABEL: Record<DealRisk, string> = DEAL_RISK_LABELS;
@@ -17,17 +18,13 @@ const LABEL: Record<DealRisk, string> = DEAL_RISK_LABELS;
 export function DealHealthBoard() {
   const qc = useQueryClient();
   const t = useT();
-  const router = useRouter();
   const params = useSearchParams();
   const risk = (DEAL_RISKS as readonly string[]).includes(params.get('risk') ?? '') ? (params.get('risk') as DealRisk) : undefined;
   const mine = params.get('mine') === 'true';
   const setFilter = (next: { risk?: DealRisk; mine?: boolean }) => {
-    const q = new URLSearchParams();
     const r = 'risk' in next ? next.risk : risk;
     const m = 'mine' in next ? next.mine : mine;
-    if (r) q.set('risk', r);
-    if (m) q.set('mine', 'true');
-    router.replace(`/app/deals/health${q.size ? `?${q}` : ''}`);
+    replaceQuery({ risk: r ?? null, mine: m ? 'true' : null });
   };
   const summary = useQuery({ queryKey: ['deal-health', 'summary'], queryFn: () => api<DealHealthSummary>('/deal-health/summary') });
   const rows = useQuery({

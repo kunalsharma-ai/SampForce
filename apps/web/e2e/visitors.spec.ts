@@ -45,6 +45,9 @@ async function visitors(page: Page) {
 }
 
 test('admin installs tracking with consent; a consenting visitor is scored and becomes a lead when they enquire', async ({ page, browser }) => {
+  // One long journey across three browsers (admin, visitor, visitor with Global Privacy Control) with four
+  // accessibility scans: about 20 seconds on a quiet machine, so the default 30 seconds runs out when the machine is busy.
+  test.setTimeout(60_000);
   await signUp(page, 'Tracked');
   await page.goto('/app/website-visitors');
   await expect(page.getByText('Website tracking is off.')).toBeVisible();
@@ -80,6 +83,9 @@ test('admin installs tracking with consent; a consenting visitor is scored and b
   await expect.poll(async () => (await visitors(page)).length).toBe(1);
   await site.getByRole('link', { name: 'Pricing' }).click();
   await expect(site.getByRole('heading', { name: 'pricing' })).toBeVisible();
+  // The tracker records a page once it has fetched the site's settings, a moment after the page shows. Wait for
+  // that, as a person reading the page would, before moving on: leaving sooner cancels the request.
+  await expect.poll(async () => (await visitors(page))[0]?.pageViews).toBe(2);
   await site.getByRole('link', { name: 'Demo' }).click();
   await expect(site.getByRole('heading', { name: 'demo' })).toBeVisible();
   await expect.poll(async () => (await visitors(page))[0]?.pageViews).toBe(3);

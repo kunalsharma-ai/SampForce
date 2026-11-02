@@ -15,7 +15,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Download, Eye, EyeOff, Plus, Send, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccentPicker } from '@/components/bids/accent-picker';
 import { previewProposal, ProposalPreview, TemplateThumb, type PreviewLine } from '@/components/bids/bid-preview';
@@ -33,6 +33,7 @@ import {
   useTaxRates,
 } from '@/lib/revenue';
 import { useSession } from '@/lib/session';
+import { replaceQuery } from '@/lib/url-query';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -150,8 +151,6 @@ export function QuickBidStudio() {
 
 function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; onCreated?: (id: string) => void }) {
   const t = useT();
-  const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const qc = useQueryClient();
   const { data: session } = useSession();
@@ -303,11 +302,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
       // Keep what the person has typed; take the terms the server filled in from workspace settings.
       setDraft((d) => ({ ...d, terms: row.terms ?? '', validUntil: row.validUntil ?? '' }));
       setSave({ kind: 'saved', at: new Date() });
-      const next = new URLSearchParams(params);
-      next.delete('template');
-      next.delete('accent');
-      next.set('quote', row.id);
-      router.replace(`${pathname}?${next}`, { scroll: false });
+      replaceQuery({ template: null, accent: null, quote: row.id });
       go(1);
     },
   });
