@@ -396,8 +396,15 @@ export const EMAIL_INSIGHT_KINDS = ['quiet_step', 'high_bounce', 'ab_leader', 'r
 export interface EmailInsight {
   kind: (typeof EMAIL_INSIGHT_KINDS)[number];
   severity: 'info' | 'warning';
+  /** English wording, for API clients. The app writes the tip in the reader's language from `kind` and `facts`. */
   title: string;
   detail: string;
+  /**
+   * The numbers behind the tip. quiet_step: sequence, email, sent. high_bounce: sequence, rate, bounced, sent.
+   * ab_leader: sequence, email, leader, rateA, sentA, rateB, sentB. reply_timing: replies, plus hours (under a day)
+   * or days, and waitDays. disengaged: people.
+   */
+  facts: Record<string, string | number>;
   sequenceId: string | null;
   /** For disengaged people: up to ten names with the lead or contact they belong to. */
   people?: { name: string; leadId: string | null; contactId: string | null }[];

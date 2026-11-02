@@ -139,7 +139,7 @@ export class EmailAnalyticsService {
       const [seqId] = k.split(':') as [string];
       const pos = position.get(k);
       if (c.sent >= 20 && c.replied === 0) {
-        out.push({ kind: 'quiet_step', severity: 'warning', sequenceId: seqId, title: `${name(seqId)}: email ${pos ?? '?'} has no replies`, detail: `${c.sent} sent in this period and none answered. Try a different angle or a shorter email; the Email Assistant can rewrite it.` });
+        out.push({ kind: 'quiet_step', severity: 'warning', sequenceId: seqId, facts: { sequence: name(seqId), email: pos ?? '?', sent: c.sent }, title: `${name(seqId)}: email ${pos ?? '?'} has no replies`, detail: `${c.sent} sent in this period and none answered. Try a different angle or a shorter email; the Email Assistant can rewrite it.` });
       }
       const a = c.variants.get('A');
       const b = c.variants.get('B');
@@ -151,13 +151,13 @@ export class EmailAnalyticsService {
         const z = se > 0 ? (pb - pa) / se : 0;
         if (Math.abs(z) >= 1.96) {
           const lead = z > 0 ? 'B' : 'A';
-          out.push({ kind: 'ab_leader', severity: 'info', sequenceId: seqId, title: `${name(seqId)}: version ${lead} of email ${pos ?? '?'} gets more replies`, detail: `Version A ${Math.round(pa * 100)}% of ${a.sent}, version B ${Math.round(pb * 100)}% of ${b.sent}. The gap is unlikely to be chance (95% level); consider keeping version ${lead}.` });
+          out.push({ kind: 'ab_leader', severity: 'info', sequenceId: seqId, facts: { sequence: name(seqId), email: pos ?? '?', leader: lead, rateA: Math.round(pa * 100), sentA: a.sent, rateB: Math.round(pb * 100), sentB: b.sent }, title: `${name(seqId)}: version ${lead} of email ${pos ?? '?'} gets more replies`, detail: `Version A ${Math.round(pa * 100)}% of ${a.sent}, version B ${Math.round(pb * 100)}% of ${b.sent}. The gap is unlikely to be chance (95% level); consider keeping version ${lead}.` });
         }
       }
     }
     for (const [seqId, c] of bySeq) {
       if (c.sent >= 20 && c.bounced / c.sent >= 0.05) {
-        out.push({ kind: 'high_bounce', severity: 'warning', sequenceId: seqId, title: `${name(seqId)}: ${Math.round((c.bounced / c.sent) * 100)}% of emails bounced`, detail: `${c.bounced} of ${c.sent} bounced. Verify addresses before enrolling more people; a high bounce rate can hurt your mailbox's reputation.` });
+        out.push({ kind: 'high_bounce', severity: 'warning', sequenceId: seqId, facts: { sequence: name(seqId), rate: Math.round((c.bounced / c.sent) * 100), bounced: c.bounced, sent: c.sent }, title: `${name(seqId)}: ${Math.round((c.bounced / c.sent) * 100)}% of emails bounced`, detail: `${c.bounced} of ${c.sent} bounced. Verify addresses before enrolling more people; a high bounce rate can hurt your mailbox's reputation.` });
       }
     }
     const timing = await tx.$queryRaw<{ n: number; median_hours: number | null }[]>`
@@ -167,7 +167,8 @@ export class EmailAnalyticsService {
     const t = timing[0];
     if (t && t.n >= 10 && t.median_hours !== null) {
       const days = Math.max(1, Math.round(t.median_hours / 24));
-      out.push({ kind: 'reply_timing', severity: 'info', sequenceId: null, title: `Half of replies arrive within ${t.median_hours < 24 ? `${Math.max(1, Math.round(t.median_hours))} hours` : `${days} day${days === 1 ? '' : 's'}`}`, detail: `From ${t.n} replies in this period. Waiting about ${days + 1} day${days + 1 === 1 ? '' : 's'} before a follow-up gives most people time to answer first.` });
+      const facts: Record<string, number> = t.median_hours < 24 ? { replies: t.n, hours: Math.max(1, Math.round(t.median_hours)), waitDays: days + 1 } : { replies: t.n, days, waitDays: days + 1 };
+      out.push({ kind: 'reply_timing', severity: 'info', sequenceId: null, facts, title: `Half of replies arrive within ${t.median_hours < 24 ? `${Math.max(1, Math.round(t.median_hours))} hours` : `${days} day${days === 1 ? '' : 's'}`}`, detail: `From ${t.n} replies in this period. Waiting about ${days + 1} day${days + 1 === 1 ? '' : 's'} before a follow-up gives most people time to answer first.` });
     }
     const quiet = await tx.$queryRaw<{ lead_id: string | null; contact_id: string | null; name: string | null; email: string }[]>`
       SELECT e.lead_id, e.contact_id, COALESCE(l.full_name, NULLIF(trim(concat_ws(' ', c.first_name, c.last_name)), '')) AS name, e.email
@@ -184,6 +185,7 @@ export class EmailAnalyticsService {
         kind: 'disengaged',
         severity: 'info',
         sequenceId: null,
+        facts: { people: quiet.length },
         title: `${quiet.length} ${quiet.length === 1 ? 'person has' : 'people have'} had 3 or more emails with no reply, open or click`,
         detail: 'Consider pausing them or trying another channel. Opens are often blocked, so some may still be reading.',
         people: quiet.slice(0, 10).map((q) => ({ name: q.name ?? q.email, leadId: q.lead_id, contactId: q.contact_id })),

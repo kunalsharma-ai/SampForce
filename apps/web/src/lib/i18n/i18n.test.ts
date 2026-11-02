@@ -4,12 +4,16 @@ import {
   ACTIVITY_TYPES,
   DEAL_PRIORITIES,
   DEAL_RISK_LABELS,
+  EMAIL_BLOCK_LABELS,
+  EMAIL_TONE_LABELS,
   EMAIL_STATUS_LABELS,
   ENROLL_SKIP_LABELS,
   INBOX_STATUS_LABELS,
   LANGUAGES,
   LEAD_STATUSES,
+  MERGE_FIELDS,
   NEXT_ACTION_LABELS,
+  RULE_ACTION_LABELS,
   SSO_ERRORS,
   THEMES,
   TIMELINE_KIND_LABELS,
@@ -17,6 +21,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
+import { ENROLLMENT_LABEL } from '@/lib/sequences';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
 import { CATALOGUES, translate, translatePlural } from './translate';
@@ -107,6 +112,11 @@ describe('page phrases', () => {
     ['custom field validation messages', [...source('../../../../../packages/types/src/crm.ts').matchAll(/customFieldDefSchema[\s\S]*?CustomFieldDefInput/g)].flatMap((m) => [...m[0].matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!))],
     ['workspace settings validation messages', [...source('../../app/app/settings/workspace-settings.tsx').matchAll(/(?:min|regex|length)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
     ['territory validation messages', [...source('../../../../../packages/types/src/territories.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)|refine\([^,]+, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
+    // Email sequences: shared labels, sequence statuses, the template designer's checks, and AI availability reasons.
+    ['email sequence labels', [...Object.values(MERGE_FIELDS), ...Object.values(RULE_ACTION_LABELS), ...Object.values(ENROLLMENT_LABEL), ...Object.values(EMAIL_TONE_LABELS), ...Object.values(EMAIL_BLOCK_LABELS), 'Draft', 'Active', 'Paused', 'Archived']],
+    ['sequence analytics template names', [...source('../../../../api/src/sequences/analytics.service.ts').matchAll(/name: id === 'none' \? '([^']+)' : \(templates\.get\(id\) \?\? '([^']+)'\)/g)].flatMap((m) => [m[1]!, m[2]!])],
+    ['email design validation messages', [...source('../../../../../packages/types/src/email-design.ts').matchAll(/(?:regex|refine|max|min)\([^,']*, '([^']+)'\)|message: '([^']+)'/g)].map((m) => (m[1] ?? m[2])!)],
+    ['AI availability reasons', [...source('../../../../api/src/ai/gateway.service.ts').matchAll(/\? '([^']+\.)'/g)].map((m) => m[1]!).filter((r) => !r.startsWith('An API key'))],
     ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)

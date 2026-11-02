@@ -72,6 +72,25 @@ starts in the language its owner signed up in, on every device.
 Still English in these pages: the Theme Studio's automatic adjustment notes (sentences with colour values built in
 `@dealflow/types`), API error messages, and the per-row problems an import check returns from the server.
 
+## Scope of batch 3
+
+Translated: Email Sequences (the sequence list, the editor's steps, rules, send window, people and results tabs, the
+do-not-email list, workspace variables and campaign results), email templates with the template designer (palette,
+outline, block settings, look, previews and the drag-and-drop announcements), merge-field buttons and the lead
+preview, and the "Write with AI" panel. New table: `sequences`; new plural key `count.inSequences`.
+
+- **Tips from the results API are written in the app.** Each tip now carries `facts` (the numbers behind it) next to
+  its English `title` and `detail`, and the page writes the sentence in the reader's language from its `kind`.
+  Durations such as "5 hours" use `Intl.NumberFormat` with a unit, so each language gets its own plural.
+- **Weekday names** in the send window come from `Intl.DateTimeFormat` in the format locale.
+- **Labels inside sentences** ("Added a pricing table block") go through `inSentence`, which lower-cases them except
+  in German, where nouns keep their capital. The translations quote the label where the grammar needs it.
+- **The outline's summaries** take a translator for their fixed wording (`blockSummary(block, say)`); the text people
+  typed in a block is never translated.
+
+Still English here: the starter content of a new sequence and of a new design (it is email text people replace),
+AI-written drafts, the reasons on a paused or failed enrolment, and API error messages.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

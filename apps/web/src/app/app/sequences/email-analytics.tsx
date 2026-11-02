@@ -1,16 +1,54 @@
 'use client';
 
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
-import type { AnalyticsCounts } from '@dealflow/types';
+import type { AnalyticsCounts, EmailInsight } from '@dealflow/types';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText } from '@/components/revenue/tabs';
 import { titleCase } from '@/lib/crm';
 import { pct, SEQUENCE_TONE, useEmailAnalytics } from '@/lib/sequences';
+import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 const PERIODS = [7, 30, 90, 365] as const;
+
+/** "5 hours", "3 Tage": the language's own plural, from Intl. */
+const unit = (t: Translator, n: number, u: 'hour' | 'day') => new Intl.NumberFormat(t.language, { style: 'unit', unit: u, unitDisplay: 'long' }).format(n);
+
+/** A tip in the reader's language, written from its numbers. Unknown kinds keep the API's English. */
+export function insightText(i: EmailInsight, t: Translator): { title: string; detail: string } {
+  const f = i.facts ?? {};
+  switch (i.kind) {
+    case 'quiet_step':
+      return {
+        title: t('{sequence}: email {email} has no replies', f),
+        detail: t('{sent} sent in this period and none answered. Try a different angle or a shorter email; the Email Assistant can rewrite it.', f),
+      };
+    case 'ab_leader':
+      return {
+        title: t('{sequence}: version {leader} of email {email} gets more replies', f),
+        detail: t('Version A {rateA}% of {sentA}, version B {rateB}% of {sentB}. The gap is unlikely to be chance (95% level); consider keeping version {leader}.', f),
+      };
+    case 'high_bounce':
+      return {
+        title: t('{sequence}: {rate}% of emails bounced', f),
+        detail: t("{bounced} of {sent} bounced. Verify addresses before enrolling more people; a high bounce rate can hurt your mailbox's reputation.", f),
+      };
+    case 'reply_timing':
+      return {
+        title: t('Half of replies arrive within {time}', { time: f.hours !== undefined ? unit(t, Number(f.hours), 'hour') : unit(t, Number(f.days), 'day') }),
+        detail: t('From {replies} replies in this period. Waiting about {wait} before a follow-up gives most people time to answer first.', { replies: f.replies ?? 0, wait: unit(t, Number(f.waitDays), 'day') }),
+      };
+    case 'disengaged':
+      return {
+        title: t('People who had 3 or more emails with no reply, open or click: {people}', f),
+        detail: t('Consider pausing them or trying another channel. Opens are often blocked, so some may still be reading.'),
+      };
+    default:
+      return { title: i.title, detail: i.detail };
+  }
+}
 
 function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
   return (
@@ -40,22 +78,24 @@ function CountCells({ c }: { c: AnalyticsCounts }) {
 }
 
 function CountHead({ first }: { first: string }) {
+  const t = useT();
   return (
     <thead className="border-b border-border text-start text-xs text-muted-foreground">
       <tr>
         <th className="px-3 py-2 font-medium">{first}</th>
-        <th className="px-3 py-2 text-end font-medium">Sent</th>
-        <th className="px-3 py-2 text-end font-medium">Replied</th>
-        <th className="px-3 py-2 text-end font-medium">Opened (estimate)</th>
-        <th className="px-3 py-2 text-end font-medium">Clicked</th>
-        <th className="px-3 py-2 text-end font-medium">Bounced</th>
-        <th className="px-3 py-2 text-end font-medium">Unsubscribed</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Sent')}</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Replied')}</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Opened (estimate)')}</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Clicked')}</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Bounced')}</th>
+        <th className="px-3 py-2 text-end font-medium">{t('Unsubscribed')}</th>
       </tr>
     </thead>
   );
 }
 
 function Table({ title, first, rows }: { title: string; first: string; rows: { key: string; name: React.ReactNode; c: AnalyticsCounts }[] }) {
+  const t = useT();
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -63,7 +103,7 @@ function Table({ title, first, rows }: { title: string; first: string; rows: { k
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         {rows.length === 0 ? (
-          <p className="px-4 pb-4 text-sm text-muted-foreground">Nothing sent in this period.</p>
+          <p className="px-4 pb-4 text-sm text-muted-foreground">{t('Nothing sent in this period.')}</p>
         ) : (
           <table className="w-full text-sm">
             <CountHead first={first} />
@@ -88,18 +128,19 @@ export function EmailAnalyticsPanel() {
   const [days, setDays] = useState<number>(30);
   const [scope, setScope] = useState<'mine' | 'team'>('mine');
   const q = useEmailAnalytics(days, scope);
-  const t = q.data?.totals;
+  const t = useT();
+  const totals = q.data?.totals;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label htmlFor="ea-days" className="block text-xs font-medium">
-            Period
+            {t('Period')}
           </label>
           <Select id="ea-days" value={String(days)} onChange={(e) => setDays(Number(e.target.value))}>
             {PERIODS.map((d) => (
               <option key={d} value={d}>
-                Last {d} days
+                {t('Last {days} days', { days: d })}
               </option>
             ))}
           </Select>
@@ -107,11 +148,11 @@ export function EmailAnalyticsPanel() {
         {canTeam && (
           <div>
             <label htmlFor="ea-scope" className="block text-xs font-medium">
-              Whose emails
+              {t('Whose emails')}
             </label>
             <Select id="ea-scope" value={scope} onChange={(e) => setScope(e.target.value as 'mine' | 'team')}>
-              <option value="mine">Mine</option>
-              <option value="team">Whole team</option>
+              <option value="mine">{t('Mine')}</option>
+              <option value="team">{t('Whole team')}</option>
             </Select>
           </div>
         )}
@@ -123,37 +164,38 @@ export function EmailAnalyticsPanel() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Stat label="Emails sent" value={t!.sent} />
-            <Stat label="Reply rate" value={pct(t!.replied, t!.sent)} note={`${t!.replied} replies`} />
-            <Stat label="Bounce rate" value={pct(t!.bounced, t!.sent)} note={`${t!.bounced} bounced`} />
-            <Stat label="People enrolled" value={t!.enrolled} note={`${t!.completed} finished, ${t!.failed} failed`} />
+            <Stat label={t('Emails sent')} value={totals!.sent} />
+            <Stat label={t('Reply rate')} value={pct(totals!.replied, totals!.sent)} note={t('Replies: {count}', { count: totals!.replied })} />
+            <Stat label={t('Bounce rate')} value={pct(totals!.bounced, totals!.sent)} note={t('Bounced: {count}', { count: totals!.bounced })} />
+            <Stat label={t('People enrolled')} value={totals!.enrolled} note={t('Finished: {done}, failed: {failed}', { done: totals!.completed, failed: totals!.failed })} />
           </div>
           <p className="text-xs text-muted-foreground">
-            Replies and bounces come from your synced mailbox and are reliable. Opens are estimates: some mail apps load images by themselves and others block them. Some clicks come
-            from security scanners. Delivery is not shown because mail providers do not report it.
+            {t('Replies and bounces come from your synced mailbox and are reliable. Opens are estimates: some mail apps load images by themselves and others block them. Some clicks come from security scanners. Delivery is not shown because mail providers do not report it.')}
           </p>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Tips</CardTitle>
+              <CardTitle className="text-base">{t('Tips')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {q.data.insights.length === 0 ? (
-                <p className="text-muted-foreground">No tips yet. Tips appear once there is enough data, for example 20 emails from one step or 10 replies.</p>
+                <p className="text-muted-foreground">{t('No tips yet. Tips appear once there is enough data, for example 20 emails from one step or 10 replies.')}</p>
               ) : (
                 <ul className="space-y-3">
-                  {q.data.insights.map((i) => (
+                  {q.data.insights.map((i) => {
+                    const text = insightText(i, t);
+                    return (
                     <li key={`${i.kind}-${i.title}`}>
                       <p className="flex flex-wrap items-center gap-2 font-medium">
-                        <Badge tone={i.severity === 'warning' ? 'warning' : 'primary'}>{i.severity === 'warning' ? 'Check' : 'Tip'}</Badge>
+                        <Badge tone={i.severity === 'warning' ? 'warning' : 'primary'}>{i.severity === 'warning' ? t('Check') : t('Tip')}</Badge>
                         {i.sequenceId ? (
                           <Link href={`/app/sequences/${i.sequenceId}`} className="underline underline-offset-2">
-                            {i.title}
+                            {text.title}
                           </Link>
                         ) : (
-                          i.title
+                          text.title
                         )}
                       </p>
-                      <p className="text-muted-foreground">{i.detail}</p>
+                      <p className="text-muted-foreground">{text.detail}</p>
                       {i.people && (
                         <p className="text-xs">
                           {i.people.map((p, n) => (
@@ -167,14 +209,15 @@ export function EmailAnalyticsPanel() {
                         </p>
                       )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>
           </Card>
           <Table
-            title="By sequence"
-            first="Sequence"
+            title={t('By sequence')}
+            first={t('Sequence')}
             rows={q.data.bySequence.map((s) => ({
               key: s.id,
               c: s,
@@ -183,20 +226,24 @@ export function EmailAnalyticsPanel() {
                   <Link href={`/app/sequences/${s.id}`} className="font-medium underline underline-offset-2">
                     {s.name}
                   </Link>
-                  <Badge tone={SEQUENCE_TONE[s.status]}>{titleCase(s.status)}</Badge>
-                  {s.abTested && <Badge tone="accent">A/B test</Badge>}
-                  <span className="text-xs text-muted-foreground">{s.enrolled} enrolled</span>
+                  <Badge tone={SEQUENCE_TONE[s.status]}>{t.maybe(titleCase(s.status))}</Badge>
+                  {s.abTested && <Badge tone="accent">{t('A/B test')}</Badge>}
+                  <span className="text-xs text-muted-foreground">{t('Enrolled: {count}', { count: s.enrolled })}</span>
                 </span>
               ),
             }))}
           />
           <Table
-            title="By sending mailbox"
-            first="Sender"
+            title={t('By sending mailbox')}
+            first={t('Sender')}
             rows={q.data.byMailbox.map((m) => ({ key: m.userId, c: m, name: <span>{m.name}{m.mailbox && <span className="block text-xs text-muted-foreground">{m.mailbox}</span>}</span> }))}
           />
-          <Table title="By template" first="Template" rows={q.data.byTemplate.map((x) => ({ key: x.id ?? 'none', c: x, name: x.name }))} />
-          <Table title="First email and follow-ups" first="Email in the sequence" rows={q.data.byStepPosition.map((x) => ({ key: String(x.position), c: x, name: x.position === 1 ? 'First email' : `Follow-up ${x.position - 1}` }))} />
+          <Table title={t('By template')} first={t('Template')} rows={q.data.byTemplate.map((x) => ({ key: x.id ?? 'none', c: x, name: x.id ? x.name : t.maybe(x.name) }))} />
+          <Table
+            title={t('First email and follow-ups')}
+            first={t('Email in the sequence')}
+            rows={q.data.byStepPosition.map((x) => ({ key: String(x.position), c: x, name: x.position === 1 ? t('First email') : t('Follow-up {n}', { n: x.position - 1 }) }))}
+          />
         </>
       )}
     </div>

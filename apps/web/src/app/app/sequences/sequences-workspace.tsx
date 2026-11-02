@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { formatDate, titleCase } from '@/lib/crm';
 import { useCampaigns } from '@/lib/revenue';
 import { pct, SEQUENCE_TONE, useSequences, useSuppressions, useTemplateCategories, useTemplates } from '@/lib/sequences';
+import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { EmailAnalyticsPanel } from './email-analytics';
 import { EmailVariables } from './email-variables';
@@ -23,19 +24,20 @@ import { insertAt, MergeFieldBar, PreviewPanel } from './merge-fields';
 type Tab = 'sequences' | 'analytics' | 'templates' | 'variables' | 'suppressions';
 
 export function SequencesWorkspace() {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('sequences');
   return (
     <div>
       <Tabs<Tab>
-        label="Email sequences"
+        label={t('Email sequences')}
         value={tab}
         onChange={setTab}
         tabs={[
-          { key: 'sequences', label: 'Sequences' },
-          { key: 'analytics', label: 'Results' },
-          { key: 'templates', label: 'Templates' },
-          { key: 'variables', label: 'Variables' },
-          { key: 'suppressions', label: 'Do-not-email list' },
+          { key: 'sequences', label: t('Sequences') },
+          { key: 'analytics', label: t('Results') },
+          { key: 'templates', label: t('Templates') },
+          { key: 'variables', label: t('Variables') },
+          { key: 'suppressions', label: t('Do-not-email list') },
         ]}
       />
       {tab === 'sequences' && <SequenceList />}
@@ -48,6 +50,7 @@ export function SequencesWorkspace() {
 }
 
 function SequenceList() {
+  const t = useT();
   const list = useSequences();
   const canWrite = useCan('sequences:write');
   const router = useRouter();
@@ -56,7 +59,7 @@ function SequenceList() {
       api<{ id: string }>('/sequences', {
         method: 'POST',
         json: {
-          name: 'New sequence',
+          name: t('New sequence'),
           steps: [
             { id: 'step-1', type: 'email', delayDays: 0, subject: 'Quick question, {{first_name|there}}', body: 'Hi {{first_name|there}},\n\n\n\n{{sender_first_name}}' },
             { id: 'step-2', type: 'email', delayDays: 3, subject: 'Re: quick question', body: 'Hi {{first_name|there}}, following up on my note above.\n\n{{sender_first_name}}' },
@@ -72,7 +75,7 @@ function SequenceList() {
       {canWrite && (
         <div className="flex flex-wrap items-center gap-3">
           <Button size="sm" onClick={() => create.mutate()} disabled={create.isPending}>
-            <Plus aria-hidden /> New sequence
+            <Plus aria-hidden /> {t('New sequence')}
           </Button>
           <ErrorText error={create.error} />
         </div>
@@ -86,18 +89,18 @@ function SequenceList() {
               <ErrorText error={list.error} />
             </div>
           ) : list.data.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">No sequences yet. A sequence sends a few personal emails over days or weeks and stops when someone replies.</p>
+            <p className="p-6 text-sm text-muted-foreground">{t('No sequences yet. A sequence sends a few personal emails over days or weeks and stops when someone replies.')}</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Sequence</th>
-                  <th className="px-4 py-2 text-end font-medium">Steps</th>
-                  <th className="px-4 py-2 text-end font-medium">In progress</th>
-                  <th className="px-4 py-2 text-end font-medium">Sent</th>
-                  <th className="px-4 py-2 text-end font-medium">Replied</th>
-                  <th className="px-4 py-2 text-end font-medium">Opened*</th>
-                  <th className="px-4 py-2 text-end font-medium">Bounced</th>
+                  <th className="px-4 py-2 font-medium">{t('Sequence')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Steps')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('In progress')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Sent')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Replied')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Opened*')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Bounced')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -107,9 +110,9 @@ function SequenceList() {
                       <Link href={`/app/sequences/${s.id}`} className="font-medium hover:underline">
                         {s.name}
                       </Link>{' '}
-                      <Badge tone={SEQUENCE_TONE[s.status]}>{titleCase(s.status)}</Badge>
+                      <Badge tone={SEQUENCE_TONE[s.status]}>{t.maybe(titleCase(s.status))}</Badge>
                       <span className="block text-xs text-muted-foreground">
-                        {s.owner ? `By ${s.owner.name} · ` : ''}updated {formatDate(s.updatedAt)}
+                        {s.owner ? t('By {name}, updated {date}', { name: s.owner.name, date: formatDate(s.updatedAt) }) : t('Updated {date}', { date: formatDate(s.updatedAt) })}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-end tabular-nums">{s.steps.length}</td>
@@ -130,7 +133,7 @@ function SequenceList() {
         </CardContent>
       </Card>
       <p className="text-xs text-muted-foreground">
-        *Opens are approximate. Apple Mail loads tracking images by itself, and many work inboxes block them, so open counts can be too high or too low. Replies come from your synced mailbox and are reliable.
+        {t('*Opens are approximate. Apple Mail loads tracking images by itself, and many work inboxes block them, so open counts can be too high or too low. Replies come from your synced mailbox and are reliable.')}
       </p>
     </div>
   );
@@ -139,6 +142,7 @@ function SequenceList() {
 // ───────────── Templates ─────────────
 
 function TemplateLibrary() {
+  const t = useT();
   const [category, setCategory] = useState('');
   const templates = useTemplates({ category: category || undefined });
   const categories = useTemplateCategories();
@@ -157,16 +161,16 @@ function TemplateLibrary() {
       <div className="flex flex-wrap items-end gap-3">
         {canWrite && !editing && (
           <Button size="sm" onClick={() => setEditing('new')}>
-            <Plus aria-hidden /> New template
+            <Plus aria-hidden /> {t('New template')}
           </Button>
         )}
         {(categories.data?.length ?? 0) > 0 && (
           <div>
             <label htmlFor="tpl-filter" className="block text-xs font-medium">
-              Category
+              {t('Category')}
             </label>
             <Select id="tpl-filter" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
+              <option value="">{t('All categories')}</option>
               {categories.data!.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -185,33 +189,33 @@ function TemplateLibrary() {
       ) : templates.data.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            {category ? 'No templates in this category.' : 'No templates yet. Templates are reusable emails with merge fields such as first name and company.'}
+            {category ? t('No templates in this category.') : t('No templates yet. Templates are reusable emails with merge fields such as first name and company.')}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {templates.data.map((t) => (
-            <Card key={t.id}>
+          {templates.data.map((tpl) => (
+            <Card key={tpl.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-                  {t.name}
-                  {t.shared ? <Badge tone="primary">Shared</Badge> : <Badge>Only you</Badge>}
-                  {t.design && <Badge tone="accent">Designed</Badge>}
-                  {t.category && <Badge tone="neutral">{t.category}</Badge>}
-                  {t.usedBy > 0 && <Badge tone="accent">In {t.usedBy} sequence{t.usedBy === 1 ? '' : 's'}</Badge>}
+                  {tpl.name}
+                  {tpl.shared ? <Badge tone="primary">{t('Shared')}</Badge> : <Badge>{t('Only you')}</Badge>}
+                  {tpl.design && <Badge tone="accent">{t('Designed')}</Badge>}
+                  {tpl.category && <Badge tone="neutral">{tpl.category}</Badge>}
+                  {tpl.usedBy > 0 && <Badge tone="accent">{t.plural('count.inSequences', tpl.usedBy)}</Badge>}
                 </CardTitle>
-                {t.campaign && <p className="text-xs text-muted-foreground">Campaign: {t.campaign.name}</p>}
+                {tpl.campaign && <p className="text-xs text-muted-foreground">{t('Campaign: {name}', { name: tpl.campaign.name })}</p>}
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p className="font-medium">{t.subject}</p>
-                <p className="line-clamp-4 whitespace-pre-wrap text-muted-foreground">{t.body}</p>
+                <p className="font-medium">{tpl.subject}</p>
+                <p className="line-clamp-4 whitespace-pre-wrap text-muted-foreground">{tpl.body}</p>
                 {canWrite && (
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditing(t)} aria-label={`Edit ${t.name}`}>
-                      Edit
+                    <Button size="sm" variant="outline" onClick={() => setEditing(tpl)} aria-label={t('Edit {name}', { name: tpl.name })}>
+                      {t('Edit')}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => duplicate.mutate(t.id)} disabled={duplicate.isPending} aria-label={`Duplicate ${t.name}`}>
-                      <Copy className="h-4 w-4" aria-hidden /> Duplicate
+                    <Button size="sm" variant="ghost" onClick={() => duplicate.mutate(tpl.id)} disabled={duplicate.isPending} aria-label={t('Duplicate {name}', { name: tpl.name })}>
+                      <Copy className="h-4 w-4" aria-hidden /> {t('Duplicate')}
                     </Button>
                   </div>
                 )}
@@ -225,6 +229,7 @@ function TemplateLibrary() {
 }
 
 function TemplateForm({ template, categories, onDone }: { template: EmailTemplateRow | null; categories: string[]; onDone: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const canShare = useCan('marketing:manage');
   const canSeeCampaigns = useCan('marketing:read');
@@ -281,7 +286,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{template ? `Edit ${template.name}` : 'New template'}</CardTitle>
+        <CardTitle className="text-base">{template ? t('Edit {name}', { name: template.name }) : t('New template')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -289,28 +294,28 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
           onSubmit={(e) => {
             e.preventDefault();
             if (designed && design) {
-              const problem = designProblem(design);
+              const problem = designProblem(design, t);
               setDesignError(problem);
               if (problem) return;
             }
             save.mutate();
           }}
         >
-          <Field id="tpl-name" label="Name">
+          <Field id="tpl-name" label={t('Name')}>
             <Input id="tpl-name" required maxLength={120} value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
           </Field>
-          <Field id="tpl-subject" label="Subject">
+          <Field id="tpl-subject" label={t('Subject')}>
             <Input id="tpl-subject" ref={subjectRef} required maxLength={200} value={v.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => setV({ ...v, subject: e.target.value })} />
           </Field>
           <div className="flex flex-wrap items-center gap-2">
             <span id="tpl-format" className="text-sm font-medium">
-              Format
+              {t('Format')}
             </span>
             <div className="inline-flex rounded-md border border-border p-0.5" role="group" aria-labelledby="tpl-format">
               {(
                 [
-                  [false, 'Plain text'],
-                  [true, 'Designed'],
+                  [false, t('Plain text')],
+                  [true, t('Designed')],
                 ] as const
               ).map(([value, name]) => (
                 <button
@@ -325,7 +330,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
               ))}
             </div>
             <span className="text-xs text-muted-foreground">
-              {designed ? 'Blocks, colours and buttons, sent as HTML with a plain-text version.' : 'A personal-looking email. Links become clickable.'}
+              {designed ? t('Blocks, colours and buttons, sent as HTML with a plain-text version.') : t('A personal-looking email. Links become clickable.')}
             </span>
           </div>
           {designed && design ? (
@@ -340,7 +345,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
             />
           ) : (
             <>
-            <Field id="tpl-body" label="Email" hint="Plain text. Links become clickable. An unsubscribe line is added to every sequence email.">
+            <Field id="tpl-body" label={t('Email')} hint={t('Plain text. Links become clickable. An unsubscribe line is added to every sequence email.')}>
               <Textarea
                 id="tpl-body"
                 ref={bodyRef}
@@ -362,10 +367,10 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
             </>
           )}
           <p className="text-xs text-muted-foreground">
-            Add a fallback after a bar for fields that may be empty, for example {'{{first_name|there}}'}. Custom fields use {'{{custom.key}}'} and workspace variables use {'{{var.key}}'}.
+            {t('Add a fallback after a bar for fields that may be empty, for example {example}. Custom fields use {custom} and workspace variables use {variable}.', { example: '{{first_name|there}}', custom: '{{custom.key}}', variable: '{{var.key}}' })}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="tpl-category" label="Category" hint="Optional, for example Cold outreach or Follow-up.">
+            <Field id="tpl-category" label={t('Category')} hint={t('Optional, for example Cold outreach or Follow-up.')}>
               <Input id="tpl-category" list="tpl-category-options" maxLength={40} value={v.category} onChange={(e) => setV({ ...v, category: e.target.value })} />
               <datalist id="tpl-category-options">
                 {categories.map((c) => (
@@ -374,9 +379,9 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
               </datalist>
             </Field>
             {canSeeCampaigns && (
-              <Field id="tpl-campaign" label="Campaign">
+              <Field id="tpl-campaign" label={t('Campaign')}>
                 <Select id="tpl-campaign" value={v.campaignId} onChange={(e) => setV({ ...v, campaignId: e.target.value })}>
-                  <option value="">No campaign</option>
+                  <option value="">{t('No campaign')}</option>
                   {(campaigns.data ?? []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -388,20 +393,20 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
           </div>
           {canShare && (
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={v.shared} onChange={(e) => setV({ ...v, shared: e.target.checked })} /> Share with the whole workspace
+              <input type="checkbox" checked={v.shared} onChange={(e) => setV({ ...v, shared: e.target.checked })} /> {t('Share with the whole workspace')}
             </label>
           )}
           <PreviewPanel subject={v.subject} body={designed ? '' : v.body} design={designed ? design : null} />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" disabled={save.isPending}>
-              Save template
+              {t('Save template')}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={onDone}>
-              Cancel
+              {t('Cancel')}
             </Button>
             {template && (
               <Button type="button" size="sm" variant="ghost" className="text-critical" onClick={() => remove.mutate()} disabled={remove.isPending}>
-                Delete
+                {t('Delete')}
               </Button>
             )}
           </div>
@@ -413,13 +418,14 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
 }
 
 /** The first thing that stops a design from saving, named by its block, or null. */
-function designProblem(design: EmailDesign): string | null {
+function designProblem(design: EmailDesign, t: Translator): string | null {
   const r = emailDesignSchema.safeParse(design);
   if (r.success) return null;
   const issue = r.error.issues[0]!;
   const [where, index] = issue.path;
   const block = where === 'blocks' && typeof index === 'number' ? design.blocks[index] : undefined;
-  return block ? `${EMAIL_BLOCK_LABELS[block.type]} block ${Number(index) + 1}: ${issue.message}.` : `${issue.message}.`;
+  const message = t.maybe(issue.message);
+  return block ? t('{block} block {n}: {problem}.', { block: t.maybe(EMAIL_BLOCK_LABELS[block.type]), n: Number(index) + 1, problem: message }) : `${message}.`;
 }
 
 // ───────────── Do-not-email list ─────────────
@@ -427,6 +433,7 @@ function designProblem(design: EmailDesign): string | null {
 const REASON_LABEL = { UNSUBSCRIBED: 'Unsubscribed', BOUNCED: 'Bounced', MANUAL: 'Added by your team' } as const;
 
 function SuppressionList() {
+  const t = useT();
   const [search, setSearch] = useState('');
   const list = useSuppressions(search);
   const qc = useQueryClient();
@@ -448,19 +455,19 @@ function SuppressionList() {
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardContent className="space-y-3 p-4">
-          <Input aria-label="Search addresses" placeholder="Search addresses" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input aria-label={t('Search addresses')} placeholder={t('Search addresses')} value={search} onChange={(e) => setSearch(e.target.value)} />
           {list.isPending ? (
             <Skeleton className="h-24" />
           ) : list.error ? (
             <ErrorText error={list.error} />
           ) : list.data.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nobody is on the list{search ? ' that matches' : ''}.</p>
+            <p className="text-sm text-muted-foreground">{search ? t('Nobody on the list matches.') : t('Nobody is on the list.')}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {list.data.map((s) => (
                 <li key={s.email} className="flex flex-wrap items-center gap-2 py-2">
                   <span className="font-medium">{s.email}</span>
-                  <Badge tone={s.reason === 'BOUNCED' ? 'critical' : s.reason === 'UNSUBSCRIBED' ? 'warning' : 'neutral'}>{REASON_LABEL[s.reason]}</Badge>
+                  <Badge tone={s.reason === 'BOUNCED' ? 'critical' : s.reason === 'UNSUBSCRIBED' ? 'warning' : 'neutral'}>{t.maybe(REASON_LABEL[s.reason])}</Badge>
                   <span className="text-xs text-muted-foreground">{formatDate(s.createdAt)}</span>
                   {canManage && (
                     <Button
@@ -468,12 +475,12 @@ function SuppressionList() {
                       variant="ghost"
                       className="ms-auto"
                       onClick={() => {
-                        const reason = s.reason === 'UNSUBSCRIBED' ? window.prompt('This person unsubscribed. Why may they be emailed again?') : undefined;
+                        const reason = s.reason === 'UNSUBSCRIBED' ? window.prompt(t('This person unsubscribed. Why may they be emailed again?')) : undefined;
                         if (s.reason === 'UNSUBSCRIBED' && !reason) return;
                         remove.mutate({ email: s.email, reason: reason ?? undefined });
                       }}
                     >
-                      Remove
+                      {t('Remove')}
                     </Button>
                   )}
                 </li>
@@ -485,10 +492,10 @@ function SuppressionList() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Add addresses</CardTitle>
+          <CardTitle className="text-base">{t('Add addresses')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p className="text-muted-foreground">Sequences never email anyone on this list. Unsubscribes and bounces are added automatically.</p>
+          <p className="text-muted-foreground">{t('Sequences never email anyone on this list. Unsubscribes and bounces are added automatically.')}</p>
           {canWrite && (
             <form
               className="space-y-2"
@@ -498,13 +505,13 @@ function SuppressionList() {
               }}
             >
               <label htmlFor="sup-add" className="sr-only">
-                Email addresses
+                {t('Email addresses')}
               </label>
               <Textarea id="sup-add" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="one@example.com, two@example.com" />
               <Button type="submit" size="sm" disabled={!text.trim() || add.isPending}>
-                Add to list
+                {t('Add to list')}
               </Button>
-              {add.data && <p role="status" className="text-xs text-success">Added {add.data.added}.</p>}
+              {add.data && <p role="status" className="text-xs text-success">{t('Added: {count}.', { count: add.data.added })}</p>}
               <ErrorText error={add.error} />
             </form>
           )}

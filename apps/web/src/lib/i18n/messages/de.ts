@@ -137,4 +137,6 @@ export const de: Messages = {
   'count.openDealsClosing_other': '{count} offene Verkaufschancen mit erwartetem Abschluss',
   'count.unsavedChanges_one': '{count} nicht gespeicherte Änderung.',
   'count.unsavedChanges_other': '{count} nicht gespeicherte Änderungen.',
+  'count.inSequences_one': 'In {count} Sequenz',
+  'count.inSequences_other': 'In {count} Sequenzen',
 };

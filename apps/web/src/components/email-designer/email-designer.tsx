@@ -53,6 +53,7 @@ import { useMemo, useRef, useState } from 'react';
 import { insertAt, MergeFieldBar } from '@/app/app/sequences/merge-fields';
 import { Select, Textarea } from '@/components/crm/select';
 import { Field } from '@/components/revenue/tabs';
+import { inSentence, type Translator, useT } from '@/lib/i18n';
 import {
   addBlock,
   applyDrop,
@@ -82,6 +83,9 @@ const ICONS: Record<EmailBlockType, LucideIcon> = {
  * Pointer drops go to the gap under the pointer; keyboard drags fall back to overlap. A dragged block is never its own
  * target: it moves with the pointer, so it would always be under it.
  */
+/** A block type's name in the reader's language. */
+const blockName = (t: Translator, type: EmailBlockType) => t.maybe(EMAIL_BLOCK_LABELS[type]);
+
 const collision: CollisionDetection = (args) => {
   const own = `before:${String(args.active.id).replace(/^block:/, '')}`;
   const others = { ...args, droppableContainers: args.droppableContainers.filter((c) => c.id !== own) };
@@ -105,6 +109,8 @@ export function EmailDesigner({
   idBase?: string;
   error?: string | null;
 }) {
+  const t = useT();
+  const name = (type: EmailBlockType) => inSentence(t, blockName(t, type));
   const [selected, setSelected] = useState<string | null>(value.blocks[0]?.id ?? null);
   const [width, setWidth] = useState<'desktop' | 'mobile'>('desktop');
   const [notice, setNotice] = useState('');
@@ -118,28 +124,27 @@ export function EmailDesigner({
   const html = useMemo(() => renderEmailDesign(value, { keepTags: true, draft: true }).html, [value]);
   const label = (id: string | number) => {
     const s = String(id);
-    if (s.startsWith('new:'))
-      return `New ${EMAIL_BLOCK_LABELS[s.slice(4) as EmailBlockType].toLowerCase()} block`;
+    if (s.startsWith('new:')) return t('New {block} block', { block: name(s.slice(4) as EmailBlockType) });
     const b = value.blocks.find((x) => `block:${x.id}` === s);
-    return b ? `${EMAIL_BLOCK_LABELS[b.type]} block` : 'Block';
+    return b ? t('{block} block', { block: blockName(t, b.type) }) : t('Block');
   };
   const where = (id: string | number | undefined) => {
     const s = String(id ?? '');
-    if (s === 'end') return 'the end of the email';
+    if (s === 'end') return t('the end of the email');
     const i = value.blocks.findIndex((b) => `before:${b.id}` === s);
     return i >= 0
-      ? `position ${i + 1}, before the ${EMAIL_BLOCK_LABELS[value.blocks[i]!.type].toLowerCase()}`
-      : 'nowhere';
+      ? t('position {n}, before the {block}', { n: i + 1, block: name(value.blocks[i]!.type) })
+      : t('nowhere');
   };
   const announcements: Announcements = {
     onDragStart: ({ active }) =>
-      `Picked up ${label(active.id)}. Use the arrow keys to move, space to drop, escape to cancel.`,
-    onDragOver: ({ active, over }) => `${label(active.id)} is over ${where(over?.id)}.`,
+      t('Picked up {block}. Use the arrow keys to move, space to drop, escape to cancel.', { block: label(active.id) }),
+    onDragOver: ({ active, over }) => t('{block} is over {where}.', { block: label(active.id), where: where(over?.id) }),
     onDragEnd: ({ active, over }) =>
       over
-        ? `${label(active.id)} dropped at ${where(over.id)}.`
-        : `${label(active.id)} was not dropped.`,
-    onDragCancel: ({ active }) => `Moving ${label(active.id)} was cancelled.`,
+        ? t('{block} dropped at {where}.', { block: label(active.id), where: where(over.id) })
+        : t('{block} was not dropped.', { block: label(active.id) }),
+    onDragCancel: ({ active }) => t('Moving {block} was cancelled.', { block: label(active.id) }),
   };
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -156,16 +161,14 @@ export function EmailDesigner({
       : value.blocks.length;
     const r = addBlock(value, type, at);
     onChange(r.design);
-    select(r.id, `Added a ${EMAIL_BLOCK_LABELS[type].toLowerCase()} block at position ${at + 1}.`);
+    select(r.id, t('Added a {block} block at position {n}.', { block: name(type), n: at + 1 }));
   };
   const move = (id: string, by: -1 | 1) => {
     const i = value.blocks.findIndex((b) => b.id === id);
     const to = i + by;
     if (to < 0 || to >= value.blocks.length) return;
     onChange(moveBlock(value, i, to));
-    setNotice(
-      `Moved the ${EMAIL_BLOCK_LABELS[value.blocks[i]!.type].toLowerCase()} block to position ${to + 1}.`,
-    );
+    setNotice(t('Moved the {block} block to position {n}.', { block: name(value.blocks[i]!.type), n: to + 1 }));
   };
   const onDragEnd = (e: DragEndEvent) => {
     if (!e.over) return;
@@ -188,7 +191,7 @@ export function EmailDesigner({
     const f = lastField.current;
     const b = f && value.blocks.find((x) => x.id === f.blockId);
     if (!f || !b || !f.el.isConnected) {
-      setNotice('Click into a text box in the block settings first, then choose a field.');
+      setNotice(t('Click into a text box in the block settings first, then choose a field.'));
       return;
     }
     const current = String((b as Record<string, unknown>)[f.key] ?? '');
@@ -209,8 +212,7 @@ export function EmailDesigner({
           {notice}
         </p>
         <p id={`${idBase}-dnd-help`} className="sr-only">
-          Drag with the handle, or focus it and press space, use the arrow keys, then space to drop.
-          Each block also has move up and move down buttons.
+          {t('Drag with the handle, or focus it and press space, use the arrow keys, then space to drop. Each block also has move up and move down buttons.')}
         </p>
         <DndContext
           sensors={sensors}
@@ -220,12 +222,12 @@ export function EmailDesigner({
         >
           <section aria-labelledby={`${idBase}-palette`} className="space-y-2">
             <h3 id={`${idBase}-palette`} className="text-sm font-semibold">
-              Add a block
+              {t('Add a block')}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Drag a block into the email, or click it to add it after the selected block.
+              {t('Drag a block into the email, or click it to add it after the selected block.')}
             </p>
-            <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" aria-label="Blocks you can add">
+            <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" aria-label={t('Blocks you can add')}>
               {EMAIL_BLOCK_TYPES.map((type) => (
                 <PaletteItem
                   key={type}
@@ -238,9 +240,9 @@ export function EmailDesigner({
           </section>
           <section aria-labelledby={`${idBase}-outline`} className="space-y-2">
             <h3 id={`${idBase}-outline`} className="text-sm font-semibold">
-              Email layout
+              {t('Email layout')}
             </h3>
-            <ol className="space-y-1" aria-label="Email blocks">
+            <ol className="space-y-1" aria-label={t('Email blocks')}>
               {value.blocks.map((b, i) => (
                 <OutlineItem
                   key={b.id}
@@ -254,22 +256,16 @@ export function EmailDesigner({
                   onDuplicate={() => {
                     const r = duplicateBlock(value, b.id);
                     onChange(r.design);
-                    select(
-                      r.id,
-                      `Duplicated the ${EMAIL_BLOCK_LABELS[b.type].toLowerCase()} block.`,
-                    );
+                    select(r.id, t('Duplicated the {block} block.', { block: name(b.type) }));
                   }}
                   onRemove={() => {
                     if (value.blocks.length === 1) {
-                      setNotice('An email needs at least one block.');
+                      setNotice(t('An email needs at least one block.'));
                       return;
                     }
                     const next = value.blocks[i + 1] ?? value.blocks[i - 1];
                     onChange(removeBlock(value, b.id));
-                    select(
-                      next!.id,
-                      `Removed the ${EMAIL_BLOCK_LABELS[b.type].toLowerCase()} block.`,
-                    );
+                    select(next!.id, t('Removed the {block} block.', { block: name(b.type) }));
                   }}
                 />
               ))}
@@ -288,7 +284,7 @@ export function EmailDesigner({
             className="space-y-3 rounded-lg border border-border p-3"
           >
             <h3 id={`${idBase}-settings`} className="text-sm font-semibold">
-              {EMAIL_BLOCK_LABELS[block.type]} settings
+              {t('{block} settings', { block: blockName(t, block.type) })}
             </h3>
             <BlockSettings
               key={block.id}
@@ -321,17 +317,17 @@ export function EmailDesigner({
       <section aria-labelledby={`${idBase}-preview`} className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 id={`${idBase}-preview`} className="text-sm font-semibold">
-            Preview
+            {t('Preview')}
           </h3>
           <div
             className="inline-flex rounded-md border border-border p-0.5"
             role="group"
-            aria-label="Preview width"
+            aria-label={t('Preview width')}
           >
             {(
               [
-                ['desktop', 'Desktop', Monitor],
-                ['mobile', 'Phone', Smartphone],
+                ['desktop', t('Desktop'), Monitor],
+                ['mobile', t('Phone'), Smartphone],
               ] as const
             ).map(([key, name, Icon]) => (
               <button
@@ -352,14 +348,14 @@ export function EmailDesigner({
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Merge fields show as typed here. Use “Preview for a lead” below to see them filled in.
+          {t('Merge fields show as typed here. Use “Preview for a lead” below to see them filled in.')}
         </p>
         <div className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-2">
           <iframe
             title={
               width === 'desktop'
-                ? 'Email preview at desktop width'
-                : 'Email preview at phone width'
+                ? t('Email preview at desktop width')
+                : t('Email preview at phone width')
             }
             srcDoc={html}
             sandbox=""
@@ -385,6 +381,7 @@ function PaletteItem({
   onAdd: () => void;
   help: string;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `new:${type}`,
   });
@@ -403,7 +400,7 @@ function PaletteItem({
         {...listeners}
         {...attributes}
         aria-describedby={help}
-        aria-label={`Drag a ${EMAIL_BLOCK_LABELS[type].toLowerCase()} block into the email`}
+        aria-label={t('Drag a {block} block into the email', { block: inSentence(t, blockName(t, type)) })}
         className="grid min-w-6 cursor-grab touch-none place-items-center rounded-s-md px-1.5 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
         <GripVertical className="size-3.5" aria-hidden />
@@ -414,9 +411,9 @@ function PaletteItem({
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded-e-md px-2 py-1.5 text-start text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Icon className="size-3.5 shrink-0 text-primary" aria-hidden />
-        <span className="truncate">{EMAIL_BLOCK_LABELS[type]}</span>
+        <span className="truncate">{blockName(t, type)}</span>
         <Plus className="ms-auto size-3 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="sr-only">(add)</span>
+        <span className="sr-only">{t('(add)')}</span>
       </button>
     </li>
   );
@@ -443,11 +440,12 @@ function OutlineItem({
   onDuplicate: () => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const drag = useDraggable({ id: `block:${block.id}` });
   const drop = useDroppable({ id: `before:${block.id}` });
   const Icon = ICONS[block.type];
-  const name = EMAIL_BLOCK_LABELS[block.type];
-  const pos = `${name} block ${index + 1}`;
+  const name = blockName(t, block.type);
+  const pos = t('{block} block {n}', { block: name, n: index + 1 });
   return (
     <li
       ref={(el) => {
@@ -470,7 +468,7 @@ function OutlineItem({
         {...drag.listeners}
         {...drag.attributes}
         aria-describedby={help}
-        aria-label={`Drag ${pos}`}
+        aria-label={t('Drag {block}', { block: pos })}
         className="cursor-grab touch-none rounded p-1 text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
       >
         <GripVertical className="size-4" aria-hidden />
@@ -483,7 +481,7 @@ function OutlineItem({
       >
         <Icon className="size-4 shrink-0 text-primary" aria-hidden />
         <span className="shrink-0 font-medium">{name}</span>
-        <span className="truncate text-xs text-muted-foreground">{blockSummary(block)}</span>
+        <span className="truncate text-xs text-muted-foreground">{blockSummary(block, (text, vars) => t(text, vars))}</span>
       </button>
       <Button
         type="button"
@@ -492,7 +490,7 @@ function OutlineItem({
         className="size-7"
         disabled={index === 0}
         onClick={() => onMove(-1)}
-        aria-label={`Move ${pos} up`}
+        aria-label={t('Move {block} up', { block: pos })}
       >
         <ArrowUp aria-hidden />
       </Button>
@@ -503,7 +501,7 @@ function OutlineItem({
         className="size-7"
         disabled={index === count - 1}
         onClick={() => onMove(1)}
-        aria-label={`Move ${pos} down`}
+        aria-label={t('Move {block} down', { block: pos })}
       >
         <ArrowDown aria-hidden />
       </Button>
@@ -513,7 +511,7 @@ function OutlineItem({
         size="icon"
         className="size-7"
         onClick={onDuplicate}
-        aria-label={`Duplicate ${pos}`}
+        aria-label={t('Duplicate {block}', { block: pos })}
       >
         <Copy aria-hidden />
       </Button>
@@ -524,7 +522,7 @@ function OutlineItem({
         className="size-7"
         disabled={count === 1}
         onClick={onRemove}
-        aria-label={`Remove ${pos}`}
+        aria-label={t('Remove {block}', { block: pos })}
       >
         <Trash2 aria-hidden />
       </Button>
@@ -533,6 +531,7 @@ function OutlineItem({
 }
 
 function EndZone() {
+  const t = useT();
   const { setNodeRef, isOver } = useDroppable({ id: 'end' });
   return (
     <li
@@ -542,7 +541,7 @@ function EndZone() {
         isOver ? 'border-primary bg-primary/10 text-foreground' : 'border-border',
       )}
     >
-      Drop here to add at the end
+      {t('Drop here to add at the end')}
     </li>
   );
 }
@@ -562,6 +561,7 @@ function BlockSettings({
   patch: (p: Partial<EmailBlock>) => void;
   track: Track;
 }) {
+  const t = useT();
   const id = (k: string) => `${idBase}-${k}`;
   const text = (
     key: string,
@@ -591,7 +591,7 @@ function BlockSettings({
     options: readonly ('left' | 'center' | 'right')[] = ['left', 'center', 'right'],
   ) =>
     'align' in b ? (
-      <Field id={id('align')} label="Alignment">
+      <Field id={id('align')} label={t('Alignment')}>
         <Select
           id={id('align')}
           value={b.align}
@@ -599,38 +599,37 @@ function BlockSettings({
         >
           {options.map((o) => (
             <option key={o} value={o}>
-              {o === 'left' ? 'Left' : o === 'center' ? 'Centre' : 'Right'}
+              {o === 'left' ? t('Left') : o === 'center' ? t('Centre') : t('Right')}
             </option>
           ))}
         </Select>
       </Field>
     ) : null;
-  const LINK_HINT =
-    'A full link starting with https://, or a merge field such as {{var.booking_link}}.';
-  const IMAGE_HINT =
-    'A public image link starting with https://. Email apps do not show images from other places.';
+  const LINK_HINT = t('A full link starting with https://, or a merge field such as {example}.', { example: '{{var.booking_link}}' });
+  const IMAGE_HINT = t('A public image link starting with https://. Email apps do not show images from other places.');
+  const optional = (hint: string) => t('Optional. {hint}', { hint });
 
   switch (b.type) {
     case 'header':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('title', 'Title', { max: 120 })}
-          {text('logoUrl', 'Logo image link', { hint: IMAGE_HINT, max: 1000, type: 'url' })}
+          {text('title', t('Title'), { max: 120 })}
+          {text('logoUrl', t('Logo image link'), { hint: IMAGE_HINT, max: 1000, type: 'url' })}
           {alignField()}
         </div>
       );
     case 'heading':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('text', 'Heading', { max: 200 })}
-          <Field id={id('level')} label="Size">
+          {text('text', t('Heading'), { max: 200 })}
+          <Field id={id('level')} label={t('Size')}>
             <Select
               id={id('level')}
               value={String(b.level)}
               onChange={(e) => patch({ level: Number(e.target.value) as 1 | 2 })}
             >
-              <option value="1">Large</option>
-              <option value="2">Medium</option>
+              <option value="1">{t('Large')}</option>
+              <option value="2">{t('Medium')}</option>
             </Select>
           </Field>
           {alignField()}
@@ -639,11 +638,11 @@ function BlockSettings({
     case 'text':
       return (
         <div className="space-y-3">
-          {text('text', 'Text', {
+          {text('text', t('Text'), {
             area: true,
             rows: 7,
             max: 5000,
-            hint: 'A blank line starts a new paragraph. Links become clickable.',
+            hint: t('A blank line starts a new paragraph. Links become clickable.'),
           })}
           {alignField()}
         </div>
@@ -651,16 +650,16 @@ function BlockSettings({
     case 'image':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('src', 'Image link', { hint: IMAGE_HINT, max: 1000, type: 'url' })}
-          {text('alt', 'Description', {
-            hint: 'Read aloud by screen readers and shown when images are off.',
+          {text('src', t('Image link'), { hint: IMAGE_HINT, max: 1000, type: 'url' })}
+          {text('alt', t('Description'), {
+            hint: t('Read aloud by screen readers and shown when images are off.'),
             max: 200,
           })}
-          {text('href', 'Opens this link when clicked', {
-            hint: `Optional. ${LINK_HINT}`,
+          {text('href', t('Opens this link when clicked'), {
+            hint: optional(LINK_HINT),
             max: 1000,
           })}
-          <Field id={id('width')} label={`Width: ${b.width}%`}>
+          <Field id={id('width')} label={t('Width: {width}%', { width: b.width })}>
             <input
               id={id('width')}
               type="range"
@@ -678,15 +677,15 @@ function BlockSettings({
     case 'button':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('label', 'Button text', { max: 80 })}
-          {text('url', 'Link', { hint: LINK_HINT, max: 1000 })}
+          {text('label', t('Button text'), { max: 80 })}
+          {text('url', t('Link'), { hint: LINK_HINT, max: 1000 })}
           {alignField()}
         </div>
       );
     case 'divider':
       return (
         <p className="text-sm text-muted-foreground">
-          A thin line between sections. It has no settings.
+          {t('A thin line between sections. It has no settings.')}
         </p>
       );
     case 'social':
@@ -694,12 +693,12 @@ function BlockSettings({
     case 'signature':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('name', 'Name', { max: 120 })}
-          {text('title', 'Job title', { max: 120 })}
-          {text('phone', 'Phone', { max: 60 })}
-          {text('email', 'Email', { max: 200 })}
-          {text('website', 'Website', {
-            hint: 'Optional. A full link starting with https://.',
+          {text('name', t('Name'), { max: 120 })}
+          {text('title', t('Job title'), { max: 120 })}
+          {text('phone', t('Phone'), { max: 60 })}
+          {text('email', t('Email'), { max: 200 })}
+          {text('website', t('Website'), {
+            hint: optional(t('A full link starting with https://.')),
             max: 1000,
           })}
         </div>
@@ -707,31 +706,31 @@ function BlockSettings({
     case 'product':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          {text('name', 'Product or service', { max: 120 })}
-          {text('price', 'Price', {
-            hint: 'As you want it shown, for example $8 per complete.',
+          {text('name', t('Product or service'), { max: 120 })}
+          {text('price', t('Price'), {
+            hint: t('As you want it shown, for example $8 per complete.'),
             max: 60,
           })}
           <div className="sm:col-span-2">
-            {text('description', 'Description', { area: true, rows: 3, max: 1000 })}
+            {text('description', t('Description'), { area: true, rows: 3, max: 1000 })}
           </div>
-          {text('imageUrl', 'Image link', {
-            hint: `Optional. ${IMAGE_HINT}`,
+          {text('imageUrl', t('Image link'), {
+            hint: optional(IMAGE_HINT),
             max: 1000,
             type: 'url',
           })}
-          {text('url', 'Link', { hint: `Optional. ${LINK_HINT}`, max: 1000 })}
-          {text('buttonLabel', 'Button text', { max: 60 })}
+          {text('url', t('Link'), { hint: optional(LINK_HINT), max: 1000 })}
+          {text('buttonLabel', t('Button text'), { max: 60 })}
         </div>
       );
     case 'pricing':
       return <PricingSettings block={b} idBase={idBase} patch={patch} track={track} />;
     case 'footer':
-      return text('text', 'Footer text', {
+      return text('text', t('Footer text'), {
         area: true,
         rows: 3,
         max: 1000,
-        hint: 'Your address or why people get this email. Sequence emails also add an unsubscribe line.',
+        hint: t('Your address or why people get this email. Sequence emails also add an unsubscribe line.'),
       });
   }
 }
@@ -745,6 +744,8 @@ function SocialSettings({
   idBase: string;
   patch: (p: Partial<EmailBlock>) => void;
 }) {
+  const t = useT();
+  const network = (n: SocialNetwork) => t.maybe(SOCIAL_NETWORKS[n]);
   const set = (links: typeof block.links) => patch({ links } as Partial<EmailBlock>);
   const unused = (Object.keys(SOCIAL_NETWORKS) as SocialNetwork[]).filter(
     (n) => !block.links.some((l) => l.network === n),
@@ -753,15 +754,15 @@ function SocialSettings({
     <div className="space-y-2">
       {block.links.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No links yet. Add the profiles you want people to find.
+          {t('No links yet. Add the profiles you want people to find.')}
         </p>
       )}
-      <ul className="space-y-2" aria-label="Social links">
+      <ul className="space-y-2" aria-label={t('Social links')}>
         {block.links.map((l, i) => (
           <li key={l.network} className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <label htmlFor={`${idBase}-social-${l.network}`} className="text-xs font-medium">
-                {SOCIAL_NETWORKS[l.network]} link
+                {t('{network} link', { network: network(l.network) })}
               </label>
               <Input
                 id={`${idBase}-social-${l.network}`}
@@ -779,7 +780,7 @@ function SocialSettings({
               variant="ghost"
               size="icon"
               onClick={() => set(block.links.filter((_, j) => j !== i))}
-              aria-label={`Remove the ${SOCIAL_NETWORKS[l.network]} link`}
+              aria-label={t('Remove the {network} link', { network: network(l.network) })}
             >
               <Trash2 aria-hidden />
             </Button>
@@ -788,7 +789,7 @@ function SocialSettings({
       </ul>
       {unused.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
-          <span className="text-xs text-muted-foreground">Add:</span>
+          <span className="text-xs text-muted-foreground">{t('Add:')}</span>
           {unused.map((n) => (
             <Button
               key={n}
@@ -797,20 +798,20 @@ function SocialSettings({
               variant="outline"
               onClick={() => set([...block.links, { network: n, url: '' }])}
             >
-              {SOCIAL_NETWORKS[n]}
+              {network(n)}
             </Button>
           ))}
         </div>
       )}
-      <Field id={`${idBase}-align`} label="Alignment">
+      <Field id={`${idBase}-align`} label={t('Alignment')}>
         <Select
           id={`${idBase}-align`}
           value={block.align}
           onChange={(e) => patch({ align: e.target.value } as Partial<EmailBlock>)}
         >
-          <option value="left">Left</option>
-          <option value="center">Centre</option>
-          <option value="right">Right</option>
+          <option value="left">{t('Left')}</option>
+          <option value="center">{t('Centre')}</option>
+          <option value="right">{t('Right')}</option>
         </Select>
       </Field>
     </div>
@@ -828,10 +829,11 @@ function PricingSettings({
   patch: (p: Partial<EmailBlock>) => void;
   track: Track;
 }) {
+  const t = useT();
   const setRows = (rows: typeof block.rows) => patch({ rows } as Partial<EmailBlock>);
   return (
     <div className="space-y-3">
-      <Field id={`${idBase}-title`} label="Title">
+      <Field id={`${idBase}-title`} label={t('Title')}>
         <Input
           id={`${idBase}-title`}
           value={block.title}
@@ -841,7 +843,7 @@ function PricingSettings({
         />
       </Field>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Rows</legend>
+        <legend className="text-sm font-medium">{t('Rows')}</legend>
         {block.rows.map((r, i) => (
           <div
             key={i}
@@ -849,7 +851,7 @@ function PricingSettings({
           >
             <div>
               <label htmlFor={`${idBase}-row${i}-label`} className="text-xs font-medium">
-                Row {i + 1} item
+                {t('Row {n} item', { n: i + 1 })}
               </label>
               <Input
                 id={`${idBase}-row${i}-label`}
@@ -862,7 +864,7 @@ function PricingSettings({
             </div>
             <div>
               <label htmlFor={`${idBase}-row${i}-price`} className="text-xs font-medium">
-                Row {i + 1} price
+                {t('Row {n} price', { n: i + 1 })}
               </label>
               <Input
                 id={`${idBase}-row${i}-price`}
@@ -880,19 +882,19 @@ function PricingSettings({
               className="self-end"
               disabled={block.rows.length === 1}
               onClick={() => setRows(block.rows.filter((_, j) => j !== i))}
-              aria-label={`Remove row ${i + 1}`}
+              aria-label={t('Remove row {n}', { n: i + 1 })}
             >
               <Trash2 aria-hidden />
             </Button>
             <div className="sm:col-span-3">
               <label htmlFor={`${idBase}-row${i}-note`} className="text-xs font-medium">
-                Row {i + 1} note
+                {t('Row {n} note', { n: i + 1 })}
               </label>
               <Input
                 id={`${idBase}-row${i}-note`}
                 value={r.note}
                 maxLength={200}
-                placeholder="Optional"
+                placeholder={t('Optional')}
                 onChange={(e) =>
                   setRows(block.rows.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))
                 }
@@ -907,15 +909,15 @@ function PricingSettings({
           disabled={block.rows.length >= 12}
           onClick={() => setRows([...block.rows, { label: '', price: '', note: '' }])}
         >
-          <Plus aria-hidden /> Add a row
+          <Plus aria-hidden /> {t('Add a row')}
         </Button>
       </fieldset>
-      <Field id={`${idBase}-footnote`} label="Note under the table">
+      <Field id={`${idBase}-footnote`} label={t('Note under the table')}>
         <Input
           id={`${idBase}-footnote`}
           value={block.footnote}
           maxLength={500}
-          placeholder="Optional, for example: Prices exclude tax."
+          placeholder={t('Optional, for example: Prices exclude tax.')}
           onChange={(e) => patch({ footnote: e.target.value } as Partial<EmailBlock>)}
           {...track('footnote')}
         />
@@ -933,11 +935,12 @@ function ThemeSettings({
   theme: EmailTheme;
   onChange: (t: EmailTheme) => void;
 }) {
+  const t = useT();
   const colours = [
-    ['accent', 'Accent (header, buttons, links)'],
-    ['text', 'Text'],
-    ['surface', 'Email background'],
-    ['background', 'Page background'],
+    ['accent', t('Accent (header, buttons, links)')],
+    ['text', t('Text')],
+    ['surface', t('Email background')],
+    ['background', t('Page background')],
   ] as const;
   return (
     <section
@@ -945,7 +948,7 @@ function ThemeSettings({
       className="space-y-3 rounded-lg border border-border p-3"
     >
       <h3 id={`${idBase}-theme`} className="text-sm font-semibold">
-        Look
+        {t('Look')}
       </h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {colours.map(([key, name]) => (
@@ -962,14 +965,14 @@ function ThemeSettings({
             </label>
           </div>
         ))}
-        <Field id={`${idBase}-theme-font`} label="Font">
+        <Field id={`${idBase}-theme-font`} label={t('Font')}>
           <Select
             id={`${idBase}-theme-font`}
             value={theme.font}
             onChange={(e) => onChange({ ...theme, font: e.target.value as EmailTheme['font'] })}
           >
-            <option value="sans">Clean (Arial)</option>
-            <option value="serif">Classic (Georgia)</option>
+            <option value="sans">{t('Clean (Arial)')}</option>
+            <option value="serif">{t('Classic (Georgia)')}</option>
           </Select>
         </Field>
       </div>
