@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 type Target = { leadId?: string; contactId?: string; dealId?: string };
@@ -30,6 +31,7 @@ function defaultStart(): string {
 
 /** Zoom meetings for a lead, contact or deal: schedule one and see its transcript status. Shown once Zoom is connected. */
 export function RecordZoomMeetings({ target }: { target: Target }) {
+  const t = useT();
   const canRead = useCan('activities:read');
   const canWrite = useCan('activities:write');
   const qc = useQueryClient();
@@ -65,16 +67,16 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
     <Card role="region" aria-labelledby="zoom-meetings-heading">
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle id="zoom-meetings-heading" className="text-base">
-          Zoom meetings
+          {t('Zoom meetings')}
         </CardTitle>
         {canWrite && !open && (
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Video aria-hidden /> Schedule
+            <Video aria-hidden /> {t('Schedule')}
           </Button>
         )}
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        {zoom.state === 'error' && <p className="text-xs text-critical">{zoom.connection?.lastError ?? 'Zoom needs reconnecting in Integrations.'}</p>}
+        {zoom.state === 'error' && <p className="text-xs text-critical">{zoom.connection?.lastError ?? t('Zoom needs reconnecting in Integrations.')}</p>}
         {open && (
           <form
             className="space-y-2 rounded-md border p-3"
@@ -84,20 +86,20 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
             }}
           >
             <div className="space-y-1.5">
-              <Label htmlFor="zoom-topic">Topic</Label>
+              <Label htmlFor="zoom-topic">{t('Topic')}</Label>
               <Input id="zoom-topic" value={topic} maxLength={200} required onChange={(e) => setTopic(e.target.value)} />
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="zoom-start">Starts</Label>
+                <Label htmlFor="zoom-start">{t('Starts')}</Label>
                 <Input id="zoom-start" type="datetime-local" value={startsAt} required onChange={(e) => setStartsAt(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="zoom-duration">Length</Label>
+                <Label htmlFor="zoom-duration">{t('Length')}</Label>
                 <Select id="zoom-duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
                   {[15, 30, 45, 60, 90, 120].map((m) => (
                     <option key={m} value={m}>
-                      {m} minutes
+                      {new Intl.NumberFormat(t.language, { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(m)}
                     </option>
                   ))}
                 </Select>
@@ -106,23 +108,23 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-1" checked={record} disabled={!transcriptsReady} onChange={(e) => setRecord(e.target.checked)} />
               <span>
-                Record to the Zoom cloud and add the transcript to meeting notes
-                {!transcriptsReady && <span className="block text-xs text-muted-foreground">{zoom.warnings[0]}</span>}
+                {t('Record to the Zoom cloud and add the transcript to meeting notes')}
+                {!transcriptsReady && <span className="block text-xs text-muted-foreground">{t.maybe(zoom.warnings[0] ?? '')}</span>}
               </span>
             </label>
             {record && (
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                <span>Everyone in the meeting has agreed to it being recorded and transcribed. Zoom also announces the recording.</span>
+                <span>{t('Everyone in the meeting has agreed to it being recorded and transcribed. Zoom also announces the recording.')}</span>
               </label>
             )}
-            <p className="text-xs text-muted-foreground">The meeting is created in your Zoom user (your DealFlow email) and logged on this record.</p>
+            <p className="text-xs text-muted-foreground">{t('The meeting is created in your Zoom user (your DealFlow email) and logged on this record.')}</p>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={schedule.isPending || !topic.trim() || (record && !consent)}>
-                {schedule.isPending ? 'Scheduling…' : 'Schedule Zoom meeting'}
+                {schedule.isPending ? t('Scheduling…') : t('Schedule Zoom meeting')}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
+                {t('Cancel')}
               </Button>
             </div>
             {schedule.error && (
@@ -133,24 +135,24 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
           </form>
         )}
         {items.length === 0 ? (
-          <p className="text-muted-foreground">No Zoom meetings scheduled from DealFlow for this record.</p>
+          <p className="text-muted-foreground">{t('No Zoom meetings scheduled from DealFlow for this record.')}</p>
         ) : (
-          <ul className="space-y-2" aria-label="Zoom meetings">
+          <ul className="space-y-2" aria-label={t('Zoom meetings')}>
             {items.map((m) => {
-              const t = TRANSCRIPT[m.transcriptStatus];
+              const ts = TRANSCRIPT[m.transcriptStatus];
               return (
                 <li key={m.id} className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{m.topic}</span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(m.startsAt).toLocaleString(fmtLocale())} · {m.durationMinutes} min
+                    {new Date(m.startsAt).toLocaleString(fmtLocale())} · {new Intl.NumberFormat(t.language, { style: 'unit', unit: 'minute', unitDisplay: 'short' }).format(m.durationMinutes)}
                   </span>
                   <a href={m.joinUrl} target="_blank" rel="noreferrer noopener" className="text-xs text-primary underline underline-offset-2">
-                    Join link
+                    {t('Join link')}
                   </a>
-                  {t && <Badge tone={t.tone}>{t.label}</Badge>}
+                  {ts && <Badge tone={ts.tone}>{t.maybe(ts.label)}</Badge>}
                   {m.meetingRecordId && (
                     <Link href={`/app/meetings/records/${m.meetingRecordId}`} className="text-xs text-primary underline underline-offset-2">
-                      Open meeting notes
+                      {t('Open meeting notes')}
                     </Link>
                   )}
                   {m.transcriptError && <span className="w-full text-xs text-critical">{m.transcriptError}</span>}

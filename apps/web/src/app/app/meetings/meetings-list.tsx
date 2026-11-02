@@ -12,11 +12,13 @@ import { api } from '@/lib/api';
 import { useIntegrations, useMeetings } from '@/lib/automation';
 import { useMeetingRecords } from '@/lib/meetings';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString(fmtLocale(), { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export function MeetingsList() {
+  const t = useT();
   const meetings = useMeetings();
   const integrations = useIntegrations();
   const connected = integrations.data?.some((p) => p.connection?.status === 'CONNECTED');
@@ -28,21 +30,21 @@ export function MeetingsList() {
     <div className="space-y-4">
       {!connected && !integrations.isPending && (
         <p className="text-sm text-muted-foreground">
-          No calendar connected.{' '}
+          {t('No calendar connected.')}{' '}
           <Link href="/app/integrations" className="text-primary underline underline-offset-2">
-            Connect Google or Microsoft 365
-          </Link>{' '}
-          to see meetings here.
+            {t('Connect Google or Microsoft 365 to see meetings here.')}
+          </Link>
         </p>
       )}
-      <Section title="Upcoming" items={upcoming} empty="No upcoming meetings with contacts." />
-      <Section title="Past 30 days" items={past} empty="No recent meetings with contacts." notes />
+      <Section title={t('Upcoming')} items={upcoming} empty={t('No upcoming meetings with contacts.')} />
+      <Section title={t('Past 30 days')} items={past} empty={t('No recent meetings with contacts.')} notes />
       <NotesSection />
     </div>
   );
 }
 
 function Section({ title, items, empty, notes }: { title: string; items: MeetingRow[]; empty: string; notes?: boolean }) {
+  const t = useT();
   return (
     <Card>
       <CardHeader>
@@ -56,21 +58,21 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
             {items.map((m) => (
               <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
                 <span className={`text-sm font-medium ${m.canceled ? 'line-through text-muted-foreground' : ''}`}>{m.title}</span>
-                {m.canceled && <Badge tone="neutral">Canceled</Badge>}
-                {m.platform && <Badge tone="neutral">{MEETING_PLATFORM_LABELS[m.platform]}</Badge>}
+                {m.canceled && <Badge tone="neutral">{t('Canceled')}</Badge>}
+                {m.platform && <Badge tone="neutral">{t.maybe(MEETING_PLATFORM_LABELS[m.platform])}</Badge>}
                 <span className="ms-auto flex flex-wrap gap-2">
                   {!notes && m.joinUrl && !m.canceled && (
                     <a href={m.joinUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
-                      Join <span className="sr-only">{m.title}</span>
+                      {t('Join')} <span className="sr-only">{m.title}</span>
                       <ExternalLink className="size-3" aria-hidden />
                     </a>
                   )}
                   {m.recordId ? (
                     <Link href={`/app/meetings/records/${m.recordId}`} className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
-                      <NotebookPen className="size-3.5" aria-hidden /> Open notes <span className="sr-only">for {m.title}</span>
+                      <NotebookPen className="size-3.5" aria-hidden /> {t('Open notes')} <span className="sr-only">{t('for {title}', { title: m.title })}</span>
                     </Link>
                   ) : (
-                    notes && !m.canceled && m.contactIds.length > 0 && <MeetingNotesButton target={{ meetingId: m.id }} label="Add notes" />
+                    notes && !m.canceled && m.contactIds.length > 0 && <MeetingNotesButton target={{ meetingId: m.id }} label={t('Add notes')} />
                   )}
                 </span>
                 <span className="w-full text-xs text-muted-foreground">
@@ -82,7 +84,7 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
                   {m.attendees.length > 6 && ` +${m.attendees.length - 6}`}
                   {m.contactIds.map((id, i) => (
                     <Link key={id} href={`/app/contacts/${id}`} className="ms-2 text-primary underline underline-offset-2">
-                      Contact {m.contactIds.length > 1 ? i + 1 : ''}
+                      {m.contactIds.length > 1 ? t('Contact {n}', { n: i + 1 }) : t('Contact')}
                     </Link>
                   ))}
                 </span>
@@ -97,6 +99,7 @@ function Section({ title, items, empty, notes }: { title: string; items: Meeting
 
 /** Every meeting notes page in the workspace, including ones for calls that were not in a calendar. */
 function NotesSection() {
+  const t = useT();
   const canWrite = useCan('activities:write');
   const records = useMeetingRecords();
   const router = useRouter();
@@ -112,7 +115,7 @@ function NotesSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Meeting notes</CardTitle>
+        <CardTitle className="text-base">{t('Meeting notes')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {canWrite && (
@@ -124,16 +127,16 @@ function NotesSection() {
             }}
           >
             <div className="min-w-56 flex-1">
-              <Field id="new-meeting-title" label="New notes for a call not in your calendar" error={create.error?.message}>
-                <Input value={title} maxLength={300} placeholder="Discovery call with Acme" onChange={(e) => setTitle(e.target.value)} />
+              <Field id="new-meeting-title" label={t('New notes for a call not in your calendar')} error={create.error?.message}>
+                <Input value={title} maxLength={300} placeholder={t('Discovery call with Acme')} onChange={(e) => setTitle(e.target.value)} />
               </Field>
             </div>
             <Button type="submit" disabled={!title.trim() || create.isPending}>
-              New meeting notes
+              {t('New meeting notes')}
             </Button>
           </form>
         )}
-        {records.isPending ? <Skeleton className="h-16" /> : <MeetingRecordList items={records.data ?? []} empty="No meeting notes yet." />}
+        {records.isPending ? <Skeleton className="h-16" /> : <MeetingRecordList items={records.data ?? []} empty={t('No meeting notes yet.')} />}
       </CardContent>
     </Card>
   );

@@ -91,6 +91,27 @@ preview, and the "Write with AI" panel. New table: `sequences`; new plural key `
 Still English here: the starter content of a new sequence and of a new design (it is email text people replace),
 AI-written drafts, the reasons on a paused or failed enrolment, and API error messages.
 
+## Scope of batch 4
+
+Translated: Email & Communication (the team inbox, its filters, the conversation view with status, category, owner,
+links and internal notes, message tracking, the mailbox sync log and the compose dialog), the AI reading of an email,
+Meetings (the calendar list and meeting notes), the meeting notes page (notes and transcript, recording
+transcription, the AI analysis and its review form, and putting it to use as tasks, a timeline summary or a follow-up
+email), the transcription status banner, Zoom scheduling on records, and the AI qualification, deal health and
+proposal draft panels on lead and deal records. New tables: `communication` and `meetings`; new plural keys
+`count.notes`, `count.messages`, `count.emailsRead`, `count.tasks`, `count.createTasks` and
+`count.tasksCreatedFromMeeting`.
+
+- **Counts in buttons and confirmations** ("Create 2 tasks", "1 task created from this meeting.") are plural keys, so
+  each language gets its own forms and the English wording stays the same.
+- **Durations** ("due in 3 days", "30 minutes") use `Intl.NumberFormat` with a unit.
+- **Labels from shared maps** (inbox categories, email intents and next actions, meeting platforms, meeting-note
+  stages and Zoom transcript states) go through `t.maybe` and are checked by the data-label test, read from the source
+  where they are defined. The compose, note and meeting analysis schemas' validation messages are checked the same way.
+
+Still English here: email subjects and bodies, the AI's own summaries and drafts, the signal names and details the
+scoring API writes, provider error text from Zoom and mailbox syncs, and API error messages.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

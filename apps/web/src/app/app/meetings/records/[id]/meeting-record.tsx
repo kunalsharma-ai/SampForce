@@ -18,6 +18,7 @@ import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { uploadRecording, useMeetingRecord, useTranscriptionStatus } from '@/lib/meetings';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 const SOURCE_LABEL = { notes: 'Notes', transcript: 'Transcript', recording: 'Transcribed recording' } as const;
@@ -45,6 +46,7 @@ function useUpdate(id: string) {
 }
 
 export function MeetingRecordView({ id }: { id: string }) {
+  const t = useT();
   const rec = useMeetingRecord(id);
   const status = useTranscriptionStatus();
   const canWrite = useCan('activities:write');
@@ -63,21 +65,21 @@ export function MeetingRecordView({ id }: { id: string }) {
   return (
     <div className="max-w-5xl space-y-4">
       <Link href="/app/meetings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> Meetings
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t('Meetings')}
       </Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">{r.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {when(r.occurredAt)} · {SOURCE_LABEL[r.source]}
-            {r.createdBy && ` · added by ${r.createdBy.name}`}
+            {when(r.occurredAt)} · {t(SOURCE_LABEL[r.source])}
+            {r.createdBy && ` · ${t('added by {name}', { name: r.createdBy.name })}`}
           </p>
-          {r.attendees.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Invited: {r.attendees.join(', ')}</p>}
+          {r.attendees.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{t('Invited: {people}', { people: r.attendees.join(', ') })}</p>}
         </div>
-        <Badge tone={stage.tone}>{stage.label}</Badge>
+        <Badge tone={stage.tone}>{t.maybe(stage.label)}</Badge>
         {r.joinUrl && (
           <a href={r.joinUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
-            Meeting link <ExternalLink className="size-3" aria-hidden />
+            {t('Meeting link')} <ExternalLink className="size-3" aria-hidden />
           </a>
         )}
         {canWrite && (
@@ -86,10 +88,10 @@ export function MeetingRecordView({ id }: { id: string }) {
             size="sm"
             disabled={remove.isPending}
             onClick={() => {
-              if (window.confirm('Delete these meeting notes? Tasks and timeline notes already created stay.')) remove.mutate();
+              if (window.confirm(t('Delete these meeting notes? Tasks and timeline notes already created stay.'))) remove.mutate();
             }}
           >
-            <Trash2 aria-hidden /> Delete notes
+            <Trash2 aria-hidden /> {t('Delete notes')}
           </Button>
         )}
       </div>
@@ -97,28 +99,28 @@ export function MeetingRecordView({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Linked records</CardTitle>
+          <CardTitle className="text-base">{t('Linked records')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {canWrite ? (
             <div className="grid gap-3 sm:grid-cols-3">
               {(
                 [
-                  ['deal', 'deals', 'Linked deal', r.deal],
-                  ['contact', 'contacts', 'Linked contact', r.contact],
-                  ['lead', 'leads', 'Linked lead', r.lead],
+                  ['deal', 'deals', t('Linked deal'), t('Search deals'), r.deal],
+                  ['contact', 'contacts', t('Linked contact'), t('Search contacts'), r.contact],
+                  ['lead', 'leads', t('Linked lead'), t('Search leads'), r.lead],
                 ] as const
-              ).map(([key, entity, label, value]) => (
+              ).map(([key, entity, label, placeholder, value]) => (
                 <div key={key} className="space-y-1">
                   <label htmlFor={`mr-${key}`} className="text-xs font-medium">
                     {label}
                   </label>
-                  <RecordPicker id={`mr-${key}`} entity={entity} value={value} placeholder={`Search ${entity}`} onChange={(v) => update.mutate({ [`${key}Id`]: v?.id ?? null })} />
+                  <RecordPicker id={`mr-${key}`} entity={entity} value={value} placeholder={placeholder} onChange={(v) => update.mutate({ [`${key}Id`]: v?.id ?? null })} />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm">{linked ? linked.name : 'Not linked to a record.'}</p>
+            <p className="text-sm">{linked ? linked.name : t('Not linked to a record.')}</p>
           )}
           {update.error && <p role="alert" className="text-sm text-critical">{update.error.message}</p>}
         </CardContent>
@@ -131,6 +133,7 @@ export function MeetingRecordView({ id }: { id: string }) {
 }
 
 function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: TranscriptionStatus | undefined; canWrite: boolean }) {
+  const t = useT();
   const update = useUpdate(r.id);
   const [text, setText] = useState(r.transcript ?? '');
   const [source, setSource] = useState<'notes' | 'transcript'>(r.source === 'notes' ? 'notes' : 'transcript');
@@ -146,17 +149,17 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Notes and transcript</CardTitle>
+        <CardTitle className="text-base">{t('Notes and transcript')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {r.segments?.length && !editing ? (
           <div className="space-y-2">
-            <ol className="max-h-96 space-y-2 overflow-y-auto rounded-md border border-border p-3 text-sm" aria-label="Transcript">
+            <ol className="max-h-96 space-y-2 overflow-y-auto rounded-md border border-border p-3 text-sm" aria-label={t('Transcript')}>
               {r.segments.map((s, i) => (
                 <li key={i} className="flex gap-3">
                   <span className="w-12 shrink-0 tabular-nums text-xs text-muted-foreground">{clock(s.start)}</span>
                   <span>
-                    {s.speaker !== null && <span className="font-medium">{names.get(s.speaker) ?? `Speaker ${s.speaker}`}: </span>}
+                    {s.speaker !== null && <span className="font-medium">{names.get(s.speaker) ?? t('Speaker {n}', { n: s.speaker })}: </span>}
                     {s.text}
                   </span>
                 </li>
@@ -164,7 +167,7 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
             </ol>
             {canWrite && (
               <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                Edit as text
+                {t('Edit as text')}
               </Button>
             )}
           </div>
@@ -176,26 +179,26 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
               update.mutate({ transcript: text, source }, { onSuccess: () => setEditing(false) });
             }}
           >
-            <Field id="mr-transcript" label="Notes or transcript" hint={r.segments?.length ? 'Saving text replaces the speaker timings from the recording.' : 'Paste your notes, or a transcript you are allowed to share. "Speaker 1:" style lines help the AI tell people apart.'}>
-              <Textarea value={text} readOnly={!canWrite} maxLength={200_000} className="min-h-56" onChange={(e) => setText(e.target.value)} placeholder="What was discussed, what was decided, who will do what…" />
+            <Field id="mr-transcript" label={t('Notes or transcript')} hint={r.segments?.length ? t('Saving text replaces the speaker timings from the recording.') : t('Paste your notes, or a transcript you are allowed to share. "Speaker 1:" style lines help the AI tell people apart.')}>
+              <Textarea value={text} readOnly={!canWrite} maxLength={200_000} className="min-h-56" onChange={(e) => setText(e.target.value)} placeholder={t('What was discussed, what was decided, who will do what…')} />
             </Field>
             {canWrite && (
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
                   <label htmlFor="mr-source" className="text-xs font-medium">
-                    This text is
+                    {t('This text is')}
                   </label>
                   <Select id="mr-source" className="w-auto" value={source} onChange={(e) => setSource(e.target.value as 'notes' | 'transcript')}>
-                    <option value="notes">My notes</option>
-                    <option value="transcript">A transcript</option>
+                    <option value="notes">{t('My notes')}</option>
+                    <option value="transcript">{t('A transcript')}</option>
                   </Select>
                 </div>
                 <Button type="submit" disabled={!dirty || update.isPending}>
-                  Save notes
+                  {t('Save notes')}
                 </Button>
                 {r.segments?.length ? (
                   <Button type="button" variant="outline" onClick={() => setEditing(false)}>
-                    Cancel
+                    {t('Cancel')}
                   </Button>
                 ) : null}
               </div>
@@ -205,16 +208,16 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
         )}
 
         <div className="space-y-3 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold">Transcribe a recording</h3>
+          <h3 className="text-sm font-semibold">{t('Transcribe a recording')}</h3>
           <TranscriptionBanner status={status} />
           {r.recordingConsent && (
             <p className="text-xs text-muted-foreground">
-              Recording consent confirmed by {r.recordingConsent.by?.name ?? 'a former user'} {relativeTime(r.recordingConsent.at)}.
+              {t('Recording consent confirmed by {name} {when}.', { name: r.recordingConsent.by?.name ?? t('a former user'), when: relativeTime(r.recordingConsent.at) })}
             </p>
           )}
           {r.transcriptionStatus === 'failed' && r.transcriptionError && (
             <p role="alert" className="text-sm text-critical">
-              The last transcription failed: {r.transcriptionError}
+              {t('The last transcription failed: {error}', { error: r.transcriptionError })}
             </p>
           )}
           {canWrite && (
@@ -225,7 +228,7 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
                 if (file) upload.mutate(file, { onSuccess: () => { setFile(null); setConsent(false); setEditing(false); } });
               }}
             >
-              <Field id="mr-file" label="Recording (audio or video)" hint={`Up to ${status?.maxUploadMb ?? 100} MB. The file is sent to Deepgram for transcription and is not stored by DealFlow. A new transcription replaces the text above.`}>
+              <Field id="mr-file" label={t('Recording (audio or video)')} hint={t('Up to {mb} MB. The file is sent to Deepgram for transcription and is not stored by DealFlow. A new transcription replaces the text above.', { mb: status?.maxUploadMb ?? 100 })}>
                 <input
                   type="file"
                   accept="audio/*,video/*"
@@ -236,11 +239,11 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
               </Field>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" checked={consent} disabled={!ready} onChange={(e) => setConsent(e.target.checked)} />
-                <span>Everyone in this meeting agreed to it being recorded and transcribed.</span>
+                <span>{t('Everyone in this meeting agreed to it being recorded and transcribed.')}</span>
               </label>
-              {tooBig && <p className="text-sm text-critical">This file is larger than {status?.maxUploadMb} MB.</p>}
+              {tooBig && <p className="text-sm text-critical">{t('This file is larger than {mb} MB.', { mb: status?.maxUploadMb ?? 100 })}</p>}
               <Button type="submit" variant="outline" disabled={!ready || !file || !consent || !!tooBig || upload.isPending}>
-                <Upload aria-hidden /> {upload.isPending ? 'Transcribing…' : 'Transcribe recording'}
+                <Upload aria-hidden /> {upload.isPending ? t('Transcribing…') : t('Transcribe recording')}
               </Button>
               {upload.error && <p role="alert" className="text-sm text-critical">{upload.error.message}</p>}
             </form>
@@ -252,34 +255,35 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
 }
 
 function AnalysisCard({ r, canWrite }: { r: MeetingRecord; canWrite: boolean }) {
+  const t = useT();
   const canAi = useCan('ai:use');
   const analyse = useRecordMutation(r.id, () => api<MeetingRecord>(`/meeting-records/${r.id}/analyse`, { method: 'POST' }));
   const hasText = !!(r.transcript?.trim() || r.segments?.length);
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-base">Meeting summary</CardTitle>
+        <CardTitle className="text-base">{t('Meeting summary')}</CardTitle>
         {canWrite && canAi && (
           <Button
             size="sm"
             variant={r.analysis ? 'outline' : 'default'}
             disabled={!hasText || analyse.isPending}
             onClick={() => {
-              if (r.reviewed && !window.confirm('Analysing again replaces your reviewed version with a new AI draft. Continue?')) return;
+              if (r.reviewed && !window.confirm(t('Analysing again replaces your reviewed version with a new AI draft. Continue?'))) return;
               analyse.mutate(undefined);
             }}
           >
-            <Sparkles aria-hidden /> {analyse.isPending ? 'Analysing…' : r.analysis ? 'Analyse again' : 'Analyse with AI'}
+            <Sparkles aria-hidden /> {analyse.isPending ? t('Analysing…') : r.analysis ? t('Analyse again') : t('Analyse with AI')}
           </Button>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {analyse.error && <p role="alert" className="text-sm text-critical">{aiErrorMessage(analyse.error)}</p>}
+        {analyse.error && <p role="alert" className="text-sm text-critical">{t.maybe(aiErrorMessage(analyse.error))}</p>}
         {!r.analysis ? (
           <p className="text-sm text-muted-foreground">
             {hasText
-              ? 'Analyse the notes to get a summary, requirements, objections, decisions, action items and a follow-up email draft. You review and edit everything before it reaches the CRM.'
-              : 'Add notes, a transcript or a recording first.'}
+              ? t('Analyse the notes to get a summary, requirements, objections, decisions, action items and a follow-up email draft. You review and edit everything before it reaches the CRM.')
+              : t('Add notes, a transcript or a recording first.')}
           </p>
         ) : (
           <AnalysisEditor key={`${r.analysedAt}-${r.reviewedAt}-${r.taskIds.length}`} r={r} analysis={r.analysis} canWrite={canWrite} />
@@ -292,9 +296,10 @@ function AnalysisCard({ r, canWrite }: { r: MeetingRecord; canWrite: boolean }) 
 const lines = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean);
 
 function LinesField({ id, label, value, onChange, disabled }: { id: string; label: string; value: string[]; onChange: (v: string[]) => void; disabled: boolean }) {
+  const t = useT();
   const [text, setText] = useState(value.join('\n'));
   return (
-    <Field id={id} label={label} hint="One per line.">
+    <Field id={id} label={label} hint={t('One per line.')}>
       <Textarea
         value={text}
         readOnly={disabled}
@@ -309,6 +314,7 @@ function LinesField({ id, label, value, onChange, disabled }: { id: string; labe
 }
 
 function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis: MeetingAnalysis; canWrite: boolean }) {
+  const t = useT();
   const [draft, setDraft] = useState<MeetingAnalysis>(() => structuredClone(analysis));
   const [error, setError] = useState<string | null>(null);
   const [gen, setGen] = useState(0);
@@ -321,7 +327,7 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
     const parsed = meetingAnalysisSchema.safeParse(draft);
     if (!parsed.success) {
       const i = parsed.error.issues[0]!;
-      setError(`${i.path.join(' › ')}: ${i.message}`);
+      setError(`${i.path.join(' › ')}: ${t.maybe(i.message)}`);
       return;
     }
     setError(null);
@@ -332,49 +338,53 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
     <div className="space-y-5 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {r.reviewed && r.reviewedBy ? (
-          <Badge tone="success">Reviewed by {r.reviewedBy.name}</Badge>
+          <Badge tone="success">{t('Reviewed by {name}', { name: r.reviewedBy.name })}</Badge>
         ) : (
-          <Badge tone="warning">AI draft: check it, edit it and save it before using it</Badge>
+          <Badge tone="warning">{t('AI draft: check it, edit it and save it before using it')}</Badge>
         )}
-        <span>AI-assisted{r.analysedAt && ` · analysed ${relativeTime(r.analysedAt)}`}{r.reviewedAt && ` · reviewed ${relativeTime(r.reviewedAt)}`}</span>
+        <span>
+          {t('AI-assisted')}
+          {r.analysedAt && ` · ${t('analysed {when}', { when: relativeTime(r.analysedAt) })}`}
+          {r.reviewedAt && ` · ${t('reviewed {when}', { when: relativeTime(r.reviewedAt) })}`}
+        </span>
       </div>
 
-      <Field id="mr-summary" label="Summary">
+      <Field id="mr-summary" label={t('Summary')}>
         <Textarea value={draft.summary} readOnly={ro} className="min-h-24" maxLength={4000} onChange={(e) => set('summary', e.target.value)} />
       </Field>
       <div className="grid gap-4 md:grid-cols-2">
-        <LinesField key={`mr-key-points-${gen}`} id="mr-key-points" label="Key points" value={draft.keyPoints} onChange={(v) => set('keyPoints', v)} disabled={ro} />
-        <LinesField key={`mr-requirements-${gen}`} id="mr-requirements" label="Requirements" value={draft.requirements} onChange={(v) => set('requirements', v)} disabled={ro} />
-        <LinesField key={`mr-objections-${gen}`} id="mr-objections" label="Objections and concerns" value={draft.objections} onChange={(v) => set('objections', v)} disabled={ro} />
-        <LinesField key={`mr-decisions-${gen}`} id="mr-decisions" label="Decisions" value={draft.decisions} onChange={(v) => set('decisions', v)} disabled={ro} />
+        <LinesField key={`mr-key-points-${gen}`} id="mr-key-points" label={t('Key points')} value={draft.keyPoints} onChange={(v) => set('keyPoints', v)} disabled={ro} />
+        <LinesField key={`mr-requirements-${gen}`} id="mr-requirements" label={t('Requirements')} value={draft.requirements} onChange={(v) => set('requirements', v)} disabled={ro} />
+        <LinesField key={`mr-objections-${gen}`} id="mr-objections" label={t('Objections and concerns')} value={draft.objections} onChange={(v) => set('objections', v)} disabled={ro} />
+        <LinesField key={`mr-decisions-${gen}`} id="mr-decisions" label={t('Decisions')} value={draft.decisions} onChange={(v) => set('decisions', v)} disabled={ro} />
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Action items</legend>
-        {draft.actionItems.length === 0 && <p className="text-muted-foreground">No action items.</p>}
+        <legend className="text-sm font-medium">{t('Action items')}</legend>
+        {draft.actionItems.length === 0 && <p className="text-muted-foreground">{t('No action items.')}</p>}
         {draft.actionItems.map((a, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2">
-            <Input aria-label={`Action ${i + 1}`} className="min-w-48 flex-1" value={a.title} readOnly={ro} maxLength={200} onChange={(e) => set('actionItems', draft.actionItems.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-            <Select aria-label={`Who does action ${i + 1}`} className="w-auto" value={a.owner} disabled={ro} onChange={(e) => set('actionItems', draft.actionItems.map((x, j) => (j === i ? { ...x, owner: e.target.value as 'me' | 'customer' } : x)))}>
-              <option value="me">Us</option>
-              <option value="customer">Customer</option>
+            <Input aria-label={t('Action {n}', { n: i + 1 })} className="min-w-48 flex-1" value={a.title} readOnly={ro} maxLength={200} onChange={(e) => set('actionItems', draft.actionItems.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+            <Select aria-label={t('Who does action {n}', { n: i + 1 })} className="w-auto" value={a.owner} disabled={ro} onChange={(e) => set('actionItems', draft.actionItems.map((x, j) => (j === i ? { ...x, owner: e.target.value as 'me' | 'customer' } : x)))}>
+              <option value="me">{t('Us')}</option>
+              <option value="customer">{t('Customer')}</option>
             </Select>
             <Input
-              aria-label={`Days until action ${i + 1} is due`}
+              aria-label={t('Days until action {n} is due', { n: i + 1 })}
               type="number"
               min={0}
               max={365}
-              placeholder="Days"
+              placeholder={t('Days')}
               className="w-28"
               readOnly={ro}
               value={a.dueInDays ?? ''}
               onChange={(e) => set('actionItems', draft.actionItems.map((x, j) => (j === i ? { ...x, dueInDays: e.target.value === '' ? null : Math.max(0, Math.min(365, Math.round(Number(e.target.value)))) } : x)))}
             />
             {a.taskId ? (
-              <Badge tone="success">Task created</Badge>
+              <Badge tone="success">{t('Task created')}</Badge>
             ) : (
               !ro && (
-                <Button type="button" variant="ghost" size="sm" aria-label={`Remove action ${i + 1}`} onClick={() => set('actionItems', draft.actionItems.filter((_, j) => j !== i))}>
+                <Button type="button" variant="ghost" size="sm" aria-label={t('Remove action {n}', { n: i + 1 })} onClick={() => set('actionItems', draft.actionItems.filter((_, j) => j !== i))}>
                   <X aria-hidden />
                 </Button>
               )
@@ -383,20 +393,20 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
         ))}
         {!ro && draft.actionItems.length < 20 && (
           <Button type="button" variant="outline" size="sm" onClick={() => set('actionItems', [...draft.actionItems, { title: '', owner: 'me', dueInDays: null }])}>
-            <Plus aria-hidden /> Add action
+            <Plus aria-hidden /> {t('Add action')}
           </Button>
         )}
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Commitments</legend>
-        {draft.commitments.length === 0 && <p className="text-muted-foreground">No commitments recorded.</p>}
+        <legend className="text-sm font-medium">{t('Commitments')}</legend>
+        {draft.commitments.length === 0 && <p className="text-muted-foreground">{t('No commitments recorded.')}</p>}
         {draft.commitments.map((c, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2">
-            <Input aria-label={`Who made commitment ${i + 1}`} className="w-40" value={c.who} readOnly={ro} maxLength={120} onChange={(e) => set('commitments', draft.commitments.map((x, j) => (j === i ? { ...x, who: e.target.value } : x)))} />
-            <Input aria-label={`Commitment ${i + 1}`} className="min-w-48 flex-1" value={c.what} readOnly={ro} maxLength={500} onChange={(e) => set('commitments', draft.commitments.map((x, j) => (j === i ? { ...x, what: e.target.value } : x)))} />
+            <Input aria-label={t('Who made commitment {n}', { n: i + 1 })} className="w-40" value={c.who} readOnly={ro} maxLength={120} onChange={(e) => set('commitments', draft.commitments.map((x, j) => (j === i ? { ...x, who: e.target.value } : x)))} />
+            <Input aria-label={t('Commitment {n}', { n: i + 1 })} className="min-w-48 flex-1" value={c.what} readOnly={ro} maxLength={500} onChange={(e) => set('commitments', draft.commitments.map((x, j) => (j === i ? { ...x, what: e.target.value } : x)))} />
             {!ro && (
-              <Button type="button" variant="ghost" size="sm" aria-label={`Remove commitment ${i + 1}`} onClick={() => set('commitments', draft.commitments.filter((_, j) => j !== i))}>
+              <Button type="button" variant="ghost" size="sm" aria-label={t('Remove commitment {n}', { n: i + 1 })} onClick={() => set('commitments', draft.commitments.filter((_, j) => j !== i))}>
                 <X aria-hidden />
               </Button>
             )}
@@ -404,25 +414,25 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
         ))}
         {!ro && draft.commitments.length < 20 && (
           <Button type="button" variant="outline" size="sm" onClick={() => set('commitments', [...draft.commitments, { who: '', what: '' }])}>
-            <Plus aria-hidden /> Add commitment
+            <Plus aria-hidden /> {t('Add commitment')}
           </Button>
         )}
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Participants</legend>
-        <p className="text-xs text-muted-foreground">Names come from what was said. Correct them here; nothing is looked up elsewhere.</p>
+        <legend className="text-sm font-medium">{t('Participants')}</legend>
+        <p className="text-xs text-muted-foreground">{t('Names come from what was said. Correct them here; nothing is looked up elsewhere.')}</p>
         {draft.participants.map((p, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2">
-            {p.speaker !== null && <span className="w-20 text-xs text-muted-foreground">Speaker {p.speaker}</span>}
-            <Input aria-label={`Participant ${i + 1} name`} className="min-w-40 flex-1" value={p.name} readOnly={ro} maxLength={120} onChange={(e) => set('participants', draft.participants.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-            <Select aria-label={`Participant ${i + 1} side`} className="w-auto" value={p.side} disabled={ro} onChange={(e) => set('participants', draft.participants.map((x, j) => (j === i ? { ...x, side: e.target.value as 'us' | 'customer' | 'unknown' } : x)))}>
-              <option value="us">Our team</option>
-              <option value="customer">Customer</option>
-              <option value="unknown">Not sure</option>
+            {p.speaker !== null && <span className="w-20 text-xs text-muted-foreground">{t('Speaker {n}', { n: p.speaker })}</span>}
+            <Input aria-label={t('Participant {n} name', { n: i + 1 })} className="min-w-40 flex-1" value={p.name} readOnly={ro} maxLength={120} onChange={(e) => set('participants', draft.participants.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+            <Select aria-label={t('Participant {n} side', { n: i + 1 })} className="w-auto" value={p.side} disabled={ro} onChange={(e) => set('participants', draft.participants.map((x, j) => (j === i ? { ...x, side: e.target.value as 'us' | 'customer' | 'unknown' } : x)))}>
+              <option value="us">{t('Our team')}</option>
+              <option value="customer">{t('Customer')}</option>
+              <option value="unknown">{t('Not sure')}</option>
             </Select>
             {!ro && (
-              <Button type="button" variant="ghost" size="sm" aria-label={`Remove participant ${i + 1}`} onClick={() => set('participants', draft.participants.filter((_, j) => j !== i))}>
+              <Button type="button" variant="ghost" size="sm" aria-label={t('Remove participant {n}', { n: i + 1 })} onClick={() => set('participants', draft.participants.filter((_, j) => j !== i))}>
                 <X aria-hidden />
               </Button>
             )}
@@ -430,17 +440,17 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
         ))}
         {!ro && draft.participants.length < 30 && (
           <Button type="button" variant="outline" size="sm" onClick={() => set('participants', [...draft.participants, { name: '', speaker: null, side: 'unknown' }])}>
-            <Plus aria-hidden /> Add participant
+            <Plus aria-hidden /> {t('Add participant')}
           </Button>
         )}
       </fieldset>
 
       <fieldset className="space-y-3 rounded-md border border-border p-3">
-        <legend className="px-1 text-sm font-medium">Follow-up email draft</legend>
-        <Field id="mr-fu-subject" label="Email subject">
+        <legend className="px-1 text-sm font-medium">{t('Follow-up email draft')}</legend>
+        <Field id="mr-fu-subject" label={t('Email subject')}>
           <Input value={draft.followUpEmail.subject} readOnly={ro} maxLength={200} onChange={(e) => set('followUpEmail', { ...draft.followUpEmail, subject: e.target.value })} />
         </Field>
-        <Field id="mr-fu-body" label="Email body">
+        <Field id="mr-fu-body" label={t('Email body')}>
           <Textarea value={draft.followUpEmail.body} readOnly={ro} className="min-h-32" maxLength={5000} onChange={(e) => set('followUpEmail', { ...draft.followUpEmail, body: e.target.value })} />
         </Field>
       </fieldset>
@@ -448,78 +458,79 @@ function AnalysisEditor({ r, analysis, canWrite }: { r: MeetingRecord; analysis:
       {canWrite && (
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={save} disabled={(!dirty && r.reviewed) || update.isPending}>
-            {r.reviewed && !dirty ? 'Reviewed' : 'Save reviewed version'}
+            {r.reviewed && !dirty ? t('Reviewed') : t('Save reviewed version')}
           </Button>
           {dirty && (
             <Button variant="outline" onClick={() => {
                 setDraft(structuredClone(analysis));
                 setGen((g) => g + 1);
               }}>
-              Discard changes
+              {t('Discard changes')}
             </Button>
           )}
           {(error || update.error) && <p role="alert" className="text-sm text-critical">{error ?? update.error?.message}</p>}
         </div>
       )}
 
-      {canWrite && <UseIt r={r} analysis={analysis} blocked={dirty ? 'Save your edits first.' : !r.reviewed ? 'Save the reviewed version first. Nothing from an unreviewed AI draft goes onto the CRM.' : null} />}
+      {canWrite && <UseIt r={r} analysis={analysis} blocked={dirty ? t('Save your edits first.') : !r.reviewed ? t('Save the reviewed version first. Nothing from an unreviewed AI draft goes onto the CRM.') : null} />}
     </div>
   );
 }
 
 function UseIt({ r, analysis, blocked }: { r: MeetingRecord; analysis: MeetingAnalysis; blocked: string | null }) {
+  const t = useT();
   const open = analysis.actionItems.map((a, i) => ({ ...a, i })).filter((a) => !a.taskId);
   const [picked, setPicked] = useState<number[]>(() => open.filter((a) => a.owner === 'me').map((a) => a.i));
   const [composing, setComposing] = useState(false);
   const tasks = useRecordMutation(r.id, (indexes: number[]) => api<MeetingRecord>(`/meeting-records/${r.id}/tasks`, { method: 'POST', json: { indexes } }));
   const save = useRecordMutation(r.id, () => api<MeetingRecord>(`/meeting-records/${r.id}/save`, { method: 'POST' }));
-  const target = r.deal ? `deal ${r.deal.name}` : r.contact ? r.contact.name : r.lead ? r.lead.name : null;
+  const target = r.deal ? t('deal {name}', { name: r.deal.name }) : r.contact ? r.contact.name : r.lead ? r.lead.name : null;
   const chosen = picked.filter((i) => open.some((a) => a.i === i));
 
   return (
     <section className="space-y-4 border-t border-border pt-4" aria-labelledby="mr-use">
       <h3 id="mr-use" className="text-sm font-semibold">
-        Put it to use
+        {t('Put it to use')}
       </h3>
       {blocked && <p className="text-sm text-muted-foreground">{blocked}</p>}
 
       {open.length > 0 && (
         <fieldset className="space-y-1.5" disabled={!!blocked}>
-          <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Create tasks</legend>
+          <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('Create tasks')}</legend>
           {open.map((a) => (
             <label key={a.i} className="flex items-start gap-2">
               <input type="checkbox" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" checked={picked.includes(a.i)} onChange={(e) => setPicked((p) => (e.target.checked ? [...p, a.i] : p.filter((x) => x !== a.i)))} />
               <span>
                 {a.title}
                 <span className="block text-xs text-muted-foreground">
-                  {a.owner === 'me' ? 'For us' : 'For the customer (a reminder to follow up)'}
-                  {a.dueInDays !== null && ` · due in ${a.dueInDays} day${a.dueInDays === 1 ? '' : 's'}`}
+                  {a.owner === 'me' ? t('For us') : t('For the customer (a reminder to follow up)')}
+                  {a.dueInDays !== null && ` · ${t('due in {time}', { time: new Intl.NumberFormat(t.language, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(a.dueInDays) })}`}
                 </span>
               </span>
             </label>
           ))}
           <Button size="sm" onClick={() => tasks.mutate(chosen)} disabled={!chosen.length || tasks.isPending}>
-            Create {chosen.length} task{chosen.length === 1 ? '' : 's'}
+            {t.plural('count.createTasks', chosen.length)}
           </Button>
         </fieldset>
       )}
       {r.taskIds.length > 0 && (
         <p className="text-xs text-success">
-          {r.taskIds.length} task{r.taskIds.length === 1 ? '' : 's'} created from this meeting.
+          {t.plural('count.tasksCreatedFromMeeting', r.taskIds.length)}
         </p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         {r.activityId ? (
-          <p className="text-xs text-success">Summary added to the timeline of {target ?? 'the linked record'}.</p>
+          <p className="text-xs text-success">{t('Summary added to the timeline of {target}.', { target: target ?? t('the linked record') })}</p>
         ) : (
           <Button size="sm" variant="outline" disabled={!!blocked || !target || save.isPending} onClick={() => save.mutate(undefined)}>
-            {target ? `Add summary to ${target}` : 'Add summary to a record'}
+            {target ? t('Add summary to {target}', { target }) : t('Add summary to a record')}
           </Button>
         )}
-        {!target && !r.activityId && <span className="text-xs text-muted-foreground">Link a deal, contact or lead above first.</span>}
+        {!target && !r.activityId && <span className="text-xs text-muted-foreground">{t('Link a deal, contact or lead above first.')}</span>}
         <Button size="sm" variant="outline" disabled={!!blocked} onClick={() => setComposing(true)}>
-          <Mail aria-hidden /> Write follow-up email
+          <Mail aria-hidden /> {t('Write follow-up email')}
         </Button>
       </div>
       {(tasks.error || save.error) && <p role="alert" className="text-sm text-critical">{(tasks.error ?? save.error)?.message}</p>}
