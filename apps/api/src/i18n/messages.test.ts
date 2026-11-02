@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PIPELINE_STAGES } from '@dealflow/database';
 import { ALL_SERVER_TEXT as SERVER_TEXT } from '@dealflow/types';
 import { shape, sourceTexts } from './source-text';
 
@@ -21,5 +22,9 @@ describe('text the API sends to people', () => {
     const keys = new Set(SERVER_TEXT.keys());
     const missing = [...new Set(found.filter((t) => (t.kind === 'key' ? !keys.has(t.text) : !shapes.has(shape(t.text)))).map((t) => `${t.file}: ${t.text}`))];
     expect(missing, 'Add these to packages/types/src/i18n/text').toEqual([]);
+  });
+
+  it('has the starter pipeline a new workspace gets in every language', () => {
+    for (const name of ['Sales Pipeline', ...DEFAULT_PIPELINE_STAGES.map((s) => s.name)]) expect(SERVER_TEXT.row(name), name).toBeDefined();
   });
 });

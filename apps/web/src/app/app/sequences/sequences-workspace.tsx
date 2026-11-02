@@ -253,7 +253,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
     if (next === designed) return;
     if (next && !design) {
       // Start the design from what is written so far.
-      const start = starterEmailDesign();
+      const start = starterEmailDesign(undefined, (english) => t.maybe(english));
       const first = start.blocks[0]!;
       setDesign(v.body.trim() && first.type === 'text' ? { ...start, blocks: [{ ...first, text: v.body.trim() }, ...start.blocks.slice(1)] } : start);
     }

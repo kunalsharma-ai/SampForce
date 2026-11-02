@@ -63,6 +63,16 @@ describe('Email Assistant', () => {
     await h().post('/ai/email/draft', { mode: 'compose', objective: 'hello' }).expect(400);
   });
 
+  it('asks the model to write in the person’s language, keeping merge fields and names as they are', async () => {
+    const before = fixture.requests.length;
+    await h().post('/ai/email/draft', { mode: 'compose', objective: 'a short call about onboarding', tone: 'friendly', contactId }).set('accept-language', 'es').expect(200);
+    await h().post('/ai/email/draft', { mode: 'compose', objective: 'a short call about onboarding', tone: 'friendly', contactId }).expect(200);
+    const [es, en] = fixture.requests.slice(before).map((r) => r.body.system ?? '');
+    expect(es).toMatch(/works in Spanish\. Write everything meant for them to read .* in Spanish\./);
+    expect(es).toMatch(/merge fields such as \{\{first_name\}\}/);
+    expect(en).not.toMatch(/^Language:/m);
+  });
+
   it('writes template drafts with merge fields that exist, and refuses invented ones', async () => {
     await h().put('/email-variables', { key: 'booking_link', label: 'Booking link', value: 'https://cal.example.com/me' }).expect(200);
     const t = (await h().post('/ai/email/draft', { mode: 'compose', objective: 'our new reporting add-on', asTemplate: true }).expect(200)).body as EmailDraft;

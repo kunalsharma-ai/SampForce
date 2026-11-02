@@ -6,6 +6,7 @@ import { MotionConfig } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useActiveLocale } from '@/lib/i18n';
+import { translateData } from '@/lib/i18n/translate';
 import { applyPaint, computePaint, isDarkMode, PAINT_CACHE_KEY } from '@/lib/appearance-engine';
 import { usePreferences } from '@/stores/preferences';
 
@@ -54,6 +55,35 @@ function useRefetchOnLanguageChange(client: QueryClient) {
   }, [client, language]);
 }
 
+/**
+ * Browser tab titles come from each page's metadata in English ("Deals · DealFlow"). Each part is translated when the
+ * title is set, and again when the language changes; a title with no translation stays as it is.
+ */
+function useTranslatedTitle() {
+  const { language, formatLocale } = useActiveLocale();
+  useEffect(() => {
+    if (language === 'en') return;
+    let english = document.title;
+    let shown = '';
+    const apply = () => {
+      if (document.title === shown) return;
+      english = document.title;
+      shown = english
+        .split(' · ')
+        .map((part) => translateData(language, part, undefined, formatLocale))
+        .join(' · ');
+      if (shown !== document.title) document.title = shown;
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { subtree: true, childList: true, characterData: true });
+    return () => {
+      observer.disconnect();
+      if (document.title === shown) document.title = english;
+    };
+  }, [language, formatLocale]);
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
     () =>
@@ -70,6 +100,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useAppearancePaint();
   const dir = useDocumentLocale();
   useRefetchOnLanguageChange(client);
+  useTranslatedTitle();
   const motion = usePreferences((s) => s.appearance.motion);
   // Full ignores the OS setting; Balanced follows it; Minimal and Off keep only essential fades (CSS handles Off).
   const reducedMotion = motion === 'full' ? 'never' : motion === 'balanced' ? 'user' : 'always';

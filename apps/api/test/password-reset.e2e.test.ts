@@ -107,6 +107,16 @@ describe('password reset by email', () => {
     await post('/auth/password-reset/request', { email: sso.email }).expect(202);
     expect(smtp.messages.length).toBe(before);
   });
+
+  it('writes the reset email in the language the person saved, whatever the requesting browser sends', async () => {
+    const german = await registerUser(app, 'Rücksetzer');
+    await api(german).put('/me/regional', { language: 'de', formatLocale: null }).expect(200);
+    await post('/auth/password-reset/request', { email: german.email }).set('accept-language', 'fr').expect(202);
+    const mail = smtp.messages.at(-1)!;
+    expect(mail.to).toEqual([german.email]);
+    expect(mail.subject).toBe('Setzen Sie Ihr DealFlow-Passwort zurück');
+    expect(mail.text).toContain('https://app.dealflow.test/reset-password#token=');
+  });
 });
 
 describe('password reset without an email service', () => {

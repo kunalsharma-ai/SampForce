@@ -15,15 +15,16 @@ export function nextBlockId(design: EmailDesign): string {
   return `b${n}`;
 }
 
-/** Adds a new block of a type at a position (the end when it is left out). Returns the design and the new block's id. */
+/** Adds a new block of a type at a position (the end when it is left out), its starter text written by `say`. Returns the design and the new block's id. */
 export function addBlock(
   design: EmailDesign,
   type: EmailBlockType,
   at = design.blocks.length,
+  say?: (english: string) => string,
 ): { design: EmailDesign; id: string } {
   const id = nextBlockId(design);
   const blocks = [...design.blocks];
-  blocks.splice(clamp(at, 0, blocks.length), 0, newEmailBlock(type, id));
+  blocks.splice(clamp(at, 0, blocks.length), 0, newEmailBlock(type, id, say));
   return { design: { ...design, blocks }, id };
 }
 

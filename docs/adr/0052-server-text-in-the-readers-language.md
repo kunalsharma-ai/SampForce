@@ -81,6 +81,26 @@ drafts followed in the batches below.
 - The scanner also reads `tr()` keys, notification titles and bodies, and signal labels, so a new sentence fails the
   unit test until it has a row.
 
+## Batch 3: starter content, emails, PDFs, tab titles and AI drafts
+
+- **Starter content** is written in the language of the person who creates it. When a workspace is registered, the
+  default pipeline and its stages are named in the registering person's language (`provisionTenant({ text })`).
+  New email design blocks start with text in the author's language (`newEmailBlock(type, id, say)`), keeping merge
+  fields such as `{{sender_name}}`. After that, it is the workspace's own data and is not translated again.
+- **Emails** go out in the recipient's saved language, read from `user_regional_settings`; for someone without a
+  saved language, the request's language is used. That covers password reset, the password-changed notice, and
+  portal invites and replies. Each is sent inside `inLanguage()`.
+- **Quote, proposal and contract PDFs** use the reader's language for labels, dates and amounts. What people typed
+  (titles, sections, terms) is kept as typed. A buyer downloading a public proposal gets their browser's language.
+  PDFs use pdfkit's built-in Latin-1 fonts, which cannot draw Arabic, so Arabic readers get English PDFs
+  (`pdfLanguage()`) until a Unicode font is embedded.
+- **Browser tab titles** are translated part by part (each side of " · ") through the page catalogue.
+- **AI drafts and answers.** Every model call made during a request gets one more system-prompt line
+  (`apps/api/src/ai/language.ts`). It asks the model to write for the person in their language, keeps a draft in the
+  language of the text being worked on when that differs, and leaves names, numbers, merge fields, JSON keys and
+  listed values as they are. Queued runs (automatic lead qualification) stay in English, since several people with
+  different languages may read them.
+
 ## Review
 
 As with the page tables, the translations were written by Claude and need a native speaker's review before customers

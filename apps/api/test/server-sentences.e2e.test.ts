@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { InsightFeed, NextActionList, NotificationRow, TimelinePage } from '@dealflow/types';
+import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { api, asTenant, registerUser, startApp, type TestUser } from './helpers';
 
@@ -63,5 +64,19 @@ describe('Composed sentences in the reader’s language', () => {
     });
     const en = (await api(owner).get('/notifications').expect(200)).body.items as NotificationRow[];
     expect(en.find((n) => n.type === 'deal.high_risk')?.title).toBe('Quiet Renewal is at high risk');
+  });
+  it('names the starter pipeline in the language of the person who registers the workspace', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/auth/register')
+      .set('origin', 'http://localhost:3000')
+      .set('accept-language', 'es')
+      .send({ name: 'Ana', email: `es-${Date.now()}@example.com`, password: 'correcthorse1', organizationName: 'Ventas SA' })
+      .expect(201);
+    const pipelines = (await agent.get('/api/v1/pipelines').expect(200)).body as { name: string; stages: { name: string }[] }[];
+    expect(pipelines[0]!.name).toBe('Pipeline de ventas');
+    expect(pipelines[0]!.stages.map((s) => s.name)).toContain('Calificación');
+    // Owner registered without a language header: English, as before.
+    expect(((await api(owner).get('/pipelines').expect(200)).body as { name: string }[])[0]!.name).toBe('Sales Pipeline');
   });
 });

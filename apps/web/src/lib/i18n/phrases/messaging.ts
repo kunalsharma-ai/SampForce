@@ -2,6 +2,20 @@ import type { PhraseTable } from './types';
 
 /** SMS and WhatsApp on contact pages, voice notes, the Copilot panel, the notifications menu and the 404 page. */
 export const messaging = {
+  // Starter text of new email design blocks (merge fields stay as they are)
+  'A heading': ['Un título', 'Un titre', 'Eine Überschrift', 'عنوان'],
+  'Hi {{first_name|there}},': ['Hola, {{first_name|equipo}}:', 'Bonjour {{first_name|à tous}},', 'Hallo {{first_name|zusammen}},', 'مرحبًا {{first_name|بك}}،'],
+  'Write your message here.': ['Escribe tu mensaje aquí.', 'Écrivez votre message ici.', 'Schreiben Sie hier Ihre Nachricht.', 'اكتب رسالتك هنا.'],
+  'Book a call': ['Reservar una llamada', 'Réserver un appel', 'Gespräch buchen', 'احجز مكالمة'],
+  'Product name': ['Nombre del producto', 'Nom du produit', 'Produktname', 'اسم المنتج'],
+  'Learn more': ['Más información', 'En savoir plus', 'Mehr erfahren', 'اعرف المزيد'],
+  Starter: ['Inicial', 'Essentiel', 'Starter', 'المبتدئ'],
+  'You are receiving this because you spoke with {{sender_name}}.': [
+    'Recibes este mensaje porque hablaste con {{sender_name}}.',
+    'Vous recevez ce message car vous avez échangé avec {{sender_name}}.',
+    'Sie erhalten diese Nachricht, weil Sie mit {{sender_name}} gesprochen haben.',
+    'تصلك هذه الرسالة لأنك تحدثت مع {{sender_name}}.',
+  ],
   // Shared between SMS and WhatsApp
   'Number {phone}': ['Número {phone}', 'Numéro {phone}', 'Nummer {phone}', 'الرقم {phone}'],
   'Consent recorded': ['Consentimiento registrado', 'Consentement enregistré', 'Einwilligung erfasst', 'الموافقة مسجّلة'],
@@ -386,4 +400,19 @@ export const messaging = {
   ],
   Unread: ['Sin leer', 'Non lu', 'Ungelesen', 'غير مقروء'],
   'This page does not exist': ['Esta página no existe', 'Cette page n’existe pas', 'Diese Seite gibt es nicht', 'هذه الصفحة غير موجودة'],
+  // Browser tab titles that are not also page headings
+  'Accept invitation': ['Aceptar invitación', 'Accepter l’invitation', 'Einladung annehmen', 'قبول الدعوة'],
+  'Command Center': ['Centro de mando', 'Centre de commande', 'Kommandozentrale', 'مركز القيادة'],
+  Form: ['Formulario', 'Formulaire', 'Formular', 'نموذج'],
+  'Join a workspace': ['Unirse a un espacio de trabajo', 'Rejoindre un espace de travail', 'Einem Arbeitsbereich beitreten', 'الانضمام إلى مساحة عمل'],
+  'Prospect list': ['Lista de prospectos', 'Liste de prospects', 'Interessentenliste', 'قائمة العملاء المحتملين'],
+  Report: ['Informe', 'Rapport', 'Bericht', 'تقرير'],
+  'Reset password': ['Restablecer contraseña', 'Réinitialiser le mot de passe', 'Passwort zurücksetzen', 'إعادة تعيين كلمة المرور'],
+  Workflow: ['Flujo de trabajo', 'Workflow', 'Workflow', 'سير العمل'],
+  'DealFlow by Sampledge: the AI-native sales CRM': [
+    'DealFlow de Sampledge: el CRM de ventas nativo de IA',
+    'DealFlow par Sampledge : le CRM commercial conçu pour l’IA',
+    'DealFlow von Sampledge: das KI-native Vertriebs-CRM',
+    'DealFlow من Sampledge: نظام إدارة المبيعات المبني على الذكاء الاصطناعي',
+  ],
 } satisfies PhraseTable;

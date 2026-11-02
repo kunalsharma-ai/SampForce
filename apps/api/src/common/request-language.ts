@@ -54,3 +54,17 @@ export function money(amount: number, currency: string): string {
 export function percent(value: number): string {
   return new Intl.NumberFormat(requestLocale(), { style: 'percent', maximumFractionDigits: 1 }).format(value / 100);
 }
+
+/**
+ * The language a PDF is written in: the request's, except Arabic, which the built-in Latin-1 PDF fonts cannot draw.
+ * Those PDFs stay in English until a Unicode font is embedded (ADR 0052).
+ */
+export function pdfLanguage(language: LanguageCode = requestLanguage()): LanguageCode {
+  return language === 'ar' ? 'en' : language;
+}
+
+/** An amount with two decimals and the currency code, for PDFs ("USD 5,000.00", "EUR 5.000,00"), in Latin-1 safe spacing. */
+export function pdfMoney(amount: number, currency: string): string {
+  const n = amount.toLocaleString(requestLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${currency} ${n.replace(/[\u202F\u2009]/g, '\u00A0')}`;
+}
