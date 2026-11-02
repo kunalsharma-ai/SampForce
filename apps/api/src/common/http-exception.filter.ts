@@ -10,6 +10,7 @@ import { ThrottlerException } from '@nestjs/throttler';
 import type { Response } from 'express';
 import type { ApiErrorBody } from '@dealflow/types';
 import type { AuthedRequest } from './auth-context';
+import { localize, pickLanguage } from './request-language';
 
 const CODE_BY_STATUS: Record<number, string> = {
   400: 'BAD_REQUEST',
@@ -58,6 +59,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
     } else {
       this.logger.error({ err: exception, requestId }, 'Unhandled error');
+    }
+
+    // Messages are written in English and sent in the reader's language (Accept-Language); codes stay as they are.
+    const language = pickLanguage(req.headers?.['accept-language']);
+    if (language !== 'en') {
+      body = {
+        ...body,
+        message: localize(body.message, language),
+        ...(body.details ? { details: body.details.map((d) => ({ ...d, message: localize(d.message, language) })) } : {}),
+      };
     }
 
     res.status(status).json({ error: body } satisfies ApiErrorBody);

@@ -147,9 +147,9 @@ export class CardPaymentsClient {
     const json = (await res.json().catch(() => ({}))) as T & { error?: { message?: string; description?: string } };
     if (res.ok) return json;
     const detail = json.error?.message ?? json.error?.description;
-    if (res.status === 401) throw new CardPaymentError('keys_refused', `${name} refused the keys.${detail ? ` ${detail}` : ''}`);
-    if (res.status === 403) throw new CardPaymentError('permission', `The ${name} key is missing a permission${detail ? `: ${detail}` : '.'}`);
-    throw new CardPaymentError(`http_${res.status}`, `${name} answered HTTP ${res.status}${detail ? `: ${detail}` : ''}.`, res.status >= 500 ? 502 : 400);
+    if (res.status === 401) throw new CardPaymentError('keys_refused', detail ? `${name} refused the keys. ${detail}` : `${name} refused the keys.`);
+    if (res.status === 403) throw new CardPaymentError('permission', detail ? `The ${name} key is missing a permission: ${detail}` : `The ${name} key is missing a permission.`);
+    throw new CardPaymentError(`http_${res.status}`, detail ? `${name} answered HTTP ${res.status}: ${detail}.` : `${name} answered HTTP ${res.status}.`, res.status >= 500 ? 502 : 400);
   }
 }
 

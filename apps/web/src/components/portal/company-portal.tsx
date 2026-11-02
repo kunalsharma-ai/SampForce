@@ -253,7 +253,7 @@ function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { ur
         e.preventDefault();
         const body = { companyId, contactId: v.contactId || undefined, name: v.name, email: v.email, role: v.role };
         const r = portalInviteSchema.safeParse(body);
-        if (!r.success) return setError(r.error.issues[0]!.message);
+        if (!r.success) return setError(t.maybe(r.error.issues[0]!.message));
         setError(null);
         invite.mutate(r.data);
       }}

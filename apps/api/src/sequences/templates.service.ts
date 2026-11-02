@@ -90,7 +90,7 @@ export class TemplatesService {
     return this.prisma.run(auth, async (tx) => {
       const t = await this.editable(tx, auth, id);
       const users = (await this.usage(tx, auth.tenantId)).get(t.id) ?? 0;
-      if (users > 0) throw new ConflictException({ code: 'TEMPLATE_IN_USE', message: `This template is used by ${users} sequence${users === 1 ? '' : 's'}. Change those steps first.` });
+      if (users > 0) throw new ConflictException({ code: 'TEMPLATE_IN_USE', message: users === 1 ? 'This template is used by 1 sequence. Change those steps first.' : `This template is used by ${users} sequences. Change those steps first.` });
       await tx.emailTemplate.delete({ where: { id: t.id } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.deleted', entityType: 'email_template', entityId: t.id, metadata: { name: t.name }, meta });
     });

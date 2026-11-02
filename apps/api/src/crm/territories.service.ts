@@ -236,7 +236,10 @@ export class TerritoriesService {
     if (taken.length) {
       throw new ConflictException({
         code: 'COUNTRY_TAKEN',
-        message: `${taken.map((t) => t.country).join(', ')} already ${taken.length === 1 ? 'belongs' : 'belong'} to ${[...new Set(taken.map((t) => t.territory.name))].join(', ')}. A country can be in one territory only.`,
+        message:
+          taken.length === 1
+            ? `${taken[0]!.country} already belongs to ${taken[0]!.territory.name}. A country can be in one territory only.`
+            : `${taken.map((t) => t.country).join(', ')} already belong to ${[...new Set(taken.map((t) => t.territory.name))].join(', ')}. A country can be in one territory only.`,
         details: taken.map((t) => ({ path: 'countries', message: `${t.country} is in ${t.territory.name}` })),
       });
     }

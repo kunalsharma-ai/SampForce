@@ -21,7 +21,7 @@ import { brandingOf, type PortalContext } from './portal-auth.service';
 import { DocumentLinks } from './portal-documents';
 
 type Settings = NonNullable<Awaited<ReturnType<TenantTx['portalSettings']['findUnique']>>>;
-const off = (what: string) => new ForbiddenException({ code: 'PORTAL_FEATURE_OFF', message: `${what} is not available in this portal.` });
+const off = (what: string) => new ForbiddenException({ code: 'PORTAL_FEATURE_OFF', message: `${what}: not available in this portal.` });
 export const requestRef = (n: number) => `R-${String(n).padStart(4, '0')}`;
 
 /**

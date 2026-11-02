@@ -129,7 +129,7 @@ export class SegmentsService {
 
   private requireRead(auth: AuthContext, entity: SegmentEntity) {
     const p = entity === 'lead' ? 'leads:read' : 'contacts:read';
-    if (!auth.permissions.includes(p)) throw new ForbiddenException({ code: 'FORBIDDEN', message: `Your role cannot read ${entity}s.` });
+    if (!auth.permissions.includes(p)) throw new ForbiddenException({ code: 'FORBIDDEN', message: entity === 'lead' ? 'Your role cannot read leads.' : 'Your role cannot read contacts.' });
   }
 
   private async find(tx: TenantTx, tenantId: string, id: string) {

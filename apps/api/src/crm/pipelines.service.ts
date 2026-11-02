@@ -41,7 +41,7 @@ export class PipelinesService {
       if (limit !== null && count >= limit) {
         throw new ForbiddenException({
           code: 'PLAN_LIMIT',
-          message: `Your plan allows ${limit} pipeline${limit === 1 ? '' : 's'}. Upgrade to add more.`,
+          message: limit === 1 ? 'Your plan allows 1 pipeline. Upgrade to add more.' : `Your plan allows ${limit} pipelines. Upgrade to add more.`,
         });
       }
       try {

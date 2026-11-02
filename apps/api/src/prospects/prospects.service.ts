@@ -595,7 +595,7 @@ export class ProspectsService {
       const limit = this.limitFor(await this.settingsRow(tx, auth.tenantId), auth.userId);
       const used = await this.usageOf(tx, auth.tenantId, auth.userId);
       if (used + units > limit) {
-        throw new HttpException({ code: 'USAGE_LIMIT', message: `That needs ${units} provider call${units === 1 ? '' : 's'} and you have ${Math.max(0, limit - used)} of ${limit} left in the last 24 hours. Ask an admin to raise your limit.` }, HttpStatus.TOO_MANY_REQUESTS);
+        throw new HttpException({ code: 'USAGE_LIMIT', message: units === 1 ? `That needs 1 provider call and you have ${Math.max(0, limit - used)} of ${limit} left in the last 24 hours. Ask an admin to raise your limit.` : `That needs ${units} provider calls and you have ${Math.max(0, limit - used)} of ${limit} left in the last 24 hours. Ask an admin to raise your limit.` }, HttpStatus.TOO_MANY_REQUESTS);
       }
       await tx.providerUsage.create({ data: { tenantId: auth.tenantId, userId: auth.userId, provider, kind, units, live } });
       return { used: used + units, limit };

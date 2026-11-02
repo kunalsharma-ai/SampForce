@@ -10,6 +10,7 @@ import { loadApiEnv } from '@dealflow/config';
 import { AppModule } from './app.module';
 import { httpMetricsMiddleware } from './observability/metrics';
 import { buildOpenApiDocument } from './openapi/document';
+import { requestLanguageMiddleware } from './common/request-language';
 
 export async function createApp(): Promise<INestApplication> {
   const env = loadApiEnv();
@@ -17,6 +18,7 @@ export async function createApp(): Promise<INestApplication> {
   app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api/v1');
   app.use(httpMetricsMiddleware);
+  app.use(requestLanguageMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   // Replaces Nest's default JSON parser so SCIM clients' application/scim+json bodies are parsed too.

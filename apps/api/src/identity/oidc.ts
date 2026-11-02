@@ -126,7 +126,7 @@ export async function exchangeCode(
     throw new OidcError('provider_error', 'The token endpoint could not be reached.');
   }
   const json = (await res.json().catch(() => null)) as { id_token?: string; error?: string } | null;
-  if (!res.ok || !json?.id_token) throw new OidcError('provider_error', `Token exchange failed (${res.status}${json?.error ? `: ${json.error}` : ''}).`);
+  if (!res.ok || !json?.id_token) throw new OidcError('provider_error', json?.error ? `Token exchange failed (${res.status}: ${json.error}).` : `Token exchange failed (${res.status}).`);
 
   let jwks = jwksCache.get(meta.jwks_uri);
   if (!jwks) {
