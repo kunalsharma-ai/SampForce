@@ -1,6 +1,7 @@
 import { Bot, FileSignature, GitBranch, HeartHandshake, KanbanSquare, LineChart, Megaphone, ShieldCheck } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Tr } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'DealFlow by Sampledge: the AI-native sales CRM',
@@ -23,39 +24,39 @@ export default function LandingPage() {
   return (
     <>
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-20 sm:px-6">
-        <p className="text-sm font-medium text-primary">DealFlow by Sampledge</p>
+        <p className="text-sm font-medium text-primary"><Tr text="DealFlow by Sampledge" /></p>
         <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Close smarter. Grow faster. <span className="text-gradient">Flow beyond limits.</span>
+          <Tr text="Close smarter. Grow faster." /> <span className="text-gradient"><Tr text="Flow beyond limits." /></span>
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.
+          <Tr text="One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts." />
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/signup" className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Start free
+            <Tr text="Start free" />
           </Link>
           <Link href="/pricing" className="rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-muted">
-            See pricing
+            <Tr text="See pricing" />
           </Link>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">The Free plan covers 2 users with no card required.</p>
+        <p className="mt-3 text-xs text-muted-foreground"><Tr text="The Free plan covers 2 users with no card required." /></p>
       </section>
 
       <section aria-labelledby="features" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
         <h2 id="features" className="text-2xl font-semibold tracking-tight">
-          What is in the box
+          <Tr text="What is in the box" />
         </h2>
         <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f) => (
             <li key={f.title} className="rounded-xl border border-border bg-surface/60 p-5">
               <f.icon className="size-5 text-primary" aria-hidden />
-              <h3 className="mt-3 font-medium">{f.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
+              <h3 className="mt-3 font-medium"><Tr text={f.title} /></h3>
+              <p className="mt-1 text-sm text-muted-foreground"><Tr text={f.body} /></p>
             </li>
           ))}
         </ul>
         <p className="mt-6 text-sm text-muted-foreground">
-          AI features draw on each plan’s monthly AI credit allowance. When it is used up they pause until the next month; nothing is charged automatically.
+          <Tr text="AI features draw on each plan’s monthly AI credit allowance. When it is used up they pause until the next month; nothing is charged automatically." />
         </p>
       </section>
     </>

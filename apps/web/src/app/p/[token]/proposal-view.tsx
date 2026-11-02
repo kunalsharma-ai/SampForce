@@ -5,14 +5,19 @@ import { bidStyle, textOn, type PublicProposal } from '@dealflow/types';
 import { CreditCard, Download } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatAmount } from '@/lib/revenue';
+import { useT } from '@/lib/i18n';
+import { fmtLocale } from '@/lib/i18n/locale';
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'missing'; message: string }
+  | { kind: 'missing'; message: string | null; failed?: boolean }
   | { kind: 'ready'; p: PublicProposal };
 
+// English keeps the day-month-year order the PDF uses; other languages follow the visitor's locale.
+const dateLocale = () => (fmtLocale().startsWith('en') ? 'en-GB' : fmtLocale());
+
 const fmtDate = (iso: string) =>
-  new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso).toLocaleDateString('en-GB', {
+  new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso).toLocaleDateString(dateLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -21,6 +26,7 @@ const fmtDate = (iso: string) =>
 
 /** The customer's view of a proposal. It talks only to the public proposal endpoints; the rep previews it with ?preview=1, which is not counted. */
 export function ProposalView({ token, preview, returnedFromPayment = false }: { token: string; preview: boolean; returnedFromPayment?: boolean }) {
+  const t = useT();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const loaded = useRef(false);
   const base = `/api/v1/proposals/view/${encodeURIComponent(token)}`;
@@ -37,13 +43,14 @@ export function ProposalView({ token, preview, returnedFromPayment = false }: { 
         else
           setState({
             kind: 'missing',
-            message: body?.error?.message ?? 'This proposal is not available.',
+            message: body?.error?.message ?? null,
           });
       })
       .catch(() =>
         setState({
           kind: 'missing',
-          message: 'This proposal could not be loaded. Please try again.',
+          message: null,
+          failed: true,
         }),
       );
   }, [base, preview]);
@@ -71,7 +78,7 @@ export function ProposalView({ token, preview, returnedFromPayment = false }: { 
   if (state.kind === 'missing')
     return (
       <Card>
-        <CardContent className="p-6 text-sm">{state.message}</CardContent>
+        <CardContent className="p-6 text-sm">{state.message ? t.maybe(state.message) : state.failed ? t('This proposal could not be loaded. Please try again.') : t('This proposal is not available.')}</CardContent>
       </Card>
     );
 
@@ -81,7 +88,7 @@ export function ProposalView({ token, preview, returnedFromPayment = false }: { 
       banner={
         preview && (
           <p className="rounded-md bg-muted p-2 text-xs">
-            Preview. This visit is not counted as a view.
+            {t('Preview. This visit is not counted as a view.')}
           </p>
         )
       }
@@ -97,11 +104,11 @@ export function ProposalView({ token, preview, returnedFromPayment = false }: { 
           )}
           <Button asChild variant="outline" size="sm">
             <a href={`${base}/pdf`} download>
-              <Download aria-hidden /> Download PDF
+              <Download aria-hidden /> {t('Download PDF')}
             </a>
           </Button>
           <p className="text-xs text-muted-foreground">
-            To accept or ask a question, reply to the email this link came in.
+            {t('To accept or ask a question, reply to the email this link came in.')}
           </p>
         </div>
       }
@@ -113,6 +120,7 @@ const PROVIDER_NAME = { stripe: 'Stripe', razorpay: 'Razorpay' } as const;
 
 /** Card payment into the seller's own Stripe or Razorpay account, on the provider's hosted page. */
 function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicProposal; preview: boolean; waiting: boolean }) {
+  const t = useT();
   const pay = p.payment!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,15 +128,14 @@ function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicPropo
   if (pay.paid)
     return (
       <p className="flex items-center gap-2 text-sm" role="status">
-        <Badge tone="success">Paid</Badge>
-        {pay.paidAt && `Payment confirmed by ${name} on ${fmtDate(pay.paidAt)}.`}
+        <Badge tone="success">{t('Paid')}</Badge>
+        {pay.paidAt && t('Payment confirmed by {provider} on {date}.', { provider: name, date: fmtDate(pay.paidAt) })}
       </p>
     );
   if (waiting)
     return (
       <p className="text-sm" role="status">
-        Thank you. {name} is confirming your payment; this page updates when it does. You will not
-        be charged twice if you leave.
+        {t('Thank you. {provider} is confirming your payment; this page updates when it does. You will not be charged twice if you leave.', { provider: name })}
       </p>
     );
   if (!pay.available) return pay.reason ? <p className="text-xs text-muted-foreground">{pay.reason}</p> : null;
@@ -142,19 +149,19 @@ function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicPropo
         window.location.assign(body.url);
         return;
       }
-      setError(body?.error?.message ?? 'Card payment is not available right now.');
+      setError(body?.error?.message ? t.maybe(body.error.message) : t('Card payment is not available right now.'));
     } catch {
-      setError('Card payment could not be started. Please try again.');
+      setError(t('Card payment could not be started. Please try again.'));
     }
     setBusy(false);
   };
   return (
     <div className="space-y-1">
       <Button size="sm" onClick={start} disabled={busy || preview} aria-describedby="pay-note">
-        <CreditCard aria-hidden /> {busy ? 'Opening payment page…' : `Pay ${formatAmount(p.total, p.currency)} by card`}
+        <CreditCard aria-hidden /> {busy ? t('Opening payment page…') : t('Pay {amount} by card', { amount: formatAmount(p.total, p.currency) })}
       </Button>
       <p id="pay-note" className="text-xs text-muted-foreground">
-        {preview ? 'Preview: your customer sees this button. It is turned off here.' : `You pay on ${name}'s secure page. ${p.seller.name} never sees your card details.`}
+        {preview ? t('Preview: your customer sees this button. It is turned off here.') : t("You pay on {provider}'s secure page. {seller} never sees your card details.", { provider: name, seller: p.seller.name })}
       </p>
       {error && (
         <p className="text-xs text-destructive" role="alert">
@@ -167,6 +174,7 @@ function PayByCard({ base, p, preview, waiting }: { base: string; p: PublicPropo
 
 /** The proposal itself: shared by the link view and the client portal, which bring their own actions. */
 export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; banner?: React.ReactNode; actions?: React.ReactNode }) {
+  const t = useT();
   // The bid template look: accent for bands and rules, a serif or sans heading face, and a cover style.
   // Text stays in the theme's colours so a pale accent never makes it unreadable.
   const style = p.style ?? bidStyle(null, null, p.seller.brandColor);
@@ -202,7 +210,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
           // eslint-disable-next-line @next/next/no-img-element -- the seller's stored logo as a data URL
           <img
             src={p.seller.logoDataUrl}
-            alt={`${p.seller.name} logo`}
+            alt={t('{name} logo', { name: p.seller.name })}
             className={banded ? 'h-14 max-w-60 rounded bg-white p-1 object-contain' : 'h-14 max-w-60 object-contain'}
           />
         )}
@@ -213,22 +221,21 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
       {banner}
       {p.superseded && (
         <p className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm">
-          A newer version of this proposal has been prepared. Ask {p.seller.name} for the latest
-          link.
+          {t('A newer version of this proposal has been prepared. Ask {seller} for the latest link.', { seller: p.seller.name })}
         </p>
       )}
 
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className={`text-2xl font-semibold tracking-tight ${heading}`}>{p.title}</h1>
-          {p.status === 'ACCEPTED' && <Badge tone="success">Accepted</Badge>}
-          {p.status === 'DECLINED' && <Badge tone="neutral">Declined</Badge>}
-          {p.expired && <Badge tone="warning">Past its valid date</Badge>}
+          {p.status === 'ACCEPTED' && <Badge tone="success">{t('Accepted')}</Badge>}
+          {p.status === 'DECLINED' && <Badge tone="neutral">{t('Declined')}</Badge>}
+          {p.expired && <Badge tone="warning">{t('Past its valid date')}</Badge>}
         </div>
         <p className="text-sm text-muted-foreground">
           {p.reference}
-          {p.preparedFor && ` · prepared for ${p.preparedFor}`} · {fmtDate(p.createdAt)}
-          {p.validUntil && ` · valid until ${fmtDate(p.validUntil)}`}
+          {p.preparedFor && ` · ${t('prepared for {name}', { name: p.preparedFor })}`} · {fmtDate(p.createdAt)}
+          {p.validUntil && ` · ${t('valid until {date}', { date: fmtDate(p.validUntil) })}`}
         </p>
       </div>
 
@@ -243,18 +250,18 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       <section className="space-y-2">
         <h2 className={`border-s-4 ps-3 text-lg font-semibold ${heading}`} style={{ borderColor: 'var(--proposal-accent)' }}>
-          Pricing
+          {t('Pricing')}
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th className="pb-2 font-medium">Item</th>
-                <th className="pb-2 text-end font-medium">Qty</th>
-                <th className="pb-2 text-end font-medium">Unit price</th>
-                <th className="pb-2 text-end font-medium">Discount</th>
-                <th className="pb-2 text-end font-medium">Tax</th>
-                <th className="pb-2 text-end font-medium">Net</th>
+                <th className="pb-2 font-medium">{t('Item')}</th>
+                <th className="pb-2 text-end font-medium">{t('Qty')}</th>
+                <th className="pb-2 text-end font-medium">{t('Unit price')}</th>
+                <th className="pb-2 text-end font-medium">{t('Discount')}</th>
+                <th className="pb-2 text-end font-medium">{t('Tax')}</th>
+                <th className="pb-2 text-end font-medium">{t('Net')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -286,21 +293,21 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
         </div>
         <div className="ms-auto max-w-64 space-y-1 text-sm tabular-nums">
           <p className="flex justify-between">
-            <span>Subtotal</span>
+            <span>{t('Subtotal')}</span>
             <span>{formatAmount(p.subtotal, p.currency)}</span>
           </p>
           {p.discountTotal > 0 && (
             <p className="flex justify-between">
-              <span>Discount</span>
+              <span>{t('Discount')}</span>
               <span>−{formatAmount(p.discountTotal, p.currency)}</span>
             </p>
           )}
           <p className="flex justify-between">
-            <span>Tax</span>
+            <span>{t('Tax')}</span>
             <span>{formatAmount(p.taxTotal, p.currency)}</span>
           </p>
           <p className="flex justify-between border-t-2 pt-1 font-semibold" style={{ borderColor: 'var(--proposal-accent)' }}>
-            <span>Total</span>
+            <span>{t('Total')}</span>
             <span>{formatAmount(p.total, p.currency)}</span>
           </p>
         </div>
@@ -308,7 +315,7 @@ export function ProposalDocument({ p, banner, actions }: { p: PublicProposal; ba
 
       {p.terms && (
         <section className="space-y-1">
-          <h2 className={`text-lg font-semibold ${heading}`}>Terms</h2>
+          <h2 className={`text-lg font-semibold ${heading}`}>{t('Terms')}</h2>
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.terms}</p>
         </section>
       )}
