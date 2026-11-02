@@ -15,14 +15,15 @@ import { automation } from './automation';
 import { integrations } from './integrations';
 import { growth } from './growth';
 import { engagement } from './engagement';
+import { publicPages } from './public-pages';
 import { settings } from './settings';
 import { table } from './table';
 import { territories } from './territories';
 import type { PhraseTable } from './types';
 
 /** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
-export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement } as const satisfies Record<string, PhraseTable>;
+export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages } as const satisfies Record<string, PhraseTable>;
 
-export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement } as const;
+export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

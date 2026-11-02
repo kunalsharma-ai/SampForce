@@ -4,11 +4,13 @@ import { Button, Card, CardContent, Input, Skeleton } from '@dealflow/ui';
 import type { PublicFormView } from '@dealflow/types';
 import { useEffect, useState } from 'react';
 import { Textarea } from '@/components/crm/select';
+import { useT } from '@/lib/i18n';
 
 type State = { kind: 'loading' } | { kind: 'missing' } | { kind: 'ready'; form: PublicFormView } | { kind: 'done'; message: string };
 
 /** The hosted lead form. It talks only to the public form endpoints and works inside an iframe. */
 export function PublicForm({ token }: { token: string }) {
+  const t = useT();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [values, setValues] = useState<Record<string, string>>({});
   const [consent, setConsent] = useState(false);
@@ -27,7 +29,7 @@ export function PublicForm({ token }: { token: string }) {
   if (state.kind === 'missing')
     return (
       <Card className="w-full">
-        <CardContent className="p-6 text-sm">This form is not available.</CardContent>
+        <CardContent className="p-6 text-sm">{t('This form is not available.')}</CardContent>
       </Card>
     );
   if (state.kind === 'done')
@@ -52,11 +54,11 @@ export function PublicForm({ token }: { token: string }) {
         body: JSON.stringify({ ...values, consent, website }),
       });
       const body = (await r.json().catch(() => null)) as { message?: string; error?: { message: string; details?: { path: string; message: string }[] } } | null;
-      if (r.ok) return setState({ kind: 'done', message: body?.message ?? 'Thank you.' });
-      if (body?.error?.details?.length) setErrors(Object.fromEntries(body.error.details.map((d) => [d.path, d.message])));
-      setError(body?.error?.message ?? 'Something went wrong. Please try again.');
+      if (r.ok) return setState({ kind: 'done', message: body?.message ?? t('Thank you.') });
+      if (body?.error?.details?.length) setErrors(Object.fromEntries(body.error.details.map((d) => [d.path, t.maybe(d.message)])));
+      setError(body?.error?.message ? t.maybe(body.error.message) : t('Something went wrong. Please try again.'));
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('Something went wrong. Please try again.'));
     } finally {
       setSending(false);
     }
@@ -83,8 +85,8 @@ export function PublicForm({ token }: { token: string }) {
             return (
               <div key={f.key} className="space-y-1">
                 <label htmlFor={id} className="text-sm font-medium">
-                  {f.label}
-                  {f.required ? ' *' : ' (optional)'}
+                  {t.maybe(f.label)}
+                  {f.required ? ' *' : ` ${t('(optional)')}`}
                 </label>
                 {f.key === 'message' ? (
                   <Textarea {...common} maxLength={2000} />
@@ -94,7 +96,7 @@ export function PublicForm({ token }: { token: string }) {
                     type={f.key === 'email' ? 'email' : f.key === 'phone' ? 'tel' : 'text'}
                     autoComplete={{ fullName: 'name', email: 'email', phone: 'tel', companyName: 'organization', jobTitle: 'organization-title', country: 'country' }[f.key]}
                     maxLength={f.key === 'country' ? 2 : 200}
-                    placeholder={f.key === 'country' ? 'Two-letter code, e.g. DE' : undefined}
+                    placeholder={f.key === 'country' ? t('Two-letter code, e.g. DE') : undefined}
                   />
                 )}
                 {err && (
@@ -107,7 +109,7 @@ export function PublicForm({ token }: { token: string }) {
           })}
           {/* Honeypot for bots: hidden from people and assistive technology. */}
           <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-            <label htmlFor="ff-website">Website</label>
+            <label htmlFor="ff-website">{t('Website')}</label>
             <input id="ff-website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
           </div>
           {form.consentText && (
@@ -122,7 +124,7 @@ export function PublicForm({ token }: { token: string }) {
             </p>
           )}
           <Button type="submit" className="w-full" disabled={sending}>
-            {sending ? 'Sending…' : 'Submit'}
+            {sending ? t('Sending…') : t('Submit')}
           </Button>
         </form>
       </CardContent>

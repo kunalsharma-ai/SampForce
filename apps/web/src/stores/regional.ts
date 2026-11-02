@@ -1,4 +1,4 @@
-import { DEFAULT_REGIONAL, type LanguageCode, normalizeRegional, type Regional } from '@dealflow/types';
+import { DEFAULT_REGIONAL, LANGUAGES, type LanguageCode, normalizeRegional, type Regional } from '@dealflow/types';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -13,6 +13,25 @@ interface RegionalState {
   chosenSignedOut: LanguageCode | null;
   chooseSignedOut: (language: LanguageCode) => void;
   clearSignedOut: () => void;
+}
+
+/**
+ * The first supported language in the browser's preference list (`navigator.languages`), matched on the primary
+ * subtag, so `de-AT` picks German. Used on a device that has never stored a language: visitors to a hosted form, a
+ * proposal link, the client portal or the website see their own language before anyone has chosen one.
+ */
+export function visitorLanguage(preferred: readonly string[]): LanguageCode | null {
+  for (const tag of preferred) {
+    const primary = tag.toLowerCase().split('-')[0];
+    const hit = LANGUAGES.find((l) => l.code === primary);
+    if (hit) return hit.code;
+  }
+  return null;
+}
+
+function browserLanguage(): LanguageCode {
+  if (typeof navigator === 'undefined') return DEFAULT_REGIONAL.language;
+  return visitorLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]) ?? DEFAULT_REGIONAL.language;
 }
 
 /** Read by the bootstrap script in app/layout.tsx to set <html lang dir> before first paint. */
@@ -34,7 +53,8 @@ export const useRegional = create<RegionalState>()(
       partialize: (s) => ({ regional: s.regional, chosenSignedOut: s.chosenSignedOut }),
       merge: (persisted, current) => {
         const p = persisted as { regional?: unknown; chosenSignedOut?: unknown } | undefined;
-        const regional = normalizeRegional(p?.regional);
+        // Nothing stored on this device yet: start in the browser's language. Signing in still applies the account's own.
+        const regional = p?.regional === undefined ? normalizeRegional({ ...DEFAULT_REGIONAL, language: browserLanguage() }) : normalizeRegional(p.regional);
         return { ...current, regional, chosenSignedOut: p?.chosenSignedOut === regional.language ? regional.language : null };
       },
     },

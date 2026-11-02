@@ -10,8 +10,10 @@ import { Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { portalPath, usePortalBranding } from '@/lib/portal';
 import { PortalFrame } from './portal-frame';
+import { useT } from '@/lib/i18n';
 
 export function LoginForm({ slug }: { slug: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login');
   const [email, setEmail] = useState('');
@@ -23,7 +25,7 @@ export function LoginForm({ slug }: { slug: string }) {
     e.preventDefault();
     setError(null);
     const parsed = mode === 'login' ? portalLoginSchema.safeParse({ email, password }) : portalForgotSchema.safeParse({ email });
-    if (!parsed.success) return setError(parsed.error.issues[0]!.message);
+    if (!parsed.success) return setError(t.maybe(parsed.error.issues[0]!.message));
     setPending(true);
     try {
       if (mode === 'login') {
@@ -34,7 +36,7 @@ export function LoginForm({ slug }: { slug: string }) {
         setMode('sent');
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(t.maybe((err as Error).message));
     } finally {
       setPending(false);
     }
@@ -43,20 +45,20 @@ export function LoginForm({ slug }: { slug: string }) {
   if (mode === 'sent')
     return (
       <div className="space-y-3 text-sm">
-        <p role="status">If {email} has portal access, a reset link is on its way. It works for 60 minutes.</p>
+        <p role="status">{t('If {email} has portal access, a reset link is on its way. It works for 60 minutes.', { email })}</p>
         <Button type="button" variant="outline" size="sm" onClick={() => setMode('login')}>
-          Back to sign in
+          {t('Back to sign in')}
         </Button>
       </div>
     );
   return (
     <form className="space-y-4" onSubmit={submit} noValidate>
-      <h1 className="text-xl font-semibold">{mode === 'login' ? 'Sign in' : 'Reset your password'}</h1>
-      <Field id="portal-email" label="Email">
+      <h1 className="text-xl font-semibold">{mode === 'login' ? t('Sign in') : t('Reset your password')}</h1>
+      <Field id="portal-email" label={t('Email')}>
         <Input id="portal-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
       {mode === 'login' && (
-        <Field id="portal-password" label="Password">
+        <Field id="portal-password" label={t('Password')}>
           <Input id="portal-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
       )}
@@ -67,19 +69,20 @@ export function LoginForm({ slug }: { slug: string }) {
       )}
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {mode === 'login' ? 'Sign in' : 'Send reset link'}
+          {mode === 'login' ? t('Sign in') : t('Send reset link')}
         </Button>
         <Button type="button" variant="link" size="sm" onClick={() => { setError(null); setMode(mode === 'login' ? 'forgot' : 'login'); }}>
-          {mode === 'login' ? 'Forgot your password?' : 'Back to sign in'}
+          {mode === 'login' ? t('Forgot your password?') : t('Back to sign in')}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Access is by invitation from your account manager.</p>
+      <p className="text-xs text-muted-foreground">{t('Access is by invitation from your account manager.')}</p>
     </form>
   );
 }
 
 /** Choosing a password, from an invitation or a reset link. */
 export function PasswordPage({ slug, token, mode }: { slug: string; token: string; mode: 'accept' | 'reset' }) {
+  const t = useT();
   const branding = usePortalBranding(slug);
   const router = useRouter();
   const qc = useQueryClient();
@@ -92,8 +95,8 @@ export function PasswordPage({ slug, token, mode }: { slug: string; token: strin
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 10) return setError('Use at least 10 characters');
-    if (password !== confirm) return setError('The two passwords do not match');
+    if (password.length < 10) return setError(t('Use at least 10 characters'));
+    if (password !== confirm) return setError(t('The two passwords do not match'));
     setPending(true);
     try {
       if (mode === 'accept') {
@@ -105,7 +108,7 @@ export function PasswordPage({ slug, token, mode }: { slug: string; token: strin
         setDone(true);
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(t.maybe((err as Error).message));
     } finally {
       setPending(false);
     }
@@ -116,21 +119,21 @@ export function PasswordPage({ slug, token, mode }: { slug: string; token: strin
       <Card>
         <CardContent className="p-6">
           {!token ? (
-            <p className="text-sm">This link is missing its code. Open the link from your email again.</p>
+            <p className="text-sm">{t('This link is missing its code. Open the link from your email again.')}</p>
           ) : done ? (
             <div className="space-y-3 text-sm">
-              <p role="status">Your password is changed. Any other signed-in devices were signed out.</p>
+              <p role="status">{t('Your password is changed. Any other signed-in devices were signed out.')}</p>
               <Button asChild size="sm">
-                <Link href={`/portal/${slug}`}>Sign in</Link>
+                <Link href={`/portal/${slug}`}>{t('Sign in')}</Link>
               </Button>
             </div>
           ) : (
             <form className="space-y-4" onSubmit={submit} noValidate>
-              <h1 className="text-xl font-semibold">{mode === 'accept' ? 'Choose a password to open your portal' : 'Choose a new password'}</h1>
-              <Field id="pw-new" label="Password" hint="At least 10 characters.">
+              <h1 className="text-xl font-semibold">{mode === 'accept' ? t('Choose a password to open your portal') : t('Choose a new password')}</h1>
+              <Field id="pw-new" label={t('Password')} hint={t('At least 10 characters.')}>
                 <Input id="pw-new" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </Field>
-              <Field id="pw-confirm" label="Confirm password">
+              <Field id="pw-confirm" label={t('Confirm password')}>
                 <Input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
               </Field>
               {error && (
@@ -139,7 +142,7 @@ export function PasswordPage({ slug, token, mode }: { slug: string; token: strin
                 </p>
               )}
               <Button type="submit" disabled={pending}>
-                {mode === 'accept' ? 'Open portal' : 'Save password'}
+                {mode === 'accept' ? t('Open portal') : t('Save password')}
               </Button>
             </form>
           )}

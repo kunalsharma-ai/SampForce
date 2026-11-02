@@ -2,6 +2,7 @@
 
 import { Button, Card, CardContent, Skeleton } from '@dealflow/ui';
 import { useEffect, useState } from 'react';
+import { rich, useT } from '@/lib/i18n';
 
 type Info = { valid: false } | { valid: true; email: string; workspace: string; unsubscribed: boolean };
 
@@ -11,6 +12,7 @@ type Info = { valid: false } | { valid: true; email: string; workspace: string; 
  * unsubscribe post to the API directly instead.
  */
 export function Unsubscribe({ token }: { token: string }) {
+  const t = useT();
   const [info, setInfo] = useState<Info | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +28,7 @@ export function Unsubscribe({ token }: { token: string }) {
   if (!info.valid)
     return (
       <Card className="w-full">
-        <CardContent className="p-6 text-sm">This unsubscribe link is not valid. Reply to the email and ask the sender to stop emailing you.</CardContent>
+        <CardContent className="p-6 text-sm">{t('This unsubscribe link is not valid. Reply to the email and ask the sender to stop emailing you.')}</CardContent>
       </Card>
     );
   return (
@@ -34,16 +36,16 @@ export function Unsubscribe({ token }: { token: string }) {
       <CardContent className="space-y-4 p-6">
         {info.unsubscribed ? (
           <div role="status" className="space-y-2">
-            <h1 className="text-lg font-semibold">You are unsubscribed</h1>
+            <h1 className="text-lg font-semibold">{t('You are unsubscribed')}</h1>
             <p className="text-sm text-muted-foreground">
-              {info.workspace} will not send more sequence emails to {info.email}.
+              {t('{workspace} will not send more sequence emails to {email}.', { workspace: info.workspace, email: info.email })}
             </p>
           </div>
         ) : (
           <>
-            <h1 className="text-lg font-semibold">Stop emails from {info.workspace}?</h1>
+            <h1 className="text-lg font-semibold">{t('Stop emails from {workspace}?', { workspace: info.workspace })}</h1>
             <p className="text-sm text-muted-foreground">
-              We will stop sending follow-up emails to <span className="font-medium text-foreground">{info.email}</span> and add it to their do-not-email list.
+              {rich(t('We will stop sending follow-up emails to {email} and add it to their do-not-email list.'), { email: <span className="font-medium text-foreground">{info.email}</span> })}
             </p>
             <Button
               disabled={busy}
@@ -55,13 +57,13 @@ export function Unsubscribe({ token }: { token: string }) {
                   if (!r.ok) throw new Error();
                   setInfo((await r.json()) as Info);
                 } catch {
-                  setError('Something went wrong. Please try again.');
+                  setError(t('Something went wrong. Please try again.'));
                 } finally {
                   setBusy(false);
                 }
               }}
             >
-              Unsubscribe
+              {t('Unsubscribe')}
             </Button>
             {error && (
               <p role="alert" className="text-sm text-critical">
@@ -70,7 +72,7 @@ export function Unsubscribe({ token }: { token: string }) {
             )}
           </>
         )}
-        <p className="text-xs text-muted-foreground">Sent with DealFlow on behalf of {info.workspace}.</p>
+        <p className="text-xs text-muted-foreground">{t('Sent with DealFlow on behalf of {workspace}.', { workspace: info.workspace })}</p>
       </CardContent>
     </Card>
   );

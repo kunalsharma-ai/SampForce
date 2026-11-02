@@ -50,6 +50,7 @@ import { describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
 import { ENROLLMENT_LABEL } from '@/lib/sequences';
+import { visitorLanguage } from '@/stores/regional';
 import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
@@ -314,5 +315,15 @@ describe('translate', () => {
     expect(translatePlural('ar', 'regional.days', 2)).toBe('قبل يومين');
     expect(translatePlural('ar', 'regional.days', 5, undefined, 'en')).toBe('قبل 5 أيام');
     expect(translatePlural('ar', 'regional.days', 11, undefined, 'en')).toBe('قبل 11 يومًا');
+  });
+});
+
+describe('visitor language', () => {
+  it('picks the first supported language from the browser list, on the primary subtag', () => {
+    expect(visitorLanguage(['de-AT', 'en-US'])).toBe('de');
+    expect(visitorLanguage(['pt-BR', 'fr-CA', 'es'])).toBe('fr');
+    expect(visitorLanguage(['AR'])).toBe('ar');
+    expect(visitorLanguage(['ja-JP', 'zh'])).toBeNull();
+    expect(visitorLanguage([])).toBeNull();
   });
 });

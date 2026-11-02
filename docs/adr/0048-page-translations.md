@@ -207,6 +207,30 @@ Finder notes that name a domain, competition and award period keys, and browser 
 and customers see without a DealFlow account (hosted forms, the portal sign-in, unsubscribe and the website) are a
 separate batch, because they need the visitor's language rather than a saved setting.
 
+## Scope of batch 9: public pages
+
+Translated: the website (landing page, pricing and its questions, header and footer), the hosted lead form, the
+unsubscribe page, the proposal link (including card payment), the client portal sign-in, invitation and reset pages and
+the whole portal. New table: `publicPages`; plurals `count.openRequests` and `count.upToUsers`.
+
+- **The visitor's language.** People on these pages have no DealFlow account to read a setting from. A device that has
+  never stored a language now starts in the first supported language from the browser's list (`navigator.languages`,
+  matched on the primary subtag, so `de-AT` is German), both in the regional store and in the first-paint script, so
+  an Arabic browser never flashes left to right. Signing in still applies the account's own setting, and a language
+  chosen on the device always wins. The website, proposal link, unsubscribe page and portal show the same language
+  picker as the sign-in page; the hosted form does not, because it usually sits inside a customer's own page.
+- **Content written by the workspace stays as written**: form headings, consent and thank-you text, proposal sections,
+  portal names and welcome messages. Form field labels that are still the English defaults are translated, so a
+  visitor sees "Vollständiger Name" rather than "Full name"; labels someone typed are shown as typed.
+- **Validation messages** from the shared schemas and the hosted form's two API messages ("Please check the
+  highlighted fields.", "Too many submissions.") are translated on the page with `t.maybe`.
+- Proposal dates follow the visitor's locale; English keeps the day-month-year order the PDF uses.
+
+Still English here: the browser extension privacy policy (it is the text the Chrome Web Store listing points to, so
+the English page stays the binding version until a reviewed translation exists), other API error messages, the
+payment provider's "not available" reasons, the proposal PDF, emails (invitations, reset links, sequence emails) and
+page titles.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's
