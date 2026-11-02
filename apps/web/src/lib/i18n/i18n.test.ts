@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url';
 import {
   ACTIVITY_TYPES,
   BID_TEMPLATES,
+  CHURN_RISK,
+  DATE_BUCKETS,
   DEAL_PRIORITIES,
   DEAL_RISK_LABELS,
   EMAIL_BLOCK_LABELS,
@@ -20,6 +22,8 @@ import {
   NEXT_ACTION_LABELS,
   PLAN_CATALOG,
   PROPOSAL_TEMPLATES,
+  REPORT_CATALOG,
+  REPORT_TEMPLATES,
   RULE_ACTION_LABELS,
   SSO_ERRORS,
   THEMES,
@@ -146,6 +150,51 @@ describe('page phrases', () => {
       ].flatMap(([file, re]) => [...source(file as string).matchAll(re as RegExp)].flatMap((m) => m[1]!.split(/', '/).map((x) => x.replace(/^'|'$/g, '')))),
     ],
     ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
+    // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
+    // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
+    // retention plan's cadences and steps.
+    [
+      'report catalogue labels',
+      Object.values(REPORT_CATALOG).flatMap((e) => [
+        e.label,
+        `Number of ${e.label.toLowerCase().replace(/ \(.*\)$/, '')}`,
+        ...e.fields.flatMap((f) => [
+          f.label,
+          ...(f.kind === 'date' ? DATE_BUCKETS.map((b) => `${f.label} (${b})`) : []),
+          ...(f.kind === 'number' || f.kind === 'money' ? ['Total', 'Average', 'Lowest', 'Highest'].map((fn) => `${fn} ${f.label.toLowerCase()}`) : []),
+          ...(f.options ?? []).map((o) => o.charAt(0) + o.slice(1).toLowerCase().replace(/_/g, ' ')),
+        ]),
+      ]),
+    ],
+    ['report templates and buckets', [...REPORT_TEMPLATES.map((r) => r.name), ...DATE_BUCKETS.map((b) => b.charAt(0).toUpperCase() + b.slice(1)), 'All', '(none)', 'Other']],
+    ['report definition checks', [...source('../../../../../packages/types/src/reports.ts').matchAll(/issue\(\[[^\]]*\], '([^']+)'\)/g)].map((m) => m[1]!)],
+    [
+      'report and forecast screen labels',
+      [
+        // [file, the part of it that holds the labels, the label pattern]
+        ['../../app/app/reports/report-editor.tsx', /const METRIC_LABEL[\s\S]*?\n\};\n\n/, /: '([^']+)'/g],
+        ['../../app/app/reports/reports-nav.tsx', /const LINKS[\s\S]*?\];/, /label: '([^']+)'/g],
+        ['../../app/app/reports/dashboards/dashboard-board.tsx', /const SIZE_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/reports/galaxy/galaxy-explorer.tsx', /const KIND_LABEL[\s\S]*?const KIND_ONE.*/, /: '([^']+)'/g],
+        ['../../app/app/reports/galaxy/galaxy-explorer.tsx', /const items.*/, /'chart-\d', '([^']+)'/g],
+        ['../../app/app/reports/globe/globe-explorer.tsx', /const METRICS[\s\S]*?\} as const;/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const CATEGORY[\s\S]*?\} as const;/, /label: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const CHANGE_LABEL[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const GRANULARITY_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-plan.tsx', /const TARGET_SOURCE[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../components/revenue/churn.tsx', /const SERIES[\s\S]*?\] as const;/, /label: '([^']+)'/g],
+        ['../motion.ts', /[\s\S]*/, /reason: '([^']+)'/g],
+      ].flatMap(([file, part, re]) => [...source(file as string).match(part as RegExp)![0].matchAll(re as RegExp)].map((m) => m[1]!)),
+    ],
+    [
+      'churn and retention labels',
+      [
+        ...Object.values(CHURN_RISK).map((c) => c.label),
+        ...[...source('../../../../../packages/types/src/revenue.ts').matchAll(/signals\.push\(\{ key: '\w+', label: '([^']+)'|^\s+label: '([^']+)',$|everyDays: \d+, touches: \d+, label: '([^']+)'|title: '([^']+)'/gm)].map((m) => m.slice(1).find(Boolean)!),
+        'No calls, emails, meetings or notes recorded.',
+        ...['Low', 'Medium', 'High', 'Critical'],
+      ],
+    ],
     ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)

@@ -3,6 +3,7 @@
 import { cn } from '@dealflow/ui';
 import { useState } from 'react';
 import { type SceneSupport, useSceneSupport } from '@/lib/motion';
+import { useT } from '@/lib/i18n';
 
 export type ViewMode = '3d' | '2d';
 
@@ -19,12 +20,13 @@ export function useViewMode(): { support: SceneSupport; mode: ViewMode; setMode:
 }
 
 export function ViewModeSwitch({ view, label }: { view: ReturnType<typeof useViewMode>; label: string }) {
+  const t = useT();
   const { support, mode, setMode, lost } = view;
-  const reason = lost ? 'The graphics context was lost (often after a GPU reset or low memory), so this view switched to 2D.' : support.reason;
+  const reason = lost ? t('The graphics context was lost (often after a GPU reset or low memory), so this view switched to 2D.') : support.reason && t.maybe(support.reason);
   return (
     <div className="flex flex-wrap items-center gap-3">
       {support.mode === '3d' && !lost && (
-        <div role="radiogroup" aria-label={`${label} view`} className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+        <div role="radiogroup" aria-label={t('{name} view', { name: label })} className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
           {(['3d', '2d'] as const).map((m) => (
             <button
               key={m}
@@ -46,10 +48,11 @@ export function ViewModeSwitch({ view, label }: { view: ReturnType<typeof useVie
 
 /** Optional frame-rate readout, so the 60 FPS budget can be checked on a real device. */
 export function FpsReadout({ fps }: { fps: { fps: number; dpr: number } | null }) {
+  const t = useT();
   if (!fps) return null;
   return (
     <p className="pointer-events-none absolute bottom-2 start-2 rounded bg-background/80 px-2 py-0.5 font-mono text-[11px] text-muted-foreground" aria-hidden>
-      {fps.fps} fps · {fps.dpr}× pixels
+      {t('{fps} fps · {dpr}× pixels', { fps: fps.fps, dpr: fps.dpr })}
     </p>
   );
 }

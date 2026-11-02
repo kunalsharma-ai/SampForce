@@ -15,6 +15,7 @@ import { Targets } from '../revenue/revenue-workspace';
 import { Assumptions, PlanSection, Trends } from './forecast-plan';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 const CATEGORY = {
   won: { label: 'Won', tone: 'success' },
@@ -46,6 +47,7 @@ function periodOptions(g: PeriodGranularity): string[] {
 }
 
 export function ForecastWorkspace() {
+  const t = useT();
   const [granularity, setGranularity] = useState<PeriodGranularity>('quarter');
   const options = useMemo(() => periodOptions(granularity), [granularity]);
   const [period, setPeriod] = useState(() => periodOptions('quarter')[2]!);
@@ -56,7 +58,7 @@ export function ForecastWorkspace() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <label htmlFor="forecast-granularity" className="text-sm font-medium">
-            Forecast by
+            {t('Forecast by')}
           </label>
           <Select
             id="forecast-granularity"
@@ -70,14 +72,14 @@ export function ForecastWorkspace() {
           >
             {(Object.keys(GRANULARITY_LABEL) as PeriodGranularity[]).map((g) => (
               <option key={g} value={g}>
-                {GRANULARITY_LABEL[g]}
+                {t.maybe(GRANULARITY_LABEL[g])}
               </option>
             ))}
           </Select>
         </div>
         <div className="space-y-1">
           <label htmlFor="forecast-period" className="text-sm font-medium">
-            {GRANULARITY_LABEL[granularity]}
+            {t.maybe(GRANULARITY_LABEL[granularity])}
           </label>
           <Select id="forecast-period" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-36">
             {options.map((o) => (
@@ -89,7 +91,7 @@ export function ForecastWorkspace() {
         </div>
         {forecast.data && (
           <p className="pb-2 text-xs text-muted-foreground">
-            {formatDate(forecast.data.period.start)} to {formatDate(new Date(Date.parse(forecast.data.period.end) - 86_400_000).toISOString().slice(0, 10))} · method {forecast.data.method} · {forecast.data.currency}
+            {t('{start} to {end}', { start: formatDate(forecast.data.period.start), end: formatDate(new Date(Date.parse(forecast.data.period.end) - 86_400_000).toISOString().slice(0, 10)) })} · {t('method {method}', { method: forecast.data.method })} · {forecast.data.currency}
           </p>
         )}
       </div>
@@ -120,14 +122,15 @@ export function ForecastWorkspace() {
 }
 
 function Summary({ view }: { view: ForecastView }) {
-  const t = view.totals;
+  const t = useT();
+  const tot = view.totals;
   const money = (v: number) => formatMoney(v, view.currency);
   const tiles: [string, number, string][] = [
-    ['Won', t.won, 'Closed won in the period'],
-    ['Commit', t.commit, `Open deals at ${view.assumptions.commit}% or more`],
-    ['Best case', t.bestCase, `Open deals at ${view.assumptions.bestCase}–${view.assumptions.commit - 1}%`],
-    ['Pipeline', t.pipeline, `Open deals under ${view.assumptions.bestCase}%`],
-    ['Weighted', t.weighted, 'Open amount × probability'],
+    [t('Won'), tot.won, t('Closed won in the period')],
+    [t('Commit'), tot.commit, t('Open deals at {n}% or more', { n: view.assumptions.commit })],
+    [t('Best case'), tot.bestCase, t('Open deals at {from}–{to}%', { from: view.assumptions.bestCase, to: view.assumptions.commit - 1 })],
+    [t('Pipeline'), tot.pipeline, t('Open deals under {n}%', { n: view.assumptions.bestCase })],
+    [t('Weighted'), tot.weighted, t('Open amount × probability')],
   ];
   return (
     <div className="space-y-4">
@@ -144,24 +147,24 @@ function Summary({ view }: { view: ForecastView }) {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Scenarios</CardTitle>
+          <CardTitle className="text-base">{t('Scenarios')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 text-sm sm:grid-cols-3">
-          <Scenario label="Worst" value={money(t.worst)} detail="Only what is already won." />
-          <Scenario label="Base" value={money(t.base)} detail="Won plus the weighted open pipeline." />
-          <Scenario label="Best" value={money(t.best)} detail="Won plus every commit and best-case deal." />
+          <Scenario label={t('Worst')} value={money(tot.worst)} detail={t('Only what is already won.')} />
+          <Scenario label={t('Base')} value={money(tot.base)} detail={t('Won plus the weighted open pipeline.')} />
+          <Scenario label={t('Best')} value={money(tot.best)} detail={t('Won plus every commit and best-case deal.')} />
         </CardContent>
       </Card>
       {(view.excluded.otherCurrency > 0 || view.excluded.noCloseDate > 0) && (
         <p role="note" className="text-sm text-muted-foreground">
-          Not included:{' '}
-          {[
-            view.excluded.otherCurrency > 0 && `${view.excluded.otherCurrency} deal${view.excluded.otherCurrency === 1 ? '' : 's'} in another currency`,
-            view.excluded.noCloseDate > 0 && `${view.excluded.noCloseDate} open deal${view.excluded.noCloseDate === 1 ? '' : 's'} without an expected close date`,
-          ]
-            .filter(Boolean)
-            .join(' and ')}
-          .
+          {t('Not included: {items}.', {
+            items: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(
+              [
+                view.excluded.otherCurrency > 0 ? t.plural('count.dealsOtherCurrency', view.excluded.otherCurrency) : '',
+                view.excluded.noCloseDate > 0 ? t.plural('count.openDealsNoCloseDate', view.excluded.noCloseDate) : '',
+              ].filter(Boolean),
+            ),
+          })}
         </p>
       )}
     </div>
@@ -179,27 +182,28 @@ function Scenario({ label, value, detail }: { label: string; value: string; deta
 }
 
 function Lines({ view }: { view: ForecastView }) {
+  const t = useT();
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Deals in this forecast ({view.lineCount})</CardTitle>
+        <CardTitle className="text-base">{t('Deals in this forecast ({n})', { n: view.lineCount })}</CardTitle>
         {view.lineCount > view.lines.length && (
-          <p className="text-sm text-muted-foreground">Showing the {view.lines.length} largest. The totals above include all {view.lineCount}.</p>
+          <p className="text-sm text-muted-foreground">{t('Showing the {shown} largest. The totals above include all {total}.', { shown: view.lines.length, total: view.lineCount })}</p>
         )}
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {view.lines.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No open or won deals with a close date in this period.</p>
+          <p className="text-sm text-muted-foreground">{t('No open or won deals with a close date in this period.')}</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th className="pb-2 font-medium">Deal</th>
-                <th className="pb-2 font-medium">Category</th>
-                <th className="pb-2 text-end font-medium">Amount</th>
-                <th className="pb-2 text-end font-medium">Prob.</th>
-                <th className="pb-2 font-medium">Close</th>
-                <th className="pb-2 font-medium">Owner</th>
+                <th className="pb-2 font-medium">{t('Deal')}</th>
+                <th className="pb-2 font-medium">{t('Category')}</th>
+                <th className="pb-2 text-end font-medium">{t('Amount')}</th>
+                <th className="pb-2 text-end font-medium">{t('Prob.')}</th>
+                <th className="pb-2 font-medium">{t('Close')}</th>
+                <th className="pb-2 font-medium">{t('Owner')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -212,15 +216,15 @@ function Lines({ view }: { view: ForecastView }) {
                     <span className="block text-xs text-muted-foreground">{l.stage}</span>
                   </td>
                   <td className="py-2 pe-2">
-                    <Badge tone={CATEGORY[l.category].tone}>{CATEGORY[l.category].label}</Badge>
+                    <Badge tone={CATEGORY[l.category].tone}>{t.maybe(CATEGORY[l.category].label)}</Badge>
                   </td>
                   <td className="py-2 text-end tabular-nums">{formatMoney(l.amount, view.currency)}</td>
                   <td className="py-2 text-end tabular-nums">
                     {l.status === 'WON' ? '—' : `${l.probability}%`}
-                    {l.status === 'OPEN' && l.probabilitySource && <span className="block text-[11px] text-muted-foreground">{l.probabilitySource === 'deal' ? 'set on deal' : l.probabilitySource === 'history' ? 'win history' : 'stage'}</span>}
+                    {l.status === 'OPEN' && l.probabilitySource && <span className="block text-[11px] text-muted-foreground">{l.probabilitySource === 'deal' ? t('set on deal') : l.probabilitySource === 'history' ? t('win history') : t('stage')}</span>}
                   </td>
                   <td className="py-2 ps-2">{formatDate(l.closeDate)}</td>
-                  <td className="py-2">{l.owner?.name ?? 'Unassigned'}</td>
+                  <td className="py-2">{l.owner?.name ?? t('Unassigned')}</td>
                 </tr>
               ))}
             </tbody>
@@ -232,6 +236,7 @@ function Lines({ view }: { view: ForecastView }) {
 }
 
 function Snapshots({ period, currency }: { period: string; currency: string }) {
+  const t = useT();
   const snapshots = useSnapshots(period);
   const qc = useQueryClient();
   const [label, setLabel] = useState('');
@@ -258,13 +263,13 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
   const rows = snapshots.data ?? [];
   const nameOf = (id: string) => {
     const s = rows.find((r) => r.id === id);
-    return s ? `${s.label ?? 'Snapshot'} · ${new Date(s.createdAt).toLocaleString(fmtLocale(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
+    return s ? `${s.label ?? t('Snapshot')} · ${new Date(s.createdAt).toLocaleString(fmtLocale(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
   };
 
   return (
     <section aria-labelledby="snapshots-heading" className="space-y-4">
       <h2 id="snapshots-heading" className="text-sm font-semibold">
-        Snapshots
+        {t('Snapshots')}
       </h2>
       <Card>
         <CardContent className="space-y-4 p-4">
@@ -277,43 +282,43 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
           >
             <div className="space-y-1">
               <label htmlFor="snapshot-label" className="text-sm font-medium">
-                Label (optional)
+                {t('Label (optional)')}
               </label>
-              <Input id="snapshot-label" value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} placeholder="Monday pipeline review" className="w-64" />
+              <Input id="snapshot-label" value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} placeholder={t('Monday pipeline review')} className="w-64" />
             </div>
             <Button type="submit" size="sm" disabled={take.isPending}>
-              <Camera aria-hidden /> Take snapshot
+              <Camera aria-hidden /> {t('Take snapshot')}
             </Button>
-            <p className="w-full text-xs text-muted-foreground">A snapshot stores every deal line as it is now, so its totals can be recomputed and checked later. Snapshots cannot be edited.</p>
+            <p className="w-full text-xs text-muted-foreground">{t('A snapshot stores every deal line as it is now, so its totals can be recomputed and checked later. Snapshots cannot be edited.')}</p>
           </form>
           {take.error && <p role="alert" className="text-sm text-critical">{take.error.message}</p>}
 
           {snapshots.isPending ? (
             <Skeleton className="h-20" />
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No snapshots for {period} yet.</p>
+            <p className="text-sm text-muted-foreground">{t('No snapshots for {period} yet.', { period })}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {rows.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                  <span className="font-medium">{s.label ?? 'Snapshot'}</span>
+                  <span className="font-medium">{s.label ?? t('Snapshot')}</span>
                   <span className="text-xs text-muted-foreground">
-                    {s.createdBy?.name ?? 'Someone'} · {relativeTime(s.createdAt)}
+                    {s.createdBy?.name ?? t('Someone')} · {relativeTime(s.createdAt)}
                   </span>
-                  <span className="ms-auto tabular-nums">Base {money(s.totals.base)}</span>
+                  <span className="ms-auto tabular-nums">{t('Base {value}', { value: money(s.totals.base) })}</span>
                   {s.id in verified ? (
                     verified[s.id] ? (
                       <Badge tone="success">
-                        <CheckCircle2 className="me-1 size-3" aria-hidden /> Totals match
+                        <CheckCircle2 className="me-1 size-3" aria-hidden /> {t('Totals match')}
                       </Badge>
                     ) : (
                       <Badge tone="critical">
-                        <XCircle className="me-1 size-3" aria-hidden /> Totals differ
+                        <XCircle className="me-1 size-3" aria-hidden /> {t('Totals differ')}
                       </Badge>
                     )
                   ) : (
                     <Button size="sm" variant="ghost" onClick={() => verify.mutate(s.id)} disabled={verify.isPending}>
-                      Recompute
+                      {t('Recompute')}
                     </Button>
                   )}
                 </li>
@@ -326,7 +331,7 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
       {rows.length >= 2 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Compare snapshots</CardTitle>
+            <CardTitle className="text-base">{t('Compare snapshots')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <form
@@ -336,10 +341,10 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
                 if (from && to && from !== to) compare.mutate();
               }}
             >
-              <SnapshotSelect id="compare-from" label="From" value={from} onChange={setFrom} rows={rows} nameOf={nameOf} />
-              <SnapshotSelect id="compare-to" label="To" value={to} onChange={setTo} rows={rows} nameOf={nameOf} />
+              <SnapshotSelect id="compare-from" label={t('From')} value={from} onChange={setFrom} rows={rows} nameOf={nameOf} />
+              <SnapshotSelect id="compare-to" label={t('To')} value={to} onChange={setTo} rows={rows} nameOf={nameOf} />
               <Button type="submit" size="sm" variant="outline" disabled={!from || !to || from === to || compare.isPending}>
-                Compare
+                {t('Compare')}
               </Button>
             </form>
             {compare.error && <p role="alert" className="text-sm text-critical">{compare.error.message}</p>}
@@ -352,13 +357,14 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
 }
 
 function SnapshotSelect({ id, label, value, onChange, rows, nameOf }: { id: string; label: string; value: string; onChange: (v: string) => void; rows: { id: string }[]; nameOf: (id: string) => string }) {
+  const t = useT();
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
       <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="w-72">
-        <option value="">Choose a snapshot</option>
+        <option value="">{t('Choose a snapshot')}</option>
         {rows.map((r) => (
           <option key={r.id} value={r.id}>
             {nameOf(r.id)}
@@ -370,6 +376,7 @@ function SnapshotSelect({ id, label, value, onChange, rows, nameOf }: { id: stri
 }
 
 function ComparisonView({ cmp, money }: { cmp: ForecastComparison; money: (v: number) => string }) {
+  const t = useT();
   const status = useAiStatus();
   const canExplain = useCan('ai:use');
   const reason = agentReason(status.data, 'forecast_explainer');
@@ -378,10 +385,10 @@ function ComparisonView({ cmp, money }: { cmp: ForecastComparison; money: (v: nu
   });
   const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${money(Math.abs(v))}`;
   const keys: [keyof ForecastComparison['delta'], string][] = [
-    ['won', 'Won'],
-    ['weighted', 'Weighted'],
-    ['base', 'Base'],
-    ['best', 'Best'],
+    ['won', t('Won')],
+    ['weighted', t('Weighted')],
+    ['base', t('Base')],
+    ['best', t('Best')],
   ];
   const fmtChange = (c: ForecastChange, v: string | number | null) =>
     v === null ? '—' : c.kind === 'probability' ? `${v}%` : c.kind === 'close_date' ? formatDate(String(v)) : c.kind === 'stage' ? String(v) : money(Number(v));
@@ -397,12 +404,12 @@ function ComparisonView({ cmp, money }: { cmp: ForecastComparison; money: (v: nu
         ))}
       </div>
       {cmp.changes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No deal-level changes between these snapshots.</p>
+        <p className="text-sm text-muted-foreground">{t('No deal-level changes between these snapshots.')}</p>
       ) : (
         <ul className="divide-y divide-border text-sm">
           {cmp.changes.map((c, i) => (
             <li key={`${c.dealId}-${c.kind}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-              <Badge>{CHANGE_LABEL[c.kind]}</Badge>
+              <Badge>{t.maybe(CHANGE_LABEL[c.kind])}</Badge>
               <Link href={`/app/deals/${c.dealId}`} className="text-primary hover:underline">
                 {c.name}
               </Link>
@@ -417,9 +424,9 @@ function ComparisonView({ cmp, money }: { cmp: ForecastComparison; money: (v: nu
         <div className="space-y-2 rounded-md border border-border p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => explain.mutate()} disabled={explain.isPending || !!reason}>
-              <Sparkles aria-hidden /> {explain.isPending ? 'Explaining…' : 'Explain with AI'}
+              <Sparkles aria-hidden /> {explain.isPending ? t('Explaining…') : t('Explain with AI')}
             </Button>
-            <span className="text-xs text-muted-foreground">{reason ?? 'Writes a short explanation from the changes above. It does not change any number.'}</span>
+            <span className="text-xs text-muted-foreground">{reason ? t.maybe(reason) : t('Writes a short explanation from the changes above. It does not change any number.')}</span>
           </div>
           {explain.error && <p role="alert" className="text-sm text-critical">{aiErrorMessage(explain.error)}</p>}
           {explanation && (

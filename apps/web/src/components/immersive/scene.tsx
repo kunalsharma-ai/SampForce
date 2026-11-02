@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { Color } from 'three';
 import { OrbitControls as OrbitControlsImpl } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { MotionLevel } from '@/lib/motion';
+import { useT } from '@/lib/i18n';
 
 /** Reads a design token (an HSL triplet such as "189 100% 50%") as a three.js colour. */
 export function tokenColor(name: string, fallback = '#00d9ff'): Color {
@@ -147,12 +148,13 @@ export function Scene({ motion, animating, camera, label, onContextLost, onFps, 
 
 /** Shown over a scene that renders too slowly on this device, with a one-click way to the 2D view. */
 export function SlowNotice({ fps, onSwitch }: { fps: number | null; onSwitch: () => void }) {
+  const t = useT();
   if (fps === null) return null;
   return (
     <div className="absolute inset-x-2 bottom-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-popover/95 px-3 py-2 text-xs text-popover-foreground shadow" role="status">
-      <span>This device is drawing the 3D view slowly (about {fps} frames a second). The 2D view shows the same data.</span>
+      <span>{t('This device is drawing the 3D view slowly (about {fps} frames a second). The 2D view shows the same data.', { fps })}</span>
       <button type="button" onClick={onSwitch} className="rounded border border-border px-2 py-1 font-medium hover:bg-muted">
-        Switch to 2D
+        {t('Switch to 2D')}
       </button>
     </div>
   );

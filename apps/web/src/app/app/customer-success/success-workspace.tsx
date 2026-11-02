@@ -11,22 +11,25 @@ import { ChurnTrendCard, CustomerInsights, RetentionPanel } from '@/components/r
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field, Tabs } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
-import { formatDate, useMembers } from '@/lib/crm';
+import { formatDate, titleCase, useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { formatAmount, HEALTH_BAND, SEVERITY_TONE, useCustomers, useEscalations } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
+import { inSentence, useT } from '@/lib/i18n';
 
 export function SuccessWorkspace() {
+  const t = useT();
   const [tab, setTab] = useState<'customers' | 'escalations'>('customers');
   return (
     <>
-      <Tabs label="Customer success sections" value={tab} onChange={setTab} tabs={[{ key: 'customers', label: 'Customers' }, { key: 'escalations', label: 'Escalations' }]} />
+      <Tabs label={t('Customer success sections')} value={tab} onChange={setTab} tabs={[{ key: 'customers', label: t('Customers') }, { key: 'escalations', label: t('Escalations') }]} />
       {tab === 'customers' ? <Customers /> : <Escalations />}
     </>
   );
 }
 
 function Customers() {
+  const t = useT();
   const [band, setBand] = useState<HealthBand | ''>('');
   const [ownerId, setOwnerId] = useState('');
   const all = useCustomers();
@@ -39,9 +42,9 @@ function Customers() {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-muted-foreground">
-          No customers yet. A company becomes a customer when it has an active contract.{' '}
+          {t('No customers yet. A company becomes a customer when it has an active contract.')}{' '}
           <Link href="/app/contracts" className="text-primary hover:underline">
-            Go to contracts
+            {t('Go to contracts')}
           </Link>
         </CardContent>
       </Card>
@@ -51,7 +54,7 @@ function Customers() {
   const rows = customers.data ?? [];
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Customers by churn risk">
+      <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label={t('Customers by churn risk')}>
         {(Object.keys(counts) as HealthBand[]).map((b) => (
           <button
             key={b}
@@ -62,7 +65,7 @@ function Customers() {
           >
             <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <span className={`inline-block size-2.5 rounded-sm ${b === 'at_risk' ? 'bg-critical' : b === 'watch' ? 'bg-warning' : 'bg-success'}`} aria-hidden />
-              {CHURN_RISK[b].label}
+              {t.maybe(CHURN_RISK[b].label)}
             </span>
             <span className="text-xl font-semibold tabular-nums">{counts[b]}</span>
           </button>
@@ -70,17 +73,17 @@ function Customers() {
       </div>
       <ChurnTrendCard />
       <div className="flex flex-wrap items-end gap-3">
-        <Field id="cs-band" label="Churn risk">
+        <Field id="cs-band" label={t('Churn risk')}>
           <Select id="cs-band" value={band} onChange={(e) => setBand(e.target.value as HealthBand | '')} className="w-48">
-            <option value="">All customers</option>
-            <option value="at_risk">High</option>
-            <option value="watch">Medium</option>
-            <option value="healthy">Low</option>
+            <option value="">{t('All customers')}</option>
+            <option value="at_risk">{t('High')}</option>
+            <option value="watch">{t('Medium')}</option>
+            <option value="healthy">{t('Low')}</option>
           </Select>
         </Field>
-        <Field id="cs-owner" label="Account owner">
+        <Field id="cs-owner" label={t('Account owner')}>
           <Select id="cs-owner" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="w-56">
-            <option value="">Everyone</option>
+            <option value="">{t('Everyone')}</option>
             {(members.data ?? []).map((m) => (
               <option key={m.userId} value={m.userId}>
                 {m.name}
@@ -89,13 +92,13 @@ function Customers() {
           </Select>
         </Field>
         <p className="pb-2 text-xs text-muted-foreground" aria-live="polite">
-          Showing {rows.length} of {all.data.length}
+          {t('Showing {shown} of {total}', { shown: rows.length, total: all.data.length })}
         </p>
       </div>
       {customers.isPending ? (
         <Skeleton className="h-32" />
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No customers match these filters.</p>
+        <p className="text-sm text-muted-foreground">{t('No customers match these filters.')}</p>
       ) : (
         <ul className="space-y-3">
           {rows.map((c) => (
@@ -108,6 +111,7 @@ function Customers() {
 }
 
 export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boolean }) {
+  const t = useT();
   return (
     <li>
       <Card className={highlight ? 'ring-2 ring-primary' : undefined}>
@@ -117,21 +121,21 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
               {c.company.name}
             </Link>
             <Badge tone={HEALTH_BAND[c.health.band].tone}>
-              {CHURN_RISK[c.health.band].label} · health {c.health.score}/100
+              {t.maybe(CHURN_RISK[c.health.band].label)} · {t('health {score}/100', { score: c.health.score })}
             </Badge>
-            {c.openEscalations > 0 && <Badge tone="warning">{c.openEscalations} open escalation{c.openEscalations === 1 ? '' : 's'}</Badge>}
-            <span className="ms-auto text-xs text-muted-foreground">{c.owner?.name ?? 'Unassigned'}</span>
+            {c.openEscalations > 0 && <Badge tone="warning">{t.plural('count.openEscalations', c.openEscalations)}</Badge>}
+            <span className="ms-auto text-xs text-muted-foreground">{c.owner?.name ?? t('Unassigned')}</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            {c.activeContracts} active contract{c.activeContracts === 1 ? '' : 's'} · {formatAmount(c.contractValue, c.currency)}
+            {t.plural('count.activeContracts', c.activeContracts)} · {formatAmount(c.contractValue, c.currency)}
             {c.nextRenewal && (
               <>
                 {' '}
-                · next end{' '}
+                · {t('next end')}{' '}
                 <Link href={`/app/contracts/${c.nextRenewal.contractId}`} className="text-primary underline underline-offset-2">
                   {c.nextRenewal.reference}
                 </Link>{' '}
-                on {formatDate(c.nextRenewal.endDate)} ({c.nextRenewal.daysToEnd} days)
+                {t('on {date} ({time})', { date: formatDate(c.nextRenewal.endDate), time: new Intl.NumberFormat(t.language, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(c.nextRenewal.daysToEnd) })}
               </>
             )}
           </p>
@@ -139,12 +143,12 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
             <ul className="space-y-0.5 text-xs">
               {c.health.signals.map((s, i) => (
                 <li key={`${s.key}-${i}`}>
-                  <span className="font-medium">−{s.points}</span> {s.label}: <span className="text-muted-foreground">{s.detail}</span>
+                  <span className="font-medium">−{s.points}</span> {t.maybe(s.label)}: <span className="text-muted-foreground">{t.maybe(s.detail)}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-success">No risk signals.</p>
+            <p className="text-xs text-success">{t('No risk signals.')}</p>
           )}
           {c.engagement && <CustomerInsights c={c} />}
           {c.plan && <RetentionPanel c={c} />}
@@ -155,23 +159,24 @@ export function CustomerCard({ c, highlight }: { c: CustomerRow; highlight?: boo
 }
 
 function Escalations() {
+  const t = useT();
   const [status, setStatus] = useState<'OPEN' | 'RESOLVED' | ''>('OPEN');
   const list = useEscalations({ status: status || undefined });
   const canWrite = useCan('success:write');
   return (
     <div className="space-y-4">
-      <Field id="esc-status" label="Status">
+      <Field id="esc-status" label={t('Status')}>
         <Select id="esc-status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className="w-40">
-          <option value="OPEN">Open</option>
-          <option value="RESOLVED">Resolved</option>
-          <option value="">All</option>
+          <option value="OPEN">{t('Open')}</option>
+          <option value="RESOLVED">{t('Resolved')}</option>
+          <option value="">{t('All')}</option>
         </Select>
       </Field>
       {canWrite && <NewEscalation />}
       {list.isPending ? (
         <Skeleton className="h-24" />
       ) : !list.data?.length ? (
-        <p className="text-sm text-muted-foreground">No escalations.</p>
+        <p className="text-sm text-muted-foreground">{t('No escalations.')}</p>
       ) : (
         <ul className="space-y-3">
           {list.data.map((e) => (
@@ -184,6 +189,7 @@ function Escalations() {
 }
 
 export function EscalationCard({ e, canWrite }: { e: EscalationRow; canWrite: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const [resolution, setResolution] = useState('');
   const resolve = useMutation({
@@ -196,19 +202,19 @@ export function EscalationCard({ e, canWrite }: { e: EscalationRow; canWrite: bo
         <CardContent className="space-y-2 p-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{e.title}</span>
-            <Badge tone={SEVERITY_TONE[e.severity]}>{e.severity.toLowerCase()}</Badge>
-            <Badge tone={e.status === 'OPEN' ? 'warning' : 'success'}>{e.status === 'OPEN' ? 'Open' : 'Resolved'}</Badge>
+            <Badge tone={SEVERITY_TONE[e.severity]}>{inSentence(t, t.maybe(titleCase(e.severity)))}</Badge>
+            <Badge tone={e.status === 'OPEN' ? 'warning' : 'success'}>{e.status === 'OPEN' ? t('Open') : t('Resolved')}</Badge>
             <span className="ms-auto text-xs text-muted-foreground">
               <Link href={`/app/companies/${e.company.id}`} className="hover:underline">
                 {e.company.name}
               </Link>{' '}
-              · {e.owner?.name ?? 'Unassigned'} · {relativeTime(e.createdAt)}
+              · {e.owner?.name ?? t('Unassigned')} · {relativeTime(e.createdAt)}
             </span>
           </div>
           {e.description && <p className="whitespace-pre-wrap text-muted-foreground">{e.description}</p>}
           {e.resolution && (
             <p>
-              <span className="font-medium">Resolution:</span> {e.resolution}
+              <span className="font-medium">{t('Resolution:')}</span> {e.resolution}
             </p>
           )}
           {e.status === 'OPEN' && canWrite && (
@@ -220,11 +226,11 @@ export function EscalationCard({ e, canWrite }: { e: EscalationRow; canWrite: bo
               }}
             >
               <label htmlFor={`res-${e.id}`} className="sr-only">
-                Resolution
+                {t('Resolution')}
               </label>
-              <Input id={`res-${e.id}`} value={resolution} onChange={(ev) => setResolution(ev.target.value)} placeholder="What fixed it?" className="h-9 min-w-56 flex-1" maxLength={5000} />
+              <Input id={`res-${e.id}`} value={resolution} onChange={(ev) => setResolution(ev.target.value)} placeholder={t('What fixed it?')} className="h-9 min-w-56 flex-1" maxLength={5000} />
               <Button type="submit" size="sm" variant="outline" disabled={!resolution.trim() || resolve.isPending}>
-                Resolve
+                {t('Resolve')}
               </Button>
             </form>
           )}
@@ -236,6 +242,7 @@ export function EscalationCard({ e, canWrite }: { e: EscalationRow; canWrite: bo
 }
 
 export function NewEscalation({ company: fixed }: { company?: PickerValue }) {
+  const t = useT();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [company, setCompany] = useState<PickerValue | null>(fixed ?? null);
@@ -254,7 +261,7 @@ export function NewEscalation({ company: fixed }: { company?: PickerValue }) {
   if (!open)
     return (
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        Open escalation
+        {t('Open escalation')}
       </Button>
     );
   return (
@@ -266,30 +273,30 @@ export function NewEscalation({ company: fixed }: { company?: PickerValue }) {
       }}
     >
       {!fixed && (
-        <Field id="esc-company" label="Company">
-          <RecordPicker id="esc-company" entity="companies" value={company} onChange={setCompany} placeholder="Search companies" />
+        <Field id="esc-company" label={t('Company')}>
+          <RecordPicker id="esc-company" entity="companies" value={company} onChange={setCompany} placeholder={t('Search companies')} />
         </Field>
       )}
-      <Field id="esc-title" label="Title">
+      <Field id="esc-title" label={t('Title')}>
         <Input id="esc-title" required value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
       </Field>
-      <Field id="esc-severity" label="Severity">
+      <Field id="esc-severity" label={t('Severity')}>
         <Select id="esc-severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="CRITICAL">Critical</option>
+          <option value="LOW">{t('Low')}</option>
+          <option value="MEDIUM">{t('Medium')}</option>
+          <option value="HIGH">{t('High')}</option>
+          <option value="CRITICAL">{t('Critical')}</option>
         </Select>
       </Field>
-      <Field id="esc-desc" label="Details (optional)" className="sm:col-span-3">
+      <Field id="esc-desc" label={t('Details (optional)')} className="sm:col-span-3">
         <Textarea id="esc-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={5000} />
       </Field>
       <div className="flex gap-2 sm:col-span-3">
         <Button type="submit" size="sm" disabled={!company || !title.trim() || create.isPending}>
-          Open escalation
+          {t('Open escalation')}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
+          {t('Cancel')}
         </Button>
       </div>
       <div className="sm:col-span-3">

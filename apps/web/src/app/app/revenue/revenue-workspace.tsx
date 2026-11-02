@@ -11,6 +11,7 @@ import { formatDate, formatMoney, useMembers } from '@/lib/crm';
 import { todayIso, useExchangeRates, useRevenue, useTargets } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 function quarterOptions(): string[] {
   const now = new Date();
@@ -22,12 +23,13 @@ function quarterOptions(): string[] {
 const pct = (v: number | null) => (v === null ? '—' : `${v}%`);
 
 export function RevenueWorkspace() {
+  const t = useT();
   const options = useMemo(quarterOptions, []);
   const [period, setPeriod] = useState(options[4]!);
   const data = useRevenue(period);
   return (
     <div className="space-y-6">
-      <Field id="rev-period" label="Quarter">
+      <Field id="rev-period" label={t('Quarter')}>
         <Select id="rev-period" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-36">
           {options.map((o) => (
             <option key={o} value={o}>
@@ -46,29 +48,30 @@ export function RevenueWorkspace() {
 }
 
 function Report({ a }: { a: RevenueAnalytics }) {
+  const t = useT();
   const money = (v: number | null) => formatMoney(v, a.currency);
   const maxMonth = Math.max(1, ...a.byMonth.map((m) => m.won));
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Won" value={money(a.won.total)} hint={`${a.won.deals} deal${a.won.deals === 1 ? '' : 's'} closed won`} />
-        <Tile label="Win rate" value={pct(a.closed.winRate)} hint={`${a.closed.won} won, ${a.closed.lost} lost`} />
-        <Tile label="Average deal" value={money(a.won.avgDealSize)} hint={a.won.avgCycleDays === null ? 'No closed deals yet' : `${a.won.avgCycleDays} days from created to won`} />
+        <Tile label={t('Won')} value={money(a.won.total)} hint={t.plural('count.dealsClosedWon', a.won.deals)} />
+        <Tile label={t('Win rate')} value={pct(a.closed.winRate)} hint={t('{won} won, {lost} lost', { won: a.closed.won, lost: a.closed.lost })} />
+        <Tile label={t('Average deal')} value={money(a.won.avgDealSize)} hint={a.won.avgCycleDays === null ? t('No closed deals yet') : t('{time} from created to won', { time: new Intl.NumberFormat(t.language, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(a.won.avgCycleDays) })} />
         <Tile
-          label="Target"
-          value={a.target.amount === null ? 'Not set' : pct(a.target.attainment)}
-          hint={a.target.amount === null ? 'Set a team target below' : `of ${money(a.target.amount)} · open in quarter ${money(a.target.openInPeriod)}${a.target.coverage !== null ? ` (${a.target.coverage}× the gap)` : ''}`}
+          label={t('Target')}
+          value={a.target.amount === null ? t('Not set') : pct(a.target.attainment)}
+          hint={a.target.amount === null ? t('Set a team target below') : `${t('of {target} · open in quarter {open}', { target: money(a.target.amount), open: money(a.target.openInPeriod) })}${a.target.coverage !== null ? ` ${t('({n}× the gap)', { n: a.target.coverage })}` : ''}`}
         />
       </div>
       {a.excluded.noExchangeRate > 0 && (
         <p role="note" className="text-sm text-warning">
-          {a.excluded.noExchangeRate} deal amount{a.excluded.noExchangeRate === 1 ? ' is' : 's are'} in a currency with no exchange rate and {a.excluded.noExchangeRate === 1 ? 'is' : 'are'} left out. Add a rate below to include {a.excluded.noExchangeRate === 1 ? 'it' : 'them'}.
+          {t.plural('count.amountsNoRate', a.excluded.noExchangeRate)}
         </p>
       )}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Won by month</CardTitle>
+            <CardTitle className="text-base">{t('Won by month')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
@@ -88,44 +91,44 @@ function Report({ a }: { a: RevenueAnalytics }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Lead funnel</CardTitle>
+            <CardTitle className="text-base">{t('Lead funnel')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p className="text-xs text-muted-foreground">Leads created this quarter</p>
-            <Line label="Leads" value={String(a.funnel.leads)} />
-            <Line label="Qualified or converted" value={String(a.funnel.qualified)} />
-            <Line label="Converted" value={String(a.funnel.converted)} />
-            <Line label="Became won deals" value={String(a.funnel.wonFromLeads)} />
+            <p className="text-xs text-muted-foreground">{t('Leads created this quarter')}</p>
+            <Line label={t('Leads')} value={String(a.funnel.leads)} />
+            <Line label={t('Qualified or converted')} value={String(a.funnel.qualified)} />
+            <Line label={t('Converted')} value={String(a.funnel.converted)} />
+            <Line label={t('Became won deals')} value={String(a.funnel.wonFromLeads)} />
             <p className="pt-2 text-xs text-muted-foreground">
-              Sales velocity: {a.velocity.perDay === null ? 'not enough closed history yet' : `${money(a.velocity.perDay)} per day`} ({a.velocity.openDeals} open deals)
+              {t('Sales velocity: {velocity} ({deals})', { velocity: a.velocity.perDay === null ? t('not enough closed history yet') : t('{value} per day', { value: money(a.velocity.perDay) }), deals: t.plural('count.openDeals', a.velocity.openDeals) })}
             </p>
           </CardContent>
         </Card>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">By owner</CardTitle>
+          <CardTitle className="text-base">{t('By owner')}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {a.byOwner.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No closed deals or targets this quarter.</p>
+            <p className="text-sm text-muted-foreground">{t('No closed deals or targets this quarter.')}</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th className="pb-2 font-medium">Owner</th>
-                  <th className="pb-2 text-end font-medium">Won</th>
-                  <th className="pb-2 text-end font-medium">Deals</th>
-                  <th className="pb-2 text-end font-medium">Lost</th>
-                  <th className="pb-2 text-end font-medium">Win rate</th>
-                  <th className="pb-2 text-end font-medium">Target</th>
-                  <th className="pb-2 text-end font-medium">Attainment</th>
+                  <th className="pb-2 font-medium">{t('Owner')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Won')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Deals')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Lost')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Win rate')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Target')}</th>
+                  <th className="pb-2 text-end font-medium">{t('Attainment')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {a.byOwner.map((o) => (
                   <tr key={o.owner?.id ?? 'none'}>
-                    <td className="py-2">{o.owner?.name ?? 'Unassigned'}</td>
+                    <td className="py-2">{o.owner?.name ?? t('Unassigned')}</td>
                     <td className="py-2 text-end tabular-nums">{money(o.won)}</td>
                     <td className="py-2 text-end tabular-nums">{o.deals}</td>
                     <td className="py-2 text-end tabular-nums">{o.lost}</td>
@@ -140,25 +143,25 @@ function Report({ a }: { a: RevenueAnalytics }) {
         </CardContent>
       </Card>
       <div className="grid gap-4 lg:grid-cols-3">
-        <ListCard title="By lead source" empty="No won deals." rows={a.bySource.map((s) => [s.source, `${money(s.won)} · ${s.deals}`])} />
-        <ListCard title="By product (accepted quotes)" empty="No accepted quotes on won deals." rows={a.byProduct.map((p) => [p.name, `${money(p.revenue)} · qty ${p.quantity}`])} />
-        <ListCard title="Loss reasons" empty="No lost deals." rows={a.lossReasons.map((l) => [l.reason, `${l.deals} · ${money(l.amount)}`])} />
+        <ListCard title={t('By lead source')} empty={t('No won deals.')} rows={a.bySource.map((s) => [t.maybe(s.source), `${money(s.won)} · ${s.deals}`])} />
+        <ListCard title={t('By product (accepted quotes)')} empty={t('No accepted quotes on won deals.')} rows={a.byProduct.map((p) => [p.name, `${money(p.revenue)} · ${t('qty {n}', { n: p.quantity })}`])} />
+        <ListCard title={t('Loss reasons')} empty={t('No lost deals.')} rows={a.lossReasons.map((l) => [t.maybe(l.reason), `${l.deals} · ${money(l.amount)}`])} />
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Forecast against actual</CardTitle>
+          <CardTitle className="text-base">{t('Forecast against actual')}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm">
           {a.actualVsForecast.length === 0 ? (
-            <p className="text-muted-foreground">Take a forecast snapshot early in a quarter to compare it with what actually closed.</p>
+            <p className="text-muted-foreground">{t('Take a forecast snapshot early in a quarter to compare it with what actually closed.')}</p>
           ) : (
             <ul className="divide-y divide-border">
               {a.actualVsForecast.map((f) => (
                 <li key={f.period} className="flex flex-wrap gap-x-4 py-2">
                   <span className="font-medium">{f.period}</span>
-                  <span className="text-muted-foreground">first snapshot {formatDate(f.snapshotAt)}</span>
+                  <span className="text-muted-foreground">{t('first snapshot {date}', { date: formatDate(f.snapshotAt) })}</span>
                   <span className="ms-auto tabular-nums">
-                    predicted {money(f.predicted)} · actual {money(f.actual)} · {f.errorPercent === null ? '—' : `${f.errorPercent > 0 ? '+' : ''}${f.errorPercent}%`}
+                    {t('predicted {predicted} · actual {actual}', { predicted: money(f.predicted), actual: money(f.actual) })} · {f.errorPercent === null ? '—' : `${f.errorPercent > 0 ? '+' : ''}${f.errorPercent}%`}
                   </span>
                 </li>
               ))}
@@ -216,6 +219,7 @@ function ListCard({ title, rows, empty }: { title: string; rows: [string, string
 }
 
 export function Targets({ period }: { period: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const canManage = useCan('pipelines:manage');
   const targets = useTargets(period);
@@ -235,20 +239,20 @@ export function Targets({ period }: { period: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Targets for {period}</CardTitle>
+        <CardTitle className="text-base">{t('Targets for {period}', { period })}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!targets.data?.length ? (
-          <p className="text-muted-foreground">No targets for this period.</p>
+          <p className="text-muted-foreground">{t('No targets for this period.')}</p>
         ) : (
           <ul className="divide-y divide-border">
-            {targets.data.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 py-1.5">
-                <span>{t.user?.name ?? 'Whole team'}</span>
-                <span className="ms-auto tabular-nums">{formatMoney(t.amount, base)}</span>
+            {targets.data.map((tg) => (
+              <li key={tg.id} className="flex items-center gap-2 py-1.5">
+                <span>{tg.user?.name ?? t('Whole team')}</span>
+                <span className="ms-auto tabular-nums">{formatMoney(tg.amount, base)}</span>
                 {canManage && (
-                  <Button size="sm" variant="ghost" onClick={() => remove.mutate(t.id)} aria-label={`Remove target for ${t.user?.name ?? 'whole team'}`}>
-                    Remove
+                  <Button size="sm" variant="ghost" onClick={() => remove.mutate(tg.id)} aria-label={t('Remove target for {name}', { name: tg.user?.name ?? t('whole team') })}>
+                    {t('Remove')}
                   </Button>
                 )}
               </li>
@@ -263,9 +267,9 @@ export function Targets({ period }: { period: string }) {
               if (amount !== '') save.mutate();
             }}
           >
-            <Field id="target-user" label="For">
+            <Field id="target-user" label={t('For')}>
               <Select id="target-user" value={userId} onChange={(e) => setUserId(e.target.value)} className="w-44">
-                <option value="">Whole team</option>
+                <option value="">{t('Whole team')}</option>
                 {(members.data ?? []).map((m) => (
                   <option key={m.userId} value={m.userId}>
                     {m.name}
@@ -273,11 +277,11 @@ export function Targets({ period }: { period: string }) {
                 ))}
               </Select>
             </Field>
-            <Field id="target-amount" label="Amount">
+            <Field id="target-amount" label={t('Amount')}>
               <Input id="target-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="w-32" />
             </Field>
             <Button type="submit" size="sm" variant="outline" disabled={save.isPending}>
-              Set target
+              {t('Set target')}
             </Button>
           </form>
         )}
@@ -288,6 +292,7 @@ export function Targets({ period }: { period: string }) {
 }
 
 function Rates() {
+  const t = useT();
   const qc = useQueryClient();
   const canManage = useCan('catalog:manage');
   const rates = useExchangeRates();
@@ -305,14 +310,14 @@ function Rates() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Exchange rates</CardTitle>
+        <CardTitle className="text-base">{t('Exchange rates')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-xs text-muted-foreground">
-          Rates you enter convert other currencies into {base ?? 'your workspace currency'} for analytics and forecasts. The latest rate per currency is used. There is no automatic rate feed.
+          {t('Rates you enter convert other currencies into {base} for analytics and forecasts. The latest rate per currency is used. There is no automatic rate feed.', { base: base ?? t('your workspace currency') })}
         </p>
         {!rates.data?.rates.length ? (
-          <p className="text-muted-foreground">No rates yet.</p>
+          <p className="text-muted-foreground">{t('No rates yet.')}</p>
         ) : (
           <ul className="divide-y divide-border">
             {rates.data.rates.map((r) => (
@@ -320,7 +325,7 @@ function Rates() {
                 <span>
                   1 {r.currency} = {r.rate} {base}
                 </span>
-                <span className="ms-auto text-muted-foreground">from {formatDate(r.effectiveDate)}</span>
+                <span className="ms-auto text-muted-foreground">{t('from {date}', { date: formatDate(r.effectiveDate) })}</span>
               </li>
             ))}
           </ul>
@@ -333,17 +338,17 @@ function Rates() {
               if (currency && rate) save.mutate();
             }}
           >
-            <Field id="fx-currency" label="Currency">
+            <Field id="fx-currency" label={t('Currency')}>
               <Input id="fx-currency" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} className="w-20 uppercase" placeholder="EUR" />
             </Field>
-            <Field id="fx-rate" label={`Rate to ${base ?? 'base'}`}>
+            <Field id="fx-rate" label={t('Rate to {base}', { base: base ?? t('base') })}>
               <Input id="fx-rate" value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" className="w-28" />
             </Field>
-            <Field id="fx-date" label="From">
+            <Field id="fx-date" label={t('From')}>
               <Input id="fx-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <Button type="submit" size="sm" variant="outline" disabled={save.isPending}>
-              Save rate
+              {t('Save rate')}
             </Button>
           </form>
         )}

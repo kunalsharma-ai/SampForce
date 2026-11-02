@@ -135,6 +135,26 @@ Still English here: the section text a bid template starts with and the example 
 proposal text people replace), what customers see on the public proposal page, PDF and email text sent to customers,
 and API and payment provider error messages.
 
+## Scope of batch 6
+
+Translated: Reports & Analytics (saved reports, the report editor with its records, measures, groupings, chart types,
+order, filters and definition checks, the report view and its chart descriptions), Dashboards, the Pipeline flow,
+Pipeline replay, Relationship Galaxy and Revenue Globe explorers with their 2D fallbacks and 3D notices, Forecasting
+(the forecast, targets, gap and coverage, the trend view and the plan), Revenue Intelligence and Customer Success
+(customers, churn risk, health signals, escalations and suggested retention steps). New tables: `reports` and
+`revenue`; 28 new plural keys, among them `count.lastDays`, `count.stageChanges`, the eight `count.<records>Match` keys
+and `count.recordsLeftOut`.
+
+- **The report catalogue** (record types, field labels, measure names such as "Total amount" and date groupings such
+  as "Created (month)"), the report templates and the report definition checks from the shared types go through
+  `t.maybe`; the data-label test builds every combination from `REPORT_CATALOG` and fails if one has no phrase.
+- **Sentences are not stitched from fragments**: the "Not included" list uses `Intl.ListFormat`, day counts use
+  `Intl.NumberFormat` units, and each chart description is one phrase per chart type.
+
+Still English here: row labels that the API computes for reports (month, week and country names), the detail line
+under a health signal and under a churn risk (it carries counts and dates from the server), the "why" text under a
+suggested retention step, and browser tab titles.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

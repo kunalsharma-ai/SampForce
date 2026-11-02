@@ -6,6 +6,7 @@ import { BufferAttribute, BufferGeometry, type InstancedMesh, Matrix4, Quaternio
 import type { MotionLevel } from '@/lib/motion';
 import { Orbit, Scene, SlowNotice, tokenColor } from './scene';
 import { FpsReadout } from './view-controls';
+import { useT } from '@/lib/i18n';
 
 export interface GlobeBar {
   country: string;
@@ -96,6 +97,7 @@ function Bars({ bars, selected, onHover, onSelect }: { bars: GlobeBar[]; selecte
 }
 
 export default function GlobeScene({ bars, selected, onSelect, motion, showFps, onContextLost, onSwitch2D, describe }: { bars: GlobeBar[]; selected: string | null; onSelect: (c: string) => void; motion: MotionLevel; showFps: boolean; onContextLost: () => void; onSwitch2D: () => void; describe: (country: string) => string }) {
+  const t = useT();
   const borders = useBorders();
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const [interacted, setInteracted] = useState(false);
@@ -109,7 +111,7 @@ export default function GlobeScene({ bars, selected, onSelect, motion, showFps, 
         motion={motion}
         animating={!interacted}
         camera={[0, 0.6, 3.1]}
-        label={`Revenue Globe with ${bars.length} countries. The table beside it holds the same figures.`}
+        label={t.plural('count.globeCountries', bars.length)}
         onContextLost={onContextLost}
         onFps={showFps ? (f, d) => setFps({ fps: f, dpr: d }) : undefined}
         onSlow={setSlow}

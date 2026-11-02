@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { inSentence, type Translator, useT } from '@/lib/i18n';
 
 const TARGET_SOURCE: Record<NonNullable<PlanTarget['source']>, string> = {
   set: 'Set for this period',
@@ -19,7 +20,7 @@ const TARGET_SOURCE: Record<NonNullable<PlanTarget['source']>, string> = {
   share_of_quarter: 'A third of the quarter target (no month target set)',
 };
 
-const signedGap = (gap: number, money: (v: number) => string) => (gap > 0 ? `${money(gap)} short` : gap < 0 ? `${money(-gap)} ahead` : 'On target');
+const signedGap = (gap: number, money: (v: number) => string, t: Translator) => (gap > 0 ? t('{value} short', { value: money(gap) }) : gap < 0 ? t('{value} ahead', { value: money(-gap) }) : t('On target'));
 
 /** Target, attainment, gaps, coverage, salespeople, and risks for the chosen period. */
 export function PlanSection({ period }: { period: string }) {
@@ -40,24 +41,25 @@ export function PlanSection({ period }: { period: string }) {
 }
 
 function TargetCard({ p, money }: { p: ForecastPlan; money: (v: number) => string }) {
-  const t = p.target;
+  const t = useT();
+  const tg = p.target;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Target and gap</CardTitle>
+        <CardTitle className="text-base">{t('Target and gap')}</CardTitle>
       </CardHeader>
       <CardContent>
-        {t.amount === null ? (
+        {tg.amount === null ? (
           <p className="text-sm text-muted-foreground">
-            No target for {p.period.label}. Set one below (whole team or per person) to see attainment, the gap to target and pipeline coverage.
+            {t('No target for {period}. Set one below (whole team or per person) to see attainment, the gap to target and pipeline coverage.', { period: p.period.label })}
           </p>
         ) : (
           <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
-            <Stat label="Target" value={money(t.amount)} detail={t.source ? TARGET_SOURCE[t.source] : ''} />
-            <Stat label="Attainment" value={p.attainment === null ? '—' : `${p.attainment}%`} detail={`${money(p.totals.won)} won so far`} />
-            <Stat label="Gap at base" value={p.gap ? signedGap(p.gap.base, money) : '—'} detail="Target minus won and weighted open deals" tone={p.gap && p.gap.base > 0 ? 'critical' : 'success'} />
-            <Stat label="Gap at best" value={p.gap ? signedGap(p.gap.best, money) : '—'} detail={`Worst case: ${p.gap ? signedGap(p.gap.worst, money) : '—'}`} />
-            <Stat label="Pipeline coverage" value={p.coverage === null ? '—' : `${p.coverage}×`} detail="Open pipeline ÷ what is still needed. Under 3× is usually thin." tone={p.coverage !== null && p.coverage < 1 ? 'critical' : undefined} />
+            <Stat label={t('Target')} value={money(tg.amount)} detail={tg.source ? t.maybe(TARGET_SOURCE[tg.source]) : ''} />
+            <Stat label={t('Attainment')} value={p.attainment === null ? '—' : `${p.attainment}%`} detail={t('{value} won so far', { value: money(p.totals.won) })} />
+            <Stat label={t('Gap at base')} value={p.gap ? signedGap(p.gap.base, money, t) : '—'} detail={t('Target minus won and weighted open deals')} tone={p.gap && p.gap.base > 0 ? 'critical' : 'success'} />
+            <Stat label={t('Gap at best')} value={p.gap ? signedGap(p.gap.best, money, t) : '—'} detail={t('Worst case: {value}', { value: p.gap ? signedGap(p.gap.worst, money, t) : '—' })} />
+            <Stat label={t('Pipeline coverage')} value={p.coverage === null ? '—' : `${p.coverage}×`} detail={t('Open pipeline ÷ what is still needed. Under 3× is usually thin.')} tone={p.coverage !== null && p.coverage < 1 ? 'critical' : undefined} />
           </div>
         )}
       </CardContent>
@@ -76,36 +78,37 @@ function Stat({ label, value, detail, tone }: { label: string; value: string; de
 }
 
 function People({ p, money }: { p: ForecastPlan; money: (v: number) => string }) {
+  const t = useT();
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">By salesperson</CardTitle>
+        <CardTitle className="text-base">{t('By salesperson')}</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {p.byOwner.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No deals or personal targets in this period.</p>
+          <p className="text-sm text-muted-foreground">{t('No deals or personal targets in this period.')}</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th className="pb-2 font-medium">Person</th>
-                <th className="pb-2 text-end font-medium">Target</th>
-                <th className="pb-2 text-end font-medium">Won</th>
-                <th className="pb-2 text-end font-medium">Base</th>
-                <th className="pb-2 text-end font-medium">Gap</th>
+                <th className="pb-2 font-medium">{t('Person')}</th>
+                <th className="pb-2 text-end font-medium">{t('Target')}</th>
+                <th className="pb-2 text-end font-medium">{t('Won')}</th>
+                <th className="pb-2 text-end font-medium">{t('Base')}</th>
+                <th className="pb-2 text-end font-medium">{t('Gap')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {p.byOwner.map((o) => (
                 <tr key={o.owner?.id ?? 'none'}>
-                  <td className="py-2 pe-2">{o.owner?.name ?? 'Unassigned'}</td>
+                  <td className="py-2 pe-2">{o.owner?.name ?? t('Unassigned')}</td>
                   <td className="py-2 text-end tabular-nums">{o.target.amount === null ? '—' : money(o.target.amount)}</td>
                   <td className="py-2 text-end tabular-nums">
                     {money(o.totals.won)}
                     {o.attainment !== null && <span className="block text-xs text-muted-foreground">{o.attainment}%</span>}
                   </td>
                   <td className="py-2 text-end tabular-nums">{money(o.totals.base)}</td>
-                  <td className={`py-2 text-end tabular-nums ${o.gap !== null && o.gap > 0 ? 'text-critical' : ''}`}>{o.gap === null ? '—' : signedGap(o.gap, money)}</td>
+                  <td className={`py-2 text-end tabular-nums ${o.gap !== null && o.gap > 0 ? 'text-critical' : ''}`}>{o.gap === null ? '—' : signedGap(o.gap, money, t)}</td>
                 </tr>
               ))}
             </tbody>
@@ -117,15 +120,16 @@ function People({ p, money }: { p: ForecastPlan; money: (v: number) => string })
 }
 
 function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) {
+  const t = useT();
   const groups: [string, string, PlanRisk, typeof CalendarX2][] = [
-    ['overdue', 'Close date has passed', p.risks.overdue, CalendarX2],
-    ['stale', 'No activity in 30 days', p.risks.stale, AlertTriangle],
-    ['high', 'High risk on deal health', p.risks.highRisk, HeartPulse],
+    ['overdue', t('Close date has passed'), p.risks.overdue, CalendarX2],
+    ['stale', t('No activity in 30 days'), p.risks.stale, AlertTriangle],
+    ['high', t('High risk on deal health'), p.risks.highRisk, HeartPulse],
   ];
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Pipeline risks in this period</CardTitle>
+        <CardTitle className="text-base">{t('Pipeline risks in this period')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {groups.map(([key, title, r, Icon]) => (
@@ -134,7 +138,7 @@ function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) 
               <Icon className="size-4 text-muted-foreground" aria-hidden />
               {title}
               <span className="ms-auto tabular-nums text-muted-foreground">
-                {r.count} deal{r.count === 1 ? '' : 's'} · {money(r.amount)}
+                {t.plural('count.deals', r.count)} · {money(r.amount)}
               </span>
             </p>
             {r.deals.length > 0 && (
@@ -144,7 +148,7 @@ function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) 
                     <Link href={`/app/deals/${d.id}`} className="truncate text-primary underline underline-offset-2">
                       {d.name}
                     </Link>
-                    <span className="text-muted-foreground">{d.detail}</span>
+                    <span className="text-muted-foreground">{t.maybe(d.detail)}</span>
                     <span className="ms-auto tabular-nums text-muted-foreground">{money(d.amount)}</span>
                   </li>
                 ))}
@@ -159,6 +163,7 @@ function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) 
 
 /** How probabilities and categories are worked out, with the stage win history behind the history method. */
 export function Assumptions({ period }: { period: string }) {
+  const t = useT();
   const plan = useForecastPlan(period);
   const canManage = useCan('pipelines:manage');
   const [editing, setEditing] = useState(false);
@@ -168,10 +173,10 @@ export function Assumptions({ period }: { period: string }) {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-base">Forecast assumptions</CardTitle>
+        <CardTitle className="text-base">{t('Forecast assumptions')}</CardTitle>
         {canManage && !editing && (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-            Change assumptions
+            {t('Change assumptions')}
           </Button>
         )}
       </CardHeader>
@@ -181,27 +186,27 @@ export function Assumptions({ period }: { period: string }) {
         ) : (
           <div className="space-y-1">
             <p>
-              Probability: <strong>{s.method === 'history' ? `stage win rate over the last ${s.historyMonths} months (stages with at least ${s.minSample} closed deals), otherwise the stage probability` : 'the probability set on each stage'}</strong>. A probability entered on a deal always wins.
+              {t('Probability:')} <strong>{s.method === 'history' ? t('stage win rate over the last {months} months (stages with at least {min} closed deals), otherwise the stage probability', { months: s.historyMonths, min: s.minSample }) : t('the probability set on each stage')}</strong>. {t('A probability entered on a deal always wins.')}
             </p>
             <p>
-              Commit from <strong>{s.commitThreshold}%</strong>, best case from <strong>{s.bestCaseThreshold}%</strong>.
+              {t('Commit from {commit}%, best case from {best}%.', { commit: s.commitThreshold, best: s.bestCaseThreshold })}
             </p>
             <p className="text-xs text-muted-foreground">
-              Open deals this period: {src.deal} with their own probability, {src.stage} from the stage, {src.history} from win history.
-              {s.updatedBy && s.updatedAt && ` Changed by ${s.updatedBy.name} ${relativeTime(s.updatedAt)}.`}
+              {t('Open deals this period: {deal} with their own probability, {stage} from the stage, {history} from win history.', { deal: src.deal, stage: src.stage, history: src.history })}
+              {s.updatedBy && s.updatedAt && ` ${t('Changed by {name} {when}.', { name: s.updatedBy.name, when: relativeTime(s.updatedAt) })}`}
             </p>
           </div>
         )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <caption className="mb-2 text-start text-xs font-semibold uppercase tracking-wider text-muted-foreground">Win rate by stage, deals closed in the last {s.historyMonths} months</caption>
+            <caption className="mb-2 text-start text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('Win rate by stage, deals closed in the last {months} months', { months: s.historyMonths })}</caption>
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th className="pb-2 font-medium">Stage</th>
-                <th className="pb-2 text-end font-medium">Stage probability</th>
-                <th className="pb-2 text-end font-medium">Won</th>
-                <th className="pb-2 text-end font-medium">Lost</th>
-                <th className="pb-2 text-end font-medium">Win rate</th>
+                <th className="pb-2 font-medium">{t('Stage')}</th>
+                <th className="pb-2 text-end font-medium">{t('Stage probability')}</th>
+                <th className="pb-2 text-end font-medium">{t('Won')}</th>
+                <th className="pb-2 text-end font-medium">{t('Lost')}</th>
+                <th className="pb-2 text-end font-medium">{t('Win rate')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -216,7 +221,7 @@ export function Assumptions({ period }: { period: string }) {
                   <td className="py-1.5 text-end tabular-nums">{r.lost}</td>
                   <td className="py-1.5 text-end tabular-nums">
                     {r.rate === null ? '—' : `${r.rate}%`}
-                    {r.rate !== null && !r.usable && <span className="block text-xs text-muted-foreground">too few to use</span>}
+                    {r.rate !== null && !r.usable && <span className="block text-xs text-muted-foreground">{t('too few to use')}</span>}
                   </td>
                 </tr>
               ))}
@@ -229,6 +234,7 @@ export function Assumptions({ period }: { period: string }) {
 }
 
 function SettingsForm({ initial, onDone }: { initial: ForecastSettingsInput; onDone: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const [v, setV] = useState<ForecastSettingsInput>({ method: initial.method, commitThreshold: initial.commitThreshold, bestCaseThreshold: initial.bestCaseThreshold, historyMonths: initial.historyMonths, minSample: initial.minSample });
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +262,7 @@ function SettingsForm({ initial, onDone }: { initial: ForecastSettingsInput; onD
       onSubmit={(e) => {
         e.preventDefault();
         const r = forecastSettingsSchema.safeParse(v);
-        if (!r.success) return setError(r.error.issues[0]!.message);
+        if (!r.success) return setError(t.maybe(r.error.issues[0]!.message));
         setError(null);
         save.mutate(r.data);
       }}
@@ -264,26 +270,26 @@ function SettingsForm({ initial, onDone }: { initial: ForecastSettingsInput; onD
       <div className="flex flex-wrap items-end gap-4">
         <div className="space-y-1">
           <label htmlFor="fs-method" className="text-xs font-medium">
-            Probability of open deals
+            {t('Probability of open deals')}
           </label>
           <Select id="fs-method" className="w-auto" value={v.method} onChange={(e) => setV({ ...v, method: e.target.value as ForecastSettingsInput['method'] })}>
-            <option value="stage">Stage probability</option>
-            <option value="history">Stage win rate from history</option>
+            <option value="stage">{t('Stage probability')}</option>
+            <option value="history">{t('Stage win rate from history')}</option>
           </Select>
         </div>
-        {num('commitThreshold', 'Commit from', 1, 100, '%')}
-        {num('bestCaseThreshold', 'Best case from', 0, 99, '%')}
-        {num('historyMonths', 'History window', 3, 36, 'months')}
-        {num('minSample', 'Minimum closed deals per stage', 3, 200, 'deals')}
+        {num('commitThreshold', t('Commit from'), 1, 100, '%')}
+        {num('bestCaseThreshold', t('Best case from'), 0, 99, '%')}
+        {num('historyMonths', t('History window'), 3, 36, t('months'))}
+        {num('minSample', t('Minimum closed deals per stage'), 3, 200, t('deals'))}
       </div>
-      <p className="text-xs text-muted-foreground">Changes apply to the live forecast and to new snapshots. Existing snapshots keep the assumptions they were taken with.</p>
+      <p className="text-xs text-muted-foreground">{t('Changes apply to the live forecast and to new snapshots. Existing snapshots keep the assumptions they were taken with.')}</p>
       {(error || save.error) && <p role="alert" className="text-sm text-critical">{error ?? save.error?.message}</p>}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={save.isPending}>
-          Save assumptions
+          {t('Save assumptions')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={onDone}>
-          Cancel
+          {t('Cancel')}
         </Button>
       </div>
     </form>
@@ -291,59 +297,62 @@ function SettingsForm({ initial, onDone }: { initial: ForecastSettingsInput; onD
 }
 
 const TREND_COUNT: Record<PeriodGranularity, number> = { month: 12, quarter: 8, year: 4 };
+const GRANULARITY: Record<PeriodGranularity, string> = { month: 'Month', quarter: 'Quarter', year: 'Year' };
 
 /** Won revenue per period with win rate, cycle, and how the first snapshot compared. */
 export function Trends({ granularity }: { granularity: PeriodGranularity }) {
+  const t = useT();
   const trends = useForecastTrends(granularity, TREND_COUNT[granularity]);
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Win and loss trends</CardTitle>
+        <CardTitle className="text-base">{t('Win and loss trends')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {trends.isPending ? <Skeleton className="h-40" /> : trends.error ? <p role="alert" className="text-sm text-critical">{trends.error.message}</p> : <TrendView t={trends.data} />}
+        {trends.isPending ? <Skeleton className="h-40" /> : trends.error ? <p role="alert" className="text-sm text-critical">{trends.error.message}</p> : <TrendView tr={trends.data} />}
       </CardContent>
     </Card>
   );
 }
 
-function TrendView({ t }: { t: ForecastTrends }) {
-  const money = (v: number) => formatMoney(v, t.currency);
-  const max = Math.max(1, ...t.points.map((p) => p.won));
+function TrendView({ tr }: { tr: ForecastTrends }) {
+  const t = useT();
+  const money = (v: number) => formatMoney(v, tr.currency);
+  const max = Math.max(1, ...tr.points.map((p) => p.won));
   return (
     <>
       <figure>
-        <div className="flex h-40 items-end gap-2 border-b border-border" role="img" aria-label={`Won revenue per ${t.granularity}. The table below has the figures.`}>
-          {t.points.map((p) => (
-            <div key={p.period} className="group relative flex h-full flex-1 items-end justify-center" title={`${p.period}: ${money(p.won)} won · ${p.wonCount} won, ${p.lostCount} lost`}>
+        <div className="flex h-40 items-end gap-2 border-b border-border" role="img" aria-label={t('Won revenue per {period}. The table below has the figures.', { period: inSentence(t, t.maybe(GRANULARITY[tr.granularity])) })}>
+          {tr.points.map((p) => (
+            <div key={p.period} className="group relative flex h-full flex-1 items-end justify-center" title={t('{period}: {value} won · {won} won, {lost} lost', { period: p.period, value: money(p.won), won: p.wonCount, lost: p.lostCount })}>
               {p.won > 0 && <div className="w-full max-w-9 rounded-t bg-primary transition-opacity group-hover:opacity-80" style={{ height: `${Math.max(2, (p.won / max) * 100)}%` }} />}
             </div>
           ))}
         </div>
         <div className="mt-1 flex gap-2" aria-hidden>
-          {t.points.map((p) => (
+          {tr.points.map((p) => (
             <span key={p.period} className="flex-1 truncate text-center text-[11px] text-muted-foreground">
               {p.period}
             </span>
           ))}
         </div>
-        <figcaption className="mt-1 text-xs text-muted-foreground">Won revenue per {t.granularity}. Hover a bar for details.</figcaption>
+        <figcaption className="mt-1 text-xs text-muted-foreground">{t('Won revenue per {period}. Hover a bar for details.', { period: inSentence(t, t.maybe(GRANULARITY[tr.granularity])) })}</figcaption>
       </figure>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-start text-xs text-muted-foreground">
             <tr>
-              <th className="pb-2 font-medium">Period</th>
-              <th className="pb-2 text-end font-medium">Won</th>
-              <th className="pb-2 text-end font-medium">Won / lost</th>
-              <th className="pb-2 text-end font-medium">Win rate</th>
-              <th className="pb-2 text-end font-medium">Avg. cycle</th>
-              <th className="pb-2 text-end font-medium">First forecast</th>
-              <th className="pb-2 text-end font-medium">Accuracy</th>
+              <th className="pb-2 font-medium">{t('Period')}</th>
+              <th className="pb-2 text-end font-medium">{t('Won')}</th>
+              <th className="pb-2 text-end font-medium">{t('Won / lost')}</th>
+              <th className="pb-2 text-end font-medium">{t('Win rate')}</th>
+              <th className="pb-2 text-end font-medium">{t('Avg. cycle')}</th>
+              <th className="pb-2 text-end font-medium">{t('First forecast')}</th>
+              <th className="pb-2 text-end font-medium">{t('Accuracy')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {t.points.map((p) => (
+            {tr.points.map((p) => (
               <tr key={p.period}>
                 <td className="py-1.5">{p.period}</td>
                 <td className="py-1.5 text-end tabular-nums">{money(p.won)}</td>
@@ -351,25 +360,25 @@ function TrendView({ t }: { t: ForecastTrends }) {
                   {p.wonCount} / {p.lostCount}
                 </td>
                 <td className="py-1.5 text-end tabular-nums">{p.winRate === null ? '—' : `${p.winRate}%`}</td>
-                <td className="py-1.5 text-end tabular-nums">{p.avgCycleDays === null ? '—' : `${p.avgCycleDays} days`}</td>
+                <td className="py-1.5 text-end tabular-nums">{p.avgCycleDays === null ? '—' : new Intl.NumberFormat(t.language, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(p.avgCycleDays)}</td>
                 <td className="py-1.5 text-end tabular-nums">{p.forecastAtStart === null ? '—' : money(p.forecastAtStart)}</td>
                 <td className="py-1.5 text-end tabular-nums">
-                  {p.errorPercent === null ? (p.forecastAtStart !== null ? <span className="text-xs text-muted-foreground">in progress</span> : '—') : `${p.errorPercent > 0 ? '+' : ''}${p.errorPercent}%`}
+                  {p.errorPercent === null ? (p.forecastAtStart !== null ? <span className="text-xs text-muted-foreground">{t('in progress')}</span> : '—') : `${p.errorPercent > 0 ? '+' : ''}${p.errorPercent}%`}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-muted-foreground">Accuracy compares what was won with the base forecast of the first snapshot taken for that period. Take a snapshot at the start of each period to track it.</p>
-      {t.topLossReasons.length > 0 && (
+      <p className="text-xs text-muted-foreground">{t('Accuracy compares what was won with the base forecast of the first snapshot taken for that period. Take a snapshot at the start of each period to track it.')}</p>
+      {tr.topLossReasons.length > 0 && (
         <div className="text-sm">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Top loss reasons</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('Top loss reasons')}</p>
           <ul className="flex flex-wrap gap-2">
-            {t.topLossReasons.map((r) => (
+            {tr.topLossReasons.map((r) => (
               <li key={r.reason}>
                 <Badge tone="neutral">
-                  {r.reason} · {r.count}
+                  {t.maybe(r.reason)} · {r.count}
                 </Badge>
               </li>
             ))}
