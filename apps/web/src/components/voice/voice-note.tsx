@@ -17,6 +17,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { TranscriptionBanner } from '@/components/meetings/transcription-banner';
 import { aiErrorMessage } from '@/lib/ai';
 import { relativeTime } from '@/lib/format';
+import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { voiceApi, useVoiceMutation, useVoiceNotes, useVoiceTranscriptionStatus } from '@/lib/voice';
 
@@ -31,7 +32,9 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 const languageName = (code: string | null) => VOICE_LANGUAGES.find(([c]) => c === code)?.[1] ?? code;
 
 /** A button that opens a new voice note, optionally tied to a record. */
-export function VoiceNoteButton({ record, label = 'Voice note', variant = 'outline', iconOnly }: { record: VoiceRecordTarget | null; label?: string; variant?: 'outline' | 'ghost'; iconOnly?: boolean }) {
+export function VoiceNoteButton({ record, label: given, variant = 'outline', iconOnly }: { record: VoiceRecordTarget | null; label?: string; variant?: 'outline' | 'ghost'; iconOnly?: boolean }) {
+  const t = useT();
+  const label = given ?? t('Voice note');
   const canWrite = useCan('activities:write');
   const [open, setOpen] = useState(false);
   if (!canWrite) return null;
@@ -48,6 +51,7 @@ export function VoiceNoteButton({ record, label = 'Voice note', variant = 'outli
 
 /** Your voice notes on a lead, contact, deal or company. Notes are private to the person who made them. */
 export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
+  const t = useT();
   const canWrite = useCan('activities:write');
   const notes = useVoiceNotes({ type: record.type, id: record.id }, canWrite);
   const [openNote, setOpenNote] = useState<VoiceNote | null>(null);
@@ -56,20 +60,20 @@ export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-base">Voice notes</CardTitle>
-        <VoiceNoteButton record={record} label="New voice note" />
+        <CardTitle className="text-base">{t('Voice notes')}</CardTitle>
+        <VoiceNoteButton record={record} label={t('New voice note')} />
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No voice notes yet. Speak or type a note and DealFlow suggests tasks, notes and records for you to confirm.</p>
+          <p className="text-sm text-muted-foreground">{t('No voice notes yet. Speak or type a note and DealFlow suggests tasks, notes and records for you to confirm.')}</p>
         ) : (
-          <ul className="space-y-2 text-sm" aria-label="Voice notes">
+          <ul className="space-y-2 text-sm" aria-label={t('Voice notes')}>
             {items.slice(0, 5).map((n) => {
-              const s = noteStage(n);
+              const s = noteStage(t, n);
               return (
                 <li key={n.id} className="flex flex-wrap items-start gap-2">
                   <button type="button" className="min-w-0 flex-1 truncate text-start text-primary underline underline-offset-2" onClick={() => setOpenNote(n)}>
-                    {n.summary || n.transcript?.slice(0, 80) || 'Untitled voice note'}
+                    {n.summary || n.transcript?.slice(0, 80) || t('Untitled voice note')}
                   </button>
                   <Badge tone={s.tone}>{s.label}</Badge>
                   <span className="shrink-0 text-xs text-muted-foreground">{relativeTime(n.createdAt)}</span>
@@ -78,22 +82,23 @@ export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
             })}
           </ul>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">Only you can see your voice notes. What you confirm is saved to the record like any other task or note.</p>
+        <p className="mt-3 text-xs text-muted-foreground">{t('Only you can see your voice notes. What you confirm is saved to the record like any other task or note.')}</p>
       </CardContent>
       {openNote && <VoiceNoteDialog open onOpenChange={(o) => !o && setOpenNote(null)} record={record} initial={openNote} />}
     </Card>
   );
 }
 
-function noteStage(n: VoiceNote): { label: string; tone: 'neutral' | 'warning' | 'success' | 'primary' | 'critical' } {
+function noteStage(t: Translator, n: VoiceNote): { label: string; tone: 'neutral' | 'warning' | 'success' | 'primary' | 'critical' } {
   const applied = n.actions.filter((a) => a.status === 'applied').length;
-  if (applied > 0) return { label: `${applied} saved`, tone: 'success' };
-  if (n.transcriptionStatus === 'failed') return { label: 'Transcription failed', tone: 'critical' };
-  if (n.interpretedAt) return { label: n.actions.length ? 'Suggestions to review' : 'Nothing to save', tone: n.actions.length ? 'warning' : 'neutral' };
-  return { label: 'Draft', tone: 'neutral' };
+  if (applied > 0) return { label: t('{n} saved', { n: applied }), tone: 'success' };
+  if (n.transcriptionStatus === 'failed') return { label: t('Transcription failed'), tone: 'critical' };
+  if (n.interpretedAt) return { label: n.actions.length ? t('Suggestions to review') : t('Nothing to save'), tone: n.actions.length ? 'warning' : 'neutral' };
+  return { label: t('Draft'), tone: 'neutral' };
 }
 
 export function VoiceNoteDialog({ open, onOpenChange, record, initial }: { open: boolean; onOpenChange: (o: boolean) => void; record: VoiceRecordTarget | null; initial?: VoiceNote }) {
+  const t = useT();
   const [note, setNote] = useState<VoiceNote | null>(initial ?? null);
   const [editing, setEditing] = useState(!initial?.interpretedAt);
   const where = note?.record?.name ?? record?.name;
@@ -101,9 +106,11 @@ export function VoiceNoteDialog({ open, onOpenChange, record, initial }: { open:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-lg">
         <div className="pe-8">
-          <DialogTitle className="text-lg font-semibold">Voice note</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t('Voice note')}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            {where ? <>For {where}. </> : null}Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.
+            {where
+              ? t('For {name}. Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.', { name: where })
+              : t('Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.')}
           </DialogDescription>
         </div>
         {editing || !note?.interpretedAt ? (
@@ -125,6 +132,7 @@ export function VoiceNoteDialog({ open, onOpenChange, record, initial }: { open:
 }
 
 function Compose({ note, record, onNote, onInterpreted }: { note: VoiceNote | null; record: VoiceRecordTarget | null; onNote: (n: VoiceNote) => void; onInterpreted: (n: VoiceNote) => void }) {
+  const t = useT();
   const canAi = useCan('ai:use');
   const status = useVoiceTranscriptionStatus();
   const [mode, setMode] = useState<'type' | 'record'>(note?.source === 'recording' ? 'record' : 'type');
@@ -156,12 +164,12 @@ function Compose({ note, record, onNote, onInterpreted }: { note: VoiceNote | nu
   });
 
   if (locked) {
-    return <p className="text-sm text-muted-foreground">Some suggestions from this note are already saved, so the note can no longer be changed. Start a new voice note instead.</p>;
+    return <p className="text-sm text-muted-foreground">{t('Some suggestions from this note are already saved, so the note can no longer be changed. Start a new voice note instead.')}</p>;
   }
   const ready = status.data?.state !== 'pending_configuration' && !!status.data;
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="How to add the note" className="inline-flex rounded-md border border-border p-0.5 text-sm">
+      <div role="tablist" aria-label={t('How to add the note')} className="inline-flex rounded-md border border-border p-0.5 text-sm">
         {(['type', 'record'] as const).map((m) => (
           <button
             key={m}
@@ -171,16 +179,16 @@ function Compose({ note, record, onNote, onInterpreted }: { note: VoiceNote | nu
             onClick={() => setMode(m)}
             className={`rounded px-3 py-1 ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
           >
-            {m === 'type' ? 'Type' : 'Record'}
+            {m === 'type' ? t('Type') : t('Record')}
           </button>
         ))}
       </div>
 
-      <Field id="vn-language" label="Language" hint="Used for transcription. The suggestions are written in the language of the note.">
+      <Field id="vn-language" label={t('Language')} hint={t('Used for transcription. The suggestions are written in the language of the note.')}>
         <Select value={language} onChange={(e) => setLanguage(e.target.value as VoiceLanguage)}>
           {VOICE_LANGUAGES.map(([code, name]) => (
             <option key={code} value={code}>
-              {name}
+              {t.maybe(name)}
             </option>
           ))}
         </Select>
@@ -188,37 +196,37 @@ function Compose({ note, record, onNote, onInterpreted }: { note: VoiceNote | nu
 
       {mode === 'record' && (
         <div className="space-y-3 rounded-md border border-border p-3">
-          <TranscriptionBanner status={status.data} fallback="You can type the note instead." />
+          <TranscriptionBanner status={status.data} fallback={t('You can type the note instead.')} />
           <Recorder disabled={!ready || transcribe.isPending} busy={transcribe.isPending} onAudio={(blob) => transcribe.mutate(blob)} />
-          {note?.detectedLanguage && <p className="text-xs text-muted-foreground">Detected language: {languageName(note.detectedLanguage)}</p>}
+          {note?.detectedLanguage && <p className="text-xs text-muted-foreground">{t('Detected language: {language}', { language: t.maybe(languageName(note.detectedLanguage) ?? '') })}</p>}
           {transcribe.error && (
             <p role="alert" className="text-sm text-critical">
-              {transcribe.error.message}
+              {t.maybe(transcribe.error.message)}
             </p>
           )}
         </div>
       )}
 
       {(mode === 'type' || text) && (
-        <Field id="vn-text" label={mode === 'type' ? 'Your note' : 'Transcript (you can correct it)'}>
+        <Field id="vn-text" label={mode === 'type' ? t('Your note') : t('Transcript (you can correct it)')}>
           <Textarea
             rows={7}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Called Priya at Acme. Follow up tomorrow at 3 pm with the revised quote. Note that they want a 12 month contract."
+            placeholder={t('Called Priya at Acme. Follow up tomorrow at 3 pm with the revised quote. Note that they want a 12 month contract.')}
           />
         </Field>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => interpret.mutate(undefined)} disabled={!canAi || !text.trim() || interpret.isPending}>
-          <Sparkles aria-hidden /> {interpret.isPending ? 'Working it out…' : 'Suggest actions'}
+          <Sparkles aria-hidden /> {interpret.isPending ? t('Working it out…') : t('Suggest actions')}
         </Button>
-        {!canAi && <span className="text-xs text-muted-foreground">Your role cannot use AI features.</span>}
+        {!canAi && <span className="text-xs text-muted-foreground">{t('Your role cannot use AI features.')}</span>}
       </div>
       {interpret.error && (
         <p role="alert" className="text-sm text-critical">
-          {aiErrorMessage(interpret.error)}
+          {t.maybe(aiErrorMessage(interpret.error))}
         </p>
       )}
     </div>
@@ -227,6 +235,7 @@ function Compose({ note, record, onNote, onInterpreted }: { note: VoiceNote | nu
 
 /** Browser microphone recording. Consent is asked for every recording; the audio goes to the server once and is not kept. */
 function Recorder({ disabled, busy, onAudio }: { disabled: boolean; busy: boolean; onAudio: (b: Blob) => void }) {
+  const t = useT();
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<'idle' | 'recording' | 'done'>('idle');
   const [seconds, setSeconds] = useState(0);
@@ -245,7 +254,7 @@ function Recorder({ disabled, busy, onAudio }: { disabled: boolean; busy: boolea
   const start = async () => {
     setError(null);
     if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setError('This browser cannot record audio. Type the note instead.');
+      setError(t('This browser cannot record audio. Type the note instead.'));
       return;
     }
     try {
@@ -269,7 +278,7 @@ function Recorder({ disabled, busy, onAudio }: { disabled: boolean; busy: boolea
         });
       }, 1000);
     } catch {
-      setError('Microphone access was blocked. Allow it in the browser, or type the note instead.');
+      setError(t('Microphone access was blocked. Allow it in the browser, or type the note instead.'));
     }
   };
 
@@ -277,25 +286,25 @@ function Recorder({ disabled, busy, onAudio }: { disabled: boolean; busy: boolea
     <div className="space-y-3">
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" checked={consent} disabled={disabled || state === 'recording'} onChange={(e) => setConsent(e.target.checked)} />
-        <span>Everyone whose voice is on this recording agreed to it being transcribed.</span>
+        <span>{t('Everyone whose voice is on this recording agreed to it being transcribed.')}</span>
       </label>
       <div className="flex flex-wrap items-center gap-2">
         {state === 'recording' ? (
           <Button variant="outline" onClick={stop}>
-            <Square aria-hidden /> Stop ({clock(seconds)})
+            <Square aria-hidden /> {t('Stop ({time})', { time: clock(seconds) })}
           </Button>
         ) : (
           <Button variant="outline" onClick={() => void start()} disabled={disabled || !consent}>
-            <Mic aria-hidden /> {state === 'done' ? 'Record again' : 'Start recording'}
+            <Mic aria-hidden /> {state === 'done' ? t('Record again') : t('Start recording')}
           </Button>
         )}
         {state === 'done' && blob && (
           <Button onClick={() => onAudio(blob)} disabled={disabled || !consent}>
-            {busy ? 'Transcribing…' : `Transcribe ${clock(seconds)}`}
+            {busy ? t('Transcribing…') : t('Transcribe {time}', { time: clock(seconds) })}
           </Button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by DealFlow.</p>
+      <p className="text-xs text-muted-foreground">{t('Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by DealFlow.')}</p>
       {error && (
         <p role="alert" className="text-sm text-critical">
           {error}
@@ -313,6 +322,7 @@ function clean(a: VoiceAction): VoiceAction {
 }
 
 function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n: VoiceNote) => void; onEdit: () => void; onClose: () => void }) {
+  const t = useT();
   const [drafts, setDrafts] = useState<VoiceAction[]>(() => note.actions.map((a) => a.action));
   // A note on no record cannot be saved, so it starts unticked; the warning on it says why.
   const [picked, setPicked] = useState<boolean[]>(() => note.actions.map((a) => a.status === 'proposed' && !(a.action.type === 'add_note' && !note.record)));
@@ -336,7 +346,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
     for (const i of chosen) {
       const parsed = voiceActionSchema.safeParse(clean(drafts[i]!));
       if (parsed.success) items.push({ index: i, action: parsed.data });
-      else errs[i] = parsed.error.issues.map((x) => x.message).join('. ');
+      else errs[i] = parsed.error.issues.map((x) => t.maybe(x.message)).join('. ');
     }
     setErrors(errs);
     if (Object.keys(errs).length === 0 && items.length) apply.mutate(items);
@@ -346,57 +356,57 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
     <div className="space-y-4">
       <section className="space-y-1 rounded-md border border-border bg-muted/40 p-3 text-sm">
         <div className="flex items-center gap-2">
-          <Badge tone="accent">AI suggestion</Badge>
-          <span className="text-xs text-muted-foreground">Check each item before saving.</span>
+          <Badge tone="accent">{t('AI suggestion')}</Badge>
+          <span className="text-xs text-muted-foreground">{t('Check each item before saving.')}</span>
         </div>
         {note.summary && <p>{note.summary}</p>}
         <details className="text-xs text-muted-foreground">
-          <summary className="cursor-pointer">Your note</summary>
+          <summary className="cursor-pointer">{t('Your note')}</summary>
           <p className="mt-1 whitespace-pre-wrap">{note.transcript}</p>
         </details>
       </section>
 
       {note.lastCall && (
-        <section aria-label="Last call" className="space-y-1 rounded-md border border-border p-3 text-sm">
+        <section aria-label={t('Last call')} className="space-y-1 rounded-md border border-border p-3 text-sm">
           <h3 className="font-semibold">
-            Last call: {note.lastCall.title} <span className="font-normal text-muted-foreground">({relativeTime(note.lastCall.occurredAt)})</span>
+            {t('Last call: {title}', { title: note.lastCall.title })} <span className="font-normal text-muted-foreground">({relativeTime(note.lastCall.occurredAt)})</span>
           </h3>
           <p className="whitespace-pre-wrap">{note.lastCall.summary}</p>
           <p className="text-xs text-muted-foreground">
-            {note.lastCall.source === 'meeting_record' ? 'From the saved meeting summary.' : 'From the logged activity.'}{' '}
+            {note.lastCall.source === 'meeting_record' ? t('From the saved meeting summary.') : t('From the logged activity.')}{' '}
             <Link className="text-primary underline underline-offset-2" href={note.lastCall.link}>
-              Open
+              {t('Open')}
             </Link>
           </p>
         </section>
       )}
-      {note.lastCallMissing && <p className="text-sm text-muted-foreground">You asked about the last call, but there is no logged call or meeting summary to show yet.</p>}
+      {note.lastCallMissing && <p className="text-sm text-muted-foreground">{t('You asked about the last call, but there is no logged call or meeting summary to show yet.')}</p>}
 
       {note.unsupported.length > 0 && (
-        <section aria-label="Not done" className="space-y-1 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm">
+        <section aria-label={t('Not done')} className="space-y-1 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm">
           <h3 className="flex items-center gap-1.5 font-semibold">
-            <AlertTriangle className="size-4 text-warning" aria-hidden /> Not done from a voice note
+            <AlertTriangle className="size-4 text-warning" aria-hidden /> {t('Not done from a voice note')}
           </h3>
           <ul className="list-disc ps-5">
             {note.unsupported.map((u) => (
-              <li key={u}>{u}</li>
+              <li key={u}>{t.maybe(u)}</li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">Deleting records, sending email and changing amounts, stages or owners always need you to do it yourself on the record.</p>
+          <p className="text-xs text-muted-foreground">{t('Deleting records, sending email and changing amounts, stages or owners always need you to do it yourself on the record.')}</p>
         </section>
       )}
 
       {note.actions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing in this note looks like a task, note, lead or contact to save.</p>
+        <p className="text-sm text-muted-foreground">{t('Nothing in this note looks like a task, note, lead or contact to save.')}</p>
       ) : (
-        <ul className="space-y-3" aria-label="Suggested actions">
+        <ul className="space-y-3" aria-label={t('Suggested actions')}>
           {note.actions.map((s, i) => (
             <li key={i} className="space-y-2 rounded-md border border-border p-3">
               <div className="flex items-center gap-2">
                 {s.status === 'proposed' ? (
                   <input
                     type="checkbox"
-                    aria-label={`Save ${VOICE_ACTION_LABELS[s.action.type]} ${i + 1}`}
+                    aria-label={t('Save {kind} {n}', { kind: t.maybe(VOICE_ACTION_LABELS[s.action.type]), n: i + 1 })}
                     className="size-4 accent-[hsl(var(--primary))]"
                     checked={picked[i] ?? false}
                     onChange={(e) => setPicked((p) => p.map((v, j) => (j === i ? e.target.checked : v)))}
@@ -404,21 +414,21 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
                 ) : (
                   <Check className="size-4 text-success" aria-hidden />
                 )}
-                <Badge tone="primary">{VOICE_ACTION_LABELS[s.action.type]}</Badge>
+                <Badge tone="primary">{t.maybe(VOICE_ACTION_LABELS[s.action.type])}</Badge>
                 {s.status === 'applied' && s.result && (
                   <Link href={s.result.link} className="ms-auto inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2">
-                    Saved <ExternalLink className="size-3" aria-hidden />
+                    {t('Saved')} <ExternalLink className="size-3" aria-hidden />
                   </Link>
                 )}
               </div>
               {s.status === 'proposed' ? (
                 <ActionFields id={`va-${i}`} action={drafts[i]!} onChange={(a) => setDrafts((d) => d.map((x, j) => (j === i ? a : x)))} />
               ) : (
-                <p className="text-sm">{describe(s.action)}</p>
+                <p className="text-sm">{describe(t, s.action)}</p>
               )}
               {s.warnings.map((w) => (
                 <p key={w} className="text-xs text-warning">
-                  {w}
+                  {t.maybe(w)}
                 </p>
               ))}
               {errors[i] && (
@@ -434,32 +444,32 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
         {chosen.length > 0 && (
           <Button onClick={save} disabled={apply.isPending}>
-            <Check aria-hidden /> {apply.isPending ? 'Saving…' : `Save ${chosen.length} selected`}
+            <Check aria-hidden /> {apply.isPending ? t('Saving…') : t('Save {n} selected', { n: chosen.length })}
           </Button>
         )}
         {!anyApplied && (
           <Button variant="outline" onClick={onEdit}>
-            <Pencil aria-hidden /> Change the note
+            <Pencil aria-hidden /> {t('Change the note')}
           </Button>
         )}
         <Button variant="ghost" className="ms-auto text-critical" onClick={() => remove.mutate(undefined)} disabled={remove.isPending}>
-          <Trash2 aria-hidden /> Delete note
+          <Trash2 aria-hidden /> {t('Delete note')}
         </Button>
       </div>
-      {anyApplied && <p className="text-xs text-muted-foreground">Deleting this note does not remove what you already saved.</p>}
+      {anyApplied && <p className="text-xs text-muted-foreground">{t('Deleting this note does not remove what you already saved.')}</p>}
       {(apply.error || remove.error) && (
         <p role="alert" className="text-sm text-critical">
-          {(apply.error ?? remove.error)!.message}
+          {t.maybe((apply.error ?? remove.error)!.message)}
         </p>
       )}
     </div>
   );
 }
 
-function describe(a: VoiceAction): string {
+function describe(t: Translator, a: VoiceAction): string {
   switch (a.type) {
     case 'create_task':
-      return [a.title, a.dueDate && `due ${a.dueDate}${a.dueTime ? ` ${a.dueTime}` : ''}`].filter(Boolean).join(', ');
+      return [a.title, a.dueDate && t('due {when}', { when: a.dueTime ? `${a.dueDate} ${a.dueTime}` : a.dueDate })].filter(Boolean).join(', ');
     case 'add_note':
       return a.body;
     case 'create_lead':
@@ -470,9 +480,10 @@ function describe(a: VoiceAction): string {
 }
 
 function ActionFields({ id, action, onChange }: { id: string; action: VoiceAction; onChange: (a: VoiceAction) => void }) {
+  const t = useT();
   const set = (k: string, v: unknown) => onChange({ ...action, [k]: v } as VoiceAction);
   const text = (k: string, label: string, opts: { type?: string } = {}) => (
-    <Field id={`${id}-${k}`} label={label}>
+    <Field id={`${id}-${k}`} label={t.maybe(label)}>
       <Input type={opts.type ?? 'text'} value={((action as Record<string, unknown>)[k] as string | null) ?? ''} onChange={(e) => set(k, e.target.value)} />
     </Field>
   );
@@ -485,13 +496,13 @@ function ActionFields({ id, action, onChange }: { id: string; action: VoiceActio
           {text('dueTime', 'Time', { type: 'time' })}
           <label className="flex items-start gap-2 text-sm sm:col-span-2">
             <input type="checkbox" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" checked={action.meeting} onChange={(e) => set('meeting', e.target.checked)} />
-            <span>This is a meeting to arrange. It is saved as a task; no calendar invite is sent.</span>
+            <span>{t('This is a meeting to arrange. It is saved as a task; no calendar invite is sent.')}</span>
           </label>
         </div>
       );
     case 'add_note':
       return (
-        <Field id={`${id}-body`} label="Note">
+        <Field id={`${id}-body`} label={t('Note')}>
           <Textarea rows={3} value={action.body} onChange={(e) => set('body', e.target.value)} />
         </Field>
       );

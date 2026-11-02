@@ -24,6 +24,18 @@ interface Pattern {
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * Placeholders that only ever carry a number or a date match only one, so a pattern such as "Expected {date}" never
+ * turns ordinary text ("Expected revenue") into a sentence.
+ */
+const NUMBER_SLOT = new Set(['n', 'count', 'given', 'days', 'score', 'health', 'percent', 'before', 'opened', 'clicked', 'replied', 'sent', 'amount', 'max', 'min']);
+const DATE_SLOT = new Set(['date', 'start', 'end']);
+function slot(name: string): string {
+  if (NUMBER_SLOT.has(name)) return '(-?\\d[\\d.,]*)';
+  if (DATE_SLOT.has(name)) return '(\\d{4}-\\d{2}-\\d{2})';
+  return '([\\s\\S]+?)';
+}
+
 /** The placeholder names of a phrase, in order. */
 export function placeholdersOf(text: string): string[] {
   return [...text.matchAll(PLACEHOLDER)].map((m) => m[1]!);
@@ -56,7 +68,7 @@ export class TextCatalogue {
         if (!names.length) continue;
         const pieces = key.split(PLACEHOLDER);
         // split() with a capture group alternates literal, name, literal, name, …
-        const source = pieces.map((p, i) => (i % 2 === 1 ? '([\\s\\S]+?)' : escapeRe(p))).join('');
+        const source = pieces.map((p, i) => (i % 2 === 1 ? slot(p) : escapeRe(p))).join('');
         const weight = pieces.filter((_, i) => i % 2 === 0).join('').length;
         this.patterns.push({ key, re: new RegExp(`^${source}$`), names, row, weight });
       }
@@ -111,9 +123,14 @@ export class TextCatalogue {
     return text;
   }
 
+  /** A carried value that is a phrase, or a comma-separated list of phrases ("No open task, No amount"). */
   private exactIn(language: LanguageCode, value: string): string | undefined {
+    const col = COLUMN[language as Exclude<LanguageCode, 'en'>];
     const row = this.exact.get(value);
-    return row ? row[COLUMN[language as Exclude<LanguageCode, 'en'>]] : undefined;
+    if (row) return row[col];
+    const parts = value.split(', ');
+    if (parts.length < 2 || !parts.every((p) => this.exact.has(p))) return undefined;
+    return parts.map((p) => this.exact.get(p)![col]).join(language === 'ar' ? '، ' : ', ');
   }
 }
 

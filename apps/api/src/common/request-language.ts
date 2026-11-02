@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { type LanguageCode, pickLanguage, SERVER_TEXT, type TextVars } from '@dealflow/types';
+import { ALL_SERVER_TEXT, type LanguageCode, NOTIFICATION_TEXT, pickLanguage, SERVER_TEXT, type TextVars } from '@dealflow/types';
 
 const store = new AsyncLocalStorage<LanguageCode>();
 
@@ -25,7 +25,7 @@ export function inLanguage<T>(language: LanguageCode, fn: () => T): T {
 
 /** Writes a server phrase in the request's language: `tr('Closes in {days} days', { days })`. */
 export function tr(key: string, vars?: TextVars): string {
-  return SERVER_TEXT.say(requestLanguage(), key, vars);
+  return ALL_SERVER_TEXT.say(requestLanguage(), key, vars, requestLocale());
 }
 
 /** Translates finished English text (an error message, a validation message) into `language`. */
@@ -33,4 +33,24 @@ export function localize(text: string, language: LanguageCode = requestLanguage(
   return SERVER_TEXT.localize(language, text);
 }
 
+/** Translates a stored notification title or body into the request's language. */
+export function localizeNotification(text: string, language: LanguageCode = requestLanguage()): string {
+  return NOTIFICATION_TEXT.localize(language, text);
+}
+
 export { pickLanguage };
+
+/** The number format for the request's language; English keeps the US format the API has always used. */
+export function requestLocale(language: LanguageCode = requestLanguage()): string {
+  return language === 'en' ? 'en-US' : language;
+}
+
+/** A whole amount in `currency`, in the request's number format ("$5,000", "5.000 $"). */
+export function money(amount: number, currency: string): string {
+  return new Intl.NumberFormat(requestLocale(), { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+}
+
+/** A percentage already multiplied by 100 ("12.5%", "12,5 %"). */
+export function percent(value: number): string {
+  return new Intl.NumberFormat(requestLocale(), { style: 'percent', maximumFractionDigits: 1 }).format(value / 100);
+}

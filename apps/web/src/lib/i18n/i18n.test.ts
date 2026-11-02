@@ -132,7 +132,8 @@ describe('page phrases', () => {
     // Sent by the API: KPI names and onboarding steps (dashboard), buying signals and flags (record intelligence),
     // deal health risk signals (scoring). Read from the API source so a new label fails here until it is translated.
     ['dashboard API labels', [...source('../../../../api/src/dashboard/dashboard.service.ts').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
-    ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
+    // The API now writes these with tr() in the reader's language; the page keeps the same rows for stored responses.
+    ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: tr\('([^']+)'\)/g)].map((m) => m[1]!)],
     ['deal health signals', [...source('../../../../api/src/ai/scoring.ts').matchAll(/risk\('\w+', '([^']+)'/g)].map((m) => m[1]!)],
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
     // Sign-in errors and the validation messages of the shared auth schemas, shown through t.maybe() on the auth pages.

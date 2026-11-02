@@ -164,7 +164,7 @@ export function visitorIntent(input: IntentInput, importantPages: ImportantPage[
     byPage.set(page.label, cur);
   }
   for (const { page, views } of [...byPage.values()].sort((a, b) => b.page.weight - a.page.weight)) {
-    signals.push({ key: `page:${page.label}`, label: `Viewed ${page.label}${views > 1 ? ` (${views} times)` : ''}`, points: page.weight });
+    signals.push({ key: `page:${page.label}`, label: views > 1 ? `Viewed ${page.label} (${views} times)` : `Viewed ${page.label}`, points: page.weight });
   }
   if (input.engagedSeconds >= 600) signals.push({ key: 'engaged', label: `${Math.round(input.engagedSeconds / 60)} minutes on the site`, points: 15 });
   else if (input.engagedSeconds >= 180) signals.push({ key: 'engaged', label: `${Math.round(input.engagedSeconds / 60)} minutes on the site`, points: 10 });

@@ -139,12 +139,12 @@ export function customerHealth(h: HealthInput): { score: number; band: HealthBan
   if (h.lastActivityDays === null) signals.push({ key: 'no_activity', label: 'No logged activity', points: 30, detail: 'No calls, emails, meetings or notes recorded.' });
   else if (h.lastActivityDays >= 60) signals.push({ key: 'quiet_60', label: 'Quiet for 60+ days', points: 30, detail: `Last activity ${h.lastActivityDays} days ago.` });
   else if (h.lastActivityDays >= 30) signals.push({ key: 'quiet_30', label: 'Quiet for 30+ days', points: 15, detail: `Last activity ${h.lastActivityDays} days ago.` });
-  for (const s of h.openEscalations) signals.push({ key: `escalation_${s.toLowerCase()}`, label: `Open ${s.toLowerCase()} escalation`, points: SEVERITY_POINTS[s], detail: 'Unresolved escalation.' });
+  for (const s of h.openEscalations) signals.push({ key: `escalation_${s.toLowerCase()}`, label: { LOW: 'Open low escalation', MEDIUM: 'Open medium escalation', HIGH: 'Open high escalation', CRITICAL: 'Open critical escalation' }[s], points: SEVERITY_POINTS[s], detail: 'Unresolved escalation.' });
   if (h.daysToRenewal !== null && h.daysToRenewal <= 60 && !h.renewalInProgress) {
     const near = h.daysToRenewal <= 30;
     signals.push({ key: near ? 'renewal_30' : 'renewal_60', label: near ? 'Renewal within 30 days' : 'Renewal within 60 days', points: near ? 25 : 15, detail: h.daysToRenewal < 0 ? `Contract ended ${-h.daysToRenewal} days ago with no renewal.` : `Contract ends in ${h.daysToRenewal} days and no renewal has been started.` });
   }
-  if (h.overdueTasks > 0) signals.push({ key: 'overdue_tasks', label: 'Overdue tasks', points: Math.min(15, h.overdueTasks * 5), detail: `${h.overdueTasks} overdue task${h.overdueTasks === 1 ? '' : 's'}.` });
+  if (h.overdueTasks > 0) signals.push({ key: 'overdue_tasks', label: 'Overdue tasks', points: Math.min(15, h.overdueTasks * 5), detail: h.overdueTasks === 1 ? '1 overdue task.' : `${h.overdueTasks} overdue tasks.` });
   if (h.engagement && engagementTrend(h.engagement) === 'declining')
     signals.push({ key: 'declining_engagement', label: 'Engagement is falling', points: 15, detail: `${h.engagement.last30} touches in the last 30 days, down from ${h.engagement.previous30} the 30 days before.` });
   if (h.openRequests && h.openRequests.count > 0)
@@ -152,9 +152,12 @@ export function customerHealth(h: HealthInput): { score: number; band: HealthBan
       key: 'open_requests',
       label: 'Open customer requests',
       points: Math.min(15, h.openRequests.count * 5),
-      detail: `${h.openRequests.count} open request${h.openRequests.count === 1 ? '' : 's'} in the client portal, oldest ${h.openRequests.oldestDays} day${h.openRequests.oldestDays === 1 ? '' : 's'}.`,
+      detail: (h.openRequests.count === 1
+        ? h.openRequests.oldestDays === 1 ? '{n} open request in the client portal, oldest {days} day.' : '{n} open request in the client portal, oldest {days} days.'
+        : h.openRequests.oldestDays === 1 ? '{n} open requests in the client portal, oldest {days} day.' : '{n} open requests in the client portal, oldest {days} days.'
+      ).replace('{n}', String(h.openRequests.count)).replace('{days}', String(h.openRequests.oldestDays)),
     });
-  if (h.lostDeals90 && h.lostDeals90 > 0) signals.push({ key: 'lost_deal', label: 'Recently lost a deal', points: 10, detail: `${h.lostDeals90} deal${h.lostDeals90 === 1 ? '' : 's'} with them lost in the last 90 days.` });
+  if (h.lostDeals90 && h.lostDeals90 > 0) signals.push({ key: 'lost_deal', label: 'Recently lost a deal', points: 10, detail: h.lostDeals90 === 1 ? '1 deal with them lost in the last 90 days.' : `${h.lostDeals90} deals with them lost in the last 90 days.` });
   const score = Math.max(0, 100 - signals.reduce((a, s) => a + s.points, 0));
   return { score, band: score >= 70 ? 'healthy' : score >= 40 ? 'watch' : 'at_risk', signals };
 }

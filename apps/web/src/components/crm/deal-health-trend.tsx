@@ -57,7 +57,7 @@ export function DealHealthTrend({ dealId }: { dealId: string }) {
               <ul className="list-inside list-disc text-xs text-muted-foreground">
                 {q.data.current.signals.map((s) => (
                   <li key={s.key}>
-                    {t.maybe(s.label)}: {s.detail}
+                    {t.maybe(s.label)}: {t.maybe(s.detail)}
                   </li>
                 ))}
               </ul>

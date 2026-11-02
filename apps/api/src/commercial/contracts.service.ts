@@ -185,7 +185,9 @@ export class ContractsService {
             if (!c.renewal) {
               const days = daysBetween(today(), ymd(c.endDate));
               await this.notifications.send(tx, d.tenant_id, [c.ownerId], {
-                type: 'contract.renewal_due', title: `Renewal due: ${ref}`, body: `${c.name} ends in ${days} day${days === 1 ? '' : 's'} (${ymd(c.endDate)}).${c.autoRenew ? ' It is marked to auto-renew; start the renewal to record the next term.' : ''}`, link: `/app/contracts/${c.id}`,
+                type: 'contract.renewal_due', title: `Renewal due: ${ref}`, body: c.autoRenew
+                  ? days === 1 ? `${c.name} ends in ${days} day (${ymd(c.endDate)}). It is marked to auto-renew; start the renewal to record the next term.` : `${c.name} ends in ${days} days (${ymd(c.endDate)}). It is marked to auto-renew; start the renewal to record the next term.`
+                  : days === 1 ? `${c.name} ends in ${days} day (${ymd(c.endDate)}).` : `${c.name} ends in ${days} days (${ymd(c.endDate)}).`, link: `/app/contracts/${c.id}`,
               });
             }
           }

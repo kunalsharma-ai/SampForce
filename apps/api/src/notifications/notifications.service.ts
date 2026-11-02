@@ -3,6 +3,7 @@ import type { TenantTx } from '@dealflow/database';
 import type { NotificationRow } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { localizeNotification } from '../common/request-language';
 
 export interface NotificationDraft {
   type: string;
@@ -27,8 +28,9 @@ export class NotificationsService {
         items: rows.map((r) => ({
           id: r.id,
           type: r.type,
-          title: r.title,
-          body: r.body,
+          // Stored in English when the event happened; shown in the reader's language (ADR 0052).
+          title: localizeNotification(r.title),
+          body: r.body === null ? null : localizeNotification(r.body),
           link: r.link,
           readAt: r.readAt?.toISOString() ?? null,
           createdAt: r.createdAt.toISOString(),

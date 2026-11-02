@@ -3,6 +3,7 @@ import type { TenantTx } from '@dealflow/database';
 import type { BuyingSignal, DecisionMaker, RecordIntelligence, TimelineEntity } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { localize, tr } from '../common/request-language';
 import { notFound } from '../crm/crm-helpers';
 
 const DAY = 86_400_000;
@@ -64,10 +65,10 @@ export class RecordIntelligenceService {
       const signals: BuyingSignal[] = [];
       if (can('activities:read') && personOr.length) {
         const replies = await tx.emailMessage.findMany({ where: { tenantId: t, direction: 'INBOUND', sentAt: { gte: d30 }, OR: personOr }, orderBy: { sentAt: 'desc' }, take: 3, select: { id: true, subject: true, sentAt: true, fromAddress: true } });
-        for (const r of replies) signals.push({ key: `reply:${r.id}`, label: 'Wrote to you', detail: `${r.fromAddress}: "${r.subject || '(no subject)'}"`, at: r.sentAt.toISOString(), confirmed: true });
+        for (const r of replies) signals.push({ key: `reply:${r.id}`, label: tr('Wrote to you'), detail: `${r.fromAddress}: "${r.subject || tr('(no subject)')}"`, at: r.sentAt.toISOString(), confirmed: true });
         if (p.contactIds.length) {
           const upcoming = await tx.meeting.findFirst({ where: { tenantId: t, canceled: false, startsAt: { gte: now }, contactIds: { hasSome: p.contactIds } }, orderBy: { startsAt: 'asc' }, select: { title: true, startsAt: true } });
-          if (upcoming) signals.push({ key: 'meeting_booked', label: 'Meeting booked', detail: upcoming.title, at: upcoming.startsAt.toISOString(), confirmed: true });
+          if (upcoming) signals.push({ key: 'meeting_booked', label: tr('Meeting booked'), detail: upcoming.title, at: upcoming.startsAt.toISOString(), confirmed: true });
         }
       }
       if (can('sequences:read') && personOr.length) {
@@ -78,27 +79,27 @@ export class RecordIntelligenceService {
           select: { type: true, url: true, createdAt: true, messageId: true },
         });
         const clicks = events.filter((e) => e.type === 'CLICKED');
-        if (clicks[0]) signals.push({ key: 'clicked', label: `Clicked ${clicks.length === 1 ? 'a link' : `${clicks.length} links`} in your emails`, detail: clicks[0].url ?? '', at: clicks[0].createdAt.toISOString(), confirmed: true });
+        if (clicks[0]) signals.push({ key: 'clicked', label: clicks.length === 1 ? tr('Clicked a link in your emails') : tr('Clicked {n} links in your emails', { n: clicks.length }), detail: clicks[0].url ?? '', at: clicks[0].createdAt.toISOString(), confirmed: true });
         const openedMessages = new Set(events.filter((e) => e.type === 'OPENED').map((e) => e.messageId));
         if (openedMessages.size >= 2) {
           const first = events.find((e) => e.type === 'OPENED')!;
-          signals.push({ key: 'opened_several', label: `Opened ${openedMessages.size} of your emails (estimate)`, detail: 'Opens are approximate: privacy features and scanners can load images.', at: first.createdAt.toISOString(), confirmed: false });
+          signals.push({ key: 'opened_several', label: tr('Opened {n} of your emails (estimate)', { n: openedMessages.size }), detail: tr('Opens are approximate: privacy features and scanners can load images.'), at: first.createdAt.toISOString(), confirmed: false });
         }
       }
       if (can('marketing:read') && p.leadIds.length) {
         const form = await tx.formSubmission.findFirst({ where: { tenantId: t, leadId: { in: p.leadIds }, createdAt: { gte: new Date(now.getTime() - 90 * DAY) } }, orderBy: { createdAt: 'desc' }, include: { form: { select: { name: true } } } });
-        if (form) signals.push({ key: 'form', label: 'Filled in a form', detail: form.form.name, at: form.createdAt.toISOString(), confirmed: true });
+        if (form) signals.push({ key: 'form', label: tr('Filled in a form'), detail: form.form.name, at: form.createdAt.toISOString(), confirmed: true });
       }
       if (can('deals:read') && p.dealIds.length) {
         const moved = await tx.dealStageEvent.findFirst({ where: { tenantId: t, opportunityId: { in: p.dealIds }, fromStageId: { not: null }, occurredAt: { gte: new Date(now.getTime() - 14 * DAY) } }, orderBy: { occurredAt: 'desc' }, select: { occurredAt: true, toStageId: true, opportunity: { select: { name: true } } } });
         if (moved) {
           const stage = await tx.pipelineStage.findUnique({ where: { id: moved.toStageId }, select: { name: true } });
-          signals.push({ key: 'stage_moved', label: 'Deal moved forward', detail: `${moved.opportunity.name} to ${stage?.name ?? 'a new stage'}`, at: moved.occurredAt.toISOString(), confirmed: true });
+          signals.push({ key: 'stage_moved', label: tr('Deal moved forward'), detail: stage ? tr('{deal} to {stage}', { deal: moved.opportunity.name, stage: localize(stage.name) }) : tr('{deal} to a new stage', { deal: moved.opportunity.name }), at: moved.occurredAt.toISOString(), confirmed: true });
         }
       }
       if (can('quotes:read') && p.dealIds.length) {
         const q = await tx.quote.findFirst({ where: { tenantId: t, opportunityId: { in: p.dealIds }, status: 'ACCEPTED', decidedAt: { gte: d60 } }, orderBy: { decidedAt: 'desc' }, select: { decidedAt: true, title: true } });
-        if (q) signals.push({ key: 'quote_accepted', label: 'Accepted a quote', detail: q.title, at: q.decidedAt!.toISOString(), confirmed: true });
+        if (q) signals.push({ key: 'quote_accepted', label: tr('Accepted a quote'), detail: q.title, at: q.decidedAt!.toISOString(), confirmed: true });
       }
       signals.sort((a, b) => b.at.localeCompare(a.at));
 
@@ -151,10 +152,10 @@ export class RecordIntelligenceService {
 
       const flags: RecordIntelligence['flags'] = [];
       const lastTouch = [lastInbound, lastOutbound].filter((x): x is Date => !!x).sort((a, b) => b.getTime() - a.getTime())[0];
-      if (last30 === 0 && (previous30 > 0 || (lastTouch && lastTouch < d60))) flags.push({ key: 'inactive', label: 'No contact in the last 30 days' });
-      if (trend === 'declining') flags.push({ key: 'declining', label: 'Engagement is falling' });
-      if (signals.filter((s) => s.confirmed).length >= 2) flags.push({ key: 'high_intent', label: 'Several buying signals recently' });
-      if (decisionMakers && decisionMakers.length === 0 && entity !== 'lead') flags.push({ key: 'no_decision_maker', label: 'No senior contact recorded at this company' });
+      if (last30 === 0 && (previous30 > 0 || (lastTouch && lastTouch < d60))) flags.push({ key: 'inactive', label: tr('No contact in the last 30 days') });
+      if (trend === 'declining') flags.push({ key: 'declining', label: tr('Engagement is falling') });
+      if (signals.filter((s) => s.confirmed).length >= 2) flags.push({ key: 'high_intent', label: tr('Several buying signals recently') });
+      if (decisionMakers && decisionMakers.length === 0 && entity !== 'lead') flags.push({ key: 'no_decision_maker', label: tr('No senior contact recorded at this company') });
 
       return {
         engagement: { last30, previous30, trend, lastInboundAt: lastInbound?.toISOString() ?? null, lastOutboundAt: lastOutbound?.toISOString() ?? null },

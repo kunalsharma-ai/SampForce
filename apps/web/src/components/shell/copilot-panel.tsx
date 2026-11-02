@@ -11,9 +11,11 @@ import { Textarea } from '@/components/crm/select';
 import { aiErrorMessage, agentReason, useAiStatus } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 
-const EXAMPLES = ['Brief me on my week: what needs attention?', 'Summarise my open pipeline.', 'Which of my deals close this month?', 'What tasks are overdue?'];
+/** Example questions; each is translated when shown, and the translated wording is what gets asked. */
+const EXAMPLES = ['Brief me on my week: what needs attention?', 'Summarise my open pipeline.', 'Which of my deals close this month?', 'What tasks are overdue?'] as const;
 
 const citationHref = (c: Citation) => (c.entity === 'task' ? '/app/activities' : `/app/${c.entity === 'company' ? 'companies' : `${c.entity}s`}/${c.id}`);
 
@@ -28,6 +30,7 @@ interface Turn {
  * shown as a proposal that does nothing until the person confirms it, and is permission-checked again then.
  */
 export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const tr = useT();
   const canUse = useCan('ai:use');
   const status = useAiStatus(open);
   const qc = useQueryClient();
@@ -81,9 +84,9 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
             <Bot className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-lg font-semibold">DealFlow Copilot</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">{tr('DealFlow Copilot')}</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Reads what your role can read. Changes wait for you to confirm.
+              {tr('Reads what your role can read. Changes wait for you to confirm.')}
             </DialogDescription>
           </div>
           {turns.length > 0 && (
@@ -95,35 +98,35 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
                 setConversationId(undefined);
               }}
             >
-              <RotateCcw aria-hidden /> New chat
+              <RotateCcw aria-hidden /> {tr('New chat')}
             </Button>
           )}
         </div>
 
         {!canUse ? (
-          <p className="px-5 text-sm text-muted-foreground">Your role does not include AI features (ai:use). Ask a workspace admin if you need them.</p>
+          <p className="px-5 text-sm text-muted-foreground">{tr('Your role does not include AI features (ai:use). Ask a workspace admin if you need them.')}</p>
         ) : (
           <>
             <div className="flex-1 space-y-4 overflow-y-auto px-5" aria-live="polite">
               {reason && (
                 <div role="status" className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-                  <span>{reason}</span>
+                  <span>{tr.maybe(reason)}</span>
                 </div>
               )}
               {turns.length === 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">Ask about your leads, deals, contacts and tasks. Try:</p>
+                  <p className="text-sm text-muted-foreground">{tr('Ask about your leads, deals, contacts and tasks. Try:')}</p>
                   <ul className="space-y-2">
                     {EXAMPLES.map((e) => (
                       <li key={e}>
                         <button
                           type="button"
                           disabled={!!reason || ask.isPending}
-                          onClick={() => submit(e)}
+                          onClick={() => submit(tr(e))}
                           className="w-full rounded-md border border-border bg-surface-raised/60 px-3 py-2 text-start text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {e}
+                          {tr(e)}
                         </button>
                       </li>
                     ))}
@@ -131,7 +134,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
                   <div className="flex gap-3 rounded-md border border-border p-3 text-sm">
                     <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                     <p className="text-muted-foreground">
-                      Copilot cannot send email, change amounts or prices, export data or change security settings. Every question and every confirmed change is recorded.
+                      {tr('Copilot cannot send email, change amounts or prices, export data or change security settings. Every question and every confirmed change is recorded.')}
                     </p>
                   </div>
                 </div>
@@ -141,11 +144,11 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
                   <p className="ms-8 rounded-lg bg-primary/10 px-3 py-2 text-sm">{t.question}</p>
                   {t.error ? (
                     <p role="alert" className="me-8 rounded-lg border border-critical/40 px-3 py-2 text-sm text-critical">
-                      {t.error}
+                      {tr.maybe(t.error)}
                     </p>
                   ) : !t.answer ? (
                     <p className="me-8 flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin" aria-hidden /> Looking through your CRM…
+                      <Loader2 className="size-4 animate-spin" aria-hidden /> {tr('Looking through your CRM…')}
                     </p>
                   ) : (
                     <AnswerView answer={t.answer} onAction={(a) => updateAction(t.answer!.runId, a)} />
@@ -163,11 +166,11 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               }}
             >
               <label htmlFor="copilot-question" className="sr-only">
-                Ask Copilot
+                {tr('Ask Copilot')}
               </label>
               <Textarea
                 id="copilot-question"
-                placeholder={reason ? 'Copilot is unavailable' : 'Ask about your pipeline…'}
+                placeholder={reason ? tr('Copilot is unavailable') : tr('Ask about your pipeline…')}
                 value={question}
                 disabled={!!reason}
                 maxLength={2000}
@@ -183,11 +186,11 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
               <div className="flex items-center gap-2">
                 {credits && (
                   <span className="text-xs text-muted-foreground">
-                    {credits.remaining.toLocaleString(fmtLocale())} of {credits.limit.toLocaleString(fmtLocale())} AI credits left this month
+                    {tr('{remaining} of {limit} AI credits left this month', { remaining: credits.remaining.toLocaleString(fmtLocale()), limit: credits.limit.toLocaleString(fmtLocale()) })}
                   </span>
                 )}
                 <Button type="submit" size="sm" className="ms-auto" disabled={!question.trim() || ask.isPending || !!reason}>
-                  <Send aria-hidden /> Ask
+                  <Send aria-hidden /> {tr('Ask')}
                 </Button>
               </div>
             </form>
@@ -199,11 +202,13 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
 }
 
 function AnswerView({ answer, onAction }: { answer: CopilotAnswer; onAction: (a: ProposedAction) => void }) {
+  const tr = useT();
+  const looked = [...new Set(answer.toolsUsed)].join(', ').replaceAll('_', ' ');
   return (
     <div className="me-8 space-y-2 rounded-lg border border-border px-3 py-2">
       <p className="whitespace-pre-wrap text-sm">{answer.answer}</p>
       {answer.citations.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" aria-label="Sources">
+        <div className="flex flex-wrap gap-1.5" aria-label={tr('Sources')}>
           {answer.citations.map((c) => (
             <Link key={`${c.entity}-${c.id}`} href={citationHref(c)} className="rounded-full border border-border px-2 py-0.5 text-xs text-primary hover:bg-muted">
               {c.label}
@@ -215,14 +220,16 @@ function AnswerView({ answer, onAction }: { answer: CopilotAnswer; onAction: (a:
         <ActionCard key={a.id} runId={answer.runId} action={a} onChange={onAction} />
       ))}
       <p className="text-[11px] text-muted-foreground">
-        {answer.creditsUsed} credit{answer.creditsUsed === 1 ? '' : 's'}
-        {answer.toolsUsed.length > 0 && ` · looked at: ${[...new Set(answer.toolsUsed)].join(', ').replaceAll('_', ' ')}`}
+        {answer.toolsUsed.length > 0
+          ? answer.creditsUsed === 1 ? tr('{n} credit · looked at: {tools}', { n: answer.creditsUsed, tools: looked }) : tr('{n} credits · looked at: {tools}', { n: answer.creditsUsed, tools: looked })
+          : answer.creditsUsed === 1 ? tr('{n} credit', { n: answer.creditsUsed }) : tr('{n} credits', { n: answer.creditsUsed })}
       </p>
     </div>
   );
 }
 
 function ActionCard({ runId, action, onChange }: { runId: string; action: ProposedAction; onChange: (a: ProposedAction) => void }) {
+  const tr = useT();
   const qc = useQueryClient();
   const decide = useMutation({
     mutationFn: (decision: 'confirm' | 'dismiss') => api<ProposedAction>(`/ai/copilot/runs/${runId}/actions/${action.id}`, { method: 'POST', json: { decision } }),
@@ -234,32 +241,32 @@ function ActionCard({ runId, action, onChange }: { runId: string; action: Propos
   return (
     <div className="space-y-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="accent">Proposed change</Badge>
+        <Badge tone="accent">{tr('Proposed change')}</Badge>
         <span className="font-medium">{action.title}</span>
       </div>
       {action.fromUntrustedContent && action.status === 'proposed' && (
         <p className="flex gap-2 text-xs text-warning">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          Copilot read email or other outside content before proposing this. Check it is what you want.
+          {tr('Copilot read email or other outside content before proposing this. Check it is what you want.')}
         </p>
       )}
       {action.status === 'proposed' ? (
         <div className="flex gap-2">
           <Button size="sm" onClick={() => decide.mutate('confirm')} disabled={decide.isPending}>
-            <Check aria-hidden /> Confirm
+            <Check aria-hidden /> {tr('Confirm')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => decide.mutate('dismiss')} disabled={decide.isPending}>
-            <X aria-hidden /> Dismiss
+            <X aria-hidden /> {tr('Dismiss')}
           </Button>
         </div>
       ) : (
         <p className={`text-xs ${action.status === 'failed' ? 'text-critical' : 'text-muted-foreground'}`}>
-          {action.status === 'applied' ? 'Done.' : action.status === 'dismissed' ? 'Dismissed.' : `Could not apply: ${action.error ?? 'unknown error'}`}
+          {action.status === 'applied' ? tr('Done.') : action.status === 'dismissed' ? tr('Dismissed.') : tr('Could not apply: {error}', { error: action.error ? tr.maybe(action.error) : tr('unknown error') })}
         </p>
       )}
       {decide.error && (
         <p role="alert" className="text-xs text-critical">
-          {aiErrorMessage(decide.error)}
+          {tr.maybe(aiErrorMessage(decide.error))}
         </p>
       )}
     </div>

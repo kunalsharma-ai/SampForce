@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { localize, tr } from '../common/request-language';
 import { TasksService } from '../crm/tasks.service';
 
 const DAY = 86_400_000;
@@ -54,17 +55,17 @@ function riskTask(signals: Signal[], deal: string): string {
     case 'stale':
     case 'quiet':
     case 'no_activity':
-      return `Get back in touch about ${deal}`;
+      return tr('Get back in touch about {deal}', { deal });
     case 'close_date_passed':
-      return `Confirm a new close date for ${deal}`;
+      return tr('Confirm a new close date for {deal}', { deal });
     case 'stuck':
-      return `Move ${deal} forward or update its stage`;
+      return tr('Move {deal} forward or update its stage', { deal });
     case 'no_contact':
-      return `Add the main buyer to ${deal}`;
+      return tr('Add the main buyer to {deal}', { deal });
     case 'no_close_date':
-      return `Agree an expected close date for ${deal}`;
+      return tr('Agree an expected close date for {deal}', { deal });
     default:
-      return `Plan the next step for ${deal}`;
+      return tr('Plan the next step for {deal}', { deal });
   }
 }
 
@@ -194,7 +195,7 @@ export class NextActionsService {
         const name = 'fullName' in person ? person.fullName : [person.firstName, person.lastName].filter(Boolean).join(' ');
         push({
           key: `reply_waiting:${m.id}`, kind: 'reply_waiting', priority: NEXT_ACTION_RULES.reply_waiting.base - Math.min(10, daysSince(m.sentAt, now)),
-          title: `Reply to ${name}`, reason: `"${m.subject || '(no subject)'}" arrived ${ymd(m.sentAt)} and has no answer yet.`,
+          title: tr('Reply to {name}', { name }), reason: tr('"{subject}" arrived {date} and has no answer yet.', { subject: m.subject || tr('(no subject)'), date: ymd(m.sentAt) }),
           record: { type, id, name }, href: href(type, id), suggestedTask: null,
         });
       }
@@ -212,7 +213,7 @@ export class NextActionsService {
         const late = daysSince(task.dueAt!, now);
         push({
           key: `overdue_task:${task.id}`, kind: 'overdue_task', priority: NEXT_ACTION_RULES.overdue_task.base + Math.min(10, late),
-          title: task.title, reason: late === 0 ? 'Due earlier today.' : `Overdue by ${late} day${late === 1 ? '' : 's'}.`,
+          title: task.title, reason: late === 0 ? tr('Due earlier today.') : tr(late === 1 ? 'Overdue by {n} day.' : 'Overdue by {n} days.', { n: late }),
           record: { type: 'task', id: task.id, name: task.title }, href: href('task', task.id), suggestedTask: null,
         });
       }
@@ -242,31 +243,31 @@ export class NextActionsService {
           const signals = h.signals as unknown as Signal[];
           push({
             key: `deal_at_risk:${d.id}:${ymd(h.computedAt)}`, kind: 'deal_at_risk', priority: NEXT_ACTION_RULES.deal_at_risk.base + Math.round((100 - h.health) / 10),
-            title: riskTask(signals, d.name), reason: `Health ${h.health}/100: ${signals.map((s) => s.label).join(', ')}.`,
+            title: riskTask(signals, d.name), reason: tr('Health {health}/100: {signals}.', { health: String(h.health), signals: signals.map((s) => localize(s.label)).join(', ') }),
             record: rec, href: href('deal', d.id), suggestedTask: { title: riskTask(signals, d.name), dueInDays: 1 },
           });
           const p75 = bigByCurrency.get(d.currency);
           if (p75 !== undefined && Number(d.amount) >= p75 && Number(d.amount) > 0) {
             push({
               key: `escalate_deal:${d.id}:${ymd(h.computedAt)}`, kind: 'escalate_deal', priority: NEXT_ACTION_RULES.escalate_deal.base + Math.round((100 - h.health) / 10),
-              title: `Review ${d.name} with your manager`,
-              reason: `High risk (health ${h.health}/100) and one of the largest open deals in ${d.currency}. A second view can save it.`,
-              record: rec, href: href('deal', d.id), suggestedTask: { title: `Review ${d.name} with your manager`, dueInDays: 1 },
+              title: tr('Review {deal} with your manager', { deal: d.name }),
+              reason: tr('High risk (health {health}/100) and one of the largest open deals in {currency}. A second view can save it.', { health: String(h.health), currency: d.currency }),
+              record: rec, href: href('deal', d.id), suggestedTask: { title: tr('Review {deal} with your manager', { deal: d.name }), dueInDays: 1 },
             });
           }
         }
         if (d.expectedCloseDate && ymd(d.expectedCloseDate) < today) {
           push({
             key: `close_date_passed:${d.id}:${ymd(d.expectedCloseDate)}`, kind: 'close_date_passed', priority: NEXT_ACTION_RULES.close_date_passed.base,
-            title: `Confirm a new close date for ${d.name}`, reason: `It was expected to close on ${ymd(d.expectedCloseDate)}.`,
-            record: rec, href: href('deal', d.id), suggestedTask: { title: `Confirm a new close date for ${d.name}`, dueInDays: 1 },
+            title: tr('Confirm a new close date for {deal}', { deal: d.name }), reason: tr('It was expected to close on {date}.', { date: ymd(d.expectedCloseDate) }),
+            record: rec, href: href('deal', d.id), suggestedTask: { title: tr('Confirm a new close date for {deal}', { deal: d.name }), dueInDays: 1 },
           });
         }
         if (d._count.tasks === 0) {
           push({
             key: `deal_no_next_step:${d.id}`, kind: 'deal_no_next_step', priority: NEXT_ACTION_RULES.deal_no_next_step.base,
-            title: `Plan the next step for ${d.name}`, reason: 'No open task is scheduled on this deal.',
-            record: rec, href: href('deal', d.id), suggestedTask: { title: `Plan the next step for ${d.name}`, dueInDays: 2 },
+            title: tr('Plan the next step for {deal}', { deal: d.name }), reason: tr('No open task is scheduled on this deal.'),
+            record: rec, href: href('deal', d.id), suggestedTask: { title: tr('Plan the next step for {deal}', { deal: d.name }), dueInDays: 2 },
           });
         }
       }
@@ -286,7 +287,7 @@ export class NextActionsService {
           const name = byDeal.get(r.entityId)!;
           push({
             key: `ai:${r.id}`, kind: 'ai_recommendation', priority: NEXT_ACTION_RULES.ai_recommendation.base,
-            title: next.title, reason: `Deal Intelligence suggested this on ${ymd(r.createdAt)}: ${next.reason}`,
+            title: next.title, reason: tr('Deal Intelligence suggested this on {date}: {reason}', { date: ymd(r.createdAt), reason: next.reason }),
             record: { type: 'deal', id: r.entityId, name }, href: href('deal', r.entityId), suggestedTask: { title: next.title, dueInDays: next.dueInDays },
             recommendationId: r.id,
           });
@@ -304,8 +305,8 @@ export class NextActionsService {
         const ref = formatReference('Q', q.number, q.version);
         push({
           key: `quote_awaiting_answer:${q.id}`, kind: 'quote_awaiting_answer', priority: NEXT_ACTION_RULES.quote_awaiting_answer.base,
-          title: `Follow up on quote ${ref}`, reason: `Sent to ${q.opportunity.name} on ${ymd(q.sentAt!)}, ${daysSince(q.sentAt!, now)} days ago, with no answer recorded.`,
-          record: { type: 'quote', id: q.id, name: ref }, href: href('quote', q.id), suggestedTask: { title: `Follow up on quote ${ref}`, dueInDays: 0 },
+          title: tr('Follow up on quote {ref}', { ref }), reason: tr('Sent to {deal} on {date}, {n} days ago, with no answer recorded.', { deal: q.opportunity.name, date: ymd(q.sentAt!), n: daysSince(q.sentAt!, now) }),
+          record: { type: 'quote', id: q.id, name: ref }, href: href('quote', q.id), suggestedTask: { title: tr('Follow up on quote {ref}', { ref }), dueInDays: 0 },
         });
       }
     }
@@ -320,8 +321,8 @@ export class NextActionsService {
         const ref = formatReference('C', c.number);
         push({
           key: `renewal_due:${c.id}:${ymd(c.endDate!)}`, kind: 'renewal_due', priority: NEXT_ACTION_RULES.renewal_due.base,
-          title: `Start the renewal of ${ref} ${c.name}`, reason: `Ends on ${ymd(c.endDate!)} and no renewal is linked yet.`,
-          record: { type: 'contract', id: c.id, name: `${ref} ${c.name}` }, href: href('contract', c.id), suggestedTask: { title: `Start the renewal of ${ref} ${c.name}`, dueInDays: 2 },
+          title: tr('Start the renewal of {contract}', { contract: `${ref} ${c.name}` }), reason: tr('Ends on {date} and no renewal is linked yet.', { date: ymd(c.endDate!) }),
+          record: { type: 'contract', id: c.id, name: `${ref} ${c.name}` }, href: href('contract', c.id), suggestedTask: { title: tr('Start the renewal of {contract}', { contract: `${ref} ${c.name}` }), dueInDays: 2 },
         });
       }
     }
@@ -336,8 +337,8 @@ export class NextActionsService {
       for (const l of leads) {
         push({
           key: `new_lead_untouched:${l.id}`, kind: 'new_lead_untouched', priority: NEXT_ACTION_RULES.new_lead_untouched.base,
-          title: `Make first contact with ${l.fullName}${l.companyName ? ` (${l.companyName})` : ''}`, reason: `Added ${ymd(l.createdAt)}; still New with nothing logged.`,
-          record: { type: 'lead', id: l.id, name: l.fullName }, href: href('lead', l.id), suggestedTask: { title: `Make first contact with ${l.fullName}`, dueInDays: 0 },
+          title: tr('Make first contact with {name}', { name: l.companyName ? `${l.fullName} (${l.companyName})` : l.fullName }), reason: tr('Added {date}; still New with nothing logged.', { date: ymd(l.createdAt) }),
+          record: { type: 'lead', id: l.id, name: l.fullName }, href: href('lead', l.id), suggestedTask: { title: tr('Make first contact with {name}', { name: l.fullName }), dueInDays: 0 },
         });
       }
     }
@@ -365,10 +366,10 @@ export class NextActionsService {
         const person = people.get(id);
         if (!person) continue;
         const { name, phone } = person;
-        const title = phone ? `Call ${name} instead of emailing` : `Try ${name} on another channel`;
+        const title = phone ? tr('Call {name} instead of emailing', { name }) : tr('Try {name} on another channel', { name });
         push({
           key: `prospect_silent:${e.id}`, kind: 'prospect_silent', priority: NEXT_ACTION_RULES.prospect_silent.base,
-          title, reason: `Finished "${e.sequence.name}" on ${ymd(e.finishedAt!)} without replying. More email is unlikely to help.`,
+          title, reason: tr('Finished "{sequence}" on {date} without replying. More email is unlikely to help.', { sequence: e.sequence.name, date: ymd(e.finishedAt!) }),
           record: { type, id, name }, href: href(type, id), suggestedTask: { title, dueInDays: 1 },
         });
       }
@@ -394,11 +395,16 @@ export class NextActionsService {
         const id = (r.contact_id ?? r.lead_id)!;
         const name = names.get(id);
         if (!name) continue;
-        const what = [r.opened ? `opened ${r.opened} email${r.opened === 1 ? '' : 's'} (estimate)` : null, r.clicked ? `clicked links in ${r.clicked}` : null].filter(Boolean).join(' and ');
-        const title = `Follow up personally with ${name}`;
+        const pattern =
+          r.opened && r.clicked
+            ? r.opened === 1 ? 'In the last 14 days they opened {opened} email (estimate) and clicked links in {clicked} without replying.' : 'In the last 14 days they opened {opened} emails (estimate) and clicked links in {clicked} without replying.'
+            : r.opened
+              ? r.opened === 1 ? 'In the last 14 days they opened {opened} email (estimate) without replying.' : 'In the last 14 days they opened {opened} emails (estimate) without replying.'
+              : 'In the last 14 days they clicked links in {clicked} without replying.';
+        const title = tr('Follow up personally with {name}', { name });
         push({
           key: `engaged_no_reply:${type}:${id}:${ymd(r.last_at)}`, kind: 'engaged_no_reply', priority: NEXT_ACTION_RULES.engaged_no_reply.base + Math.min(10, r.clicked * 3),
-          title, reason: `In the last 14 days they ${what} without replying. A short personal note or a call may land better than the next automated email.`,
+          title, reason: `${tr(pattern, { opened: r.opened, clicked: r.clicked })} ${tr('A short personal note or a call may land better than the next automated email.')}`,
           record: { type, id, name }, href: href(type, id), suggestedTask: { title, dueInDays: 1 },
         });
       }
@@ -437,7 +443,7 @@ export class NextActionsService {
       : item.record.type === 'quote' || item.record.type === 'contract' ? await this.dealOf(auth, item.record.type, item.record.id)
       : {};
     const task = await this.tasks.create(auth, {
-      title: input.title, description: `From your next best actions: ${item.reason}`, assigneeId: auth.userId,
+      title: input.title, description: tr('From your next best actions: {reason}', { reason: item.reason }), assigneeId: auth.userId,
       dueAt: new Date(Date.now() + input.dueInDays * DAY).toISOString(), ...ref,
     }, meta);
     await this.decide(auth, item, 'accepted', null, task.id);

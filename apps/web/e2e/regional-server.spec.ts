@@ -42,3 +42,22 @@ test('a conflict reported by the API appears in German in a German workspace', a
   await main.getByRole('button', { name: 'Pipeline erstellen' }).click();
   await expect(main.getByText('Ihr Tarif erlaubt 1 Pipeline. Erweitern Sie ihn, um weitere hinzuzufügen.')).toBeVisible();
 });
+
+test('sentences the API writes and the notifications menu switch language with the person', async ({ page }) => {
+  await signUp(page, 'Frases SL');
+  await page.goto('/app');
+  // The insights feed always counts new deals; in English first.
+  await expect(page.getByText('0 new deals worth', { exact: false })).toBeVisible();
+
+  await page.goto('/app/settings');
+  const card = page.getByTestId('regional-settings');
+  await card.getByLabel('Language').selectOption('es');
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+  await page.goto('/app');
+  // Written by the API in Spanish (ADR 0052), not translated by the page.
+  await expect(page.getByText(/^0 oportunidades nuevas por /)).toBeVisible();
+  await page.getByRole('button', { name: 'Notificaciones', exact: true }).click();
+  await expect(page.getByText('Estás al día. Las asignaciones, aprobaciones y alertas de automatización aparecen aquí.')).toBeVisible();
+});

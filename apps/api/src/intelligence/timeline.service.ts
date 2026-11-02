@@ -3,6 +3,7 @@ import type { TenantTx } from '@dealflow/database';
 import { formatReference, type TimelineEntity, type TimelineItem, type TimelineKind, type TimelinePage, type TimelineQuery } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { localize, tr } from '../common/request-language';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
 
 /** The permission each source needs, on top of read access to the record itself. */
@@ -22,6 +23,22 @@ const SOURCE_PERMISSION: Record<TimelineKind, string> = {
 };
 
 const ENTITY_PERMISSION: Record<TimelineEntity, string> = { lead: 'leads:read', contact: 'contacts:read', company: 'companies:read', deal: 'deals:read' };
+
+/** Whole sentences per value, so each language can phrase them (ADR 0052). */
+const ACTIVITY_TITLE = { CALL: 'Call: {subject}', EMAIL: 'Email: {subject}', MEETING: 'Meeting: {subject}', NOTE: 'Note: {subject}' } as const;
+const EMAIL_EVENT_TITLE = {
+  OPENED: 'Opened (approximate) "{subject}"', CLICKED: 'Clicked a link in "{subject}"', BOUNCED: 'Bounced: "{subject}"',
+  UNSUBSCRIBED: 'Unsubscribed from "{subject}"', REPLIED: 'Replied to "{subject}"',
+} as const;
+const QUOTE_TITLE = {
+  DRAFT: 'Quote {ref} draft', PENDING_APPROVAL: 'Quote {ref} pending approval', APPROVED: 'Quote {ref} approved', REJECTED: 'Quote {ref} rejected',
+  SENT: 'Quote {ref} sent', ACCEPTED: 'Quote {ref} accepted', DECLINED: 'Quote {ref} declined',
+} as const;
+const CONTRACT_TITLE = {
+  DRAFT: 'Contract {contract}: draft', ACTIVE: 'Contract {contract}: active', EXPIRED: 'Contract {contract}: expired',
+  TERMINATED: 'Contract {contract}: terminated', RENEWED: 'Contract {contract}: renewed',
+} as const;
+const ESCALATION_TITLE = { LOW: 'Low escalation: {title}', MEDIUM: 'Medium escalation: {title}', HIGH: 'High escalation: {title}', CRITICAL: 'Critical escalation: {title}' } as const;
 
 const SOURCE_LABEL: Record<string, string> = { 'Browser extension': 'the browser extension', 'Email finder': 'the email finder' };
 
@@ -70,7 +87,7 @@ export class TimelineService {
 
   private async scope(tx: TenantTx, tenantId: string, entity: TimelineEntity, id: string): Promise<Scope> {
     const names = new Map<string, { type: 'lead' | 'contact' | 'deal'; name: string }>();
-    const created = (source: string | null | undefined) => (source ? `Source: ${SOURCE_LABEL[source] ?? source}` : null);
+    const created = (source: string | null | undefined) => (source ? tr('Source: {source}', { source: SOURCE_LABEL[source] ? tr(SOURCE_LABEL[source]) : localize(source) }) : null);
     if (entity === 'lead') {
       const l = await tx.lead.findFirst({ where: { id, tenantId, deletedAt: null }, select: { fullName: true, createdAt: true, source: true, convertedContactId: true } });
       if (!l) throw notFound('Lead');
@@ -116,7 +133,7 @@ export class TimelineService {
     switch (kind) {
       case 'created':
         return s.createdAt < before
-          ? [{ id: `created:${id}`, kind, at: s.createdAt.toISOString(), title: `${s.name} was added`, detail: s.createdDetail, actor: null, about: null, href: null }]
+          ? [{ id: `created:${id}`, kind, at: s.createdAt.toISOString(), title: tr('{name} was added', { name: s.name }), detail: s.createdDetail, actor: null, about: null, href: null }]
           : [];
 
       case 'activity': {
@@ -128,7 +145,7 @@ export class TimelineService {
         if (!where.length) return [];
         const rows = await tx.activity.findMany({ where: { tenantId, deletedAt: null, occurredAt: { lt: before }, OR: where }, orderBy: { occurredAt: 'desc' }, take });
         return rows.map((a) => ({
-          id: `activity:${a.id}`, kind, at: a.occurredAt.toISOString(), title: `${a.type[0]}${a.type.slice(1).toLowerCase()}: ${a.subject}`, detail: a.body?.slice(0, 500) ?? null,
+          id: `activity:${a.id}`, kind, at: a.occurredAt.toISOString(), title: tr(ACTIVITY_TITLE[a.type], { subject: a.subject }), detail: a.body?.slice(0, 500) ?? null,
           actor: a.ownerId ? { id: a.ownerId, name: '' } : null, about: about(a.contactId, a.leadId, a.opportunityId), href: null,
         }));
       }
@@ -147,7 +164,7 @@ export class TimelineService {
         });
         return rows.map((m) => ({
           id: `email:${m.id}`, kind, at: m.sentAt.toISOString(), direction: m.direction === 'INBOUND' ? 'in' : 'out',
-          title: m.direction === 'INBOUND' ? `Email from ${m.fromAddress}: ${m.subject || '(no subject)'}` : `Email sent: ${m.subject || '(no subject)'}`,
+          title: m.direction === 'INBOUND' ? tr('Email from {from}: {subject}', { from: m.fromAddress, subject: m.subject || tr('(no subject)') }) : tr('Email sent: {subject}', { subject: m.subject || tr('(no subject)') }),
           detail: m.snippet ?? null, actor: m.direction === 'OUTBOUND' ? { id: m.connection.userId, name: '' } : null, about: about(m.contactId, m.leadId), href: null,
         }));
       }
@@ -156,7 +173,7 @@ export class TimelineService {
         if (!s.contactIds.length) return [];
         const rows = await tx.meeting.findMany({ where: { tenantId, canceled: false, startsAt: { lt: before }, contactIds: { hasSome: s.contactIds } }, orderBy: { startsAt: 'desc' }, take });
         return rows.map((m) => ({
-          id: `meeting:${m.id}`, kind, at: m.startsAt.toISOString(), title: `Meeting: ${m.title}`, detail: m.location ?? null, actor: null,
+          id: `meeting:${m.id}`, kind, at: m.startsAt.toISOString(), title: tr('Meeting: {title}', { title: m.title }), detail: m.location ?? null, actor: null,
           about: about(...m.contactIds.filter((c) => s.contactIds.includes(c))), href: '/app/meetings',
         }));
       }
@@ -171,7 +188,7 @@ export class TimelineService {
         });
         return rows.map((m) => ({
           id: `sequence_email:${m.id}`, kind, at: m.sentAt.toISOString(), direction: 'out' as const,
-          title: `Sequence "${m.enrollment.sequence.name}": ${m.subject}`, detail: m.repliedAt ? `Replied ${m.repliedAt.toISOString().slice(0, 10)}` : null,
+          title: tr('Sequence "{sequence}": {subject}', { sequence: m.enrollment.sequence.name, subject: m.subject }), detail: m.repliedAt ? tr('Replied {date}', { date: m.repliedAt.toISOString().slice(0, 10) }) : null,
           actor: { id: m.senderId, name: '' }, about: about(m.enrollment.contactId, m.enrollment.leadId), href: `/app/sequences/${m.enrollment.sequenceId}`,
         }));
       }
@@ -185,9 +202,8 @@ export class TimelineService {
           take,
           select: { id: true, type: true, url: true, createdAt: true, message: { select: { subject: true, enrollment: { select: { leadId: true, contactId: true } } } } },
         });
-        const label = { OPENED: 'Opened (approximate)', CLICKED: 'Clicked a link in', BOUNCED: 'Bounced:', UNSUBSCRIBED: 'Unsubscribed from', REPLIED: 'Replied to' } as const;
         return rows.map((e) => ({
-          id: `email_event:${e.id}`, kind, at: e.createdAt.toISOString(), title: `${label[e.type]} "${e.message.subject}"`, detail: e.type === 'CLICKED' ? e.url : null,
+          id: `email_event:${e.id}`, kind, at: e.createdAt.toISOString(), title: tr(EMAIL_EVENT_TITLE[e.type], { subject: e.message.subject }), detail: e.type === 'CLICKED' ? e.url : null,
           actor: null, about: about(e.message.enrollment.contactId, e.message.enrollment.leadId), href: null,
         }));
       }
@@ -198,10 +214,14 @@ export class TimelineService {
         const stages = new Map(
           (await tx.pipelineStage.findMany({ where: { id: { in: [...new Set(rows.flatMap((r) => [r.toStageId, r.fromStageId].filter((x): x is string => !!x)))] } }, select: { id: true, name: true } })).map((st) => [st.id, st.name]),
         );
+        const stageName = (stageId: string) => {
+          const name = stages.get(stageId);
+          return name ? localize(name) : tr('a stage');
+        };
         return rows.map((r) => ({
           id: `stage_change:${r.id}`, kind, at: r.occurredAt.toISOString(),
-          title: r.fromStageId ? `Moved from ${stages.get(r.fromStageId) ?? 'a stage'} to ${stages.get(r.toStageId) ?? 'a stage'}` : `Started in ${stages.get(r.toStageId) ?? 'a stage'}`,
-          detail: r.reconstructed ? 'Reconstructed from the audit log' : null, actor: r.actorUserId ? { id: r.actorUserId, name: '' } : null, about: about(r.opportunityId), href: null,
+          title: r.fromStageId ? tr('Moved from {from} to {to}', { from: stageName(r.fromStageId), to: stageName(r.toStageId) }) : tr('Started in {stage}', { stage: stageName(r.toStageId) }),
+          detail: r.reconstructed ? tr('Reconstructed from the audit log') : null, actor: r.actorUserId ? { id: r.actorUserId, name: '' } : null, about: about(r.opportunityId), href: null,
         }));
       }
 
@@ -210,7 +230,7 @@ export class TimelineService {
         if (!where.length) return [];
         const rows = await tx.task.findMany({ where: { tenantId, deletedAt: null, status: 'DONE', completedAt: { lt: before }, OR: where }, orderBy: { completedAt: 'desc' }, take });
         return rows.map((t) => ({
-          id: `task_done:${t.id}`, kind, at: t.completedAt!.toISOString(), title: `Task done: ${t.title}`, detail: null,
+          id: `task_done:${t.id}`, kind, at: t.completedAt!.toISOString(), title: tr('Task done: {title}', { title: t.title }), detail: null,
           actor: t.assigneeId ? { id: t.assigneeId, name: '' } : null, about: about(t.contactId, t.leadId, t.opportunityId), href: null,
         }));
       }
@@ -220,7 +240,7 @@ export class TimelineService {
         const rows = await tx.quote.findMany({ where: { tenantId, opportunityId: { in: s.dealIds }, createdAt: { lt: before } }, orderBy: { createdAt: 'desc' }, take });
         return rows.map((q) => ({
           id: `quote:${q.id}`, kind, at: (q.decidedAt ?? q.sentAt ?? q.createdAt).toISOString(),
-          title: `Quote ${formatReference('Q', q.number, q.version)} ${q.status.toLowerCase().replace('_', ' ')}`, detail: `${q.currency} ${q.total.toFixed(2)}`,
+          title: tr(QUOTE_TITLE[q.status], { ref: formatReference('Q', q.number, q.version) }), detail: `${q.currency} ${q.total.toFixed(2)}`,
           actor: q.createdById ? { id: q.createdById, name: '' } : null, about: about(q.opportunityId), href: `/app/quotes/${q.id}`,
         })).filter((i) => i.at < before.toISOString());
       }
@@ -231,7 +251,7 @@ export class TimelineService {
         const rows = await tx.contract.findMany({ where: { tenantId, createdAt: { lt: before }, OR: where }, orderBy: { createdAt: 'desc' }, take });
         return rows.map((c) => ({
           id: `contract:${c.id}`, kind, at: (c.signedAt ?? c.createdAt).toISOString(),
-          title: `Contract ${formatReference('C', c.number)} ${c.name}: ${c.status.toLowerCase()}`, detail: c.endDate ? `Runs to ${c.endDate.toISOString().slice(0, 10)}` : null,
+          title: tr(CONTRACT_TITLE[c.status], { contract: `${formatReference('C', c.number)} ${c.name}` }), detail: c.endDate ? tr('Runs to {date}', { date: c.endDate.toISOString().slice(0, 10) }) : null,
           actor: c.ownerId ? { id: c.ownerId, name: '' } : null, about: about(c.opportunityId), href: `/app/contracts/${c.id}`,
         })).filter((i) => i.at < before.toISOString());
       }
@@ -240,7 +260,7 @@ export class TimelineService {
         if (!s.leadIds.length) return [];
         const rows = await tx.formSubmission.findMany({ where: { tenantId, leadId: { in: s.leadIds }, createdAt: { lt: before } }, orderBy: { createdAt: 'desc' }, take, include: { form: { select: { name: true } } } });
         return rows.map((f) => ({
-          id: `form:${f.id}`, kind, at: f.createdAt.toISOString(), title: `Submitted the form "${f.form.name}"`, detail: f.consent ? 'Gave marketing consent' : null,
+          id: `form:${f.id}`, kind, at: f.createdAt.toISOString(), title: tr('Submitted the form "{form}"', { form: f.form.name }), detail: f.consent ? tr('Gave marketing consent') : null,
           actor: null, about: about(f.leadId), href: null,
         }));
       }
@@ -249,8 +269,8 @@ export class TimelineService {
         if (!s.companyIds.length) return [];
         const rows = await tx.escalation.findMany({ where: { tenantId, companyId: { in: s.companyIds }, createdAt: { lt: before } }, orderBy: { createdAt: 'desc' }, take });
         return rows.map((e) => ({
-          id: `escalation:${e.id}`, kind, at: e.createdAt.toISOString(), title: `${e.severity[0]}${e.severity.slice(1).toLowerCase()} escalation: ${e.title}`,
-          detail: e.status === 'RESOLVED' ? `Resolved: ${e.resolution ?? ''}` : null, actor: e.openedById ? { id: e.openedById, name: '' } : null, about: null, href: `/app/customer-success?company=${e.companyId}`,
+          id: `escalation:${e.id}`, kind, at: e.createdAt.toISOString(), title: tr(ESCALATION_TITLE[e.severity], { title: e.title }),
+          detail: e.status === 'RESOLVED' ? tr('Resolved: {resolution}', { resolution: e.resolution ?? '' }) : null, actor: e.openedById ? { id: e.openedById, name: '' } : null, about: null, href: `/app/customer-success?company=${e.companyId}`,
         }));
       }
     }

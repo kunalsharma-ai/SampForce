@@ -154,7 +154,9 @@ export class CardPaymentsService {
         const ref = `Q-${String(q.number).padStart(4, '0')}${q.version > 1 ? ` v${q.version}` : ''}`;
         await this.audit.record(tx, { tenantId, actorUserId: null, action: 'quote.paid', entityType: 'quote', entityId: q.id, metadata: { provider: payment.provider, amount: payment.amount.toNumber(), currency: payment.currency, providerPaymentId: ev.providerPaymentId } });
         if (q.createdById) {
-          await this.notifications.send(tx, tenantId, [q.createdById], { type: 'quote.paid', title: `Proposal ${ref} was paid`, body: `${payment.currency} ${payment.amount.toNumber().toFixed(2)} by card${ev.payerEmail ? ` from ${ev.payerEmail}` : ''}, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`, link: `/app/quotes/${q.id}` });
+          await this.notifications.send(tx, tenantId, [q.createdById], { type: 'quote.paid', title: `Proposal ${ref} was paid`, body: ev.payerEmail
+            ? `${payment.currency} ${payment.amount.toNumber().toFixed(2)} by card from ${ev.payerEmail}, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`
+            : `${payment.currency} ${payment.amount.toNumber().toFixed(2)} by card, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`, link: `/app/quotes/${q.id}` });
         }
       });
       await this.apps.recordEvent(tenantId, conn, { kind: 'payment.paid', ok: true, externalId: ev.providerPaymentId, summary: `Paid: ${payment.currency} ${payment.amount.toNumber().toFixed(2)}${ev.payerEmail ? ` by ${ev.payerEmail}` : ''}`, actorUserId: null, entityType: 'quote', entityId: payment.quoteId });

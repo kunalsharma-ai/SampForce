@@ -400,7 +400,6 @@ export class SequenceRunner implements OnModuleInit {
 
   private async apply(e: Live, action: RuleAction, flowStatus: EnrollmentStatus, event: EmailEvent): Promise<void> {
     const tenantId = e.tenantId;
-    const label = { replied: 'replied', opened: 'opened an email', clicked: 'clicked a link', bounced: 'bounced', unsubscribed: 'unsubscribed' }[event];
     switch (action.type) {
       case 'stop':
         await this.prisma.run({ tenantId }, async (tx) => {
@@ -434,7 +433,7 @@ export class SequenceRunner implements OnModuleInit {
       }
       case 'notify_owner':
         await this.prisma.run({ tenantId }, (tx) =>
-          this.notifications.send(tx, tenantId, [e.senderId], { type: `sequence.${event}`, title: `${e.email} ${label}`, body: `In the sequence "${e.sequence.name}".`, link: e.leadId ? `/app/leads/${e.leadId}` : e.contactId ? `/app/contacts/${e.contactId}` : `/app/sequences/${e.sequenceId}` }),
+          this.notifications.send(tx, tenantId, [e.senderId], { type: `sequence.${event}`, title: { replied: `${e.email} replied`, opened: `${e.email} opened an email`, clicked: `${e.email} clicked a link`, bounced: `${e.email} bounced`, unsubscribed: `${e.email} unsubscribed` }[event], body: `In the sequence "${e.sequence.name}".`, link: e.leadId ? `/app/leads/${e.leadId}` : e.contactId ? `/app/contacts/${e.contactId}` : `/app/sequences/${e.sequenceId}` }),
         );
     }
   }
