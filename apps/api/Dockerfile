@@ -9,11 +9,15 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @dealflow/api... build
 RUN pnpm deploy --filter @dealflow/api --prod --legacy /out
-# The generated Prisma client lives in the workspace store; copy it into the deployed tree.
-RUN cp -r node_modules/.pnpm/@prisma+client*/node_modules/.prisma /out/node_modules/.prisma
+# The generated Prisma client lives in the workspace store; copy it into the deployed tree, beside the
+# @prisma/client package that loads it. (At the top of node_modules it cannot find @prisma/client/runtime, which
+# pnpm keeps inside .pnpm, and the API stops at startup with "Cannot find module '@prisma/client/runtime/library.js'".)
+RUN src="$(echo node_modules/.pnpm/@prisma+client*/node_modules/.prisma)" \
+  && dest="$(echo /out/node_modules/.pnpm/@prisma+client*/node_modules)" \
+  && test -d "$src" && test -d "$dest" && cp -r "$src" "$dest/"
 
 # Schema migrations as their own small image (Kubernetes runs it as a pre-upgrade Job). It connects as the
-# schema owner: pass the owner connection string as DATABASE_URL.
+# schema owner: pass the owner connection string as both DATABASE_URL and MIGRATION_DATABASE_URL (the schema reads both).
 FROM node:22-bookworm-slim AS migrate
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
   && npm install -g prisma@6.19.3 && npm cache clean --force
