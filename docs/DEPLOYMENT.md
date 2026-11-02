@@ -45,6 +45,11 @@ Create one Secret (or sync it from your secret manager) and name it in `secrets.
 | `SMTP_URL` | no | Account email (password reset). `smtps://user:pass@host:465`. Set `config.MAIL_FROM` with it. Without it, reset requests answer that email is not set up |
 | `ANTHROPIC_API_KEY`, `STRIPE_*`, `RAZORPAY_*`, `GOOGLE_*`, `MICROSOFT_*` | no | Features stay "not configured" without them |
 
+Provider keys (Apollo, Hunter, Deepgram, Google, Microsoft, Slack, Zoom, DocuSign, Anthropic, SMTP, Zapier, Stripe,
+Razorpay) can instead be entered in the operator console under Providers. They are sealed with `ENCRYPTION_KEY`,
+override the Secret, and reach the API and worker within `PROVIDER_KEYS_REFRESH_SECONDS` (default 10) without a
+restart (ADR 0051). The secrets above `OPERATOR_JWT_SECRET` can only come from the Secret.
+
 The chart never writes secrets into ConfigMaps or values. Back up `ENCRYPTION_KEY` separately from database backups.
 
 ## 4. Install

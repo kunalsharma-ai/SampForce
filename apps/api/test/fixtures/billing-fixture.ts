@@ -71,6 +71,7 @@ export async function startBillingFixture(): Promise<BillingFixture> {
     if (auth.startsWith('Bearer ')) {
       if (auth !== 'Bearer sk_test_fixture') return json(401, { error: { message: 'Invalid API key' } });
       const form = new URLSearchParams(body);
+      if (req.method === 'GET' && p === '/v1/balance') return json(200, { object: 'balance', livemode: false, available: [{ amount: 0, currency: 'usd' }] });
       if (req.method === 'POST' && p === '/v1/checkout/sessions') return json(200, { id: `cs_${++n}`, url: `https://checkout.stripe.test/c/cs_${n}` });
       if (req.method === 'POST' && p === '/v1/billing_portal/sessions') return json(200, { url: `https://billing.stripe.test/p/${form.get('customer')}` });
       const m = /^\/v1\/subscriptions\/([\w-]+)$/.exec(p);
@@ -91,6 +92,7 @@ export async function startBillingFixture(): Promise<BillingFixture> {
     if (auth.startsWith('Basic ')) {
       if (Buffer.from(auth.slice(6), 'base64').toString() !== 'rzp_test_fixture:rzp_fixture_secret') return json(401, { error: { description: 'Authentication failed' } });
       const b = body ? (JSON.parse(body) as Record<string, unknown>) : {};
+      if (req.method === 'GET' && p === '/v1/plans') return json(200, { entity: 'collection', count: 1, items: [{ id: 'plan_growth_m', entity: 'plan' }] });
       if (req.method === 'POST' && p === '/v1/subscriptions') {
         const id = `sub_rzp${++n}`;
         state.razorpaySubs[id] = { id, entity: 'subscription', plan_id: b.plan_id, quantity: b.quantity, status: 'created', notes: b.notes, customer_id: null, short_url: `https://rzp.test/i/${id}` };

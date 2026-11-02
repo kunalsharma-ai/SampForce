@@ -90,15 +90,16 @@ describe('operator provider setup and live checks (stand-ins)', () => {
     const { admin, support } = await boot({ APOLLO_API_KEY: undefined, HUNTER_API_KEY: 'hunter-test-key', DEEPGRAM_API_KEY: undefined });
     const rows = (await support.get('/providers').expect(200)).body as { key: string; state: string; env: { name: string; set: boolean }[]; checkable: boolean; appStatus: string }[];
     const by = Object.fromEntries(rows.map((r) => [r.key, r]));
-    expect(rows.map((r) => r.key)).toEqual(['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp']);
+    expect(rows.map((r) => r.key)).toEqual(['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay']);
     expect(by.apollo).toMatchObject({ state: 'not_configured', checkable: true, appStatus: 'Mock Mode: labelled sample people', env: [{ name: 'APOLLO_API_KEY', set: false, required: true }] });
     expect(by.hunter).toMatchObject({ state: 'configured', env: [{ name: 'HUNTER_API_KEY', set: true }] });
-    expect(by.google!.checkable).toBe(false);
+    expect(by.google).toMatchObject({ checkable: true, state: 'not_configured' });
     // Values never leave the server, only whether each one is set.
     expect(JSON.stringify(rows)).not.toContain('hunter-test-key');
 
     expect((await admin.post('/providers/apollo/check').expect(400)).body.error.code).toBe('NOT_CONFIGURED');
-    await admin.post('/providers/google/check').expect(400);
+    expect((await admin.post('/providers/google/check').expect(400)).body.error.code).toBe('NOT_CONFIGURED');
+    await admin.post('/providers/nope/check').expect(400);
     // Support operators can look but not run checks.
     await support.post('/providers/hunter/check').expect(403);
     expect(finder.hunterCalls).toEqual([]);

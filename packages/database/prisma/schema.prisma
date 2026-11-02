@@ -1980,6 +1980,22 @@ model PlatformSetting {
   @@map("platform_settings")
 }
 
+/// Provider keys entered in the operator console (ADR 0051). Values are sealed with ENCRYPTION_KEY (SecretBox) and
+/// override the environment variable of the same name; clearing a row falls back to that variable.
+model PlatformSecret {
+  /// The environment variable name, e.g. SLACK_CLIENT_SECRET.
+  name        String   @id
+  valueEnc    String   @map("value_enc")
+  /// What the console shows after saving: the last four characters of a secret, or the full non-secret value.
+  hint        String?
+  /// First 12 hex characters of the value's SHA-256, so the audit log can tell keys apart without holding them.
+  fingerprint String
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_secrets")
+}
+
 // ───────────────────────────── Reports and immersive views (Phase 7) ─────────────────────────────
 
 enum ReportVisibility {

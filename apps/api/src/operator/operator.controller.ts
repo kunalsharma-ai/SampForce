@@ -11,7 +11,11 @@ import {
   operatorVoidSchema,
   paymentInstructionsSchema,
   PROVIDER_CHECK_KEYS,
+  PROVIDER_KEYS,
   type ProviderCheckKey,
+  type ProviderKey,
+  type ProviderKeysUpdateInput,
+  providerKeysUpdateSchema,
   z,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
@@ -124,6 +128,20 @@ export class OperatorController {
   @Get('providers')
   providers() {
     return this.ops.providers();
+  }
+
+  /** Saves or removes keys entered in the console. Admins only; values are sealed, never returned, and every change is logged. */
+  @Post('providers/:key/keys')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  setProviderKeys(
+    @Operator() op: OperatorContext,
+    @Param('key', new ZodPipe(z.enum(PROVIDER_KEYS))) key: ProviderKey,
+    @Body(new ZodPipe(providerKeysUpdateSchema)) body: ProviderKeysUpdateInput,
+    @Req() req: Request,
+  ) {
+    return this.ops.setProviderKeys(op, key, body, ip(req));
   }
 
   /** Runs one no-cost call with the deployment's key. Admins only: it spends a provider request. */

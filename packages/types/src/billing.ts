@@ -295,24 +295,53 @@ export interface PlatformAuditRow {
   createdAt: string;
 }
 
-/** A provider in the operator console's provider setup list. Keys are deployment secrets, never shown or sent. */
-export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram'] as const;
-export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
+/** A provider in the operator console's provider setup list (ADR 0031, keys editable since ADR 0051). */
+export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
+export type ProviderKey = (typeof PROVIDER_KEYS)[number];
+/** Every provider has a connection test: a call that proves the keys and costs nothing. */
+export const PROVIDER_CHECK_KEYS = PROVIDER_KEYS;
+export type ProviderCheckKey = ProviderKey;
+
+/** One key or setting a provider reads. Values are never returned: a secret shows only its last four characters. */
+export interface OperatorProviderField {
+  /** The environment variable name, which is also the name the console saves it under. */
+  name: string;
+  label: string;
+  set: boolean;
+  required: boolean;
+  /** False for settings that are not credentials (a sender address, a URL); those are shown in full. */
+  secret: boolean;
+  /** console: saved in the operator console (wins); environment: from the deployment's secrets; missing: neither. */
+  source: 'console' | 'environment' | 'missing';
+  /** Last four characters of a secret (null when it is too short to show any), or the whole non-secret value. */
+  hint: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  help: string | null;
+}
+
 export interface OperatorProviderRow {
-  key: ProviderCheckKey | 'google' | 'microsoft' | 'anthropic' | 'smtp' | 'slack' | 'zoom' | 'docusign';
+  key: ProviderKey;
   name: string;
   usedFor: string;
-  /** The environment variables it reads, and whether each is set (values are never returned). */
-  env: { name: string; set: boolean; required: boolean }[];
+  env: OperatorProviderField[];
   configured: boolean;
-  /** Only providers with a no-cost check can be checked from the console. */
+  /** Whether the connection test can run (every provider has one; it needs the required keys set). */
   checkable: boolean;
-  /** What the check does and what it costs, in plain words. */
+  /** What the connection test does and what it costs, in plain words. */
   checkNote: string | null;
-  /** The last check run; `stale` when it used a different key from the one set now. */
+  /** The last test run; `stale` when it used different keys from the ones set now. */
   lastCheck: { ok: boolean; at: string; message: string; by: string | null; stale: boolean } | null;
-  /** not_configured → configured (not checked) → verified, or failed when the last check failed. */
+  /** not_configured → configured (not tested) → verified, or failed when the last test failed. */
   state: 'not_configured' | 'configured' | 'verified' | 'failed';
   /** What workspaces see for it today. */
   appStatus: string;
 }
+
+/** Saves keys in the operator console: a string sets the value, null removes the console value (falls back to the environment). */
+export const providerKeysUpdateSchema = z.object({
+  values: z
+    .record(z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/), z.string().max(4096).nullable())
+    .refine((v) => Object.keys(v).length > 0 && Object.keys(v).length <= 10, 'Change between one and ten keys at a time.'),
+});
+export type ProviderKeysUpdateInput = z.infer<typeof providerKeysUpdateSchema>;

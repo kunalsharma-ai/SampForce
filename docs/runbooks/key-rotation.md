@@ -2,14 +2,16 @@
 
 ## ENCRYPTION_KEY (drilled)
 
-Protects TOTP secrets, SSO client secrets, webhook signing secrets and mailbox OAuth tokens.
+Protects TOTP secrets, SSO client secrets, webhook signing secrets, mailbox OAuth tokens, workspace app credentials
+and provider keys saved in the operator console (`platform_secrets`).
 
 1. Generate a new key: `openssl rand -base64 32`. Store it in the secret manager next to the old one.
 2. Set `ENCRYPTION_KEY=<new>` and `ENCRYPTION_KEY_PREVIOUS=<old>` for the API and worker; roll out. Values sealed
    with either key now open; new values use the new key.
 3. Re-seal stored values: `ENCRYPTION_KEY=<new> ENCRYPTION_KEY_PREVIOUS=<old> DATABASE_URL=<runtime role>
    pnpm --filter @dealflow/api secrets:reseal -- --dry-run`, then without `--dry-run`. It is safe to re-run; a second
-   run reports 0 re-sealed. It stops without writing if a value opens with neither key.
+   run reports 0 re-sealed. It stops without writing if a value opens with neither key. `--only=platform_secrets`
+   (comma-separated table names) limits it to some tables.
 4. Remove `ENCRYPTION_KEY_PREVIOUS`; roll out. Keep the old key in cold storage until backups older than the
    rotation have expired, because those backups still need it.
 
@@ -37,10 +39,17 @@ Existing connections keep working until they reconnect. Same for `dealflow_owner
 
 ## Provider keys
 
-Stripe, Razorpay, Google, Microsoft and Anthropic keys rotate in the provider's dashboard; update the Secret and roll
-out. Webhook secrets for Stripe and Razorpay must change on both sides at the same time, or webhooks fail
+Rotate the key in the provider's dashboard, then either save the new one in the operator console (Providers > Update
+keys; it applies within `PROVIDER_KEYS_REFRESH_SECONDS`, default 10, with no restart) or update the Secret and roll out.
+A key saved in the console wins over the Secret, so after rotating in the Secret, remove any console value. Run
+"Test connection" afterwards: a test made with the old key no longer counts. The operator log records each change by
+fingerprint and last four characters (ADR 0051).
+
+Drill (2026-11-02, apps/api/test/provider-keys.e2e.test.ts): a console key saved under the old ENCRYPTION_KEY opened
+with new + previous keys; with only the new key it was skipped (shown as missing, never used); after
+`secrets:reseal --only=platform_secrets` it opened with only the new key. Webhook secrets for Stripe and Razorpay must change on both sides at the same time, or webhooks fail
 verification until they match (providers retry).
 
 ## Workspace-held secrets
 
-SCIM tokens and SSO client secrets belong to each workspace: owners rotate them under Workspace security.
+SCIM tokens and SSO client secrets belong to each workspace: owners rotate them under Workspace security. Workspace app credentials (Twilio, WhatsApp, card payments) are replaced under Settings > Apps.
