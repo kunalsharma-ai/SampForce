@@ -93,31 +93,34 @@ export function applyDrop(
 }
 
 /** One line that says what a block holds, for the outline. */
-export function blockSummary(b: EmailBlock): string {
+/** Fixed wording in a summary, translated by the caller. People's own text is never passed through it. */
+export type SummaryWording = 'Logo' | 'Empty' | 'No image yet' | 'No label' | 'A line between sections' | 'No links yet' | 'Links: {count}' | 'Rows: {count}';
+type Say = (text: SummaryWording, vars?: { count: number }) => string;
+const english: Say = (text, vars) => text.replace('{count}', String(vars?.count ?? ''));
+
+export function blockSummary(b: EmailBlock, say: Say = english): string {
   const cut = (s: string) => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
   switch (b.type) {
     case 'header':
-      return cut(b.title || (b.logoUrl ? 'Logo' : 'Empty'));
+      return cut(b.title || say(b.logoUrl ? 'Logo' : 'Empty'));
     case 'heading':
     case 'text':
     case 'footer':
-      return cut(b.text.replace(/\s+/g, ' ').trim() || 'Empty');
+      return cut(b.text.replace(/\s+/g, ' ').trim() || say('Empty'));
     case 'image':
-      return b.src ? cut(b.alt || b.src) : 'No image yet';
+      return b.src ? cut(b.alt || b.src) : say('No image yet');
     case 'button':
-      return cut(b.label || 'No label');
+      return cut(b.label || say('No label'));
     case 'divider':
-      return 'A line between sections';
+      return say('A line between sections');
     case 'social':
-      return b.links.length
-        ? `${b.links.length} link${b.links.length === 1 ? '' : 's'}`
-        : 'No links yet';
+      return b.links.length ? say('Links: {count}', { count: b.links.length }) : say('No links yet');
     case 'signature':
-      return cut([b.name, b.title].filter(Boolean).join(', ') || 'Empty');
+      return cut([b.name, b.title].filter(Boolean).join(', ') || say('Empty'));
     case 'product':
-      return cut([b.name, b.price].filter(Boolean).join(' · ') || 'Empty');
+      return cut([b.name, b.price].filter(Boolean).join(' · ') || say('Empty'));
     case 'pricing':
-      return `${b.rows.length} row${b.rows.length === 1 ? '' : 's'}`;
+      return say('Rows: {count}', { count: b.rows.length });
   }
 }
 

@@ -158,4 +158,10 @@ export const ar: Messages = {
   'count.unsavedChanges_few': '{count} تغييرات غير محفوظة.',
   'count.unsavedChanges_many': '{count} تغييرًا غير محفوظ.',
   'count.unsavedChanges_other': '{count} تغيير غير محفوظ.',
+  'count.inSequences_zero': 'ليس في أي سلسلة',
+  'count.inSequences_one': 'في سلسلة واحدة',
+  'count.inSequences_two': 'في سلسلتين',
+  'count.inSequences_few': 'في {count} سلاسل',
+  'count.inSequences_many': 'في {count} سلسلة',
+  'count.inSequences_other': 'في {count} سلسلة',
 };

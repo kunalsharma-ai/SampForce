@@ -2,7 +2,6 @@
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import {
-  EMAIL_EVENT_LABELS,
   EMAIL_EVENTS,
   ENROLL_SKIP_LABELS,
   type EmailEvent,
@@ -32,12 +31,14 @@ import { ENROLLMENT_LABEL, ENROLLMENT_TONE, pct, SEQUENCE_TONE, useEnrollments, 
 import { useCan, useSession } from '@/lib/session';
 import { EmailAssist } from '@/components/ai/email-assist';
 import { insertAt, MergeFieldBar, PreviewPanel } from '../merge-fields';
+import { inSentence, useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 type Tab = 'steps' | 'rules' | 'settings' | 'people' | 'results';
 type Draft = Pick<SequenceRow, 'name' | 'description' | 'steps' | 'rules' | 'settings'>;
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Short weekday names in the reader's language, Sunday first (index 0 = Sunday, as the API stores them). 2023-01-01 was a Sunday. */
+const weekdays = (locale: string) => Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' }).format(Date.UTC(2023, 0, 1 + i)));
 const newId = () => `s${Math.random().toString(36).slice(2, 8)}`;
 
 export function SequenceEditor({ id }: { id: string }) {
@@ -48,6 +49,7 @@ export function SequenceEditor({ id }: { id: string }) {
 }
 
 function Editor({ seq }: { seq: SequenceRow }) {
+  const t = useT();
   const qc = useQueryClient();
   const me = useSession().data;
   const canManage = useCan('marketing:manage');
@@ -64,53 +66,53 @@ function Editor({ seq }: { seq: SequenceRow }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <Link href="/app/sequences" className="text-xs text-muted-foreground hover:underline">
-            ← All sequences
+            ← {t('All sequences')}
           </Link>
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
-            {seq.name} <Badge tone={SEQUENCE_TONE[seq.status]}>{titleCase(seq.status)}</Badge>
+            {seq.name} <Badge tone={SEQUENCE_TONE[seq.status]}>{t.maybe(titleCase(seq.status))}</Badge>
           </h1>
           <p className="text-sm text-muted-foreground">
-            {seq.stats.active} in progress · {seq.stats.sent} sent · {seq.stats.replied} replied ({pct(seq.stats.replied, seq.stats.sent)})
+            {t('In progress: {active} · sent: {sent} · replied: {replied} ({rate})', { active: seq.stats.active, sent: seq.stats.sent, replied: seq.stats.replied, rate: pct(seq.stats.replied, seq.stats.sent) })}
           </p>
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
             {dirty && (
               <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-                Save changes
+                {t('Save changes')}
               </Button>
             )}
             {seq.status !== 'ACTIVE' && seq.status !== 'ARCHIVED' && (
               <Button size="sm" variant="accent" onClick={() => status.mutate('ACTIVE')} disabled={dirty || status.isPending}>
-                <Play aria-hidden /> Start sequence
+                <Play aria-hidden /> {t('Start sequence')}
               </Button>
             )}
             {seq.status === 'ACTIVE' && (
               <Button size="sm" variant="outline" onClick={() => status.mutate('PAUSED')} disabled={status.isPending}>
-                <Pause aria-hidden /> Pause sending
+                <Pause aria-hidden /> {t('Pause sending')}
               </Button>
             )}
             {seq.status !== 'ARCHIVED' && (
-              <Button size="sm" variant="ghost" onClick={() => window.confirm('Archive this sequence? Everyone still in it stops.') && status.mutate('ARCHIVED')}>
-                Archive
+              <Button size="sm" variant="ghost" onClick={() => window.confirm(t('Archive this sequence? Everyone still in it stops.')) && status.mutate('ARCHIVED')}>
+                {t('Archive')}
               </Button>
             )}
           </div>
         )}
       </div>
       <ErrorText error={save.error ?? status.error} />
-      {dirty && <p className="text-xs text-warning">You have unsaved changes{seq.status === 'DRAFT' ? '. Save before starting the sequence.' : '.'}</p>}
+      {dirty && <p className="text-xs text-warning">{seq.status === 'DRAFT' ? t('You have unsaved changes. Save before starting the sequence.') : t('You have unsaved changes.')}</p>}
 
       <Tabs<Tab>
-        label="Sequence"
+        label={t('Sequence')}
         value={tab}
         onChange={setTab}
         tabs={[
-          { key: 'steps', label: `Steps (${draft.steps.length})` },
-          { key: 'rules', label: 'When they respond' },
-          { key: 'settings', label: 'Sending' },
-          { key: 'people', label: `People (${seq.stats.active})` },
-          { key: 'results', label: 'Results' },
+          { key: 'steps', label: t('Steps ({count})', { count: draft.steps.length }) },
+          { key: 'rules', label: t('When they respond') },
+          { key: 'settings', label: t('Sending') },
+          { key: 'people', label: t('People ({count})', { count: seq.stats.active }) },
+          { key: 'results', label: t('Results') },
         ]}
       />
       {tab === 'steps' && <StepsTab draft={draft} setDraft={setDraft} readOnly={!canEdit} test={canEdit ? { seqId: seq.id, dirty } : undefined} />}
@@ -127,6 +129,7 @@ function Editor({ seq }: { seq: SequenceRow }) {
 type TestTarget = { seqId: string; dirty: boolean };
 
 function StepsTab({ draft, setDraft, readOnly, test }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean; test?: TestTarget }) {
+  const t = useT();
   const steps = draft.steps;
   const set = (i: number, s: SequenceStep) => setDraft({ ...draft, steps: steps.map((x, j) => (j === i ? s : x)) });
   const move = (i: number, by: number) => {
@@ -139,14 +142,14 @@ function StepsTab({ draft, setDraft, readOnly, test }: { draft: Draft; setDraft:
     const id = newId();
     const step: SequenceStep =
       type === 'email' ? { id, type, delayDays: 3, templateId: null, subject: '', body: '', variantB: null }
-        : type === 'task' ? { id, type, delayDays: 0, title: 'Call {{first_name}}' }
+        : type === 'task' ? { id, type, delayDays: 0, title: t('Call {{first_name}}') }
           : { id, type, delayDays: 2, check: 'replied', ifYes: 'stop', ifNo: 'next' };
     setDraft({ ...draft, steps: [...steps, step] });
   };
   let day = 0;
   return (
     <div className="space-y-3">
-      <Field id="seq-name" label="Name">
+      <Field id="seq-name" label={t('Name')}>
         <Input id="seq-name" value={draft.name} maxLength={120} disabled={readOnly} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
       </Field>
       <ol className="space-y-3">
@@ -166,13 +169,13 @@ function StepsTab({ draft, setDraft, readOnly, test }: { draft: Draft; setDraft:
       {!readOnly && steps.length < 20 && (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => add('email')}>
-            <Mail aria-hidden /> Add email
+            <Mail aria-hidden /> {t('Add email')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => add('task')}>
-            <CheckSquare aria-hidden /> Add task
+            <CheckSquare aria-hidden /> {t('Add task')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => add('condition')}>
-            <GitBranch aria-hidden /> Add check
+            <GitBranch aria-hidden /> {t('Add check')}
           </Button>
         </div>
       )}
@@ -181,12 +184,22 @@ function StepsTab({ draft, setDraft, readOnly, test }: { draft: Draft; setDraft:
 }
 
 const STEP_ICON = { email: Mail, task: CheckSquare, condition: GitBranch };
-const STEP_LABEL = { email: 'Email', task: 'Task for you', condition: 'Check' };
+const STEP_LABEL = { email: 'Email', task: 'Task for you', condition: 'Check' } as const;
+
+/** Rule card titles, one sentence per event so each language can word it naturally. */
+const WHEN = {
+  replied: 'When someone replies',
+  opened: 'When someone opens an email (approximate)',
+  clicked: 'When someone clicks a link',
+  bounced: 'When an email bounces',
+  unsubscribed: 'When someone unsubscribes',
+} as const satisfies Record<EmailEvent, string>;
 
 function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onDown, onDelete }: {
   step: SequenceStep; index: number; day: number; steps: SequenceStep[]; readOnly: boolean; test?: TestTarget;
   onChange: (s: SequenceStep) => void; onUp?: () => void; onDown?: () => void; onDelete: () => void;
 }) {
+  const t = useT();
   const Icon = STEP_ICON[step.type];
   const delayId = `delay-${step.id}`;
   return (
@@ -194,17 +207,17 @@ function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onD
       <CardHeader className="flex flex-row flex-wrap items-center gap-2 space-y-0 pb-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
         <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-        <CardTitle className="text-sm">{STEP_LABEL[step.type]}</CardTitle>
-        <span className="text-xs text-muted-foreground">Day {day}</span>
+        <CardTitle className="text-sm">{t(STEP_LABEL[step.type])}</CardTitle>
+        <span className="text-xs text-muted-foreground">{t('Day {day}', { day })}</span>
         {!readOnly && (
           <div className="ms-auto flex gap-1">
-            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Move step ${index + 1} up`} disabled={!onUp} onClick={onUp}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={t('Move step {n} up', { n: index + 1 })} disabled={!onUp} onClick={onUp}>
               <ArrowUp className="h-4 w-4" aria-hidden />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Move step ${index + 1} down`} disabled={!onDown} onClick={onDown}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={t('Move step {n} down', { n: index + 1 })} disabled={!onDown} onClick={onDown}>
               <ArrowDown className="h-4 w-4" aria-hidden />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Delete step ${index + 1}`} onClick={onDelete}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={t('Delete step {n}', { n: index + 1 })} onClick={onDelete}>
               <Trash2 className="h-4 w-4" aria-hidden />
             </Button>
           </div>
@@ -212,27 +225,27 @@ function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onD
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label htmlFor={delayId}>Wait</label>
+          <label htmlFor={delayId}>{t('Wait')}</label>
           <Input id={delayId} type="number" min={0} max={60} className="h-8 w-20" disabled={readOnly} value={step.delayDays} onChange={(e) => onChange({ ...step, delayDays: Math.max(0, Math.min(60, Number(e.target.value) || 0)) })} />
-          <span className="text-muted-foreground">{index === 0 ? 'days after enrolment' : 'days after the previous step'}</span>
+          <span className="text-muted-foreground">{index === 0 ? t('days after enrolment') : t('days after the previous step')}</span>
         </div>
         {step.type === 'email' && <EmailStep step={step} readOnly={readOnly} test={test} onChange={onChange} />}
         {step.type === 'task' && (
-          <Field id={`task-${step.id}`} label="Task title" hint="Created for the sender, due a day later.">
+          <Field id={`task-${step.id}`} label={t('Task title')} hint={t('Created for the sender, due a day later.')}>
             <Input id={`task-${step.id}`} maxLength={200} disabled={readOnly} value={step.title} onChange={(e) => onChange({ ...step, title: e.target.value })} />
           </Field>
         )}
         {step.type === 'condition' && (
           <div className="grid gap-2 sm:grid-cols-3">
-            <Field id={`check-${step.id}`} label="Has the person">
+            <Field id={`check-${step.id}`} label={t('Has the person')}>
               <Select id={`check-${step.id}`} disabled={readOnly} value={step.check} onChange={(e) => onChange({ ...step, check: e.target.value as typeof step.check })}>
-                <option value="replied">replied</option>
-                <option value="opened">opened an email (approximate)</option>
-                <option value="clicked">clicked a link</option>
+                <option value="replied">{t('replied')}</option>
+                <option value="opened">{t('opened an email (approximate)')}</option>
+                <option value="clicked">{t('clicked a link')}</option>
               </Select>
             </Field>
-            <JumpSelect id={`yes-${step.id}`} label="If yes" value={step.ifYes} steps={steps} after={index} readOnly={readOnly} onChange={(ifYes) => onChange({ ...step, ifYes })} />
-            <JumpSelect id={`no-${step.id}`} label="If no" value={step.ifNo} steps={steps} after={index} readOnly={readOnly} onChange={(ifNo) => onChange({ ...step, ifNo })} />
+            <JumpSelect id={`yes-${step.id}`} label={t('If yes')} value={step.ifYes} steps={steps} after={index} readOnly={readOnly} onChange={(ifYes) => onChange({ ...step, ifYes })} />
+            <JumpSelect id={`no-${step.id}`} label={t('If no')} value={step.ifNo} steps={steps} after={index} readOnly={readOnly} onChange={(ifNo) => onChange({ ...step, ifNo })} />
           </div>
         )}
       </CardContent>
@@ -241,14 +254,15 @@ function StepCard({ step, index, day, steps, readOnly, test, onChange, onUp, onD
 }
 
 function JumpSelect({ id, label, value, steps, after, readOnly, onChange }: { id: string; label: string; value: string; steps: SequenceStep[]; after: number; readOnly: boolean; onChange: (v: string) => void }) {
+  const t = useT();
   return (
     <Field id={id} label={label}>
       <Select id={id} disabled={readOnly} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="next">Carry on to the next step</option>
-        <option value="stop">End the sequence for them</option>
+        <option value="next">{t('Carry on to the next step')}</option>
+        <option value="stop">{t('End the sequence for them')}</option>
         {steps.slice(after + 2).map((s, j) => (
           <option key={s.id} value={s.id}>
-            Jump to step {after + 3 + j} ({STEP_LABEL[s.type].toLowerCase()})
+            {t('Jump to step {n} ({kind})', { n: after + 3 + j, kind: inSentence(t, t(STEP_LABEL[s.type])) })}
           </option>
         ))}
       </Select>
@@ -259,6 +273,7 @@ function JumpSelect({ id, label, value, steps, after, readOnly, onChange }: { id
 type EmailStepT = Extract<SequenceStep, { type: 'email' }>;
 
 function EmailStep({ step, readOnly, test, onChange }: { step: EmailStepT; readOnly: boolean; test?: TestTarget; onChange: (s: SequenceStep) => void }) {
+  const t = useT();
   const [shown, setShown] = useState<EmailVariant>('A');
   const variant: EmailVariant = step.variantB ? shown : 'A';
   const version: EmailVersion = variant === 'B' && step.variantB ? step.variantB : step;
@@ -268,25 +283,25 @@ function EmailStep({ step, readOnly, test, onChange }: { step: EmailStepT; readO
       <div className="flex flex-wrap items-center gap-2">
         {step.variantB ? (
           <>
-            <div className="inline-flex overflow-hidden rounded-md border border-border" role="group" aria-label={`Versions of this email`}>
+            <div className="inline-flex overflow-hidden rounded-md border border-border" role="group" aria-label={t('Versions of this email')}>
               {(['A', 'B'] as const).map((v) => (
                 <button key={v} type="button" aria-pressed={variant === v} onClick={() => setShown(v)}
                   className={`px-3 py-1 text-sm ${variant === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
-                  Version {v}
+                  {t('Version {v}', { v })}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-muted-foreground">About half the people get each version. The Results tab compares them.</span>
+            <span className="text-xs text-muted-foreground">{t('About half the people get each version. The Results tab compares them.')}</span>
             {!readOnly && (
               <Button type="button" size="sm" variant="ghost" className="ms-auto" onClick={() => { setShown('A'); onChange({ ...step, variantB: null }); }}>
-                Stop testing, keep version A
+                {t('Stop testing, keep version A')}
               </Button>
             )}
           </>
         ) : (
           !readOnly && (
             <Button type="button" size="sm" variant="outline" onClick={() => { onChange({ ...step, variantB: { templateId: null, subject: step.subject, body: step.body } }); setShown('B'); }}>
-              <FlaskConical className="h-4 w-4" aria-hidden /> A/B test this email
+              <FlaskConical className="h-4 w-4" aria-hidden /> {t('A/B test this email')}
             </Button>
           )
         )}
@@ -300,29 +315,30 @@ function EmailStep({ step, readOnly, test, onChange }: { step: EmailStepT; readO
 function VersionFields({ idBase, version, readOnly, test, onChange }: {
   idBase: string; version: EmailVersion; readOnly: boolean; test?: TestTarget & { stepId: string; variant: EmailVariant }; onChange: (v: EmailVersion) => void;
 }) {
+  const t = useT();
   const templates = useTemplates();
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const last = useRef<'subject' | 'body'>('body');
-  const tpl = templates.data?.find((t) => t.id === version.templateId);
+  const tpl = templates.data?.find((x) => x.id === version.templateId);
   const insert = (tag: string) =>
     onChange(last.current === 'subject' ? { ...version, subject: insertAt(subjectRef.current, version.subject, tag) } : { ...version, body: insertAt(bodyRef.current, version.body, tag) });
   return (
     <div className="space-y-3">
-      <Field id={`tpl-${idBase}`} label="Template" hint={tpl ? 'Leave the boxes below empty to use the template as it is, or write here to change it for this step.' : undefined}>
+      <Field id={`tpl-${idBase}`} label={t('Template')} hint={tpl ? t('Leave the boxes below empty to use the template as it is, or write here to change it for this step.') : undefined}>
         <Select id={`tpl-${idBase}`} disabled={readOnly} value={version.templateId ?? ''} onChange={(e) => onChange({ ...version, templateId: e.target.value || null })}>
-          <option value="">No template, write it here</option>
-          {templates.data?.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          <option value="">{t('No template, write it here')}</option>
+          {templates.data?.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
             </option>
           ))}
         </Select>
       </Field>
-      <Field id={`subj-${idBase}`} label="Subject">
+      <Field id={`subj-${idBase}`} label={t('Subject')}>
         <Input id={`subj-${idBase}`} ref={subjectRef} maxLength={200} disabled={readOnly} placeholder={tpl?.subject} value={version.subject} onFocus={() => (last.current = 'subject')} onChange={(e) => onChange({ ...version, subject: e.target.value })} />
       </Field>
-      <Field id={`body-${idBase}`} label="Email">
+      <Field id={`body-${idBase}`} label={t('Email')}>
         <Textarea id={`body-${idBase}`} ref={bodyRef} rows={7} maxLength={20_000} disabled={readOnly} placeholder={tpl?.body} value={version.body} onFocus={() => (last.current = 'body')} onChange={(e) => onChange({ ...version, body: e.target.value })} />
       </Field>
       {!readOnly && <MergeFieldBar idBase={idBase} onInsert={insert} />}
@@ -342,6 +358,7 @@ function VersionFields({ idBase, version, readOnly, test, onChange }: {
 // ───────────── Rules ─────────────
 
 function RulesTab({ seqId, rules, onChange, readOnly }: { seqId: string; rules: EventRule[]; onChange: (r: EventRule[]) => void; readOnly: boolean }) {
+  const t = useT();
   const others = useSequences().data?.filter((s) => s.id !== seqId && s.status !== 'ARCHIVED') ?? [];
   const ruleFor = (on: EmailEvent) => rules.find((r) => r.on === on);
   const update = (on: EmailEvent, actions: RuleAction[]) => {
@@ -351,7 +368,7 @@ function RulesTab({ seqId, rules, onChange, readOnly }: { seqId: string; rules: 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Choose what DealFlow does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.
+        {t('Choose what DealFlow does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.')}
       </p>
       {EMAIL_EVENTS.map((on) => (
         <RuleCard key={on} on={on} rule={ruleFor(on)} others={others} readOnly={readOnly} onChange={(a) => update(on, a)} />
@@ -361,32 +378,33 @@ function RulesTab({ seqId, rules, onChange, readOnly }: { seqId: string; rules: 
 }
 
 function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; rule?: EventRule; others: SequenceRow[]; readOnly: boolean; onChange: (a: RuleAction[]) => void }) {
+  const t = useT();
   const actions = rule?.actions ?? [];
-  const has = (t: RuleAction['type']) => actions.find((a) => a.type === t);
-  const toggle = (t: RuleAction['type'], make: () => RuleAction) => {
-    if (has(t)) return onChange(actions.filter((a) => a.type !== t));
+  const has = (type: RuleAction['type']) => actions.find((a) => a.type === type);
+  const toggle = (type: RuleAction['type'], make: () => RuleAction) => {
+    if (has(type)) return onChange(actions.filter((a) => a.type !== type));
     let next = [...actions, make()];
-    if (t === 'stop') next = next.filter((a) => a.type !== 'move_sequence');
-    if (t === 'move_sequence') next = next.filter((a) => a.type !== 'stop');
+    if (type === 'stop') next = next.filter((a) => a.type !== 'move_sequence');
+    if (type === 'move_sequence') next = next.filter((a) => a.type !== 'stop');
     onChange(next);
   };
-  const patch = (t: RuleAction['type'], v: Partial<RuleAction>) => onChange(actions.map((a) => (a.type === t ? ({ ...a, ...v } as RuleAction) : a)));
+  const patch = (type: RuleAction['type'], v: Partial<RuleAction>) => onChange(actions.map((a) => (a.type === type ? ({ ...a, ...v } as RuleAction) : a)));
   const move = has('move_sequence') as Extract<RuleAction, { type: 'move_sequence' }> | undefined;
   const status = has('set_lead_status') as Extract<RuleAction, { type: 'set_lead_status' }> | undefined;
   const task = has('create_task') as Extract<RuleAction, { type: 'create_task' }> | undefined;
-  const box = (t: RuleAction['type'], make: () => RuleAction, disabled = false) => (
+  const box = (type: RuleAction['type'], make: () => RuleAction, disabled = false) => (
     <label className="flex items-center gap-2">
-      <input type="checkbox" checked={!!has(t)} disabled={readOnly || disabled} onChange={() => toggle(t, make)} /> {RULE_ACTION_LABELS[t]}
+      <input type="checkbox" checked={!!has(type)} disabled={readOnly || disabled} onChange={() => toggle(type, make)} /> {t.maybe(RULE_ACTION_LABELS[type])}
     </label>
   );
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">When someone {EMAIL_EVENT_LABELS[on].charAt(0).toLowerCase() + EMAIL_EVENT_LABELS[on].slice(1)}</CardTitle>
+        <CardTitle className="text-sm">{t(WHEN[on])}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
         {on === 'bounced' || on === 'unsubscribed' ? (
-          <p className="text-muted-foreground sm:col-span-2">Sending to them always stops. You can also:</p>
+          <p className="text-muted-foreground sm:col-span-2">{t('Sending to them always stops. You can also:')}</p>
         ) : (
           box('stop', () => ({ type: 'stop' }))
         )}
@@ -394,7 +412,7 @@ function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; ru
           <div className="space-y-1">
             {box('move_sequence', () => ({ type: 'move_sequence', sequenceId: others[0]?.id ?? '' }), others.length === 0)}
             {move && (
-              <Select aria-label="Sequence to move them to" disabled={readOnly} value={move.sequenceId} onChange={(e) => patch('move_sequence', { sequenceId: e.target.value })}>
+              <Select aria-label={t('Sequence to move them to')} disabled={readOnly} value={move.sequenceId} onChange={(e) => patch('move_sequence', { sequenceId: e.target.value })}>
                 {others.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -407,18 +425,18 @@ function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; ru
         <div className="space-y-1">
           {box('set_lead_status', () => ({ type: 'set_lead_status', status: on === 'replied' ? 'CONTACTED' : 'UNQUALIFIED' }))}
           {status && (
-            <Select aria-label="New lead status" disabled={readOnly} value={status.status} onChange={(e) => patch('set_lead_status', { status: e.target.value as typeof status.status })}>
+            <Select aria-label={t('New lead status')} disabled={readOnly} value={status.status} onChange={(e) => patch('set_lead_status', { status: e.target.value as typeof status.status })}>
               {LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => (
                 <option key={s} value={s}>
-                  {titleCase(s)}
+                  {t.maybe(titleCase(s))}
                 </option>
               ))}
             </Select>
           )}
         </div>
         <div className="space-y-1">
-          {box('create_task', () => ({ type: 'create_task', title: on === 'replied' ? 'Reply to {{first_name}}' : 'Follow up', dueInDays: 1 }))}
-          {task && <Input aria-label="Task title" disabled={readOnly} maxLength={200} value={task.title} onChange={(e) => patch('create_task', { title: e.target.value })} />}
+          {box('create_task', () => ({ type: 'create_task', title: on === 'replied' ? t('Reply to {{first_name}}') : t('Follow up'), dueInDays: 1 }))}
+          {task && <Input aria-label={t('Task title')} disabled={readOnly} maxLength={200} value={task.title} onChange={(e) => patch('create_task', { title: e.target.value })} />}
         </div>
         {box('notify_owner', () => ({ type: 'notify_owner' }))}
       </CardContent>
@@ -429,7 +447,9 @@ function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; ru
 // ───────────── Sending settings ─────────────
 
 function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d: Draft) => void; readOnly: boolean }) {
+  const t = useT();
   const s = draft.settings;
+  const days = useMemo(() => weekdays(t.formatLocale), [t.formatLocale]);
   const set = (v: Partial<SequenceSettings>) => setDraft({ ...draft, settings: { ...s, ...v } });
   const zones = useMemo(() => {
     try {
@@ -442,22 +462,22 @@ function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d
     <Card>
       <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
         <fieldset className="space-y-2 sm:col-span-2">
-          <legend className="text-sm font-medium">Send on</legend>
+          <legend className="text-sm font-medium">{t('Send on')}</legend>
           <div className="flex flex-wrap gap-3 text-sm">
-            {DAYS.map((d, i) => (
+            {days.map((d, i) => (
               <label key={d} className="flex items-center gap-1">
                 <input type="checkbox" disabled={readOnly} checked={s.sendDays.includes(i)} onChange={(e) => set({ sendDays: e.target.checked ? [...s.sendDays, i].sort() : s.sendDays.filter((x) => x !== i) })} /> {d}
               </label>
             ))}
           </div>
         </fieldset>
-        <Field id="send-start" label="From">
+        <Field id="send-start" label={t('From')}>
           <Input id="send-start" type="time" disabled={readOnly} value={s.sendStart} onChange={(e) => set({ sendStart: e.target.value })} />
         </Field>
-        <Field id="send-end" label="Until">
+        <Field id="send-end" label={t('Until')}>
           <Input id="send-end" type="time" disabled={readOnly} value={s.sendEnd} onChange={(e) => set({ sendEnd: e.target.value })} />
         </Field>
-        <Field id="send-tz" label="Time zone" hint="The window uses this zone for everyone in the sequence.">
+        <Field id="send-tz" label={t('Time zone')} hint={t('The window uses this zone for everyone in the sequence.')}>
           <Input id="send-tz" list="tz-list" disabled={readOnly} value={s.timezone} onChange={(e) => set({ timezone: e.target.value })} />
           <datalist id="tz-list">
             {zones.map((z) => (
@@ -465,19 +485,19 @@ function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d
             ))}
           </datalist>
         </Field>
-        <Field id="send-limit" label="Emails per sender per day" hint="Your mailbox's overall DealFlow limit also applies. Sends are spread out by a few minutes.">
+        <Field id="send-limit" label={t('Emails per sender per day')} hint={t("Your mailbox's overall DealFlow limit also applies. Sends are spread out by a few minutes.")}>
           <Input id="send-limit" type="number" min={1} max={500} disabled={readOnly} value={s.dailyLimit} onChange={(e) => set({ dailyLimit: Math.max(1, Math.min(500, Number(e.target.value) || 1)) })} />
         </Field>
         <fieldset className="space-y-2 sm:col-span-2">
-          <legend className="text-sm font-medium">Tracking</legend>
+          <legend className="text-sm font-medium">{t('Tracking')}</legend>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={readOnly} checked={s.trackOpens} onChange={(e) => set({ trackOpens: e.target.checked })} /> Track opens (approximate)
+            <input type="checkbox" disabled={readOnly} checked={s.trackOpens} onChange={(e) => set({ trackOpens: e.target.checked })} /> {t('Track opens (approximate)')}
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" disabled={readOnly} checked={s.trackClicks} onChange={(e) => set({ trackClicks: e.target.checked })} /> Track link clicks
+            <input type="checkbox" disabled={readOnly} checked={s.trackClicks} onChange={(e) => set({ trackClicks: e.target.checked })} /> {t('Track link clicks')}
           </label>
           <p className="text-xs text-muted-foreground">
-            Tracking sends the email with an HTML part, a small image and rewritten links. Plain text with no tracking can land in the inbox more often. Replies are detected either way.
+            {t('Tracking sends the email with an HTML part, a small image and rewritten links. Plain text with no tracking can land in the inbox more often. Replies are detected either way.')}
           </p>
         </fieldset>
       </CardContent>
@@ -488,6 +508,7 @@ function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d
 // ───────────── People ─────────────
 
 function PeopleTab({ seq }: { seq: SequenceRow }) {
+  const t = useT();
   const qc = useQueryClient();
   const me = useSession().data;
   const canWrite = useCan('sequences:write');
@@ -512,30 +533,30 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
       {canWrite && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Enrol people</CardTitle>
+            <CardTitle className="text-base">{t('Enrol people')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {!open && <p className="text-warning">Start the sequence before enrolling people.</p>}
-            <p className="text-muted-foreground">Emails go from your own connected mailbox. People who opted out, are on the do-not-email list or have no email address are skipped.</p>
+            {!open && <p className="text-warning">{t('Start the sequence before enrolling people.')}</p>}
+            <p className="text-muted-foreground">{t('Emails go from your own connected mailbox. People who opted out, are on the do-not-email list or have no email address are skipped.')}</p>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <label htmlFor="enrol-lead" className="text-sm font-medium">
-                    A lead
+                    {t('A lead')}
                   </label>
-                  <RecordPicker id="enrol-lead" entity="leads" value={lead} onChange={setLead} placeholder="Search leads" />
+                  <RecordPicker id="enrol-lead" entity="leads" value={lead} onChange={setLead} placeholder={t('Search leads')} />
                 </div>
                 <Button size="sm" disabled={!open || !lead || enroll.isPending} onClick={() => lead && enroll.mutate({ leadIds: [lead.id] })}>
-                  Enrol
+                  {t('Enrol')}
                 </Button>
               </div>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <label htmlFor="enrol-seg" className="text-sm font-medium">
-                    A whole segment (up to 500)
+                    {t('A whole segment (up to 500)')}
                   </label>
                   <Select id="enrol-seg" value={segmentId} onChange={(e) => setSegmentId(e.target.value)}>
-                    <option value="">Choose a segment</option>
+                    <option value="">{t('Choose a segment')}</option>
                     {segments.data?.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -544,15 +565,19 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
                   </Select>
                 </div>
                 <Button size="sm" disabled={!open || !segmentId || enroll.isPending} onClick={() => enroll.mutate({ segmentId })}>
-                  Enrol segment
+                  {t('Enrol segment')}
                 </Button>
               </div>
             </div>
             <ErrorText error={enroll.error} />
             {enroll.data && (
               <p role="status" className="text-sm">
-                Enrolled {enroll.data.enrolled}.
-                {enroll.data.skipped.length > 0 && ` Skipped ${enroll.data.skipped.length}: ${enroll.data.skipped.slice(0, 5).map((s) => `${s.name} (${ENROLL_SKIP_LABELS[s.reason]})`).join(', ')}${enroll.data.skipped.length > 5 ? '…' : ''}.`}
+                {t('Enrolled: {count}.', { count: enroll.data.enrolled })}
+                {enroll.data.skipped.length > 0 &&
+                  ` ${t('Skipped {count}: {people}.', {
+                    count: enroll.data.skipped.length,
+                    people: `${enroll.data.skipped.slice(0, 5).map((s) => `${s.name} (${t.maybe(ENROLL_SKIP_LABELS[s.reason])})`).join(', ')}${enroll.data.skipped.length > 5 ? '…' : ''}`,
+                  })}`}
               </p>
             )}
           </CardContent>
@@ -561,7 +586,7 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
       <div className="flex gap-2 text-sm">
         {(['live', 'finished', undefined] as const).map((f) => (
           <Button key={f ?? 'all'} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => setFilter(f)}>
-            {f === 'live' ? 'In progress' : f === 'finished' ? 'Finished' : 'Everyone'}
+            {f === 'live' ? t('In progress') : f === 'finished' ? t('Finished') : t('Everyone')}
           </Button>
         ))}
       </div>
@@ -574,17 +599,17 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
               <ErrorText error={rows.error} />
             </div>
           ) : rows.data.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">Nobody here yet.</p>
+            <p className="p-6 text-sm text-muted-foreground">{t('Nobody here yet.')}</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Person</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Next</th>
-                  <th className="px-4 py-2 text-end font-medium">Sent</th>
-                  <th className="px-4 py-2 font-medium">Activity</th>
-                  <th className="sr-only">Actions</th>
+                  <th className="px-4 py-2 font-medium">{t('Person')}</th>
+                  <th className="px-4 py-2 font-medium">{t('Status')}</th>
+                  <th className="px-4 py-2 font-medium">{t('Next')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Sent')}</th>
+                  <th className="px-4 py-2 font-medium">{t('Activity')}</th>
+                  <th className="sr-only">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -598,26 +623,26 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
                         </Link>
                         <span className="block text-xs text-muted-foreground">
                           {r.email}
-                          {r.sender ? ` · from ${r.sender.name}` : ''}
+                          {r.sender ? ` · ${t('from {name}', { name: r.sender.name })}` : ''}
                         </span>
                       </td>
                       <td className="px-4 py-2">
-                        <Badge tone={ENROLLMENT_TONE[r.status]}>{ENROLLMENT_LABEL[r.status]}</Badge>
+                        <Badge tone={ENROLLMENT_TONE[r.status]}>{t.maybe(ENROLLMENT_LABEL[r.status])}</Badge>
                         {r.lastError && <span className="block max-w-xs text-xs text-warning">{r.lastError}</span>}
                       </td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground">{r.nextStep ? `Step ${r.nextStep}${r.nextRunAt ? `, ${new Date(r.nextRunAt).toLocaleString(fmtLocale())}` : ''}` : '—'}</td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{r.nextStep ? (r.nextRunAt ? t('Step {n}, {when}', { n: r.nextStep, when: new Date(r.nextRunAt).toLocaleString(fmtLocale()) }) : t('Step {n}', { n: r.nextStep })) : '—'}</td>
                       <td className="px-4 py-2 text-end tabular-nums">{r.sent}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
-                        {[r.repliedAt && `Replied ${formatDate(r.repliedAt)}`, r.clickedAt && 'Clicked', !r.clickedAt && r.openedAt && 'Opened*'].filter(Boolean).join(' · ') || '—'}
+                        {[r.repliedAt && t('Replied {date}', { date: formatDate(r.repliedAt) }), r.clickedAt && t('Clicked'), !r.clickedAt && r.openedAt && t('Opened*')].filter(Boolean).join(' · ') || '—'}
                       </td>
                       <td className="px-4 py-2">
                         {canWrite && mine && (r.status === 'ACTIVE' || r.status === 'PAUSED') && (
                           <div className="flex gap-1">
                             <Button size="sm" variant="ghost" onClick={() => change.mutate({ id: r.id, action: r.status === 'ACTIVE' ? 'pause' : 'resume' })}>
-                              {r.status === 'ACTIVE' ? 'Pause' : 'Resume'}
+                              {r.status === 'ACTIVE' ? t('Pause') : t('Resume')}
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => change.mutate({ id: r.id, action: 'stop' })}>
-                              Stop
+                              {t('Stop')}
                             </Button>
                           </div>
                         )}
@@ -649,10 +674,11 @@ function leader(variants: { variant: EmailVariant; counts: EmailCounts }[]): Ema
 }
 
 function StatsRow({ label, c, sub, lead }: { label: string; c: EmailCounts; sub?: boolean; lead?: boolean }) {
+  const t = useT();
   return (
     <tr className={sub ? 'bg-muted/30' : undefined}>
       <td className={`px-4 py-2 ${sub ? 'ps-8 text-muted-foreground' : ''}`}>
-        {label} {lead && <Badge tone="success">Ahead on replies</Badge>}
+        {label} {lead && <Badge tone="success">{t('Ahead on replies')}</Badge>}
       </td>
       <td className="px-4 py-2 text-end tabular-nums">{c.sent}</td>
       <td className="px-4 py-2 text-end tabular-nums">{c.replied} <span className="text-xs text-muted-foreground">{pct(c.replied, c.sent)}</span></td>
@@ -664,25 +690,26 @@ function StatsRow({ label, c, sub, lead }: { label: string; c: EmailCounts; sub?
 }
 
 function ResultsTab({ seq }: { seq: SequenceRow }) {
+  const t = useT();
   const stats = useStepStats(seq.id);
-  const t = seq.stats;
+  const n = seq.stats;
   const tiles: [string, number, string][] = [
-    ['Sent', t.sent, ''],
-    ['Replied', t.replied, pct(t.replied, t.sent)],
-    ['Clicked', t.clicked, pct(t.clicked, t.sent)],
-    ['Opened*', t.opened, pct(t.opened, t.sent)],
-    ['Bounced', t.bounced, pct(t.bounced, t.sent)],
-    ['Unsubscribed', t.unsubscribed, ''],
+    [t('Sent'), n.sent, ''],
+    [t('Replied'), n.replied, pct(n.replied, n.sent)],
+    [t('Clicked'), n.clicked, pct(n.clicked, n.sent)],
+    [t('Opened*'), n.opened, pct(n.opened, n.sent)],
+    [t('Bounced'), n.bounced, pct(n.bounced, n.sent)],
+    [t('Unsubscribed'), n.unsubscribed, ''],
   ];
   const position = new Map(seq.steps.map((s, i) => [s.id, i + 1]));
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {tiles.map(([label, n, p]) => (
+        {tiles.map(([label, count, p]) => (
           <Card key={label}>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-2xl font-semibold tabular-nums">{n}</p>
+              <p className="text-2xl font-semibold tabular-nums">{count}</p>
               {p && <p className="text-xs text-muted-foreground">{p}</p>}
             </CardContent>
           </Card>
@@ -700,19 +727,19 @@ function ResultsTab({ seq }: { seq: SequenceRow }) {
             <table className="w-full text-sm">
               <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Email step</th>
-                  <th className="px-4 py-2 text-end font-medium">Sent</th>
-                  <th className="px-4 py-2 text-end font-medium">Replied</th>
-                  <th className="px-4 py-2 text-end font-medium">Clicked</th>
-                  <th className="px-4 py-2 text-end font-medium">Opened*</th>
-                  <th className="px-4 py-2 text-end font-medium">Bounced</th>
+                  <th className="px-4 py-2 font-medium">{t('Email step')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Sent')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Replied')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Clicked')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Opened*')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Bounced')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {stats.data.flatMap((r) => [
-                  <StatsRow key={r.stepId} label={`Step ${position.get(r.stepId) ?? '?'}${r.variants ? ', both versions' : ''}`} c={r} />,
+                  <StatsRow key={r.stepId} label={r.variants ? t('Step {n}, both versions', { n: position.get(r.stepId) ?? '?' }) : t('Step {n}', { n: position.get(r.stepId) ?? '?' })} c={r} />,
                   ...(r.variants ?? []).map((v) => (
-                    <StatsRow key={`${r.stepId}-${v.variant}`} label={`Version ${v.variant}`} c={v.counts} sub
+                    <StatsRow key={`${r.stepId}-${v.variant}`} label={t('Version {v}', { v: v.variant })} c={v.counts} sub
                       lead={leader(r.variants!) === v.variant} />
                   )),
                 ])}
@@ -721,10 +748,10 @@ function ResultsTab({ seq }: { seq: SequenceRow }) {
           )}
         </CardContent>
       </Card>
-      <p className="text-xs text-muted-foreground">*Opens are approximate: some mail apps load images automatically and others block them. Replies and bounces come from your synced mailbox.</p>
+      <p className="text-xs text-muted-foreground">{t('*Opens are approximate: some mail apps load images automatically and others block them. Replies and bounces come from your synced mailbox.')}</p>
       {stats.data?.some((r) => r.variants) && (
         <p className="text-xs text-muted-foreground">
-          A/B tests: “Ahead on replies” appears once each version has gone to at least {AB_MIN_SENT} people and one has a higher reply rate. With small numbers the difference can be chance, so keep testing before you pick one.
+          {t('A/B tests: “Ahead on replies” appears once each version has gone to at least {min} people and one has a higher reply rate. With small numbers the difference can be chance, so keep testing before you pick one.', { min: AB_MIN_SENT })}
         </p>
       )}
     </div>

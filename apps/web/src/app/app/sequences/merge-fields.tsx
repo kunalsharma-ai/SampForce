@@ -9,6 +9,7 @@ import { RecordPicker, type PickerValue } from '@/components/crm/record-picker';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useCustomFields } from '@/lib/crm';
+import { useT } from '@/lib/i18n';
 import { useEmailVariables } from '@/lib/sequences';
 
 /** Custom fields on leads and contacts plus workspace variables, as insertable tags with readable labels. */
@@ -32,11 +33,12 @@ export function useExtraMergeFields() {
 
 /** Buttons that insert `{{field}}` at the cursor of the last focused subject or body box. */
 export function MergeFieldBar({ onInsert, idBase = 'mf' }: { onInsert: (tag: string) => void; idBase?: string }) {
+  const t = useT();
   const { options } = useExtraMergeFields();
   const groups = ['Custom fields', 'Workspace variables'] as const;
   return (
-    <div className="flex flex-wrap items-center gap-1" aria-label="Insert a merge field">
-      <span className="me-1 text-xs text-muted-foreground">Insert:</span>
+    <div className="flex flex-wrap items-center gap-1" aria-label={t('Insert a merge field')}>
+      <span className="me-1 text-xs text-muted-foreground">{t('Insert:')}</span>
       {MERGE_FIELD_KEYS.map((k) => (
         <button
           key={k}
@@ -45,13 +47,13 @@ export function MergeFieldBar({ onInsert, idBase = 'mf' }: { onInsert: (tag: str
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onInsert(k === 'first_name' ? '{{first_name|there}}' : `{{${k}}}`)}
         >
-          {MERGE_FIELDS[k as MergeField]}
+          {t.maybe(MERGE_FIELDS[k as MergeField])}
         </button>
       ))}
       {options.length > 0 && (
         <>
           <label htmlFor={`${idBase}-extra`} className="sr-only">
-            Insert a custom field or workspace variable
+            {t('Insert a custom field or workspace variable')}
           </label>
           <select
             id={`${idBase}-extra`}
@@ -61,10 +63,10 @@ export function MergeFieldBar({ onInsert, idBase = 'mf' }: { onInsert: (tag: str
               if (e.target.value) onInsert(`{{${e.target.value}}}`);
             }}
           >
-            <option value="">More fields…</option>
+            <option value="">{t('More fields…')}</option>
             {groups.map((g) =>
               options.some((o) => o.group === g) ? (
-                <optgroup key={g} label={g}>
+                <optgroup key={g} label={t(g)}>
                   {options
                     .filter((o) => o.group === g)
                     .map((o) => (
@@ -109,6 +111,7 @@ export interface TestSendTarget {
 
 /** Renders the email for a real lead so people see exactly what goes out, including empty fields. */
 export function PreviewPanel({ subject, body, design, idBase = 'tpl', test }: { subject: string; body: string; design?: EmailDesign | null; idBase?: string; test?: TestSendTarget }) {
+  const t = useT();
   const [lead, setLead] = useState<PickerValue | null>(null);
   const preview = useMutation({
     mutationFn: () => api<TemplatePreview>('/email-templates/preview', { method: 'POST', json: { subject, body, design: design ?? undefined, leadId: lead?.id } }),
@@ -118,49 +121,53 @@ export function PreviewPanel({ subject, body, design, idBase = 'tpl', test }: { 
     mutationFn: () => api<SequenceTestSendResult>(`/sequences/${test!.seqId}/test-send`, { method: 'POST', json: { stepId: test!.stepId, variant: test!.variant, leadId: lead?.id } }),
   });
   const pickerId = `preview-lead-${idBase}`;
-  const { labels } = useExtraMergeFields();
+  const { labels: extra } = useExtraMergeFields();
+  // Built-in field names are shown in the reader's language; custom fields and variables keep the names people gave them.
+  const fieldName = (tag: string) => (tag in MERGE_FIELDS ? t.maybe(mergeTagLabel(tag, extra)) : mergeTagLabel(tag, extra));
   return (
     <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-56 flex-1">
           <label htmlFor={pickerId} className="text-xs font-medium">
-            Preview for a lead
+            {t('Preview for a lead')}
           </label>
-          <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder="Search leads (optional)" />
+          <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder={t('Search leads (optional)')} />
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => preview.mutate()} disabled={preview.isPending || !ready}>
-          Preview
+          {t('Preview')}
         </Button>
         {test && (
           <Button type="button" size="sm" variant="outline" onClick={() => send.mutate()} disabled={send.isPending || test.dirty || !ready}>
-            <Send className="h-4 w-4" aria-hidden /> Send me a test
+            <Send className="h-4 w-4" aria-hidden /> {t('Send me a test')}
           </Button>
         )}
       </div>
-      {test?.dirty && <p className="text-xs text-muted-foreground">Save your changes to send a test of this email.</p>}
+      {test?.dirty && <p className="text-xs text-muted-foreground">{t('Save your changes to send a test of this email.')}</p>}
       <ErrorText error={preview.error ?? send.error} />
       {send.data && (
         <p role="status" className="text-xs text-success">
-          Test sent to {send.data.to} with the subject “{send.data.subject}”.
-          {send.data.missing.length > 0 && ` Empty fields are marked in it: ${send.data.missing.map((m) => mergeTagLabel(m, labels)).join(', ')}.`}
+          {t('Test sent to {to} with the subject “{subject}”.', { to: send.data.to, subject: send.data.subject })}
+          {send.data.missing.length > 0 && ` ${t('Empty fields are marked in it: {fields}.', { fields: send.data.missing.map(fieldName).join(', ') })}`}
         </p>
       )}
       {preview.data && (
         <div className="space-y-1 text-sm">
           {preview.data.recipient && (
             <p className="text-xs text-muted-foreground">
-              To {preview.data.recipient.name} {preview.data.recipient.email ? `<${preview.data.recipient.email}>` : '(no email address)'}
+              {preview.data.recipient.email
+                ? t('To {name} <{email}>', { name: preview.data.recipient.name, email: preview.data.recipient.email })
+                : t('To {name} (no email address)', { name: preview.data.recipient.name })}
             </p>
           )}
-          <p className="font-medium">{preview.data.subject || <span className="text-muted-foreground">(empty subject)</span>}</p>
+          <p className="font-medium">{preview.data.subject || <span className="text-muted-foreground">{t('(empty subject)')}</span>}</p>
           {preview.data.html ? (
-            <iframe title={`Email preview for ${preview.data.recipient?.name ?? 'a blank lead'}`} srcDoc={preview.data.html} sandbox="" className="h-[560px] w-full rounded border border-border bg-white" />
+            <iframe title={preview.data.recipient ? t('Email preview for {name}', { name: preview.data.recipient.name }) : t('Email preview for a blank lead')} srcDoc={preview.data.html} sandbox="" className="h-[560px] w-full rounded border border-border bg-white" />
           ) : (
             <p className="whitespace-pre-wrap">{preview.data.body}</p>
           )}
           {preview.data.missing.length > 0 && (
             <p role="alert" className="text-xs text-warning">
-              Empty with no fallback: {preview.data.missing.map((m) => mergeTagLabel(m, labels)).join(', ')}. A sequence pauses for people like this instead of sending a gap.
+              {t('Empty with no fallback: {fields}. A sequence pauses for people like this instead of sending a gap.', { fields: preview.data.missing.map(fieldName).join(', ') })}
             </p>
           )}
         </div>

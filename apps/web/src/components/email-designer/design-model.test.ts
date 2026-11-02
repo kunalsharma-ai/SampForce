@@ -86,6 +86,10 @@ describe('email design editing', () => {
         rows: [{ label: 'a', price: '', note: '' }],
         footnote: '',
       }),
-    ).toBe('1 row');
+    ).toBe('Rows: 1');
+    // Fixed wording goes through the caller's translation; people's own text does not.
+    const say = (text: string, vars?: { count: number }) => `«${text.replace('{count}', String(vars?.count ?? ''))}»`;
+    expect(blockSummary({ id: 'x', type: 'divider' }, say)).toBe('«A line between sections»');
+    expect(blockSummary(start.blocks[0]!, say)).toBe('Hi {{first_name|there}}, Write your message here.');
   });
 });

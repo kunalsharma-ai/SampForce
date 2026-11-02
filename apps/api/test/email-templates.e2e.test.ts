@@ -200,9 +200,12 @@ describe('email templates, variables and analytics', () => {
     expect(mineTips.filter((i) => i.kind === 'quiet_step').map((i) => i.title).sort()).toEqual([
       'Quiet one: email 1 has no replies', 'Quiet one: email 2 has no replies', 'Quiet one: email 3 has no replies',
     ]);
-    expect(mineTips.find((i) => i.kind === 'high_bounce')).toMatchObject({ title: 'Quiet one: 5% of emails bounced', severity: 'warning' });
+    expect(mineTips.find((i) => i.kind === 'high_bounce')).toMatchObject({ title: 'Quiet one: 5% of emails bounced', severity: 'warning', facts: { sequence: 'Quiet one', rate: 5, bounced: 3, sent: 60 } });
+    // The app writes tips in the reader's language from the facts.
+    expect(mineTips.filter((i) => i.kind === 'quiet_step').map((i) => i.facts.email).sort()).toEqual([1, 2, 3]);
     const quiet = a.insights.find((i) => i.kind === 'disengaged')!;
     expect(quiet.title).toMatch(/^17 people have had 3 or more emails/);
+    expect(quiet.facts).toEqual({ people: 17 });
     expect(quiet.people).toHaveLength(10);
     expect(quiet.detail).toMatch(/Opens are often blocked/);
     // Ten replies are needed before a timing tip appears.

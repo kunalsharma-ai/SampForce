@@ -44,6 +44,11 @@ export function useT(): Translator {
   );
 }
 
+/** A translated label used inside a sentence ("Added a {block} block"): lower case, except in German, where nouns keep their capital. */
+export function inSentence(t: Pick<Translator, 'language'>, label: string): string {
+  return t.language === 'de' ? label : label.toLocaleLowerCase(t.language);
+}
+
 /** Renders data-borne text through `t.maybe`, for cells and constants defined outside a component. */
 export function Tr({ text, vars }: { text: string; vars?: Vars }) {
   return useT().maybe(text, vars);

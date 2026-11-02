@@ -142,4 +142,7 @@ export const es: Messages = {
   'count.unsavedChanges_one': '{count} cambio sin guardar.',
   'count.unsavedChanges_many': '{count} de cambios sin guardar.',
   'count.unsavedChanges_other': '{count} cambios sin guardar.',
+  'count.inSequences_one': 'En {count} secuencia',
+  'count.inSequences_many': 'En {count} de secuencias',
+  'count.inSequences_other': 'En {count} secuencias',
 };

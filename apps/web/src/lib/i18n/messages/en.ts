@@ -147,6 +147,8 @@ export const en = {
   'count.openDealsClosing_other': '{count} open deals expected to close',
   'count.unsavedChanges_one': '{count} unsaved change.',
   'count.unsavedChanges_other': '{count} unsaved changes.',
+  'count.inSequences_one': 'In {count} sequence',
+  'count.inSequences_other': 'In {count} sequences',
 } as const;
 
 export type ShellKey = keyof typeof en;
