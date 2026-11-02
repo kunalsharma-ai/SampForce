@@ -155,6 +155,33 @@ Still English here: row labels that the API computes for reports (month, week an
 under a health signal and under a churn risk (it carries counts and dates from the server), the "why" text under a
 suggested retention step, and browser tab titles.
 
+## Scope of batch 7
+
+Translated: Team Management (members, roles and their permission counts, sales teams, invitations), Administration
+(the hub, the audit log, support access and workspace security with two-step verification, single sign-on and SCIM
+tokens), Integrations (your mailbox and calendar, workspace apps: Slack, Microsoft Teams, Zoom, DocuSign, card
+payments, WhatsApp Business and SMS, the browser extension, Zapier and API keys, outbound webhooks and the planned
+integrations) and Automation Studio (the workflow list and templates, the editor with every trigger, condition field,
+operator and action, the schema checks, simulation, run history and versions). New tables: `administration`,
+`automation` and `integrations`; 12 new plural keys, among them `count.members`, `count.permissions`, `count.scopes`,
+`count.attempts`, `count.runsIn30Days` and `count.smsSegments`.
+
+- **Links and code inside a sentence** use a new helper, `rich(t('… {link} …'), { link: <Link>…</Link> })`, which
+  translates the whole sentence first and then puts the React parts in its placeholders, so translators see one
+  sentence and can move the link.
+- **App cards** (name, description, warnings and state badges from the API's app registry), OAuth outcomes, API key
+  scopes, trigger events, actions, operators and workflow templates go through `t.maybe`; the data-label test reads them
+  from `@dealflow/types`, `workflow-model.ts` and the API's apps service, and fails if one has no phrase.
+- **Product terms stay as the provider shows them**: Stripe and Razorpay key prefixes, the Twilio console labels
+  ("A message comes in", Account SID, Auth Token) and Teams' "Send webhook alerts to a channel" are not translated, so
+  people can find them in the provider's own screens.
+- The scope checkboxes on API keys and the event checkboxes on webhooks now have 24px targets (WCAG 2.2 target size),
+  found by the Arabic integrations test.
+
+Still English here: error messages and details returned by the API, the summaries in each app's recent activity list,
+workflow checks that name a step id (for example "Step "action_2" points to missing step …"), permission codes in the
+role editor, simulation step details computed by the API, webhook event codes, AI notes and browser tab titles.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

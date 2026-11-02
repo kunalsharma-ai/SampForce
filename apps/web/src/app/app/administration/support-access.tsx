@@ -8,12 +8,14 @@ import { api } from '@/lib/api';
 import { formatDate, useSupportGrants } from '@/lib/billing';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 /**
  * Time-boxed permission for DealFlow platform support to see this workspace's member list and audit
  * log. Support never sees CRM records, and every look is logged.
  */
 export function SupportAccess() {
+  const t = useT();
   const canManage = useCan('tenant:manage');
   const grants = useSupportGrants(canManage);
   const qc = useQueryClient();
@@ -29,16 +31,16 @@ export function SupportAccess() {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Support access {active ? <Badge tone="warning">On until {new Date(active.expiresAt).toLocaleString(fmtLocale())}</Badge> : <Badge>Off</Badge>}
+          {t('Support access')} {active ? <Badge tone="warning">{t('On until {date}', { date: new Date(active.expiresAt).toLocaleString(fmtLocale()) })}</Badge> : <Badge>{t('Off')}</Badge>}
         </CardTitle>
-        <CardDescription>Let DealFlow support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.</CardDescription>
+        <CardDescription>{t('Let DealFlow support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {active ? (
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-muted-foreground">Granted by {active.grantedBy?.name ?? 'a former member'}: “{active.reason}”</span>
+            <span className="text-muted-foreground">{t('Granted by {name}: “{reason}”', { name: active.grantedBy?.name ?? t('a former member'), reason: active.reason })}</span>
             <Button size="sm" variant="outline" onClick={() => revoke.mutate(active.id)} disabled={revoke.isPending}>
-              Turn off now
+              {t('Turn off now')}
             </Button>
           </div>
         ) : (
@@ -49,25 +51,25 @@ export function SupportAccess() {
               grant.mutate();
             }}
           >
-            <Field id="support-hours" label="Hours (1–72)">
+            <Field id="support-hours" label={t('Hours (1–72)')}>
               <Input id="support-hours" type="number" min={1} max={72} value={hours} onChange={(e) => setHours(e.target.value)} className="w-24" />
             </Field>
-            <Field id="support-reason" label="Reason" className="min-w-64 flex-1">
-              <Input id="support-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={500} required placeholder="What support is helping with" />
+            <Field id="support-reason" label={t('Reason')} className="min-w-64 flex-1">
+              <Input id="support-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} maxLength={500} required placeholder={t('What support is helping with')} />
             </Field>
             <Button type="submit" disabled={grant.isPending || reason.trim().length < 5}>
-              Grant access
+              {t('Grant access')}
             </Button>
           </form>
         )}
         <ErrorText error={grant.error ?? revoke.error} />
         {!!grants.data?.length && (
           <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer">History</summary>
+            <summary className="cursor-pointer">{t('History')}</summary>
             <ul className="mt-2 space-y-1">
               {grants.data.map((g) => (
                 <li key={g.id}>
-                  {formatDate(g.createdAt)} · {g.reason} · {g.revokedAt ? `turned off ${formatDate(g.revokedAt)}` : g.active ? 'active' : `expired ${formatDate(g.expiresAt)}`}
+                  {formatDate(g.createdAt)} · {g.reason} · {g.revokedAt ? t('turned off {date}', { date: formatDate(g.revokedAt) }) : g.active ? t('active') : t('expired {date}', { date: formatDate(g.expiresAt) })}
                 </li>
               ))}
             </ul>

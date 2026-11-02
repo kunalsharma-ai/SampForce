@@ -28,11 +28,13 @@ import {
   SSO_ERRORS,
   THEMES,
   TIMELINE_KIND_LABELS,
+  TRIGGER_EVENTS,
 } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
 import { ENROLLMENT_LABEL } from '@/lib/sequences';
+import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
 import { CATALOGUES, translate, translatePlural } from './translate';
@@ -195,6 +197,40 @@ describe('page phrases', () => {
         ...['Low', 'Medium', 'High', 'Critical'],
       ],
     ],
+    [
+      'automation labels',
+      [
+        ...Object.values(TRIGGER_EVENTS).map((e) => e.label),
+        ...Object.values(ACTION_LABELS),
+        ...Object.values(OP_LABELS),
+        ...Object.values(CONDITION_FIELDS).flatMap((f) => f.map((x) => x.label)),
+        ...[...TEMPLATES, ...EMAIL_TEMPLATES].flatMap((x) => [x.name, x.description]),
+        ...[...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:regex\([^\n]*?|refine\([^\n]*?|min\(1|message): '([^'$]+)'/g)].map((m) => m[1]!),
+        'Enter a name', 'Choose at least one event', 'Use a number other than 0', 'Use the template name as it appears in WhatsApp Manager', 'Use record.<field> or event.<field>', 'Start step does not exist', 'Steps must not loop back',
+      ],
+    ],
+    [
+      'administration and integration labels',
+      [
+        // [file, the part of it that holds the labels, the label pattern]
+        ['../../lib/automation.ts', /export const EXECUTION_LABEL[\s\S]*?\} as const;/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-workspace.tsx', /const TABS[\s\S]*?\];/, /label: '([^']+)'/g],
+        ['../../app/app/automation/workflow-workspace.tsx', /const SEARCH_PLACEHOLDER[\s\S]*?const STEP_STATUS.*/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-editor.tsx', /const TITLES.*/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-editor.tsx', /const FIELD_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/administration/audit-log-table.tsx', /const ACTOR_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/integrations/api-keys.tsx', /const SCOPE_LABEL[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/integrations-board.tsx', /const OUTCOME[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const OUTCOME[\s\S]*?\n\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const STATE[\s\S]*?\n\};/, /label: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const OAUTH_COPY[\s\S]*?\n\};/, /(?:blurb|credentials|privacy|disconnect): '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const PAYMENT_EVENTS[\s\S]*?\n\};/, /(?:keyHelp|hookHelp): '([^']+)'/g],
+        ['../../app/app/integrations/page.tsx', /const PLANNED[\s\S]*?\];/, /(?:category|name|phase|needs): '([^']+)'/g],
+        ['../../../../api/src/apps/apps.service.ts', /const META[\s\S]*?\n\};/, /description: '([^']+)'/g],
+        ['../../../../api/src/apps/apps.service.ts', /warnings: [\s\S]*?: \[\],/, /\['([^']+)'\]/g],
+      ].flatMap(([file, part, re]) => [...source(file as string).match(part as RegExp)![0].matchAll(re as RegExp)].map((m) => m[1]!)),
+    ],
+    ['administration statuses', ['Card payments', 'Pending', 'Succeeded', 'Failed', 'Accepted', 'Revoked', 'Expired', 'Green', 'Yellow', 'Red', 'Unknown']],
     ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)
