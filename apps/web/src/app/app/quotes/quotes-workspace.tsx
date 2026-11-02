@@ -32,18 +32,20 @@ import {
   useTaxRates,
 } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 export function QuotesWorkspace() {
+  const t = useT();
   const [tab, setTab] = useState<'quotes' | 'catalogue'>('quotes');
   return (
     <>
       <Tabs
-        label="Quotes sections"
+        label={t('Quotes sections')}
         value={tab}
         onChange={setTab}
         tabs={[
-          { key: 'quotes', label: 'Quotes' },
-          { key: 'catalogue', label: 'Catalogue & pricing' },
+          { key: 'quotes', label: t('Quotes') },
+          { key: 'catalogue', label: t('Catalogue & pricing') },
         ]}
       />
       {tab === 'quotes' ? <QuoteList /> : <Catalogue />}
@@ -52,23 +54,24 @@ export function QuotesWorkspace() {
 }
 
 function QuoteList() {
+  const t = useT();
   const [status, setStatus] = useState('');
   const quotes = useQuotes({ status: status || undefined });
   const canWrite = useCan('quotes:write');
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <Field id="quote-status" label="Status">
+        <Field id="quote-status" label={t('Status')}>
           <Select
             id="quote-status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="w-48"
           >
-            <option value="">All statuses</option>
+            <option value="">{t('All statuses')}</option>
             {Object.entries(QUOTE_STATUS).map(([k, v]) => (
               <option key={k} value={k}>
-                {v.label}
+                {t.maybe(v.label)}
               </option>
             ))}
           </Select>
@@ -85,7 +88,7 @@ function QuoteList() {
             </div>
           ) : quotes.data.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
-              No quotes yet. Start one from a deal.
+              {t('No quotes yet. Start one from a deal.')}
             </p>
           ) : (
             <QuoteTable rows={quotes.data} />
@@ -97,15 +100,16 @@ function QuoteList() {
 }
 
 export function QuoteTable({ rows, showDeal = true }: { rows: QuoteRow[]; showDeal?: boolean }) {
+  const t = useT();
   return (
     <table className="w-full text-sm">
       <thead className="border-b border-border text-start text-xs text-muted-foreground">
         <tr>
-          <th className="px-4 py-2 font-medium">Quote</th>
-          {showDeal && <th className="px-4 py-2 font-medium">Deal</th>}
-          <th className="px-4 py-2 font-medium">Status</th>
-          <th className="px-4 py-2 text-end font-medium">Total</th>
-          <th className="px-4 py-2 font-medium">Valid until</th>
+          <th className="px-4 py-2 font-medium">{t('Quote')}</th>
+          {showDeal && <th className="px-4 py-2 font-medium">{t('Deal')}</th>}
+          <th className="px-4 py-2 font-medium">{t('Status')}</th>
+          <th className="px-4 py-2 text-end font-medium">{t('Total')}</th>
+          <th className="px-4 py-2 font-medium">{t('Valid until')}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
@@ -131,10 +135,10 @@ export function QuoteTable({ rows, showDeal = true }: { rows: QuoteRow[]; showDe
               </td>
             )}
             <td className="px-4 py-2">
-              <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
+              <Badge tone={QUOTE_STATUS[q.status].tone}>{t.maybe(QUOTE_STATUS[q.status].label)}</Badge>
               {q.expired && (
                 <Badge tone="warning" className="ms-1">
-                  Past valid date
+                  {t('Past valid date')}
                 </Badge>
               )}
             </td>
@@ -151,6 +155,7 @@ export function QuoteTable({ rows, showDeal = true }: { rows: QuoteRow[]; showDe
 
 /** Starts a draft quote for a deal and opens the editor. */
 export function NewQuote({ deal: fixedDeal }: { deal?: PickerValue }) {
+  const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
   const [deal, setDeal] = useState<PickerValue | null>(fixedDeal ?? null);
@@ -171,18 +176,18 @@ export function NewQuote({ deal: fixedDeal }: { deal?: PickerValue }) {
       }}
     >
       {!fixedDeal && (
-        <Field id="new-quote-deal" label="Deal" className="w-72">
+        <Field id="new-quote-deal" label={t('Deal')} className="w-72">
           <RecordPicker
             id="new-quote-deal"
             entity="deals"
             value={deal}
             onChange={setDeal}
-            placeholder="Search deals"
+            placeholder={t('Search deals')}
           />
         </Field>
       )}
       <Button type="submit" size="sm" disabled={!deal || create.isPending}>
-        <Plus aria-hidden /> New quote
+        <Plus aria-hidden /> {t('New quote')}
       </Button>
       <div className="w-full">
         <ErrorText error={create.error} />
@@ -192,6 +197,7 @@ export function NewQuote({ deal: fixedDeal }: { deal?: PickerValue }) {
 }
 
 function Catalogue() {
+  const t = useT();
   const canManage = useCan('catalog:manage');
   const products = useProducts();
   const books = usePriceBooks();
@@ -199,8 +205,7 @@ function Catalogue() {
     <div className="space-y-4">
       {!canManage && (
         <p className="text-sm text-muted-foreground">
-          You can view the catalogue. Changing products, prices and tax rates needs the
-          catalog:manage permission.
+          {t('You can view the catalogue. Changing products, prices and tax rates needs the catalog:manage permission.')}
         </p>
       )}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -234,6 +239,7 @@ function Products({
   canManage: boolean;
   loading: boolean;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
@@ -258,19 +264,19 @@ function Products({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Products and prices</CardTitle>
+        <CardTitle className="text-base">{t('Products and prices')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <Skeleton className="h-24" />
         ) : !products?.length ? (
-          <p className="text-sm text-muted-foreground">No products yet.</p>
+          <p className="text-sm text-muted-foreground">{t('No products yet.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th className="pb-2 font-medium">Product</th>
+                  <th className="pb-2 font-medium">{t('Product')}</th>
                   {activeBooks.map((b) => (
                     <th key={b.id} className="pb-2 text-end font-medium">
                       {b.name} ({b.currency})
@@ -284,7 +290,7 @@ function Products({
                     <td className="py-2 pe-2">
                       <span className="font-medium">{p.name}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {[p.sku, `per ${p.unit}`, !p.active && 'inactive']
+                        {[p.sku, t('per {unit}', { unit: t.maybe(p.unit) }), !p.active && t('inactive')]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
@@ -295,7 +301,7 @@ function Products({
                         <td key={b.id} className="py-2 text-end">
                           {canManage ? (
                             <PriceInput
-                              label={`${p.name} price in ${b.name}`}
+                              label={t('{product} price in {book}', { product: p.name, book: b.name })}
                               value={price?.unitPrice ?? null}
                               onSave={(unitPrice) =>
                                 setPrice.mutate({ book: b.id, product: p.id, unitPrice })
@@ -303,7 +309,7 @@ function Products({
                             />
                           ) : (
                             <span className="tabular-nums">
-                              {price ? formatAmount(price.unitPrice, b.currency) : 'Not priced'}
+                              {price ? formatAmount(price.unitPrice, b.currency) : t('Not priced')}
                             </span>
                           )}
                         </td>
@@ -324,7 +330,7 @@ function Products({
               if (name.trim()) add.mutate();
             }}
           >
-            <Field id="product-name" label="New product">
+            <Field id="product-name" label={t('New product')}>
               <Input
                 id="product-name"
                 value={name}
@@ -333,7 +339,7 @@ function Products({
                 className="w-56"
               />
             </Field>
-            <Field id="product-sku" label="SKU (optional)">
+            <Field id="product-sku" label={t('SKU (optional)')}>
               <Input
                 id="product-sku"
                 value={sku}
@@ -343,7 +349,7 @@ function Products({
               />
             </Field>
             <Button type="submit" size="sm" disabled={!name.trim() || add.isPending}>
-              Add product
+              {t('Add product')}
             </Button>
             <div className="w-full">
               <ErrorText error={add.error} />
@@ -352,8 +358,7 @@ function Products({
         )}
         {canManage && (
           <p className="text-xs text-muted-foreground">
-            Price changes are recorded in the audit log. Existing quotes keep their prices; a
-            revision picks up the new price.
+            {t('Price changes are recorded in the audit log. Existing quotes keep their prices; a revision picks up the new price.')}
           </p>
         )}
       </CardContent>
@@ -370,6 +375,7 @@ function PriceInput({
   value: number | null;
   onSave: (v: number) => void;
 }) {
+  const t = useT();
   const [text, setText] = useState(value === null ? '' : String(value));
   const commit = () => {
     const n = Number(text);
@@ -380,7 +386,7 @@ function PriceInput({
       aria-label={label}
       inputMode="decimal"
       value={text}
-      placeholder="Not priced"
+      placeholder={t('Not priced')}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && commit()}
@@ -390,6 +396,7 @@ function PriceInput({
 }
 
 function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('');
@@ -414,12 +421,12 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Price books</CardTitle>
+        <CardTitle className="text-base">{t('Price books')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!books?.length ? (
           <p className="text-muted-foreground">
-            No price books. Quotes need one in the deal&apos;s currency.
+            {t("No price books. Quotes need one in the deal's currency.")}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -427,9 +434,9 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
               <li key={b.id} className="flex items-center gap-2 py-2">
                 <span className="font-medium">{b.name}</span>
                 <Badge>{b.currency}</Badge>
-                {b.isDefault && <Badge tone="primary">Default</Badge>}
-                {!b.active && <Badge tone="warning">Inactive</Badge>}
-                <span className="ms-auto text-xs text-muted-foreground">{b.entryCount} prices</span>
+                {b.isDefault && <Badge tone="primary">{t('Default')}</Badge>}
+                {!b.active && <Badge tone="warning">{t('Inactive')}</Badge>}
+                <span className="ms-auto text-xs text-muted-foreground">{t.plural('count.prices', b.entryCount)}</span>
               </li>
             ))}
           </ul>
@@ -442,7 +449,7 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
               if (name.trim() && currency.trim()) add.mutate();
             }}
           >
-            <Field id="book-name" label="Name">
+            <Field id="book-name" label={t('Name')}>
               <Input
                 id="book-name"
                 value={name}
@@ -451,7 +458,7 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
                 maxLength={120}
               />
             </Field>
-            <Field id="book-currency" label="Currency">
+            <Field id="book-currency" label={t('Currency')}>
               <Input
                 id="book-currency"
                 value={currency}
@@ -462,7 +469,7 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
               />
             </Field>
             <Button type="submit" size="sm" variant="outline" disabled={add.isPending}>
-              Add
+              {t('Add')}
             </Button>
             <div className="w-full">
               <ErrorText error={add.error} />
@@ -475,6 +482,7 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
 }
 
 function TaxRates({ canManage }: { canManage: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const rates = useTaxRates();
   const [name, setName] = useState('');
@@ -491,11 +499,11 @@ function TaxRates({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Tax rates</CardTitle>
+        <CardTitle className="text-base">{t('Tax rates')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!rates.data?.length ? (
-          <p className="text-muted-foreground">No tax rates. Lines without a rate carry no tax.</p>
+          <p className="text-muted-foreground">{t('No tax rates. Lines without a rate carry no tax.')}</p>
         ) : (
           <ul className="divide-y divide-border">
             {rates.data.map((r) => (
@@ -507,7 +515,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
           </ul>
         )}
         <p className="text-xs text-muted-foreground">
-          You set the rates; DealFlow does not look up or validate tax rules for any country.
+          {t('You set the rates; DealFlow does not look up or validate tax rules for any country.')}
         </p>
         {canManage && (
           <form
@@ -517,7 +525,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
               if (name.trim() && rate !== '') add.mutate();
             }}
           >
-            <Field id="tax-name" label="Name">
+            <Field id="tax-name" label={t('Name')}>
               <Input
                 id="tax-name"
                 value={name}
@@ -526,7 +534,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
                 maxLength={80}
               />
             </Field>
-            <Field id="tax-rate" label="Rate %">
+            <Field id="tax-rate" label={t('Rate %')}>
               <Input
                 id="tax-rate"
                 value={rate}
@@ -536,7 +544,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
               />
             </Field>
             <Button type="submit" size="sm" variant="outline" disabled={add.isPending}>
-              Add
+              {t('Add')}
             </Button>
             <div className="w-full">
               <ErrorText error={add.error} />
@@ -549,6 +557,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
 }
 
 function Settings({ canManage }: { canManage: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const settings = useCommercialSettings();
   const [threshold, setThreshold] = useState<string | null>(null);
@@ -572,7 +581,7 @@ function Settings({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Quote rules</CardTitle>
+        <CardTitle className="text-base">{t('Quote rules')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -584,8 +593,8 @@ function Settings({ canManage }: { canManage: boolean }) {
         >
           <Field
             id="discount-threshold"
-            label="Discount needing approval (above %)"
-            hint="Any line discount above this needs someone with quotes:approve."
+            label={t('Discount needing approval (above %)')}
+            hint={t('Any line discount above this needs someone with quotes:approve.')}
           >
             <Input
               id="discount-threshold"
@@ -596,7 +605,7 @@ function Settings({ canManage }: { canManage: boolean }) {
               className="w-24"
             />
           </Field>
-          <Field id="quote-validity" label="Quotes valid for (days)">
+          <Field id="quote-validity" label={t('Quotes valid for (days)')}>
             <Input
               id="quote-validity"
               disabled={!canManage}
@@ -613,7 +622,7 @@ function Settings({ canManage }: { canManage: boolean }) {
               variant="outline"
               disabled={save.isPending || (threshold === null && validity === null)}
             >
-              Save rules
+              {t('Save rules')}
             </Button>
           )}
           <ErrorText error={save.error} />
@@ -625,6 +634,7 @@ function Settings({ canManage }: { canManage: boolean }) {
 
 /** Proposal branding: a logo, a header line and a footer printed on online proposals and their PDFs. */
 function Branding({ canManage }: { canManage: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const settings = useCommercialSettings();
   const [header, setHeader] = useState<string | null>(null);
@@ -654,8 +664,8 @@ function Branding({ canManage }: { canManage: boolean }) {
     setFileError('');
     if (!file) return;
     if (!['image/png', 'image/jpeg'].includes(file.type))
-      return setFileError('Use a PNG or JPEG image.');
-    if (file.size > 250_000) return setFileError('Use a logo under 250 KB.');
+      return setFileError(t('Use a PNG or JPEG image.'));
+    if (file.size > 250_000) return setFileError(t('Use a logo under 250 KB.'));
     const reader = new FileReader();
     reader.onload = () => setLogo(String(reader.result));
     reader.readAsDataURL(file);
@@ -663,7 +673,7 @@ function Branding({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Proposal branding</CardTitle>
+        <CardTitle className="text-base">{t('Proposal branding')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -674,29 +684,29 @@ function Branding({ canManage }: { canManage: boolean }) {
           }}
         >
           <div className="space-y-1">
-            <p className="text-sm font-medium">Logo</p>
+            <p className="text-sm font-medium">{t('Logo')}</p>
             {shownLogo ? (
               // eslint-disable-next-line @next/next/no-img-element -- a stored data URL, not a remote image
               <img
                 src={shownLogo}
-                alt="Current proposal logo"
+                alt={t('Current proposal logo')}
                 className="h-12 max-w-48 object-contain"
               />
             ) : (
-              <p className="text-xs text-muted-foreground">No logo yet.</p>
+              <p className="text-xs text-muted-foreground">{t('No logo yet.')}</p>
             )}
             {canManage && (
               <>
                 <UploadZone
-                  label="Upload a logo"
+                  label={t('Upload a logo')}
                   accept={['image/png', 'image/jpeg']}
                   maxBytes={250_000}
-                  hint="PNG or JPEG up to 250 KB. It is printed on proposals and their PDFs."
+                  hint={t('PNG or JPEG up to 250 KB. It is printed on proposals and their PDFs.')}
                   onFile={pick}
                 />
                 {shownLogo && (
                   <Button type="button" size="sm" variant="ghost" onClick={() => setLogo(null)}>
-                    Remove logo
+                    {t('Remove logo')}
                   </Button>
                 )}
               </>
@@ -709,8 +719,8 @@ function Branding({ canManage }: { canManage: boolean }) {
           </div>
           <Field
             id="proposal-header"
-            label="Header line"
-            hint="Printed under the logo, for example your address or tagline."
+            label={t('Header line')}
+            hint={t('Printed under the logo, for example your address or tagline.')}
           >
             <Input
               id="proposal-header"
@@ -720,7 +730,7 @@ function Branding({ canManage }: { canManage: boolean }) {
               onChange={(e) => setHeader(e.target.value)}
             />
           </Field>
-          <Field id="proposal-footer" label="Footer">
+          <Field id="proposal-footer" label={t('Footer')}>
             <Input
               id="proposal-footer"
               disabled={!canManage}
@@ -738,7 +748,7 @@ function Branding({ canManage }: { canManage: boolean }) {
                 save.isPending || (header === null && footer === null && logo === undefined)
               }
             >
-              Save branding
+              {t('Save branding')}
             </Button>
           )}
           <ErrorText error={save.error} />

@@ -3,6 +3,7 @@
 import { Button, Input } from '@dealflow/ui';
 import { bidAccentSchema } from '@dealflow/types';
 import { useEffect, useId, useState } from 'react';
+import { useT } from '@/lib/i18n';
 
 /**
  * Accent colour for a bid: a colour well plus a hex field. The hex field keeps what the person typed
@@ -20,6 +21,7 @@ export function AccentPicker({
   onChange: (accent: string | null) => void;
   disabled?: boolean;
 }) {
+  const t = useT();
   const id = useId();
   const effective = value ?? templateAccent;
   const [text, setText] = useState(effective);
@@ -29,12 +31,12 @@ export function AccentPicker({
   return (
     <div className="space-y-1">
       <label htmlFor={`${id}-hex`} className="text-sm font-medium">
-        Accent colour
+        {t('Accent colour')}
       </label>
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="color"
-          aria-label="Pick accent colour"
+          aria-label={t('Pick accent colour')}
           value={valid ? text : effective}
           disabled={disabled}
           onChange={(e) => set(e.target.value)}
@@ -56,12 +58,12 @@ export function AccentPicker({
         />
         {value && (
           <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => onChange(null)}>
-            Use template colour
+            {t('Use template colour')}
           </Button>
         )}
       </div>
       <p id={`${id}-hint`} className={valid ? 'text-xs text-muted-foreground' : 'text-xs text-critical'} role={valid ? undefined : 'alert'}>
-        {valid ? 'Used for bands, rules and the total. Text keeps the theme colours so it stays readable.' : 'Use a hex colour such as #2563eb.'}
+        {valid ? t('Used for bands, rules and the total. Text keeps the theme colours so it stays readable.') : t('Use a hex colour such as #2563eb.')}
       </p>
     </div>
   );

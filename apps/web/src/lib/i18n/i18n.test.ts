@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   ACTIVITY_TYPES,
+  BID_TEMPLATES,
+  CHURN_RISK,
+  DATE_BUCKETS,
   DEAL_PRIORITIES,
   DEAL_RISK_LABELS,
   EMAIL_BLOCK_LABELS,
@@ -17,15 +20,21 @@ import {
   MEETING_PLATFORM_LABELS,
   MERGE_FIELDS,
   NEXT_ACTION_LABELS,
+  PLAN_CATALOG,
+  PROPOSAL_TEMPLATES,
+  REPORT_CATALOG,
+  REPORT_TEMPLATES,
   RULE_ACTION_LABELS,
   SSO_ERRORS,
   THEMES,
   TIMELINE_KIND_LABELS,
+  TRIGGER_EVENTS,
 } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
 import { ENROLLMENT_LABEL } from '@/lib/sequences';
+import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
 import { CATALOGUES, translate, translatePlural } from './translate';
@@ -126,6 +135,102 @@ describe('page phrases', () => {
     ['Zoom transcript states', [...source('../../components/meetings/zoom-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
     ['compose and meeting analysis checks', [...source('../../../../../packages/types/src/meetings.ts').matchAll(/min\(1, '([^']+)'\)|message: '([^']+)'/g), ...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:subject|body): z\.string\(\)(?:\.trim\(\))?\.min\(1, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     ['AI availability reasons', [...source('../../../../api/src/ai/gateway.service.ts').matchAll(/\? '([^']+\.)'/g)].map((m) => m[1]!).filter((r) => !r.startsWith('An API key'))],
+    // Quotes, contracts, approvals and billing: statuses from lib/revenue and lib/billing, bid and proposal templates,
+    // plan audiences, the screens' own label maps, and the Quick Bid Studio's checks.
+    ['revenue and billing statuses', (source('../revenue.ts') + source('../billing.ts')).match(/label: '[^']+'/g)!.map((m) => m.slice(8, -1))],
+    ['bid and proposal templates', [...BID_TEMPLATES.flatMap((b) => [b.name, b.category, b.description]), ...PROPOSAL_TEMPLATES.map((p) => p.name)]],
+    ['plan audiences', PLAN_CATALOG.map((p) => p.audience)],
+    [
+      'commercial screen labels',
+      [
+        ['../../app/app/quotes/[id]/proposal-panel.tsx', /label: '([^']+)', tone/g],
+        ['../../components/revenue/esignature.tsx', /label: '([^']+)', tone/g],
+        ['../../app/app/contracts/[id]/contract-detail.tsx', /(?:wet_ink|email_confirmation|external_esign|docusign): '([^']+)'/g],
+        ['../../app/app/billing/billing-workspace.tsx', /OFFLINE: '([^']+)'/g], // Stripe and Razorpay are names.
+        ['../../app/app/quotes/quick/quick-bid-studio.tsx', /\] = '([^']+)';/g],
+        ['../../app/app/quotes/quick/quick-bid-studio.tsx', /const STEPS = \[([^\]]+)\]/g],
+      ].flatMap(([file, re]) => [...source(file as string).matchAll(re as RegExp)].flatMap((m) => m[1]!.split(/', '/).map((x) => x.replace(/^'|'$/g, '')))),
+    ],
+    ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
+    // Reports, forecasting, revenue and customer success: the report catalogue and the labels the reports API builds
+    // from it, the editor's option maps, the explorers' label maps, forecast and churn labels, health signals and the
+    // retention plan's cadences and steps.
+    [
+      'report catalogue labels',
+      Object.values(REPORT_CATALOG).flatMap((e) => [
+        e.label,
+        `Number of ${e.label.toLowerCase().replace(/ \(.*\)$/, '')}`,
+        ...e.fields.flatMap((f) => [
+          f.label,
+          ...(f.kind === 'date' ? DATE_BUCKETS.map((b) => `${f.label} (${b})`) : []),
+          ...(f.kind === 'number' || f.kind === 'money' ? ['Total', 'Average', 'Lowest', 'Highest'].map((fn) => `${fn} ${f.label.toLowerCase()}`) : []),
+          ...(f.options ?? []).map((o) => o.charAt(0) + o.slice(1).toLowerCase().replace(/_/g, ' ')),
+        ]),
+      ]),
+    ],
+    ['report templates and buckets', [...REPORT_TEMPLATES.map((r) => r.name), ...DATE_BUCKETS.map((b) => b.charAt(0).toUpperCase() + b.slice(1)), 'All', '(none)', 'Other']],
+    ['report definition checks', [...source('../../../../../packages/types/src/reports.ts').matchAll(/issue\(\[[^\]]*\], '([^']+)'\)/g)].map((m) => m[1]!)],
+    [
+      'report and forecast screen labels',
+      [
+        // [file, the part of it that holds the labels, the label pattern]
+        ['../../app/app/reports/report-editor.tsx', /const METRIC_LABEL[\s\S]*?\n\};\n\n/, /: '([^']+)'/g],
+        ['../../app/app/reports/reports-nav.tsx', /const LINKS[\s\S]*?\];/, /label: '([^']+)'/g],
+        ['../../app/app/reports/dashboards/dashboard-board.tsx', /const SIZE_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/reports/galaxy/galaxy-explorer.tsx', /const KIND_LABEL[\s\S]*?const KIND_ONE.*/, /: '([^']+)'/g],
+        ['../../app/app/reports/galaxy/galaxy-explorer.tsx', /const items.*/, /'chart-\d', '([^']+)'/g],
+        ['../../app/app/reports/globe/globe-explorer.tsx', /const METRICS[\s\S]*?\} as const;/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const CATEGORY[\s\S]*?\} as const;/, /label: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const CHANGE_LABEL[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-workspace.tsx', /const GRANULARITY_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/forecasting/forecast-plan.tsx', /const TARGET_SOURCE[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../components/revenue/churn.tsx', /const SERIES[\s\S]*?\] as const;/, /label: '([^']+)'/g],
+        ['../motion.ts', /[\s\S]*/, /reason: '([^']+)'/g],
+      ].flatMap(([file, part, re]) => [...source(file as string).match(part as RegExp)![0].matchAll(re as RegExp)].map((m) => m[1]!)),
+    ],
+    [
+      'churn and retention labels',
+      [
+        ...Object.values(CHURN_RISK).map((c) => c.label),
+        ...[...source('../../../../../packages/types/src/revenue.ts').matchAll(/signals\.push\(\{ key: '\w+', label: '([^']+)'|^\s+label: '([^']+)',$|everyDays: \d+, touches: \d+, label: '([^']+)'|title: '([^']+)'/gm)].map((m) => m.slice(1).find(Boolean)!),
+        'No calls, emails, meetings or notes recorded.',
+        ...['Low', 'Medium', 'High', 'Critical'],
+      ],
+    ],
+    [
+      'automation labels',
+      [
+        ...Object.values(TRIGGER_EVENTS).map((e) => e.label),
+        ...Object.values(ACTION_LABELS),
+        ...Object.values(OP_LABELS),
+        ...Object.values(CONDITION_FIELDS).flatMap((f) => f.map((x) => x.label)),
+        ...[...TEMPLATES, ...EMAIL_TEMPLATES].flatMap((x) => [x.name, x.description]),
+        ...[...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:regex\([^\n]*?|refine\([^\n]*?|min\(1|message): '([^'$]+)'/g)].map((m) => m[1]!),
+        'Enter a name', 'Choose at least one event', 'Use a number other than 0', 'Use the template name as it appears in WhatsApp Manager', 'Use record.<field> or event.<field>', 'Start step does not exist', 'Steps must not loop back',
+      ],
+    ],
+    [
+      'administration and integration labels',
+      [
+        // [file, the part of it that holds the labels, the label pattern]
+        ['../../lib/automation.ts', /export const EXECUTION_LABEL[\s\S]*?\} as const;/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-workspace.tsx', /const TABS[\s\S]*?\];/, /label: '([^']+)'/g],
+        ['../../app/app/automation/workflow-workspace.tsx', /const SEARCH_PLACEHOLDER[\s\S]*?const STEP_STATUS.*/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-editor.tsx', /const TITLES.*/, /: '([^']+)'/g],
+        ['../../app/app/automation/workflow-editor.tsx', /const FIELD_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/administration/audit-log-table.tsx', /const ACTOR_LABEL.*/, /: '([^']+)'/g],
+        ['../../app/app/integrations/api-keys.tsx', /const SCOPE_LABEL[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/integrations-board.tsx', /const OUTCOME[\s\S]*?\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const OUTCOME[\s\S]*?\n\};/, /: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const STATE[\s\S]*?\n\};/, /label: '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const OAUTH_COPY[\s\S]*?\n\};/, /(?:blurb|credentials|privacy|disconnect): '([^']+)'/g],
+        ['../../app/app/integrations/workspace-apps.tsx', /const PAYMENT_EVENTS[\s\S]*?\n\};/, /(?:keyHelp|hookHelp): '([^']+)'/g],
+        ['../../app/app/integrations/page.tsx', /const PLANNED[\s\S]*?\];/, /(?:category|name|phase|needs): '([^']+)'/g],
+        ['../../../../api/src/apps/apps.service.ts', /const META[\s\S]*?\n\};/, /description: '([^']+)'/g],
+        ['../../../../api/src/apps/apps.service.ts', /warnings: [\s\S]*?: \[\],/, /\['([^']+)'\]/g],
+      ].flatMap(([file, part, re]) => [...source(file as string).match(part as RegExp)![0].matchAll(re as RegExp)].map((m) => m[1]!)),
+    ],
+    ['administration statuses', ['Card payments', 'Pending', 'Succeeded', 'Failed', 'Accepted', 'Revoked', 'Expired', 'Green', 'Yellow', 'Red', 'Unknown']],
     ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)

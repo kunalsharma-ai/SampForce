@@ -7,6 +7,14 @@ import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatValue } from '@/lib/reports';
 import { useMotionLevel } from '@/lib/motion';
+import { inSentence, useT } from '@/lib/i18n';
+
+/** Screen-reader descriptions of a chart, without and with a grouping. */
+const CHART_DESCRIPTION = {
+  line: ['Line chart of {metric}, {n} groups. Use the Table button for exact values.', 'Line chart of {metric} by {group}, {n} groups. Use the Table button for exact values.'],
+  pie: ['Pie chart of {metric}, {n} groups. Use the Table button for exact values.', 'Pie chart of {metric} by {group}, {n} groups. Use the Table button for exact values.'],
+  bar: ['Bar chart of {metric}, {n} groups. Use the Table button for exact values.', 'Bar chart of {metric} by {group}, {n} groups. Use the Table button for exact values.'],
+} as const;
 
 export const SERIES = [1, 2, 3, 4, 5, 6].map((i) => `hsl(var(--chart-${i}))`);
 const PIE_SLICES = 6;
@@ -27,6 +35,7 @@ function pieRows(rows: ReportResult['rows']) {
  * for "table" reports). Notes say when groups were cut or records could not be converted.
  */
 export function ReportView({ result, chart, height = 256, compact = false }: { result: ReportResult; chart: ReportChart; height?: number; compact?: boolean }) {
+  const t = useT();
   const [asTable, setAsTable] = useState(false);
   const motion = useMotionLevel();
   const animate = motion === 'full';
@@ -40,21 +49,21 @@ export function ReportView({ result, chart, height = 256, compact = false }: { r
         <div className="flex justify-end">
           <Button variant="ghost" size="sm" onClick={() => setAsTable(!asTable)} aria-pressed={asTable}>
             {asTable ? <BarChart3 aria-hidden /> : <Table2 aria-hidden />}
-            {asTable ? 'Chart' : 'Table'}
+            {asTable ? t('Chart') : t('Table')}
           </Button>
         </div>
       )}
       {empty ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">No records match this report yet.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">{t('No records match this report yet.')}</p>
       ) : chart === 'number' ? (
         <div className="py-4">
-          <p className="text-4xl font-semibold tabular" aria-label={`${result.metricLabel}: ${fmt(result.total)}`}>{fmt(result.total)}</p>
+          <p className="text-4xl font-semibold tabular" aria-label={`${t.maybe(result.metricLabel)}: ${fmt(result.total)}`}>{fmt(result.total)}</p>
           <p className="mt-1 text-sm text-muted-foreground">{result.metricLabel}</p>
         </div>
       ) : showTable ? (
         <ResultTable result={result} fmt={fmt} compact={compact} />
       ) : (
-        <div style={{ height }} role="img" aria-label={`${chart === 'line' ? 'Line' : chart === 'pie' ? 'Pie' : 'Bar'} chart of ${result.metricLabel.toLowerCase()}${result.groupLabel ? ` by ${result.groupLabel.toLowerCase()}` : ''}, ${result.rows.length} groups. Use the Table button for exact values.`}>
+        <div style={{ height }} role="img" aria-label={t(CHART_DESCRIPTION[chart === 'line' ? 'line' : chart === 'pie' ? 'pie' : 'bar'][result.groupLabel ? 1 : 0], { metric: inSentence(t, t.maybe(result.metricLabel)), group: inSentence(t, t.maybe(result.groupLabel ?? '')), n: result.rows.length })}>
           <ResponsiveContainer width="100%" height="100%">
             {chart === 'line' ? (
               <LineChart data={result.rows} margin={{ left: 8, right: 16, top: 8 }}>
@@ -93,23 +102,23 @@ export function ReportView({ result, chart, height = 256, compact = false }: { r
 }
 
 function ResultTable({ result, fmt, compact }: { result: ReportResult; fmt: (v: number) => string; compact: boolean }) {
+  const t = useT();
   return (
     <div className={compact ? 'max-h-64 overflow-auto' : 'overflow-x-auto'}>
       <table className="w-full text-sm">
         <caption className="sr-only">
-          {result.metricLabel}
-          {result.groupLabel ? ` by ${result.groupLabel}` : ''}
+          {result.groupLabel ? t('{metric} by {group}', { metric: t.maybe(result.metricLabel), group: t.maybe(result.groupLabel) }) : t.maybe(result.metricLabel)}
         </caption>
         <thead className="text-start text-xs text-muted-foreground">
           <tr>
-            <th scope="col" className="py-2 font-medium">{result.groupLabel ?? 'Group'}</th>
-            <th scope="col" className="py-2 text-end font-medium">{result.metricLabel}</th>
+            <th scope="col" className="py-2 font-medium">{result.groupLabel ? t.maybe(result.groupLabel) : t('Group')}</th>
+            <th scope="col" className="py-2 text-end font-medium">{t.maybe(result.metricLabel)}</th>
           </tr>
         </thead>
         <tbody className="tabular">
           {result.rows.map((r, i) => (
             <tr key={r.key ?? `none-${i}`} className="border-t border-border">
-              <th scope="row" className="py-2 text-start font-normal">{r.label}</th>
+              <th scope="row" className="py-2 text-start font-normal">{t.maybe(r.label)}</th>
               <td className="py-2 text-end">{fmt(r.value)}</td>
             </tr>
           ))}
@@ -117,7 +126,7 @@ function ResultTable({ result, fmt, compact }: { result: ReportResult; fmt: (v: 
         {result.rows.length > 1 && (
           <tfoot>
             <tr className="border-t border-border font-medium">
-              <th scope="row" className="py-2 text-start">All matching records</th>
+              <th scope="row" className="py-2 text-start">{t('All matching records')}</th>
               <td className="py-2 text-end tabular">{fmt(result.total)}</td>
             </tr>
           </tfoot>
@@ -128,12 +137,11 @@ function ResultTable({ result, fmt, compact }: { result: ReportResult; fmt: (v: 
 }
 
 function ResultNotes({ result }: { result: ReportResult }) {
+  const t = useT();
   const notes: string[] = [];
-  if (result.truncated) notes.push(`Showing the first ${result.rows.length} groups; raise the row limit to see more.`);
+  if (result.truncated) notes.push(t('Showing the first {n} groups; raise the row limit to see more.', { n: result.rows.length }));
   if (result.excluded) {
-    notes.push(
-      `${result.excluded.records} record${result.excluded.records === 1 ? '' : 's'} in ${result.excluded.currencies.join(', ')} left out: no exchange rate to ${result.currency} yet (add one in Revenue Intelligence).`,
-    );
+    notes.push(t.plural('count.recordsLeftOut', result.excluded.records, { currencies: result.excluded.currencies.join(', '), currency: result.currency ?? '' }));
   }
   if (notes.length === 0) return null;
   return (
@@ -146,6 +154,7 @@ function ResultNotes({ result }: { result: ReportResult }) {
 }
 
 function PieLegend({ result, fmt }: { result: ReportResult; fmt: (v: number) => string }) {
+  const t = useT();
   const rows = pieRows(result.rows);
   const total = rows.reduce((s, r) => s + r.value, 0) || 1;
   return (
@@ -153,7 +162,7 @@ function PieLegend({ result, fmt }: { result: ReportResult; fmt: (v: number) => 
       {rows.map((r, i) => (
         <li key={r.key ?? `none-${i}`} className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: SERIES[i % SERIES.length] }} />
-          <span className="min-w-0 flex-1 truncate">{r.label}</span>
+          <span className="min-w-0 flex-1 truncate">{t.maybe(r.label)}</span>
           <span className="tabular text-muted-foreground">{fmt(r.value)} · {Math.round((r.value / total) * 100)}%</span>
         </li>
       ))}

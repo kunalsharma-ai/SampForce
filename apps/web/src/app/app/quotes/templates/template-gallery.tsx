@@ -9,24 +9,26 @@ import { AccentPicker } from '@/components/bids/accent-picker';
 import { EXAMPLE_LINES, previewProposal, ProposalPreview, TemplateThumb } from '@/components/bids/bid-preview';
 import { useCommercialSettings } from '@/lib/revenue';
 import { useCan, useSession } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 const CATEGORIES = ['All', ...Array.from(new Set(BID_TEMPLATES.map((t) => t.category)))];
 
 /** Template gallery: browse the ten bid looks, preview one with example content, tune the accent and start a bid. */
 export function TemplateGallery() {
+  const t = useT();
   const { data: session } = useSession();
   const settings = useCommercialSettings();
   const canWrite = useCan('quotes:write');
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState<BidTemplate>(BID_TEMPLATES[0]!);
   const [accent, setAccent] = useState<string | null>(null);
-  const shown = BID_TEMPLATES.filter((t) => category === 'All' || t.category === category);
+  const shown = BID_TEMPLATES.filter((tpl) => category === 'All' || tpl.category === category);
 
   const preview = useMemo(
     () =>
       previewProposal({
         seller: {
-          name: session?.tenant.name ?? 'Your company',
+          name: session?.tenant.name ?? t('Your company'),
           logoDataUrl: settings.data?.logoDataUrl,
           header: settings.data?.proposalHeader,
           footer: settings.data?.proposalFooter,
@@ -34,27 +36,27 @@ export function TemplateGallery() {
         },
         templateKey: selected.key,
         accentColor: accent,
-        title: `${selected.name} proposal`,
-        reference: 'Example',
-        preparedFor: 'Example customer',
+        title: t('{template} proposal', { template: t.maybe(selected.name) }),
+        reference: t('Example'),
+        preparedFor: t('Example customer'),
         currency: 'USD',
         validUntil: null,
         sections: selected.sections,
         lines: EXAMPLE_LINES,
         terms: null,
       }),
-    [session, settings.data, selected, accent],
+    [session, settings.data, selected, accent, t],
   );
 
-  const choose = (t: BidTemplate) => {
-    setSelected(t);
+  const choose = (tpl: BidTemplate) => {
+    setSelected(tpl);
     setAccent(null);
   };
   const startHref = `/app/quotes/quick?template=${selected.key}${accent ? `&accent=${encodeURIComponent(accent)}` : ''}`;
 
   return (
     <div className="space-y-4">
-      <div role="group" aria-label="Category" className="flex flex-wrap gap-1.5">
+      <div role="group" aria-label={t('Category')} className="flex flex-wrap gap-1.5">
         {CATEGORIES.map((c) => (
           <button
             key={c}
@@ -63,27 +65,27 @@ export function TemplateGallery() {
             onClick={() => setCategory(c)}
             className="h-8 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {c}
+            {c === 'All' ? t('All') : t.maybe(c)}
           </button>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <ul aria-label="Bid templates" className="grid content-start gap-3 sm:grid-cols-2">
-          {shown.map((t) => (
-            <li key={t.key}>
+        <ul aria-label={t('Bid templates')} className="grid content-start gap-3 sm:grid-cols-2">
+          {shown.map((tpl) => (
+            <li key={tpl.key}>
               <button
                 type="button"
-                aria-pressed={selected.key === t.key}
-                onClick={() => choose(t)}
+                aria-pressed={selected.key === tpl.key}
+                onClick={() => choose(tpl)}
                 className="group w-full rounded-lg border border-border p-2 text-start transition-colors hover:bg-muted/50 aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <TemplateThumb template={t} accent={selected.key === t.key ? (accent ?? undefined) : undefined} />
+                <TemplateThumb template={tpl} accent={selected.key === tpl.key ? (accent ?? undefined) : undefined} />
                 <span className="mt-2 flex items-center justify-between gap-2 px-1">
-                  <span className="text-sm font-medium">{t.name}</span>
-                  <Badge tone="neutral">{t.category}</Badge>
+                  <span className="text-sm font-medium">{t.maybe(tpl.name)}</span>
+                  <Badge tone="neutral">{t.maybe(tpl.category)}</Badge>
                 </span>
-                <span className="mt-0.5 block px-1 text-xs text-muted-foreground">{t.description}</span>
+                <span className="mt-0.5 block px-1 text-xs text-muted-foreground">{t.maybe(tpl.description)}</span>
               </button>
             </li>
           ))}
@@ -93,10 +95,10 @@ export function TemplateGallery() {
           <Card>
             <CardContent className="space-y-3 p-4">
               <div>
-                <h2 className="text-base font-semibold">{selected.name}</h2>
+                <h2 className="text-base font-semibold">{t.maybe(selected.name)}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {selected.style.font === 'serif' ? 'Serif' : 'Sans-serif'} headings, {COVER_LABEL[selected.style.cover]}.{' '}
-                  {selected.sections.length} starting sections.
+                  {t(selected.style.font === 'serif' ? 'Serif headings, {cover}.' : 'Sans-serif headings, {cover}.', { cover: t(COVER_LABEL[selected.style.cover]) })}{' '}
+                  {t.plural('count.startingSections', selected.sections.length)}
                 </p>
               </div>
               <AccentPicker value={accent} templateAccent={selected.style.accent} onChange={setAccent} />
@@ -105,14 +107,14 @@ export function TemplateGallery() {
                   href={startHref}
                   className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  Use template <ArrowRight className="rtl:-scale-x-100 size-4" aria-hidden />
+                  {t('Use template')} <ArrowRight className="rtl:-scale-x-100 size-4" aria-hidden />
                 </Link>
               ) : (
-                <p className="text-xs text-muted-foreground">You can browse templates. Starting a bid needs permission to write quotes.</p>
+                <p className="text-xs text-muted-foreground">{t('You can browse templates. Starting a bid needs permission to write quotes.')}</p>
               )}
             </CardContent>
           </Card>
-          <ProposalPreview proposal={preview} label={`${selected.name} example preview`} />
+          <ProposalPreview proposal={preview} label={t('{template} example preview', { template: t.maybe(selected.name) })} />
         </div>
       </div>
     </div>

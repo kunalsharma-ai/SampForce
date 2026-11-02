@@ -43,6 +43,7 @@ import {
   type Slot,
   updateNode,
 } from './workflow-model';
+import { useT } from '@/lib/i18n';
 
 interface Props {
   definition: WorkflowDefinition;
@@ -65,6 +66,7 @@ export function WorkflowEditor({ definition, onChange, readOnly }: Props) {
 }
 
 function TriggerCard({ definition, onChange, readOnly }: Props) {
+  const t = useT();
   const id = useId();
   const event = definition.trigger.event;
   return (
@@ -72,10 +74,10 @@ function TriggerCard({ definition, onChange, readOnly }: Props) {
       <CardContent className="space-y-4 p-4">
         <div className="flex items-center gap-2">
           <Zap className="size-4 text-primary" aria-hidden />
-          <h3 className="text-sm font-semibold">When</h3>
+          <h3 className="text-sm font-semibold">{t('When')}</h3>
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${id}-event`}>Trigger</Label>
+          <Label htmlFor={`${id}-event`}>{t('Trigger')}</Label>
           <Select
             id={`${id}-event`}
             disabled={readOnly}
@@ -87,17 +89,17 @@ function TriggerCard({ definition, onChange, readOnly }: Props) {
               onChange({ ...definition, trigger: { event: next, conditions: sameEntity ? definition.trigger.conditions : { match: 'all', rules: [] } } });
             }}
           >
-            <optgroup label="Records">
+            <optgroup label={t('Records')}>
               {TRIGGER_EVENT_KEYS.filter((k) => TRIGGER_EVENTS[k].entity !== 'person').map((k) => (
                 <option key={k} value={k}>
-                  {TRIGGER_EVENTS[k].label}
+                  {t.maybe(TRIGGER_EVENTS[k].label)}
                 </option>
               ))}
             </optgroup>
-            <optgroup label="Email and sequences">
+            <optgroup label={t('Email and sequences')}>
               {TRIGGER_EVENT_KEYS.filter((k) => TRIGGER_EVENTS[k].entity === 'person').map((k) => (
                 <option key={k} value={k}>
-                  {TRIGGER_EVENTS[k].label}
+                  {t.maybe(TRIGGER_EVENTS[k].label)}
                 </option>
               ))}
             </optgroup>
@@ -106,17 +108,17 @@ function TriggerCard({ definition, onChange, readOnly }: Props) {
         {EMAIL_TRIGGER_CONFIDENCE[event] && EMAIL_TRIGGER_CONFIDENCE[event] !== 'confirmed' && (
           <p className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
             {event === 'email.opened'
-              ? 'Opens are an estimate: privacy protection, image blocking and security scanners make them fire without a person reading, or not fire at all. Avoid sending email on opens alone.'
-              : 'Some clicks come from security scanners that check links before a person sees the email. Pair clicks with other signals before acting on them.'}
+              ? t('Opens are an estimate: privacy protection, image blocking and security scanners make them fire without a person reading, or not fire at all. Avoid sending email on opens alone.')
+              : t('Some clicks come from security scanners that check links before a person sees the email. Pair clicks with other signals before acting on them.')}
           </p>
         )}
         <ConditionEditor
-          label="Only when"
+          label={t('Only when')}
           entity={entityOf(event)}
           value={definition.trigger.conditions ?? { match: 'all', rules: [] }}
           onChange={(conditions) => onChange({ ...definition, trigger: { ...definition.trigger, conditions } })}
           readOnly={readOnly}
-          emptyText="Runs for every matching event."
+          emptyText={t('Runs for every matching event.')}
         />
       </CardContent>
     </Card>
@@ -138,6 +140,7 @@ function ConditionEditor({
   readOnly?: boolean;
   emptyText: string;
 }) {
+  const t = useT();
   const id = useId();
   const fields = CONDITION_FIELDS[entity] ?? [];
   const setRule = (i: number, patch: Partial<ConditionRule>) => onChange({ ...value, rules: value.rules.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
@@ -148,11 +151,11 @@ function ConditionEditor({
         {value.rules.length > 1 && (
           <>
             <label htmlFor={`${id}-match`} className="sr-only">
-              Match
+              {t('Match')}
             </label>
             <Select id={`${id}-match`} className="h-7 w-24 text-xs" disabled={readOnly} value={value.match} onChange={(e) => onChange({ ...value, match: e.target.value as 'all' | 'any' })}>
-              <option value="all">all of</option>
-              <option value="any">any of</option>
+              <option value="all">{t('all of')}</option>
+              <option value="any">{t('any of')}</option>
             </Select>
           </>
         )}
@@ -164,45 +167,45 @@ function ConditionEditor({
         return (
           <div key={i} className="flex flex-wrap items-center gap-2">
             <label htmlFor={`${id}-f${i}`} className="sr-only">
-              Field
+              {t('Field')}
             </label>
             <Select id={`${id}-f${i}`} className="h-9 w-48" disabled={readOnly} value={known ? r.field : '__custom'} onChange={(e) => setRule(i, { field: e.target.value === '__custom' ? 'record.' : e.target.value })}>
               {fields.map((f) => (
                 <option key={f.value} value={f.value}>
-                  {f.label}
+                  {t.maybe(f.label)}
                 </option>
               ))}
-              <option value="__custom">Other field…</option>
+              <option value="__custom">{t('Other field…')}</option>
             </Select>
             {!known && (
               <>
                 <label htmlFor={`${id}-p${i}`} className="sr-only">
-                  Field path
+                  {t('Field path')}
                 </label>
                 <Input id={`${id}-p${i}`} className="h-9 w-48" disabled={readOnly} value={r.field} onChange={(e) => setRule(i, { field: e.target.value })} placeholder="record.customFields.tier" />
               </>
             )}
             <label htmlFor={`${id}-o${i}`} className="sr-only">
-              Operator
+              {t('Operator')}
             </label>
             <Select id={`${id}-o${i}`} className="h-9 w-40" disabled={readOnly} value={r.op} onChange={(e) => setRule(i, { op: e.target.value as ConditionRule['op'] })}>
               {CONDITION_OPS.map((op) => (
                 <option key={op} value={op}>
-                  {OP_LABELS[op]}
+                  {t.maybe(OP_LABELS[op])}
                 </option>
               ))}
             </Select>
             {needsValue && (
               <>
                 <label htmlFor={`${id}-v${i}`} className="sr-only">
-                  Value
+                  {t('Value')}
                 </label>
                 <Input
                   id={`${id}-v${i}`}
                   className="h-9 w-40"
                   disabled={readOnly}
                   value={Array.isArray(r.value) ? r.value.join(', ') : String(r.value ?? '')}
-                  placeholder={r.op === 'in' ? 'a, b, c' : 'Value'}
+                  placeholder={r.op === 'in' ? 'a, b, c' : t('Value')}
                   onChange={(e) => {
                     const raw = e.target.value;
                     const numeric = ['gt', 'gte', 'lt', 'lte'].includes(r.op) && raw.trim() !== '' && !Number.isNaN(Number(raw));
@@ -212,7 +215,7 @@ function ConditionEditor({
               </>
             )}
             {!readOnly && (
-              <Button type="button" variant="ghost" size="icon" aria-label={`Remove rule ${i + 1}`} onClick={() => onChange({ ...value, rules: value.rules.filter((_, j) => j !== i) })}>
+              <Button type="button" variant="ghost" size="icon" aria-label={t('Remove rule {n}', { n: i + 1 })} onClick={() => onChange({ ...value, rules: value.rules.filter((_, j) => j !== i) })}>
                 <Trash2 aria-hidden />
               </Button>
             )}
@@ -221,7 +224,7 @@ function ConditionEditor({
       })}
       {!readOnly && value.rules.length < 20 && (
         <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...value, rules: [...value.rules, { field: fields[0]?.value ?? 'record.', op: 'eq', value: '' }] })}>
-          <Plus aria-hidden /> Add rule
+          <Plus aria-hidden /> {t('Add rule')}
         </Button>
       )}
     </fieldset>
@@ -230,6 +233,7 @@ function ConditionEditor({
 
 /** Renders the chain of steps hanging off one pointer, with an "add step" control at its end. */
 function Branch({ slot, definition, onChange, entity, readOnly, depth }: { slot: Slot; definition: WorkflowDefinition; onChange: (d: WorkflowDefinition) => void; entity: string; readOnly?: boolean; depth: number }) {
+  const t = useT();
   const chain: { node: WorkflowNode; slot: Slot }[] = [];
   let cursor: Slot = slot;
   const seen = new Set<string>();
@@ -248,7 +252,7 @@ function Branch({ slot, definition, onChange, entity, readOnly, depth }: { slot:
   const endSlot: Slot | null = !tail ? slot : tail.node.type === 'condition' ? null : { kind: 'next', nodeId: tail.node.id };
 
   return (
-    <ol className="space-y-3" aria-label={depth === 0 ? 'Workflow steps' : undefined}>
+    <ol className="space-y-3" aria-label={depth === 0 ? t('Workflow steps') : undefined}>
       {chain.map(({ node }) => (
         <li key={node.id}>
           <StepCard node={node} definition={definition} onChange={onChange} entity={entity} readOnly={readOnly} depth={depth} />
@@ -256,27 +260,28 @@ function Branch({ slot, definition, onChange, entity, readOnly, depth }: { slot:
       ))}
       {endSlot && !readOnly && (
         <li>
-          <AddStep onAdd={(type) => onChange(insertAt(definition, endSlot, type))} label={chain.length === 0 ? (depth === 0 ? 'Add the first step' : 'Add a step to this branch') : 'Add step'} />
+          <AddStep onAdd={(type) => onChange(insertAt(definition, endSlot, type))} label={chain.length === 0 ? (depth === 0 ? t('Add the first step') : t('Add a step to this branch')) : t('Add step')} />
         </li>
       )}
-      {endSlot && readOnly && chain.length === 0 && <li className="text-xs text-muted-foreground">No steps.</li>}
+      {endSlot && readOnly && chain.length === 0 && <li className="text-xs text-muted-foreground">{t('No steps.')}</li>}
     </ol>
   );
 }
 
 function AddStep({ onAdd, label }: { onAdd: (t: NodeType) => void; label: string }) {
+  const t = useT();
   const id = useId();
   const [type, setType] = useState<NodeType>('action');
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border p-2">
       <label htmlFor={id} className="sr-only">
-        Step type
+        {t('Step type')}
       </label>
       <Select id={id} className="h-8 w-44 text-xs" value={type} onChange={(e) => setType(e.target.value as NodeType)}>
-        <option value="action">Action</option>
-        <option value="condition">If / else branch</option>
-        <option value="delay">Wait</option>
-        <option value="approval">Approval</option>
+        <option value="action">{t('Action')}</option>
+        <option value="condition">{t('If / else branch')}</option>
+        <option value="delay">{t('Wait')}</option>
+        <option value="approval">{t('Approval')}</option>
       </Select>
       <Button type="button" size="sm" variant="outline" onClick={() => onAdd(type)}>
         <Plus aria-hidden /> {label}
@@ -289,6 +294,7 @@ const ICONS = { action: Zap, condition: GitBranch, delay: Clock, approval: Shiel
 const TITLES = { action: 'Action', condition: 'If / else', delay: 'Wait', approval: 'Approval' } as const;
 
 function StepCard({ node, definition, onChange, entity, readOnly, depth }: { node: WorkflowNode; definition: WorkflowDefinition; onChange: (d: WorkflowDefinition) => void; entity: string; readOnly?: boolean; depth: number }) {
+  const t = useT();
   const Icon = ICONS[node.type];
   const set = (patch: Partial<WorkflowNode>) => onChange(updateNode(definition, node.id, patch));
   const external = node.type === 'action' && EXTERNAL.has(node.action.type);
@@ -297,11 +303,11 @@ function StepCard({ node, definition, onChange, entity, readOnly, depth }: { nod
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center gap-2">
           <Icon className="size-4 text-muted-foreground" aria-hidden />
-          <h3 className="text-sm font-semibold">{TITLES[node.type]}</h3>
+          <h3 className="text-sm font-semibold">{t.maybe(TITLES[node.type])}</h3>
           <span className="font-mono text-[11px] text-muted-foreground">{node.id}</span>
-          {external && <Badge tone="warning">Needs approval each run</Badge>}
+          {external && <Badge tone="warning">{t('Needs approval each run')}</Badge>}
           {!readOnly && (
-            <Button type="button" variant="ghost" size="icon" className="ms-auto" aria-label={`Delete step ${node.id}`} onClick={() => onChange(removeNode(definition, node.id))}>
+            <Button type="button" variant="ghost" size="icon" className="ms-auto" aria-label={t('Delete step {id}', { id: node.id })} onClick={() => onChange(removeNode(definition, node.id))}>
               <Trash2 aria-hidden />
             </Button>
           )}
@@ -312,32 +318,32 @@ function StepCard({ node, definition, onChange, entity, readOnly, depth }: { nod
         {node.type === 'delay' && <DelayFields node={node} readOnly={readOnly} onChange={set} />}
 
         {node.type === 'approval' && (
-          <TextField label="What should the approver confirm?" value={node.title} readOnly={readOnly} maxLength={200} onChange={(title) => set({ title } as Partial<WorkflowNode>)} />
+          <TextField label={t('What should the approver confirm?')} value={node.title} readOnly={readOnly} maxLength={200} onChange={(title) => set({ title } as Partial<WorkflowNode>)} />
         )}
 
         {node.type === 'condition' && (
           <ConditionEditor
-            label="If"
+            label={t('If')}
             entity={entity}
             value={node.condition}
             readOnly={readOnly}
-            emptyText="With no rules, the “yes” branch always runs."
+            emptyText={t('With no rules, the “yes” branch always runs.')}
             onChange={(condition) => set({ condition } as Partial<WorkflowNode>)}
           />
         )}
 
         {node.type === 'condition' && (
           <div className="grid gap-3 md:grid-cols-2">
-            <BranchBox title="Yes">
+            <BranchBox title={t('Yes')}>
               <Branch slot={{ kind: 'onTrue', nodeId: node.id }} definition={definition} onChange={onChange} entity={entity} readOnly={readOnly} depth={depth + 1} />
             </BranchBox>
-            <BranchBox title="No">
+            <BranchBox title={t('No')}>
               <Branch slot={{ kind: 'onFalse', nodeId: node.id }} definition={definition} onChange={onChange} entity={entity} readOnly={readOnly} depth={depth + 1} />
             </BranchBox>
           </div>
         )}
         {node.type === 'approval' && (
-          <BranchBox title="If rejected">
+          <BranchBox title={t('If rejected')}>
             <Branch slot={{ kind: 'onReject', nodeId: node.id }} definition={definition} onChange={onChange} entity={entity} readOnly={readOnly} depth={depth + 1} />
           </BranchBox>
         )}
@@ -347,8 +353,9 @@ function StepCard({ node, definition, onChange, entity, readOnly, depth }: { nod
 }
 
 function BranchBox({ title, children }: { title: string; children: React.ReactNode }) {
+  const t = useT();
   return (
-    <section className="space-y-2 rounded-md border border-border bg-muted/30 p-3" aria-label={`${title} branch`}>
+    <section className="space-y-2 rounded-md border border-border bg-muted/30 p-3" aria-label={t('{name} branch', { name: title })}>
       <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
       {children}
     </section>
@@ -375,19 +382,20 @@ function TextField({ label, value, onChange, readOnly, maxLength, multiline, hin
 }
 
 function DelayFields({ node, readOnly, onChange }: { node: Extract<WorkflowNode, { type: 'delay' }>; readOnly?: boolean; onChange: (p: Partial<WorkflowNode>) => void }) {
+  const t = useT();
   const id = useId();
   return (
     <div className="flex flex-wrap items-end gap-2">
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-n`}>Wait for</Label>
+        <Label htmlFor={`${id}-n`}>{t('Wait for')}</Label>
         <Input id={`${id}-n`} type="number" min={1} max={365} className="w-24" disabled={readOnly} value={node.amount} onChange={(e) => onChange({ amount: Math.max(1, Math.min(365, Number(e.target.value) || 1)) } as Partial<WorkflowNode>)} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-u`}>Unit</Label>
+        <Label htmlFor={`${id}-u`}>{t('Unit')}</Label>
         <Select id={`${id}-u`} className="w-32" disabled={readOnly} value={node.unit} onChange={(e) => onChange({ unit: e.target.value } as Partial<WorkflowNode>)}>
-          <option value="minutes">minutes</option>
-          <option value="hours">hours</option>
-          <option value="days">days</option>
+          <option value="minutes">{t('minutes')}</option>
+          <option value="hours">{t('hours')}</option>
+          <option value="days">{t('days')}</option>
         </Select>
       </div>
     </div>
@@ -395,14 +403,15 @@ function DelayFields({ node, readOnly, onChange }: { node: Extract<WorkflowNode,
 }
 
 function PersonSelect({ label, value, onChange, readOnly }: { label: string; value: string; onChange: (v: string) => void; readOnly?: boolean }) {
+  const t = useT();
   const id = useId();
   const members = useMembers();
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
       <Select id={id} disabled={readOnly} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="record_owner">The record’s owner</option>
-        <option value="trigger_actor">The person who made the change</option>
+        <option value="record_owner">{t('The record’s owner')}</option>
+        <option value="trigger_actor">{t('The person who made the change')}</option>
         {members.data?.map((m) => (
           <option key={m.userId} value={m.userId}>
             {m.name}
@@ -413,27 +422,29 @@ function PersonSelect({ label, value, onChange, readOnly }: { label: string; val
   );
 }
 
-const TEMPLATE_HINT = 'Insert record fields with {{record.field}}, for example {{record.fullName}}.';
+const TEMPLATE_HINT = 'Insert record fields with {{record.field}}, for example {{record.fullName}}.' as const;
+const FIELD_LABEL: Record<string, string> = { status: 'Status', probability: 'Probability', source: 'Source', industry: 'Industry' };
 
 function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<WorkflowNode, { type: 'action' }>; entity: string; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const t = useT();
   const id = useId();
   const a = node.action;
   const members = useMembers();
   const allowed = (Object.keys(ACTION_LABELS) as WorkflowAction['type'][]).filter(
-    (t) =>
-      (t !== 'update_field' || entity in UPDATABLE_FIELDS) &&
-      (t !== 'add_tag' || entity === 'lead') &&
-      (t !== 'assign_owner' || (entity !== 'activity' && entity !== 'person')) &&
-      (!PERSON_ACTIONS.has(t) || ['lead', 'contact', 'person'].includes(entity)),
+    (item) =>
+      (item !== 'update_field' || entity in UPDATABLE_FIELDS) &&
+      (item !== 'add_tag' || entity === 'lead') &&
+      (item !== 'assign_owner' || (entity !== 'activity' && entity !== 'person')) &&
+      (!PERSON_ACTIONS.has(item) || ['lead', 'contact', 'person'].includes(entity)),
   );
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-type`}>Do this</Label>
+        <Label htmlFor={`${id}-type`}>{t('Do this')}</Label>
         <Select id={`${id}-type`} disabled={readOnly} value={a.type} onChange={(e) => onChange(defaultAction(e.target.value as WorkflowAction['type']))}>
-          {allowed.map((t) => (
-            <option key={t} value={t}>
-              {ACTION_LABELS[t]}
+          {allowed.map((item) => (
+            <option key={item} value={item}>
+              {t.maybe(ACTION_LABELS[item])}
             </option>
           ))}
         </Select>
@@ -441,19 +452,19 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
       {a.type === 'create_task' && (
         <>
-          <TextField label="Task title" value={a.title} readOnly={readOnly} maxLength={200} hint={TEMPLATE_HINT} onChange={(title) => onChange({ ...a, title })} />
+          <TextField label={t('Task title')} value={a.title} readOnly={readOnly} maxLength={200} hint={t(TEMPLATE_HINT)} onChange={(title) => onChange({ ...a, title })} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor={`${id}-due`}>Due in (days)</Label>
+              <Label htmlFor={`${id}-due`}>{t('Due in (days)')}</Label>
               <Input id={`${id}-due`} type="number" min={0} max={365} disabled={readOnly} value={a.dueInDays ?? ''} onChange={(e) => onChange({ ...a, dueInDays: e.target.value === '' ? undefined : Math.max(0, Math.min(365, Number(e.target.value))) })} />
             </div>
-            <PersonSelect label="Assign to" value={a.assignTo} readOnly={readOnly} onChange={(assignTo) => onChange({ ...a, assignTo })} />
+            <PersonSelect label={t('Assign to')} value={a.assignTo} readOnly={readOnly} onChange={(assignTo) => onChange({ ...a, assignTo })} />
             <div className="space-y-1.5">
-              <Label htmlFor={`${id}-prio`}>Priority</Label>
+              <Label htmlFor={`${id}-prio`}>{t('Priority')}</Label>
               <Select id={`${id}-prio`} disabled={readOnly} value={a.priority} onChange={(e) => onChange({ ...a, priority: e.target.value as 'LOW' | 'NORMAL' | 'HIGH' })}>
-                <option value="LOW">Low</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH">High</option>
+                <option value="LOW">{t('Low')}</option>
+                <option value="NORMAL">{t('Normal')}</option>
+                <option value="HIGH">{t('High')}</option>
               </Select>
             </div>
           </div>
@@ -462,10 +473,10 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
       {a.type === 'stop_sequences' && (
         <div className="space-y-1.5">
-          <Label htmlFor={`${id}-mode`}>Their live sequences</Label>
+          <Label htmlFor={`${id}-mode`}>{t('Their live sequences')}</Label>
           <Select id={`${id}-mode`} disabled={readOnly} value={a.mode} onChange={(e) => onChange({ ...a, mode: e.target.value as 'stop' | 'pause' })}>
-            <option value="stop">Stop them</option>
-            <option value="pause">Pause them (resume by hand)</option>
+            <option value="stop">{t('Stop them')}</option>
+            <option value="pause">{t('Pause them (resume by hand)')}</option>
           </Select>
         </div>
       )}
@@ -474,29 +485,29 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
       {a.type === 'flag_email' && (
         <div className="space-y-1.5">
-          <Label htmlFor={`${id}-flag`}>Mark the address as</Label>
+          <Label htmlFor={`${id}-flag`}>{t('Mark the address as')}</Label>
           <Select id={`${id}-flag`} disabled={readOnly} value={a.status} onChange={(e) => onChange({ ...a, status: e.target.value as 'needs_verification' | 'invalid' | 'valid' })}>
-            <option value="needs_verification">Check before emailing</option>
-            <option value="invalid">Invalid</option>
-            <option value="valid">Verified</option>
+            <option value="needs_verification">{t('Check before emailing')}</option>
+            <option value="invalid">{t('Invalid')}</option>
+            <option value="valid">{t('Verified')}</option>
           </Select>
         </div>
       )}
 
       {a.type === 'add_engagement_points' && (
         <div className="space-y-1.5">
-          <Label htmlFor={`${id}-pts`}>Points (use a minus sign to lower)</Label>
+          <Label htmlFor={`${id}-pts`}>{t('Points (use a minus sign to lower)')}</Label>
           <Input id={`${id}-pts`} type="number" min={-50} max={50} disabled={readOnly} value={a.points} onChange={(e) => onChange({ ...a, points: Math.max(-50, Math.min(50, Math.trunc(Number(e.target.value)) || 1)) })} />
-          <p className="text-xs text-muted-foreground">The score stays between 0 and 100.</p>
+          <p className="text-xs text-muted-foreground">{t('The score stays between 0 and 100.')}</p>
         </div>
       )}
 
       {a.type === 'assign_owner' && (
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Assign to</legend>
-          <Select aria-label="Assignment mode" disabled={readOnly} value={a.mode} onChange={(e) => onChange({ ...a, mode: e.target.value as 'round_robin' | 'user', userIds: e.target.value === 'user' ? a.userIds.slice(0, 1) : a.userIds })}>
-            <option value="round_robin">Rotate between people (round robin)</option>
-            <option value="user">One person</option>
+          <legend className="text-sm font-medium">{t('Assign to')}</legend>
+          <Select aria-label={t('Assignment mode')} disabled={readOnly} value={a.mode} onChange={(e) => onChange({ ...a, mode: e.target.value as 'round_robin' | 'user', userIds: e.target.value === 'user' ? a.userIds.slice(0, 1) : a.userIds })}>
+            <option value="round_robin">{t('Rotate between people (round robin)')}</option>
+            <option value="user">{t('One person')}</option>
           </Select>
           <div className="grid gap-1 sm:grid-cols-2">
             {members.data?.map((m) => (
@@ -515,29 +526,29 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
               </label>
             ))}
           </div>
-          {a.userIds.length === 0 && <p className="text-xs text-warning">Choose at least one person.</p>}
+          {a.userIds.length === 0 && <p className="text-xs text-warning">{t('Choose at least one person.')}</p>}
         </fieldset>
       )}
 
       {a.type === 'update_field' && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-field`}>Field</Label>
+            <Label htmlFor={`${id}-field`}>{t('Field')}</Label>
             <Select id={`${id}-field`} disabled={readOnly} value={a.field} onChange={(e) => onChange({ ...a, field: e.target.value, value: e.target.value === 'status' ? 'CONTACTED' : e.target.value === 'probability' ? 50 : '' })}>
               {((UPDATABLE_FIELDS as Record<string, readonly string[]>)[entity] ?? []).map((f) => (
                 <option key={f} value={f}>
-                  {f}
+                  {t.maybe(FIELD_LABEL[f] ?? f)}
                 </option>
               ))}
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-val`}>New value</Label>
+            <Label htmlFor={`${id}-val`}>{t('New value')}</Label>
             {a.field === 'status' ? (
               <Select id={`${id}-val`} disabled={readOnly} value={String(a.value ?? '')} onChange={(e) => onChange({ ...a, value: e.target.value })}>
                 {LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => (
                   <option key={s} value={s}>
-                    {s.charAt(0) + s.slice(1).toLowerCase()}
+                    {t.maybe(s.charAt(0) + s.slice(1).toLowerCase())}
                   </option>
                 ))}
               </Select>
@@ -550,29 +561,29 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
         </div>
       )}
 
-      {a.type === 'add_tag' && <TextField label="Tag" value={a.tag} readOnly={readOnly} maxLength={40} onChange={(tag) => onChange({ ...a, tag })} />}
+      {a.type === 'add_tag' && <TextField label={t('Tag')} value={a.tag} readOnly={readOnly} maxLength={40} onChange={(tag) => onChange({ ...a, tag })} />}
 
       {a.type === 'notify' && (
         <>
-          <PersonSelect label="Notify" value={a.to} readOnly={readOnly} onChange={(to) => onChange({ ...a, to })} />
-          <TextField label="Message" value={a.title} readOnly={readOnly} maxLength={200} hint={TEMPLATE_HINT} onChange={(title) => onChange({ ...a, title })} />
+          <PersonSelect label={t('Notify')} value={a.to} readOnly={readOnly} onChange={(to) => onChange({ ...a, to })} />
+          <TextField label={t('Message')} value={a.title} readOnly={readOnly} maxLength={200} hint={t(TEMPLATE_HINT)} onChange={(title) => onChange({ ...a, title })} />
         </>
       )}
 
       {a.type === 'log_note' && (
         <>
-          <TextField label="Subject" value={a.subject} readOnly={readOnly} maxLength={200} hint={TEMPLATE_HINT} onChange={(subject) => onChange({ ...a, subject })} />
-          <TextField label="Note" multiline value={a.body ?? ''} readOnly={readOnly} maxLength={5000} onChange={(body) => onChange({ ...a, body: body || undefined })} />
+          <TextField label={t('Subject')} value={a.subject} readOnly={readOnly} maxLength={200} hint={t(TEMPLATE_HINT)} onChange={(subject) => onChange({ ...a, subject })} />
+          <TextField label={t('Note')} multiline value={a.body ?? ''} readOnly={readOnly} maxLength={5000} onChange={(body) => onChange({ ...a, body: body || undefined })} />
         </>
       )}
 
       {a.type === 'send_webhook' && (
         <TextField
-          label="Endpoint URL"
+          label={t('Endpoint URL')}
           value={a.url}
           readOnly={readOnly}
           maxLength={2000}
-          hint="Posts the record as JSON after someone approves the run. Private network addresses are refused."
+          hint={t('Posts the record as JSON after someone approves the run. Private network addresses are refused.')}
           onChange={(url) => onChange({ ...a, url })}
         />
       )}
@@ -586,10 +597,10 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
       {a.type === 'send_email' && (
         <>
           <p className="text-xs text-muted-foreground">
-            Sends one email to the record’s email address from the workflow owner’s connected mailbox, after someone approves the run.
+            {t('Sends one email to the record’s email address from the workflow owner’s connected mailbox, after someone approves the run.')}
           </p>
-          <TextField label="Subject" value={a.subject} readOnly={readOnly} maxLength={200} onChange={(subject) => onChange({ ...a, subject })} />
-          <TextField label="Body" multiline value={a.body} readOnly={readOnly} maxLength={10_000} hint={TEMPLATE_HINT} onChange={(body) => onChange({ ...a, body })} />
+          <TextField label={t('Subject')} value={a.subject} readOnly={readOnly} maxLength={200} onChange={(subject) => onChange({ ...a, subject })} />
+          <TextField label={t('Body')} multiline value={a.body} readOnly={readOnly} maxLength={10_000} hint={t(TEMPLATE_HINT)} onChange={(body) => onChange({ ...a, body })} />
         </>
       )}
     </div>
@@ -598,6 +609,7 @@ function ActionFields({ node, entity, readOnly, onChange }: { node: Extract<Work
 
 /** App, channel and message for a "Post to Slack or Teams" step. Channels come from the workspace's connection. */
 function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'post_to_chat' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const t = useT();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
   const target = apps.data?.find((x) => x.key === a.app);
   const connected = target?.state === 'connected' || (a.app === 'teams' && target?.state === 'error');
@@ -605,7 +617,7 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
   const teamsChannels = useQuery({ enabled: a.app === 'teams' && connected && !readOnly, queryKey: ['apps', 'teams', 'channels'], queryFn: () => api<TeamsChannel[]>('/apps/teams/channels') });
   const options =
     a.app === 'slack'
-      ? (slackChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: `#${c.name}${c.isPrivate ? ' (private)' : ''}` }))
+      ? (slackChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: c.isPrivate ? t('#{name} (private)', { name: c.name }) : `#${c.name}` }))
       : (teamsChannels.data ?? []).map((c) => ({ id: c.id, name: c.name, label: c.name }));
   const settings = (target?.connection?.settings ?? {}) as { defaultChannelName?: string | null; defaultChannelId?: string | null; channels?: TeamsChannel[] };
   const fallback = a.app === 'slack' ? (settings.defaultChannelName ? `#${settings.defaultChannelName}` : null) : (settings.channels?.find((c) => c.id === settings.defaultChannelId)?.name ?? null);
@@ -613,7 +625,7 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
   return (
     <>
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-app`}>App</Label>
+        <Label htmlFor={`${id}-app`}>{t('App')}</Label>
         <Select id={`${id}-app`} disabled={readOnly} value={a.app} onChange={(e) => onChange({ ...a, app: e.target.value as 'slack' | 'teams', channelId: null, channelName: null })}>
           <option value="slack">Slack</option>
           <option value="teams">Microsoft Teams</option>
@@ -622,16 +634,16 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
       {target && !connected && (
         <p className="text-xs text-warning" role="status">
           {target.state === 'pending_configuration'
-            ? `${name} is Pending Configuration on this installation, so this step will fail until an operator adds the app credentials and an admin connects it.`
+            ? t('{name} is Pending Configuration on this installation, so this step will fail until an operator adds the app credentials and an admin connects it.', { name })
             : target.state === 'error'
-              ? `${name} needs reconnecting in Integrations before this step can post.`
+              ? t('{name} needs reconnecting in Integrations before this step can post.', { name })
               : a.app === 'teams'
-                ? 'No Teams channels are added yet. An admin can add one in Integrations; until then this step fails with that message.'
-                : 'Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+                ? t('No Teams channels are added yet. An admin can add one in Integrations; until then this step fails with that message.')
+                : t('Slack is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.')}
         </p>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-channel`}>Channel</Label>
+        <Label htmlFor={`${id}-channel`}>{t('Channel')}</Label>
         <Select
           id={`${id}-channel`}
           disabled={readOnly || !connected}
@@ -641,7 +653,7 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
             onChange({ ...a, channelId: ch?.id ?? null, channelName: ch?.name ?? null });
           }}
         >
-          <option value="">{fallback ? `Default channel (${fallback})` : 'Default channel'}</option>
+          <option value="">{fallback ? t('Default channel ({name})', { name: fallback }) : t('Default channel')}</option>
           {a.channelId && !options.some((c) => c.id === a.channelId) && <option value={a.channelId}>{a.app === 'slack' ? '#' : ''}{a.channelName ?? a.channelId}</option>}
           {options.map((c) => (
             <option key={c.id} value={c.id}>
@@ -650,46 +662,47 @@ function ChatStepFields({ id, action: a, readOnly, onChange }: { id: string; act
           ))}
         </Select>
       </div>
-      <TextField label="Message" multiline value={a.text} readOnly={readOnly} maxLength={3000} hint={`${TEMPLATE_HINT} A link to the record is added automatically.`} onChange={(text) => onChange({ ...a, text })} />
+      <TextField label={t('Message')} multiline value={a.text} readOnly={readOnly} maxLength={3000} hint={`${t(TEMPLATE_HINT)} ${t('A link to the record is added automatically.')}`} onChange={(text) => onChange({ ...a, text })} />
     </>
   );
 }
 
 /** An approved WhatsApp template and its values. Templates come from the workspace's own WhatsApp Business account. */
 function WhatsappStepFields({ id, action: a, readOnly, onChange }: { id: string; action: Extract<WorkflowAction, { type: 'send_whatsapp' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const t = useT();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
   const wa = apps.data?.find((x) => x.key === 'whatsapp');
   const connected = wa?.state === 'connected';
   const templates = useQuery({ enabled: connected && !readOnly, queryKey: ['apps', 'whatsapp', 'templates'], queryFn: () => api<WhatsappTemplate[]>('/apps/whatsapp/templates') });
   const key = a.templateName ? `${a.templateName}|${a.language}` : '';
-  const chosen = templates.data?.find((t) => `${t.name}|${t.language}` === key);
+  const chosen = templates.data?.find((item) => `${item.name}|${item.language}` === key);
   const count = chosen?.params ?? a.params.length;
   return (
     <>
       <p className="text-xs text-muted-foreground">
-        Sends one approved template to the contact’s WhatsApp number after someone approves the run, and only if their WhatsApp consent is recorded on the contact. People who replied STOP are skipped with a clear failure.
+        {t('Sends one approved template to the contact’s WhatsApp number after someone approves the run, and only if their WhatsApp consent is recorded on the contact. People who replied STOP are skipped with a clear failure.')}
       </p>
       {wa && !connected && (
         <p className="text-xs text-warning" role="status">
-          {wa.state === 'error' ? 'WhatsApp needs new credentials in Integrations before this step can send.' : 'WhatsApp Business is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+          {wa.state === 'error' ? t('WhatsApp needs new credentials in Integrations before this step can send.') : t('WhatsApp Business is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.')}
         </p>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor={`${id}-template`}>Template</Label>
+        <Label htmlFor={`${id}-template`}>{t('Template')}</Label>
         <Select
           id={`${id}-template`}
           disabled={readOnly || !connected}
           value={key}
           onChange={(e) => {
-            const t = templates.data?.find((x) => `${x.name}|${x.language}` === e.target.value);
-            onChange({ ...a, templateName: t?.name ?? '', language: t?.language ?? 'en', params: t ? Array.from({ length: t.params }, (_, i) => a.params[i] ?? '') : [] });
+            const tpl = templates.data?.find((x) => `${x.name}|${x.language}` === e.target.value);
+            onChange({ ...a, templateName: tpl?.name ?? '', language: tpl?.language ?? 'en', params: tpl ? Array.from({ length: tpl.params }, (_, i) => a.params[i] ?? '') : [] });
           }}
         >
-          <option value="">Choose an approved template</option>
+          <option value="">{t('Choose an approved template')}</option>
           {key && !chosen && <option value={key}>{`${a.templateName} (${a.language})`}</option>}
-          {(templates.data ?? []).map((t) => (
-            <option key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>
-              {`${t.name} (${t.language}, ${t.category.toLowerCase()})`}
+          {(templates.data ?? []).map((item) => (
+            <option key={`${item.name}|${item.language}`} value={`${item.name}|${item.language}`}>
+              {`${item.name} (${item.language}, ${item.category.toLowerCase()})`}
             </option>
           ))}
         </Select>
@@ -699,11 +712,11 @@ function WhatsappStepFields({ id, action: a, readOnly, onChange }: { id: string;
       {Array.from({ length: count }, (_, i) => (
         <TextField
           key={i}
-          label={`Value for {{${i + 1}}}`}
+          label={t('Value for {placeholder}', { placeholder: `{{${i + 1}}}` })}
           value={a.params[i] ?? ''}
           readOnly={readOnly}
           maxLength={1024}
-          hint={i === 0 ? TEMPLATE_HINT : undefined}
+          hint={i === 0 ? t(TEMPLATE_HINT) : undefined}
           onChange={(v) => {
             const params = Array.from({ length: count }, (_, j) => (j === i ? v : (a.params[j] ?? '')));
             onChange({ ...a, params });
@@ -715,26 +728,27 @@ function WhatsappStepFields({ id, action: a, readOnly, onChange }: { id: string;
 }
 
 function SmsStepFields({ action: a, readOnly, onChange }: { action: Extract<WorkflowAction, { type: 'send_sms' }>; readOnly?: boolean; onChange: (a: WorkflowAction) => void }) {
+  const t = useT();
   const apps = useQuery({ queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps') });
   const sms = apps.data?.find((x) => x.key === 'twilio');
   const seg = smsSegments(a.text);
   return (
     <>
       <p className="text-xs text-muted-foreground">
-        Sends one text to the contact’s number from your Twilio number after someone approves the run, and only if their SMS consent is recorded. People who replied STOP are skipped with a clear failure.
+        {t('Sends one text to the contact’s number from your Twilio number after someone approves the run, and only if their SMS consent is recorded. People who replied STOP are skipped with a clear failure.')}
       </p>
       {sms && sms.state !== 'connected' && (
         <p className="text-xs text-warning" role="status">
-          {sms.state === 'error' ? 'SMS needs new Twilio credentials in Integrations before this step can send.' : 'SMS (Twilio) is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.'}
+          {sms.state === 'error' ? t('SMS needs new Twilio credentials in Integrations before this step can send.') : t('SMS (Twilio) is not connected yet. An admin can connect it in Integrations; until then this step fails with that message.')}
         </p>
       )}
       <TextField
-        label="Text"
+        label={t('Text')}
         multiline
         value={a.text}
         readOnly={readOnly}
         maxLength={SMS_MAX_LENGTH}
-        hint={`${TEMPLATE_HINT} About ${seg.segments} segment${seg.segments === 1 ? '' : 's'} before the values are filled in.`}
+        hint={`${t(TEMPLATE_HINT)} ${t.plural('count.smsSegments', seg.segments)}`}
         onChange={(text) => onChange({ ...a, text })}
       />
     </>
@@ -743,20 +757,21 @@ function SmsStepFields({ action: a, readOnly, onChange }: { action: Extract<Work
 
 /** Active sequences to enrol into. Emails then follow that sequence's own send window, limits and do-not-email list. */
 function SequencePicker({ id, value, readOnly, onChange }: { id: string; value: string; readOnly?: boolean; onChange: (v: string) => void }) {
+  const t = useT();
   const list = useQuery({ queryKey: ['sequences'], queryFn: () => api<SequenceRow[]>('/sequences') });
   const active = list.data?.filter((s) => s.status === 'ACTIVE') ?? [];
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>Sequence</Label>
+      <Label htmlFor={id}>{t('Sequence')}</Label>
       <Select id={id} disabled={readOnly || list.isPending} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Choose an active sequence</option>
+        <option value="">{t('Choose an active sequence')}</option>
         {active.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>
         ))}
       </Select>
-      <p className="text-xs text-muted-foreground">Emails go from the workflow owner’s mailbox, inside the sequence’s send window and limits. People on the do-not-email list or opted out are skipped.</p>
+      <p className="text-xs text-muted-foreground">{t('Emails go from the workflow owner’s mailbox, inside the sequence’s send window and limits. People on the do-not-email list or opted out are skipped.')}</p>
     </div>
   );
 }

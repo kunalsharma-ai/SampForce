@@ -22,6 +22,7 @@ import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { WorkflowEditor } from './workflow-editor';
 import { AI_DRAFT_KEY, type AiWorkflowDraft, EMAIL_TEMPLATES, emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
+import { inSentence, useT } from '@/lib/i18n';
 
 type Tab = 'builder' | 'simulate' | 'runs' | 'versions';
 const TABS: { key: Tab; label: string }[] = [
@@ -32,13 +33,14 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export function WorkflowWorkspace({ id }: { id: string | null }) {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
   const workflow = useWorkflow(id);
-  const template = [...TEMPLATES, ...EMAIL_TEMPLATES].find((t) => t.key === params.get('template'));
-  const [name, setName] = useState(template?.name ?? '');
-  const [description, setDescription] = useState(template?.description ?? '');
+  const template = [...TEMPLATES, ...EMAIL_TEMPLATES].find((item) => item.key === params.get('template'));
+  const [name, setName] = useState(template ? t.maybe(template.name) : '');
+  const [description, setDescription] = useState(template ? t.maybe(template.description) : '');
   const [definition, setDefinition] = useState<WorkflowDefinition>(template?.definition ?? emptyDefinition());
   const [dirty, setDirty] = useState(!id);
   const [tab, setTab] = useState<Tab>(params.get('run') ? 'runs' : 'builder');
@@ -114,36 +116,36 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link href="/app/automation" className="text-sm text-primary hover:underline">
-          ← All workflows
+          {t('← All workflows')}
         </Link>
         {wf && (
           <>
-            <Badge tone={wf.status === 'ACTIVE' ? 'success' : wf.status === 'PAUSED' ? 'warning' : 'neutral'}>{wf.status === 'ACTIVE' ? 'Active' : wf.status === 'PAUSED' ? 'Paused' : 'Draft'}</Badge>
+            <Badge tone={wf.status === 'ACTIVE' ? 'success' : wf.status === 'PAUSED' ? 'warning' : 'neutral'}>{wf.status === 'ACTIVE' ? t('Active') : wf.status === 'PAUSED' ? t('Paused') : t('Draft')}</Badge>
             <span className="text-xs text-muted-foreground">
-              Version {wf.version} · runs as {wf.createdBy?.name ?? 'unknown'}
+              {t('Version {n} · runs as {name}', { n: wf.version, name: wf.createdBy?.name ?? t('unknown') })}
             </span>
           </>
         )}
         <div className="ms-auto flex flex-wrap gap-2">
           <Button onClick={() => save.mutate()} disabled={!name.trim() || issues.length > 0 || save.isPending || (!dirty && !!id)}>
-            <Save aria-hidden /> {id ? (dirty ? 'Save new version' : 'Saved') : 'Create workflow'}
+            <Save aria-hidden /> {id ? (dirty ? t('Save new version') : t('Saved')) : t('Create workflow')}
           </Button>
           {wf && wf.status !== 'ACTIVE' && (
             <Button onClick={() => setStatus.mutate('ACTIVE')} disabled={dirty || setStatus.isPending}>
-              <Play aria-hidden /> Activate
+              <Play aria-hidden /> {t('Activate')}
             </Button>
           )}
           {wf?.status === 'ACTIVE' && (
             <Button variant="outline" onClick={() => setStatus.mutate('PAUSED')} disabled={setStatus.isPending}>
-              <Pause aria-hidden /> Pause
+              <Pause aria-hidden /> {t('Pause')}
             </Button>
           )}
           {wf && (
             <Button
               variant="ghost"
-              aria-label="Delete workflow"
+              aria-label={t('Delete workflow')}
               onClick={() => {
-                if (window.confirm(`Delete "${wf.name}"? Runs in progress are canceled.`)) remove.mutate();
+                if (window.confirm(t('Delete “{name}”? Runs in progress are canceled.', { name: wf.name }))) remove.mutate();
               }}
             >
               <Trash2 aria-hidden />
@@ -153,19 +155,19 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
       </div>
       {aiDraft && (
         <div role="status" className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm">
-          <p className="font-medium">Drafted by AI from your description. Check every step before you save it.</p>
+          <p className="font-medium">{t('Drafted by AI from your description. Check every step before you save it.')}</p>
           {aiDraft.notes && <p className="mt-1 text-muted-foreground">{aiDraft.notes}</p>}
-          <p className="mt-1 text-xs text-muted-foreground">It is saved as a draft and does nothing until you activate it. Emails and webhooks still wait for approval.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('It is saved as a draft and does nothing until you activate it. Emails and webhooks still wait for approval.')}</p>
         </div>
       )}
-      {dirty && wf && <p className="text-xs text-muted-foreground">Unsaved changes. Saving creates version {wf.version + 1}; runs already in progress finish on the version they started with.</p>}
+      {dirty && wf && <p className="text-xs text-muted-foreground">{t('Unsaved changes. Saving creates version {n}; runs already in progress finish on the version they started with.', { n: wf.version + 1 })}</p>}
       {error && (
         <div role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
           {error.message}
           {error instanceof ApiError && error.details?.length ? (
             <ul className="mt-1 list-disc ps-5">
               {error.details.map((d, i) => (
-                <li key={i}>{d.message}</li>
+                <li key={i}>{t.maybe(d.message)}</li>
               ))}
             </ul>
           ) : null}
@@ -175,30 +177,30 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="wf-name">Name</Label>
-            <Input id="wf-name" value={name} maxLength={120} onChange={(e) => (setName(e.target.value), setDirty(true))} placeholder="e.g. Follow up on high-value leads" />
+            <Label htmlFor="wf-name">{t('Name')}</Label>
+            <Input id="wf-name" value={name} maxLength={120} onChange={(e) => (setName(e.target.value), setDirty(true))} placeholder={t('e.g. Follow up on high-value leads')} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="wf-desc">Description</Label>
+            <Label htmlFor="wf-desc">{t('Description')}</Label>
             <Textarea id="wf-desc" className="min-h-10" value={description} maxLength={500} onChange={(e) => (setDescription(e.target.value), setDirty(true))} />
           </div>
         </CardContent>
       </Card>
 
-      <div role="tablist" aria-label="Workflow views" className="flex gap-1 border-b border-border">
-        {TABS.map((t) => (
+      <div role="tablist" aria-label={t('Workflow views')} className="flex gap-1 border-b border-border">
+        {TABS.map((item) => (
           <button
-            key={t.key}
+            key={item.key}
             type="button"
             role="tab"
-            id={`tab-${t.key}`}
-            aria-selected={tab === t.key}
-            aria-controls={`panel-${t.key}`}
-            disabled={!id && (t.key === 'runs' || t.key === 'versions')}
-            onClick={() => setTab(t.key)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm disabled:opacity-50 ${tab === t.key ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+            id={`tab-${item.key}`}
+            aria-selected={tab === item.key}
+            aria-controls={`panel-${item.key}`}
+            disabled={!id && (item.key === 'runs' || item.key === 'versions')}
+            onClick={() => setTab(item.key)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm disabled:opacity-50 ${tab === item.key ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
-            {t.label}
+            {t.maybe(item.label)}
           </button>
         ))}
       </div>
@@ -208,10 +210,10 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
           <div className="space-y-3">
             {issues.length > 0 && (
               <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-                <p className="font-medium">Fix these before saving:</p>
+                <p className="font-medium">{t('Fix these before saving:')}</p>
                 <ul className="list-disc ps-5">
                   {issues.map((i) => (
-                    <li key={i}>{i}</li>
+                    <li key={i}>{t.maybe(i)}</li>
                   ))}
                 </ul>
               </div>
@@ -228,29 +230,35 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
 }
 
 const PICKER_ENTITY = { lead: 'leads', contact: 'contacts', company: 'companies', deal: 'deals' } as const;
+const SEARCH_PLACEHOLDER = { leads: 'Search leads…', contacts: 'Search contacts…', companies: 'Search companies…', deals: 'Search deals…' } as const;
+const ENTITY_LABEL: Record<string, string> = { lead: 'Lead', contact: 'Contact', company: 'Company', deal: 'Deal', activity: 'Activity', person: 'Person', task: 'Task' };
+const NODE_LABEL: Record<string, string> = { action: 'Action', condition: 'If / else', delay: 'Wait', approval: 'Approval' };
+const OPEN_RECORD: Record<string, string> = { lead: 'Open the lead', contact: 'Open the contact', company: 'Open the company', deal: 'Open the deal' };
+const STEP_STATUS: Record<string, string> = { succeeded: 'Succeeded', failed: 'Failed', waiting: 'Waiting', awaiting_approval: 'Awaiting approval', simulated: 'Simulated' };
 
 function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; valid: boolean }) {
+  const t = useT();
   const entity = entityOf(definition.trigger.event);
   const pickerEntity = PICKER_ENTITY[entity as keyof typeof PICKER_ENTITY];
   const [record, setRecord] = useState<PickerValue | null>(null);
   const sim = useMutation({ mutationFn: () => api<SimulationResult>('/workflows/simulate', { method: 'POST', json: { definition, recordId: record!.id } }) });
   if (!pickerEntity) {
-    return <p className="text-sm text-muted-foreground">Simulation works with lead, contact, company and deal triggers. This trigger starts from a {entity}.</p>;
+    return <p className="text-sm text-muted-foreground">{t('Simulation works with lead, contact, company and deal triggers. This trigger starts from a record of this kind: {entity}.', { entity: inSentence(t, t.maybe(ENTITY_LABEL[entity] ?? entity)) })}</p>;
   }
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Dry run against a real record</CardTitle>
-        <p className="text-sm text-muted-foreground">Shows the path this version would take for “{TRIGGER_EVENTS[definition.trigger.event].label}”. Nothing is changed, sent or created; waits and approvals are skipped.</p>
+        <CardTitle className="text-base">{t('Dry run against a real record')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('Shows the path this version would take for “{trigger}”. Nothing is changed, sent or created; waits and approvals are skipped.', { trigger: t.maybe(TRIGGER_EVENTS[definition.trigger.event].label) })}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-64 flex-1 space-y-1.5">
-            <Label htmlFor="sim-record">Record</Label>
-            <RecordPicker id="sim-record" entity={pickerEntity} value={record} onChange={setRecord} placeholder={`Search ${pickerEntity}…`} />
+            <Label htmlFor="sim-record">{t('Record')}</Label>
+            <RecordPicker id="sim-record" entity={pickerEntity} value={record} onChange={setRecord} placeholder={t.maybe(SEARCH_PLACEHOLDER[pickerEntity])} />
           </div>
           <Button onClick={() => sim.mutate()} disabled={!record || !valid || sim.isPending}>
-            Run simulation
+            {t('Run simulation')}
           </Button>
         </div>
         {sim.error && (
@@ -261,19 +269,19 @@ function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; 
         {sim.data && (
           <div aria-live="polite" className="space-y-2">
             {!sim.data.triggerMatched ? (
-              <p className="text-sm">The trigger conditions do not match this record, so the workflow would not start.</p>
+              <p className="text-sm">{t('The trigger conditions do not match this record, so the workflow would not start.')}</p>
             ) : (
               <ol className="space-y-1.5">
                 {sim.data.path.map((p, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
                     <span className="font-mono text-xs text-muted-foreground">{p.nodeId}</span>
                     <Badge tone={p.nodeType === 'condition' ? (p.outcome === 'true' ? 'success' : 'neutral') : 'primary'}>
-                      {p.nodeType === 'condition' ? (p.outcome === 'true' ? 'Yes' : 'No') : p.nodeType}
+                      {p.nodeType === 'condition' ? (p.outcome === 'true' ? t('Yes') : t('No')) : t.maybe(NODE_LABEL[p.nodeType] ?? p.nodeType)}
                     </Badge>
-                    {p.detail && <span>{p.detail}</span>}
+                    {p.detail && <span>{t.maybe(p.detail)}</span>}
                   </li>
                 ))}
-                <li className="text-xs text-muted-foreground">{sim.data.ended === 'failed' ? 'The run would fail here.' : 'The run would finish here.'}</li>
+                <li className="text-xs text-muted-foreground">{sim.data.ended === 'failed' ? t('The run would fail here.') : t('The run would finish here.')}</li>
               </ol>
             )}
           </div>
@@ -284,9 +292,10 @@ function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; 
 }
 
 function RunsPanel({ workflowId, highlight }: { workflowId: string; highlight: string | null }) {
+  const t = useT();
   const runs = useExecutions(workflowId);
   if (runs.isPending) return <Skeleton className="h-40" />;
-  if (!runs.data?.length) return <p className="py-6 text-center text-sm text-muted-foreground">No runs yet. Activate the workflow and it will run the next time its trigger happens.</p>;
+  if (!runs.data?.length) return <p className="py-6 text-center text-sm text-muted-foreground">{t('No runs yet. Activate the workflow and it will run the next time its trigger happens.')}</p>;
   return (
     <ul className="space-y-2">
       {runs.data.map((r) => (
@@ -297,22 +306,23 @@ function RunsPanel({ workflowId, highlight }: { workflowId: string; highlight: s
 }
 
 function RunItem({ run, open: initiallyOpen }: { run: ExecutionRow; open: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(initiallyOpen);
   const href = run.entityId && run.entityType && ['lead', 'contact', 'company', 'deal'].includes(run.entityType) ? `/app/${run.entityType === 'company' ? 'companies' : `${run.entityType}s`}/${run.entityId}` : null;
   return (
     <li className="rounded-md border border-border">
       <button type="button" className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-start text-sm" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         {open ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="rtl:-scale-x-100 size-4" aria-hidden />}
-        <Badge tone={EXECUTION_TONE[run.status]}>{EXECUTION_LABEL[run.status]}</Badge>
-        <span>{TRIGGER_EVENTS[run.eventType as keyof typeof TRIGGER_EVENTS]?.label ?? run.eventType}</span>
+        <Badge tone={EXECUTION_TONE[run.status]}>{t.maybe(EXECUTION_LABEL[run.status])}</Badge>
+        <span>{t.maybe(TRIGGER_EVENTS[run.eventType as keyof typeof TRIGGER_EVENTS]?.label ?? run.eventType)}</span>
         <span className="text-xs text-muted-foreground">v{run.version} · {relativeTime(run.startedAt)}</span>
-        {run.status === 'WAITING' && run.resumeAt && <span className="text-xs text-muted-foreground">· resumes {formatDate(run.resumeAt)}</span>}
+        {run.status === 'WAITING' && run.resumeAt && <span className="text-xs text-muted-foreground">· {t('resumes {date}', { date: formatDate(run.resumeAt) })}</span>}
       </button>
       {open && (
         <div className="space-y-2 border-t border-border px-3 py-2">
           {href && (
             <Link href={href} className="text-xs text-primary hover:underline">
-              Open the {run.entityType}
+              {t.maybe(OPEN_RECORD[run.entityType ?? ''] ?? 'Open record')}
             </Link>
           )}
           {run.error && <p className="text-sm text-critical">{run.error}</p>}
@@ -320,7 +330,7 @@ function RunItem({ run, open: initiallyOpen }: { run: ExecutionRow; open: boolea
             {run.steps.map((s, i) => (
               <li key={i} className="flex flex-wrap gap-2 text-xs">
                 <span className="font-mono text-muted-foreground">{s.nodeId}</span>
-                <span className={s.status === 'failed' ? 'text-critical' : ''}>{s.status.replace('_', ' ')}</span>
+                <span className={s.status === 'failed' ? 'text-critical' : ''}>{t.maybe(STEP_STATUS[s.status] ?? s.status.replace('_', ' '))}</span>
                 {s.error && <span className="text-critical">{s.error}</span>}
                 {!s.error && Object.keys(s.output).length > 0 && <span className="truncate text-muted-foreground">{JSON.stringify(s.output)}</span>}
               </li>
@@ -328,7 +338,7 @@ function RunItem({ run, open: initiallyOpen }: { run: ExecutionRow; open: boolea
           </ol>
           {run.status === 'AWAITING_APPROVAL' && (
             <Link href="/app/approvals" className="text-xs text-primary hover:underline">
-              Review in Approvals
+              {t('Review in Approvals')}
             </Link>
           )}
         </div>
@@ -338,15 +348,16 @@ function RunItem({ run, open: initiallyOpen }: { run: ExecutionRow; open: boolea
 }
 
 function VersionsPanel({ workflowId }: { workflowId: string }) {
+  const t = useT();
   const versions = useVersions(workflowId);
   if (versions.isPending) return <Skeleton className="h-24" />;
   return (
     <ul className="divide-y divide-border rounded-md border border-border">
       {versions.data?.map((v) => (
         <li key={v.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-          <span className="font-medium">Version {v.version}</span>
+          <span className="font-medium">{t('Version {n}', { n: v.version })}</span>
           <span className="text-muted-foreground">
-            {formatDate(v.createdAt)} by {v.createdBy?.name ?? 'unknown'} · {v.definition.nodes.length} steps
+            {t('{date} by {name}', { date: formatDate(v.createdAt), name: v.createdBy?.name ?? t('unknown') })} · {t.plural('count.steps', v.definition.nodes.length)}
           </span>
         </li>
       ))}

@@ -112,6 +112,76 @@ proposal draft panels on lead and deal records. New tables: `communication` and 
 Still English here: email subjects and bodies, the AI's own summaries and drafts, the signal names and details the
 scoring API writes, provider error text from Zoom and mailbox syncs, and API error messages.
 
+## Scope of batch 5
+
+Translated: Quotes & Proposals (the quote list, the catalogue and price books, the quote editor with its lines, totals,
+discount approval and versions, the online proposal panel with tracking, payments and the send dialog), the Quick Bid
+Studio (all four steps, its checks, autosave and restore), the bid template gallery and previews, the upload zone,
+e-signature on quotes and contracts, Contracts (the list, renewals and the contract page with signature, renewal and
+termination), Approvals, Billing (plan, trial, seats, usage, plans and invoices), the permission notice and the
+commercial panels on records. New tables: `quotes` and `contracts`; new plural keys `count.prices`,
+`count.suggestedSections`, `count.proposalOpened`, `count.startingSections`, `count.daysLeft`, `count.endedDaysAgo`,
+`count.daysBeforeEnd`, `count.seats`, `count.tryFreeDays` and `count.pipelines`.
+
+- **Template names, categories and descriptions** (the ten bid templates and the proposal templates), plan audiences,
+  quote, contract, invoice, subscription, payment, envelope and approval statuses, signature methods and the Quick Bid
+  checks go through `t.maybe` and are checked by the data-label test, read from the source where they are defined.
+- **The upload zone's file checks** take the translator as an argument, with an English default, so the shared
+  `fileProblem` check stays usable in tests and outside React.
+- **Names stay as they are**: plan names ("DealFlow Professional"), Stripe and Razorpay, and money in the format
+  locale.
+
+Still English here: the section text a bid template starts with and the example lines in the gallery preview (it is
+proposal text people replace), what customers see on the public proposal page, PDF and email text sent to customers,
+and API and payment provider error messages.
+
+## Scope of batch 6
+
+Translated: Reports & Analytics (saved reports, the report editor with its records, measures, groupings, chart types,
+order, filters and definition checks, the report view and its chart descriptions), Dashboards, the Pipeline flow,
+Pipeline replay, Relationship Galaxy and Revenue Globe explorers with their 2D fallbacks and 3D notices, Forecasting
+(the forecast, targets, gap and coverage, the trend view and the plan), Revenue Intelligence and Customer Success
+(customers, churn risk, health signals, escalations and suggested retention steps). New tables: `reports` and
+`revenue`; 28 new plural keys, among them `count.lastDays`, `count.stageChanges`, the eight `count.<records>Match` keys
+and `count.recordsLeftOut`.
+
+- **The report catalogue** (record types, field labels, measure names such as "Total amount" and date groupings such
+  as "Created (month)"), the report templates and the report definition checks from the shared types go through
+  `t.maybe`; the data-label test builds every combination from `REPORT_CATALOG` and fails if one has no phrase.
+- **Sentences are not stitched from fragments**: the "Not included" list uses `Intl.ListFormat`, day counts use
+  `Intl.NumberFormat` units, and each chart description is one phrase per chart type.
+
+Still English here: row labels that the API computes for reports (month, week and country names), the detail line
+under a health signal and under a churn risk (it carries counts and dates from the server), the "why" text under a
+suggested retention step, and browser tab titles.
+
+## Scope of batch 7
+
+Translated: Team Management (members, roles and their permission counts, sales teams, invitations), Administration
+(the hub, the audit log, support access and workspace security with two-step verification, single sign-on and SCIM
+tokens), Integrations (your mailbox and calendar, workspace apps: Slack, Microsoft Teams, Zoom, DocuSign, card
+payments, WhatsApp Business and SMS, the browser extension, Zapier and API keys, outbound webhooks and the planned
+integrations) and Automation Studio (the workflow list and templates, the editor with every trigger, condition field,
+operator and action, the schema checks, simulation, run history and versions). New tables: `administration`,
+`automation` and `integrations`; 12 new plural keys, among them `count.members`, `count.permissions`, `count.scopes`,
+`count.attempts`, `count.runsIn30Days` and `count.smsSegments`.
+
+- **Links and code inside a sentence** use a new helper, `rich(t('… {link} …'), { link: <Link>…</Link> })`, which
+  translates the whole sentence first and then puts the React parts in its placeholders, so translators see one
+  sentence and can move the link.
+- **App cards** (name, description, warnings and state badges from the API's app registry), OAuth outcomes, API key
+  scopes, trigger events, actions, operators and workflow templates go through `t.maybe`; the data-label test reads them
+  from `@dealflow/types`, `workflow-model.ts` and the API's apps service, and fails if one has no phrase.
+- **Product terms stay as the provider shows them**: Stripe and Razorpay key prefixes, the Twilio console labels
+  ("A message comes in", Account SID, Auth Token) and Teams' "Send webhook alerts to a channel" are not translated, so
+  people can find them in the provider's own screens.
+- The scope checkboxes on API keys and the event checkboxes on webhooks now have 24px targets (WCAG 2.2 target size),
+  found by the Arabic integrations test.
+
+Still English here: error messages and details returned by the API, the summaries in each app's recent activity list,
+workflow checks that name a step id (for example "Step "action_2" points to missing step …"), permission codes in the
+role editor, simulation step details computed by the API, webhook event codes, AI notes and browser tab titles.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

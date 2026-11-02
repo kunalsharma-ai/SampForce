@@ -30,7 +30,7 @@ import { api, downloadFile } from '@/lib/api';
 import { useMembers } from '@/lib/crm';
 import { useReport, useReportResult } from '@/lib/reports';
 import { useCan } from '@/lib/session';
-import { fmtLocale } from '@/lib/i18n/locale';
+import { inSentence, type PluralKey, useT } from '@/lib/i18n';
 
 const METRIC_LABEL = {
   count: 'Count of records',
@@ -70,8 +70,20 @@ const DATE_OP_LABEL: Partial<Record<FilterOp, string>> = {
   lte: 'is on or before',
 };
 
-const plural = (noun: string, n: number) =>
-  n === 1 ? noun : noun.endsWith('y') ? `${noun.slice(0, -1)}ies` : `${noun}s`;
+/** "2 deals match": one plural key per kind of record, so each language words the count itself. */
+const MATCHES = {
+  deals: 'count.dealsMatch',
+  leads: 'count.leadsMatch',
+  contacts: 'count.contactsMatch',
+  companies: 'count.companiesMatch',
+  activities: 'count.activitiesMatch',
+  tasks: 'count.tasksMatch',
+  quotes: 'count.quotesMatch',
+  contracts: 'count.contractsMatch',
+} as const satisfies Record<ReportEntity, PluralKey>;
+
+/** An enum value as a label: OPTED_IN becomes "Opted in". */
+const optionLabel = (o: string) => o.charAt(0) + o.slice(1).toLowerCase().replace(/_/g, ' ');
 
 const blank = (entity: ReportEntity = 'deals'): ReportDefinition => ({
   entity,
@@ -100,6 +112,7 @@ export function ReportEditor({ id }: { id?: string }) {
 }
 
 function Editor({ report }: { report?: ReportRow }) {
+  const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
   const params = useSearchParams();
@@ -122,7 +135,7 @@ function Editor({ report }: { report?: ReportRow }) {
   const save = useMutation({
     mutationFn: (asCopy: boolean) => {
       const body = {
-        name: asCopy ? `${name} (copy)` : name,
+        name: asCopy ? t('{name} (copy)', { name }) : name,
         description: description || null,
         visibility: asCopy ? 'PRIVATE' : visibility,
         definition: def,
@@ -153,7 +166,10 @@ function Editor({ report }: { report?: ReportRow }) {
   const groupable = entity.fields.filter((f) => f.groupable);
   const groupField = def.groupBy ? reportField(def.entity, def.groupBy.field) : undefined;
   const issues = parsed.success ? [] : parsed.error.issues;
-  const issueAt = (path: string) => issues.find((i) => i.path.join('.') === path)?.message;
+  const issueAt = (path: string) => {
+    const message = issues.find((i) => i.path.join('.') === path)?.message;
+    return message && t.maybe(message);
+  };
   const patch = (p: Partial<ReportDefinition>) => setDef((d) => ({ ...d, ...p }));
 
   const setEntity = (e: ReportEntity) => setDef(blank(e));
@@ -198,25 +214,26 @@ function Editor({ report }: { report?: ReportRow }) {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">
-        {report ? report.name : 'New report'}
+        {report ? report.name : t('New report')}
       </h1>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <Card>
           <CardHeader>
             <CardTitle>
-              {readOnly ? 'Definition' : report ? 'Edit report' : 'Build the report'}
+              {readOnly ? t('Definition') : report ? t('Edit report') : t('Build the report')}
             </CardTitle>
             {readOnly && (
               <p className="text-sm text-muted-foreground">
-                Shared by {report.createdBy?.name ?? 'a former member'}. You can view it
-                {canWrite ? ' or save your own copy' : ''}.
+                {canWrite
+                  ? t('Shared by {name}. You can view it or save your own copy.', { name: report.createdBy?.name ?? t('a former member') })
+                  : t('Shared by {name}. You can view it.', { name: report.createdBy?.name ?? t('a former member') })}
               </p>
             )}
           </CardHeader>
           <CardContent>
             <fieldset disabled={readOnly} className="space-y-4">
-              <legend className="sr-only">Report definition</legend>
-              <Field id="r-name" label="Name">
+              <legend className="sr-only">{t('Report definition')}</legend>
+              <Field id="r-name" label={t('Name')}>
                 <Input
                   id="r-name"
                   value={name}
@@ -224,7 +241,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   maxLength={120}
                 />
               </Field>
-              <Field id="r-entity" label="Records">
+              <Field id="r-entity" label={t('Records')}>
                 <Select
                   id="r-entity"
                   value={def.entity}
@@ -232,29 +249,29 @@ function Editor({ report }: { report?: ReportRow }) {
                 >
                   {REPORT_ENTITIES.map((e) => (
                     <option key={e} value={e}>
-                      {REPORT_CATALOG[e].label}
+                      {t.maybe(REPORT_CATALOG[e].label)}
                     </option>
                   ))}
                 </Select>
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field id="r-metric" label="Measure">
+                <Field id="r-metric" label={t('Measure')}>
                   <Select
                     id="r-metric"
                     value={def.metric.fn}
                     onChange={(e) => setMetric(e.target.value as ReportDefinition['metric']['fn'])}
                   >
-                    <option value="count">{METRIC_LABEL.count}</option>
+                    <option value="count">{t(METRIC_LABEL.count)}</option>
                     {numeric.length > 0 &&
                       (['sum', 'avg', 'min', 'max'] as const).map((m) => (
                         <option key={m} value={m}>
-                          {METRIC_LABEL[m]}
+                          {t(METRIC_LABEL[m])}
                         </option>
                       ))}
                   </Select>
                 </Field>
                 {def.metric.fn !== 'count' && (
-                  <Field id="r-metric-field" label="Field" error={issueAt('metric.field')}>
+                  <Field id="r-metric-field" label={t('Field')} error={issueAt('metric.field')}>
                     <Select
                       id="r-metric-field"
                       value={def.metric.field ?? ''}
@@ -264,7 +281,7 @@ function Editor({ report }: { report?: ReportRow }) {
                     >
                       {numeric.map((f) => (
                         <option key={f.key} value={f.key}>
-                          {f.label}
+                          {t.maybe(f.label)}
                         </option>
                       ))}
                     </Select>
@@ -272,22 +289,22 @@ function Editor({ report }: { report?: ReportRow }) {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field id="r-group" label="Group by">
+                <Field id="r-group" label={t('Group by')}>
                   <Select
                     id="r-group"
                     value={def.groupBy?.field ?? ''}
                     onChange={(e) => setGroup(e.target.value)}
                   >
-                    <option value="">No grouping</option>
+                    <option value="">{t('No grouping')}</option>
                     {groupable.map((f) => (
                       <option key={f.key} value={f.key}>
-                        {f.label}
+                        {t.maybe(f.label)}
                       </option>
                     ))}
                   </Select>
                 </Field>
                 {groupField?.kind === 'date' && (
-                  <Field id="r-bucket" label="By">
+                  <Field id="r-bucket" label={t('By')}>
                     <Select
                       id="r-bucket"
                       value={def.groupBy?.bucket ?? 'month'}
@@ -302,7 +319,7 @@ function Editor({ report }: { report?: ReportRow }) {
                     >
                       {DATE_BUCKETS.map((b) => (
                         <option key={b} value={b}>
-                          {b.charAt(0).toUpperCase() + b.slice(1)}
+                          {t.maybe(b.charAt(0).toUpperCase() + b.slice(1))}
                         </option>
                       ))}
                     </Select>
@@ -311,7 +328,7 @@ function Editor({ report }: { report?: ReportRow }) {
               </div>
               <Filters def={def} onChange={(filters) => patch({ filters })} issueAt={issueAt} />
               <div className="grid grid-cols-2 gap-3">
-                <Field id="r-chart" label="Show as" error={issueAt('chart')}>
+                <Field id="r-chart" label={t('Show as')} error={issueAt('chart')}>
                   <Select
                     id="r-chart"
                     value={def.chart}
@@ -319,13 +336,13 @@ function Editor({ report }: { report?: ReportRow }) {
                   >
                     {charts.map((c) => (
                       <option key={c} value={c}>
-                        {CHART_LABEL[c]}
+                        {t(CHART_LABEL[c])}
                       </option>
                     ))}
                   </Select>
                 </Field>
                 {def.groupBy && (
-                  <Field id="r-limit" label="Rows">
+                  <Field id="r-limit" label={t('Rows')}>
                     <Input
                       id="r-limit"
                       type="number"
@@ -345,7 +362,7 @@ function Editor({ report }: { report?: ReportRow }) {
                 )}
               </div>
               {def.groupBy && (
-                <Field id="r-sort" label="Order">
+                <Field id="r-sort" label={t('Order')}>
                   <Select
                     id="r-sort"
                     value={def.sort}
@@ -353,7 +370,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   >
                     {Object.entries(SORT_LABEL).map(([k, l]) => (
                       <option key={k} value={k}>
-                        {l}
+                        {t.maybe(l)}
                       </option>
                     ))}
                   </Select>
@@ -361,11 +378,11 @@ function Editor({ report }: { report?: ReportRow }) {
               )}
               <Field
                 id="r-visibility"
-                label="Who can see it"
+                label={t('Who can see it')}
                 hint={
                   visibility === 'WORKSPACE'
-                    ? 'Everyone in the workspace with report access. Each person still only sees records their role can read.'
-                    : 'Only you.'
+                    ? t('Everyone in the workspace with report access. Each person still only sees records their role can read.')
+                    : t('Only you.')
                 }
               >
                 <Select
@@ -373,11 +390,11 @@ function Editor({ report }: { report?: ReportRow }) {
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as ReportVisibility)}
                 >
-                  <option value="PRIVATE">Only me</option>
-                  <option value="WORKSPACE">Shared with the workspace</option>
+                  <option value="PRIVATE">{t('Only me')}</option>
+                  <option value="WORKSPACE">{t('Shared with the workspace')}</option>
                 </Select>
               </Field>
-              <Field id="r-desc" label="Description (optional)">
+              <Field id="r-desc" label={t('Description (optional)')}>
                 <Textarea
                   id="r-desc"
                   value={description}
@@ -393,7 +410,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   onClick={() => save.mutate(false)}
                   disabled={!parsed.success || !name.trim() || save.isPending}
                 >
-                  <Save aria-hidden /> {report ? 'Save changes' : 'Save report'}
+                  <Save aria-hidden /> {report ? t('Save changes') : t('Save report')}
                 </Button>
               )}
               {report && canWrite && (
@@ -402,7 +419,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   onClick={() => save.mutate(true)}
                   disabled={!parsed.success || save.isPending}
                 >
-                  <Copy aria-hidden /> Save a copy
+                  <Copy aria-hidden /> {t('Save a copy')}
                 </Button>
               )}
               {report && canExport && (
@@ -414,7 +431,7 @@ function Editor({ report }: { report?: ReportRow }) {
                     )
                   }
                 >
-                  <Download aria-hidden /> Export CSV
+                  <Download aria-hidden /> {t('Export CSV')}
                 </Button>
               )}
               {report && !readOnly && (
@@ -423,18 +440,18 @@ function Editor({ report }: { report?: ReportRow }) {
                   className="text-critical"
                   onClick={() =>
                     window.confirm(
-                      `Delete “${report.name}”? It is also removed from any dashboards.`,
+                      t('Delete “{name}”? It is also removed from any dashboards.', { name: report.name }),
                     ) && remove.mutate()
                   }
                   disabled={remove.isPending}
                 >
-                  <Trash2 aria-hidden /> Delete
+                  <Trash2 aria-hidden /> {t('Delete')}
                 </Button>
               )}
             </div>
             {report && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Export uses the saved version of the report.
+                {t('Export uses the saved version of the report.')}
               </p>
             )}
             <div className="mt-3">
@@ -444,13 +461,11 @@ function Editor({ report }: { report?: ReportRow }) {
         </Card>
         <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>{name.trim() || 'Preview'}</CardTitle>
+            <CardTitle>{name.trim() || t('Preview')}</CardTitle>
             {result.data && (
               <p className="text-sm text-muted-foreground">
-                {result.data.records.toLocaleString(fmtLocale())}{' '}
-                {plural(entity.noun, result.data.records)} match
-                {result.data.records === 1 ? 'es' : ''}
-                {result.isFetching ? ' · updating…' : ''}
+                {t.plural(MATCHES[def.entity], result.data.records)}
+                {result.isFetching ? ` · ${t('updating…')}` : ''}
               </p>
             )}
           </CardHeader>
@@ -458,7 +473,7 @@ function Editor({ report }: { report?: ReportRow }) {
             {!parsed.success ? (
               <ul className="space-y-1 text-sm text-warning">
                 {issues.map((i) => (
-                  <li key={`${i.path.join('.')}-${i.message}`}>Finish the report: {i.message}.</li>
+                  <li key={`${i.path.join('.')}-${i.message}`}>{t('Finish the report: {problem}.', { problem: t.maybe(i.message) })}</li>
                 ))}
               </ul>
             ) : result.error ? (
@@ -484,6 +499,7 @@ function Filters({
   onChange: (f: ReportFilter[]) => void;
   issueAt: (p: string) => string | undefined;
 }) {
+  const t = useT();
   const fields = REPORT_CATALOG[def.entity].fields;
   const set = (i: number, f: ReportFilter) =>
     onChange(def.filters.map((x, j) => (j === i ? f : x)));
@@ -493,10 +509,10 @@ function Filters({
   };
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium">Filters</legend>
+      <legend className="text-sm font-medium">{t('Filters')}</legend>
       {def.filters.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          All {REPORT_CATALOG[def.entity].label.toLowerCase()} are included.
+          {t('All {records} are included.', { records: inSentence(t, t.maybe(REPORT_CATALOG[def.entity].label)) })}
         </p>
       )}
       {def.filters.map((flt, i) => {
@@ -507,21 +523,21 @@ function Filters({
           <div key={i} className="space-y-1 rounded-lg border border-border p-2">
             <div className="flex gap-2">
               <Select
-                aria-label={`Filter ${i + 1} field`}
+                aria-label={t('Filter {n} field', { n: i + 1 })}
                 value={flt.field}
                 onChange={(e) => set(i, defaultFilter(e.target.value, def.entity))}
                 className="min-w-0 flex-1"
               >
                 {fields.map((f) => (
                   <option key={f.key} value={f.key}>
-                    {f.label}
+                    {t.maybe(f.label)}
                   </option>
                 ))}
               </Select>
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Remove filter ${i + 1}`}
+                aria-label={t('Remove filter {n}', { n: i + 1 })}
                 onClick={() => onChange(def.filters.filter((_, j) => j !== i))}
               >
                 <X aria-hidden />
@@ -529,7 +545,7 @@ function Filters({
             </div>
             <div className="flex gap-2">
               <Select
-                aria-label={`Filter ${i + 1} condition`}
+                aria-label={t('Filter {n} condition', { n: i + 1 })}
                 value={flt.op}
                 onChange={(e) =>
                   set(i, {
@@ -542,7 +558,7 @@ function Filters({
               >
                 {ops.map((o) => (
                   <option key={o} value={o}>
-                    {(field.kind === 'date' && DATE_OP_LABEL[o]) || OP_LABEL[o]}
+                    {t.maybe((field.kind === 'date' && DATE_OP_LABEL[o]) || OP_LABEL[o])}
                   </option>
                 ))}
               </Select>
@@ -563,7 +579,7 @@ function Filters({
       })}
       {def.filters.length < MAX_REPORT_FILTERS && (
         <Button variant="outline" size="sm" onClick={add}>
-          Add filter
+          {t('Add filter')}
         </Button>
       )}
     </fieldset>
@@ -602,15 +618,16 @@ function FilterValue({
   entity: ReportEntity;
   onChange: (v: ReportFilter['value']) => void;
 }) {
+  const t = useT();
   const field = reportField(entity, filter.field)!;
   const members = useMembers();
-  const label = `Filter ${index + 1} value`;
+  const label = t('Filter {n} value', { n: index + 1 });
   const cls = 'min-w-0 flex-1';
   if (filter.op === 'is_empty' || filter.op === 'not_empty') return null;
   if (filter.op === 'last_n_days')
     return (
       <Input
-        aria-label={`${label} (days)`}
+        aria-label={t('{label} (days)', { label })}
         type="number"
         min={1}
         max={3660}
@@ -631,7 +648,7 @@ function FilterValue({
       >
         {field.options!.map((o) => (
           <option key={o} value={o}>
-            {o.replace(/_/g, ' ').toLowerCase()}
+            {t.maybe(optionLabel(o))}
           </option>
         ))}
       </select>
@@ -641,9 +658,9 @@ function FilterValue({
     const v = (Array.isArray(filter.value) ? filter.value : []) as string[];
     return (
       <Input
-        aria-label={`${label} (comma separated)`}
+        aria-label={t('{label} (comma separated)', { label })}
         value={v.join(', ')}
-        placeholder="DE, IN, US"
+        placeholder={t('DE, IN, US')}
         onChange={(e) =>
           onChange(
             e.target.value
@@ -667,7 +684,7 @@ function FilterValue({
         >
           {field.options!.map((o) => (
             <option key={o} value={o}>
-              {o.replace(/_/g, ' ').toLowerCase()}
+              {t.maybe(optionLabel(o))}
             </option>
           ))}
         </Select>
@@ -680,8 +697,8 @@ function FilterValue({
           onChange={(e) => onChange(e.target.value === 'true')}
           className={cls}
         >
-          <option value="true">Yes</option>
-          <option value="false">No</option>
+          <option value="true">{t('Yes')}</option>
+          <option value="false">{t('No')}</option>
         </Select>
       );
     case 'user':
@@ -692,7 +709,7 @@ function FilterValue({
           onChange={(e) => onChange(e.target.value)}
           className={cls}
         >
-          <option value="">Choose a member</option>
+          <option value="">{t('Choose a member')}</option>
           {members.data?.map((m) => (
             <option key={m.userId} value={m.userId}>
               {m.name}
@@ -725,7 +742,7 @@ function FilterValue({
     case 'country':
       return (
         <Input
-          aria-label={`${label} (two-letter code)`}
+          aria-label={t('{label} (two-letter code)', { label })}
           maxLength={2}
           value={String(filter.value ?? '')}
           placeholder="DE"

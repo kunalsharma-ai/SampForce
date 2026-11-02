@@ -3,6 +3,7 @@
 import { cn } from '@dealflow/ui';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useT } from '@/lib/i18n';
 
 const LINKS = [
   { href: '/app/reports', label: 'Reports', match: (p: string) => p === '/app/reports' || p === '/app/reports/new' || /^\/app\/reports\/[0-9a-f-]{36}$/.test(p) },
@@ -15,9 +16,10 @@ const LINKS = [
 
 /** Section navigation for Reports & Analytics: saved reports, dashboards and the visual explorers. */
 export function ReportsNav() {
+  const t = useT();
   const path = usePathname();
   return (
-    <nav aria-label="Reports and analytics" className="mb-6 overflow-x-auto">
+    <nav aria-label={t('Reports and analytics')} className="mb-6 overflow-x-auto">
       <ul className="inline-flex min-w-max gap-1 rounded-lg border border-border bg-muted/40 p-1">
         {LINKS.map((l) => {
           const active = l.match(path);
@@ -28,7 +30,7 @@ export function ReportsNav() {
                 aria-current={active ? 'page' : undefined}
                 className={cn('block rounded-md px-3 py-1.5 text-sm font-medium transition-colors', active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
               >
-                {l.label}
+                {t.maybe(l.label)}
               </Link>
             </li>
           );

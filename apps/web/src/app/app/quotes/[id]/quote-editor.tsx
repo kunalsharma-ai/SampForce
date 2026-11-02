@@ -42,6 +42,7 @@ import {
   useTaxRates,
 } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 interface DraftLine {
   productId: string;
@@ -66,6 +67,7 @@ export function QuoteEditor({ id }: { id: string }) {
 }
 
 function Editor({ quote: q }: { quote: QuoteRow }) {
+  const t = useT();
   const qc = useQueryClient();
   const router = useRouter();
   const canWrite = useCan('quotes:write');
@@ -181,13 +183,13 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         href="/app/quotes"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All quotes
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t('All quotes')}
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{q.reference}</h1>
-        <Badge tone={QUOTE_STATUS[q.status].tone}>{QUOTE_STATUS[q.status].label}</Badge>
-        {!q.isLatest && <Badge tone="warning">Superseded by a newer version</Badge>}
-        {q.expired && <Badge tone="warning">Past valid date</Badge>}
+        <Badge tone={QUOTE_STATUS[q.status].tone}>{t.maybe(QUOTE_STATUS[q.status].label)}</Badge>
+        {!q.isLatest && <Badge tone="warning">{t('Superseded by a newer version')}</Badge>}
+        {q.expired && <Badge tone="warning">{t('Past valid date')}</Badge>}
         <div className="ms-auto flex flex-wrap gap-2">
           <Button
             size="sm"
@@ -201,35 +203,35 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         </div>
       </div>
       <p className="text-sm text-muted-foreground">
-        For{' '}
+        {t('For')}{' '}
         <Link href={`/app/deals/${q.deal.id}`} className="text-primary underline underline-offset-2">
           {q.deal.name}
         </Link>
-        {q.deal.companyName && ` · ${q.deal.companyName}`} · price book {q.priceBook.name} (
-        {q.currency}) · created by {q.createdBy?.name ?? 'someone'} {relativeTime(q.createdAt)}
+        {q.deal.companyName && ` · ${q.deal.companyName}`} · {t('price book {name} ({currency})', { name: q.priceBook.name, currency: q.currency })} ·{' '}
+        {t('created by {name} {when}', { name: q.createdBy?.name ?? t('someone'), when: relativeTime(q.createdAt) })}
       </p>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Lines</CardTitle>
+              <CardTitle className="text-base">{t('Lines')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 overflow-x-auto">
               {lines.length === 0 && !editable && (
-                <p className="text-sm text-muted-foreground">No lines.</p>
+                <p className="text-sm text-muted-foreground">{t('No lines.')}</p>
               )}
               {(editable ? lines.length > 0 : q.lines.length > 0) && (
                 <table className="w-full text-sm">
                   <thead className="text-start text-xs text-muted-foreground">
                     <tr>
-                      <th className="pb-2 font-medium">Product</th>
-                      <th className="pb-2 text-end font-medium">Qty</th>
-                      <th className="pb-2 text-end font-medium">Unit price</th>
-                      <th className="pb-2 text-end font-medium">Discount %</th>
-                      <th className="pb-2 font-medium">Tax</th>
-                      <th className="pb-2 text-end font-medium">Net</th>
-                      {editable && <th className="sr-only">Remove</th>}
+                      <th className="pb-2 font-medium">{t('Product')}</th>
+                      <th className="pb-2 text-end font-medium">{t('Qty')}</th>
+                      <th className="pb-2 text-end font-medium">{t('Unit price')}</th>
+                      <th className="pb-2 text-end font-medium">{t('Discount %')}</th>
+                      <th className="pb-2 font-medium">{t('Tax')}</th>
+                      <th className="pb-2 text-end font-medium">{t('Net')}</th>
+                      {editable && <th className="sr-only">{t('Remove')}</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -243,13 +245,13 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                             <tr key={i}>
                               <td className="py-2 pe-2">
                                 <Select
-                                  aria-label={`Line ${i + 1} product`}
+                                  aria-label={t('Line {n} product', { n: i + 1 })}
                                   value={l.productId}
                                   onChange={(e) => set({ productId: e.target.value })}
                                   className="h-9 min-w-40"
                                 >
                                   {!productById.has(l.productId) && (
-                                    <option value={l.productId}>Unknown product</option>
+                                    <option value={l.productId}>{t('Unknown product')}</option>
                                   )}
                                   {pricedProducts.map((p) => (
                                     <option key={p.id} value={p.id}>
@@ -260,7 +262,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                               </td>
                               <td className="py-2 pe-2">
                                 <Input
-                                  aria-label={`Line ${i + 1} quantity`}
+                                  aria-label={t('Line {n} quantity', { n: i + 1 })}
                                   value={l.quantity}
                                   onChange={(e) => set({ quantity: e.target.value })}
                                   inputMode="decimal"
@@ -272,7 +274,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                               </td>
                               <td className="py-2 pe-2">
                                 <Input
-                                  aria-label={`Line ${i + 1} discount percent`}
+                                  aria-label={t('Line {n} discount percent', { n: i + 1 })}
                                   aria-describedby={over ? `over-${i}` : undefined}
                                   value={l.discountPercent}
                                   onChange={(e) => set({ discountPercent: e.target.value })}
@@ -284,23 +286,23 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                                     id={`over-${i}`}
                                     className="block text-end text-[11px] text-warning"
                                   >
-                                    Needs approval
+                                    {t('Needs approval')}
                                   </span>
                                 )}
                               </td>
                               <td className="py-2 pe-2">
                                 <Select
-                                  aria-label={`Line ${i + 1} tax rate`}
+                                  aria-label={t('Line {n} tax rate', { n: i + 1 })}
                                   value={l.taxRateId}
                                   onChange={(e) => set({ taxRateId: e.target.value })}
                                   className="h-9 w-32"
                                 >
-                                  <option value="">No tax</option>
+                                  <option value="">{t('No tax')}</option>
                                   {(taxes.data ?? [])
-                                    .filter((t) => t.active)
-                                    .map((t) => (
-                                      <option key={t.id} value={t.id}>
-                                        {t.name} ({t.rate}%)
+                                    .filter((r) => r.active)
+                                    .map((r) => (
+                                      <option key={r.id} value={r.id}>
+                                        {r.name} ({r.rate}%)
                                       </option>
                                     ))}
                                 </Select>
@@ -313,7 +315,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                                   type="button"
                                   size="icon"
                                   variant="ghost"
-                                  aria-label={`Remove line ${i + 1}`}
+                                  aria-label={t('Remove line {n}', { n: i + 1 })}
                                   onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}
                                 >
                                   <Trash2 className="size-4" aria-hidden />
@@ -333,7 +335,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                               {l.discountPercent}%
                             </td>
                             <td className="py-2 pe-2">
-                              {l.taxPercent ? `${l.taxPercent}%` : 'No tax'}
+                              {l.taxPercent ? `${l.taxPercent}%` : t('No tax')}
                             </td>
                             <td className="py-2 text-end tabular-nums">
                               {formatAmount(l.netTotal, q.currency)}
@@ -362,16 +364,15 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       ])
                     }
                   >
-                    <Plus aria-hidden /> Add line
+                    <Plus aria-hidden /> {t('Add line')}
                   </Button>
                   {pricedProducts.length === 0 && (
                     <span className="text-xs text-muted-foreground">
-                      No products are priced in {q.priceBook.name}. Set prices under Catalogue &amp;
-                      pricing.
+                      {t('No products are priced in {book}. Set prices under Catalogue & pricing.', { book: q.priceBook.name })}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground">
-                    Unit prices come from the price book and cannot be typed in.
+                    {t('Unit prices come from the price book and cannot be typed in.')}
                   </span>
                 </div>
               )}
@@ -387,10 +388,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">{t('Details')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <Field id="quote-title" label="Title">
+              <Field id="quote-title" label={t('Title')}>
                 <Input
                   id="quote-title"
                   value={title}
@@ -399,7 +400,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                   maxLength={200}
                 />
               </Field>
-              <Field id="quote-valid" label="Valid until">
+              <Field id="quote-valid" label={t('Valid until')}>
                 <Input
                   id="quote-valid"
                   type="date"
@@ -408,7 +409,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                   onChange={(e) => setValidUntil(e.target.value)}
                 />
               </Field>
-              <Field id="quote-template" label="Bid template" hint="The look of the online proposal and PDF.">
+              <Field id="quote-template" label={t('Bid template')} hint={t('The look of the online proposal and PDF.')}>
                 <Select
                   id="quote-template"
                   value={templateKey ?? ''}
@@ -418,10 +419,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                     setAccentColor(null);
                   }}
                 >
-                  <option value="">Plain (workspace brand)</option>
-                  {BID_TEMPLATES.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.name}
+                  <option value="">{t('Plain (workspace brand)')}</option>
+                  {BID_TEMPLATES.map((tpl) => (
+                    <option key={tpl.key} value={tpl.key}>
+                      {t.maybe(tpl.name)}
                     </option>
                   ))}
                 </Select>
@@ -436,7 +437,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
               ) : (
                 <div />
               )}
-              <Field id="quote-notes" label="Notes for the customer" className="sm:col-span-2">
+              <Field id="quote-notes" label={t('Notes for the customer')} className="sm:col-span-2">
                 <Textarea
                   id="quote-notes"
                   value={notes}
@@ -445,7 +446,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                   maxLength={5000}
                 />
               </Field>
-              <Field id="quote-terms" label="Terms" className="sm:col-span-2">
+              <Field id="quote-terms" label={t('Terms')} className="sm:col-span-2">
                 <Textarea
                   id="quote-terms"
                   value={terms}
@@ -461,19 +462,18 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Totals</CardTitle>
+              <CardTitle className="text-base">{t('Totals')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <Row label="Subtotal" value={formatAmount(totals.subtotal, q.currency)} />
-              <Row label="Discount" value={`−${formatAmount(totals.discountTotal, q.currency)}`} />
-              <Row label="Tax" value={formatAmount(totals.taxTotal, q.currency)} />
+              <Row label={t('Subtotal')} value={formatAmount(totals.subtotal, q.currency)} />
+              <Row label={t('Discount')} value={`−${formatAmount(totals.discountTotal, q.currency)}`} />
+              <Row label={t('Tax')} value={formatAmount(totals.taxTotal, q.currency)} />
               <div className="border-t border-border pt-1">
-                <Row label="Total" value={formatAmount(totals.total, q.currency)} strong />
+                <Row label={t('Total')} value={formatAmount(totals.total, q.currency)} strong />
               </div>
               {threshold !== undefined && (
                 <p className="pt-2 text-xs text-muted-foreground">
-                  Highest discount {totals.maxDiscountPercent}% · approval needed above {threshold}
-                  %.
+                  {t('Highest discount {max}% · approval needed above {threshold}%.', { max: totals.maxDiscountPercent, threshold })}
                 </p>
               )}
             </CardContent>
@@ -481,7 +481,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Next step</CardTitle>
+              <CardTitle className="text-base">{t('Next step')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {editable && (
@@ -492,18 +492,18 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                     disabled={busy || !dirty}
                     onClick={() => save.mutate()}
                   >
-                    Save draft
+                    {t('Save draft')}
                   </Button>
                   <Button
                     className="w-full"
                     disabled={busy || dirty || q.lines.length === 0}
                     onClick={() => transition.mutate('submit')}
                   >
-                    Submit for sending
+                    {t('Submit for sending')}
                   </Button>
                   {dirty && (
                     <p className="text-xs text-muted-foreground">
-                      Save your changes before submitting.
+                      {t('Save your changes before submitting.')}
                     </p>
                   )}
                   {q.status === 'DRAFT' && q.version === 1 && (
@@ -513,18 +513,17 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       disabled={remove.isPending}
                       onClick={() => remove.mutate()}
                     >
-                      Delete draft
+                      {t('Delete draft')}
                     </Button>
                   )}
                 </>
               )}
               {q.status === 'PENDING_APPROVAL' && (
                 <p>
-                  Waiting for someone with quotes:approve to decide in{' '}
+                  {t('Waiting for someone with quotes:approve to decide. You cannot approve your own discount.')}{' '}
                   <Link href="/app/approvals" className="text-primary hover:underline">
-                    Approvals
+                    {t('Open Approvals')}
                   </Link>
-                  . You cannot approve your own discount.
                 </p>
               )}
               {canWrite && q.isLatest && q.status === 'APPROVED' && (
@@ -534,7 +533,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                   disabled={busy}
                   onClick={() => transition.mutate('mark_sent')}
                 >
-                  Mark as sent (sent another way)
+                  {t('Mark as sent (sent another way)')}
                 </Button>
               )}
               {canWrite && q.isLatest && (q.status === 'APPROVED' || q.status === 'SENT') && (
@@ -545,7 +544,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       checked={updateDeal}
                       onChange={(e) => setUpdateDeal(e.target.checked)}
                     />{' '}
-                    Set the deal amount to the quote total before tax
+                    {t('Set the deal amount to the quote total before tax')}
                   </label>
                   <div className="flex gap-2">
                     <Button
@@ -554,7 +553,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       disabled={busy}
                       onClick={() => transition.mutate('accept')}
                     >
-                      Customer accepted
+                      {t('Customer accepted')}
                     </Button>
                     <Button
                       className="flex-1"
@@ -562,7 +561,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       disabled={busy}
                       onClick={() => transition.mutate('decline')}
                     >
-                      Declined
+                      {t('Declined')}
                     </Button>
                   </div>
                 </>
@@ -576,7 +575,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                     disabled={busy}
                     onClick={() => transition.mutate('revise')}
                   >
-                    Revise (new version)
+                    {t('Revise (new version)')}
                   </Button>
                 )}
               {q.status === 'ACCEPTED' &&
@@ -585,7 +584,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                     href={`/app/contracts/${q.contractId}`}
                     className="inline-flex items-center gap-1 text-primary hover:underline"
                   >
-                    <FileSignature className="size-4" aria-hidden /> Open contract
+                    <FileSignature className="size-4" aria-hidden /> {t('Open contract')}
                   </Link>
                 ) : (
                   canContract && (
@@ -594,12 +593,12 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       disabled={contract.isPending}
                       onClick={() => contract.mutate()}
                     >
-                      <FileSignature aria-hidden /> Create contract
+                      <FileSignature aria-hidden /> {t('Create contract')}
                     </Button>
                   )
                 ))}
               {q.sentAt && (
-                <p className="text-xs text-muted-foreground">Sent {formatDate(q.sentAt)}</p>
+                <p className="text-xs text-muted-foreground">{t('Sent {date}', { date: formatDate(q.sentAt) })}</p>
               )}
               <ErrorText error={save.error ?? transition.error ?? remove.error ?? contract.error} />
             </CardContent>
@@ -622,12 +621,13 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 }
 
 function Versions({ id, current }: { id: string; current: string }) {
+  const t = useT();
   const versions = useQuoteVersions(id);
   if (!versions.data || versions.data.length < 2) return null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Versions</CardTitle>
+        <CardTitle className="text-base">{t('Versions')}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="divide-y divide-border text-sm">
@@ -640,7 +640,7 @@ function Versions({ id, current }: { id: string; current: string }) {
                   v{v.version}
                 </Link>
               )}
-              <Badge tone={QUOTE_STATUS[v.status].tone}>{QUOTE_STATUS[v.status].label}</Badge>
+              <Badge tone={QUOTE_STATUS[v.status].tone}>{t.maybe(QUOTE_STATUS[v.status].label)}</Badge>
               <span className="ms-auto tabular-nums">{formatAmount(v.total, v.currency)}</span>
             </li>
           ))}

@@ -11,6 +11,7 @@ import { formatValue, useReplay } from '@/lib/reports';
 import { WindowControls } from '../window-controls';
 import { buildTimeline } from './replay-model';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 const DAY = 86_400_000;
 const COL_W = 150;
@@ -31,6 +32,7 @@ export function ReplayExplorer() {
 }
 
 function Player({ r }: { r: PipelineReplay }) {
+  const t = useT();
   const motion = useMotionLevel();
   const from = Date.parse(r.from);
   const to = Date.parse(r.to);
@@ -39,8 +41,8 @@ function Player({ r }: { r: PipelineReplay }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const frameAt = useMemo(() => buildTimeline(r), [r]);
-  const t = day >= totalDays ? to : from + day * DAY;
-  const frame = useMemo(() => frameAt(t), [frameAt, t]);
+  const at = day >= totalDays ? to : from + day * DAY;
+  const frame = useMemo(() => frameAt(at), [frameAt, at]);
   const stages = useMemo(() => {
     const rank = { OPEN: 0, WON: 1, LOST: 2 } as const;
     return [...r.stages].sort((a, b) => rank[a.category] - rank[b.category] || a.position - b.position);
@@ -89,20 +91,20 @@ function Player({ r }: { r: PipelineReplay }) {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">{r.pipelineName}</CardTitle>
           <p className="text-sm text-muted-foreground" aria-live="polite">
-            <span className="font-medium text-foreground">{fmtDay(t)}</span> · {frame.openDeals} open deal{frame.openDeals === 1 ? '' : 's'} worth {formatValue(frame.openValue, r.currency)} · {frame.wonSinceStart} won and {frame.lostSinceStart} lost since {fmtDay(from)}
+            <span className="font-medium text-foreground">{fmtDay(at)}</span> · {t.plural('count.openDealsWorth', frame.openDeals, { value: formatValue(frame.openValue, r.currency) })} · {t('{won} won and {lost} lost since {date}', { won: frame.wonSinceStart, lost: frame.lostSinceStart, date: fmtDay(from) })}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => { if (day >= totalDays) setDay(0); setPlaying(!playing); }} aria-label={playing ? 'Pause replay' : 'Play replay'}>
-              {playing ? <Pause aria-hidden /> : <Play aria-hidden />} {playing ? 'Pause' : 'Play'}
+            <Button onClick={() => { if (day >= totalDays) setDay(0); setPlaying(!playing); }} aria-label={playing ? t('Pause replay') : t('Play replay')}>
+              {playing ? <Pause aria-hidden /> : <Play aria-hidden />} {playing ? t('Pause') : t('Play')}
             </Button>
             <Button variant="outline" onClick={() => { setPlaying(false); setDay(0); }}>
-              <RotateCcw aria-hidden /> Start
+              <RotateCcw aria-hidden /> {t('Start')}
             </Button>
             <label className="inline-flex items-center gap-2 text-sm">
-              Speed
-              <Select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-9 w-20" aria-label="Playback speed">
+              {t('Speed')}
+              <Select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-9 w-20" aria-label={t('Playback speed')}>
                 <option value={0.5}>½×</option>
                 <option value={1}>1×</option>
                 <option value={2}>2×</option>
@@ -115,16 +117,16 @@ function Player({ r }: { r: PipelineReplay }) {
               max={totalDays}
               value={day}
               onChange={(e) => { setPlaying(false); setDay(Number(e.target.value)); }}
-              aria-label="Replay date"
-              aria-valuetext={fmtDay(t)}
+              aria-label={t('Replay date')}
+              aria-valuetext={fmtDay(at)}
               className="min-w-48 flex-1 accent-[hsl(var(--primary))]"
             />
           </div>
           {r.deals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No deals were in this pipeline during the period.</p>
+            <p className="text-sm text-muted-foreground">{t('No deals were in this pipeline during the period.')}</p>
           ) : (
             <div className="overflow-x-auto">
-              <svg viewBox={`0 0 ${width} ${height}`} style={{ minWidth: Math.min(width, 800) }} className="h-auto w-full" role="img" aria-label={`Deals by stage on ${fmtDay(t)}. The table below lists the same counts.`}>
+              <svg viewBox={`0 0 ${width} ${height}`} style={{ minWidth: Math.min(width, 800) }} className="h-auto w-full" role="img" aria-label={t('Deals by stage on {date}. The table below lists the same counts.', { date: fmtDay(at) })}>
                 {stages.map((s, i) => (
                   <g key={s.id} transform={`translate(${i * COL_W} 0)`}>
                     <rect x={4} y={0} width={COL_W - 8} height={height} rx={8} fill="hsl(var(--muted))" fillOpacity={0.35} />
@@ -156,19 +158,19 @@ function Player({ r }: { r: PipelineReplay }) {
               </svg>
             </div>
           )}
-          {r.truncated && <p className="text-xs text-muted-foreground">Showing the 400 most recently active deals.</p>}
-          {r.reconstructed && <p className="text-xs text-muted-foreground">Moves made before stage history was recorded were rebuilt from the audit log, so some early dates may be approximate.</p>}
+          {r.truncated && <p className="text-xs text-muted-foreground">{t('Showing the 400 most recently active deals.')}</p>}
+          {r.reconstructed && <p className="text-xs text-muted-foreground">{t('Moves made before stage history was recorded were rebuilt from the audit log, so some early dates may be approximate.')}</p>}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">On {fmtDay(t)}</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('On {date}', { date: fmtDay(at) })}</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
-            <caption className="sr-only">Deals in each stage on {fmtDay(t)}</caption>
+            <caption className="sr-only">{t('Deals in each stage on {date}', { date: fmtDay(at) })}</caption>
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th scope="col" className="py-1 font-medium">Stage</th>
-                <th scope="col" className="py-1 text-end font-medium">Deals</th>
+                <th scope="col" className="py-1 font-medium">{t('Stage')}</th>
+                <th scope="col" className="py-1 text-end font-medium">{t('Deals')}</th>
               </tr>
             </thead>
             <tbody className="tabular">

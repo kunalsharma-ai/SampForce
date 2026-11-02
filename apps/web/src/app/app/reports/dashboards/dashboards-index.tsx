@@ -12,8 +12,10 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useDashboards } from '@/lib/reports';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 export function DashboardsIndex() {
+  const t = useT();
   const boards = useDashboards();
   const canWrite = useCan('reports:write');
   const router = useRouter();
@@ -36,11 +38,11 @@ export function DashboardsIndex() {
             if (name.trim()) create.mutate();
           }}
         >
-          <Field id="d-name" label="New dashboard" className="w-72">
-            <Input id="d-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Weekly pipeline review" maxLength={120} />
+          <Field id="d-name" label={t('New dashboard')} className="w-72">
+            <Input id="d-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('Weekly pipeline review')} maxLength={120} />
           </Field>
           <Button type="submit" disabled={!name.trim() || create.isPending}>
-            <Plus aria-hidden /> Create
+            <Plus aria-hidden /> {t('Create')}
           </Button>
           <ErrorText error={create.error} />
         </form>
@@ -51,7 +53,7 @@ export function DashboardsIndex() {
         <ErrorText error={boards.error} />
       ) : boards.data.length === 0 ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">No dashboards yet.{canWrite ? ' Name one above, then add saved reports to it.' : ''}</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">{t('No dashboards yet.')}{canWrite ? ` ${t('Name one above, then add saved reports to it.')}` : ''}</CardContent>
         </Card>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,10 +64,10 @@ export function DashboardsIndex() {
                   <CardHeader className="space-y-2">
                     <CardTitle className="text-base">{d.name}</CardTitle>
                     <CardDescription>
-                      {d.widgets.length} widget{d.widgets.length === 1 ? '' : 's'} · {d.createdBy?.name ?? 'Former member'} · updated {formatDate(d.updatedAt)}
+                      {t.plural('count.widgets', d.widgets.length)} · {d.createdBy?.name ?? t('Former member')} · {t('updated {date}', { date: formatDate(d.updatedAt) })}
                     </CardDescription>
                     <div>
-                      <Badge tone={d.visibility === 'WORKSPACE' ? 'primary' : 'neutral'}>{d.visibility === 'WORKSPACE' ? 'Shared' : 'Private'}</Badge>
+                      <Badge tone={d.visibility === 'WORKSPACE' ? 'primary' : 'neutral'}>{d.visibility === 'WORKSPACE' ? t('Shared') : t('Private')}</Badge>
                     </div>
                   </CardHeader>
                 </Card>

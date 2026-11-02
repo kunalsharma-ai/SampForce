@@ -9,6 +9,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useBilling, useRoles } from '@/lib/billing';
 import { useCan, useSession } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 /** Permissions grouped by resource, for the role editor. */
 const GROUPS = PERMISSIONS.reduce<Record<string, string[]>>((acc, p) => {
@@ -20,6 +21,7 @@ const GROUPS = PERMISSIONS.reduce<Record<string, string[]>>((acc, p) => {
 const label = (res: string) => res.charAt(0).toUpperCase() + res.slice(1);
 
 export function RolesManager() {
+  const t = useT();
   const roles = useRoles();
   const canManage = useCan('members:manage');
   const billing = useBilling(useCan('billing:read'));
@@ -31,14 +33,14 @@ export function RolesManager() {
     <Card>
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2">
         <div>
-          <CardTitle>Roles</CardTitle>
+          <CardTitle>{t('Roles')}</CardTitle>
           <CardDescription>
-            System roles are fixed. Custom roles combine individual permissions{included === false ? ' and are included from the Professional plan' : ''}. You can only grant permissions your own role has.
+            {included === false ? t('System roles are fixed. Custom roles combine individual permissions and are included from the Professional plan. You can only grant permissions your own role has.') : t('System roles are fixed. Custom roles combine individual permissions. You can only grant permissions your own role has.')}
           </CardDescription>
         </div>
         {canManage && included !== false && editing === null && (
           <Button size="sm" onClick={() => setEditing('new')}>
-            New custom role
+            {t('New custom role')}
           </Button>
         )}
       </CardHeader>
@@ -49,19 +51,19 @@ export function RolesManager() {
             <li key={r.key} className="rounded-md border border-border p-3">
               <div className="flex items-center gap-2">
                 <p className="font-medium">{r.name}</p>
-                <Badge tone={r.isSystem ? 'neutral' : 'accent'}>{r.isSystem ? 'System' : 'Custom'}</Badge>
+                <Badge tone={r.isSystem ? 'neutral' : 'accent'}>{r.isSystem ? t('System') : t('Custom')}</Badge>
                 <span className="ms-auto text-xs text-muted-foreground">
-                  {r.members} member{r.members === 1 ? '' : 's'}
+                  {t.plural('count.members', r.members)}
                 </span>
               </div>
               {r.description && <p className="mt-1 text-sm text-muted-foreground">{r.description}</p>}
               <details className="mt-2 text-xs text-muted-foreground">
-                <summary className="cursor-pointer">{r.permissions.length} permissions</summary>
+                <summary className="cursor-pointer">{t.plural('count.permissions', r.permissions.length)}</summary>
                 <p className="mt-1 leading-relaxed">{r.permissions.join(', ')}</p>
               </details>
               {canManage && !r.isSystem && (
                 <Button size="sm" variant="ghost" className="mt-2" onClick={() => setEditing(r)}>
-                  Edit<span className="sr-only"> {r.name}</span>
+                  {t('Edit')}<span className="sr-only"> {r.name}</span>
                 </Button>
               )}
             </li>
@@ -73,6 +75,7 @@ export function RolesManager() {
 }
 
 function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data: me } = useSession();
   const [name, setName] = useState(role?.name ?? '');
@@ -106,17 +109,17 @@ function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void
         save.mutate();
       }}
     >
-      <p className="font-medium">{role ? `Edit ${role.name}` : 'New custom role'}</p>
+      <p className="font-medium">{role ? t('Edit {name}', { name: role.name }) : t('New custom role')}</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <Field id="role-name" label="Name">
+        <Field id="role-name" label={t('Name')}>
           <Input id="role-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={60} />
         </Field>
-        <Field id="role-description" label="Description (optional)">
+        <Field id="role-description" label={t('Description (optional)')}>
           <Textarea id="role-description" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={240} rows={2} />
         </Field>
       </div>
       <fieldset>
-        <legend className="mb-2 text-sm font-medium">Permissions</legend>
+        <legend className="mb-2 text-sm font-medium">{t('Permissions')}</legend>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(GROUPS).map(([res, list]) => (
             <div key={res} className="rounded-md border border-border p-2">
@@ -134,14 +137,14 @@ function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void
       <ErrorText error={save.error ?? remove.error} />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={save.isPending || perms.size === 0 || name.trim().length < 2}>
-          {role ? 'Save role' : 'Create role'}
+          {role ? t('Save role') : t('Create role')}
         </Button>
         <Button type="button" variant="ghost" onClick={onDone}>
-          Cancel
+          {t('Cancel')}
         </Button>
         {role && (
-          <Button type="button" variant="destructive" className="ms-auto" disabled={remove.isPending || role.members > 0} title={role.members > 0 ? 'Move its members to another role first' : undefined} onClick={() => remove.mutate()}>
-            Delete role
+          <Button type="button" variant="destructive" className="ms-auto" disabled={remove.isPending || role.members > 0} title={role.members > 0 ? t('Move its members to another role first') : undefined} onClick={() => remove.mutate()}>
+            {t('Delete role')}
           </Button>
         )}
       </div>

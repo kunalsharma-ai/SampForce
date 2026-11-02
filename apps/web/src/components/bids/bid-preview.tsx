@@ -10,6 +10,7 @@ import {
   type PublicProposal,
 } from '@dealflow/types';
 import { ProposalDocument } from '@/app/p/[token]/proposal-view';
+import { useT } from '@/lib/i18n';
 
 /** A priced line as the studio and the gallery hold it before the server stores it. */
 export interface PreviewLine {
@@ -77,8 +78,9 @@ export function previewProposal(input: {
 
 /** The proposal at a reduced size inside a scrollable frame, marked as a preview for screen readers. */
 export function ProposalPreview({ proposal, label = 'Live preview' }: { proposal: PublicProposal; label?: string }) {
+  const t = useT();
   return (
-    <section aria-label={label} className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+    <section aria-label={t.maybe(label)} className="overflow-hidden rounded-lg border border-border bg-background shadow-sm">
       {/* Focusable so keyboard users can scroll a long preview. */}
       <div tabIndex={0} className="max-h-[70vh] overflow-y-auto p-5 text-[0.92em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:p-6">
         <ProposalDocument p={proposal} />
@@ -89,6 +91,7 @@ export function ProposalPreview({ proposal, label = 'Live preview' }: { proposal
 
 /** A small drawing of a template's cover: band, dark band, side rule or quiet rule, in its accent and typeface. */
 export function TemplateThumb({ template, accent }: { template: BidTemplate; accent?: string }) {
+  const t = useT();
   const a = accent ?? template.style.accent;
   const cover = template.style.cover;
   const serif = template.style.font === 'serif';
@@ -103,12 +106,12 @@ export function TemplateThumb({ template, accent }: { template: BidTemplate; acc
           className="-mx-3 -mt-3 mb-1 px-3 py-3"
           style={{ background: cover === 'dark' ? '#111111' : a, color: cover === 'dark' ? '#fff' : textOn(a), borderBottom: cover === 'dark' ? `3px solid ${a}` : undefined }}
         >
-          <span className={`block text-[10px] font-semibold ${serif ? 'font-serif' : ''}`}>{template.name}</span>
+          <span className={`block text-[10px] font-semibold ${serif ? 'font-serif' : ''}`}>{t.maybe(template.name)}</span>
         </div>
       )}
       {(cover === 'minimal' || cover === 'split') && (
         <div className={cover === 'split' ? 'ps-2' : ''}>
-          <span className={`block text-[10px] font-semibold ${serif ? 'font-serif' : ''}`}>{template.name}</span>
+          <span className={`block text-[10px] font-semibold ${serif ? 'font-serif' : ''}`}>{t.maybe(template.name)}</span>
           {cover === 'minimal' && <span className="mt-1 block h-0.5 w-10" style={{ background: a }} />}
         </div>
       )}

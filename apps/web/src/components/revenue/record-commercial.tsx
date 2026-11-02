@@ -7,9 +7,11 @@ import { CustomerCard, EscalationCard, NewEscalation } from '@/app/app/customer-
 import { NewQuote, QuoteTable } from '@/app/app/quotes/quotes-workspace';
 import { useContracts, useCustomer, useEscalations, useQuotes } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 /** Quotes on a deal page. */
 export function DealQuotes({ deal }: { deal: { id: string; name: string } }) {
+  const t = useT();
   const canRead = useCan('quotes:read');
   const canWrite = useCan('quotes:write');
   const quotes = useQuotes({ opportunityId: deal.id });
@@ -17,11 +19,11 @@ export function DealQuotes({ deal }: { deal: { id: string; name: string } }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">Quotes</CardTitle>
+        <CardTitle className="text-base">{t('Quotes')}</CardTitle>
         {canWrite && <NewQuote deal={deal} />}
       </CardHeader>
       <CardContent className="overflow-x-auto p-0 pb-2">
-        {quotes.isPending ? <Skeleton className="m-4 h-12" /> : !quotes.data?.length ? <p className="px-6 pb-4 text-sm text-muted-foreground">No quotes for this deal yet.</p> : <QuoteTable rows={quotes.data} showDeal={false} />}
+        {quotes.isPending ? <Skeleton className="m-4 h-12" /> : !quotes.data?.length ? <p className="px-6 pb-4 text-sm text-muted-foreground">{t('No quotes for this deal yet.')}</p> : <QuoteTable rows={quotes.data} showDeal={false} />}
       </CardContent>
     </Card>
   );
@@ -29,6 +31,7 @@ export function DealQuotes({ deal }: { deal: { id: string; name: string } }) {
 
 /** Contracts, customer health and escalations on a company page. */
 export function CompanyCommercial({ company }: { company: { id: string; name: string } }) {
+  const t = useT();
   const canContracts = useCan('contracts:read');
   const canSuccess = useCan('success:read');
   const canEscalate = useCan('success:write');
@@ -45,20 +48,20 @@ export function CompanyCommercial({ company }: { company: { id: string; name: st
       {canContracts && (
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Contracts</CardTitle>
+            <CardTitle className="text-base">{t('Contracts')}</CardTitle>
             <Link href="/app/contracts" className="text-xs text-primary hover:underline">
-              All contracts
+              {t('All contracts')}
             </Link>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0 pb-2">
-            {contracts.isPending ? <Skeleton className="m-4 h-12" /> : !contracts.data?.length ? <p className="px-6 pb-4 text-sm text-muted-foreground">No contracts with this company.</p> : <ContractTable rows={contracts.data} showCompany={false} />}
+            {contracts.isPending ? <Skeleton className="m-4 h-12" /> : !contracts.data?.length ? <p className="px-6 pb-4 text-sm text-muted-foreground">{t('No contracts with this company.')}</p> : <ContractTable rows={contracts.data} showCompany={false} />}
           </CardContent>
         </Card>
       )}
       {canSuccess && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Open escalations</CardTitle>
+            <CardTitle className="text-base">{t('Open escalations')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {escalations.data?.length ? (
@@ -68,7 +71,7 @@ export function CompanyCommercial({ company }: { company: { id: string; name: st
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">None open.</p>
+              <p className="text-sm text-muted-foreground">{t('None open.')}</p>
             )}
             {canEscalate && <NewEscalation company={company} />}
           </CardContent>

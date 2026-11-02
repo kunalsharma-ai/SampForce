@@ -8,6 +8,8 @@ import type { MotionLevel } from '@/lib/motion';
 import { Orbit, Scene, SlowNotice, tokenColor } from './scene';
 import { FpsReadout } from './view-controls';
 import { nodeColorToken, nodeSize } from '@/lib/galaxy-style';
+import { titleCase } from '@/lib/crm';
+import { inSentence, useT } from '@/lib/i18n';
 
 export interface GalaxySceneProps {
   nodes: GalaxyNode[];
@@ -116,6 +118,7 @@ function Halo({ position, size }: { position: [number, number, number]; size: nu
 }
 
 export default function GalaxyScene(props: GalaxySceneProps) {
+  const t = useT();
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const [interacted, setInteracted] = useState(false);
   const [fps, setFps] = useState<{ fps: number; dpr: number } | null>(null);
@@ -128,7 +131,7 @@ export default function GalaxyScene(props: GalaxySceneProps) {
         motion={props.motion}
         animating={!interacted}
         camera={[0, 0, 26]}
-        label={`Relationship Galaxy: ${companyCount} compan${companyCount === 1 ? 'y' : 'ies'} with their contacts and deals. The list beside it holds the same records.`}
+        label={t.plural('count.galaxyCompanies', companyCount)}
         onContextLost={props.onContextLost}
         onFps={props.showFps ? (f, d) => setFps({ fps: f, dpr: d }) : undefined}
         onSlow={setSlow}
@@ -139,7 +142,7 @@ export default function GalaxyScene(props: GalaxySceneProps) {
       {hovered && hover && (
         <div className="pointer-events-none absolute z-10 max-w-60 rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow" style={{ left: hover.x + 12, top: hover.y + 12 }}>
           <span className="font-medium">{hovered.label}</span>
-          <span className="block text-muted-foreground">{hovered.kind === 'deal' ? `Deal · ${hovered.status?.toLowerCase()}` : hovered.kind === 'company' ? 'Company' : 'Contact'}</span>
+          <span className="block text-muted-foreground">{hovered.kind === 'deal' ? `${t('Deal')} · ${inSentence(t, t.maybe(titleCase(hovered.status ?? '')))}` : hovered.kind === 'company' ? t('Company') : t('Contact')}</span>
         </div>
       )}
       {props.showFps && <FpsReadout fps={fps} />}

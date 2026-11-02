@@ -9,6 +9,7 @@ import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useCan, useSession } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 interface RoleRow {
   key: string;
@@ -18,6 +19,7 @@ interface RoleRow {
 const STATUS_TONE = { pending: 'primary', accepted: 'success', revoked: 'neutral', expired: 'warning' } as const;
 
 export function Invitations() {
+  const t = useT();
   const qc = useQueryClient();
   const canManage = useCan('members:manage');
   const { data: me } = useSession();
@@ -48,7 +50,7 @@ export function Invitations() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invitations</CardTitle>
+        <CardTitle>{t('Invitations')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {canManage && (
@@ -59,17 +61,17 @@ export function Invitations() {
               e.preventDefault();
               const parsed = invitationInputSchema.safeParse({ email, roleKey });
               if (!parsed.success) {
-                setEmailError(parsed.error.issues[0]?.message);
+                setEmailError(parsed.error.issues[0] && t.maybe(parsed.error.issues[0].message));
                 return;
               }
               setEmailError(undefined);
               invite.mutate();
             }}
           >
-            <Field id="invite-email" label="Email" error={emailError}>
+            <Field id="invite-email" label={t('Email')} error={emailError}>
               <Input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field id="invite-role" label="Role">
+            <Field id="invite-role" label={t('Role')}>
               <Select value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
                 {assignable.map((r) => (
                   <option key={r.key} value={r.key}>
@@ -79,7 +81,7 @@ export function Invitations() {
               </Select>
             </Field>
             <Button type="submit" disabled={invite.isPending}>
-              {invite.isPending ? 'Creating…' : 'Create invitation'}
+              {invite.isPending ? t('Creating…') : t('Create invitation')}
             </Button>
           </form>
         )}
@@ -91,10 +93,10 @@ export function Invitations() {
         {created && (
           <div className="space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3 text-sm" role="status">
             <p>
-              Invitation for <strong>{created.email}</strong> created. Email delivery is not set up yet, so send this link yourself. It works once and expires {formatDate(created.expiresAt)}.
+              {t('Invitation for {email} created. Email delivery is not set up yet, so send this link yourself. It works once and expires {date}.', { email: created.email, date: formatDate(created.expiresAt) })}
             </p>
             <div className="flex gap-2">
-              <Input readOnly value={created.inviteUrl} aria-label="Invitation link" className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <Input readOnly value={created.inviteUrl} aria-label={t('Invitation link')} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
               <Button
                 type="button"
                 variant="outline"
@@ -105,24 +107,24 @@ export function Invitations() {
                     .catch(() => setCopied(false))
                 }
               >
-                {copied ? <Check aria-hidden /> : <Copy aria-hidden />} {copied ? 'Copied' : 'Copy'}
+                {copied ? <Check aria-hidden /> : <Copy aria-hidden />} {copied ? t('Copied') : t('Copy')}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">The link is shown only now. If it is lost, create a new invitation; the old one stops working.</p>
+            <p className="text-xs text-muted-foreground">{t('The link is shown only now. If it is lost, create a new invitation; the old one stops working.')}</p>
           </div>
         )}
         {list.data && list.data.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
-              <caption className="sr-only">Invitations</caption>
+              <caption className="sr-only">{t('Invitations')}</caption>
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th scope="col" className="py-2 font-medium">Email</th>
-                  <th scope="col" className="py-2 font-medium">Role</th>
-                  <th scope="col" className="py-2 font-medium">Status</th>
-                  <th scope="col" className="py-2 font-medium">Expires</th>
+                  <th scope="col" className="py-2 font-medium">{t('Email')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Role')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Status')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Expires')}</th>
                   <th scope="col" className="py-2">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t('Actions')}</span>
                   </th>
                 </tr>
               </thead>
@@ -132,13 +134,13 @@ export function Invitations() {
                     <td className="py-2">{i.email}</td>
                     <td className="py-2">{i.roleName}</td>
                     <td className="py-2">
-                      <Badge tone={STATUS_TONE[i.status]}>{i.status.charAt(0).toUpperCase() + i.status.slice(1)}</Badge>
+                      <Badge tone={STATUS_TONE[i.status]}>{t.maybe(i.status.charAt(0).toUpperCase() + i.status.slice(1))}</Badge>
                     </td>
                     <td className="py-2 text-muted-foreground">{formatDate(i.expiresAt)}</td>
                     <td className="py-2 text-end">
                       {canManage && i.status === 'pending' && (
                         <Button variant="ghost" size="sm" onClick={() => revoke.mutate(i.id)} disabled={revoke.isPending}>
-                          <X aria-hidden /> Revoke
+                          <X aria-hidden /> {t('Revoke')}
                         </Button>
                       )}
                     </td>
@@ -148,7 +150,7 @@ export function Invitations() {
             </table>
           </div>
         ) : (
-          list.data && <p className="text-sm text-muted-foreground">No invitations yet.</p>
+          list.data && <p className="text-sm text-muted-foreground">{t('No invitations yet.')}</p>
         )}
       </CardContent>
     </Card>

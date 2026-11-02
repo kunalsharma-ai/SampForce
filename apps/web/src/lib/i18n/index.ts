@@ -1,7 +1,7 @@
 'use client';
 
 import type { LanguageCode, TextDirection } from '@dealflow/types';
-import { useCallback, useMemo } from 'react';
+import { createElement, Fragment, type ReactNode, useCallback, useMemo } from 'react';
 import { useRegional } from '@/stores/regional';
 import { type ActiveLocale, activeLocaleFor } from './locale';
 import { type MessageKey, type PluralKey, translate, translatePlural, type Vars } from './translate';
@@ -52,4 +52,13 @@ export function inSentence(t: Pick<Translator, 'language'>, label: string): stri
 /** Renders data-borne text through `t.maybe`, for cells and constants defined outside a component. */
 export function Tr({ text, vars }: { text: string; vars?: Vars }) {
   return useT().maybe(text, vars);
+}
+
+/**
+ * Fills `{name}` slots in an already translated sentence with elements (links, code, bold names), so the translator
+ * keeps control of word order: `rich(t('Turn it on in {link}.'), { link: <Link …>{t('Account security')}</Link> })`.
+ */
+export function rich(text: string, parts: Record<string, ReactNode>): ReactNode {
+  const children = text.split(/\{(\w+)\}/).map((piece, i) => (i % 2 === 1 ? (piece in parts ? parts[piece] : `{${piece}}`) : piece));
+  return createElement(Fragment, null, ...children);
 }

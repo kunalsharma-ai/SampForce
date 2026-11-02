@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useIntegrations, useWebhooks } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { rich, useT } from '@/lib/i18n';
 
 const OUTCOME: Record<string, string> = {
   oauth_state_invalid: 'The sign-in link expired or belonged to another session. Try connecting again.',
@@ -18,6 +19,7 @@ const OUTCOME: Record<string, string> = {
 };
 
 export function MailboxConnections() {
+  const t = useT();
   const params = useSearchParams();
   const qc = useQueryClient();
   const status = useIntegrations();
@@ -38,12 +40,12 @@ export function MailboxConnections() {
   return (
     <section aria-labelledby="mailbox-heading" className="space-y-3">
       <h2 id="mailbox-heading" className="text-base font-semibold">
-        Your mailbox and calendar
+        {t('Your mailbox and calendar')}
       </h2>
-      {connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">Connected. The first sync runs within a few minutes, or press Sync now.</p>}
+      {connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{t('Connected. The first sync runs within a few minutes, or press Sync now.')}</p>}
       {error && (
         <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
-          {OUTCOME[error] ?? `The connection did not complete (${error}).`}
+          {OUTCOME[error] ? t.maybe(OUTCOME[error]) : t('The connection did not complete ({error}).', { error })}
         </p>
       )}
       {status.isPending ? (
@@ -58,25 +60,26 @@ export function MailboxConnections() {
               busy={connect.isPending || sync.isPending || disconnect.isPending}
               onConnect={() => connect.mutate(p.provider.toLowerCase())}
               onSync={() => sync.mutate(p.provider.toLowerCase())}
-              onDisconnect={() => window.confirm('Disconnect this account? Synced email and meetings stay on your records.') && disconnect.mutate(p.provider.toLowerCase())}
+              onDisconnect={() => window.confirm(t('Disconnect this account? Synced email and meetings stay on your records.')) && disconnect.mutate(p.provider.toLowerCase())}
             />
           ))}
         </div>
       )}
-      {sync.data && <p className="text-sm text-muted-foreground" aria-live="polite">Sync finished: {sync.data.emails} new emails, {sync.data.meetings} meetings updated.</p>}
+      {sync.data && <p className="text-sm text-muted-foreground" aria-live="polite">{t('Sync finished: {emails} new emails, {meetings} meetings updated.', { emails: sync.data.emails, meetings: sync.data.meetings })}</p>}
       {(connect.error ?? sync.error ?? disconnect.error) && (
         <p role="alert" className="text-sm text-critical">
           {(connect.error ?? sync.error ?? disconnect.error)!.message}
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        Each person connects their own account. DealFlow reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.
+        {t('Each person connects their own account. DealFlow reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.')}
       </p>
     </section>
   );
 }
 
 function ProviderCard({ p, canConnect, busy, onConnect, onSync, onDisconnect }: { p: ProviderStatus; canConnect: boolean; busy: boolean; onConnect: () => void; onSync: () => void; onDisconnect: () => void }) {
+  const t = useT();
   const c = p.connection;
   return (
     <Card>
@@ -84,22 +87,22 @@ function ProviderCard({ p, canConnect, busy, onConnect, onSync, onDisconnect }: 
         <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
           {p.name}
           {!p.configured ? (
-            <Badge>Not set up on this installation</Badge>
+            <Badge>{t('Not set up on this installation')}</Badge>
           ) : c?.status === 'CONNECTED' ? (
-            <Badge tone="success">Connected</Badge>
+            <Badge tone="success">{t('Connected')}</Badge>
           ) : c?.status === 'ERROR' ? (
-            <Badge tone="critical">Needs attention</Badge>
+            <Badge tone="critical">{t('Needs attention')}</Badge>
           ) : (
-            <Badge>Not connected</Badge>
+            <Badge>{t('Not connected')}</Badge>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        {!p.configured && <p className="text-muted-foreground">An operator must add {p.missingConfig.join(' and ')} (an OAuth app registered with the provider) before anyone can connect.</p>}
+        {!p.configured && <p className="text-muted-foreground">{t('An operator must add {settings} (an OAuth app registered with the provider) before anyone can connect.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(p.missingConfig) })}</p>}
         {c && (
           <div className="space-y-1">
             <p>{c.accountEmail}</p>
-            <p className="text-xs text-muted-foreground">{c.lastSyncAt ? `Last synced ${relativeTime(c.lastSyncAt)}` : 'Not synced yet'}</p>
+            <p className="text-xs text-muted-foreground">{c.lastSyncAt ? t('Last synced {time}', { time: relativeTime(c.lastSyncAt) }) : t('Not synced yet')}</p>
             {c.lastError && <p className="text-xs text-critical">{c.lastError}</p>}
           </div>
         )}
@@ -107,17 +110,17 @@ function ProviderCard({ p, canConnect, busy, onConnect, onSync, onDisconnect }: 
           <div className="flex flex-wrap gap-2">
             {(!c || c.status === 'ERROR') && (
               <Button size="sm" onClick={onConnect} disabled={busy}>
-                {c ? 'Reconnect' : 'Connect'}
+                {c ? t('Reconnect') : t('Connect')}
               </Button>
             )}
             {c?.status === 'CONNECTED' && (
               <Button size="sm" variant="outline" onClick={onSync} disabled={busy}>
-                <RefreshCw aria-hidden /> Sync now
+                <RefreshCw aria-hidden /> {t('Sync now')}
               </Button>
             )}
             {c && (
               <Button size="sm" variant="ghost" onClick={onDisconnect} disabled={busy}>
-                Disconnect
+                {t('Disconnect')}
               </Button>
             )}
           </div>
@@ -128,6 +131,7 @@ function ProviderCard({ p, canConnect, busy, onConnect, onSync, onDisconnect }: 
 }
 
 export function WebhooksManager() {
+  const t = useT();
   const canManage = useCan('integrations:manage');
   const qc = useQueryClient();
   const hooks = useWebhooks(canManage);
@@ -151,10 +155,10 @@ export function WebhooksManager() {
   return (
     <section aria-labelledby="webhooks-heading" className="space-y-3">
       <h2 id="webhooks-heading" className="text-base font-semibold">
-        Outbound webhooks
+        {t('Outbound webhooks')}
       </h2>
       <p className="text-sm text-muted-foreground">
-        DealFlow posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.
+        {t('DealFlow posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.')}
       </p>
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -166,14 +170,14 @@ export function WebhooksManager() {
             }}
           >
             <div className="space-y-1.5">
-              <Label htmlFor="hook-url">Endpoint URL</Label>
+              <Label htmlFor="hook-url">{t('Endpoint URL')}</Label>
               <Input id="hook-url" type="url" placeholder="https://example.com/dealflow" value={url} onChange={(e) => setUrl(e.target.value)} maxLength={2000} />
             </div>
             <fieldset>
-              <legend className="mb-1.5 text-sm font-medium">Events</legend>
+              <legend className="mb-1.5 text-sm font-medium">{t('Events')}</legend>
               <div className="grid gap-1 sm:grid-cols-3">
                 {DOMAIN_EVENT_TYPES.map((ev) => (
-                  <label key={ev} className="flex items-center gap-2 font-mono text-xs">
+                  <label key={ev} className="flex min-h-6 items-center gap-2 font-mono text-xs">
                     <input
                       type="checkbox"
                       className="size-4 accent-[hsl(var(--primary))]"
@@ -191,44 +195,45 @@ export function WebhooksManager() {
               </p>
             )}
             <Button type="submit" disabled={!url || events.length === 0 || create.isPending}>
-              Add webhook
+              {t('Add webhook')}
             </Button>
           </form>
           {secret && (
             <div role="status" className="space-y-1 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-              <p className="font-medium">Signing secret, shown once. Store it in your receiver now.</p>
+              <p className="font-medium">{t('Signing secret, shown once. Store it in your receiver now.')}</p>
               <div className="flex items-center gap-2">
                 <code className="break-all text-xs">{secret.secret}</code>
-                <Button type="button" variant="ghost" size="icon" aria-label="Copy secret" onClick={() => void navigator.clipboard?.writeText(secret.secret)}>
+                <Button type="button" variant="ghost" size="icon" aria-label={t('Copy secret')} onClick={() => void navigator.clipboard?.writeText(secret.secret)}>
                   <Copy aria-hidden />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Verify the X-DealFlow-Signature header: t=&lt;unix time&gt;,v1=HMAC-SHA256(secret, &quot;t.body&quot;) in hex.</p>
+              <p className="text-xs text-muted-foreground">{rich(t('Verify the {header} header: {format} in hex.'), { header: 'X-DealFlow-Signature', format: <code>{'t=<unix time>,v1=HMAC-SHA256(secret, "t.body")'}</code> })}</p>
             </div>
           )}
         </CardContent>
       </Card>
       {hooks.data?.map((h) => (
-        <HookCard key={h.id} hook={h} onToggle={(active) => update.mutate({ id: h.id, active })} onDelete={() => window.confirm('Delete this webhook?') && remove.mutate(h.id)} onRedeliver={(deliveryId) => redeliver.mutate({ id: h.id, deliveryId })} />
+        <HookCard key={h.id} hook={h} onToggle={(active) => update.mutate({ id: h.id, active })} onDelete={() => window.confirm(t('Delete this webhook?')) && remove.mutate(h.id)} onRedeliver={(deliveryId) => redeliver.mutate({ id: h.id, deliveryId })} />
       ))}
     </section>
   );
 }
 
 function HookCard({ hook: h, onToggle, onDelete, onRedeliver }: { hook: WebhookRow; onToggle: (a: boolean) => void; onDelete: () => void; onRedeliver: (id: string) => void }) {
+  const t = useT();
   return (
     <Card>
       <CardContent className="space-y-2 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="break-all text-sm font-medium">{h.url}</span>
-          <Badge tone={h.active ? 'success' : 'critical'}>{h.active ? 'On' : 'Off'}</Badge>
-          {h.source === 'zapier' && <Badge tone="primary">Made by a Zap</Badge>}
-          {h.consecutiveFailures > 0 && <Badge tone="warning">{h.consecutiveFailures} failures in a row</Badge>}
+          <Badge tone={h.active ? 'success' : 'critical'}>{h.active ? t('On') : t('Off')}</Badge>
+          {h.source === 'zapier' && <Badge tone="primary">{t('Made by a Zap')}</Badge>}
+          {h.consecutiveFailures > 0 && <Badge tone="warning">{t.plural('count.failuresInRow', h.consecutiveFailures)}</Badge>}
           <div className="ms-auto flex gap-1">
             <Button size="sm" variant="outline" onClick={() => onToggle(!h.active)}>
-              {h.active ? 'Switch off' : 'Switch on'}
+              {h.active ? t('Switch off') : t('Switch on')}
             </Button>
-            <Button size="icon" variant="ghost" aria-label={`Delete webhook ${h.url}`} onClick={onDelete}>
+            <Button size="icon" variant="ghost" aria-label={t('Delete webhook {url}', { url: h.url })} onClick={onDelete}>
               <Trash2 aria-hidden />
             </Button>
           </div>
@@ -239,16 +244,16 @@ function HookCard({ hook: h, onToggle, onDelete, onRedeliver }: { hook: WebhookR
           <ul className="space-y-1 border-t border-border pt-2">
             {h.recentDeliveries.map((d) => (
               <li key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
-                <Badge tone={d.status === 'SUCCEEDED' ? 'success' : d.status === 'FAILED' ? 'critical' : 'warning'}>{d.status.toLowerCase()}</Badge>
+                <Badge tone={d.status === 'SUCCEEDED' ? 'success' : d.status === 'FAILED' ? 'critical' : 'warning'}>{t.maybe(d.status.charAt(0) + d.status.slice(1).toLowerCase())}</Badge>
                 <span className="font-mono">{d.eventType}</span>
                 <span className="text-muted-foreground">
-                  {d.attempts} attempt{d.attempts === 1 ? '' : 's'}
+                  {t.plural('count.attempts', d.attempts)}
                   {d.responseCode ? ` · HTTP ${d.responseCode}` : ''} · {relativeTime(d.createdAt)}
                 </span>
                 {d.lastError && d.status !== 'SUCCEEDED' && <span className="text-critical">{d.lastError}</span>}
                 {d.status === 'FAILED' && (
                   <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => onRedeliver(d.id)}>
-                    Redeliver
+                    {t('Redeliver')}
                   </Button>
                 )}
               </li>

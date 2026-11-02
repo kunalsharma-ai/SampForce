@@ -12,6 +12,7 @@ import anchors from '@/lib/geo/anchors.json';
 import { useMotionLevel } from '@/lib/motion';
 import { countryName, formatValue, useGlobe } from '@/lib/reports';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 const GlobeScene = dynamic(() => import('@/components/immersive/globe-scene'), { ssr: false, loading: () => <Skeleton className="h-full w-full" /> });
 
@@ -25,6 +26,7 @@ type Metric = keyof typeof METRICS;
 const ANCHORS = anchors as unknown as Record<string, [number, number]>;
 
 export function GlobeExplorer() {
+  const t = useT();
   const globe = useGlobe();
   const view = useViewMode();
   const motion = useMotionLevel();
@@ -52,7 +54,7 @@ export function GlobeExplorer() {
   const d = globe.data;
   const describe = (code: string) => {
     const c = d.countries.find((x) => x.country === code);
-    return c ? `${METRICS[metric]}: ${fmt(c, metric, d)}` : '';
+    return c ? `${t.maybe(METRICS[metric])}: ${fmt(c, metric, d)}` : '';
   };
   const sel = selected ? d.countries.find((c) => c.country === selected) : undefined;
   const sorted = [...d.countries].sort((a, b) => b[metric] - a[metric] || a.country.localeCompare(b.country));
@@ -60,16 +62,16 @@ export function GlobeExplorer() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <ViewModeSwitch view={view} label="Revenue Globe" />
+        <ViewModeSwitch view={view} label={t('Revenue Globe')} />
         <div className="flex items-end gap-3">
-          <Field id="g-metric" label="Show">
+          <Field id="g-metric" label={t('Show')}>
             <Select id="g-metric" value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
-              {(Object.keys(METRICS) as Metric[]).map((m) => <option key={m} value={m}>{METRICS[m]}</option>)}
+              {(Object.keys(METRICS) as Metric[]).map((m) => <option key={m} value={m}>{t.maybe(METRICS[m])}</option>)}
             </Select>
           </Field>
           {view.mode === '3d' && (
             <label className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-              <input type="checkbox" checked={showFps} onChange={(e) => setShowFps(e.target.checked)} /> Frame rate
+              <input type="checkbox" checked={showFps} onChange={(e) => setShowFps(e.target.checked)} /> {t('Frame rate')}
             </label>
           )}
         </div>
@@ -77,7 +79,7 @@ export function GlobeExplorer() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="relative h-[32rem] overflow-hidden">
           {d.countries.length === 0 ? (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">Set a country on your companies to place them on the globe.</div>
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">{t('Set a country on your companies to place them on the globe.')}</div>
           ) : view.mode === '3d' ? (
             <GlobeScene bars={bars} selected={selected} onSelect={setSelected} motion={motion} showFps={showFps} onContextLost={view.contextLost} onSwitch2D={() => view.setMode('2d')} describe={describe} />
           ) : (
@@ -94,7 +96,7 @@ export function GlobeExplorer() {
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   {(Object.keys(METRICS) as Metric[]).map((m) => (
                     <div key={m}>
-                      <dt className="text-xs text-muted-foreground">{METRICS[m]}</dt>
+                      <dt className="text-xs text-muted-foreground">{t.maybe(METRICS[m])}</dt>
                       <dd className="font-medium tabular">{fmt(sel, m, d)}</dd>
                     </div>
                   ))}
@@ -104,16 +106,16 @@ export function GlobeExplorer() {
           )}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">By country</CardTitle>
+              <CardTitle className="text-base">{t('By country')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="max-h-80 overflow-auto">
                 <table className="w-full text-sm">
-                  <caption className="sr-only">{METRICS[metric]} by country</caption>
+                  <caption className="sr-only">{t('{metric} by country', { metric: t.maybe(METRICS[metric]) })}</caption>
                   <thead className="text-start text-xs text-muted-foreground">
                     <tr>
-                      <th scope="col" className="py-1 font-medium">Country</th>
-                      <th scope="col" className="py-1 text-end font-medium">{METRICS[metric]}</th>
+                      <th scope="col" className="py-1 font-medium">{t('Country')}</th>
+                      <th scope="col" className="py-1 text-end font-medium">{t.maybe(METRICS[metric])}</th>
                     </tr>
                   </thead>
                   <tbody className="tabular">
@@ -133,11 +135,11 @@ export function GlobeExplorer() {
               <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
                 {(d.unplaced.companies > 0 || d.unplaced.openDeals > 0) && (
                   <li>
-                    Not on the map: {d.unplaced.companies} compan{d.unplaced.companies === 1 ? 'y' : 'ies'} without a country and {d.unplaced.openDeals} open deal{d.unplaced.openDeals === 1 ? '' : 's'} without a company country.
+                    {t('Not on the map: {companies} without a country and {deals} without a company country.', { companies: t.plural('count.companies', d.unplaced.companies), deals: t.plural('count.openDeals', d.unplaced.openDeals) })}
                   </li>
                 )}
-                {offMap.length > 0 && <li>No map position for: {offMap.map(countryName).join(', ')} (listed in the table).</li>}
-                {d.excludedDeals > 0 && <li>{d.excludedDeals} deal{d.excludedDeals === 1 ? '' : 's'} left out of values: no exchange rate to {d.currency}.</li>}
+                {offMap.length > 0 && <li>{t('No map position for: {countries} (listed in the table).', { countries: offMap.map(countryName).join(', ') })}</li>}
+                {d.excludedDeals > 0 && <li>{t.plural('count.dealsLeftOut', d.excludedDeals, { currency: d.currency })}</li>}
               </ul>
             </CardContent>
           </Card>
@@ -149,6 +151,7 @@ export function GlobeExplorer() {
 
 /** Equirectangular 2D map: the same borders and values, drawn as SVG. */
 function FlatMap({ bars, selected, onSelect }: { bars: GlobeBar[]; selected: string | null; onSelect: (c: string) => void }) {
+  const t = useT();
   const [lines, setLines] = useState<number[][]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +166,7 @@ function FlatMap({ bars, selected, onSelect }: { bars: GlobeBar[]; selected: str
     return d;
   }), [lines]);
   return (
-    <svg viewBox="-180 -90 360 180" className="h-full w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World map in 2D. The table beside it holds the same figures.">
+    <svg viewBox="-180 -90 360 180" className="h-full w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label={t('World map in 2D. The table beside it holds the same figures.')}>
       <g fill="none" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.4} strokeWidth={0.3}>
         {paths.map((p, i) => <path key={i} d={p} />)}
       </g>

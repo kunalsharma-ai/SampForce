@@ -8,20 +8,22 @@ import { ErrorText } from '@/components/revenue/tabs';
 import { formatDate } from '@/lib/crm';
 import { useReports } from '@/lib/reports';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 export const CHART_ICON = { table: Table2, bar: BarChart3, line: LineChart, pie: PieChart, number: Sigma } as const;
 
 export function ReportsIndex() {
+  const t = useT();
   const reports = useReports();
   const canWrite = useCan('reports:write');
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Saved reports</h2>
+        <h2 className="text-lg font-semibold">{t('Saved reports')}</h2>
         {canWrite && (
           <Button asChild>
             <Link href="/app/reports/new">
-              <Plus aria-hidden /> New report
+              <Plus aria-hidden /> {t('New report')}
             </Link>
           </Button>
         )}
@@ -33,7 +35,7 @@ export function ReportsIndex() {
       ) : reports.data.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            No reports yet.{canWrite ? ' Start from a template below or build one from scratch.' : ' Reports that teammates share with the workspace will appear here.'}
+            {t('No reports yet.')} {canWrite ? t('Start from a template below or build one from scratch.') : t('Reports that teammates share with the workspace will appear here.')}
           </CardContent>
         </Card>
       ) : (
@@ -50,10 +52,10 @@ export function ReportsIndex() {
                         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                       </div>
                       <CardDescription>
-                        {REPORT_CATALOG[r.definition.entity].label} · {r.createdBy?.name ?? 'Former member'} · updated {formatDate(r.updatedAt)}
+                        {t.maybe(REPORT_CATALOG[r.definition.entity].label)} · {r.createdBy?.name ?? t('Former member')} · {t('updated {date}', { date: formatDate(r.updatedAt) })}
                       </CardDescription>
                       <div>
-                        <Badge tone={r.visibility === 'WORKSPACE' ? 'primary' : 'neutral'}>{r.visibility === 'WORKSPACE' ? 'Shared' : 'Private'}</Badge>
+                        <Badge tone={r.visibility === 'WORKSPACE' ? 'primary' : 'neutral'}>{r.visibility === 'WORKSPACE' ? t('Shared') : t('Private')}</Badge>
                       </div>
                     </CardHeader>
                   </Card>
@@ -65,12 +67,12 @@ export function ReportsIndex() {
       )}
       {canWrite && (
         <section aria-labelledby="templates-h" className="space-y-3">
-          <h2 id="templates-h" className="text-lg font-semibold">Start from a template</h2>
+          <h2 id="templates-h" className="text-lg font-semibold">{t('Start from a template')}</h2>
           <ul className="flex flex-wrap gap-2">
-            {REPORT_TEMPLATES.map((t, i) => (
-              <li key={t.name}>
+            {REPORT_TEMPLATES.map((tpl, i) => (
+              <li key={tpl.name}>
                 <Button asChild variant="outline" size="sm">
-                  <Link href={`/app/reports/new?template=${i}`}>{t.name}</Link>
+                  <Link href={`/app/reports/new?template=${i}`}>{t.maybe(tpl.name)}</Link>
                 </Button>
               </li>
             ))}

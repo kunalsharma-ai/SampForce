@@ -39,6 +39,7 @@ import { aiErrorMessage } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 /**
  * Proposal sections shown above the price table. Templates and the AI draft only fill the editor;
@@ -55,6 +56,7 @@ export function ProposalSections({
   onChange: (s: ProposalSection[]) => void;
   editable: boolean;
 }) {
+  const t = useT();
   const canAi = useCan('ai:use');
   const [template, setTemplate] = useState('');
   const draft = useMutation({
@@ -76,7 +78,7 @@ export function ProposalSections({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Proposal</CardTitle>
+          <CardTitle className="text-base">{t('Proposal')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {sections.map((s, i) => (
@@ -93,17 +95,16 @@ export function ProposalSections({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Proposal</CardTitle>
+        <CardTitle className="text-base">{t('Proposal')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          Sections appear above the price table on the online proposal and the PDF. Leave them empty
-          to send a plain quote.
+          {t('Sections appear above the price table on the online proposal and the PDF. Leave them empty to send a plain quote.')}
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <div>
             <label htmlFor="proposal-template" className="block text-xs font-medium">
-              Start from a template
+              {t('Start from a template')}
             </label>
             <Select
               id="proposal-template"
@@ -111,10 +112,10 @@ export function ProposalSections({
               onChange={(e) => setTemplate(e.target.value)}
               className="h-9"
             >
-              <option value="">Choose a template</option>
-              {PROPOSAL_TEMPLATES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name}
+              <option value="">{t('Choose a template')}</option>
+              {PROPOSAL_TEMPLATES.map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>
+                  {t.maybe(tpl.name)}
                 </option>
               ))}
             </Select>
@@ -125,11 +126,11 @@ export function ProposalSections({
             variant="outline"
             disabled={!template}
             onClick={() => {
-              const t = PROPOSAL_TEMPLATES.find((x) => x.key === template);
-              if (t) onChange(t.sections.map((s) => ({ ...s })));
+              const tpl = PROPOSAL_TEMPLATES.find((x) => x.key === template);
+              if (tpl) onChange(tpl.sections.map((s) => ({ ...s })));
             }}
           >
-            {sections.length ? 'Replace sections' : 'Use template'}
+            {sections.length ? t('Replace sections') : t('Use template')}
           </Button>
           {canAi && (
             <Button
@@ -139,13 +140,13 @@ export function ProposalSections({
               disabled={draft.isPending}
               onClick={() => draft.mutate()}
             >
-              <Sparkles aria-hidden /> Draft sections with AI
+              <Sparkles aria-hidden /> {t('Draft sections with AI')}
             </Button>
           )}
         </div>
         {draft.isPending && (
           <p role="status" className="text-xs text-muted-foreground">
-            Writing from the deal&apos;s details…
+            {t("Writing from the deal's details…")}
           </p>
         )}
         {draft.error && (
@@ -156,21 +157,21 @@ export function ProposalSections({
         {suggestion && (
           <div
             className="space-y-2 rounded-md bg-muted/40 p-3 text-sm"
-            aria-label="AI proposal suggestion"
+            aria-label={t('AI proposal suggestion')}
           >
             <p className="font-medium">
-              {suggestion.sections.length} suggested sections:{' '}
+              {t.plural('count.suggestedSections', suggestion.sections.length)}{' '}
               {suggestion.sections.map((s) => s.heading).join(', ')}
             </p>
             {suggestion.basedOn.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Based on: {suggestion.basedOn.join('; ')}
+                {t('Based on: {sources}', { sources: suggestion.basedOn.join('; ') })}
               </p>
             )}
             {suggestion.openQuestions.length > 0 && (
               <ul className="list-disc ps-5 text-xs text-warning">
                 {suggestion.openQuestions.map((q) => (
-                  <li key={q}>Open question: {q}</li>
+                  <li key={q}>{t('Open question: {question}', { question: q })}</li>
                 ))}
               </ul>
             )}
@@ -188,13 +189,13 @@ export function ProposalSections({
                   draft.reset();
                 }}
               >
-                Use these sections
+                {t('Use these sections')}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => draft.reset()}>
-                Discard
+                {t('Discard')}
               </Button>
               <span className="self-center text-xs text-muted-foreground">
-                AI-written. Check every fact; prices come from the quote lines.
+                {t('AI-written. Check every fact; prices come from the quote lines.')}
               </span>
             </div>
           </div>
@@ -203,7 +204,7 @@ export function ProposalSections({
           <div key={i} className="space-y-2 rounded-md border border-border p-3">
             <div className="flex items-center gap-2">
               <Input
-                aria-label={`Section ${i + 1} heading`}
+                aria-label={t('Section {n} heading', { n: i + 1 })}
                 value={s.heading}
                 maxLength={120}
                 onChange={(e) => set(i, { heading: e.target.value })}
@@ -213,7 +214,7 @@ export function ProposalSections({
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label={`Move section ${i + 1} up`}
+                aria-label={t('Move section {n} up', { n: i + 1 })}
                 disabled={i === 0}
                 onClick={() => move(i, -1)}
               >
@@ -223,7 +224,7 @@ export function ProposalSections({
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label={`Move section ${i + 1} down`}
+                aria-label={t('Move section {n} down', { n: i + 1 })}
                 disabled={i === sections.length - 1}
                 onClick={() => move(i, 1)}
               >
@@ -233,14 +234,14 @@ export function ProposalSections({
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label={`Remove section ${i + 1}`}
+                aria-label={t('Remove section {n}', { n: i + 1 })}
                 onClick={() => onChange(sections.filter((_, j) => j !== i))}
               >
                 <Trash2 className="size-4" aria-hidden />
               </Button>
             </div>
             <Textarea
-              aria-label={`Section ${i + 1} text`}
+              aria-label={t('Section {n} text', { n: i + 1 })}
               value={s.body}
               maxLength={8000}
               rows={4}
@@ -253,9 +254,9 @@ export function ProposalSections({
           size="sm"
           variant="outline"
           disabled={sections.length >= 20}
-          onClick={() => onChange([...sections, { heading: 'New section', body: '' }])}
+          onClick={() => onChange([...sections, { heading: t('New section'), body: '' }])}
         >
-          <Plus aria-hidden /> Add section
+          <Plus aria-hidden /> {t('Add section')}
         </Button>
       </CardContent>
     </Card>
@@ -270,6 +271,7 @@ export function ProposalSharing({
   quote: QuoteRow;
   onSent: () => Promise<void>;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const canWrite = useCan('quotes:write');
   const canEmail = useCan('activities:write');
@@ -298,17 +300,17 @@ export function ProposalSharing({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Online proposal</CardTitle>
+        <CardTitle className="text-base">{t('Online proposal')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {canSend && (
           <Button className="w-full" onClick={() => setOpen(true)}>
-            <Mail aria-hidden /> Email proposal
+            <Mail aria-hidden /> {t('Email proposal')}
           </Button>
         )}
         <div className="flex items-center gap-2">
           <Badge tone={q.share.enabled ? 'success' : 'neutral'}>
-            {q.share.enabled ? 'Link is live' : 'Link is off'}
+            {q.share.enabled ? t('Link is live') : t('Link is off')}
           </Badge>
           {canWrite && (
             <Button
@@ -317,7 +319,7 @@ export function ProposalSharing({
               disabled={toggle.isPending}
               onClick={() => toggle.mutate(!q.share.enabled)}
             >
-              {q.share.enabled ? 'Turn link off' : 'Turn link on'}
+              {q.share.enabled ? t('Turn link off') : t('Turn link on')}
             </Button>
           )}
         </div>
@@ -325,7 +327,7 @@ export function ProposalSharing({
           <div className="flex flex-wrap items-center gap-2">
             <Input
               readOnly
-              aria-label="Proposal link"
+              aria-label={t('Proposal link')}
               value={url}
               className="h-9 w-full text-xs"
               onFocus={(e) => e.target.select()}
@@ -338,7 +340,7 @@ export function ProposalSharing({
                 setCopied(true);
               }}
             >
-              <ClipboardCopy aria-hidden /> {copied ? 'Copied' : 'Copy'}
+              <ClipboardCopy aria-hidden /> {copied ? t('Copied') : t('Copy')}
             </Button>
             <a
               href={`${url}?preview=1`}
@@ -346,20 +348,19 @@ export function ProposalSharing({
               rel="noreferrer"
               className="inline-flex items-center gap-1 self-center text-xs text-primary hover:underline"
             >
-              <ExternalLink className="size-3" aria-hidden /> Preview (not counted)
+              <ExternalLink className="size-3" aria-hidden /> {t('Preview (not counted)')}
             </a>
           </div>
         )}
-        <div className="text-xs text-muted-foreground" aria-label="Proposal views">
+        <div className="text-xs text-muted-foreground" aria-label={t('Proposal views')}>
           {q.share.viewCount === 0 ? (
-            <p>Not opened yet.</p>
+            <p>{t('Not opened yet.')}</p>
           ) : (
             <p>
-              Opened {q.share.viewCount} {q.share.viewCount === 1 ? 'time' : 'times'}, first{' '}
-              {relativeTime(q.share.firstViewedAt!)}, last {relativeTime(q.share.lastViewedAt!)}.
+              {t.plural('count.proposalOpened', q.share.viewCount, { first: relativeTime(q.share.firstViewedAt!), last: relativeTime(q.share.lastViewedAt!) })}
             </p>
           )}
-          <p>Opens are estimates: email security scanners can open links before a person does.</p>
+          <p>{t('Opens are estimates: email security scanners can open links before a person does.')}</p>
         </div>
         <CardPayments quote={q} />
         <ErrorText error={toggle.error ?? link.error} />
@@ -378,6 +379,7 @@ const PAYMENT_STATUS: Record<QuotePaymentRow['status'], { label: string; tone: '
 
 /** Card payments the customer started from the online proposal. "Paid" only ever comes from the provider's signed webhook. */
 function CardPayments({ quote: q }: { quote: QuoteRow }) {
+  const t = useT();
   const payments = useQuery({
     queryKey: ['quotes', 'payments', q.id],
     queryFn: () => api<QuotePaymentRow[]>(`/apps/payments/quotes/${q.id}`),
@@ -386,24 +388,23 @@ function CardPayments({ quote: q }: { quote: QuoteRow }) {
   if (q.status !== 'ACCEPTED') return null;
   const rows = payments.data ?? [];
   return (
-    <div className="space-y-1 border-t border-border pt-3" aria-label="Card payments">
-      <p className="text-xs font-medium">Card payments</p>
+    <div className="space-y-1 border-t border-border pt-3" aria-label={t('Card payments')}>
+      <p className="text-xs font-medium">{t('Card payments')}</p>
       {rows.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          None yet. When card payments are set up under Integrations, the customer sees “Pay by
-          card” on this accepted proposal.
+          {t('None yet. When card payments are set up under Integrations, the customer sees “Pay by card” on this accepted proposal.')}
         </p>
       ) : (
         <ul className="space-y-1 text-xs">
           {rows.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2">
-              <Badge tone={PAYMENT_STATUS[p.status].tone}>{PAYMENT_STATUS[p.status].label}</Badge>
+              <Badge tone={PAYMENT_STATUS[p.status].tone}>{t.maybe(PAYMENT_STATUS[p.status].label)}</Badge>
               <span className="tabular-nums">
                 {p.currency} {p.amount.toFixed(2)}
               </span>
               <span className="text-muted-foreground">
                 {p.provider === 'stripe' ? 'Stripe' : 'Razorpay'} ·{' '}
-                {p.paidAt ? `paid ${relativeTime(p.paidAt)}` : `started ${relativeTime(p.createdAt)}`}
+                {p.paidAt ? t('paid {when}', { when: relativeTime(p.paidAt) }) : t('started {when}', { when: relativeTime(p.createdAt) })}
                 {p.payerEmail ? ` · ${p.payerEmail}` : ''}
               </span>
             </li>
@@ -426,10 +427,11 @@ function SendDialog({
   onOpenChange: (o: boolean) => void;
   onSent: () => Promise<void>;
 }) {
+  const t = useT();
   const [to, setTo] = useState('');
-  const [subject, setSubject] = useState(`Proposal: ${q.title}`);
+  const [subject, setSubject] = useState(t('Proposal: {title}', { title: q.title }));
   const [message, setMessage] = useState(
-    `Hello,\n\nPlease find our proposal ${q.reference} for ${q.deal.companyName ?? q.deal.name}. You can view it online and download a PDF from the link below.\n\nKind regards`,
+    t('Hello,\n\nPlease find our proposal {reference} for {company}. You can view it online and download a PDF from the link below.\n\nKind regards', { reference: q.reference, company: q.deal.companyName ?? q.deal.name }),
   );
   const send = useMutation({
     mutationFn: () =>
@@ -442,10 +444,11 @@ function SendDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-6">
-        <DialogTitle className="text-lg font-semibold">Email proposal</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{t('Email proposal')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
-          Sent from your connected mailbox. A link to the online proposal is added below your
-          message{q.status === 'APPROVED' ? ', and the quote is marked as sent' : ''}.
+          {q.status === 'APPROVED'
+            ? t('Sent from your connected mailbox. A link to the online proposal is added below your message, and the quote is marked as sent.')
+            : t('Sent from your connected mailbox. A link to the online proposal is added below your message.')}
         </DialogDescription>
         <form
           className="mt-4 space-y-3"
@@ -454,7 +457,7 @@ function SendDialog({
             send.mutate();
           }}
         >
-          <Field id="proposal-to" label="To">
+          <Field id="proposal-to" label={t('To')}>
             <Input
               id="proposal-to"
               type="email"
@@ -463,7 +466,7 @@ function SendDialog({
               onChange={(e) => setTo(e.target.value)}
             />
           </Field>
-          <Field id="proposal-subject" label="Email subject">
+          <Field id="proposal-subject" label={t('Email subject')}>
             <Input
               id="proposal-subject"
               required
@@ -472,7 +475,7 @@ function SendDialog({
               onChange={(e) => setSubject(e.target.value)}
             />
           </Field>
-          <Field id="proposal-message" label="Message">
+          <Field id="proposal-message" label={t('Message')}>
             <Textarea
               id="proposal-message"
               required
@@ -484,10 +487,10 @@ function SendDialog({
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button type="submit" disabled={send.isPending || !to.trim()}>
-              Send
+              {t('Send')}
             </Button>
           </div>
           <ErrorText error={send.error} />

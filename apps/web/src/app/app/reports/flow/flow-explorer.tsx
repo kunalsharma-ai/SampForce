@@ -7,6 +7,7 @@ import { ErrorText } from '@/components/revenue/tabs';
 import { useMotionLevel } from '@/lib/motion';
 import { formatValue, useFlow } from '@/lib/reports';
 import { WindowControls } from '../window-controls';
+import { useT } from '@/lib/i18n';
 
 const W = 150;
 const H = 96;
@@ -31,14 +32,15 @@ export function FlowExplorer() {
 }
 
 function Flow({ f, days }: { f: PipelineFlow; days: number }) {
+  const t = useT();
   const motion = useMotionLevel();
   const stages = order(f.stages);
   const x = new Map(stages.map((s, i) => [s.id, i * (W + GAP)]));
   const name = new Map(stages.map((s) => [s.id, s.name]));
-  const max = Math.max(1, ...f.transitions.map((t) => t.deals));
+  const max = Math.max(1, ...f.transitions.map((tr) => tr.deals));
   const width = stages.length * (W + GAP) - GAP;
   const height = TOP + H + 120;
-  const total = f.transitions.reduce((s, t) => s + t.deals, 0);
+  const total = f.transitions.reduce((s, tr) => s + tr.deals, 0);
   const color = (to: string) => {
     const s = stages.find((x) => x.id === to);
     return s?.category === 'WON' ? 'hsl(var(--chart-3))' : s?.category === 'LOST' ? 'hsl(var(--chart-5))' : 'hsl(var(--chart-1))';
@@ -48,14 +50,14 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">{f.pipelineName}</CardTitle>
-          <p className="text-sm text-muted-foreground">{total === 0 ? `No stage changes recorded in the last ${days} days.` : `${total} stage change${total === 1 ? '' : 's'} in the last ${days} days. Forward moves arc above the stages, moves back arc below.`}</p>
+          <p className="text-sm text-muted-foreground">{total === 0 ? t.plural('count.noStageChangesInDays', days) : `${t.plural('count.stageChanges', total)} ${t.plural('count.inLastDays', days)} ${t('Forward moves arc above the stages, moves back arc below.')}`}</p>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <svg viewBox={`-10 0 ${width + 20} ${height}`} style={{ minWidth: Math.min(width, 900) }} className="h-auto w-full" role="img" aria-label={`Pipeline flow diagram for ${f.pipelineName}. The tables below hold the same figures.`}>
+          <svg viewBox={`-10 0 ${width + 20} ${height}`} style={{ minWidth: Math.min(width, 900) }} className="h-auto w-full" role="img" aria-label={t('Pipeline flow diagram for {name}. The tables below hold the same figures.', { name: f.pipelineName })}>
             <style>{'@keyframes df-flow{to{stroke-dashoffset:-28}} .df-moving{animation:df-flow 1.4s linear infinite}'}</style>
-            {f.transitions.map((t) => {
-              const a = x.get(t.from);
-              const b = x.get(t.to);
+            {f.transitions.map((tr) => {
+              const a = x.get(tr.from);
+              const b = x.get(tr.to);
               if (a === undefined || b === undefined) return null;
               const forward = b > a;
               const x1 = a + W / 2 + (forward ? 12 : -12);
@@ -63,12 +65,12 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
               const y = forward ? TOP : TOP + H;
               const lift = Math.min(110, 30 + Math.abs(b - a) / 5) * (forward ? -1 : 1);
               const d = `M${x1} ${y} C${x1} ${y + lift} ${x2} ${y + lift} ${x2} ${y}`;
-              const w = 1.5 + 8 * (t.deals / max);
+              const w = 1.5 + 8 * (tr.deals / max);
               return (
-                <g key={`${t.from}-${t.to}`}>
-                  <path d={d} fill="none" stroke={color(t.to)} strokeOpacity={0.25} strokeWidth={w} strokeLinecap="round" />
-                  <path d={d} fill="none" stroke={color(t.to)} strokeWidth={Math.max(1.5, w / 2.5)} strokeDasharray="2 12" strokeLinecap="round" className={motion === 'full' ? 'df-moving' : undefined} />
-                  <title>{`${name.get(t.from)} → ${name.get(t.to)}: ${t.deals} deal${t.deals === 1 ? '' : 's'}`}</title>
+                <g key={`${tr.from}-${tr.to}`}>
+                  <path d={d} fill="none" stroke={color(tr.to)} strokeOpacity={0.25} strokeWidth={w} strokeLinecap="round" />
+                  <path d={d} fill="none" stroke={color(tr.to)} strokeWidth={Math.max(1.5, w / 2.5)} strokeDasharray="2 12" strokeLinecap="round" className={motion === 'full' ? 'df-moving' : undefined} />
+                  <title>{`${name.get(tr.from)} → ${name.get(tr.to)}: ${t.plural('count.deals', tr.deals)}`}</title>
                 </g>
               );
             })}
@@ -81,11 +83,11 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
                   <text x={12} y={22} fontSize={13} fontWeight={600} fill="hsl(var(--foreground))">{s.name.length > 18 ? `${s.name.slice(0, 17)}…` : s.name}</text>
                   {s.category === 'OPEN' ? (
                     <>
-                      <text x={12} y={44} fontSize={12} fill="hsl(var(--muted-foreground))">{s.openDeals} open · {formatValue(s.openValue, f.currency)}</text>
-                      <text x={12} y={64} fontSize={12} fill="hsl(var(--muted-foreground))">{s.medianDays === null ? 'No time data yet' : `Typically ${s.medianDays} d here`}</text>
+                      <text x={12} y={44} fontSize={12} fill="hsl(var(--muted-foreground))">{t('{n} open', { n: s.openDeals })} · {formatValue(s.openValue, f.currency)}</text>
+                      <text x={12} y={64} fontSize={12} fill="hsl(var(--muted-foreground))">{s.medianDays === null ? t('No time data yet') : t('Typically {n} d here', { n: s.medianDays })}</text>
                     </>
                   ) : (
-                    <text x={12} y={44} fontSize={12} fill="hsl(var(--muted-foreground))">{s.category === 'WON' ? 'Closed won' : 'Closed lost'}</text>
+                    <text x={12} y={44} fontSize={12} fill="hsl(var(--muted-foreground))">{s.category === 'WON' ? t('Closed won') : t('Closed lost')}</text>
                   )}
                 </g>
               );
@@ -95,16 +97,16 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
       </Card>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Stages</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t('Stages')}</CardTitle></CardHeader>
           <CardContent>
             <table className="w-full text-sm">
-              <caption className="sr-only">Open deals, value and typical time in each stage</caption>
+              <caption className="sr-only">{t('Open deals, value and typical time in each stage')}</caption>
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th scope="col" className="py-1 font-medium">Stage</th>
-                  <th scope="col" className="py-1 text-end font-medium">Open deals</th>
-                  <th scope="col" className="py-1 text-end font-medium">Open value</th>
-                  <th scope="col" className="py-1 text-end font-medium">Median days</th>
+                  <th scope="col" className="py-1 font-medium">{t('Stage')}</th>
+                  <th scope="col" className="py-1 text-end font-medium">{t('Open deals')}</th>
+                  <th scope="col" className="py-1 text-end font-medium">{t('Open value')}</th>
+                  <th scope="col" className="py-1 text-end font-medium">{t('Median days')}</th>
                 </tr>
               </thead>
               <tbody className="tabular">
@@ -121,26 +123,26 @@ function Flow({ f, days }: { f: PipelineFlow; days: number }) {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Moves in the period</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t('Moves in the period')}</CardTitle></CardHeader>
           <CardContent>
             {f.transitions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No moves recorded in this period.</p>
+              <p className="text-sm text-muted-foreground">{t('No moves recorded in this period.')}</p>
             ) : (
               <table className="w-full text-sm">
-                <caption className="sr-only">Deals that moved between stages</caption>
+                <caption className="sr-only">{t('Deals that moved between stages')}</caption>
                 <thead className="text-start text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="py-1 font-medium">From</th>
-                    <th scope="col" className="py-1 font-medium">To</th>
-                    <th scope="col" className="py-1 text-end font-medium">Deals</th>
+                    <th scope="col" className="py-1 font-medium">{t('From')}</th>
+                    <th scope="col" className="py-1 font-medium">{t('To')}</th>
+                    <th scope="col" className="py-1 text-end font-medium">{t('Deals')}</th>
                   </tr>
                 </thead>
                 <tbody className="tabular">
-                  {[...f.transitions].sort((a, b) => b.deals - a.deals).map((t) => (
-                    <tr key={`${t.from}-${t.to}`} className="border-t border-border">
-                      <td className="py-1">{name.get(t.from) ?? 'Removed stage'}</td>
-                      <td className="py-1">{name.get(t.to) ?? 'Removed stage'}</td>
-                      <td className="py-1 text-end">{t.deals}</td>
+                  {[...f.transitions].sort((a, b) => b.deals - a.deals).map((tr) => (
+                    <tr key={`${tr.from}-${tr.to}`} className="border-t border-border">
+                      <td className="py-1">{name.get(tr.from) ?? t('Removed stage')}</td>
+                      <td className="py-1">{name.get(tr.to) ?? t('Removed stage')}</td>
+                      <td className="py-1 text-end">{tr.deals}</td>
                     </tr>
                   ))}
                 </tbody>

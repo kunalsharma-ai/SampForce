@@ -2,6 +2,7 @@ import { Badge, Card } from '@dealflow/ui';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
+import { Tr } from '@/lib/i18n';
 import { ApiKeysAndZapier } from './api-keys';
 import { BrowserExtension } from './browser-extension';
 import { MailboxConnections, WebhooksManager } from './integrations-board';
@@ -31,21 +32,21 @@ export default function IntegrationsPage() {
       <WebhooksManager />
       <section aria-labelledby="planned-heading" className="space-y-4">
         <h2 id="planned-heading" className="text-base font-semibold">
-          Planned integrations
+          <Tr text="Planned integrations" />
         </h2>
         {PLANNED.map((group) => (
           <div key={group.category}>
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">{group.category}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground"><Tr text={group.category} /></h3>
             <Card className="divide-y divide-border">
               {group.items.map((i) => (
                 <div key={i.name} className="flex flex-wrap items-center justify-between gap-2 p-4">
                   <div>
-                    <p className="font-medium">{i.name}</p>
-                    <p className="text-xs text-muted-foreground">Requires: {i.needs}</p>
+                    <p className="font-medium"><Tr text={i.name} /></p>
+                    <p className="text-xs text-muted-foreground"><Tr text="Requires:" /> <Tr text={i.needs} /></p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge>Not available yet</Badge>
-                    <Badge tone="primary">{i.phase}</Badge>
+                    <Badge><Tr text="Not available yet" /></Badge>
+                    <Badge tone="primary"><Tr text={i.phase} /></Badge>
                   </div>
                 </div>
               ))}

@@ -14,8 +14,10 @@ import { useApprovals, useWorkflows } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { AI_DRAFT_KEY, type AiWorkflowDraft, EMAIL_TEMPLATES, type Template, TEMPLATES } from './workflow-model';
+import { useT } from '@/lib/i18n';
 
 export function WorkflowList() {
+  const t = useT();
   const workflows = useWorkflows();
   const pending = useApprovals('PENDING');
   return (
@@ -23,13 +25,13 @@ export function WorkflowList() {
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild>
           <Link href="/app/automation/new">
-            <Plus aria-hidden /> New workflow
+            <Plus aria-hidden /> {t('New workflow')}
           </Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/app/approvals">
-            <ShieldCheck aria-hidden /> Approvals
-            {!!pending.data?.length && <Badge tone="warning">{pending.data.length} waiting</Badge>}
+            <ShieldCheck aria-hidden /> {t('Approvals')}
+            {!!pending.data?.length && <Badge tone="warning">{t('{n} waiting', { n: pending.data.length })}</Badge>}
           </Link>
         </Button>
       </div>
@@ -41,7 +43,7 @@ export function WorkflowList() {
           {workflows.error.message}
         </p>
       ) : workflows.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No workflows yet. Start from scratch or from one of the templates below.</p>
+        <p className="text-sm text-muted-foreground">{t('No workflows yet. Start from scratch or from one of the templates below.')}</p>
       ) : (
         <Card>
           <ul className="divide-y divide-border">
@@ -49,10 +51,10 @@ export function WorkflowList() {
               <li key={w.id}>
                 <Link href={`/app/automation/${w.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-muted/50">
                   <span className="font-medium">{w.name}</span>
-                  <Badge tone={w.status === 'ACTIVE' ? 'success' : w.status === 'PAUSED' ? 'warning' : 'neutral'}>{w.status === 'ACTIVE' ? 'Active' : w.status === 'PAUSED' ? 'Paused' : 'Draft'}</Badge>
-                  <span className="text-sm text-muted-foreground">{TRIGGER_EVENTS[w.triggerType]?.label}</span>
+                  <Badge tone={w.status === 'ACTIVE' ? 'success' : w.status === 'PAUSED' ? 'warning' : 'neutral'}>{w.status === 'ACTIVE' ? t('Active') : w.status === 'PAUSED' ? t('Paused') : t('Draft')}</Badge>
+                  <span className="text-sm text-muted-foreground">{t.maybe(TRIGGER_EVENTS[w.triggerType]?.label ?? '')}</span>
                   <span className="ms-auto text-xs text-muted-foreground">
-                    {w.runs30d} runs in 30 days{w.failures30d > 0 && <span className="text-critical"> · {w.failures30d} failed</span>} · v{w.version} · edited {relativeTime(w.updatedAt)}
+                    {t.plural('count.runsIn30Days', w.runs30d)}{w.failures30d > 0 && <span className="text-critical"> · {t('{n} failed', { n: w.failures30d })}</span>} · v{w.version} · {t('edited {time}', { time: relativeTime(w.updatedAt) })}
                   </span>
                 </Link>
               </li>
@@ -63,11 +65,11 @@ export function WorkflowList() {
 
       <DescribeWithAi />
 
-      <TemplateSection id="templates-heading" title="Start from a template" templates={TEMPLATES} />
+      <TemplateSection id="templates-heading" title={t('Start from a template')} templates={TEMPLATES} />
       <TemplateSection
         id="email-templates-heading"
-        title="Email automation"
-        note="React to what people do with your email. Opens are estimates (images, privacy proxies and scanners trigger them), and some clicks come from link scanners; replies, bounces and unsubscribes are confirmed."
+        title={t('Email automation')}
+        note={t('React to what people do with your email. Opens are estimates (images, privacy proxies and scanners trigger them), and some clicks come from link scanners; replies, bounces and unsubscribes are confirmed.')}
         templates={EMAIL_TEMPLATES}
       />
     </div>
@@ -75,6 +77,7 @@ export function WorkflowList() {
 }
 
 function TemplateSection({ id, title, note, templates }: { id: string; title: string; note?: string; templates: Template[] }) {
+  const t = useT();
   return (
     <section aria-labelledby={id} className="space-y-3">
       <div>
@@ -84,16 +87,16 @@ function TemplateSection({ id, title, note, templates }: { id: string; title: st
         {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
       <div className="grid gap-3 md:grid-cols-3">
-        {templates.map((t) => (
-          <Card key={t.key} className="flex flex-col">
+        {templates.map((item) => (
+          <Card key={item.key} className="flex flex-col">
             <CardHeader>
-              <CardTitle className="text-sm">{t.name}</CardTitle>
+              <CardTitle className="text-sm">{t.maybe(item.name)}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-3">
-              <p className="flex-1 text-sm text-muted-foreground">{t.description}</p>
+              <p className="flex-1 text-sm text-muted-foreground">{t.maybe(item.description)}</p>
               <Button asChild variant="outline" size="sm" className="self-start">
-                <Link href={`/app/automation/new?template=${t.key}`} aria-label={`Use template: ${t.name}`}>
-                  Use template
+                <Link href={`/app/automation/new?template=${item.key}`} aria-label={t('Use template: {name}', { name: t.maybe(item.name) })}>
+                  {t('Use template')}
                 </Link>
               </Button>
             </CardContent>
@@ -106,6 +109,7 @@ function TemplateSection({ id, title, note, templates }: { id: string; title: st
 
 /** The AI workflow builder: a plain-language description becomes a validated draft that opens in the editor. */
 function DescribeWithAi() {
+  const t = useT();
   const canUse = useCan('ai:use');
   const status = useAiStatus();
   const router = useRouter();
@@ -128,7 +132,7 @@ function DescribeWithAi() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Sparkles className="size-4 text-accent" aria-hidden /> Describe it with AI
+          <Sparkles className="size-4 text-accent" aria-hidden /> {t('Describe it with AI')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -140,7 +144,7 @@ function DescribeWithAi() {
           }}
         >
           <label htmlFor="ai-workflow" className="sr-only">
-            Describe the workflow
+            {t('Describe the workflow')}
           </label>
           <Textarea
             id="ai-workflow"
@@ -148,16 +152,16 @@ function DescribeWithAi() {
             maxLength={2000}
             disabled={!!reason}
             onChange={(e) => setText(e.target.value)}
-            placeholder="When a lead from the website is worth more than 50,000, assign it to the sales lead and create a call task due tomorrow."
+            placeholder={t('When a lead from the website is worth more than 50,000, assign it to the sales lead and create a call task due tomorrow.')}
             className="min-h-[72px]"
           />
-          {reason && <p className="text-xs text-warning">{reason}</p>}
+          {reason && <p className="text-xs text-warning">{t.maybe(reason)}</p>}
           {draft.error && <p role="alert" className="text-sm text-critical">{aiErrorMessage(draft.error)}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" size="sm" disabled={text.trim().length < 10 || draft.isPending || !!reason}>
-              {draft.isPending ? 'Drafting…' : 'Draft workflow'}
+              {draft.isPending ? t('Drafting…') : t('Draft workflow')}
             </Button>
-            <span className="text-xs text-muted-foreground">The draft opens in the editor. Nothing is saved or activated until you do it.</span>
+            <span className="text-xs text-muted-foreground">{t('The draft opens in the editor. Nothing is saved or activated until you do it.')}</span>
           </div>
         </form>
       </CardContent>

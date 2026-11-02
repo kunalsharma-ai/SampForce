@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useCan, useSession } from '@/lib/session';
 import { RolesManager } from './roles-manager';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { useT } from '@/lib/i18n';
 
 interface RoleRow {
   key: string;
@@ -17,6 +18,7 @@ interface RoleRow {
 }
 
 export function MembersTable() {
+  const t = useT();
   const qc = useQueryClient();
   const { data: me } = useSession();
   const canManage = useCan('members:manage');
@@ -36,7 +38,7 @@ export function MembersTable() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Members</CardTitle>
+          <CardTitle>{t('Members')}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {error && (
@@ -48,23 +50,23 @@ export function MembersTable() {
             <Skeleton className="h-24" />
           ) : (
             <table className="w-full min-w-[520px] text-sm">
-              <caption className="sr-only">Workspace members</caption>
+              <caption className="sr-only">{t('Workspace members')}</caption>
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th scope="col" className="py-2 font-medium">Name</th>
-                  <th scope="col" className="py-2 font-medium">Email</th>
-                  <th scope="col" className="py-2 font-medium">Role</th>
-                  <th scope="col" className="py-2 font-medium">Joined</th>
+                  <th scope="col" className="py-2 font-medium">{t('Name')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Email')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Role')}</th>
+                  <th scope="col" className="py-2 font-medium">{t('Joined')}</th>
                 </tr>
               </thead>
               <tbody>
                 {members.data?.map((m) => (
                   <tr key={m.membershipId} className="border-t border-border">
                     <td className="py-2.5 font-medium">
-                      {m.name} {m.userId === me?.user.id && <Badge className="ms-1">You</Badge>}
+                      {m.name} {m.userId === me?.user.id && <Badge className="ms-1">{t('You')}</Badge>}
                       <span className="mt-1 flex flex-wrap gap-1">
-                        {m.status === 'SUSPENDED' && <Badge tone="warning">Suspended</Badge>}
-                        {m.mfaEnabled ? <Badge tone="success">Two-step on</Badge> : <Badge>Two-step off</Badge>}
+                        {m.status === 'SUSPENDED' && <Badge tone="warning">{t('Suspended')}</Badge>}
+                        {m.mfaEnabled ? <Badge tone="success">{t('Two-step on')}</Badge> : <Badge>{t('Two-step off')}</Badge>}
                         {m.provisioned && <Badge tone="accent">SCIM</Badge>}
                       </span>
                     </td>
@@ -72,7 +74,7 @@ export function MembersTable() {
                     <td className="py-2.5">
                       {canManage && roles.data ? (
                         <select
-                          aria-label={`Role for ${m.name}`}
+                          aria-label={t('Role for {name}', { name: m.name })}
                           value={m.roleKey}
                           disabled={change.isPending}
                           onChange={(e) => change.mutate({ id: m.membershipId, roleKey: e.target.value })}
