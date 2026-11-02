@@ -161,6 +161,8 @@ import {
   portalSettingsSchema,
   portalUserUpdateSchema,
   PROVIDER_CHECK_KEYS,
+  PROVIDER_KEYS,
+  providerKeysUpdateSchema,
   slackSettingsSchema,
   slackTestSchema,
   teamsAddChannelSchema,
@@ -758,9 +760,13 @@ export function buildOpenApiDocument(): object {
   }
   op('get', '/settings', 'deployment settings: payment instructions on offline invoices and where they come from');
   op('post', '/settings/payment-instructions', 'set the bank details shown on open offline invoices; empty falls back to OFFLINE_PAYMENT_INSTRUCTIONS (ADMIN)', paymentInstructionsSchema);
-  op('get', '/providers', 'provider keys this deployment has (set or missing, never values), the last live check and what workspaces show');
+  op('get', '/providers', 'provider keys this deployment has (where each comes from and its last four characters, never values), the last connection test and what workspaces show');
+  r.registerPath({ method: 'post', path: '/operator/providers/{key}/keys', tags: ['Operator'],
+    summary: 'Operator console: save (string) or remove (null) provider keys; sealed with ENCRYPTION_KEY, used instead of the environment variable at once, and logged by fingerprint (ADMIN, 20 a minute)',
+    request: { params: z.object({ key: z.enum(PROVIDER_KEYS) }), body: { content: { 'application/json': { schema: providerKeysUpdateSchema } } } },
+    responses: { 200: ok('Provider row with the new key states'), 400: json(error, 'A key this provider does not use, or a value the environment variable would refuse'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled') } });
   r.registerPath({ method: 'post', path: '/operator/providers/{key}/check', tags: ['Operator'],
-    summary: 'Operator console: run a no-cost live check for apollo, hunter or deepgram and store the result; logged (ADMIN, 10 a minute)',
+    summary: 'Operator console: run a no-cost connection test for a provider and store the result; logged (ADMIN, 10 a minute)',
     request: { params: z.object({ key: z.enum(PROVIDER_CHECK_KEYS) }) },
     responses: { 200: ok('Provider row with the new check'), 400: json(error, 'Key not set, or not a checkable provider'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled') } });
   op('get', '/audit-log', 'platform audit log');

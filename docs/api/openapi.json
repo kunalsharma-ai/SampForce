@@ -12799,6 +12799,1512 @@
         }
       }
     },
+    "/deals/territories": {
+      "get": {
+        "tags": [
+          "Deals"
+        ],
+        "summary": "Open pipeline, overdue deals and this quarter’s won and lost results per sales territory, plus the open deals no territory covers and why (deals:read)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "pipelineId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "ownerId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/territories": {
+      "get": {
+        "tags": [
+          "Territories"
+        ],
+        "summary": "Sales territories with their countries and manager (deals:read)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Territories"
+        ],
+        "summary": "Create a territory; a country can be in one territory only (tenant:manage)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "managerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "countries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{2}$"
+                    },
+                    "maxItems": 250,
+                    "default": []
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/territories/{id}": {
+      "patch": {
+        "tags": [
+          "Territories"
+        ],
+        "summary": "Rename, describe, change the manager or replace the countries (tenant:manage)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "managerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "countries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{2}$"
+                    },
+                    "maxItems": 250,
+                    "default": []
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Territories"
+        ],
+        "summary": "Delete a territory; deals and companies are not changed (tenant:manage)",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/deals/{id}/history": {
       "get": {
         "tags": [
@@ -82077,8 +83583,595 @@
                   },
                   "body": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 20000
+                    "maxLength": 20000,
+                    "default": ""
+                  },
+                  "design": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "version": {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ],
+                        "default": 1
+                      },
+                      "theme": {
+                        "type": "object",
+                        "properties": {
+                          "background": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#f4f5f7"
+                          },
+                          "surface": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#ffffff"
+                          },
+                          "text": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#1f2937"
+                          },
+                          "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#2563eb"
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "sans",
+                              "serif"
+                            ],
+                            "default": "sans"
+                          }
+                        },
+                        "default": {}
+                      },
+                      "blocks": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "logoUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "heading"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "level": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        1
+                                      ]
+                                    },
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        2
+                                      ]
+                                    }
+                                  ],
+                                  "default": 2
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "text"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 5000,
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "image"
+                                  ]
+                                },
+                                "src": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                },
+                                "alt": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "href": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 20,
+                                  "maximum": 100,
+                                  "default": 100
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "src"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "button"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "label",
+                                "url"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "divider"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "social"
+                                  ]
+                                },
+                                "links": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "network": {
+                                        "type": "string",
+                                        "enum": [
+                                          "linkedin",
+                                          "x",
+                                          "facebook",
+                                          "instagram",
+                                          "youtube",
+                                          "website"
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                      }
+                                    },
+                                    "required": [
+                                      "network",
+                                      "url"
+                                    ]
+                                  },
+                                  "maxItems": 6,
+                                  "default": []
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "signature"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "phone": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "email": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "website": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "product"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                },
+                                "price": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "imageUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "url": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "buttonLabel": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pricing"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "rows": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "default": ""
+                                      },
+                                      "price": {
+                                        "type": "string",
+                                        "maxLength": 60,
+                                        "default": ""
+                                      },
+                                      "note": {
+                                        "type": "string",
+                                        "maxLength": 200,
+                                        "default": ""
+                                      }
+                                    }
+                                  },
+                                  "maxItems": 12,
+                                  "default": []
+                                },
+                                "footnote": {
+                                  "type": "string",
+                                  "maxLength": 500,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "footer"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 60
+                      }
+                    },
+                    "default": null,
+                    "required": [
+                      "blocks"
+                    ]
                   },
                   "shared": {
                     "type": "boolean",
@@ -82103,8 +84196,7 @@
                 },
                 "required": [
                   "name",
-                  "subject",
-                  "body"
+                  "subject"
                 ]
               }
             }
@@ -84092,8 +86184,595 @@
                   },
                   "body": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 20000
+                    "maxLength": 20000,
+                    "default": ""
+                  },
+                  "design": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "version": {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ],
+                        "default": 1
+                      },
+                      "theme": {
+                        "type": "object",
+                        "properties": {
+                          "background": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#f4f5f7"
+                          },
+                          "surface": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#ffffff"
+                          },
+                          "text": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#1f2937"
+                          },
+                          "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#2563eb"
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "sans",
+                              "serif"
+                            ],
+                            "default": "sans"
+                          }
+                        },
+                        "default": {}
+                      },
+                      "blocks": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "logoUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "heading"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "level": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        1
+                                      ]
+                                    },
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        2
+                                      ]
+                                    }
+                                  ],
+                                  "default": 2
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "text"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 5000,
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "image"
+                                  ]
+                                },
+                                "src": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                },
+                                "alt": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "href": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 20,
+                                  "maximum": 100,
+                                  "default": 100
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "src"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "button"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "label",
+                                "url"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "divider"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "social"
+                                  ]
+                                },
+                                "links": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "network": {
+                                        "type": "string",
+                                        "enum": [
+                                          "linkedin",
+                                          "x",
+                                          "facebook",
+                                          "instagram",
+                                          "youtube",
+                                          "website"
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                      }
+                                    },
+                                    "required": [
+                                      "network",
+                                      "url"
+                                    ]
+                                  },
+                                  "maxItems": 6,
+                                  "default": []
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "signature"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "phone": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "email": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "website": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "product"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                },
+                                "price": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "imageUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "url": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "buttonLabel": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pricing"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "rows": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "default": ""
+                                      },
+                                      "price": {
+                                        "type": "string",
+                                        "maxLength": 60,
+                                        "default": ""
+                                      },
+                                      "note": {
+                                        "type": "string",
+                                        "maxLength": 200,
+                                        "default": ""
+                                      }
+                                    }
+                                  },
+                                  "maxItems": 12,
+                                  "default": []
+                                },
+                                "footnote": {
+                                  "type": "string",
+                                  "maxLength": 500,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "footer"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 60
+                      }
+                    },
+                    "default": null,
+                    "required": [
+                      "blocks"
+                    ]
                   },
                   "shared": {
                     "type": "boolean",
@@ -84118,8 +86797,7 @@
                 },
                 "required": [
                   "name",
-                  "subject",
-                  "body"
+                  "subject"
                 ]
               }
             }
@@ -84677,7 +87355,7 @@
         "tags": [
           "Sequences"
         ],
-        "summary": "Render a subject and body for a lead or contact, listing empty merge fields (sequences:read)",
+        "summary": "Render a subject and body (and a design as HTML) for a lead or contact, listing empty merge fields (sequences:read)",
         "security": [
           {
             "cookieAuth": []
@@ -84698,7 +87376,594 @@
                   },
                   "body": {
                     "type": "string",
-                    "maxLength": 20000
+                    "maxLength": 20000,
+                    "default": ""
+                  },
+                  "design": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "version": {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ],
+                        "default": 1
+                      },
+                      "theme": {
+                        "type": "object",
+                        "properties": {
+                          "background": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#f4f5f7"
+                          },
+                          "surface": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#ffffff"
+                          },
+                          "text": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#1f2937"
+                          },
+                          "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-f]{6}$",
+                            "default": "#2563eb"
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "sans",
+                              "serif"
+                            ],
+                            "default": "sans"
+                          }
+                        },
+                        "default": {}
+                      },
+                      "blocks": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "header"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "logoUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "heading"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "level": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        1
+                                      ]
+                                    },
+                                    {
+                                      "type": "number",
+                                      "enum": [
+                                        2
+                                      ]
+                                    }
+                                  ],
+                                  "default": 2
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "text"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 5000,
+                                  "default": ""
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "left"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "image"
+                                  ]
+                                },
+                                "src": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                },
+                                "alt": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "href": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 20,
+                                  "maximum": 100,
+                                  "default": 100
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "src"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "button"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "label",
+                                "url"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "divider"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "social"
+                                  ]
+                                },
+                                "links": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "network": {
+                                        "type": "string",
+                                        "enum": [
+                                          "linkedin",
+                                          "x",
+                                          "facebook",
+                                          "instagram",
+                                          "youtube",
+                                          "website"
+                                        ]
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "maxLength": 1000,
+                                        "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                      }
+                                    },
+                                    "required": [
+                                      "network",
+                                      "url"
+                                    ]
+                                  },
+                                  "maxItems": 6,
+                                  "default": []
+                                },
+                                "align": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "center",
+                                    "right"
+                                  ],
+                                  "default": "center"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "signature"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "phone": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "email": {
+                                  "type": "string",
+                                  "maxLength": 200,
+                                  "default": ""
+                                },
+                                "website": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "product"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                },
+                                "price": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                },
+                                "imageUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^https:\\/\\/[^\\s\"'<>]+$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "url": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 1000,
+                                      "pattern": "^(?:(?:https?:\\/\\/|mailto:)[^\\s\"'<>]+|\\{\\{[^{}]+\\}\\}[^\\s\"'<>]*)$"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        ""
+                                      ]
+                                    }
+                                  ],
+                                  "default": ""
+                                },
+                                "buttonLabel": {
+                                  "type": "string",
+                                  "maxLength": 60,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pricing"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "maxLength": 120,
+                                  "default": ""
+                                },
+                                "rows": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 120,
+                                        "default": ""
+                                      },
+                                      "price": {
+                                        "type": "string",
+                                        "maxLength": 60,
+                                        "default": ""
+                                      },
+                                      "note": {
+                                        "type": "string",
+                                        "maxLength": 200,
+                                        "default": ""
+                                      }
+                                    }
+                                  },
+                                  "maxItems": 12,
+                                  "default": []
+                                },
+                                "footnote": {
+                                  "type": "string",
+                                  "maxLength": 500,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "footer"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 1000,
+                                  "default": ""
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type"
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 60
+                      }
+                    },
+                    "required": [
+                      "blocks"
+                    ]
                   },
                   "leadId": {
                     "type": "string",
@@ -84710,8 +87975,7 @@
                   }
                 },
                 "required": [
-                  "subject",
-                  "body"
+                  "subject"
                 ]
               }
             }
@@ -122909,7 +126173,7 @@
         "tags": [
           "Operator"
         ],
-        "summary": "Operator console: provider keys this deployment has (set or missing, never values), the last live check and what workspaces show. Separate df_op session; 404 when the console is disabled",
+        "summary": "Operator console: provider keys this deployment has (where each comes from and its last four characters, never values), the last connection test and what workspaces show. Separate df_op session; 404 when the console is disabled",
         "responses": {
           "200": {
             "description": "OK"
@@ -123070,12 +126334,12 @@
         }
       }
     },
-    "/operator/providers/{key}/check": {
+    "/operator/providers/{key}/keys": {
       "post": {
         "tags": [
           "Operator"
         ],
-        "summary": "Operator console: run a no-cost live check for apollo, hunter or deepgram and store the result; logged (ADMIN, 10 a minute)",
+        "summary": "Operator console: save (string) or remove (null) provider keys; sealed with ENCRYPTION_KEY, used instead of the environment variable at once, and logged by fingerprint (ADMIN, 20 a minute)",
         "parameters": [
           {
             "schema": {
@@ -123083,7 +126347,283 @@
               "enum": [
                 "apollo",
                 "hunter",
-                "deepgram"
+                "deepgram",
+                "google",
+                "microsoft",
+                "slack",
+                "zoom",
+                "docusign",
+                "anthropic",
+                "smtp",
+                "zapier",
+                "stripe",
+                "razorpay"
+              ]
+            },
+            "required": true,
+            "name": "key",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "values": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 4096
+                    }
+                  }
+                },
+                "required": [
+                  "values"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider row with the new key states"
+          },
+          "400": {
+            "description": "A key this provider does not use, or a value the environment variable would refuse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No operator session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operator role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operator/providers/{key}/check": {
+      "post": {
+        "tags": [
+          "Operator"
+        ],
+        "summary": "Operator console: run a no-cost connection test for a provider and store the result; logged (ADMIN, 10 a minute)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "apollo",
+                "hunter",
+                "deepgram",
+                "google",
+                "microsoft",
+                "slack",
+                "zoom",
+                "docusign",
+                "anthropic",
+                "smtp",
+                "zapier",
+                "stripe",
+                "razorpay"
               ]
             },
             "required": true,

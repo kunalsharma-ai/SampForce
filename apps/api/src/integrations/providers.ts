@@ -327,7 +327,8 @@ function graphHeaders(h: Record<string, string> | undefined): { name: string; va
 
 export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
   const scopes = ['offline_access', 'openid', 'email', 'User.Read', 'Mail.Read', 'Mail.Send', 'Calendars.Read'];
-  const base = `${env.MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(env.MICROSOFT_TENANT)}/oauth2/v2.0`;
+  // Read on each call: MICROSOFT_TENANT can change in the operator console without a restart.
+  const tenantBase = () => `${env.MICROSOFT_LOGIN_BASE_URL}/${encodeURIComponent(env.MICROSOFT_TENANT || 'common')}/oauth2/v2.0`;
   const graph = `${env.MICROSOFT_GRAPH_BASE_URL}/v1.0`;
   const creds = () => ({ client_id: env.MICROSOFT_CLIENT_ID ?? '', client_secret: env.MICROSOFT_CLIENT_SECRET ?? '' });
   const addr = (a: GraphAddress | undefined) => lower(a?.emailAddress?.address);
@@ -339,17 +340,17 @@ export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
       [!env.MICROSOFT_CLIENT_ID && 'MICROSOFT_CLIENT_ID', !env.MICROSOFT_CLIENT_SECRET && 'MICROSOFT_CLIENT_SECRET'].filter((v): v is string => !!v),
     authorizeUrl(state, redirectUri) {
       const q = new URLSearchParams({ client_id: creds().client_id, response_type: 'code', redirect_uri: redirectUri, response_mode: 'query', scope: scopes.join(' '), state });
-      return `${base}/authorize?${q}`;
+      return `${tenantBase()}/authorize?${q}`;
     },
     async exchangeCode(code, redirectUri) {
-      const r = await http<{ access_token: string; refresh_token?: string; expires_in?: number; scope?: string }>(`${base}/token`, {
+      const r = await http<{ access_token: string; refresh_token?: string; expires_in?: number; scope?: string }>(`${tenantBase()}/token`, {
         method: 'POST',
         form: { ...creds(), code, redirect_uri: redirectUri, grant_type: 'authorization_code', scope: scopes.join(' ') },
       });
       return tokenSet(r);
     },
     async refresh(refreshToken) {
-      const r = await http<{ access_token: string; refresh_token?: string; expires_in?: number; scope?: string }>(`${base}/token`, {
+      const r = await http<{ access_token: string; refresh_token?: string; expires_in?: number; scope?: string }>(`${tenantBase()}/token`, {
         method: 'POST',
         form: { ...creds(), refresh_token: refreshToken, grant_type: 'refresh_token', scope: scopes.join(' ') },
       });

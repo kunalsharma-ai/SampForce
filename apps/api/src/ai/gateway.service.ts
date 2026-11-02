@@ -52,8 +52,13 @@ export class AiGateway {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(API_ENV) private readonly env: ApiEnv,
-    @Inject(AI_PROVIDER) private readonly provider: ModelProvider | null,
+    @Inject(AI_PROVIDER) private readonly providers: ModelProviderSource,
   ) {}
+
+  /** Resolved per call, so an ANTHROPIC_API_KEY saved in the operator console applies without a restart. */
+  private get provider(): ModelProvider | null {
+    return this.providers.current();
+  }
 
   get configured(): boolean {
     return this.provider !== null;
@@ -99,7 +104,7 @@ export class AiGateway {
           model: this.provider?.model ?? null,
           note: this.provider
             ? 'An API key is set. DealFlow has not verified it until the first call succeeds; failures are shown on each run.'
-            : 'An operator must set ANTHROPIC_API_KEY on the API and the worker. Until then AI features say they are unavailable.',
+            : 'An operator must add ANTHROPIC_API_KEY in the operator console (Providers) or the deployment secrets. Until then AI features say they are unavailable.',
         },
         settings: {
           enabled: s.enabled,
@@ -199,6 +204,19 @@ function restoreBlock(b: ModelBlock, r: Redactor): ModelBlock {
   return b;
 }
 
-export function providerFactory(env: ApiEnv): ModelProvider | null {
-  return env.ANTHROPIC_API_KEY ? new AnthropicProvider(env) : null;
+export interface ModelProviderSource {
+  current(): ModelProvider | null;
+}
+
+/** The Claude client for the key set now: built once per key, rebuilt when the key changes, none without a key. */
+export function providerFactory(env: ApiEnv): ModelProviderSource {
+  let cached: { key: string; provider: ModelProvider } | null = null;
+  return {
+    current() {
+      const key = env.ANTHROPIC_API_KEY;
+      if (!key) return null;
+      if (cached?.key !== key) cached = { key, provider: new AnthropicProvider(env) };
+      return cached.provider;
+    },
+  };
 }

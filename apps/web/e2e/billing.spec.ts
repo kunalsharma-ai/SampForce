@@ -150,7 +150,7 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   await expect(ops.getByText(/Not set\. Open invoices say/)).toBeVisible();
 });
 
-test('operator providers page shows which keys are missing and offers live checks only when a key is set', async ({ browser }) => {
+test('operator providers page: masked keys, saving a key applies it without a restart, and connection tests', async ({ browser }) => {
   const email = `ops-prov-${Date.now()}@platform.test`;
   execFileSync('node', ['-r', '@swc-node/register', 'scripts/create-operator.ts'], {
     cwd: '../api',
@@ -163,15 +163,46 @@ test('operator providers page shows which keys are missing and offers live check
   await ops.getByRole('button', { name: 'Sign in' }).click();
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Providers' }).click();
   await expect(ops.getByRole('heading', { level: 1, name: 'Providers' })).toBeVisible();
-  // The e2e deployment has no Apollo key, so the card says so and the check cannot run.
+  // The e2e deployment has no Apollo key, so the card says so and the test cannot run.
   const apollo = ops.getByRole('region', { name: 'Apollo.io' });
   await expect(apollo.getByText('Not configured')).toBeVisible();
-  await expect(apollo.getByRole('list', { name: 'Apollo.io deployment secrets' })).toContainText('APOLLO_API_KEYMissing');
+  await expect(apollo.getByRole('list', { name: 'Apollo.io keys' })).toContainText('APOLLO_API_KEYMissing');
   await expect(apollo.getByText('Mock Mode: labelled sample people')).toBeVisible();
-  await expect(apollo.getByRole('button', { name: 'Run live check' })).toBeDisabled();
-  // Anthropic points at a local stand-in here; the page shows it as set without showing the value.
+  await expect(apollo.getByRole('button', { name: 'Test connection' })).toBeDisabled();
+  // Anthropic points at a local stand-in here; the page shows where the key comes from and its last four characters only.
   const anthropic = ops.getByRole('region', { name: 'Anthropic (Claude)' });
-  await expect(anthropic.getByRole('list')).toContainText('ANTHROPIC_API_KEYSet');
+  await expect(anthropic.getByRole('list')).toContainText('ANTHROPIC_API_KEYFrom deployment secrets · ends in real');
   await expect(ops.locator('body')).not.toContainText('test-key-not-real');
   await expectNoA11yViolations(ops);
+
+  // Slack's keys come from the deployment. Replace the secret with a wrong one here: it is used at once.
+  const slack = ops.getByRole('region', { name: 'Slack' });
+  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText('SLACK_CLIENT_SECRETFrom deployment secrets · ends in cret');
+  await slack.getByRole('button', { name: 'Update keys' }).click();
+  const form = slack.getByRole('form', { name: 'Edit Slack keys' });
+  await form.getByLabel('Client secret SLACK_CLIENT_SECRET').fill('a-wrong-slack-secret-9z9z');
+  await expectNoA11yViolations(ops);
+  await form.getByRole('button', { name: 'Save keys' }).click();
+  await expect(slack.getByText('Saved. The API and worker use the new keys within seconds, without a restart.')).toBeVisible();
+  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText(`SLACK_CLIENT_SECRETSaved here · ends in 9z9z`);
+  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText(`by ${email}`);
+  await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');
+  await slack.getByRole('button', { name: 'Test connection' }).click();
+  await expect(slack.getByText('Connection test failed')).toBeVisible();
+  await expect(slack.getByText(/Slack refused the client ID or secret \(invalid_client_id\)/)).toBeVisible();
+
+  // Remove the saved value: Slack falls back to the deployment's secret, and the test passes again.
+  await slack.getByRole('button', { name: 'Update keys' }).click();
+  await form.getByLabel(/Remove the saved value/).check();
+  await form.getByRole('button', { name: 'Save keys' }).click();
+  await expect(slack.getByRole('list', { name: 'Slack keys' })).toContainText('SLACK_CLIENT_SECRETFrom deployment secrets · ends in cret');
+  await slack.getByRole('button', { name: 'Test connection' }).click();
+  await expect(slack.getByText('Connection test passed')).toBeVisible();
+  await expect(slack.getByText(/Slack accepted the client ID and secret/)).toBeVisible();
+
+  // Every change is in the operator log, by fingerprint and last four characters only.
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Operator log' }).click();
+  await expect(ops.getByText('provider_key.set').first()).toBeVisible();
+  await expect(ops.getByText('provider_key.cleared').first()).toBeVisible();
+  await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');
 });

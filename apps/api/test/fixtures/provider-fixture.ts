@@ -63,9 +63,10 @@ export async function startProviderFixture(): Promise<ProviderFixture> {
     // ── OAuth token endpoints ──
     if (req.method === 'POST' && (p === '/google/token' || /\/oauth2\/v2\.0\/token$/.test(p))) {
       const form = new URLSearchParams(body);
+      // Like Google and Microsoft, the client is checked before the code.
+      if (!form.get('client_id') || !form.get('client_secret') || form.get('client_secret')!.includes('wrong')) return json(401, { error: 'invalid_client', error_description: 'The OAuth client was not found.' });
       if (state.revoked) return json(400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' });
-      if (form.get('grant_type') === 'authorization_code' && form.get('code') !== 'good-code') return json(400, { error: 'invalid_request' });
-      if (!form.get('client_id') || !form.get('client_secret')) return json(401, { error: 'invalid_client' });
+      if (form.get('grant_type') === 'authorization_code' && form.get('code') !== 'good-code') return json(400, { error: 'invalid_grant', error_description: 'Malformed auth code.' });
       return json(200, { access_token: `at-${Date.now()}`, refresh_token: 'rt-1', expires_in: 3600, scope: 'openid email' });
     }
 

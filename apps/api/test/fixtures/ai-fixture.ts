@@ -291,6 +291,15 @@ export async function createAiFixture(port = 0): Promise<AiFixture> {
       res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
       return;
     }
+    // GET /v1/models: what the operator console's connection test calls. Any key accepted except one marked bad.
+    if (req.method === 'GET' && req.url?.startsWith('/v1/models')) {
+      if (!req.headers['x-api-key'] || String(req.headers['x-api-key']).includes('bad')) {
+        res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }));
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ data: [{ type: 'model', id: 'claude-opus-5-5' }, { type: 'model', id: 'claude-sonnet-5-5' }], has_more: false }));
+      return;
+    }
     if (req.method !== 'POST' || !req.url?.startsWith('/v1/messages')) {
       res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ type: 'error', error: { type: 'not_found_error', message: 'not found' } }));
       return;

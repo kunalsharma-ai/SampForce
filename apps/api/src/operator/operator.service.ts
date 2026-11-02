@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey } from '@dealflow/types';
+import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
 import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billing/billing.service';
@@ -9,7 +9,10 @@ import { PrismaService } from '../common/prisma.service';
 import { HunterClient } from '../finder/hunter';
 import { DeepgramClient } from '../meetings/deepgram';
 import { ApolloClient } from '../prospects/apollo';
-import { currentCheck, keyFingerprint, PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
+import { fingerprintOf, hintFor, isManagedKey, MANAGED_KEY_NAMES, MANAGED_KEYS, type ManagedKeyName, parseManagedValue, ProviderKeysService } from '../common/provider-keys';
+import { ConnectionTests } from './connection-tests';
+import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue';
+import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
 import type { OperatorContext } from './operator-auth';
 
 type ScanTx = Prisma.TransactionClient;
@@ -29,6 +32,8 @@ export class OperatorService {
     private readonly apollo: ApolloClient,
     private readonly hunter: HunterClient,
     private readonly deepgram: DeepgramClient,
+    private readonly tests: ConnectionTests,
+    private readonly keys: ProviderKeysService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -199,61 +204,86 @@ export class OperatorService {
     return rows.map((r) => ({ id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId, metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString() }));
   }
 
-  // ───── Provider setup: which deployment secrets are set, and a no-cost live check for each data provider ─────
+  // ───── Provider setup: keys entered here or in the deployment's secrets, and a no-cost connection test for each ─────
+
+  private fingerprint(p: CatalogueProvider): string | null {
+    const values = p.tested.map((n) => this.env[n] as string | undefined);
+    return values.some(Boolean) ? fingerprintOf(values.map((v) => v ?? '').join('\n')) : null;
+  }
 
   async providers(): Promise<OperatorProviderRow[]> {
     const rows = await this.prisma.platformSetting.findMany({ where: { key: { startsWith: PROVIDER_CHECK_PREFIX } } });
     const checks = new Map(rows.map((r) => [r.key.slice(PROVIDER_CHECK_PREFIX.length), readProviderCheck(r.value)]));
-    const e = this.env;
-    const v = (name: string, value: unknown, required = true) => ({ name, set: !!value, required });
-    const keyEnv: Partial<Record<OperatorProviderRow['key'], string | undefined>> = { apollo: e.APOLLO_API_KEY, hunter: e.HUNTER_API_KEY, deepgram: e.DEEPGRAM_API_KEY };
-    const row = (
-      key: OperatorProviderRow['key'], name: string, usedFor: string, env: OperatorProviderRow['env'], checkNote: string | null,
-      app: { off: string; on: string; verified?: string },
-    ): OperatorProviderRow => {
+    const states = new Map(MANAGED_KEY_NAMES.map((n) => [n, this.keys.state(n)]));
+    const editorIds = [...new Set([...states.values()].map((s) => s.updatedById).filter((x): x is string => !!x))];
+    const editors = new Map((editorIds.length ? await this.prisma.platformOperator.findMany({ where: { id: { in: editorIds } }, select: { id: true, email: true } }) : []).map((o) => [o.id, o.email]));
+    return PROVIDER_CATALOGUE.map((p) => {
+      const env = p.fields.map((f) => {
+        const st = states.get(f.name)!;
+        // MICROSOFT_TENANT and DOCUSIGN_AUTH_BASE_URL have built-in defaults, shown as set from the environment.
+        const value = this.env[f.name] as string | undefined;
+        return {
+          name: f.name, label: f.label, required: f.required, secret: MANAGED_KEYS[f.name].secret, set: !!value,
+          source: st.source === 'missing' && value ? ('environment' as const) : st.source,
+          hint: st.hint ?? (value ? hintFor(f.name, value) : null),
+          updatedAt: st.updatedAt, updatedBy: st.updatedById ? (editors.get(st.updatedById) ?? null) : null, help: f.help ?? null,
+        };
+      });
       const configured = env.filter((x) => x.required).every((x) => x.set);
-      const stored = checks.get(key) ?? null;
-      const secret = keyEnv[key];
-      // A check made with a different key (or before fingerprints were kept) is shown, but proves nothing now.
-      const current = secret === undefined ? null : currentCheck(stored, secret);
+      const stored = checks.get(p.key) ?? null;
+      // A test made with other keys (or before fingerprints were kept) is shown, but proves nothing now.
+      const fp = this.fingerprint(p);
+      const current = stored && stored.key !== null && stored.key === fp ? stored : null;
       const lastCheck = stored ? { ok: stored.ok, at: stored.at, message: stored.message, by: stored.by, stale: !current } : null;
       const state = !configured ? 'not_configured' : !current ? 'configured' : current.ok ? 'verified' : 'failed';
-      return { key, name, usedFor, env, configured, checkable: checkNote !== null, checkNote, lastCheck, state, appStatus: !configured ? app.off : state === 'verified' && app.verified ? app.verified : app.on };
-    };
-    return [
-      row('apollo', 'Apollo.io', 'Prospect search and email reveal (Prospect Lists, browser extension)', [v('APOLLO_API_KEY', e.APOLLO_API_KEY)],
-        'Runs one people search for a single result (Apollo returns no email addresses from search, and nothing is revealed).',
-        { off: 'Mock Mode: labelled sample people', on: 'Pending Configuration until a call succeeds', verified: 'Connected in every workspace' }),
-      row('hunter', 'Hunter.io', 'Email verification on prospects; data provider for the Email Finder', [v('HUNTER_API_KEY', e.HUNTER_API_KEY)],
-        "Calls Hunter's account endpoint, which Hunter does not count as a search or verification.",
-        { off: 'Pending Configuration', on: 'Key set: each workspace shows Connected after its first verification' }),
-      row('deepgram', 'Deepgram', 'Transcription of meeting recordings and voice notes', [v('DEEPGRAM_API_KEY', e.DEEPGRAM_API_KEY), v('MEETING_UPLOAD_MAX_MB', e.MEETING_UPLOAD_MAX_MB, false)],
-        "Lists the key's Deepgram projects. Nothing is transcribed, so nothing is billed.",
-        { off: 'Pending Configuration', on: 'Configured, not yet verified until a workspace transcribes a recording' }),
-      row('google', 'Google (Gmail, Calendar)', 'Mailbox sending and sync, calendar, meeting links', [v('GOOGLE_CLIENT_ID', e.GOOGLE_CLIENT_ID), v('GOOGLE_CLIENT_SECRET', e.GOOGLE_CLIENT_SECRET)], null,
-        { off: 'No Connect button for Google', on: 'Each person connects their own Google account' }),
-      row('microsoft', 'Microsoft 365 (Outlook, Graph)', 'Mailbox sending and sync, calendar, meeting links', [v('MICROSOFT_CLIENT_ID', e.MICROSOFT_CLIENT_ID), v('MICROSOFT_CLIENT_SECRET', e.MICROSOFT_CLIENT_SECRET), v('MICROSOFT_TENANT', e.MICROSOFT_TENANT, false)], null,
-        { off: 'No Connect button for Microsoft', on: 'Each person connects their own Microsoft account' }),
-      row('slack', 'Slack', 'Workspace app: "Post to Slack" workflow steps', [v('SLACK_CLIENT_ID', e.SLACK_CLIENT_ID), v('SLACK_CLIENT_SECRET', e.SLACK_CLIENT_SECRET)], null,
-        { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Slack; the connection is verified with auth.test' }),
-      row('zoom', 'Zoom', 'Workspace app: schedule Zoom meetings from records; transcripts of recorded meetings', [v('ZOOM_CLIENT_ID', e.ZOOM_CLIENT_ID), v('ZOOM_CLIENT_SECRET', e.ZOOM_CLIENT_SECRET), v('ZOOM_WEBHOOK_SECRET_TOKEN', e.ZOOM_WEBHOOK_SECRET_TOKEN, false)], null,
-        { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their Zoom account; transcript import also needs ZOOM_WEBHOOK_SECRET_TOKEN' }),
-      row('docusign', 'DocuSign', 'Workspace app: send contracts for e-signature; signed envelopes mark contracts signed', [v('DOCUSIGN_INTEGRATION_KEY', e.DOCUSIGN_INTEGRATION_KEY), v('DOCUSIGN_SECRET_KEY', e.DOCUSIGN_SECRET_KEY), v('DOCUSIGN_CONNECT_HMAC_KEY', e.DOCUSIGN_CONNECT_HMAC_KEY, false), v('DOCUSIGN_AUTH_BASE_URL', e.DOCUSIGN_AUTH_BASE_URL, false)], null,
-        { off: 'Pending Configuration: no Connect button', on: 'Each workspace admin connects their DocuSign account; status updates also need DOCUSIGN_CONNECT_HMAC_KEY' }),
-      row('anthropic', 'Anthropic (Claude)', 'AI agents, email assistant, proposals, meeting and voice readings', [v('ANTHROPIC_API_KEY', e.ANTHROPIC_API_KEY)], null,
-        { off: 'AI features show as not configured', on: 'AI features available' }),
-      row('smtp', 'Email (SMTP)', 'Password resets, invitations, client portal email', [v('SMTP_URL', e.SMTP_URL), v('MAIL_FROM', e.MAIL_FROM)], null,
-        { off: 'System email is not sent', on: 'System email is sent' }),
-    ];
+      return { key: p.key, name: p.name, usedFor: p.usedFor, env, configured, checkable: true, checkNote: p.checkNote, lastCheck, state, appStatus: !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on };
+    });
+  }
+
+  /**
+   * Saves or removes console values for one provider's keys. They apply at once in this process and within
+   * PROVIDER_KEYS_REFRESH_SECONDS everywhere else. The audit log records which key changed and its fingerprint, never the value.
+   */
+  async setProviderKeys(op: OperatorContext, key: ProviderKey, input: ProviderKeysUpdateInput, ip: string | null): Promise<OperatorProviderRow> {
+    const p = PROVIDER_CATALOGUE.find((x) => x.key === key)!;
+    const allowed = new Set<string>(p.fields.map((f) => f.name));
+    const changes: Partial<Record<ManagedKeyName, string | null>> = {};
+    const details: { path: string; message: string }[] = [];
+    for (const [name, raw] of Object.entries(input.values)) {
+      if (!allowed.has(name) || !isManagedKey(name)) {
+        details.push({ path: `values.${name}`, message: `${p.name} does not use ${name}.` });
+        continue;
+      }
+      if (raw === null) {
+        changes[name] = null;
+        continue;
+      }
+      const parsed = parseManagedValue(name, raw);
+      if (parsed.ok) changes[name] = parsed.value;
+      else details.push({ path: `values.${name}`, message: parsed.message });
+    }
+    if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: details[0]!.message, details });
+    const done = await this.keys.apply(changes, op.id);
+    for (const d of done) {
+      await this.log(op.id, d.action === 'set' ? 'provider_key.set' : 'provider_key.cleared', null, { provider: key, name: d.name, fingerprint: d.fingerprint, ...(MANAGED_KEYS[d.name].secret ? { last4: d.hint } : { value: d.hint }) }, ip);
+    }
+    return (await this.providers()).find((r) => r.key === key)!;
   }
 
   async checkProvider(op: OperatorContext, key: ProviderCheckKey, ip: string | null): Promise<OperatorProviderRow> {
-    const client = { apollo: this.apollo, hunter: this.hunter, deepgram: this.deepgram }[key];
-    if (!client.configured) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: 'Set the key in the deployment secrets and restart the API first.' });
-    const fingerprint = keyFingerprint({ apollo: this.env.APOLLO_API_KEY, hunter: this.env.HUNTER_API_KEY, deepgram: this.env.DEEPGRAM_API_KEY }[key]);
+    const p = PROVIDER_CATALOGUE.find((x) => x.key === key)!;
+    const missing = p.fields.filter((f) => f.required && !this.env[f.name]).map((f) => f.name);
+    if (missing.length) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: `Add ${missing.join(' and ')} first, here or in the deployment's secrets.` });
+    const run: Record<ProviderCheckKey, () => Promise<string>> = {
+      apollo: () => this.apollo.check(), hunter: () => this.hunter.check(), deepgram: () => this.deepgram.check(),
+      anthropic: () => this.tests.anthropic(), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
+      slack: () => this.tests.slack(), zoom: () => this.tests.zoom(), docusign: () => this.tests.docusign(),
+      smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
+    };
+    const fingerprint = this.fingerprint(p);
     let result: StoredCheck;
     try {
-      result = { ok: true, at: new Date().toISOString(), message: await client.check(), by: op.email, key: fingerprint };
+      result = { ok: true, at: new Date().toISOString(), message: (await run[key]()).slice(0, 300), by: op.email, key: fingerprint };
     } catch (err) {
       const message = err instanceof Error && err.name !== 'TimeoutError' ? err.message : 'The provider did not answer in time.';
       result = { ok: false, at: new Date().toISOString(), message: message.slice(0, 300), by: op.email, key: fingerprint };
@@ -261,7 +291,7 @@ export class OperatorService {
     const k = PROVIDER_CHECK_PREFIX + key;
     await this.prisma.platformSetting.upsert({ where: { key: k }, create: { key: k, value: JSON.stringify(result), updatedById: op.id }, update: { value: JSON.stringify(result), updatedById: op.id } });
     await this.log(op.id, 'provider.checked', null, { provider: key, ok: result.ok, message: result.message }, ip);
-    return (await this.providers()).find((p) => p.key === key)!;
+    return (await this.providers()).find((r) => r.key === key)!;
   }
 
   async log(operatorId: string | null, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {

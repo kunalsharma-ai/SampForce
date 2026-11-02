@@ -154,6 +154,8 @@ export const apiEnvSchema = z.object({
   PRICING_PUBLISHED: bool.default('false'),
   /** Shown for Enterprise Plus and custom quotes. Unset means no contact address is shown. */
   SALES_CONTACT_EMAIL: z.string().email().optional().or(z.literal('').transform(() => undefined)),
+  /** How often each API and worker process reloads provider keys saved in the operator console (ADR 0051). */
+  PROVIDER_KEYS_REFRESH_SECONDS: z.coerce.number().int().min(1).max(3600).default(10),
   /** Signs operator-console sessions. Unset disables the operator console entirely. */
   OPERATOR_JWT_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
 });
