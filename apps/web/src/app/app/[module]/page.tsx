@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
+import { Tr } from '@/lib/i18n';
 import { findModule, LATER, MODULES, PHASE_NAMES } from '@/lib/navigation';
 
 export function generateStaticParams() {
@@ -32,36 +33,48 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
             <m.icon className="size-5" aria-hidden />
           </span>
           <div>
-            <CardTitle>Not available yet</CardTitle>
+            <CardTitle>
+              <Tr text="Not available yet" />
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               {m.phase >= LATER ? (
-                <>Planned <Badge tone="primary">after launch</Badge>, not yet scheduled</>
+                <>
+                  <Tr text="Planned" /> <Badge tone="primary"><Tr text="after launch" /></Badge>, <Tr text="not yet scheduled" />
+                </>
               ) : (
-                <>Scheduled for <Badge tone="primary">Phase {m.phase}: {PHASE_NAMES[m.phase]}</Badge></>
+                <>
+                  <Tr text="Scheduled for" /> <Badge tone="primary"><Tr text="Phase {n}: {name}" vars={{ n: m.phase, name: PHASE_NAMES[m.phase] ?? '' }} /></Badge>
+                </>
               )}
             </p>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {m.phase >= LATER
-              ? 'Nothing in this module works yet. These are the capabilities under consideration; none has a date.'
-              : 'The data model for this module is designed and documented. Its screens, APIs and tests are built in the phase above and will replace this page when they pass acceptance tests.'}
+            <Tr
+              text={
+                m.phase >= LATER
+                  ? 'Nothing in this module works yet. These are the capabilities under consideration; none has a date.'
+                  : 'The data model for this module is designed and documented. Its screens, APIs and tests are built in the phase above and will replace this page when they pass acceptance tests.'
+              }
+            />
           </p>
           <ul className="space-y-2">
             {m.capabilities.map((c) => (
               <li key={c} className="flex items-start gap-2 text-sm">
                 <CircleDashed className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                {c}
+                <Tr text={c} />
               </li>
             ))}
           </ul>
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
             <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
-            Live today: the Command Center, CRM records and pipelines, tasks and activities, email and calendar sync, the Automation Studio and approvals, Copilot and the AI agents, forecasting, team roles and the audit log.
+            <Tr text="Live today: the Command Center, CRM records and pipelines, tasks and activities, email and calendar sync, the Automation Studio and approvals, Copilot and the AI agents, forecasting, team roles and the audit log." />
           </div>
           <Button asChild variant="outline">
-            <Link href="/app">Back to the Command Center</Link>
+            <Link href="/app">
+              <Tr text="Back to the Command Center" />
+            </Link>
           </Button>
         </CardContent>
       </Card>

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { Metadata } from 'next';
 import { PageHeader } from '@/components/page-header';
+import { Tr } from '@/lib/i18n';
 
 export const metadata: Metadata = { title: 'Help center' };
 
@@ -18,14 +19,20 @@ export default function HelpPage() {
       <PageHeader title="Help center" description="Answers for the current release." />
       <Card>
         <CardHeader>
-          <CardTitle>Frequently asked</CardTitle>
+          <CardTitle>
+            <Tr text="Frequently asked" />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="space-y-4">
             {TOPICS.map((t) => (
               <div key={t.q}>
-                <dt className="font-medium">{t.q}</dt>
-                <dd className="mt-1 text-sm text-muted-foreground">{t.a}</dd>
+                <dt className="font-medium">
+                  <Tr text={t.q} />
+                </dt>
+                <dd className="mt-1 text-sm text-muted-foreground">
+                  <Tr text={t.a} />
+                </dd>
               </div>
             ))}
           </dl>

@@ -15,11 +15,13 @@ import { relativeTime } from '@/lib/format';
 import { uploadFile, useCompanyPortal } from '@/lib/portal';
 import { useCan } from '@/lib/session';
 import { Composer, DocumentList, MessageThread, RequestStatus, UploadButton } from './thread';
+import { useT } from '@/lib/i18n';
 
 type Tab = 'people' | 'milestones' | 'documents' | 'messages' | 'requests';
 
 /** The client portal for one company: who has access, and what is shared with them. */
 export function CompanyPortal({ company }: { company: { id: string; name: string } }) {
+  const t = useT();
   const qc = useQueryClient();
   const portal = useCompanyPortal(company.id);
   const canWrite = useCan('companies:write');
@@ -34,18 +36,18 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Client portal</CardTitle>
+        <CardTitle className="text-base">{t('Client portal')}</CardTitle>
         {portal.data && (
           <p className="text-xs text-muted-foreground">
             {portal.data.url === null ? (
               <>
-                The portal is not set up yet. <Link className="text-primary underline underline-offset-2" href="/app/portal">Set it up</Link>
+                {t('The portal is not set up yet.')} <Link className="text-primary underline underline-offset-2" href="/app/portal">{t('Set it up')}</Link>
               </>
             ) : portal.data.enabled ? (
-              <>Customers sign in at {portal.data.url}</>
+              <>{t('Customers sign in at {url}', { url: portal.data.url ?? '' })}</>
             ) : (
               <>
-                The portal is switched off, so nobody can sign in. <Link className="text-primary underline underline-offset-2" href="/app/portal">Portal settings</Link>
+                {t('The portal is switched off, so nobody can sign in.')} <Link className="text-primary underline underline-offset-2" href="/app/portal">{t('Portal settings')}</Link>
               </>
             )}
           </p>
@@ -59,33 +61,33 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
         ) : (
           <>
             <Tabs
-              label={`${company.name} portal`}
+              label={t('{name} portal', { name: company.name })}
               value={tab}
               onChange={setTab}
               tabs={[
-                { key: 'people', label: `People (${portal.data.users.length})` },
-                { key: 'milestones', label: 'Milestones' },
-                { key: 'documents', label: `Documents (${portal.data.documents.length})` },
-                { key: 'messages', label: 'Messages' },
-                { key: 'requests', label: `Requests (${portal.data.requests.length})` },
+                { key: 'people', label: t('People ({n})', { n: portal.data.users.length }) },
+                { key: 'milestones', label: t('Milestones') },
+                { key: 'documents', label: t('Documents ({n})', { n: portal.data.documents.length }) },
+                { key: 'messages', label: t('Messages') },
+                { key: 'requests', label: t('Requests ({n})', { n: portal.data.requests.length }) },
               ]}
             />
             {tab === 'people' && <PeopleTab companyId={company.id} users={portal.data.users} canWrite={canWrite && portal.data.url !== null} onChange={refresh} />}
             {tab === 'milestones' && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Tick a task to show it to the customer as a milestone, with its title, due date and whether it is done. Descriptions stay internal.</p>
+                <p className="text-xs text-muted-foreground">{t('Tick a task to show it to the customer as a milestone, with its title, due date and whether it is done. Descriptions stay internal.')}</p>
                 {!portal.data.tasks.length ? (
-                  <p className="text-sm text-muted-foreground">No tasks on this company&apos;s deals or contacts yet.</p>
+                  <p className="text-sm text-muted-foreground">{t("No tasks on this company's deals or contacts yet.")}</p>
                 ) : (
                   <ul className="space-y-2 text-sm">
-                    {portal.data.tasks.map((t) => (
-                      <li key={t.id}>
+                    {portal.data.tasks.map((task) => (
+                      <li key={task.id}>
                         <label className="flex items-start gap-2">
-                          <input type="checkbox" className="mt-1" checked={t.portalVisible} disabled={!canTasks || share.isPending} onChange={(e) => share.mutate({ id: t.id, visible: e.target.checked })} aria-label={`Show "${t.title}" in portal`} />
+                          <input type="checkbox" className="mt-1" checked={task.portalVisible} disabled={!canTasks || share.isPending} onChange={(e) => share.mutate({ id: task.id, visible: e.target.checked })} aria-label={t('Show “{title}” in portal', { title: task.title })} />
                           <span className="flex-1">
-                            {t.title}
+                            {task.title}
                             <span className="block text-xs text-muted-foreground">
-                              {[t.deal, t.dueAt && `due ${formatDate(t.dueAt)}`, t.done && 'done'].filter(Boolean).join(' · ')}
+                              {[task.deal, task.dueAt && t('due {date}', { date: formatDate(task.dueAt) }), task.done && t('done')].filter(Boolean).join(' · ')}
                             </span>
                           </span>
                         </label>
@@ -97,20 +99,20 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
             )}
             {tab === 'documents' && (
               <div className="space-y-3">
-                {canWrite && <UploadButton label="Share a document" pending={upload.isPending} onFile={(f) => upload.mutate(f)} />}
+                {canWrite && <UploadButton label={t('Share a document')} pending={upload.isPending} onFile={(f) => upload.mutate(f)} />}
                 {(upload.error || remove.error) && <p role="alert" className="text-sm text-critical">{(upload.error ?? remove.error)?.message}</p>}
-                <DocumentList docs={portal.data.documents} mine="team" onRemove={canWrite ? (d) => { if (window.confirm(`Remove ${d.name} from the portal? The customer will no longer see it.`)) remove.mutate(d.id); } : undefined} />
+                <DocumentList docs={portal.data.documents} mine="team" onRemove={canWrite ? (d) => { if (window.confirm(t('Remove {name} from the portal? The customer will no longer see it.', { name: d.name }))) remove.mutate(d.id); } : undefined} />
               </div>
             )}
             {tab === 'messages' && (
               <div className="space-y-4">
-                <MessageThread messages={portal.data.messages} mine="team" empty="No messages with this customer yet." />
-                {canWrite && <Composer label="Message to the customer" button="Send message" pending={message.isPending} error={message.error} onSend={(b) => message.mutateAsync(b)} />}
+                <MessageThread messages={portal.data.messages} mine="team" empty={t('No messages with this customer yet.')} />
+                {canWrite && <Composer label={t('Message to the customer')} button={t('Send message')} pending={message.isPending} error={message.error} onSend={(b) => message.mutateAsync(b)} />}
               </div>
             )}
             {tab === 'requests' &&
               (!portal.data.requests.length ? (
-                <p className="text-sm text-muted-foreground">No requests from this customer.</p>
+                <p className="text-sm text-muted-foreground">{t('No requests from this customer.')}</p>
               ) : (
                 <ul className="divide-y divide-border text-sm">
                   {portal.data.requests.map((r) => (
@@ -119,7 +121,7 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
                         {r.subject}
                       </Link>
                       <span className="text-xs text-muted-foreground">
-                        {r.reference} · {PORTAL_REQUEST_CATEGORY_LABELS[r.category]} · {relativeTime(r.lastMessageAt)}
+                        {r.reference} · {t.maybe(PORTAL_REQUEST_CATEGORY_LABELS[r.category])} · {relativeTime(r.lastMessageAt)}
                       </span>
                       <RequestStatus status={r.status} />
                     </li>
@@ -134,6 +136,7 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
 }
 
 function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string; users: PortalUserRow[]; canWrite: boolean; onChange: () => void }) {
+  const t = useT();
   const [inviting, setInviting] = useState(false);
   const [link, setLink] = useState<{ url: string; emailed: boolean; name: string } | null>(null);
   const update = useMutation({ mutationFn: (x: { id: string; role?: PortalRole; status?: 'active' | 'disabled' }) => api(`/portal/users/${x.id}`, { method: 'PATCH', json: { role: x.role, status: x.status } }), onSuccess: onChange });
@@ -147,7 +150,7 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
     <div className="space-y-3">
       {link && <InviteLink {...link} onClose={() => setLink(null)} />}
       {err && <p role="alert" className="text-sm text-critical">{err.message}</p>}
-      {!users.length && !inviting && <p className="text-sm text-muted-foreground">Nobody at this company has portal access yet.</p>}
+      {!users.length && !inviting && <p className="text-sm text-muted-foreground">{t('Nobody at this company has portal access yet.')}</p>}
       {users.length > 0 && (
         <ul className="divide-y divide-border text-sm">
           {users.map((u) => (
@@ -155,36 +158,36 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
               <span className="min-w-40 flex-1">
                 <span className="block font-medium">{u.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {u.email} · {u.lastLoginAt ? `last signed in ${relativeTime(u.lastLoginAt)}` : 'never signed in'}
+                  {u.email} · {u.lastLoginAt ? t('last signed in {time}', { time: relativeTime(u.lastLoginAt) }) : t('never signed in')}
                 </span>
               </span>
               <UserStatus status={u.status} />
               {canWrite && (
                 <>
-                  <Select aria-label={`Access for ${u.name}`} className="h-8 w-auto text-xs" value={u.role} onChange={(e) => update.mutate({ id: u.id, role: e.target.value as PortalRole })}>
+                  <Select aria-label={t('Access for {name}', { name: u.name })} className="h-8 w-auto text-xs" value={u.role} onChange={(e) => update.mutate({ id: u.id, role: e.target.value as PortalRole })}>
                     {PORTAL_ROLES.map((r) => (
                       <option key={r} value={r}>
-                        {PORTAL_ROLE_LABELS[r]}
+                        {t.maybe(PORTAL_ROLE_LABELS[r])}
                       </option>
                     ))}
                   </Select>
                   {u.status === 'invited' && (
                     <Button type="button" size="sm" variant="outline" onClick={() => resend.mutate(u)}>
-                      New invitation link
+                      {t('New invitation link')}
                     </Button>
                   )}
                   {u.status === 'active' && (
                     <Button type="button" size="sm" variant="outline" onClick={() => update.mutate({ id: u.id, status: 'disabled' })}>
-                      Switch off
+                      {t('Switch off')}
                     </Button>
                   )}
                   {u.status === 'disabled' && (
                     <Button type="button" size="sm" variant="outline" onClick={() => update.mutate({ id: u.id, status: 'active' })}>
-                      Switch on
+                      {t('Switch on')}
                     </Button>
                   )}
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { if (window.confirm(`Remove ${u.name}'s portal access? Their messages and requests stay.`)) remove.mutate(u.id); }}>
-                    Remove
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { if (window.confirm(t('Remove portal access for {name}? Their messages and requests stay.', { name: u.name }))) remove.mutate(u.id); }}>
+                    {t('Remove')}
                   </Button>
                 </>
               )}
@@ -206,7 +209,7 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
           />
         ) : (
           <Button type="button" size="sm" onClick={() => setInviting(true)}>
-            Invite to portal
+            {t('Invite to portal')}
           </Button>
         ))}
     </div>
@@ -214,24 +217,26 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
 }
 
 function InviteLink({ url, emailed, name, onClose }: { url: string; emailed: boolean; name: string; onClose: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div role="status" className="space-y-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
-      <p>{emailed ? `We emailed ${name} an invitation. You can also share this link, which works for 7 days:` : `Email is not set up for this workspace, so send ${name} this link yourself. It works for 7 days:`}</p>
+      <p>{emailed ? t('We emailed {name} an invitation. You can also share this link, which works for 7 days:', { name }) : t('Email is not set up for this workspace, so send {name} this link yourself. It works for 7 days:', { name })}</p>
       <div className="flex gap-2">
-        <Input readOnly value={url} aria-label="Invitation link" className="font-mono text-xs" />
+        <Input readOnly value={url} aria-label={t('Invitation link')} className="font-mono text-xs" />
         <Button type="button" size="sm" variant="outline" onClick={() => void navigator.clipboard?.writeText(url).then(() => setCopied(true))}>
-          <Copy aria-hidden /> {copied ? 'Copied' : 'Copy'}
+          <Copy aria-hidden /> {copied ? t('Copied') : t('Copy')}
         </Button>
       </div>
       <Button type="button" size="sm" variant="ghost" onClick={onClose}>
-        Done
+        {t('Done')}
       </Button>
     </div>
   );
 }
 
 function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { url: string; emailed: boolean; name: string } | null) => void }) {
+  const t = useT();
   const contacts = useRecordList<ContactRow>('contacts', { companyId, pageSize: 50, sort: 'firstName', order: 'asc' });
   const [v, setV] = useState({ contactId: '', name: '', email: '', role: 'viewer' as PortalRole });
   const [error, setError] = useState<string | null>(null);
@@ -254,7 +259,7 @@ function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { ur
       }}
     >
       {withEmail.length > 0 && (
-        <Field id="pi-contact" label="Contact" hint="Pick a contact to fill in their name and email, or type them below.">
+        <Field id="pi-contact" label={t('Contact')} hint={t('Pick a contact to fill in their name and email, or type them below.')}>
           <Select
             id="pi-contact"
             value={v.contactId}
@@ -263,7 +268,7 @@ function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { ur
               setV({ ...v, contactId: e.target.value, ...(c ? { name: [c.firstName, c.lastName].filter(Boolean).join(' '), email: c.email ?? '' } : {}) });
             }}
           >
-            <option value="">Someone else</option>
+            <option value="">{t('Someone else')}</option>
             {withEmail.map((c) => (
               <option key={c.id} value={c.id}>
                 {[c.firstName, c.lastName].filter(Boolean).join(' ')} ({c.email})
@@ -273,18 +278,18 @@ function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { ur
         </Field>
       )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="pi-name" label="Name">
+        <Field id="pi-name" label={t('Name')}>
           <Input id="pi-name" value={v.name} maxLength={120} onChange={(e) => setV({ ...v, name: e.target.value })} />
         </Field>
-        <Field id="pi-email" label="Email">
+        <Field id="pi-email" label={t('Email')}>
           <Input id="pi-email" type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />
         </Field>
       </div>
-      <Field id="pi-role" label="Access">
+      <Field id="pi-role" label={t('Access')}>
         <Select id="pi-role" value={v.role} onChange={(e) => setV({ ...v, role: e.target.value as PortalRole })}>
           {PORTAL_ROLES.map((r) => (
             <option key={r} value={r}>
-              {PORTAL_ROLE_LABELS[r]}
+              {t.maybe(PORTAL_ROLE_LABELS[r])}
             </option>
           ))}
         </Select>
@@ -292,10 +297,10 @@ function InviteForm({ companyId, onDone }: { companyId: string; onDone: (r: { ur
       {(error || invite.error) && <p role="alert" className="text-sm text-critical">{error ?? invite.error?.message}</p>}
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={invite.isPending}>
-          Send invitation
+          {t('Send invitation')}
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={() => onDone(null)}>
-          Cancel
+          {t('Cancel')}
         </Button>
       </div>
     </form>

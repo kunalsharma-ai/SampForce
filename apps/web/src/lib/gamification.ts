@@ -2,6 +2,7 @@ import type { AwardRow, BadgeInput, BadgeRow, CompetitionInput, CompetitionRow, 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { fmtLocale } from '@/lib/i18n/locale';
+import type { Translator } from '@/lib/i18n';
 
 export function useGamificationMe() {
   return useQuery({ queryKey: ['gamification', 'me'], queryFn: () => api<GamificationMe>('/gamification/me') });
@@ -58,19 +59,20 @@ export const gamificationApi = {
 };
 
 /** Period labels for the selector: this month back five, this quarter and last, this year and last. */
-export function periodOptions(now = new Date()): { value: string; label: string }[] {
+export function periodOptions(t: Translator, now = new Date()): { value: string; label: string; last: boolean }[] {
   const y = now.getUTCFullYear();
   const m = now.getUTCMonth();
-  const out: { value: string; label: string }[] = [];
+  const out: { value: string; label: string; last: boolean }[] = [];
   for (let i = 0; i < 6; i++) {
     const d = new Date(Date.UTC(y, m - i, 1));
     const value = d.toISOString().slice(0, 7);
-    out.push({ value, label: `${i === 0 ? 'This month' : i === 1 ? 'Last month' : d.toLocaleDateString(fmtLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' })}${i < 2 ? ` (${d.toLocaleDateString(fmtLocale(), { month: 'short', year: 'numeric', timeZone: 'UTC' })})` : ''}` });
+    const short = d.toLocaleDateString(fmtLocale(), { month: 'short', year: 'numeric', timeZone: 'UTC' });
+    out.push({ value, last: i === 1, label: i === 0 ? t('This month ({month})', { month: short }) : i === 1 ? t('Last month ({month})', { month: short }) : d.toLocaleDateString(fmtLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' }) });
   }
   const q = Math.floor(m / 3) + 1;
-  out.push({ value: `${y}-Q${q}`, label: `This quarter (Q${q} ${y})` });
-  out.push(q === 1 ? { value: `${y - 1}-Q4`, label: `Last quarter (Q4 ${y - 1})` } : { value: `${y}-Q${q - 1}`, label: `Last quarter (Q${q - 1} ${y})` });
-  out.push({ value: `${y}`, label: `This year (${y})` });
-  out.push({ value: `${y - 1}`, label: `Last year (${y - 1})` });
+  out.push({ value: `${y}-Q${q}`, last: false, label: t('This quarter (Q{q} {year})', { q, year: y }) });
+  out.push(q === 1 ? { value: `${y - 1}-Q4`, last: true, label: t('Last quarter (Q{q} {year})', { q: 4, year: y - 1 }) } : { value: `${y}-Q${q - 1}`, last: true, label: t('Last quarter (Q{q} {year})', { q: q - 1, year: y }) });
+  out.push({ value: `${y}`, last: false, label: t('This year ({year})', { year: y }) });
+  out.push({ value: `${y - 1}`, last: true, label: t('Last year ({year})', { year: y - 1 }) });
   return out;
 }
