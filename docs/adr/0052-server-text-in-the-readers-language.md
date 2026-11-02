@@ -58,8 +58,28 @@ Not translated, on purpose:
 - **SCIM error responses** answer identity providers' provisioning clients, not people.
 - **Codes and identifiers**: error codes, permission codes, merge fields, environment variable names.
 
-The sentences the server composes for pages (insights, next actions, health signals), seeded starter content,
-emails, the proposal PDF, browser tab titles and AI drafts are later batches.
+The sentences the server composes for pages, seeded starter content, emails, PDFs, browser tab titles and AI
+drafts followed in the batches below.
+
+## Batch 2: sentences the server composes, and stored notifications
+
+- **Composed at request time** (insights, next best actions, record intelligence, the timeline, import results):
+  written with `tr(key, vars)` in the request's language, as whole sentences. Singular and plural are separate
+  keys ("1 open deal has…", "{n} open deals have…"), so each language gets correct grammar. Amounts and percentages
+  use the reader's number format (`money()`, `percent()`).
+- **Three catalogues.** `SERVER_TEXT` (errors, validation, stored values) is what finished text is matched against.
+  `NOTIFICATION_TEXT` adds notification wording. `ALL_SERVER_TEXT` adds the request-time sentences and is used only
+  by `tr()`. Broad patterns such as "{start} to {end}" therefore never translate ordinary data.
+- **Typed placeholders.** When matching finished text, `{n}`, `{count}`, `{days}` and the other count names match
+  numbers only, and `{date}`, `{start}`, `{end}` match `YYYY-MM-DD` only. A comma-separated list carried in a
+  placeholder (health signals) is translated item by item.
+- **Stored notifications** stay in English in the database, because a workspace's readers may use different
+  languages. They are translated when listed. Their sources were rewritten into whole-sentence variants so every
+  one has a row.
+- **Stored labels** (lead score, deal and customer health signals, pause and stop reasons) are matched the same way
+  when pages show them.
+- The scanner also reads `tr()` keys, notification titles and bodies, and signal labels, so a new sentence fails the
+  unit test until it has a row.
 
 ## Review
 
