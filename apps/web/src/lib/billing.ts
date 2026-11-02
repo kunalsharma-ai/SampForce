@@ -46,4 +46,4 @@ export const INVOICE_STATUS = {
   UNCOLLECTIBLE: { label: 'Uncollectible', tone: 'critical' },
 } as const;
 
-export const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
+export const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(fmtLocale(), { year: 'numeric', month: 'short', day: 'numeric' }) : '—');

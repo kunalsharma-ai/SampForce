@@ -112,6 +112,29 @@ proposal draft panels on lead and deal records. New tables: `communication` and 
 Still English here: email subjects and bodies, the AI's own summaries and drafts, the signal names and details the
 scoring API writes, provider error text from Zoom and mailbox syncs, and API error messages.
 
+## Scope of batch 5
+
+Translated: Quotes & Proposals (the quote list, the catalogue and price books, the quote editor with its lines, totals,
+discount approval and versions, the online proposal panel with tracking, payments and the send dialog), the Quick Bid
+Studio (all four steps, its checks, autosave and restore), the bid template gallery and previews, the upload zone,
+e-signature on quotes and contracts, Contracts (the list, renewals and the contract page with signature, renewal and
+termination), Approvals, Billing (plan, trial, seats, usage, plans and invoices), the permission notice and the
+commercial panels on records. New tables: `quotes` and `contracts`; new plural keys `count.prices`,
+`count.suggestedSections`, `count.proposalOpened`, `count.startingSections`, `count.daysLeft`, `count.endedDaysAgo`,
+`count.daysBeforeEnd`, `count.seats`, `count.tryFreeDays` and `count.pipelines`.
+
+- **Template names, categories and descriptions** (the ten bid templates and the proposal templates), plan audiences,
+  quote, contract, invoice, subscription, payment, envelope and approval statuses, signature methods and the Quick Bid
+  checks go through `t.maybe` and are checked by the data-label test, read from the source where they are defined.
+- **The upload zone's file checks** take the translator as an argument, with an English default, so the shared
+  `fileProblem` check stays usable in tests and outside React.
+- **Names stay as they are**: plan names ("DealFlow Professional"), Stripe and Razorpay, and money in the format
+  locale.
+
+Still English here: the section text a bid template starts with and the example lines in the gallery preview (it is
+proposal text people replace), what customers see on the public proposal page, PDF and email text sent to customers,
+and API and payment provider error messages.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

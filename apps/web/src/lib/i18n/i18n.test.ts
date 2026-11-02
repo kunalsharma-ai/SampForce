@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   ACTIVITY_TYPES,
+  BID_TEMPLATES,
   DEAL_PRIORITIES,
   DEAL_RISK_LABELS,
   EMAIL_BLOCK_LABELS,
@@ -17,6 +18,8 @@ import {
   MEETING_PLATFORM_LABELS,
   MERGE_FIELDS,
   NEXT_ACTION_LABELS,
+  PLAN_CATALOG,
+  PROPOSAL_TEMPLATES,
   RULE_ACTION_LABELS,
   SSO_ERRORS,
   THEMES,
@@ -126,6 +129,23 @@ describe('page phrases', () => {
     ['Zoom transcript states', [...source('../../components/meetings/zoom-meetings.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)],
     ['compose and meeting analysis checks', [...source('../../../../../packages/types/src/meetings.ts').matchAll(/min\(1, '([^']+)'\)|message: '([^']+)'/g), ...source('../../../../../packages/types/src/automation.ts').matchAll(/(?:subject|body): z\.string\(\)(?:\.trim\(\))?\.min\(1, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     ['AI availability reasons', [...source('../../../../api/src/ai/gateway.service.ts').matchAll(/\? '([^']+\.)'/g)].map((m) => m[1]!).filter((r) => !r.startsWith('An API key'))],
+    // Quotes, contracts, approvals and billing: statuses from lib/revenue and lib/billing, bid and proposal templates,
+    // plan audiences, the screens' own label maps, and the Quick Bid Studio's checks.
+    ['revenue and billing statuses', (source('../revenue.ts') + source('../billing.ts')).match(/label: '[^']+'/g)!.map((m) => m.slice(8, -1))],
+    ['bid and proposal templates', [...BID_TEMPLATES.flatMap((b) => [b.name, b.category, b.description]), ...PROPOSAL_TEMPLATES.map((p) => p.name)]],
+    ['plan audiences', PLAN_CATALOG.map((p) => p.audience)],
+    [
+      'commercial screen labels',
+      [
+        ['../../app/app/quotes/[id]/proposal-panel.tsx', /label: '([^']+)', tone/g],
+        ['../../components/revenue/esignature.tsx', /label: '([^']+)', tone/g],
+        ['../../app/app/contracts/[id]/contract-detail.tsx', /(?:wet_ink|email_confirmation|external_esign|docusign): '([^']+)'/g],
+        ['../../app/app/billing/billing-workspace.tsx', /OFFLINE: '([^']+)'/g], // Stripe and Razorpay are names.
+        ['../../app/app/quotes/quick/quick-bid-studio.tsx', /\] = '([^']+)';/g],
+        ['../../app/app/quotes/quick/quick-bid-studio.tsx', /const STEPS = \[([^\]]+)\]/g],
+      ].flatMap(([file, re]) => [...source(file as string).matchAll(re as RegExp)].flatMap((m) => m[1]!.split(/', '/).map((x) => x.replace(/^'|'$/g, '')))),
+    ],
+    ['approval statuses', ['Pending', 'Approved', 'Rejected', 'Expired', 'Canceled']],
     ['auth validation messages', [...[...source('../../../../../packages/types/src/auth.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!), 'Invalid email']],
   ];
   for (const [name, labels] of dataLabels)

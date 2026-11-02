@@ -33,6 +33,7 @@ import {
   useTaxRates,
 } from '@/lib/revenue';
 import { useSession } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 /**
  * Design spec Part 6: Quick Bid Studio. Four steps (client, template, items and pricing, review and send)
@@ -148,6 +149,7 @@ export function QuickBidStudio() {
 }
 
 function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; onCreated?: (id: string) => void }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -247,13 +249,13 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
         setSave({ kind: 'saved', at: new Date() });
         return row;
       } catch (err) {
-        setSave({ kind: 'error', message: err instanceof Error ? err.message : 'Could not save.' });
+        setSave({ kind: 'error', message: err instanceof Error ? err.message : t('Could not save.') });
         return null;
       }
     });
     chain.current = run;
     return run;
-  }, [quoteRow?.id, qc]);
+  }, [quoteRow?.id, qc, t]);
 
   useEffect(() => {
     if (firstRender.current) {
@@ -313,7 +315,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
   const submit = useMutation({
     mutationFn: async () => {
       const saved = await flush();
-      if (!saved) throw new Error('The bid was not submitted because its latest changes could not be saved. Fix the highlighted fields or try again.');
+      if (!saved) throw new Error(t('The bid was not submitted because its latest changes could not be saved. Fix the highlighted fields or try again.'));
       return api<QuoteRow>(`/quotes/${quoteRow!.id}/transition`, { method: 'POST', json: { action: 'submit' } });
     },
     onSuccess: async (row) => {
@@ -347,7 +349,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
   const taxById = new Map((taxes.data ?? []).map((t) => [t.id, t]));
   const priceOf = (productId: string) => productById.get(productId)?.prices.find((p) => p.priceBookId === draft.priceBookId)?.unitPrice;
   const previewLines: PreviewLine[] = draft.lines.map((l) => ({
-    name: productById.get(l.productId)?.name ?? 'Item',
+    name: productById.get(l.productId)?.name ?? t('Item'),
     description: productById.get(l.productId)?.description ?? null,
     quantity: Number(l.quantity) > 0 ? Number(l.quantity) : 0,
     unitPrice: priceOf(l.productId) ?? 0,
@@ -363,7 +365,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
     () =>
       previewProposal({
         seller: {
-          name: session?.tenant.name ?? 'Your company',
+          name: session?.tenant.name ?? t('Your company'),
           logoDataUrl: settings.data?.logoDataUrl,
           header: settings.data?.proposalHeader,
           footer: settings.data?.proposalFooter,
@@ -389,7 +391,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
   const errorFor = (id: string) =>
     err(id) ? (
       <p id={`${id}-error`} className="text-xs text-critical">
-        {err(id)}
+        {t.maybe(err(id) ?? '')}
       </p>
     ) : null;
 
@@ -415,10 +417,10 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
   return (
     <div className="space-y-4">
       <Link href="/app/quotes" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> All quotes
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t('All quotes')}
       </Link>
 
-      <nav aria-label="Bid steps">
+      <nav aria-label={t('Bid steps')}>
         <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STEPS.map((label, i) => {
             const done = i < step && reachable(i);
@@ -449,9 +451,9 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                     {done ? <Check className="size-3.5" /> : i + 1}
                   </span>
                   <span>
-                    <span className="sr-only">Step {i + 1} of 4: </span>
-                    {label}
-                    {done && <span className="sr-only"> (done)</span>}
+                    <span className="sr-only">{t('Step {n} of {total}:', { n: i + 1, total: STEPS.length })} </span>
+                    {t(label)}
+                    {done && <span className="sr-only"> {t('(done)')}</span>}
                   </span>
                 </button>
               </li>
@@ -473,7 +475,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
         <SaveStatus save={save} stored={!quoteRow} />
         {restored && (
           <span className="text-muted-foreground">
-            Restored the bid you started earlier on this device.{' '}
+            {t('Restored the bid you started earlier on this device.')}{' '}
             <button
               type="button"
               className="text-primary underline underline-offset-2"
@@ -483,7 +485,7 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                 setDraft(blank(null, null));
               }}
             >
-              Start over
+              {t('Start over')}
             </button>
           </span>
         )}
@@ -493,31 +495,30 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
         <Card>
           <CardContent className="space-y-4 p-4 sm:p-5">
             <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold focus:outline-none">
-              {STEPS[step]}
+              {t(STEPS[step]!)}
             </h2>
             {!editable && step < 3 && (
               <p className="rounded-md border border-border bg-muted/40 p-2 text-sm">
-                This bid has been submitted, so it can no longer be edited here. Revise it from the{' '}
+                {t('This bid has been submitted, so it can no longer be edited here.')}{' '}
                 <Link href={`/app/quotes/${quoteRow!.id}`} className="text-primary underline underline-offset-2">
-                  full quote
-                </Link>{' '}
-                to make a new version.
+                  {t('Revise it from the full quote')}
+                </Link>
               </p>
             )}
 
             {step === 0 && (
               <div className="space-y-3">
-                <Field id="qb-deal" label="Deal">
+                <Field id="qb-deal" label={t('Deal')}>
                   {quoteRow ? (
                     <p className="text-sm">{quoteRow.deal.name}{quoteRow.deal.companyName && ` · ${quoteRow.deal.companyName}`}</p>
                   ) : (
-                    <RecordPicker id="qb-deal" entity="deals" value={draft.deal} onChange={(v) => update({ deal: v, priceBookId: '', title: draft.title || (v ? `Proposal for ${v.name}` : '') })} placeholder="Search deals" {...described('qb-deal')} />
+                    <RecordPicker id="qb-deal" entity="deals" value={draft.deal} onChange={(v) => update({ deal: v, priceBookId: '', title: draft.title || (v ? t('Proposal for {name}', { name: v.name }) : '') })} placeholder={t('Search deals')} {...described('qb-deal')} />
                   )}
                 </Field>
                 {errorFor("qb-deal")}
-                <Field id="qb-book" label="Price book" hint={quoteRow ? 'Fixed once the bid is created.' : `Prices come from the price book, and the bid uses its currency${deal.data ? ` (the deal is in ${deal.data.currency})` : ''}.`}>
+                <Field id="qb-book" label={t('Price book')} hint={quoteRow ? t('Fixed once the bid is created.') : deal.data ? t('Prices come from the price book, and the bid uses its currency (the deal is in {currency}).', { currency: deal.data.currency }) : t('Prices come from the price book, and the bid uses its currency.')}>
                   <Select id="qb-book" value={draft.priceBookId} disabled={!!quoteRow} onChange={(e) => update({ priceBookId: e.target.value })} {...described('qb-book')}>
-                    <option value="">Choose a price book</option>
+                    <option value="">{t('Choose a price book')}</option>
                     {(quoteRow ? (books.data ?? []) : activeBooks).map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name} ({b.currency}){b.isDefault ? ', default' : ''}
@@ -526,19 +527,19 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                   </Select>
                 </Field>
                 {errorFor("qb-book")}
-                <Field id="qb-title" label="Title">
+                <Field id="qb-title" label={t('Title')}>
                   <Input id="qb-title" value={draft.title} maxLength={200} disabled={disabled} onChange={(e) => update({ title: e.target.value })} {...described('qb-title')} />
                 </Field>
                 {errorFor("qb-title")}
-                {!quoteRow && <p className="text-xs text-muted-foreground">Continuing creates a draft quote on the deal. Nothing is sent to the customer until you choose to.</p>}
+                {!quoteRow && <p className="text-xs text-muted-foreground">{t('Continuing creates a draft quote on the deal. Nothing is sent to the customer until you choose to.')}</p>}
               </div>
             )}
 
             {step === 1 && (
               <div className="space-y-4">
-                <div role="group" aria-label="Template" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div role="group" aria-label={t('Template')} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {[null, ...BID_TEMPLATES.map((t) => t.key)].map((key) => {
-                    const t = bidTemplate(key);
+                    const tpl = bidTemplate(key);
                     const checked = draft.templateKey === key;
                     return (
                       <button
@@ -549,8 +550,8 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                         onClick={() => chooseTemplate(key)}
                         className="rounded-md border border-border p-1.5 text-start text-xs aria-pressed:border-primary aria-pressed:ring-2 aria-pressed:ring-primary/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        {t ? <TemplateThumb template={t} accent={checked ? (draft.accentColor ?? undefined) : undefined} /> : <span className="grid aspect-[4/3] place-items-center rounded-md border border-dashed border-border text-muted-foreground">Plain</span>}
-                        <span className="mt-1 block truncate font-medium">{t?.name ?? 'Plain (workspace brand)'}</span>
+                        {tpl ? <TemplateThumb template={tpl} accent={checked ? (draft.accentColor ?? undefined) : undefined} /> : <span className="grid aspect-[4/3] place-items-center rounded-md border border-dashed border-border text-muted-foreground">{t('Plain')}</span>}
+                        <span className="mt-1 block truncate font-medium">{tpl ? t.maybe(tpl.name) : t('Plain (workspace brand)')}</span>
                       </button>
                     );
                   })}
@@ -558,39 +559,39 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                 {template && <AccentPicker value={draft.accentColor} templateAccent={template.style.accent} disabled={disabled} onChange={(a) => update({ accentColor: a })} />}
                 {template && JSON.stringify(draft.sections) !== JSON.stringify(template.sections) && editable && (
                   <Button type="button" size="sm" variant="outline" onClick={() => update({ sections: template.sections.map((s) => ({ ...s })) })}>
-                    Replace sections with {template.name} starting sections
+                    {t('Replace sections with {template} starting sections', { template: t.maybe(template.name) })}
                   </Button>
                 )}
                 <fieldset className="space-y-3">
-                  <legend className="text-sm font-medium">Sections</legend>
-                  {draft.sections.length === 0 && <p className="text-sm text-muted-foreground">No sections: the bid shows the price table only.</p>}
+                  <legend className="text-sm font-medium">{t('Sections')}</legend>
+                  {draft.sections.length === 0 && <p className="text-sm text-muted-foreground">{t('No sections: the bid shows the price table only.')}</p>}
                   {draft.sections.map((s, i) => (
                     <div key={i} className="space-y-2 rounded-md border border-border p-3">
                       <div className="flex items-center gap-1">
                         <label htmlFor={`qb-sec-${i}-heading`} className="sr-only">
-                          Section {i + 1} heading
+                          {t('Section {n} heading', { n: i + 1 })}
                         </label>
                         <Input id={`qb-sec-${i}-heading`} value={s.heading} maxLength={120} disabled={disabled} onChange={(e) => setSection(i, { heading: e.target.value })} className="h-9 font-medium" {...described(`qb-sec-${i}-heading`)} />
-                        <Button type="button" size="icon" variant="ghost" aria-label={`Move section ${i + 1} up`} disabled={disabled || i === 0} onClick={() => moveSection(i, -1)}>
+                        <Button type="button" size="icon" variant="ghost" aria-label={t('Move section {n} up', { n: i + 1 })} disabled={disabled || i === 0} onClick={() => moveSection(i, -1)}>
                           <ArrowUp className="size-4" aria-hidden />
                         </Button>
-                        <Button type="button" size="icon" variant="ghost" aria-label={`Move section ${i + 1} down`} disabled={disabled || i === draft.sections.length - 1} onClick={() => moveSection(i, 1)}>
+                        <Button type="button" size="icon" variant="ghost" aria-label={t('Move section {n} down', { n: i + 1 })} disabled={disabled || i === draft.sections.length - 1} onClick={() => moveSection(i, 1)}>
                           <ArrowDown className="size-4" aria-hidden />
                         </Button>
-                        <Button type="button" size="icon" variant="ghost" aria-label={`Remove section ${i + 1}`} disabled={disabled} onClick={() => update({ sections: draft.sections.filter((_, j) => j !== i) })}>
+                        <Button type="button" size="icon" variant="ghost" aria-label={t('Remove section {n}', { n: i + 1 })} disabled={disabled} onClick={() => update({ sections: draft.sections.filter((_, j) => j !== i) })}>
                           <Trash2 className="size-4" aria-hidden />
                         </Button>
                       </div>
                       {errorFor(`qb-sec-${i}-heading`)}
                       <label htmlFor={`qb-sec-${i}-body`} className="sr-only">
-                        Section {i + 1} text
+                        {t('Section {n} text', { n: i + 1 })}
                       </label>
                       <Textarea id={`qb-sec-${i}-body`} rows={3} maxLength={8000} value={s.body} disabled={disabled} onChange={(e) => setSection(i, { body: e.target.value })} />
                     </div>
                   ))}
                   {editable && draft.sections.length < 20 && (
-                    <Button type="button" size="sm" variant="ghost" onClick={() => update({ sections: [...draft.sections, { heading: 'New section', body: '' }] })}>
-                      <Plus aria-hidden /> Add section
+                    <Button type="button" size="sm" variant="ghost" onClick={() => update({ sections: [...draft.sections, { heading: t('New section'), body: '' }] })}>
+                      <Plus aria-hidden /> {t('Add section')}
                     </Button>
                   )}
                 </fieldset>
@@ -602,9 +603,9 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                 {editable && (
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-end gap-2">
-                      <Field id="qb-add-product" label="Add an item" className="min-w-0 flex-1">
+                      <Field id="qb-add-product" label={t('Add an item')} className="min-w-0 flex-1">
                         <Select id="qb-add-product" value={adding} onChange={(e) => setAdding(e.target.value)} {...described('qb-add-product')}>
-                          <option value="">Choose a product</option>
+                          <option value="">{t('Choose a product')}</option>
                           {priced.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name} · {formatAmount(priceOf(p.id) ?? 0, currency)}
@@ -621,17 +622,17 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                           setAdding('');
                         }}
                       >
-                        <Plus aria-hidden /> Add
+                        <Plus aria-hidden /> {t('Add')}
                       </Button>
                     </div>
                     {errorFor("qb-add-product")}
-                    {products.data && priced.length === 0 && <p className="text-xs text-muted-foreground">No active products have a price in this price book yet. Add prices under Quotes › Catalogue and pricing.</p>}
+                    {products.data && priced.length === 0 && <p className="text-xs text-muted-foreground">{t('No active products have a price in this price book yet. Add prices under Quotes › Catalogue and pricing.')}</p>}
                   </div>
                 )}
                 {draft.lines.length > 0 && (
-                  <ul aria-label="Items" className="divide-y divide-border rounded-md border border-border">
+                  <ul aria-label={t('Items')} className="divide-y divide-border rounded-md border border-border">
                     {draft.lines.map((l, i) => {
-                      const name = productById.get(l.productId)?.name ?? 'Unknown product';
+                      const name = productById.get(l.productId)?.name ?? t('Unknown product');
                       const over = threshold !== undefined && Number(l.discountPercent) > threshold;
                       return (
                         <li key={i} className="space-y-2 p-3">
@@ -642,37 +643,37 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                           <div className="flex flex-wrap items-start gap-2">
                             <div className="w-24 space-y-1">
                               <label htmlFor={`qb-line-${i}-qty`} className="text-xs text-muted-foreground">
-                                Quantity
+                                {t('Quantity')}
                               </label>
                               <Input id={`qb-line-${i}-qty`} inputMode="decimal" value={l.quantity} disabled={disabled} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-end" {...described(`qb-line-${i}-qty`)} />
                               {errorFor(`qb-line-${i}-qty`)}
                             </div>
                             <div className="w-24 space-y-1">
                               <label htmlFor={`qb-line-${i}-disc`} className="text-xs text-muted-foreground">
-                                Discount %
+                                {t('Discount %')}
                               </label>
                               <Input id={`qb-line-${i}-disc`} inputMode="decimal" value={l.discountPercent} disabled={disabled} onChange={(e) => setLine(i, { discountPercent: e.target.value })} className="h-9 text-end" {...described(`qb-line-${i}-disc`)} />
                               {errorFor(`qb-line-${i}-disc`)}
-                              {over && !err(`qb-line-${i}-disc`) && <p className="text-[11px] text-warning">Needs approval</p>}
+                              {over && !err(`qb-line-${i}-disc`) && <p className="text-[11px] text-warning">{t('Needs approval')}</p>}
                             </div>
                             <div className="w-36 space-y-1">
                               <label htmlFor={`qb-line-${i}-tax`} className="text-xs text-muted-foreground">
-                                Tax
+                                {t('Tax')}
                               </label>
                               <Select id={`qb-line-${i}-tax`} value={l.taxRateId} disabled={disabled} onChange={(e) => setLine(i, { taxRateId: e.target.value })} className="h-9">
-                                <option value="">No tax</option>
+                                <option value="">{t('No tax')}</option>
                                 {(taxes.data ?? [])
-                                  .filter((t) => t.active)
-                                  .map((t) => (
-                                    <option key={t.id} value={t.id}>
-                                      {t.name} ({t.rate}%)
+                                  .filter((r) => r.active)
+                                  .map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                      {r.name} ({r.rate}%)
                                     </option>
                                   ))}
                               </Select>
                             </div>
-                            <span className="self-end pb-2 text-xs text-muted-foreground">at {formatAmount(priceOf(l.productId) ?? null, currency)} each</span>
+                            <span className="self-end pb-2 text-xs text-muted-foreground">{t('at {price} each', { price: formatAmount(priceOf(l.productId) ?? null, currency) })}</span>
                             {editable && (
-                              <Button type="button" size="icon" variant="ghost" className="ms-auto self-end" aria-label={`Remove ${name}`} onClick={() => update({ lines: draft.lines.filter((_, j) => j !== i) })}>
+                              <Button type="button" size="icon" variant="ghost" className="ms-auto self-end" aria-label={t('Remove {name}', { name })} onClick={() => update({ lines: draft.lines.filter((_, j) => j !== i) })}>
                                 <Trash2 className="size-4" aria-hidden />
                               </Button>
                             )}
@@ -683,23 +684,23 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
                   </ul>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field id="qb-valid" label="Valid until">
+                  <Field id="qb-valid" label={t('Valid until')}>
                     <Input id="qb-valid" type="date" value={draft.validUntil} disabled={disabled} onChange={(e) => update({ validUntil: e.target.value })} {...described('qb-valid')} />
                   </Field>
                   <dl className="space-y-1 self-end text-sm tabular-nums">
-                    <Total label="Subtotal" value={formatAmount(totals.subtotal, currency)} />
-                    {totals.discountTotal > 0 && <Total label="Discount" value={`−${formatAmount(totals.discountTotal, currency)}`} />}
-                    <Total label="Tax" value={formatAmount(totals.taxTotal, currency)} />
-                    <Total label="Total" value={formatAmount(totals.total, currency)} strong />
+                    <Total label={t('Subtotal')} value={formatAmount(totals.subtotal, currency)} />
+                    {totals.discountTotal > 0 && <Total label={t('Discount')} value={`−${formatAmount(totals.discountTotal, currency)}`} />}
+                    <Total label={t('Tax')} value={formatAmount(totals.taxTotal, currency)} />
+                    <Total label={t('Total')} value={formatAmount(totals.total, currency)} strong />
                   </dl>
                 </div>
                 {errorFor("qb-valid")}
                 {needsApproval && (
                   <p className="rounded-md border border-warning/40 bg-warning/5 p-2 text-sm">
-                    A discount is above your workspace limit of {threshold}%, so this bid will need approval from someone else before it can be sent.
+                    {t('A discount is above your workspace limit of {threshold}%, so this bid will need approval from someone else before it can be sent.', { threshold: threshold ?? 0 })}
                   </p>
                 )}
-                <Field id="qb-terms" label="Terms">
+                <Field id="qb-terms" label={t('Terms')}>
                   <Textarea id="qb-terms" rows={4} maxLength={5000} value={draft.terms} disabled={disabled} onChange={(e) => update({ terms: e.target.value })} />
                 </Field>
               </div>
@@ -708,34 +709,34 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
             {step === 3 && quoteRow && (
               <div className="space-y-4">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                  <dt className="text-muted-foreground">For</dt>
+                  <dt className="text-muted-foreground">{t('For')}</dt>
                   <dd>{quoteRow.deal.name}{quoteRow.deal.companyName && ` · ${quoteRow.deal.companyName}`}</dd>
-                  <dt className="text-muted-foreground">Template</dt>
-                  <dd>{template?.name ?? 'Plain'}{draft.accentColor ? `, accent ${draft.accentColor}` : ''}</dd>
-                  <dt className="text-muted-foreground">Items</dt>
+                  <dt className="text-muted-foreground">{t('Template')}</dt>
+                  <dd>{template ? t.maybe(template.name) : t('Plain')}{draft.accentColor ? t(', accent {colour}', { colour: draft.accentColor }) : ''}</dd>
+                  <dt className="text-muted-foreground">{t('Items')}</dt>
                   <dd>{draft.lines.length}</dd>
-                  <dt className="text-muted-foreground">Total</dt>
+                  <dt className="text-muted-foreground">{t('Total')}</dt>
                   <dd className="font-semibold tabular-nums">{formatAmount(editable ? totals.total : quoteRow.total, currency)}</dd>
                 </dl>
                 <div className="flex flex-wrap gap-2">
                   {editable && (
                     <Button type="button" disabled={submit.isPending || draft.lines.length === 0} onClick={() => submit.mutate()}>
-                      <Send aria-hidden /> {needsApproval ? 'Submit for approval' : 'Finalise bid'}
+                      <Send aria-hidden /> {needsApproval ? t('Submit for approval') : t('Finalise bid')}
                     </Button>
                   )}
                   <Button type="button" variant="outline" onClick={async () => { await flush(); void downloadFile(`/quotes/${quoteRow.id}/pdf`, `${quoteRow.reference.replace(/\s+/g, '-')}.pdf`); }}>
                     <Download aria-hidden /> PDF
                   </Button>
                   <Link href={`/app/quotes/${quoteRow.id}`} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-primary hover:underline">
-                    Open full quote
+                    {t('Open full quote')}
                   </Link>
                 </div>
-                {editable && draft.lines.length === 0 && <p className="text-xs text-muted-foreground">Add at least one item before finalising.</p>}
+                {editable && draft.lines.length === 0 && <p className="text-xs text-muted-foreground">{t('Add at least one item before finalising.')}</p>}
                 <ErrorText error={submit.error} />
                 {quoteRow.status === 'PENDING_APPROVAL' && (
-                  <p className="rounded-md border border-border bg-muted/40 p-2 text-sm">Waiting for approval. Someone with permission to approve quotes has been asked to review the discount; you can share the bid once it is approved.</p>
+                  <p className="rounded-md border border-border bg-muted/40 p-2 text-sm">{t('Waiting for approval. Someone with permission to approve quotes has been asked to review the discount; you can share the bid once it is approved.')}</p>
                 )}
-                {quoteRow.status === 'APPROVED' && <p className="text-sm">The bid is ready. Turn the link on to copy it, or email it from your mailbox.</p>}
+                {quoteRow.status === 'APPROVED' && <p className="text-sm">{t('The bid is ready. Turn the link on to copy it, or email it from your mailbox.')}</p>}
                 <ProposalSharing
                   quote={quoteRow}
                   onSent={async () => {
@@ -750,11 +751,11 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
             <ErrorText error={create.error} />
             <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
               <Button type="button" variant="ghost" disabled={step === 0} onClick={() => { void flush(); go(step - 1); }}>
-                <ArrowLeft className="rtl:-scale-x-100" aria-hidden /> Back
+                <ArrowLeft className="rtl:-scale-x-100" aria-hidden /> {t('Back')}
               </Button>
               {step < 3 && (
                 <Button type="button" onClick={next} disabled={create.isPending}>
-                  {step === 0 && !quoteRow ? (create.isPending ? 'Creating…' : 'Create draft and continue') : 'Continue'} <ArrowRight className="rtl:-scale-x-100" aria-hidden />
+                  {step === 0 && !quoteRow ? (create.isPending ? t('Creating…') : t('Create draft and continue')) : t('Continue')} <ArrowRight className="rtl:-scale-x-100" aria-hidden />
                 </Button>
               )}
             </div>
@@ -763,10 +764,10 @@ function Studio({ initialQuote, onCreated }: { initialQuote: QuoteRow | null; on
 
         <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
           <Button type="button" variant="outline" size="sm" className="lg:hidden" aria-expanded={showPreview} aria-controls="qb-preview" onClick={() => setShowPreview((s) => !s)}>
-            {showPreview ? <EyeOff aria-hidden /> : <Eye aria-hidden />} {showPreview ? 'Hide preview' : 'Show preview'}
+            {showPreview ? <EyeOff aria-hidden /> : <Eye aria-hidden />} {showPreview ? t('Hide preview') : t('Show preview')}
           </Button>
           <div id="qb-preview" className={showPreview ? 'block' : 'hidden lg:block'}>
-            <ProposalPreview proposal={proposal} label="Live preview of the customer's proposal" />
+            <ProposalPreview proposal={proposal} label={t("Live preview of the customer's proposal")} />
           </div>
         </div>
       </div>
@@ -784,16 +785,17 @@ function Total({ label, value, strong }: { label: string; value: string; strong?
 }
 
 function SaveStatus({ save, stored }: { save: SaveState; stored: boolean }) {
-  if (stored) return <span className="text-muted-foreground">Draft kept on this device until you continue.</span>;
+  const t = useT();
+  if (stored) return <span className="text-muted-foreground">{t('Draft kept on this device until you continue.')}</span>;
   switch (save.kind) {
     case 'saving':
-      return <span className="text-muted-foreground">Saving…</span>;
+      return <span className="text-muted-foreground">{t('Saving…')}</span>;
     case 'saved':
-      return <span className="text-muted-foreground">Saved at {save.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>;
+      return <span className="text-muted-foreground">{t('Saved at {time}', { time: save.at.toLocaleTimeString(t.language, { hour: '2-digit', minute: '2-digit' }) })}</span>;
     case 'invalid':
-      return <span className="text-warning">Not saved: fix the highlighted fields.</span>;
+      return <span className="text-warning">{t('Not saved: fix the highlighted fields.')}</span>;
     case 'error':
-      return <span className="text-critical">Not saved: {save.message}</span>;
+      return <span className="text-critical">{t('Not saved: {reason}', { reason: t.maybe(save.message) })}</span>;
     default:
       return null;
   }

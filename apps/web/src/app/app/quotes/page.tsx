@@ -2,6 +2,7 @@ import { LayoutTemplate, Zap } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
+import { Tr } from '@/lib/i18n';
 import { RequirePermission } from '@/components/require-permission';
 import { QuotesWorkspace } from './quotes-workspace';
 
@@ -16,10 +17,10 @@ export default function QuotesPage() {
         actions={
           <>
             <Link href="/app/quotes/templates" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium hover:bg-muted">
-              <LayoutTemplate className="size-4" aria-hidden /> Bid templates
+              <LayoutTemplate className="size-4" aria-hidden /> <Tr text="Bid templates" />
             </Link>
             <Link href="/app/quotes/quick" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-              <Zap className="size-4" aria-hidden /> Quick Bid Studio
+              <Zap className="size-4" aria-hidden /> <Tr text="Quick Bid Studio" />
             </Link>
           </>
         }

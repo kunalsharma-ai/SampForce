@@ -10,15 +10,17 @@ import { api } from '@/lib/api';
 import { useApprovals } from '@/lib/automation';
 import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 const STATUS_TONE = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'critical', EXPIRED: 'neutral', CANCELED: 'neutral' } as const;
 
 export function ApprovalsInbox() {
+  const t = useT();
   const [view, setView] = useState<'PENDING' | 'DECIDED'>('PENDING');
   const list = useApprovals(view);
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="Approval status" className="flex gap-1 border-b border-border">
+      <div role="tablist" aria-label={t('Approval status')} className="flex gap-1 border-b border-border">
         {(['PENDING', 'DECIDED'] as const).map((v) => (
           <button
             key={v}
@@ -28,14 +30,14 @@ export function ApprovalsInbox() {
             onClick={() => setView(v)}
             className={`-mb-px border-b-2 px-3 py-2 text-sm ${view === v ? 'border-primary font-medium' : 'border-transparent text-muted-foreground'}`}
           >
-            {v === 'PENDING' ? 'Waiting' : 'Decided'}
+            {v === 'PENDING' ? t('Waiting') : t('Decided')}
           </button>
         ))}
       </div>
       {list.isPending ? (
         <Skeleton className="h-32" />
       ) : list.data?.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">{view === 'PENDING' ? 'Nothing is waiting for approval.' : 'No decisions yet.'}</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">{view === 'PENDING' ? t('Nothing is waiting for approval.') : t('No decisions yet.')}</p>
       ) : (
         <ul className="space-y-3">
           {list.data?.map((a) => (
@@ -48,6 +50,7 @@ export function ApprovalsInbox() {
 }
 
 function ApprovalCard({ approval: a }: { approval: ApprovalRow }) {
+  const t = useT();
   const qc = useQueryClient();
   const [note, setNote] = useState('');
   const decide = useMutation({
@@ -61,40 +64,40 @@ function ApprovalCard({ approval: a }: { approval: ApprovalRow }) {
         <CardContent className="space-y-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-semibold">{a.title}</h2>
-            <Badge tone={STATUS_TONE[a.status]}>{a.status.charAt(0) + a.status.slice(1).toLowerCase()}</Badge>
-            {a.kind === 'quote_discount' ? <Badge tone="accent">Quote discount</Badge> : a.kind !== 'workflow.approval_step' && <Badge tone="accent">External action</Badge>}
+            <Badge tone={STATUS_TONE[a.status]}>{t.maybe(a.status.charAt(0) + a.status.slice(1).toLowerCase())}</Badge>
+            {a.kind === 'quote_discount' ? <Badge tone="accent">{t('Quote discount')}</Badge> : a.kind !== 'workflow.approval_step' && <Badge tone="accent">{t('External action')}</Badge>}
             <span className="ms-auto text-xs text-muted-foreground">{relativeTime(a.createdAt)}</span>
           </div>
           {a.summary && <p className="text-sm text-muted-foreground">{a.summary}</p>}
-          {action?.url && <p className="break-all text-xs">Endpoint: {action.url}</p>}
-          {action?.subject && <p className="text-xs">Subject: {action.subject}</p>}
+          {action?.url && <p className="break-all text-xs">{t('Endpoint: {url}', { url: action.url })}</p>}
+          {action?.subject && <p className="text-xs">{t('Subject: {subject}', { subject: action.subject })}</p>}
           {a.kind === 'quote_discount' && typeof a.payload.quoteId === 'string' && (
             <Link href={`/app/quotes/${a.payload.quoteId}`} className="text-xs text-primary hover:underline">
-              Open quote {String(a.payload.reference ?? '')}
+              {t('Open quote {reference}', { reference: String(a.payload.reference ?? '') })}
             </Link>
           )}
           {a.workflow && (
             <Link href={`/app/automation/${a.workflow.id}${a.executionId ? `?run=${a.executionId}` : ''}`} className="text-xs text-primary hover:underline">
-              Open workflow “{a.workflow.name}”
+              {t('Open workflow “{name}”', { name: a.workflow.name })}
             </Link>
           )}
           {a.status === 'PENDING' ? (
             <div className="flex flex-wrap items-center gap-2">
               <label htmlFor={`note-${a.id}`} className="sr-only">
-                Note
+                {t('Note')}
               </label>
-              <Input id={`note-${a.id}`} className="h-9 min-w-48 flex-1" placeholder="Optional note" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
+              <Input id={`note-${a.id}`} className="h-9 min-w-48 flex-1" placeholder={t('Optional note')} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
               <Button size="sm" onClick={() => decide.mutate('approve')} disabled={decide.isPending}>
-                <Check aria-hidden /> Approve
+                <Check aria-hidden /> {t('Approve')}
               </Button>
               <Button size="sm" variant="outline" onClick={() => decide.mutate('reject')} disabled={decide.isPending}>
-                <X aria-hidden /> Reject
+                <X aria-hidden /> {t('Reject')}
               </Button>
-              <span className="w-full text-xs text-muted-foreground">Expires {formatDate(a.expiresAt)}</span>
+              <span className="w-full text-xs text-muted-foreground">{t('Expires {date}', { date: formatDate(a.expiresAt) })}</span>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              {a.decidedBy ? `${a.status === 'APPROVED' ? 'Approved' : 'Rejected'} by ${a.decidedBy.name}` : a.status === 'EXPIRED' ? 'Expired without a decision' : 'Canceled'}
+              {a.decidedBy ? (a.status === 'APPROVED' ? t('Approved by {name}', { name: a.decidedBy.name }) : t('Rejected by {name}', { name: a.decidedBy.name })) : a.status === 'EXPIRED' ? t('Expired without a decision') : t('Canceled')}
               {a.decidedAt && ` · ${relativeTime(a.decidedAt)}`}
               {a.decisionNote && ` · “${a.decisionNote}”`}
             </p>
