@@ -14,10 +14,12 @@ import { useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { usePortalRequest, usePortalRequests, usePortalSettings, usePortalUsers } from '@/lib/portal';
 import { useCan } from '@/lib/session';
+import { rich, useT } from '@/lib/i18n';
 
 type Tab = 'requests' | 'people' | 'settings';
 
 export function PortalWorkspace({ initialRequest }: { initialRequest: string | null }) {
+  const t = useT();
   const settings = usePortalSettings();
   const canManage = useCan('tenant:manage');
   const [tab, setTab] = useState<Tab>('requests');
@@ -28,13 +30,13 @@ export function PortalWorkspace({ initialRequest }: { initialRequest: string | n
     <div className="space-y-4">
       <StatusCard s={s} onSetUp={() => setTab('settings')} canManage={canManage} />
       <Tabs
-        label="Client portal"
+        label={t('Client portal')}
         value={tab}
         onChange={setTab}
         tabs={[
-          { key: 'requests', label: 'Requests' },
-          { key: 'people', label: 'People with access' },
-          ...(canManage ? [{ key: 'settings' as const, label: 'Portal settings' }] : []),
+          { key: 'requests', label: t('Requests') },
+          { key: 'people', label: t('People with access') },
+          ...(canManage ? [{ key: 'settings' as const, label: t('Portal settings') }] : []),
         ]}
       />
       {tab === 'requests' && <Inbox initial={initialRequest} />}
@@ -45,20 +47,21 @@ export function PortalWorkspace({ initialRequest }: { initialRequest: string | n
 }
 
 function StatusCard({ s, canManage, onSetUp }: { s: PortalSettings; canManage: boolean; onSetUp: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <Card>
       <CardContent className="flex flex-wrap items-center gap-3 p-5 text-sm">
-        {s.enabled ? <Badge tone="success">Portal on</Badge> : <Badge>{s.updatedAt ? 'Portal off' : 'Not set up'}</Badge>}
+        {s.enabled ? <Badge tone="success">{t('Portal on')}</Badge> : <Badge>{s.updatedAt ? t('Portal off') : t('Not set up')}</Badge>}
         <span className="flex-1 break-all">
           {s.enabled ? (
             <>
-              Customers sign in at <span className="font-medium">{s.url}</span>
+              {rich(t('Customers sign in at {url}'), { url: <span className="font-medium">{s.url}</span> })}
             </>
           ) : s.updatedAt ? (
-            'Customers cannot sign in while the portal is off. Their access and history are kept.'
+            t('Customers cannot sign in while the portal is off. Their access and history are kept.')
           ) : (
-            'Choose the portal address and what customers can see, then invite people from a company page.'
+            t('Choose the portal address and what customers can see, then invite people from a company page.')
           )}
         </span>
         {s.enabled && (
@@ -71,18 +74,18 @@ function StatusCard({ s, canManage, onSetUp }: { s: PortalSettings; canManage: b
                 void navigator.clipboard?.writeText(s.url).then(() => setCopied(true));
               }}
             >
-              <Copy aria-hidden /> {copied ? 'Copied' : 'Copy address'}
+              <Copy aria-hidden /> {copied ? t('Copied') : t('Copy address')}
             </Button>
             <Button asChild size="sm" variant="outline">
               <a href={s.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink aria-hidden /> Open sign-in page
+                <ExternalLink aria-hidden /> {t('Open sign-in page')}
               </a>
             </Button>
           </>
         )}
         {!s.updatedAt && canManage && (
           <Button type="button" size="sm" onClick={onSetUp}>
-            Set up the portal
+            {t('Set up the portal')}
           </Button>
         )}
       </CardContent>
@@ -103,6 +106,7 @@ const TOGGLES: { key: keyof PortalSettingsInput; label: string; hint?: string }[
 ];
 
 function SettingsForm({ initial }: { initial: PortalSettings }) {
+  const t = useT();
   const qc = useQueryClient();
   const { url: _u, updatedAt: _a, ...start } = initial;
   const [v, setV] = useState<PortalSettingsInput>(start);
@@ -132,36 +136,36 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
         >
           <label className="flex items-center gap-2 text-sm font-medium">
             <input type="checkbox" checked={v.enabled} onChange={(e) => setV({ ...v, enabled: e.target.checked })} />
-            Portal is on
+            {t('Portal is on')}
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="ps-slug" label="Portal address" hint={`${initial.url.replace(/[^/]+$/, '')}${v.slug || '…'}`}>
+            <Field id="ps-slug" label={t('Portal address')} hint={`${initial.url.replace(/[^/]+$/, '')}${v.slug || '…'}`}>
               <Input id="ps-slug" value={v.slug} maxLength={40} onChange={(e) => setV({ ...v, slug: e.target.value.toLowerCase() })} />
             </Field>
-            <Field id="ps-title" label="Portal name" hint="Shown at the top of every portal page.">
+            <Field id="ps-title" label={t('Portal name')} hint={t('Shown at the top of every portal page.')}>
               <Input id="ps-title" value={v.title ?? ''} maxLength={120} onChange={(e) => setV({ ...v, title: e.target.value || null })} />
             </Field>
           </div>
-          <Field id="ps-welcome" label="Welcome message" hint="Shown on the sign-in page and the overview.">
+          <Field id="ps-welcome" label={t('Welcome message')} hint={t('Shown on the sign-in page and the overview.')}>
             <Textarea id="ps-welcome" value={v.welcome ?? ''} maxLength={2000} onChange={(e) => setV({ ...v, welcome: e.target.value || null })} />
           </Field>
           <fieldset className="space-y-3">
-            <legend className="mb-2 text-sm font-medium">What customers can see and do</legend>
-            {TOGGLES.map((t) => (
-              <label key={t.key} className="flex items-start gap-2 text-sm">
-                <input type="checkbox" className="mt-1" checked={v[t.key] as boolean} onChange={(e) => setV({ ...v, [t.key]: e.target.checked })} />
+            <legend className="mb-2 text-sm font-medium">{t('What customers can see and do')}</legend>
+            {TOGGLES.map((item) => (
+              <label key={item.key} className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-1" checked={v[item.key] as boolean} onChange={(e) => setV({ ...v, [item.key]: e.target.checked })} />
                 <span>
-                  {t.label}
-                  {t.hint && <span className="block text-xs text-muted-foreground">{t.hint}</span>}
+                  {t.maybe(item.label)}
+                  {item.hint && <span className="block text-xs text-muted-foreground">{t.maybe(item.hint)}</span>}
                 </span>
               </label>
             ))}
           </fieldset>
-          <p className="text-xs text-muted-foreground">Invoices are not shown: customer invoicing is not connected to DealFlow yet. Internal notes, amounts on deals, health scores and other customers&apos; records are never shown.</p>
+          <p className="text-xs text-muted-foreground">{t("Invoices are not shown: customer invoicing is not connected to DealFlow yet. Internal notes, amounts on deals, health scores and other customers' records are never shown.")}</p>
           {(error || save.error) && <p role="alert" className="text-sm text-critical">{error ?? save.error?.message}</p>}
-          {saved && <p role="status" className="text-sm">Portal settings saved.</p>}
+          {saved && <p role="status" className="text-sm">{t('Portal settings saved.')}</p>}
           <Button type="submit" disabled={save.isPending}>
-            Save portal settings
+            {t('Save portal settings')}
           </Button>
         </form>
       </CardContent>
@@ -170,22 +174,23 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
 }
 
 function People() {
+  const t = useT();
   const users = usePortalUsers();
   if (users.isPending) return <Skeleton className="h-40" />;
   return (
     <Card>
       <CardContent className="p-0">
         {!users.data?.length ? (
-          <p className="p-6 text-sm text-muted-foreground">Nobody has portal access yet. Open a company and use the Client portal card to invite someone.</p>
+          <p className="p-6 text-sm text-muted-foreground">{t('Nobody has portal access yet. Open a company and use the Client portal card to invite someone.')}</p>
         ) : (
           <table className="w-full text-sm">
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th className="px-5 py-2 font-medium">Person</th>
-                <th className="px-5 py-2 font-medium">Company</th>
-                <th className="px-5 py-2 font-medium">Access</th>
-                <th className="px-5 py-2 font-medium">Status</th>
-                <th className="px-5 py-2 font-medium">Last sign-in</th>
+                <th className="px-5 py-2 font-medium">{t('Person')}</th>
+                <th className="px-5 py-2 font-medium">{t('Company')}</th>
+                <th className="px-5 py-2 font-medium">{t('Access')}</th>
+                <th className="px-5 py-2 font-medium">{t('Status')}</th>
+                <th className="px-5 py-2 font-medium">{t('Last sign-in')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -204,7 +209,7 @@ function People() {
                   <td className="px-5 py-2">
                     <UserStatus status={u.status} />
                   </td>
-                  <td className="px-5 py-2 text-muted-foreground">{u.lastLoginAt ? relativeTime(u.lastLoginAt) : 'Never'}</td>
+                  <td className="px-5 py-2 text-muted-foreground">{u.lastLoginAt ? relativeTime(u.lastLoginAt) : t('Never')}</td>
                 </tr>
               ))}
             </tbody>
@@ -216,10 +221,12 @@ function People() {
 }
 
 export function UserStatus({ status }: { status: 'invited' | 'active' | 'disabled' }) {
-  return status === 'active' ? <Badge tone="success">Active</Badge> : status === 'invited' ? <Badge tone="warning">Invited</Badge> : <Badge>Switched off</Badge>;
+  const t = useT();
+  return status === 'active' ? <Badge tone="success">{t('Active')}</Badge> : status === 'invited' ? <Badge tone="warning">{t('Invited')}</Badge> : <Badge>{t('Switched off')}</Badge>;
 }
 
 function Inbox({ initial }: { initial: string | null }) {
+  const t = useT();
   const [status, setStatus] = useState('active');
   const [mine, setMine] = useState(false);
   const [open, setOpen] = useState<string | null>(initial);
@@ -228,19 +235,19 @@ function Inbox({ initial }: { initial: string | null }) {
     <div className="grid gap-4 lg:grid-cols-5">
       <div className="space-y-3 lg:col-span-2">
         <div className="flex flex-wrap items-end gap-3">
-          <Field id="pr-status" label="Show">
+          <Field id="pr-status" label={t('Show')}>
             <Select id="pr-status" className="w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="active">Open and in progress</option>
+              <option value="active">{t('Open and in progress')}</option>
               {PORTAL_REQUEST_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {PORTAL_REQUEST_STATUS_LABELS[s]}
+                  {t.maybe(PORTAL_REQUEST_STATUS_LABELS[s])}
                 </option>
               ))}
-              <option value="">All</option>
+              <option value="">{t('All')}</option>
             </Select>
           </Field>
           <label className="flex items-center gap-2 pb-2 text-sm">
-            <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Assigned to me
+            <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> {t('Assigned to me')}
           </label>
         </div>
         <Card>
@@ -248,9 +255,9 @@ function Inbox({ initial }: { initial: string | null }) {
             {list.isPending ? (
               <Skeleton className="h-24" />
             ) : !list.data?.length ? (
-              <p className="p-5 text-sm text-muted-foreground">No requests here.</p>
+              <p className="p-5 text-sm text-muted-foreground">{t('No requests here.')}</p>
             ) : (
-              <ul className="divide-y divide-border" aria-label="Portal requests">
+              <ul className="divide-y divide-border" aria-label={t('Portal requests')}>
                 {list.data.map((r) => (
                   <li key={r.id}>
                     <button type="button" aria-current={open === r.id ? 'true' : undefined} className="flex w-full flex-col gap-1 px-4 py-3 text-start text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-[current=true]:bg-muted/60" onClick={() => setOpen(r.id)}>
@@ -259,7 +266,7 @@ function Inbox({ initial }: { initial: string | null }) {
                         <RequestStatus status={r.status} />
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {r.reference} · {r.company.name} · {PORTAL_REQUEST_CATEGORY_LABELS[r.category]} · {relativeTime(r.lastMessageAt)}
+                        {r.reference} · {r.company.name} · {t.maybe(PORTAL_REQUEST_CATEGORY_LABELS[r.category])} · {relativeTime(r.lastMessageAt)}
                       </span>
                     </button>
                   </li>
@@ -269,12 +276,13 @@ function Inbox({ initial }: { initial: string | null }) {
           </CardContent>
         </Card>
       </div>
-      <div className="lg:col-span-3">{open ? <RequestPanel id={open} /> : <p className="text-sm text-muted-foreground">Choose a request to read and answer it.</p>}</div>
+      <div className="lg:col-span-3">{open ? <RequestPanel id={open} /> : <p className="text-sm text-muted-foreground">{t('Choose a request to read and answer it.')}</p>}</div>
     </div>
   );
 }
 
 function RequestPanel({ id }: { id: string }) {
+  const t = useT();
   const qc = useQueryClient();
   const r = usePortalRequest(id);
   const members = useMembers();
@@ -293,25 +301,30 @@ function RequestPanel({ id }: { id: string }) {
           <RequestStatus status={x.status} />
         </div>
         <p className="text-xs text-muted-foreground">
-          {x.reference} · {PORTAL_REQUEST_CATEGORY_LABELS[x.category]} · from {x.openedBy ?? 'a former portal user'} at{' '}
-          <Link className="text-primary hover:underline" href={`/app/companies/${x.company.id}`}>
-            {x.company.name}
-          </Link>
+          {x.reference} · {t.maybe(PORTAL_REQUEST_CATEGORY_LABELS[x.category])} ·{' '}
+          {rich(t('from {person} at {company}'), {
+            person: x.openedBy ?? t('a former portal user'),
+            company: (
+              <Link className="text-primary hover:underline" href={`/app/companies/${x.company.id}`}>
+                {x.company.name}
+              </Link>
+            ),
+          })}
         </p>
         {canWrite && (
           <div className="flex flex-wrap gap-3">
-            <Field id="rq-status" label="Status">
+            <Field id="rq-status" label={t('Status')}>
               <Select id="rq-status" className="w-auto" value={x.status} onChange={(e) => update.mutate({ status: e.target.value })}>
                 {PORTAL_REQUEST_STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {PORTAL_REQUEST_STATUS_LABELS[s]}
+                    {t.maybe(PORTAL_REQUEST_STATUS_LABELS[s])}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field id="rq-assignee" label="Assigned to">
+            <Field id="rq-assignee" label={t('Assigned to')}>
               <Select id="rq-assignee" className="w-auto" value={x.assignedTo?.id ?? ''} onChange={(e) => update.mutate({ assignedToId: e.target.value || null })}>
-                <option value="">Nobody</option>
+                <option value="">{t('Nobody')}</option>
                 {members.data?.filter((m) => m.status === 'ACTIVE').map((m) => (
                   <option key={m.userId} value={m.userId}>
                     {m.name}
@@ -324,10 +337,10 @@ function RequestPanel({ id }: { id: string }) {
         {update.error && <p role="alert" className="text-sm text-critical">{update.error.message}</p>}
       </CardHeader>
       <CardContent className="space-y-4">
-        <MessageThread messages={x.messages} mine="team" empty="No messages." />
-        {canWrite && x.status !== 'closed' && <Composer label="Reply to the customer" button="Send reply" pending={reply.isPending} error={reply.error} onSend={(b) => reply.mutateAsync(b)} />}
-        {x.status === 'closed' && <p className="text-sm text-muted-foreground">Closed. Change the status to reply again.</p>}
-        <p className="text-xs text-muted-foreground">The customer sees replies in the portal. When email is set up, the person who opened the request also gets a short email saying there is a reply.</p>
+        <MessageThread messages={x.messages} mine="team" empty={t('No messages.')} />
+        {canWrite && x.status !== 'closed' && <Composer label={t('Reply to the customer')} button={t('Send reply')} pending={reply.isPending} error={reply.error} onSend={(b) => reply.mutateAsync(b)} />}
+        {x.status === 'closed' && <p className="text-sm text-muted-foreground">{t('Closed. Change the status to reply again.')}</p>}
+        <p className="text-xs text-muted-foreground">{t('The customer sees replies in the portal. When email is set up, the person who opened the request also gets a short email saying there is a reply.')}</p>
       </CardContent>
     </Card>
   );

@@ -7,23 +7,26 @@ import { useId, useRef, useState } from 'react';
 import { Textarea } from '@/components/crm/select';
 import { relativeTime } from '@/lib/format';
 import { fileSize, type PortalDocument } from '@/lib/portal';
+import { useT } from '@/lib/i18n';
 
 const STATUS_TONE: Record<PortalRequestStatus, 'primary' | 'warning' | 'success' | 'neutral'> = { open: 'primary', in_progress: 'warning', resolved: 'success', closed: 'neutral' };
 
 export function RequestStatus({ status }: { status: PortalRequestStatus }) {
-  return <Badge tone={STATUS_TONE[status]}>{PORTAL_REQUEST_STATUS_LABELS[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={STATUS_TONE[status]}>{t.maybe(PORTAL_REQUEST_STATUS_LABELS[status])}</Badge>;
 }
 
 /** A conversation between the customer and the account team. `mine` is the side the viewer is on. */
 export function MessageThread({ messages, mine, empty }: { messages: PortalMessageRow[]; mine: 'customer' | 'team'; empty: string }) {
+  const t = useT();
   if (!messages.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
-    <ol className="space-y-3" aria-label="Messages">
+    <ol className="space-y-3" aria-label={t('Messages')}>
       {messages.map((m) => (
         <li key={m.id} className={cn('max-w-[85%] rounded-lg border p-3 text-sm', m.side === mine ? 'ms-auto border-primary/30 bg-primary/5' : 'border-border bg-muted/40')}>
           <p className="mb-1 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{m.author}</span>
-            {m.side === 'team' && mine === 'customer' && ' · account team'} · <time dateTime={m.createdAt}>{relativeTime(m.createdAt)}</time>
+            {m.side === 'team' && mine === 'customer' && ` · ${t('account team')}`} · <time dateTime={m.createdAt}>{relativeTime(m.createdAt)}</time>
           </p>
           <p className="whitespace-pre-wrap">{m.body}</p>
         </li>
@@ -62,7 +65,8 @@ export function Composer({ label, button, onSend, pending, error }: { label: str
 }
 
 export function DocumentList({ docs, mine, onRemove }: { docs: PortalDocument[]; mine: 'customer' | 'team'; onRemove?: (d: PortalDocument) => void }) {
-  if (!docs.length) return <p className="text-sm text-muted-foreground">No documents shared yet.</p>;
+  const t = useT();
+  if (!docs.length) return <p className="text-sm text-muted-foreground">{t('No documents shared yet.')}</p>;
   return (
     <ul className="divide-y divide-border">
       {docs.map((d) => (
@@ -72,11 +76,11 @@ export function DocumentList({ docs, mine, onRemove }: { docs: PortalDocument[];
             {d.name}
           </a>
           <span className="text-xs text-muted-foreground">
-            {fileSize(d.sizeBytes)} · {d.side === mine ? 'shared by you' : d.side === 'team' ? `from ${d.uploadedBy}, account team` : `from ${d.uploadedBy}`} · {relativeTime(d.createdAt)}
+            {fileSize(d.sizeBytes)} · {d.side === mine ? t('shared by you') : d.side === 'team' ? t('from {name}, account team', { name: d.uploadedBy }) : t('from {name}', { name: d.uploadedBy })} · {relativeTime(d.createdAt)}
           </span>
           {onRemove && (
-            <Button type="button" size="sm" variant="ghost" className="ms-auto" onClick={() => onRemove(d)} aria-label={`Remove ${d.name}`}>
-              Remove
+            <Button type="button" size="sm" variant="ghost" className="ms-auto" onClick={() => onRemove(d)} aria-label={t('Remove {name}', { name: d.name })}>
+              {t('Remove')}
             </Button>
           )}
         </li>
@@ -86,6 +90,7 @@ export function DocumentList({ docs, mine, onRemove }: { docs: PortalDocument[];
 }
 
 export function UploadButton({ label, onFile, pending }: { label: string; onFile: (f: File) => void; pending: boolean }) {
+  const t = useT();
   const ref = useRef<HTMLInputElement>(null);
   const id = useId();
   return (
@@ -104,7 +109,7 @@ export function UploadButton({ label, onFile, pending }: { label: string; onFile
         }}
       />
       <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => ref.current?.click()}>
-        <Upload aria-hidden /> {pending ? 'Uploading…' : label}
+        <Upload aria-hidden /> {pending ? t('Uploading…') : label}
       </Button>
     </>
   );

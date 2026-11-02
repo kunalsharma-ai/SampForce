@@ -9,6 +9,7 @@ import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { usePipelines } from '@/lib/crm';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 type DraftStage = PipelineInput['stages'][number];
 
@@ -23,6 +24,7 @@ const NEW_PIPELINE: PipelineInput = {
 };
 
 export function PipelinesManager() {
+  const t = useT();
   const pipelines = usePipelines();
   const canManage = useCan('pipelines:manage');
   const [creating, setCreating] = useState(false);
@@ -39,7 +41,7 @@ export function PipelinesManager() {
           <PipelineEditor onDone={() => setCreating(false)} canManage />
         ) : (
           <Button variant="outline" onClick={() => setCreating(true)}>
-            <Plus aria-hidden /> New pipeline
+            <Plus aria-hidden /> {t('New pipeline')}
           </Button>
         ))}
     </div>
@@ -47,9 +49,10 @@ export function PipelinesManager() {
 }
 
 function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRow; canManage: boolean; onDone?: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const [draft, setDraft] = useState<PipelineInput>(
-    pipeline ? { name: pipeline.name, stages: pipeline.stages.map((s) => ({ id: s.id, name: s.name, probability: s.probability, category: s.category })) } : NEW_PIPELINE,
+    pipeline ? { name: pipeline.name, stages: pipeline.stages.map((s) => ({ id: s.id, name: s.name, probability: s.probability, category: s.category })) } : { ...NEW_PIPELINE, stages: NEW_PIPELINE.stages.map((s) => ({ ...s, name: t.maybe(s.name) })) },
   );
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -85,7 +88,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
     setError(null);
     const parsed = pipelineInputSchema.safeParse(draft);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Check the stages.');
+      setError(parsed.error.issues[0]?.message ?? t('Check the stages.'));
       return;
     }
     save.mutate(parsed.data);
@@ -96,19 +99,19 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
     <Card>
       <form onSubmit={submit}>
         <CardHeader className="flex-row flex-wrap items-center gap-3 space-y-0">
-          <CardTitle className="sr-only">{pipeline?.name ?? 'New pipeline'}</CardTitle>
+          <CardTitle className="sr-only">{pipeline?.name ?? t('New pipeline')}</CardTitle>
           <label htmlFor={`${idBase}-name`} className="sr-only">
-            Pipeline name
+            {t('Pipeline name')}
           </label>
-          <Input id={`${idBase}-name`} className="h-9 max-w-xs font-semibold" placeholder="Pipeline name" value={draft.name} disabled={!canManage} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          {pipeline?.isDefault && <Badge tone="primary">Default</Badge>}
-          {pipeline && <span className="text-xs text-muted-foreground">{pipeline.dealCount} deals</span>}
+          <Input id={`${idBase}-name`} className="h-9 max-w-xs font-semibold" placeholder={t('Pipeline name')} value={draft.name} disabled={!canManage} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          {pipeline?.isDefault && <Badge tone="primary">{t('Default')}</Badge>}
+          {pipeline && <span className="text-xs text-muted-foreground">{t.plural('count.deals', pipeline.dealCount)}</span>}
           {canManage && pipeline && !pipeline.isDefault && (
             <div className="ms-auto flex gap-1">
               <Button type="button" variant="ghost" size="sm" onClick={() => makeDefault.mutate()}>
-                <Star aria-hidden /> Make default
+                <Star aria-hidden /> {t('Make default')}
               </Button>
-              <Button type="button" variant="ghost" size="sm" aria-label={`Delete ${pipeline.name}`} onClick={() => remove.mutate()} disabled={pipeline.dealCount > 0} title={pipeline.dealCount > 0 ? 'Move or delete its deals first' : undefined}>
+              <Button type="button" variant="ghost" size="sm" aria-label={t('Delete {name}', { name: pipeline.name })} onClick={() => remove.mutate()} disabled={pipeline.dealCount > 0} title={pipeline.dealCount > 0 ? t('Move or delete its deals first') : undefined}>
                 <Trash2 aria-hidden />
               </Button>
             </div>
@@ -116,14 +119,14 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
         </CardHeader>
         <CardContent className="space-y-3">
           <table className="w-full text-sm">
-            <caption className="sr-only">Stages</caption>
+            <caption className="sr-only">{t('Stages')}</caption>
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th scope="col" className="pb-2 font-medium">Stage</th>
-                <th scope="col" className="w-28 pb-2 font-medium">Probability</th>
-                <th scope="col" className="w-32 pb-2 font-medium">Type</th>
+                <th scope="col" className="pb-2 font-medium">{t('Stage')}</th>
+                <th scope="col" className="w-28 pb-2 font-medium">{t('Probability')}</th>
+                <th scope="col" className="w-32 pb-2 font-medium">{t('Type')}</th>
                 <th scope="col" className="w-28 pb-2">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t('Actions')}</span>
                 </th>
               </tr>
             </thead>
@@ -131,28 +134,28 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
               {draft.stages.map((s, i) => (
                 <tr key={s.id ?? `new-${i}`}>
                   <td className="py-1 pe-2">
-                    <Input aria-label={`Stage ${i + 1} name`} className="h-9" value={s.name} disabled={!canManage} onChange={(e) => setStage(i, { name: e.target.value })} />
+                    <Input aria-label={t('Stage {n} name', { n: i + 1 })} className="h-9" value={s.name} disabled={!canManage} onChange={(e) => setStage(i, { name: e.target.value })} />
                   </td>
                   <td className="py-1 pe-2">
-                    <Input aria-label={`Stage ${i + 1} probability`} className="h-9" type="number" min={0} max={100} value={s.probability} disabled={!canManage} onChange={(e) => setStage(i, { probability: Number(e.target.value) })} />
+                    <Input aria-label={t('Stage {n} probability', { n: i + 1 })} className="h-9" type="number" min={0} max={100} value={s.probability} disabled={!canManage} onChange={(e) => setStage(i, { probability: Number(e.target.value) })} />
                   </td>
                   <td className="py-1 pe-2">
-                    <Select aria-label={`Stage ${i + 1} type`} className="h-9" value={s.category} disabled={!canManage} onChange={(e) => setStage(i, { category: e.target.value as DraftStage['category'] })}>
-                      <option value="OPEN">Open</option>
-                      <option value="WON">Won</option>
-                      <option value="LOST">Lost</option>
+                    <Select aria-label={t('Stage {n} type', { n: i + 1 })} className="h-9" value={s.category} disabled={!canManage} onChange={(e) => setStage(i, { category: e.target.value as DraftStage['category'] })}>
+                      <option value="OPEN">{t('Open')}</option>
+                      <option value="WON">{t('Won')}</option>
+                      <option value="LOST">{t('Lost')}</option>
                     </Select>
                   </td>
                   <td className="py-1">
                     {canManage && (
                       <div className="flex">
-                        <Button type="button" variant="ghost" size="icon" aria-label={`Move ${s.name || 'stage'} up`} disabled={i === 0} onClick={() => moveStage(i, -1)}>
+                        <Button type="button" variant="ghost" size="icon" aria-label={t('Move {name} up', { name: s.name || t('stage') })} disabled={i === 0} onClick={() => moveStage(i, -1)}>
                           <ArrowUp aria-hidden />
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" aria-label={`Move ${s.name || 'stage'} down`} disabled={i === draft.stages.length - 1} onClick={() => moveStage(i, 1)}>
+                        <Button type="button" variant="ghost" size="icon" aria-label={t('Move {name} down', { name: s.name || t('stage') })} disabled={i === draft.stages.length - 1} onClick={() => moveStage(i, 1)}>
                           <ArrowDown aria-hidden />
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${s.name || 'stage'}`} onClick={() => setDraft({ ...draft, stages: draft.stages.filter((_, j) => j !== i) })}>
+                        <Button type="button" variant="ghost" size="icon" aria-label={t('Remove {name}', { name: s.name || t('stage') })} onClick={() => setDraft({ ...draft, stages: draft.stages.filter((_, j) => j !== i) })}>
                           <Trash2 aria-hidden />
                         </Button>
                       </div>
@@ -164,24 +167,24 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
           </table>
           {error && (
             <p role="alert" className="text-sm text-critical">
-              {error}
+              {t.maybe(error)}
             </p>
           )}
           {canManage && (
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setDraft({ ...draft, stages: [...draft.stages, { name: '', probability: 50, category: 'OPEN' }] })}>
-                <Plus aria-hidden /> Add stage
+                <Plus aria-hidden /> {t('Add stage')}
               </Button>
               <span className="ms-auto text-xs text-muted-foreground" aria-live="polite">
-                {saved && !dirty ? 'Saved' : ''}
+                {saved && !dirty ? t('Saved') : ''}
               </span>
               {onDone && (
                 <Button type="button" variant="ghost" size="sm" onClick={onDone}>
-                  Cancel
+                  {t('Cancel')}
                 </Button>
               )}
               <Button type="submit" size="sm" disabled={!dirty || save.isPending}>
-                {save.isPending ? 'Saving…' : pipeline ? 'Save stages' : 'Create pipeline'}
+                {save.isPending ? t('Saving…') : pipeline ? t('Save stages') : t('Create pipeline')}
               </Button>
             </div>
           )}

@@ -18,6 +18,7 @@ import type {
 } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, downloadFile } from './api';
+import type { Translator } from './i18n';
 import { uploadFile } from './portal';
 
 export type ProspectFilters = Partial<Record<'search' | 'industry' | 'country' | 'companySize' | 'title' | 'emailStatus' | 'stage' | 'source' | 'sort', string>> & { page?: number };
@@ -73,11 +74,11 @@ export const prospectsApi = {
   saveSettings: (body: ProspectSettingsInput) => api<ProspectSettings>('/prospects/settings', { method: 'PUT', json: body }),
 };
 
-export function addResultText(r: ProspectAddResult & { revealed?: number }): string {
-  const parts = [`Added ${r.added} prospect${r.added === 1 ? '' : 's'}.`];
-  if (r.duplicates) parts.push(`${r.duplicates} already in this list.`);
-  if (r.inCrm) parts.push(`${r.inCrm} already in the CRM (linked).`);
-  if (r.revealed !== undefined) parts.push(`${r.revealed} email address${r.revealed === 1 ? '' : 'es'} found.`);
-  if (r.invalid.length) parts.push(`${r.invalid.length} row${r.invalid.length === 1 ? '' : 's'} could not be imported.`);
+export function addResultText(t: Translator, r: ProspectAddResult & { revealed?: number }): string {
+  const parts = [t.plural('count.addedProspects', r.added)];
+  if (r.duplicates) parts.push(t('{n} already in this list.', { n: r.duplicates }));
+  if (r.inCrm) parts.push(t('{n} already in the CRM (linked).', { n: r.inCrm }));
+  if (r.revealed !== undefined) parts.push(t.plural('count.emailsFound', r.revealed));
+  if (r.invalid.length) parts.push(t.plural('count.rowsNotImported', r.invalid.length));
   return parts.join(' ');
 }

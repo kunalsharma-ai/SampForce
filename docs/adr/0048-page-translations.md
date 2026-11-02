@@ -182,6 +182,31 @@ Still English here: error messages and details returned by the API, the summarie
 workflow checks that name a step id (for example "Step "action_2" points to missing step …"), permission codes in the
 role editor, simulation step details computed by the API, webhook event codes, AI notes and browser tab titles.
 
+## Scope of batch 8
+
+Translated: account security (two-step verification and signed-in devices), AI Agents (each agent's permissions,
+availability and cost), Campaigns, the Email Finder, Marketing (segments with every field and operator, lead forms and
+their consent text), pipeline settings, the Client Portal (settings, people with access, requests and the company
+page's portal card), Prospect Lists (lists, CSV and Excel import, Apollo.io search in Mock Mode, verification, moving
+and adding to the CRM, usage limits), Website Visitors (dashboard, visitor detail, install and consent settings), Sales
+Gamification (my performance, leaderboards, competitions, badges, rules), the help center and the planned-module page.
+New tables: `growth` and `engagement`; 30 new plural keys, among them `count.prospects`, `count.importRows`,
+`count.visitsLast`, `count.points` and `count.badgesAwarded`.
+
+- **Period names** for leaderboards and competitions ("Last month (October 2026)") are built by `periodOptions(t, …)`,
+  which marks past periods with a flag instead of matching the English word "Last".
+- **Defaults that get saved** (a new form's consent text, a new pipeline's stage names, form field labels) are
+  translated when the screen creates them, so they are stored in the language of the person who made them. Saved
+  values are shown as stored and are not translated again.
+- **Counts that carry a formatted number** (points, won deals, activities) pass it as `{value}` next to the raw
+  `count`, so the plural form follows the number while the text shows it with the person's number format.
+
+Still English here: error messages and details returned by the API (including import row errors and provider notices
+with dates), the AI provider's own notes, intent signal labels and other visitor labels computed by the API, Email
+Finder notes that name a domain, competition and award period keys, and browser tab titles. Public pages that visitors
+and customers see without a DealFlow account (hosted forms, the portal sign-in, unsubscribe and the website) are a
+separate batch, because they need the visitor's language rather than a saved setting.
+
 ## Review
 
 The translations were written by Claude and need review by native speakers before customers rely on them; Kunal's

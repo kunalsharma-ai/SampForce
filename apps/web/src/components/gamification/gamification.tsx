@@ -25,58 +25,61 @@ import { formatDate, formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { gamificationApi, periodOptions, useAwards, useBadges, useCompetitions, useGamificationMe, useGamificationMutation, useGamificationSettings, useLeaderboard, useTeams } from '@/lib/gamification';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { rich, type Translator, useT } from '@/lib/i18n';
 
 const ICONS = { trophy: Trophy, medal: Medal, star: Star, flame: Flame, target: Target, rocket: Rocket, crown: Crown, phone: Phone } as const;
-const WINDOW_LABELS: Record<(typeof BADGE_WINDOWS)[number], string> = { month: 'in a month', quarter: 'in a quarter', year: 'in a year', all_time: 'all time' };
+const WINDOW_LABELS = { month: 'in a month', quarter: 'in a quarter', year: 'in a year', all_time: 'all time' } as const satisfies Record<(typeof BADGE_WINDOWS)[number], string>;
 const STATUS_TONE = { running: 'success', upcoming: 'primary', finished: 'neutral', cancelled: 'critical' } as const;
+const STATUS_LABEL = { running: 'Running', upcoming: 'Upcoming', finished: 'Finished', cancelled: 'Cancelled' } as const;
 const num = (n: number) => n.toLocaleString(fmtLocale(), { maximumFractionDigits: 1 });
 
 type Tab = 'me' | 'leaderboards' | 'competitions' | 'badges' | 'settings';
 
 export function GamificationWorkspace() {
+  const t = useT();
   const me = useGamificationMe();
   const [tab, setTab] = useState<Tab | null>(null);
   if (me.isPending) return <Skeleton className="h-64" />;
-  if (me.error || !me.data) return <p role="alert" className="text-sm text-critical">{me.error?.message ?? 'Could not load gamification.'}</p>;
+  if (me.error || !me.data) return <p role="alert" className="text-sm text-critical">{me.error?.message ?? t('Could not load gamification.')}</p>;
   const m = me.data;
   const tabs: { key: Tab; label: string }[] = m.enabled
     ? [
-        { key: 'me', label: 'My performance' },
-        { key: 'leaderboards', label: 'Leaderboards' },
-        { key: 'competitions', label: 'Competitions' },
-        { key: 'badges', label: 'Badges' },
-        ...(m.canManage ? [{ key: 'settings' as const, label: 'Rules and settings' }] : []),
+        { key: 'me', label: t('My performance') },
+        { key: 'leaderboards', label: t('Leaderboards') },
+        { key: 'competitions', label: t('Competitions') },
+        { key: 'badges', label: t('Badges') },
+        ...(m.canManage ? [{ key: 'settings' as const, label: t('Rules and settings') }] : []),
       ]
     : m.canManage
-      ? [{ key: 'settings', label: 'Rules and settings' }, { key: 'badges', label: 'Badges' }]
+      ? [{ key: 'settings', label: t('Rules and settings') }, { key: 'badges', label: t('Badges') }]
       : [];
-  const current = tab && tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? null);
+  const current = tab && tabs.some((item) => item.key === tab) ? tab : (tabs[0]?.key ?? null);
 
   return (
     <div className="space-y-4">
       {!m.enabled && (
         <Card>
           <CardContent className="p-5 text-sm">
-            <p className="font-medium">Gamification is turned off for this workspace.</p>
+            <p className="font-medium">{t('Gamification is turned off for this workspace.')}</p>
             <p className="mt-1 text-muted-foreground">
-              {m.canManage ? 'Choose which activities earn points and set up badges, then turn it on in Rules and settings. Nobody sees points until you do.' : 'An admin or sales manager can turn it on and choose which activities earn points.'}
+              {m.canManage ? t('Choose which activities earn points and set up badges, then turn it on in Rules and settings. Nobody sees points until you do.') : t('An admin or sales manager can turn it on and choose which activities earn points.')}
             </p>
           </CardContent>
         </Card>
       )}
       {tabs.length > 0 && (
-        <div role="tablist" aria-label="Gamification" className="flex flex-wrap gap-1 border-b border-border">
-          {tabs.map((t) => (
+        <div role="tablist" aria-label={t('Gamification')} className="flex flex-wrap gap-1 border-b border-border">
+          {tabs.map((item) => (
             <button
-              key={t.key}
+              key={item.key}
               role="tab"
-              id={`gm-tab-${t.key}`}
-              aria-selected={current === t.key}
-              aria-controls={`gm-panel-${t.key}`}
-              onClick={() => setTab(t.key)}
-              className={cn('-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', current === t.key ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+              id={`gm-tab-${item.key}`}
+              aria-selected={current === item.key}
+              aria-controls={`gm-panel-${item.key}`}
+              onClick={() => setTab(item.key)}
+              className={cn('-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', current === item.key ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
             >
-              {t.label}
+              {item.label}
             </button>
           ))}
         </div>
@@ -106,25 +109,26 @@ function Meter({ value, label }: { value: number; label: string }) {
 }
 
 function MyPerformance({ me }: { me: GamificationMe }) {
+  const t = useT();
   const s = me.score;
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Points this month</p>
+            <p className="text-sm text-muted-foreground">{t('Points this month')}</p>
             <p className="mt-1 text-3xl font-semibold" data-testid="my-points">{num(s?.points ?? 0)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Leaderboard position</p>
+            <p className="text-sm text-muted-foreground">{t('Leaderboard position')}</p>
             <p className="mt-1 text-3xl font-semibold">{s ? `#${s.rank}` : '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Badges earned</p>
+            <p className="text-sm text-muted-foreground">{t('Badges earned')}</p>
             <p className="mt-1 text-3xl font-semibold">{me.badges.length}</p>
           </CardContent>
         </Card>
@@ -133,50 +137,50 @@ function MyPerformance({ me }: { me: GamificationMe }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">How you earned your points</CardTitle>
+            <CardTitle className="text-base">{t('How you earned your points')}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">
-              <caption className="sr-only">Points by activity this month</caption>
+              <caption className="sr-only">{t('Points by activity this month')}</caption>
               <thead className="text-start text-xs text-muted-foreground">
                 <tr>
-                  <th scope="col" className="py-2 font-medium">Activity</th>
-                  <th scope="col" className="py-2 text-end font-medium">Done</th>
-                  <th scope="col" className="py-2 text-end font-medium">Counted</th>
-                  <th scope="col" className="py-2 text-end font-medium">Points</th>
+                  <th scope="col" className="py-2 font-medium">{t('Activity')}</th>
+                  <th scope="col" className="py-2 text-end font-medium">{t('Done')}</th>
+                  <th scope="col" className="py-2 text-end font-medium">{t('Counted')}</th>
+                  <th scope="col" className="py-2 text-end font-medium">{t('Points')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {(s?.breakdown ?? []).filter((b) => b.count > 0 || b.points > 0).map((b) => (
                   <tr key={b.key}>
-                    <th scope="row" className="py-2 text-start font-normal">{b.key === 'revenue_won' ? 'Revenue won (per 1,000)' : SCORING_RULE_LABELS[b.key].label}</th>
+                    <th scope="row" className="py-2 text-start font-normal">{b.key === 'revenue_won' ? t('Revenue won (per 1,000)') : t.maybe(SCORING_RULE_LABELS[b.key].label)}</th>
                     <td className="py-2 text-end">{num(b.count)}</td>
-                    <td className="py-2 text-end">{b.scored < b.count ? <span title="Above the daily limit or not counted under the current rules">{num(b.scored)}</span> : num(b.scored)}</td>
+                    <td className="py-2 text-end">{b.scored < b.count ? <span title={t('Above the daily limit or not counted under the current rules')}>{num(b.scored)}</span> : num(b.scored)}</td>
                     <td className="py-2 text-end font-medium">{num(b.points)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {!s?.breakdown.some((b) => b.count > 0) && <p className="py-3 text-sm text-muted-foreground">Nothing yet this month. Log calls and meetings, complete tasks and win deals to earn points.</p>}
-            <p className="mt-3 text-xs text-muted-foreground">Points come straight from your CRM records under your workspace&apos;s rules. &quot;Counted&quot; is lower when a daily limit applies.</p>
+            {!s?.breakdown.some((b) => b.count > 0) && <p className="py-3 text-sm text-muted-foreground">{t('Nothing yet this month. Log calls and meetings, complete tasks and win deals to earn points.')}</p>}
+            <p className="mt-3 text-xs text-muted-foreground">{t('Points come straight from your CRM records under your workspace\'s rules. "Counted" is lower when a daily limit applies.')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Sales target progress</CardTitle>
+            <CardTitle className="text-base">{t('Sales target progress')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {me.targets.map((t) => (
-              <div key={t.period} className="space-y-1.5">
+            {me.targets.map((item) => (
+              <div key={item.period} className="space-y-1.5">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">{t.period}</span>
-                  <span className="text-muted-foreground">{t.target === null ? `${formatMoney(t.won, me.currency)} won, no target set` : `${formatMoney(t.won, me.currency)} of ${formatMoney(t.target, me.currency)} (${num(t.attainment ?? 0)}%)`}</span>
+                  <span className="font-medium">{t.maybe(item.period)}</span>
+                  <span className="text-muted-foreground">{item.target === null ? t('{won} won, no target set', { won: formatMoney(item.won, me.currency) }) : t('{won} of {target} ({pct}%)', { won: formatMoney(item.won, me.currency), target: formatMoney(item.target, me.currency), pct: num(item.attainment ?? 0) })}</span>
                 </div>
-                {t.target !== null && <Meter value={t.attainment ?? 0} label={`${t.period} target progress`} />}
+                {item.target !== null && <Meter value={item.attainment ?? 0} label={t('{period} target progress', { period: t.maybe(item.period) })} />}
               </div>
             ))}
-            <p className="text-xs text-muted-foreground">Targets are set in Revenue Intelligence. Won revenue is in {me.currency}, using your exchange rates.</p>
+            <p className="text-xs text-muted-foreground">{t('Targets are set in Revenue Intelligence. Won revenue is in {currency}, using your exchange rates.', { currency: me.currency })}</p>
           </CardContent>
         </Card>
       </div>
@@ -184,13 +188,13 @@ function MyPerformance({ me }: { me: GamificationMe }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Your badges</CardTitle>
+            <CardTitle className="text-base">{t('Your badges')}</CardTitle>
           </CardHeader>
           <CardContent>
             {me.badges.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No badges yet.</p>
+              <p className="text-sm text-muted-foreground">{t('No badges yet.')}</p>
             ) : (
-              <ul className="space-y-2" aria-label="Your badges">
+              <ul className="space-y-2" aria-label={t('Your badges')}>
                 {me.badges.map((a) => {
                   const Icon = ICONS[a.badge.icon as keyof typeof ICONS] ?? Medal;
                   return (
@@ -210,22 +214,22 @@ function MyPerformance({ me }: { me: GamificationMe }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Your competitions</CardTitle>
+            <CardTitle className="text-base">{t('Your competitions')}</CardTitle>
           </CardHeader>
           <CardContent>
             {me.competitions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">You are not in a running competition.</p>
+              <p className="text-sm text-muted-foreground">{t('You are not in a running competition.')}</p>
             ) : (
-              <ul className="space-y-3" aria-label="Your competitions">
+              <ul className="space-y-3" aria-label={t('Your competitions')}>
                 {me.competitions.map((c) => (
                   <li key={c.id} className="text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{c.name}</span>
-                      <Badge tone={STATUS_TONE[c.status]}>{c.status}</Badge>
+                      <Badge tone={STATUS_TONE[c.status]}>{t(STATUS_LABEL[c.status])}</Badge>
                     </div>
                     <p className="text-muted-foreground">
-                      {c.mine ? `${c.kind === 'team' ? `${c.mine.name}: ` : ''}#${c.mine.rank} with ${metricValue(c, c.mine.value, me.currency)}` : `Starts ${formatDate(c.start)}`}
-                      {c.goal && c.mine ? ` · ${num(c.mine.progress ?? 0)}% of the goal` : ''}
+                      {c.mine ? `${c.kind === 'team' ? `${c.mine.name}: ` : ''}${t('#{rank} with {value}', { rank: c.mine.rank, value: metricValue(t, c, c.mine.value, me.currency) })}` : t('Starts {date}', { date: formatDate(c.start) })}
+                      {c.goal && c.mine ? ` · ${t('{pct}% of the goal', { pct: num(c.mine.progress ?? 0) })}` : ''}
                     </p>
                   </li>
                 ))}
@@ -238,17 +242,18 @@ function MyPerformance({ me }: { me: GamificationMe }) {
   );
 }
 
-function metricValue(c: Pick<CompetitionRow, 'metric'>, v: number, currency: string) {
+function metricValue(t: Translator, c: Pick<CompetitionRow, 'metric'>, v: number, currency: string) {
   if (c.metric === 'revenue_won') return formatMoney(v, currency);
-  if (c.metric === 'points') return `${num(v)} points`;
-  if (c.metric === 'deals_won') return `${num(v)} won deals`;
-  return `${num(v)} activities`;
+  if (c.metric === 'points') return t.plural('count.points', v, { value: num(v) });
+  if (c.metric === 'deals_won') return t.plural('count.wonDeals', v, { value: num(v) });
+  return t.plural('count.activities', v, { value: num(v) });
 }
 
 // ───────────── leaderboards ─────────────
 
 function Leaderboards() {
-  const options = periodOptions();
+  const t = useT();
+  const options = periodOptions(t);
   const [period, setPeriod] = useState(options[0]!.value);
   const [view, setView] = useState<'people' | 'teams'>('people');
   const q = useLeaderboard(period);
@@ -256,18 +261,18 @@ function Leaderboards() {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-end justify-between gap-3 space-y-0">
-        <CardTitle className="text-base">Leaderboard</CardTitle>
+        <CardTitle className="text-base">{t('Leaderboard')}</CardTitle>
         <div className="flex flex-wrap items-end gap-3">
-          <div role="group" aria-label="Rank" className="inline-flex rounded-md border border-border p-0.5 text-sm">
+          <div role="group" aria-label={t('Rank')} className="inline-flex rounded-md border border-border p-0.5 text-sm">
             {(['people', 'teams'] as const).map((v) => (
               <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} className={cn('rounded px-3 py-1', view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>
-                {v === 'people' ? 'People' : 'Teams'}
+                {v === 'people' ? t('People') : t('Teams')}
               </button>
             ))}
           </div>
           <label className="space-y-1 text-sm">
-            <span className="block text-xs text-muted-foreground">Period</span>
-            <Select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value)} className="h-9 w-56">
+            <span className="block text-xs text-muted-foreground">{t('Period')}</span>
+            <Select aria-label={t('Period')} value={period} onChange={(e) => setPeriod(e.target.value)} className="h-9 w-56">
               {options.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -282,21 +287,21 @@ function Leaderboards() {
           <p role="alert" className="text-sm text-critical">{q.error.message}</p>
         ) : b ? (
           <>
-            {!b.full && <p className="mb-3 rounded-md bg-muted px-3 py-2 text-sm">Your workspace shows leaderboards to managers only, so you see your own score.</p>}
-            {b.missingRates > 0 && <p className="mb-3 text-sm text-warning">{b.missingRates} won {b.missingRates === 1 ? 'deal is' : 'deals are'} left out of revenue because {b.missingRates === 1 ? 'its currency has' : 'their currencies have'} no exchange rate yet.</p>}
+            {!b.full && <p className="mb-3 rounded-md bg-muted px-3 py-2 text-sm">{t('Your workspace shows leaderboards to managers only, so you see your own score.')}</p>}
+            {b.missingRates > 0 && <p className="mb-3 text-sm text-warning">{t.plural('count.missingRates', b.missingRates)}</p>}
             {view === 'people' ? (
               <table className="w-full min-w-[640px] text-sm">
-                <caption className="sr-only">People ranked by points, {b.period.label}</caption>
+                <caption className="sr-only">{t('People ranked by points, {period}', { period: t.maybe(b.period.label) })}</caption>
                 <thead className="text-start text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="py-2 font-medium">Rank</th>
-                    <th scope="col" className="py-2 font-medium">Name</th>
-                    <th scope="col" className="py-2 text-end font-medium">Points</th>
-                    <th scope="col" className="py-2 text-end font-medium">Deals won</th>
-                    <th scope="col" className="py-2 text-end font-medium">Revenue won</th>
-                    <th scope="col" className="py-2 text-end font-medium">Activities</th>
-                    <th scope="col" className="py-2 text-end font-medium">Target</th>
-                    <th scope="col" className="py-2 text-end font-medium">Badges</th>
+                    <th scope="col" className="py-2 font-medium">{t('Rank')}</th>
+                    <th scope="col" className="py-2 font-medium">{t('Name')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Points')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Deals won')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Revenue won')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Activities')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Target')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Badges')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -315,38 +320,38 @@ function Leaderboards() {
                 </tbody>
               </table>
             ) : b.teams.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{b.full ? 'No sales teams yet. An admin can create them in Team Management.' : 'Team rankings are shown to managers only.'}</p>
+              <p className="text-sm text-muted-foreground">{b.full ? t('No sales teams yet. An admin can create them in Team Management.') : t('Team rankings are shown to managers only.')}</p>
             ) : (
               <table className="w-full min-w-[560px] text-sm">
-                <caption className="sr-only">Teams ranked by points, {b.period.label}</caption>
+                <caption className="sr-only">{t('Teams ranked by points, {period}', { period: t.maybe(b.period.label) })}</caption>
                 <thead className="text-start text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="py-2 font-medium">Rank</th>
-                    <th scope="col" className="py-2 font-medium">Team</th>
-                    <th scope="col" className="py-2 text-end font-medium">Points</th>
-                    <th scope="col" className="py-2 text-end font-medium">Per member</th>
-                    <th scope="col" className="py-2 text-end font-medium">Members</th>
-                    <th scope="col" className="py-2 text-end font-medium">Deals won</th>
-                    <th scope="col" className="py-2 text-end font-medium">Revenue won</th>
+                    <th scope="col" className="py-2 font-medium">{t('Rank')}</th>
+                    <th scope="col" className="py-2 font-medium">{t('Team')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Points')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Per member')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Members')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Deals won')}</th>
+                    <th scope="col" className="py-2 text-end font-medium">{t('Revenue won')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {b.teams.map((t) => (
-                    <tr key={t.team.id}>
-                      <td className="py-2">{t.rank}</td>
-                      <th scope="row" className="py-2 text-start font-medium">{t.team.name}</th>
-                      <td className="py-2 text-end font-semibold">{num(t.points)}</td>
-                      <td className="py-2 text-end">{num(t.perMember)}</td>
-                      <td className="py-2 text-end">{t.members}</td>
-                      <td className="py-2 text-end">{t.dealsWon}</td>
-                      <td className="py-2 text-end">{formatMoney(t.revenueWon, b.currency)}</td>
+                  {b.teams.map((item) => (
+                    <tr key={item.team.id}>
+                      <td className="py-2">{item.rank}</td>
+                      <th scope="row" className="py-2 text-start font-medium">{item.team.name}</th>
+                      <td className="py-2 text-end font-semibold">{num(item.points)}</td>
+                      <td className="py-2 text-end">{num(item.perMember)}</td>
+                      <td className="py-2 text-end">{item.members}</td>
+                      <td className="py-2 text-end">{item.dealsWon}</td>
+                      <td className="py-2 text-end">{formatMoney(item.revenueWon, b.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
             <p className="mt-3 text-xs text-muted-foreground">
-              {b.period.start} to {formatDate(new Date(Date.parse(`${b.period.end}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10))}. Daily limits use UTC days. Revenue is in {b.currency}.
+              {t('{start} to {end}. Daily limits use UTC days. Revenue is in {currency}.', { start: b.period.start, end: formatDate(new Date(Date.parse(`${b.period.end}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10)), currency: b.currency })}
             </p>
           </>
         ) : null}
@@ -358,6 +363,7 @@ function Leaderboards() {
 // ───────────── competitions and team challenges ─────────────
 
 function Competitions({ canManage, currency }: { canManage: boolean; currency: string }) {
+  const t = useT();
   const q = useCompetitions();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -366,7 +372,7 @@ function Competitions({ canManage, currency }: { canManage: boolean; currency: s
     <div className="space-y-4">
       {canManage && (
         <div className="flex justify-end">
-          <Button onClick={() => setOpen(true)}>New competition</Button>
+          <Button onClick={() => setOpen(true)}>{t('New competition')}</Button>
         </div>
       )}
       {cancel.error && <p role="alert" className="text-sm text-critical">{cancel.error.message}</p>}
@@ -376,7 +382,7 @@ function Competitions({ canManage, currency }: { canManage: boolean; currency: s
         <p role="alert" className="text-sm text-critical">{q.error.message}</p>
       ) : !q.data?.length ? (
         <Card>
-          <CardContent className="p-5 text-sm text-muted-foreground">No competitions yet.{canManage ? ' Start one for a month or quarter, for people or for teams.' : ''}</CardContent>
+          <CardContent className="p-5 text-sm text-muted-foreground">{t('No competitions yet.')}{canManage ? ` ${t('Start one for a month or quarter, for people or for teams.')}` : ''}</CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -385,51 +391,51 @@ function Competitions({ canManage, currency }: { canManage: boolean; currency: s
               <CardHeader className="space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{c.name}</CardTitle>
-                  <Badge tone={STATUS_TONE[c.status]}>{c.status}</Badge>
+                  <Badge tone={STATUS_TONE[c.status]}>{t(STATUS_LABEL[c.status])}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {c.kind === 'team' ? 'Team challenge' : 'Individual'} · {COMPETITION_METRIC_LABELS[c.metric]} · {formatDate(c.start)} to {formatDate(c.end)}
+                  {c.kind === 'team' ? t('Team challenge') : t('Individual')} · {t.maybe(COMPETITION_METRIC_LABELS[c.metric])} · {t('{start} to {end}', { start: formatDate(c.start), end: formatDate(c.end) })}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {c.description && <p>{c.description}</p>}
                 {(c.goal || c.reward) && (
                   <p className="text-muted-foreground">
-                    {c.goal ? `Goal: ${metricValue(c, c.goal, currency)}${c.kind === 'team' ? ' per team' : ''}` : ''}
+                    {c.goal ? (c.kind === 'team' ? t('Goal: {value} per team', { value: metricValue(t, c, c.goal, currency) }) : t('Goal: {value}', { value: metricValue(t, c, c.goal, currency) })) : ''}
                     {c.goal && c.reward ? ' · ' : ''}
-                    {c.reward ? `Reward: ${c.reward}` : ''}
+                    {c.reward ? t('Reward: {reward}', { reward: c.reward }) : ''}
                   </p>
                 )}
                 {c.status === 'upcoming' ? (
-                  <p className="text-muted-foreground">Standings appear when it starts.</p>
+                  <p className="text-muted-foreground">{t('Standings appear when it starts.')}</p>
                 ) : c.standings.length === 0 ? (
-                  <p className="text-muted-foreground">No standings to show.</p>
+                  <p className="text-muted-foreground">{t('No standings to show.')}</p>
                 ) : (
-                  <ol className="space-y-2" aria-label={`Standings for ${c.name}`}>
+                  <ol className="space-y-2" aria-label={t('Standings for {name}', { name: c.name })}>
                     {c.standings.map((s) => (
                       <li key={s.id} className={cn('space-y-1', c.mine?.id === s.id && 'font-medium')}>
                         <div className="flex justify-between gap-2">
                           <span>
                             {s.rank}. {s.name}
-                            {c.mine?.id === s.id && <span className="sr-only"> (you)</span>}
+                            {c.mine?.id === s.id && <span className="sr-only"> {t('(you)')}</span>}
                           </span>
-                          <span>{metricValue(c, s.value, currency)}{s.progress !== null ? ` · ${num(s.progress)}%` : ''}</span>
+                          <span>{metricValue(t, c, s.value, currency)}{s.progress !== null ? ` · ${num(s.progress)}%` : ''}</span>
                         </div>
-                        {s.progress !== null && <Meter value={s.progress} label={`${s.name} progress towards the goal`} />}
+                        {s.progress !== null && <Meter value={s.progress} label={t('{name} progress towards the goal', { name: s.name })} />}
                       </li>
                     ))}
                   </ol>
                 )}
-                <p className="text-xs text-muted-foreground">Scored with the rules in place when it was created{c.createdBy ? `, by ${c.createdBy.name}` : ''}.</p>
+                <p className="text-xs text-muted-foreground">{c.createdBy ? t('Scored with the rules in place when it was created, by {name}.', { name: c.createdBy.name }) : t('Scored with the rules in place when it was created.')}</p>
                 {canManage && (c.status === 'running' || c.status === 'upcoming') && (
                   <div className="flex gap-2">
                     {confirm === c.id ? (
                       <>
-                        <Button size="sm" variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate(c.id)}>Confirm cancel</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>Keep it</Button>
+                        <Button size="sm" variant="destructive" disabled={cancel.isPending} onClick={() => cancel.mutate(c.id)}>{t('Confirm cancel')}</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>{t('Keep it')}</Button>
                       </>
                     ) : (
-                      <Button size="sm" variant="outline" onClick={() => setConfirm(c.id)}>Cancel competition</Button>
+                      <Button size="sm" variant="outline" onClick={() => setConfirm(c.id)}>{t('Cancel competition')}</Button>
                     )}
                   </div>
                 )}
@@ -444,8 +450,9 @@ function Competitions({ canManage, currency }: { canManage: boolean; currency: s
 }
 
 function CompetitionDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const teams = useTeams();
-  const options = periodOptions().filter((o) => !/^Last/.test(o.label));
+  const options = periodOptions(t).filter((o) => !o.last);
   const [form, setForm] = useState<CompetitionInput>({ name: '', description: null, kind: 'individual', metric: 'points', period: options[0]!.value, startDate: null, endDate: null, goal: null, reward: null, teamIds: [] });
   const [custom, setCustom] = useState(false);
   const create = useGamificationMutation((b: CompetitionInput) => gamificationApi.createCompetition(b), onClose);
@@ -458,49 +465,49 @@ function CompetitionDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-xl">
         <div>
-          <DialogTitle className="text-lg font-semibold">New competition</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">Participants are notified in DealFlow. It uses a copy of today&apos;s scoring rules, so later rule changes do not move its standings.</DialogDescription>
+          <DialogTitle className="text-lg font-semibold">{t('New competition')}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">{t("Participants are notified in DealFlow. It uses a copy of today's scoring rules, so later rule changes do not move its standings.")}</DialogDescription>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Name</span>
+            <span className="font-medium">{t('Name')}</span>
             <Input required maxLength={80} value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Who competes</span>
+              <span className="font-medium">{t('Who competes')}</span>
               <Select value={form.kind} onChange={(e) => set({ kind: e.target.value as CompetitionInput['kind'] })}>
-                <option value="individual">People</option>
-                <option value="team">Teams (team challenge)</option>
+                <option value="individual">{t('People')}</option>
+                <option value="team">{t('Teams (team challenge)')}</option>
               </Select>
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Measure</span>
+              <span className="font-medium">{t('Measure')}</span>
               <Select value={form.metric} onChange={(e) => set({ metric: e.target.value as CompetitionInput['metric'] })}>
                 {COMPETITION_METRICS.map((k) => (
-                  <option key={k} value={k}>{COMPETITION_METRIC_LABELS[k]}</option>
+                  <option key={k} value={k}>{t.maybe(COMPETITION_METRIC_LABELS[k])}</option>
                 ))}
               </Select>
             </label>
           </div>
           <fieldset className="space-y-2 text-sm">
-            <legend className="font-medium">When</legend>
+            <legend className="font-medium">{t('When')}</legend>
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /> Custom dates
+              <input type="checkbox" checked={custom} onChange={(e) => setCustom(e.target.checked)} /> {t('Custom dates')}
             </label>
             {custom ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block space-y-1">
-                  <span>First day</span>
+                  <span>{t('First day')}</span>
                   <Input type="date" required value={form.startDate ?? ''} onChange={(e) => set({ startDate: e.target.value })} />
                 </label>
                 <label className="block space-y-1">
-                  <span>Last day</span>
+                  <span>{t('Last day')}</span>
                   <Input type="date" required value={form.endDate ?? ''} onChange={(e) => set({ endDate: e.target.value })} />
                 </label>
               </div>
             ) : (
-              <Select aria-label="Competition period" value={form.period ?? ''} onChange={(e) => set({ period: e.target.value })}>
+              <Select aria-label={t('Competition period')} value={form.period ?? ''} onChange={(e) => set({ period: e.target.value })}>
                 {options.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
@@ -509,38 +516,38 @@ function CompetitionDialog({ onClose }: { onClose: () => void }) {
           </fieldset>
           {form.kind === 'team' || form.teamIds.length > 0 || (teams.data?.length ?? 0) > 0 ? (
             <fieldset className="space-y-2 text-sm">
-              <legend className="font-medium">Teams</legend>
-              <p className="text-xs text-muted-foreground">{form.kind === 'team' ? 'Leave all unticked to include every team.' : 'Optional: only members of the ticked teams take part.'}</p>
+              <legend className="font-medium">{t('Teams')}</legend>
+              <p className="text-xs text-muted-foreground">{form.kind === 'team' ? t('Leave all unticked to include every team.') : t('Optional: only members of the ticked teams take part.')}</p>
               {teams.data?.length ? (
-                teams.data.map((t) => (
-                  <label key={t.id} className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.teamIds.includes(t.id)} onChange={(e) => set({ teamIds: e.target.checked ? [...form.teamIds, t.id] : form.teamIds.filter((x) => x !== t.id) })} />
-                    {t.name} <span className="text-muted-foreground">({t.members.length})</span>
+                teams.data.map((item) => (
+                  <label key={item.id} className="flex items-center gap-2">
+                    <input type="checkbox" checked={form.teamIds.includes(item.id)} onChange={(e) => set({ teamIds: e.target.checked ? [...form.teamIds, item.id] : form.teamIds.filter((x) => x !== item.id) })} />
+                    {item.name} <span className="text-muted-foreground">({item.members.length})</span>
                   </label>
                 ))
               ) : (
-                <p className="text-muted-foreground">No sales teams yet. An admin can create them in Team Management.</p>
+                <p className="text-muted-foreground">{t('No sales teams yet. An admin can create them in Team Management.')}</p>
               )}
             </fieldset>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Goal (optional)</span>
+              <span className="font-medium">{t('Goal (optional)')}</span>
               <Input type="number" min={1} step="any" value={form.goal ?? ''} onChange={(e) => set({ goal: e.target.value ? Number(e.target.value) : null })} />
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Reward (optional)</span>
-              <Input maxLength={200} value={form.reward ?? ''} onChange={(e) => set({ reward: e.target.value || null })} placeholder="Team lunch" />
+              <span className="font-medium">{t('Reward (optional)')}</span>
+              <Input maxLength={200} value={form.reward ?? ''} onChange={(e) => set({ reward: e.target.value || null })} placeholder={t('Team lunch')} />
             </label>
           </div>
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Description (optional)</span>
+            <span className="font-medium">{t('Description (optional)')}</span>
             <Textarea maxLength={500} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value || null })} />
           </label>
           {create.error && <p role="alert" className="text-sm text-critical">{create.error.message}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Close</Button>
-            <Button type="submit" disabled={create.isPending}>Start competition</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t('Close')}</Button>
+            <Button type="submit" disabled={create.isPending}>{t('Start competition')}</Button>
           </div>
         </form>
       </DialogContent>
@@ -552,12 +559,13 @@ function CompetitionDialog({ onClose }: { onClose: () => void }) {
 
 const EMPTY_BADGE: BadgeInput = { name: '', description: null, icon: 'medal', metric: 'deals_won', threshold: 1, window: 'month', active: true };
 
-function badgeRule(b: Pick<BadgeRow, 'metric' | 'threshold' | 'window'>) {
+function badgeRule(t: Translator, b: Pick<BadgeRow, 'metric' | 'threshold' | 'window'>) {
   const v = b.metric === 'target_attainment' ? `${num(b.threshold)}%` : num(b.threshold);
-  return `${BADGE_METRIC_LABELS[b.metric]} at least ${v}, ${WINDOW_LABELS[b.window]}`;
+  return t('{metric} at least {value}, {window}', { metric: t.maybe(BADGE_METRIC_LABELS[b.metric]), value: v, window: t(WINDOW_LABELS[b.window]) });
 }
 
 function Badges({ canManage, enabled }: { canManage: boolean; enabled: boolean }) {
+  const t = useT();
   const badges = useBadges();
   const awards = useAwards(enabled);
   const [editing, setEditing] = useState<BadgeRow | 'new' | null>(null);
@@ -568,21 +576,21 @@ function Badges({ canManage, enabled }: { canManage: boolean; enabled: boolean }
     <div className="space-y-4">
       {canManage && (
         <div className="flex flex-wrap justify-end gap-2">
-          {enabled && <Button variant="outline" disabled={evaluate.isPending} onClick={() => evaluate.mutate(undefined)}>Check for new badges now</Button>}
-          <Button variant="outline" disabled={defaults.isPending} onClick={() => defaults.mutate(undefined)}>Add suggested badges</Button>
-          <Button onClick={() => setEditing('new')}>New badge</Button>
+          {enabled && <Button variant="outline" disabled={evaluate.isPending} onClick={() => evaluate.mutate(undefined)}>{t('Check for new badges now')}</Button>}
+          <Button variant="outline" disabled={defaults.isPending} onClick={() => defaults.mutate(undefined)}>{t('Add suggested badges')}</Button>
+          <Button onClick={() => setEditing('new')}>{t('New badge')}</Button>
         </div>
       )}
-      {checked !== null && <p role="status" className="text-sm">{checked === 0 ? 'No new badges to award.' : `${checked} new ${checked === 1 ? 'badge' : 'badges'} awarded.`}</p>}
+      {checked !== null && <p role="status" className="text-sm">{checked === 0 ? t('No new badges to award.') : t.plural('count.badgesAwarded', checked)}</p>}
       {(defaults.error || evaluate.error) && <p role="alert" className="text-sm text-critical">{(defaults.error ?? evaluate.error)!.message}</p>}
       {badges.isPending ? (
         <Skeleton className="h-40" />
       ) : !badges.data?.length ? (
         <Card>
-          <CardContent className="p-5 text-sm text-muted-foreground">No badges yet.{canManage ? ' Add the suggested ones or make your own.' : ''}</CardContent>
+          <CardContent className="p-5 text-sm text-muted-foreground">{t('No badges yet.')}{canManage ? ` ${t('Add the suggested ones or make your own.')}` : ''}</CardContent>
         </Card>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Badges">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('Badges')}>
           {badges.data.map((b) => {
             const Icon = ICONS[b.icon as keyof typeof ICONS] ?? Medal;
             return (
@@ -592,14 +600,14 @@ function Badges({ canManage, enabled }: { canManage: boolean; enabled: boolean }
                     <Icon className="size-8 shrink-0 text-accent" aria-hidden />
                     <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
                       <p className="font-medium">
-                        {b.name} {!b.active && <Badge>off</Badge>}
+                        {b.name} {!b.active && <Badge>{t('off')}</Badge>}
                       </p>
                       {b.description && <p className="text-muted-foreground">{b.description}</p>}
-                      <p className="text-xs text-muted-foreground">{badgeRule(b)}</p>
-                      <p className="text-xs text-muted-foreground">Awarded {b.awardedCount} {b.awardedCount === 1 ? 'time' : 'times'}</p>
+                      <p className="text-xs text-muted-foreground">{badgeRule(t, b)}</p>
+                      <p className="text-xs text-muted-foreground">{t.plural('count.awardedTimes', b.awardedCount)}</p>
                       {canManage && (
                         <div className="mt-auto pt-1">
-                          <Button size="sm" variant="outline" aria-label={`Edit ${b.name}`} onClick={() => setEditing(b)}>Edit</Button>
+                          <Button size="sm" variant="outline" aria-label={`Edit ${b.name}`} onClick={() => setEditing(b)}>{t('Edit')}</Button>
                         </div>
                       )}
                     </div>
@@ -613,20 +621,19 @@ function Badges({ canManage, enabled }: { canManage: boolean; enabled: boolean }
       {enabled && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Recent awards</CardTitle>
+            <CardTitle className="text-base">{t('Recent awards')}</CardTitle>
           </CardHeader>
           <CardContent>
             {awards.isPending ? (
               <Skeleton className="h-16" />
             ) : !awards.data?.length ? (
-              <p className="text-sm text-muted-foreground">No badges awarded yet. The worker checks every hour.</p>
+              <p className="text-sm text-muted-foreground">{t('No badges awarded yet. The worker checks every hour.')}</p>
             ) : (
-              <ul className="divide-y divide-border text-sm" aria-label="Recent awards">
+              <ul className="divide-y divide-border text-sm" aria-label={t('Recent awards')}>
                 {awards.data.map((a) => (
                   <li key={a.id} className="flex justify-between gap-2 py-2">
                     <span>
-                      <span className="font-medium">{a.user.name}</span> earned {a.badge.name}
-                      {a.period !== 'all' ? ` for ${a.period}` : ''}
+                      {rich(a.period !== 'all' ? t('{name} earned {badge} for {period}') : t('{name} earned {badge}'), { name: <span className="font-medium">{a.user.name}</span>, badge: a.badge.name, period: a.period })}
                     </span>
                     <span className="text-muted-foreground">{relativeTime(a.awardedAt)}</span>
                   </li>
@@ -642,6 +649,7 @@ function Badges({ canManage, enabled }: { canManage: boolean; enabled: boolean }
 }
 
 function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () => void }) {
+  const t = useT();
   const [form, setForm] = useState<BadgeInput>(badge ? { name: badge.name, description: badge.description, icon: badge.icon, metric: badge.metric, threshold: badge.threshold, window: badge.window, active: badge.active } : EMPTY_BADGE);
   const save = useGamificationMutation((b: BadgeInput) => (badge ? gamificationApi.updateBadge(badge.id, b) : gamificationApi.createBadge(b)), onClose);
   const remove = useGamificationMutation(() => gamificationApi.removeBadge(badge!.id), onClose);
@@ -652,8 +660,8 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-lg">
         <div>
-          <DialogTitle className="text-lg font-semibold">{badge ? 'Edit badge' : 'New badge'}</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">A badge is awarded once per person per period when they reach the threshold. Awards already given are kept if you change it.</DialogDescription>
+          <DialogTitle className="text-lg font-semibold">{badge ? t('Edit badge') : t('New badge')}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">{t('A badge is awarded once per person per period when they reach the threshold. Awards already given are kept if you change it.')}</DialogDescription>
         </div>
         <form
           className="space-y-4"
@@ -663,36 +671,36 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
           }}
         >
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Name</span>
+            <span className="font-medium">{t('Name')}</span>
             <Input required maxLength={60} value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </label>
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Description</span>
+            <span className="font-medium">{t('Description')}</span>
             <Input maxLength={200} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value || null })} />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Measure</span>
+              <span className="font-medium">{t('Measure')}</span>
               <Select value={form.metric} onChange={(e) => set({ metric: e.target.value as BadgeInput['metric'] })}>
                 {BADGE_METRICS.map((k) => (
-                  <option key={k} value={k}>{BADGE_METRIC_LABELS[k]}</option>
+                  <option key={k} value={k}>{t.maybe(BADGE_METRIC_LABELS[k])}</option>
                 ))}
               </Select>
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">At least</span>
+              <span className="font-medium">{t('At least')}</span>
               <Input type="number" required min={0.01} step="any" value={form.threshold} onChange={(e) => set({ threshold: Number(e.target.value) })} />
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Within</span>
+              <span className="font-medium">{t('Within')}</span>
               <Select value={form.window} aria-invalid={badWindow} onChange={(e) => set({ window: e.target.value as BadgeInput['window'] })}>
                 {BADGE_WINDOWS.map((w) => (
-                  <option key={w} value={w}>{w === 'all_time' ? 'All time' : `One ${w}`}</option>
+                  <option key={w} value={w}>{w === 'all_time' ? t('All time') : w === 'month' ? t('One month') : w === 'quarter' ? t('One quarter') : t('One year')}</option>
                 ))}
               </Select>
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="font-medium">Icon</span>
+              <span className="font-medium">{t('Icon')}</span>
               <Select value={form.icon} onChange={(e) => set({ icon: e.target.value as BadgeInput['icon'] })}>
                 {BADGE_ICONS.map((i) => (
                   <option key={i} value={i}>{i}</option>
@@ -700,9 +708,9 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
               </Select>
             </label>
           </div>
-          {badWindow && <p role="alert" className="text-sm text-critical">Target attainment needs a month, quarter or year.</p>}
+          {badWindow && <p role="alert" className="text-sm text-critical">{t('Target attainment needs a month, quarter or year.')}</p>}
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} /> Award this badge
+            <input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} /> {t('Award this badge')}
           </label>
           {(save.error || remove.error) && <p role="alert" className="text-sm text-critical">{(save.error ?? remove.error)!.message}</p>}
           <div className="flex flex-wrap justify-between gap-2">
@@ -712,14 +720,14 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
                   Delete badge and its {badge.awardedCount} {badge.awardedCount === 1 ? 'award' : 'awards'}
                 </Button>
               ) : (
-                <Button type="button" variant="outline" onClick={() => setConfirmRemove(true)}>Delete</Button>
+                <Button type="button" variant="outline" onClick={() => setConfirmRemove(true)}>{t('Delete')}</Button>
               )
             ) : (
               <span />
             )}
             <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={onClose}>Close</Button>
-              <Button type="submit" disabled={save.isPending || badWindow}>Save badge</Button>
+              <Button type="button" variant="ghost" onClick={onClose}>{t('Close')}</Button>
+              <Button type="submit" disabled={save.isPending || badWindow}>{t('Save badge')}</Button>
             </div>
           </div>
         </form>
@@ -738,6 +746,7 @@ function RulesSettings() {
 }
 
 function RulesForm({ settings }: { settings: GamificationSettings }) {
+  const t = useT();
   const [enabled, setEnabled] = useState(settings.enabled);
   const [visibility, setVisibility] = useState(settings.visibility);
   const [rules, setRules] = useState<ScoringRules>(settings.rules);
@@ -757,58 +766,58 @@ function RulesForm({ settings }: { settings: GamificationSettings }) {
     >
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Gamification</CardTitle>
+          <CardTitle className="text-base">{t('Gamification')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={enabled} onChange={(e) => (setSaved(false), setEnabled(e.target.checked))} />
-            <span className="font-medium">Turn on points, leaderboards, badges and competitions</span>
+            <span className="font-medium">{t('Turn on points, leaderboards, badges and competitions')}</span>
           </label>
           <label className="block max-w-sm space-y-1">
-            <span className="font-medium">Who sees leaderboards</span>
+            <span className="font-medium">{t('Who sees leaderboards')}</span>
             <Select value={visibility} onChange={(e) => (setSaved(false), setVisibility(e.target.value as typeof visibility))}>
-              <option value="everyone">Everyone in the workspace</option>
-              <option value="managers">Managers only (others see their own score)</option>
+              <option value="everyone">{t('Everyone in the workspace')}</option>
+              <option value="managers">{t('Managers only (others see their own score)')}</option>
             </Select>
           </label>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">What earns points</CardTitle>
+          <CardTitle className="text-base">{t('What earns points')}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
-            <caption className="sr-only">Scoring rules</caption>
+            <caption className="sr-only">{t('Scoring rules')}</caption>
             <thead className="text-start text-xs text-muted-foreground">
               <tr>
-                <th scope="col" className="py-2 font-medium">Activity</th>
-                <th scope="col" className="py-2 font-medium">Counts</th>
-                <th scope="col" className="py-2 font-medium">Points</th>
-                <th scope="col" className="py-2 font-medium">Daily limit</th>
+                <th scope="col" className="py-2 font-medium">{t('Activity')}</th>
+                <th scope="col" className="py-2 font-medium">{t('Counts')}</th>
+                <th scope="col" className="py-2 font-medium">{t('Points')}</th>
+                <th scope="col" className="py-2 font-medium">{t('Daily limit')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {SCORING_RULE_KEYS.map((k) => {
                 const r = rules[k];
-                const label = SCORING_RULE_LABELS[k].label;
+                const label = t.maybe(SCORING_RULE_LABELS[k].label);
                 return (
                   <tr key={k}>
                     <th scope="row" className="py-2 pe-3 text-start font-normal">
                       <span className="block font-medium">{label}</span>
-                      <span className="block text-xs text-muted-foreground">{SCORING_RULE_LABELS[k].unit}</span>
+                      <span className="block text-xs text-muted-foreground">{t.maybe(SCORING_RULE_LABELS[k].unit)}</span>
                     </th>
                     <td className="py-2 pe-3">
-                      <input type="checkbox" aria-label={`${label} counts`} checked={r.enabled} onChange={(e) => setRule(k, { enabled: e.target.checked })} />
+                      <input type="checkbox" aria-label={t('{name} counts', { name: label })} checked={r.enabled} onChange={(e) => setRule(k, { enabled: e.target.checked })} />
                     </td>
                     <td className="py-2 pe-3">
-                      <Input aria-label={`${label} points`} type="number" min={0} max={1000} step={1} className="h-9 w-24" value={r.points} onChange={(e) => setRule(k, { points: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
+                      <Input aria-label={t('{name} points', { name: label })} type="number" min={0} max={1000} step={1} className="h-9 w-24" value={r.points} onChange={(e) => setRule(k, { points: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
                     </td>
                     <td className="py-2">
                       {k === 'revenue_won' ? (
-                        <span className="text-xs text-muted-foreground">No limit</span>
+                        <span className="text-xs text-muted-foreground">{t('No limit')}</span>
                       ) : (
-                        <Input aria-label={`${label} daily limit`} type="number" min={1} max={500} step={1} placeholder="No limit" className="h-9 w-28" value={r.dailyCap ?? ''} onChange={(e) => setRule(k, { dailyCap: e.target.value ? Math.max(1, Math.round(Number(e.target.value))) : null })} />
+                        <Input aria-label={t('{name} daily limit', { name: label })} type="number" min={1} max={500} step={1} placeholder={t('No limit')} className="h-9 w-28" value={r.dailyCap ?? ''} onChange={(e) => setRule(k, { dailyCap: e.target.value ? Math.max(1, Math.round(Number(e.target.value))) : null })} />
                       )}
                     </td>
                   </tr>
@@ -816,13 +825,13 @@ function RulesForm({ settings }: { settings: GamificationSettings }) {
               })}
             </tbody>
           </table>
-          <p className="mt-3 text-xs text-muted-foreground">Points are worked out from CRM records whenever someone looks, so a change here applies to every leaderboard at once. Running competitions keep the rules they started with. A daily limit stops points from bulk-logged records.</p>
+          <p className="mt-3 text-xs text-muted-foreground">{t('Points are worked out from CRM records whenever someone looks, so a change here applies to every leaderboard at once. Running competitions keep the rules they started with. A daily limit stops points from bulk-logged records.')}</p>
         </CardContent>
       </Card>
       {save.error && <p role="alert" className="text-sm text-critical">{save.error.message}</p>}
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {saved ? <p role="status" className="text-sm text-success">Saved.</p> : settings.updatedBy && <p className="text-xs text-muted-foreground">Last changed by {settings.updatedBy.name} {settings.updatedAt ? relativeTime(settings.updatedAt) : ''}</p>}
-        <Button type="submit" disabled={save.isPending}>Save rules</Button>
+        {saved ? <p role="status" className="text-sm text-success">{t('Saved.')}</p> : settings.updatedBy && <p className="text-xs text-muted-foreground">{t('Last changed by {name} {time}', { name: settings.updatedBy.name, time: settings.updatedAt ? relativeTime(settings.updatedAt) : '' })}</p>}
+        <Button type="submit" disabled={save.isPending}>{t('Save rules')}</Button>
       </div>
     </form>
   );

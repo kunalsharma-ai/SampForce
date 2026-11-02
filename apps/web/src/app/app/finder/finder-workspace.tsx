@@ -20,10 +20,12 @@ import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { useT } from '@/lib/i18n';
 
 const TONE: Record<FinderEmailStatus, 'success' | 'primary' | 'accent' | 'warning'> = { found: 'success', provider: 'primary', pattern: 'accent', guess: 'warning' };
 
 export function FinderWorkspace() {
+  const t = useT();
   const qc = useQueryClient();
   const canSave = useCan('leads:write');
   const canEnroll = useCan('sequences:write');
@@ -59,40 +61,40 @@ export function FinderWorkspace() {
             >
               <div className="space-y-1">
                 <label htmlFor="finder-company" className="text-sm font-medium">
-                  Company name or website
+                  {t('Company name or website')}
                 </label>
-                <Input id="finder-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Kestrel Analytics or kestrel-analytics.com" required minLength={2} />
+                <Input id="finder-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={t('Kestrel Analytics or kestrel-analytics.com')} required minLength={2} />
               </div>
               <div className="space-y-1">
                 <label htmlFor="finder-first" className="text-sm font-medium">
-                  First name <span className="font-normal text-muted-foreground">(optional)</span>
+                  {t('First name')} <span className="font-normal text-muted-foreground">{t('(optional)')}</span>
                 </label>
                 <Input id="finder-first" value={first} onChange={(e) => setFirst(e.target.value)} autoComplete="off" />
               </div>
               <div className="space-y-1">
                 <label htmlFor="finder-last" className="text-sm font-medium">
-                  Last name <span className="font-normal text-muted-foreground">(optional)</span>
+                  {t('Last name')} <span className="font-normal text-muted-foreground">{t('(optional)')}</span>
                 </label>
                 <Input id="finder-last" value={last} onChange={(e) => setLast(e.target.value)} autoComplete="off" />
               </div>
               <Button type="submit" disabled={search.isPending || company.trim().length < 2 || !!u && u.used >= u.limit}>
-                <Search aria-hidden /> {search.isPending ? 'Searching…' : 'Find emails'}
+                <Search aria-hidden /> {search.isPending ? t('Searching…') : t('Find emails')}
               </Button>
             </form>
             <p className="text-xs text-muted-foreground">
-              {u ? `${u.used} of ${u.limit} lookups used in the last 24 hours. ` : ''}
-              {u?.provider ? 'Your data provider (Hunter.io) is connected and adds addresses it knows about.' : 'Using DealFlow’s own finder. An administrator can add a Hunter.io key to search wider.'}
+              {u ? `${t('{used} of {limit} lookups used in the last 24 hours.', { used: u.used, limit: u.limit })} ` : ''}
+              {u?.provider ? t('Your data provider (Hunter.io) is connected and adds addresses it knows about.') : t('Using DealFlow’s own finder. An administrator can add a Hunter.io key to search wider.')}
             </p>
             <ErrorText error={search.error} />
           </CardContent>
         </Card>
-        {search.isPending && <p className="text-sm text-muted-foreground" role="status">Reading the company’s website…</p>}
+        {search.isPending && <p className="text-sm text-muted-foreground" role="status">{t('Reading the company’s website…')}</p>}
         {opened.data && <ResultView key={opened.data.id} result={opened.data} canSave={canSave} canEnroll={canEnroll} />}
       </div>
 
       <aside aria-labelledby="finder-history" className="space-y-2">
         <h2 id="finder-history" className="text-sm font-semibold">
-          Your recent lookups
+          {t('Your recent lookups')}
         </h2>
         {history.data?.length ? (
           <ul className="divide-y divide-border rounded-md border border-border text-sm">
@@ -104,14 +106,14 @@ export function FinderWorkspace() {
                     {h.companyName}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {h.domain ?? 'no website found'} · {h.found} found · {relativeTime(h.createdAt)}
+                    {h.domain ?? t('no website found')} · {t('{n} found', { n: h.found })} · {relativeTime(h.createdAt)}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No lookups yet.</p>
+          <p className="text-sm text-muted-foreground">{t('No lookups yet.')}</p>
         )}
       </aside>
     </div>
@@ -119,6 +121,7 @@ export function FinderWorkspace() {
 }
 
 function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; canSave: boolean; canEnroll: boolean }) {
+  const t = useT();
   const qc = useQueryClient();
   const rows = [...r.person, ...r.emails.filter((e) => !r.person.some((p) => p.email === e.email))];
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(rows.filter((e) => !e.match && !e.suppressed && e.status !== 'guess' && e.name).map((e) => e.email)));
@@ -152,39 +155,39 @@ function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; c
           {r.companyName}
           {r.company && (
             <Link href={`/app/companies/${r.company.id}`} className="text-sm font-normal text-primary hover:underline">
-              In DealFlow
+              {t('In DealFlow')}
             </Link>
           )}
         </CardTitle>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
           <div>
-            <dt className="inline text-muted-foreground">Website: </dt>
-            <dd className="inline">{r.domain ? `${r.domain} (from ${DOMAIN_SOURCE_LABELS[r.domainSource!]})` : 'not found'}</dd>
+            <dt className="inline text-muted-foreground">{t('Website:')} </dt>
+            <dd className="inline">{r.domain ? t('{domain} (from {source})', { domain: r.domain, source: t.maybe(DOMAIN_SOURCE_LABELS[r.domainSource!]) }) : t('not found')}</dd>
           </div>
           <div>
-            <dt className="inline text-muted-foreground">Receives email: </dt>
-            <dd className="inline">{r.mailServer === null ? 'not checked' : r.mailServer ? 'yes, it has a mail server' : 'no mail server found'}</dd>
+            <dt className="inline text-muted-foreground">{t('Receives email:')} </dt>
+            <dd className="inline">{r.mailServer === null ? t('not checked') : r.mailServer ? t('yes, it has a mail server') : t('no mail server found')}</dd>
           </div>
           <div>
-            <dt className="inline text-muted-foreground">Address pattern: </dt>
-            <dd className="inline">{r.pattern ? `${r.pattern.replace(/[{}]/g, '')}@${r.domain} (from ${r.patternBasis} published address${r.patternBasis === 1 ? '' : 'es'})` : 'not enough to tell'}</dd>
+            <dt className="inline text-muted-foreground">{t('Address pattern:')} </dt>
+            <dd className="inline">{r.pattern ? t.plural('count.patternBasis', r.patternBasis, { pattern: `${r.pattern.replace(/[{}]/g, '')}@${r.domain}` }) : t('not enough to tell')}</dd>
           </div>
           <div>
-            <dt className="inline text-muted-foreground">Pages read: </dt>
+            <dt className="inline text-muted-foreground">{t('Pages read:')} </dt>
             <dd className="inline">{r.pagesRead}</dd>
           </div>
         </dl>
         {r.notes.map((n) => (
           <p key={n} className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
-            {n}
+            {t.maybe(n)}
           </p>
         ))}
       </CardHeader>
       <CardContent className="space-y-4">
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No addresses at this company yet. Try their website directly, or add a person’s name to get likely addresses.</p>
+          <p className="text-sm text-muted-foreground">{t('No addresses at this company yet. Try their website directly, or add a person’s name to get likely addresses.')}</p>
         ) : (
-          <ul className="divide-y divide-border rounded-md border border-border" aria-label="Addresses found">
+          <ul className="divide-y divide-border rounded-md border border-border" aria-label={t('Addresses found')}>
             {rows.map((e) => (
               <Row key={e.email} e={e} person={r.person.includes(e)} checked={chosen.has(e.email)} onToggle={() => toggle(e.email)} disabled={!canSave || !!e.match} />
             ))}
@@ -195,10 +198,10 @@ function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; c
             {canEnroll && active.length > 0 && (
               <div className="min-w-56 space-y-1">
                 <label htmlFor="finder-seq" className="text-sm font-medium">
-                  Also enrol in a sequence
+                  {t('Also enrol in a sequence')}
                 </label>
                 <select id="finder-seq" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={sequenceId} onChange={(e) => setSequenceId(e.target.value)}>
-                  <option value="">Do not enrol</option>
+                  <option value="">{t('Do not enrol')}</option>
                   {active.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -208,11 +211,11 @@ function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; c
               </div>
             )}
             <Button onClick={() => save.mutate()} disabled={!chosen.size || save.isPending}>
-              {chosen.size ? `Save ${chosen.size} as lead${chosen.size === 1 ? '' : 's'}${sequenceId ? ' and enrol' : ''}` : 'Choose people to save'}
+              {chosen.size ? t.plural(sequenceId ? 'count.saveAsLeadsAndEnrol' : 'count.saveAsLeads', chosen.size) : t('Choose people to save')}
             </Button>
             {save.data && (
               <p role="status" className="text-sm">
-                Saved {created} new lead{created === 1 ? '' : 's'}.{save.data.enrollment ? ` Enrolled ${save.data.enrollment.enrolled}.` : ''}
+                {t.plural('count.savedNewLeads', created)}{save.data.enrollment ? ` ${t('Enrolled {n}.', { n: save.data.enrollment.enrolled })}` : ''}
               </p>
             )}
           </div>
@@ -224,6 +227,7 @@ function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; c
 }
 
 function Row({ e, person, checked, onToggle, disabled }: { e: FinderEmail; person: boolean; checked: boolean; onToggle: () => void; disabled: boolean }) {
+  const t = useT();
   const id = `finder-${e.email}`;
   return (
     <li className="flex flex-wrap items-start gap-3 px-4 py-3 text-sm">
@@ -232,19 +236,19 @@ function Row({ e, person, checked, onToggle, disabled }: { e: FinderEmail; perso
         <label htmlFor={id} className="flex flex-wrap items-center gap-2 font-medium">
           <span className="break-all">{e.email}</span>
           <Badge tone={TONE[e.status]}>
-            {FINDER_STATUS_LABELS[e.status]}
+            {t.maybe(FINDER_STATUS_LABELS[e.status])}
             {e.confidence !== null ? ` · ${e.confidence}%` : ''}
           </Badge>
-          {person && <Badge>The person you asked about</Badge>}
-          {e.suppressed && <Badge tone="critical">Do not email</Badge>}
+          {person && <Badge>{t('The person you asked about')}</Badge>}
+          {e.suppressed && <Badge tone="critical">{t('Do not email')}</Badge>}
         </label>
         <p className="text-xs text-muted-foreground">
-          {[e.name, e.position].filter(Boolean).join(' · ') || 'Shared mailbox or no name on the page'}
+          {[e.name, e.position].filter(Boolean).join(' · ') || t('Shared mailbox or no name on the page')}
           {e.sourceUrl && (
             <>
               {' · '}
               <a href={e.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                Where it was published <ExternalLink className="size-3" aria-hidden />
+                {t('Where it was published')} <ExternalLink className="size-3" aria-hidden />
               </a>
             </>
           )}
@@ -252,7 +256,7 @@ function Row({ e, person, checked, onToggle, disabled }: { e: FinderEmail; perso
       </div>
       {e.match && (
         <Link href={`/app/${e.match.entity === 'contact' ? 'contacts' : 'leads'}/${e.match.id}`} className="text-xs text-primary hover:underline">
-          Already a {e.match.entity}: {e.match.label}
+          {e.match.entity === 'contact' ? t('Already a contact: {name}', { name: e.match.label }) : t('Already a lead: {name}', { name: e.match.label })}
         </Link>
       )}
     </li>
