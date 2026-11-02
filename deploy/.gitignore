@@ -1,0 +1,4 @@
+# Real settings and backups never go into git.
+.env
+dealflow.env
+backups/

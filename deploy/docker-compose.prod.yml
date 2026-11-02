@@ -1,0 +1,167 @@
+# DealFlow on one Linux server with Docker Compose. See deploy/SERVER_SETUP.md.
+#
+#   cd deploy
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Two settings files sit next to this one (both created by scripts/generate-secrets.sh):
+#   .env          secrets and server settings that compose fills into this file (DOMAIN, passwords, keys)
+#   dealflow.env  optional application settings, passed as-is to the API and the worker
+#
+# Only Caddy publishes ports (80 and 443). Postgres, the API, the worker and the web server are reachable only
+# on the internal network. Caddy obtains and renews the TLS certificate for DOMAIN from Let's Encrypt.
+
+name: dealflow
+
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  tmpfs: [/tmp]
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: '5' }
+
+# Settings the API and the worker must agree on. `environment` wins over `env_file`, so dealflow.env cannot
+# override these by accident.
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://dealflow_app:${DEALFLOW_APP_PASSWORD:?run scripts/generate-secrets.sh}@postgres:5432/dealflow?connection_limit=${DB_CONNECTION_LIMIT:-10}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run scripts/generate-secrets.sh}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run scripts/generate-secrets.sh}
+  OPERATOR_JWT_SECRET: ${OPERATOR_JWT_SECRET:?run scripts/generate-secrets.sh}
+  COOKIE_SECURE: 'true'
+  PUBLIC_WEB_URL: https://${DOMAIN:?set DOMAIN in .env}
+  WEB_ORIGINS: ${WEB_ORIGINS:-https://${DOMAIN}}
+  METRICS_PORT: '9464'
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    shm_size: 256mb
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/generate-secrets.sh}
+      # Read once, on the very first start, by postgres/init-dealflow.sh (roles and the dealflow database).
+      DEALFLOW_OWNER_PASSWORD: ${DEALFLOW_OWNER_PASSWORD:?run scripts/generate-secrets.sh}
+      DEALFLOW_APP_PASSWORD: ${DEALFLOW_APP_PASSWORD:?run scripts/generate-secrets.sh}
+      DEALFLOW_BACKUP_PASSWORD: ${DEALFLOW_BACKUP_PASSWORD:?run scripts/generate-secrets.sh}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../scripts/db-setup.sh:/dealflow/db-setup.sh:ro
+      - ./postgres/init-dealflow.sh:/docker-entrypoint-initdb.d/10-dealflow.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d dealflow']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: '5' }
+
+  # Applies pending schema migrations, then exits. The API and the worker wait for it to succeed.
+  migrate:
+    <<: *hardened
+    image: ${DEALFLOW_MIGRATE_IMAGE:-dealflow-migrate:local}
+    build: { context: .., dockerfile: apps/api/Dockerfile, target: migrate }
+    restart: 'no'
+    user: '1000:1000'
+    environment:
+      DATABASE_URL: postgresql://dealflow_owner:${DEALFLOW_OWNER_PASSWORD}@postgres:5432/dealflow
+      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:${DEALFLOW_OWNER_PASSWORD}@postgres:5432/dealflow
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    <<: *hardened
+    image: ${DEALFLOW_API_IMAGE:-dealflow-api:local}
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    user: '1000:1000'
+    env_file: [dealflow.env]
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    # The image's own HEALTHCHECK calls /api/v1/health/ready.
+
+  # Background jobs: outbox relay, workflow runs, webhooks, approval expiry, mailbox sync, queued AI runs.
+  worker:
+    <<: *hardened
+    image: ${DEALFLOW_API_IMAGE:-dealflow-api:local}
+    user: '1000:1000'
+    command: ['node', 'dist/worker.js']
+    env_file: [dealflow.env]
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      api: { condition: service_started }
+    healthcheck:
+      # Fails when the worker has not finished a cycle for 5 minutes.
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:9464/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  web:
+    <<: *hardened
+    image: ${DEALFLOW_WEB_IMAGE:-dealflow-web:local}
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args: { API_INTERNAL_URL: http://api:4000 }
+    user: '1000:1000'
+    tmpfs: [/tmp, /app/apps/web/.next/cache]
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  # Public entry point: HTTPS with automatic certificates, /api/v1/* to the API, everything else to the web app.
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web: { condition: service_healthy }
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: '5' }
+
+  # Not started by `up`. scripts/backup.sh and scripts/restore.sh run it on demand.
+  backup:
+    image: postgres:16-bookworm
+    profiles: [tools]
+    restart: 'no'
+    # Runs as the user who called scripts/backup.sh, so that user owns (and can copy off-site) the backup files.
+    user: '${BACKUP_UID:-0}:${BACKUP_GID:-0}'
+    environment:
+      BACKUP_DATABASE_URL: postgresql://dealflow_backup:${DEALFLOW_BACKUP_PASSWORD}@postgres:5432/dealflow
+      RESTORE_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+    volumes:
+      - ../scripts:/dealflow/scripts:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    # umask 077: backups contain every workspace's data, so only their owner may read them.
+    entrypoint: ['bash', '-c', 'umask 077 && exec bash /dealflow/scripts/backup.sh /backups']
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

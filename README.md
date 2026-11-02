@@ -21,7 +21,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 - Segments with consent-aware export, hosted lead forms, campaign attribution, revenue analytics, customer health
 - Billing: plans enforced through one entitlement rule, free trial, usage meters, and payment by invoice (bank transfer recorded by an operator). Stripe and Razorpay checkout is built but switched off (`ONLINE_PAYMENTS_ENABLED`; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
 - Custom roles (Professional and above), onboarding checklist, owner-granted support access
-- Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`)
+- Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`, or `node dist/cli/create-operator.js` in the API image)
 - Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true` (set in the Helm chart: the rate card is approved)
 - Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
 - Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
@@ -71,6 +71,7 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 | `packages/ui` | Design tokens, Tailwind preset, accessible components |
 | `packages/config` | Validated environment configuration |
 | `infrastructure/helm/dealflow` | Helm chart (API, worker, web, migrations, autoscaling, policies, alerts) |
+| `deploy/` | Self-hosting on one Linux server: Docker Compose, Caddy HTTPS, settings templates, backup/restore/update scripts ([guide](deploy/SERVER_SETUP.md)) |
 | `scripts/` | Database setup, RLS check, backup, restore, load-test runner |
 | `docs/` | PRD, architecture, ERD, AI/automation, security, tests, UI spec, pricing, feature matrix, ADRs, deployment, runbooks |
 
@@ -83,7 +84,7 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 - [UI/UX design system](docs/UI_DESIGN_SYSTEM.md)
 - [Competitive feature matrix](docs/FEATURE_MATRIX.md) · [Pricing & unit economics](docs/PRICING_STRATEGY.md)
 - [Implementation plan & feature status](docs/IMPLEMENTATION_PLAN.md) · [Billing setup](docs/BILLING.md)
-- [Deployment](docs/DEPLOYMENT.md) · [Observability](docs/OBSERVABILITY.md) · [Runbooks](docs/runbooks/README.md) · [Performance](docs/perf/README.md) · [Pen-test brief](docs/security/PENTEST_PREP.md)
+- [Self-host on one server](deploy/SERVER_SETUP.md) · [Deployment (Kubernetes)](docs/DEPLOYMENT.md) · [Observability](docs/OBSERVABILITY.md) · [Runbooks](docs/runbooks/README.md) · [Performance](docs/perf/README.md) · [Pen-test brief](docs/security/PENTEST_PREP.md)
 
 ## Credentials required for live integrations
 

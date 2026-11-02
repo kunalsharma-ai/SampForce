@@ -1,0 +1,26 @@
+# Caddy reverse proxy for DealFlow. DOMAIN and ACME_EMAIL come from deploy/.env.
+# Caddy gets a Let's Encrypt certificate for DOMAIN on first start (ports 80 and 443 must be open and DNS must
+# point at this server) and renews it on its own. Plain HTTP is redirected to HTTPS.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# API calls go straight to the API, so it sees exactly one proxy hop and logs and rate-limits the real
+	# client address (the API trusts one hop). Same origin as the web app, so auth cookies stay first-party.
+	handle /api/v1/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header -Server
+	log {
+		output stdout
+		format console
+	}
+}
