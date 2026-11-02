@@ -479,7 +479,7 @@ export class GamificationService {
           startDate: utc(start), endDate: utc(endInclusive), goal: input.goal ?? null, reward: input.reward ?? null, teamIds, rules: s.rules as unknown as Prisma.InputJsonValue, createdById: auth.userId,
         },
       });
-      await this.notifications.send(tx, auth.tenantId, participants.filter((u) => u !== auth.userId), { type: 'gamification.competition_created', title: `New ${input.kind === 'team' ? 'team challenge' : 'competition'}: ${input.name}`, body: `${start} to ${endInclusive}${input.reward ? `. Reward: ${input.reward}` : ''}`, link: '/app/gamification' });
+      await this.notifications.send(tx, auth.tenantId, participants.filter((u) => u !== auth.userId), { type: 'gamification.competition_created', title: input.kind === 'team' ? `New team challenge: ${input.name}` : `New competition: ${input.name}`, body: input.reward ? `${start} to ${endInclusive}. Reward: ${input.reward}` : `${start} to ${endInclusive}`, link: '/app/gamification' });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'gamification.competition_created', entityType: 'gamification_competition', entityId: row.id, metadata: { name: input.name, kind: input.kind, metric: input.metric, start, end: endInclusive, teamIds }, meta });
       return row.id;
     });

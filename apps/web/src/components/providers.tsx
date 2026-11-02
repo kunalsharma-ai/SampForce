@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DirectionProvider, TooltipProvider } from '@dealflow/ui';
 import { MotionConfig } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useActiveLocale } from '@/lib/i18n';
 import { applyPaint, computePaint, isDarkMode, PAINT_CACHE_KEY } from '@/lib/appearance-engine';
@@ -40,6 +40,20 @@ function useDocumentLocale() {
   return dir;
 }
 
+/**
+ * The API writes its sentences and messages in the language the request asks for (ADR 0052), so data already loaded
+ * in another language is fetched again when the person switches language.
+ */
+function useRefetchOnLanguageChange(client: QueryClient) {
+  const { language } = useActiveLocale();
+  const first = useRef(language);
+  useEffect(() => {
+    if (first.current === language) return;
+    first.current = language;
+    void client.invalidateQueries();
+  }, [client, language]);
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
     () =>
@@ -55,6 +69,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
   useAppearancePaint();
   const dir = useDocumentLocale();
+  useRefetchOnLanguageChange(client);
   const motion = usePreferences((s) => s.appearance.motion);
   // Full ignores the OS setting; Balanced follows it; Minimal and Off keep only essential fades (CSS handles Off).
   const reducedMotion = motion === 'full' ? 'never' : motion === 'balanced' ? 'user' : 'always';

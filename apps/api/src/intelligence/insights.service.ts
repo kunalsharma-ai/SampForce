@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import type { Insight, InsightFeed, InsightScope } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { money as moneyIn, percent, tr } from '../common/request-language';
 
 const DAY = 86_400_000;
 /** Below this many sequence emails in a week, a reply rate says more about chance than about the emails. */
 const MIN_SENDS_FOR_RATE = 20;
 
-const money = (n: number, currency: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
-const pct = (n: number) => `${Math.round(n * 1000) / 10}%`;
+const money = (n: number, currency: string) => moneyIn(n, currency);
+const pct = (n: number) => percent(Math.round(n * 1000) / 10);
+/** Picks the singular or plural sentence, so each language can phrase both. */
+const one = (n: number, singular: string, plural: string, vars: Record<string, string | number> = {}) => tr(n === 1 ? singular : plural, { n, ...vars });
+const otherNote = (n: number) => (n ? ` ${tr('{n} in other currencies not included in the value.', { n })}` : '');
 
 /**
  * Sales insights feed (enhancement spec feature 1). Counts and comparisons over the last seven days against the seven
@@ -48,28 +52,28 @@ export class InsightsService {
         if (high > 0) {
           items.push({
             key: 'high_risk_deals', tone: 'attention',
-            title: `${high} open deal${high === 1 ? ' is' : 's are'} critical (high risk)`,
-            detail: newlyHigh > 0 ? `${newlyHigh} turned critical in the last 7 days. Health comes from activity, stage age, tasks and dates.` : 'None turned critical in the last 7 days.',
+            title: one(high, '{n} open deal is critical (high risk)', '{n} open deals are critical (high risk)'),
+            detail: newlyHigh > 0 ? tr('{n} turned critical in the last 7 days. Health comes from activity, stage age, tasks and dates.', { n: newlyHigh }) : tr('None turned critical in the last 7 days.'),
             metric: { current: high, previous: null, unit: 'count' }, href: `/app/deals/health?risk=high${mine ? '&mine=true' : ''}`,
           });
         }
         if (overdueClose > 0) {
           items.push({
-            key: 'close_date_passed', tone: 'attention', title: `${overdueClose} open deal${overdueClose === 1 ? ' has' : 's have'} a close date in the past`,
-            detail: 'Update the date or the stage so the forecast stays honest.', metric: { current: overdueClose, previous: null, unit: 'count' }, href: '/app/deals',
+            key: 'close_date_passed', tone: 'attention', title: one(overdueClose, '{n} open deal has a close date in the past', '{n} open deals have a close date in the past'),
+            detail: tr('Update the date or the stage so the forecast stays honest.'), metric: { current: overdueClose, previous: null, unit: 'count' }, href: '/app/deals',
           });
         }
         const other = otherCurrencies(createdNow);
         items.push({
           key: 'pipeline_created', tone: createdNow.length >= createdBefore.length ? 'good' : 'info',
-          title: `${createdNow.length} new deal${createdNow.length === 1 ? '' : 's'} worth ${money(sum(createdNow), currency)}`,
-          detail: `${createdBefore.length} the week before (${money(sum(createdBefore), currency)}).${other ? ` ${other} in other currencies not included in the value.` : ''}`,
+          title: one(createdNow.length, '{n} new deal worth {value}', '{n} new deals worth {value}', { value: money(sum(createdNow), currency) }),
+          detail: `${tr('{n} the week before ({value}).', { n: createdBefore.length, value: money(sum(createdBefore), currency) })}${otherNote(other)}`,
           metric: { current: sum(createdNow), previous: sum(createdBefore), unit: 'money' }, href: '/app/deals',
         });
         if (wonNow.length || wonBefore.length) {
           items.push({
-            key: 'deals_won', tone: wonNow.length ? 'good' : 'info', title: `${wonNow.length} deal${wonNow.length === 1 ? '' : 's'} won, ${money(sum(wonNow), currency)}`,
-            detail: `${wonBefore.length} the week before (${money(sum(wonBefore), currency)}).${otherCurrencies(wonNow) ? ` ${otherCurrencies(wonNow)} in other currencies not included in the value.` : ''}`,
+            key: 'deals_won', tone: wonNow.length ? 'good' : 'info', title: one(wonNow.length, '{n} deal won, {value}', '{n} deals won, {value}', { value: money(sum(wonNow), currency) }),
+            detail: `${tr('{n} the week before ({value}).', { n: wonBefore.length, value: money(sum(wonBefore), currency) })}${otherNote(otherCurrencies(wonNow))}`,
             metric: { current: sum(wonNow), previous: sum(wonBefore), unit: 'money' }, href: '/app/revenue',
           });
         }
@@ -85,19 +89,19 @@ export class InsightsService {
         ]);
         if (repliesNow || repliesBefore) {
           items.push({
-            key: 'emails_received', tone: 'info', title: `${repliesNow} email${repliesNow === 1 ? '' : 's'} from leads and contacts`,
-            detail: `${repliesBefore} the week before. Counts mail synced from connected mailboxes only.`, metric: { current: repliesNow, previous: repliesBefore, unit: 'count' }, href: '/app/communication',
+            key: 'emails_received', tone: 'info', title: one(repliesNow, '{n} email from leads and contacts', '{n} emails from leads and contacts'),
+            detail: tr('{n} the week before. Counts mail synced from connected mailboxes only.', { n: repliesBefore }), metric: { current: repliesNow, previous: repliesBefore, unit: 'count' }, href: '/app/communication',
           });
         }
         if (overdue) {
-          items.push({ key: 'overdue_tasks', tone: 'attention', title: `${overdue} overdue task${overdue === 1 ? '' : 's'}`, detail: mine ? 'Assigned to you.' : 'Across the team.', metric: { current: overdue, previous: null, unit: 'count' }, href: '/app/activities?tab=tasks' });
+          items.push({ key: 'overdue_tasks', tone: 'attention', title: one(overdue, '{n} overdue task', '{n} overdue tasks'), detail: mine ? tr('Assigned to you.') : tr('Across the team.'), metric: { current: overdue, previous: null, unit: 'count' }, href: '/app/activities?tab=tasks' });
         }
       }
 
       if (can('leads:read')) {
         const untouched = await tx.lead.count({ where: { tenantId: t, deletedAt: null, ...owner, status: 'NEW', createdAt: { lt: new Date(now.getTime() - DAY) }, activities: { none: { deletedAt: null } } } });
         if (untouched) {
-          items.push({ key: 'untouched_leads', tone: 'attention', title: `${untouched} new lead${untouched === 1 ? '' : 's'} with no contact yet`, detail: 'Still New, nothing logged, added more than a day ago.', metric: { current: untouched, previous: null, unit: 'count' }, href: '/app/leads?status=NEW' });
+          items.push({ key: 'untouched_leads', tone: 'attention', title: one(untouched, '{n} new lead with no contact yet', '{n} new leads with no contact yet'), detail: tr('Still New, nothing logged, added more than a day ago.'), metric: { current: untouched, previous: null, unit: 'count' }, href: '/app/leads?status=NEW' });
         }
       }
 
@@ -114,23 +118,23 @@ export class InsightsService {
           const before7 = sentBefore >= MIN_SENDS_FOR_RATE ? repliedBefore / sentBefore : null;
           items.push({
             key: 'sequence_reply_rate', tone: before7 !== null && now7 < before7 ? 'attention' : 'info',
-            title: `Sequence reply rate ${pct(now7)} (${repliedNow} of ${sentNow})`,
-            detail: before7 === null ? 'Too few sends the week before to compare.' : `${pct(before7)} the week before (${repliedBefore} of ${sentBefore}). Replies so far; later replies still count toward the week sent.`,
+            title: tr('Sequence reply rate {rate} ({replied} of {sent})', { rate: pct(now7), replied: repliedNow, sent: sentNow }),
+            detail: before7 === null ? tr('Too few sends the week before to compare.') : tr('{rate} the week before ({replied} of {sent}). Replies so far; later replies still count toward the week sent.', { rate: pct(before7), replied: repliedBefore, sent: sentBefore }),
             metric: { current: now7 * 100, previous: before7 === null ? null : before7 * 100, unit: 'percent' }, href: '/app/sequences',
           });
         } else if (sentNow > 0) {
-          items.push({ key: 'sequence_reply_rate', tone: 'info', title: `${sentNow} sequence email${sentNow === 1 ? '' : 's'} sent, ${repliedNow} replied`, detail: `A reply rate is shown from ${MIN_SENDS_FOR_RATE} sends a week.`, metric: null, href: '/app/sequences' });
+          items.push({ key: 'sequence_reply_rate', tone: 'info', title: one(sentNow, '{n} sequence email sent, {replied} replied', '{n} sequence emails sent, {replied} replied', { replied: repliedNow }), detail: tr('A reply rate is shown from {n} sends a week.', { n: MIN_SENDS_FOR_RATE }), metric: null, href: '/app/sequences' });
         }
       }
 
       if (can('contracts:read')) {
         const renewals = await tx.contract.count({ where: { tenantId: t, ...owner, status: 'ACTIVE', endDate: { gte: today, lte: new Date(now.getTime() + 30 * DAY) }, renewal: { is: null } } });
-        if (renewals) items.push({ key: 'renewals_due', tone: 'attention', title: `${renewals} contract${renewals === 1 ? '' : 's'} end${renewals === 1 ? 's' : ''} within 30 days`, detail: 'No renewal is linked yet.', metric: { current: renewals, previous: null, unit: 'count' }, href: '/app/contracts' });
+        if (renewals) items.push({ key: 'renewals_due', tone: 'attention', title: one(renewals, '{n} contract ends within 30 days', '{n} contracts end within 30 days'), detail: tr('No renewal is linked yet.'), metric: { current: renewals, previous: null, unit: 'count' }, href: '/app/contracts' });
       }
 
       if (can('success:read')) {
         const atRisk = await tx.companyHealth.count({ where: { tenantId: t, band: 'at_risk', ...(mine ? { company: { ownerId: auth.userId } } : {}) } });
-        if (atRisk) items.push({ key: 'customers_at_risk', tone: 'attention', title: `${atRisk} customer${atRisk === 1 ? '' : 's'} at risk`, detail: 'From customer health: activity, escalations, renewal window and overdue tasks.', metric: { current: atRisk, previous: null, unit: 'count' }, href: '/app/customer-success' });
+        if (atRisk) items.push({ key: 'customers_at_risk', tone: 'attention', title: one(atRisk, '{n} customer at risk', '{n} customers at risk'), detail: tr('From customer health: activity, escalations, renewal window and overdue tasks.'), metric: { current: atRisk, previous: null, unit: 'count' }, href: '/app/customer-success' });
       }
 
       const order = { attention: 0, good: 1, info: 2 } as const;

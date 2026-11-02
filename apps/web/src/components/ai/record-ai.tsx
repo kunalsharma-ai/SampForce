@@ -35,7 +35,7 @@ function Signals({ signals, risk }: { signals: Signal[]; risk?: boolean }) {
           </span>
           <span>
             {t.maybe(s.label)}
-            <span className="block text-xs text-muted-foreground">{s.detail}</span>
+            <span className="block text-xs text-muted-foreground">{t.maybe(s.detail)}</span>
           </span>
         </li>
       ))}

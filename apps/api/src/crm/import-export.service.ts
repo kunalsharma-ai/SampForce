@@ -11,6 +11,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { localize, tr } from '../common/request-language';
 import { ownerRefs } from './crm-helpers';
 import { parseCsv, toCsv } from './csv';
 import { CustomFieldsService } from './custom-fields.service';
@@ -97,7 +98,7 @@ export class ImportExportService {
           }
           const parsed = SCHEMAS[req.entity].safeParse(raw);
           if (!parsed.success) {
-            result.errors.push({ row: rowNumber, message: parsed.error.issues.map((e) => `${e.path.join('.') || 'row'}: ${e.message}`).join('; ') });
+            result.errors.push({ row: rowNumber, message: parsed.error.issues.map((e) => `${e.path.join('.') || 'row'}: ${localize(e.message)}`).join('; ') });
             continue;
           }
           let customFields: Record<string, unknown> | undefined;
@@ -279,7 +280,7 @@ function invalid(path: string, message: string): BadRequestException {
 function describeValidation(err: unknown): string {
   if (err instanceof BadRequestException) {
     const body = err.getResponse() as { details?: { path: string; message: string }[]; message?: string };
-    return body.details?.map((d) => `${d.path}: ${d.message}`).join('; ') ?? body.message ?? 'Invalid row';
+    return body.details?.map((d) => `${d.path}: ${localize(d.message)}`).join('; ') ?? (body.message ? localize(body.message) : tr('Invalid row'));
   }
   throw err;
 }

@@ -169,8 +169,8 @@ export class PortalService {
       });
       await this.notifications.send(tx, ctx.tenantId, [q.createdById, q.opportunity.ownerId], {
         type: decision === 'accept' ? 'quote.accepted_in_portal' : 'quote.declined_in_portal',
-        title: `${ctx.user.name} ${decision === 'accept' ? 'approved' : 'declined'} ${ref}`,
-        body: `${q.opportunity.name}, in the client portal.${note ? ` Note: ${note.slice(0, 200)}` : ''}`,
+        title: decision === 'accept' ? `${ctx.user.name} approved ${ref}` : `${ctx.user.name} declined ${ref}`,
+        body: note ? `${q.opportunity.name}, in the client portal. Note: ${note.slice(0, 200)}` : `${q.opportunity.name}, in the client portal.`,
         link: `/app/quotes/${q.id}`,
       });
       await addUpdate(tx, ctx.tenantId, ctx.user.companyId, 'proposal', `${ref} ${decision === 'accept' ? 'approved' : 'declined'} by ${ctx.user.name}`, null);

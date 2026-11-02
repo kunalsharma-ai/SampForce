@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useNotifications } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 /** Bell with the caller's unread notifications. Selecting one marks it read and opens its link. */
 export function NotificationsMenu() {
+  const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
   const { data } = useNotifications();
@@ -23,7 +25,7 @@ export function NotificationsMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}>
+        <Button variant="ghost" size="icon" className="relative" aria-label={unread ? t('Notifications, {n} unread', { n: unread }) : t('Notifications')}>
           <Bell aria-hidden />
           {unread > 0 && (
             <span aria-hidden className="absolute end-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-critical px-1 text-[10px] font-semibold leading-4 text-background">
@@ -34,16 +36,16 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between pe-1">
-          <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('Notifications')}</DropdownMenuLabel>
           {unread > 0 && (
             <button type="button" className="rounded px-2 py-1 text-xs text-primary hover:underline" onClick={() => markRead.mutate('all')}>
-              Mark all read
+              {t('Mark all read')}
             </button>
           )}
         </div>
         <DropdownMenuSeparator />
         {items.length === 0 ? (
-          <p className="px-2 py-3 text-sm text-muted-foreground">You&apos;re all caught up. Assignments, approvals and automation alerts appear here.</p>
+          <p className="px-2 py-3 text-sm text-muted-foreground">{t('You’re all caught up. Assignments, approvals and automation alerts appear here.')}</p>
         ) : (
           items.map((n) => (
             <DropdownMenuItem
@@ -55,7 +57,7 @@ export function NotificationsMenu() {
               }}
             >
               <span className="flex w-full items-start gap-2">
-                {!n.readAt && <span aria-label="Unread" className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                {!n.readAt && <span aria-label={t('Unread')} className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
                 <span className={`flex-1 text-sm ${n.readAt ? 'text-muted-foreground' : 'font-medium'}`}>{n.title}</span>
               </span>
               {n.body && <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>}

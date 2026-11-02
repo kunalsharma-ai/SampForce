@@ -259,7 +259,7 @@ export class SuccessService {
       });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'escalation.opened', entityType: 'escalation', entityId: row.id, metadata: { companyId: input.companyId, severity: input.severity }, meta });
       if (ownerId !== auth.userId || input.severity === 'HIGH' || input.severity === 'CRITICAL') {
-        await this.notifications.send(tx, auth.tenantId, [ownerId], { type: 'escalation.opened', title: `${input.severity.toLowerCase()} escalation: ${row.company.name}`, body: input.title, link: `/app/customer-success?company=${input.companyId}` });
+        await this.notifications.send(tx, auth.tenantId, [ownerId], { type: 'escalation.opened', title: { LOW: `low escalation: ${row.company.name}`, MEDIUM: `medium escalation: ${row.company.name}`, HIGH: `high escalation: ${row.company.name}`, CRITICAL: `critical escalation: ${row.company.name}` }[input.severity], body: input.title, link: `/app/customer-success?company=${input.companyId}` });
       }
       return toEscalationRow(row, await ownerRefs(tx, [row.ownerId]));
     });

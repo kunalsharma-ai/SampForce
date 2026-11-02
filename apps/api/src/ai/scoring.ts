@@ -85,7 +85,7 @@ export function dealHealth(f: DealFacts, now = new Date()): Omit<DealHealth, 'ne
   const signals: Signal[] = [];
   const risk = (key: string, label: string, points: number, detail: string) => signals.push({ key, label, points: -points, detail });
 
-  if (f.status !== 'OPEN') return { health: 100, risk: 'low', signals: [{ key: 'closed', label: `Deal is ${f.status.toLowerCase()}`, points: 0, detail: 'Closed deals are not scored' }] };
+  if (f.status !== 'OPEN') return { health: 100, risk: 'low', signals: [{ key: 'closed', label: f.status === 'WON' ? 'Deal is won' : 'Deal is lost', points: 0, detail: 'Closed deals are not scored' }] };
 
   if (!f.lastActivityAt) risk('no_activity', 'No activity logged', 25, 'Nothing has been logged on this deal');
   else {

@@ -46,6 +46,38 @@ const ZOD_OPTIONS = new Set(['required_error', 'invalid_type_error', 'message'])
 export interface SourceText {
   text: string;
   file: string;
+  /** `key`: a phrase key passed to tr(), which must be in the catalogue exactly; otherwise finished text, matched by shape. */
+  kind?: 'key';
+}
+
+/** Functions that take catalogue keys, and the argument positions of the keys (tr in common/request-language.ts). */
+const KEY_ARGS: Record<string, number[]> = { tr: [0], one: [1, 2] };
+
+/** The signal helpers in ai/scoring.ts: `add(key, label, points, detail)`. */
+const SIGNAL_HELPERS: Record<string, number[]> = { add: [1, 3], risk: [1, 3] };
+
+/** Calls that store a notification for someone: the draft's argument index. Its title and body are shown translated. */
+const NOTIFY: Record<string, number> = { send: 3, notifyBilling: 2 };
+
+/** The keys an expression can be: literals, both sides of a condition, a const in the same file, or any value of a const map. */
+function keysOf(node: ts.Expression | undefined, src: ts.SourceFile): string[] {
+  if (!node) return [];
+  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return keysOf(node.expression, src);
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node.text];
+  if (ts.isConditionalExpression(node)) return [...keysOf(node.whenTrue, src), ...keysOf(node.whenFalse, src)];
+  if (ts.isObjectLiteralExpression(node)) return node.properties.flatMap((p) => (ts.isPropertyAssignment(p) ? keysOf(p.initializer, src) : []));
+  if (ts.isElementAccessExpression(node)) return keysOf(node.expression, src);
+  if (ts.isIdentifier(node)) {
+    let found: ts.Expression | undefined;
+    const look = (n: ts.Node): void => {
+      if (!found && ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === node.text && n.initializer) found = n.initializer;
+      if (!found) ts.forEachChild(n, look);
+    };
+    look(src);
+    return found ? keysOf(found, src) : [];
+  }
+  // A template or anything else cannot be checked, so it is reported as is and fails the test.
+  return [node.getText()];
 }
 
 function texts(node: ts.Expression | undefined): string[] {
@@ -83,6 +115,7 @@ export function sourceTexts(dirs: string[], root: string): SourceText[] {
     const usesZod = /from 'zod'|from '@dealflow\/types'/.test(code);
     const src = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true);
     const add = (list: string[]) => list.forEach((text) => /\p{L}/u.test(text) && out.push({ text, file: relative(root, file) }));
+    const addKeys = (list: string[]) => list.forEach((text) => out.push({ text, file: relative(root, file), kind: 'key' }));
     const visit = (n: ts.Node): void => {
       if (ts.isNewExpression(n)) {
         const name = n.expression.getText();
@@ -101,11 +134,21 @@ export function sourceTexts(dirs: string[], root: string): SourceText[] {
       if (ts.isObjectLiteralExpression(n)) {
         const message = prop(n, 'message');
         if (message && (prop(n, 'code') || prop(n, 'path'))) add(texts(message));
+        // Health and score signals are stored, then shown translated: `{ key, label, points, detail }`.
+        if (prop(n, 'label') && prop(n, 'points')) add([...texts(prop(n, 'label')), ...texts(prop(n, 'detail'))]);
+        // Why a sequence enrollment paused or stopped (stored as its last error and sent as a notification).
+        if (prop(n, 'kind')) add([...texts(prop(n, 'pause')), ...texts(prop(n, 'why'))]);
       }
       if (ts.isCallExpression(n)) {
         const callee = n.expression;
         const name = ts.isIdentifier(callee) ? callee.text : undefined;
         const helper = name ? HELPERS[name] : undefined;
+        const signal = name ? SIGNAL_HELPERS[name] : undefined;
+        if (signal && /scoring\.ts$/.test(file)) for (const i of signal) add(texts(n.arguments[i]));
+        for (const i of (name && KEY_ARGS[name]) || []) addKeys(keysOf(n.arguments[i], src));
+        const method = ts.isPropertyAccessExpression(callee) ? callee.name.text : name;
+        const draft = method !== undefined && method in NOTIFY ? n.arguments[NOTIFY[method]!] : undefined;
+        if (draft && ts.isObjectLiteralExpression(draft) && prop(draft, 'title')) add([...texts(prop(draft, 'title')), ...texts(prop(draft, 'body'))]);
         if (helper) {
           const values = texts(n.arguments[helper.arg]);
           add(helper.template ? values.map((v) => helper.template!.replace(SLOT, v)) : values);

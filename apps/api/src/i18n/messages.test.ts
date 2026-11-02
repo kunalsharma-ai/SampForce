@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SERVER_TEXT } from '@dealflow/types';
+import { ALL_SERVER_TEXT as SERVER_TEXT } from '@dealflow/types';
 import { shape, sourceTexts } from './source-text';
 
 const ROOT = join(__dirname, '../../../..');
@@ -18,7 +18,8 @@ describe('text the API sends to people', () => {
   });
 
   it('has a Spanish, French, German and Arabic translation for every message', () => {
-    const missing = [...new Set(found.filter((t) => !shapes.has(shape(t.text))).map((t) => `${t.file}: ${t.text}`))];
+    const keys = new Set(SERVER_TEXT.keys());
+    const missing = [...new Set(found.filter((t) => (t.kind === 'key' ? !keys.has(t.text) : !shapes.has(shape(t.text)))).map((t) => `${t.file}: ${t.text}`))];
     expect(missing, 'Add these to packages/types/src/i18n/text').toEqual([]);
   });
 });
