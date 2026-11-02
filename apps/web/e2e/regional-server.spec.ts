@@ -61,3 +61,27 @@ test('sentences the API writes and the notifications menu switch language with t
   await page.getByRole('button', { name: 'Notificaciones', exact: true }).click();
   await expect(page.getByText('Estás al día. Las asignaciones, aprobaciones y alertas de automatización aparecen aquí.')).toBeVisible();
 });
+
+test('tab titles and new email designs start in the person’s language', async ({ page }) => {
+  await signUp(page, 'Diseño SL');
+  await page.goto('/app/deals');
+  await expect(page).toHaveTitle(/^Deals · /);
+
+  await page.goto('/app/settings');
+  const card = page.getByTestId('regional-settings');
+  await card.getByLabel('Language').selectOption('es');
+  await card.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+  await page.goto('/app/deals');
+  await expect(page).toHaveTitle(/^Oportunidades · /);
+
+  // A new design starts with Spanish starter text; merge fields stay as they are.
+  await page.goto('/app/sequences');
+  await page.getByRole('tab', { name: 'Plantillas' }).click();
+  await page.getByRole('button', { name: 'Nueva plantilla' }).click();
+  await page.getByRole('button', { name: 'Diseñada', exact: true }).click();
+  const outline = page.getByRole('list', { name: 'Bloques del correo' });
+  await expect(outline).toContainText('Hola, {{first_name|equipo}}: Escribe tu mensaje aquí.');
+  await expect(outline).toContainText('Reservar una llamada');
+});

@@ -27,6 +27,8 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
+import { inLanguage, requestLanguage, tr } from '../common/request-language';
+import { type LanguageCode, languageCodeSchema } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { PasswordService } from './password.service';
@@ -115,21 +117,24 @@ export class AuthService {
       this.prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + minutes * 60_000) } }),
     ]);
     const link = `${this.env.PUBLIC_WEB_URL.replace(/\/+$/, '')}/reset-password#token=${token}`;
-    await this.mailer.send({
-      to: user.email,
-      subject: 'Reset your DealFlow password',
-      text: [
-        `Hi ${user.name},`,
-        '',
-        'Someone asked to reset the password for your DealFlow account. To choose a new password, open this link:',
-        '',
-        link,
-        '',
-        `The link works once and expires in ${minutes} minutes. If you did not ask for this, ignore this email: your password has not changed.`,
-        '',
-        'DealFlow',
-      ].join('\n'),
-    });
+    // In the person's saved language, or the language of the page they asked from (ADR 0052).
+    await inLanguage(await this.languageOf(user.id), () =>
+      this.mailer.send({
+        to: user.email,
+        subject: tr('Reset your DealFlow password'),
+        text: [
+          tr('Hi {name},', { name: user.name }),
+          '',
+          tr('Someone asked to reset the password for your DealFlow account. To choose a new password, open this link:'),
+          '',
+          link,
+          '',
+          tr('The link works once and expires in {n} minutes. If you did not ask for this, ignore this email: your password has not changed.', { n: minutes }),
+          '',
+          'DealFlow',
+        ].join('\n'),
+      }),
+    );
     await this.auditForUser(user.id, 'auth.password_reset_requested', meta);
     authEvents.inc({ event: 'password_reset_requested' });
   }
@@ -155,13 +160,28 @@ export class AuthService {
     await this.auditForUser(row.userId, 'auth.password_reset', meta);
     authEvents.inc({ event: 'password_reset' });
     // Tell the account owner, in case it was not them. A failure here does not undo the reset.
-    await this.mailer
-      .send({
+    await inLanguage(await this.languageOf(row.userId), () =>
+      this.mailer.send({
         to: row.user.email,
-        subject: 'Your DealFlow password was changed',
-        text: `Hi ${row.user.name},\n\nThe password for your DealFlow account was just changed with a reset link, and every device was signed out.\n\nIf this was not you, contact your workspace administrator straight away.\n\nDealFlow`,
-      })
-      .catch(() => undefined);
+        subject: tr('Your DealFlow password was changed'),
+        text: [
+          tr('Hi {name},', { name: row.user.name }),
+          '',
+          tr('The password for your DealFlow account was just changed with a reset link, and every device was signed out.'),
+          '',
+          tr('If this was not you, contact your workspace administrator straight away.'),
+          '',
+          'DealFlow',
+        ].join('\n'),
+      }),
+    ).catch(() => undefined);
+  }
+
+  /** The person's saved interface language, or the request's when they have not saved one. */
+  private async languageOf(userId: string): Promise<LanguageCode> {
+    const saved = await this.prisma.userRegionalSetting.findUnique({ where: { userId }, select: { language: true } });
+    const parsed = languageCodeSchema.safeParse(saved?.language);
+    return parsed.success ? parsed.data : requestLanguage();
   }
 
   /** Records an account-level event in the audit log of every workspace the person belongs to. */
@@ -189,6 +209,8 @@ export class AuthService {
           name: input.organizationName,
           slug,
           ownerUserId: user.id,
+          // The sign-up page sends the language the person chose, so the starter pipeline reads in it (ADR 0052).
+          text: (english) => tr(english),
         });
         await this.audit.record(tx, {
           tenantId,

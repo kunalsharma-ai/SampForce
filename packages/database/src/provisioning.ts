@@ -29,6 +29,11 @@ export interface ProvisionTenantInput {
   ownerUserId: string;
   planCode?: string;
   isDemo?: boolean;
+  /**
+   * Writes starter content (the default pipeline and its stages) in the creator's language. The API passes `tr`;
+   * without it the starter content is English.
+   */
+  text?: (english: string) => string;
 }
 
 /**
@@ -37,6 +42,7 @@ export interface ProvisionTenantInput {
  * so the row-level-security insert policies accept the rows.
  */
 export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput) {
+  const say = input.text ?? ((english: string) => english);
   const tenant = await tx.tenant.create({
     data: { id: input.tenantId, name: input.name, slug: input.slug, isDemo: input.isDemo ?? false },
   });
@@ -62,13 +68,13 @@ export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput)
   });
 
   const pipeline = await tx.pipeline.create({
-    data: { tenantId: tenant.id, name: 'Sales Pipeline', isDefault: true },
+    data: { tenantId: tenant.id, name: say('Sales Pipeline'), isDefault: true },
   });
   await tx.pipelineStage.createMany({
     data: DEFAULT_PIPELINE_STAGES.map((s, position) => ({
       tenantId: tenant.id,
       pipelineId: pipeline.id,
-      name: s.name,
+      name: say(s.name),
       probability: s.probability,
       category: s.category,
       position,

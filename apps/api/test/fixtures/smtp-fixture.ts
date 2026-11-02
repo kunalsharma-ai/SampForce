@@ -27,9 +27,12 @@ function decode(raw: string): { subject: string; text: string } {
   const [head = '', ...rest] = raw.split(/\r?\n\r?\n/);
   const headers = head.replace(/\r?\n[ \t]+/g, ' ');
   const subjectLine = /^Subject: (.*)$/im.exec(headers)?.[1] ?? '';
-  const subject = subjectLine.replace(/=\?utf-8\?([BQ])\?(.*?)\?=/gi, (_, enc: string, data: string) =>
-    enc.toUpperCase() === 'B' ? Buffer.from(data, 'base64').toString() : data.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (_m, h: string) => String.fromCharCode(parseInt(h, 16))),
-  ).replace(/\?=\s+=\?/g, '');
+  // RFC 2047: whitespace between two encoded words is dropped, and each word's bytes are UTF-8.
+  const subject = subjectLine.replace(/\?=\s+=\?/g, '?==?').replace(/=\?utf-8\?([BQ])\?(.*?)\?=/gi, (_, enc: string, data: string) =>
+    enc.toUpperCase() === 'B'
+      ? Buffer.from(data, 'base64').toString()
+      : Buffer.from(data.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (_m, h: string) => String.fromCharCode(parseInt(h, 16))), 'latin1').toString('utf8'),
+  );
   let body = rest.join('\n\n');
   const encoding = /^Content-Transfer-Encoding: (.*)$/im.exec(headers)?.[1]?.trim().toLowerCase();
   if (encoding === 'base64') body = Buffer.from(body.replace(/\s+/g, ''), 'base64').toString();

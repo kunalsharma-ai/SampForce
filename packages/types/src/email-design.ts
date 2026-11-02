@@ -165,23 +165,27 @@ export const EMAIL_BLOCK_LABELS: Record<EmailBlockType, string> = {
 export const EMAIL_BLOCK_TYPES = Object.keys(EMAIL_BLOCK_LABELS) as EmailBlockType[];
 
 /** A new block of a type, with starter content that shows what it is for. `id` must be unique in the design. */
-export function newEmailBlock(type: EmailBlockType, id: string): EmailBlock {
+/**
+ * A new block with starter text. `say` writes that text in the author's language (the web passes its translator);
+ * merge fields such as {{sender_name}} are kept as they are.
+ */
+export function newEmailBlock(type: EmailBlockType, id: string, say: (english: string) => string = (english) => english): EmailBlock {
   switch (type) {
     case 'header':
       return { id, type, title: '{{sender_name}}', logoUrl: '', align: 'left' };
     case 'heading':
-      return { id, type, text: 'A heading', level: 2, align: 'left' };
+      return { id, type, text: say('A heading'), level: 2, align: 'left' };
     case 'text':
       return {
         id,
         type,
-        text: 'Hi {{first_name|there}},\n\nWrite your message here.',
+        text: `${say('Hi {{first_name|there}},')}\n\n${say('Write your message here.')}`,
         align: 'left',
       };
     case 'image':
       return { id, type, src: '', alt: '', href: '', width: 100, align: 'center' };
     case 'button':
-      return { id, type, label: 'Book a call', url: '', align: 'center' };
+      return { id, type, label: say('Book a call'), url: '', align: 'center' };
     case 'divider':
       return { id, type };
     case 'social':
@@ -200,35 +204,35 @@ export function newEmailBlock(type: EmailBlockType, id: string): EmailBlock {
       return {
         id,
         type,
-        name: 'Product name',
+        name: say('Product name'),
         description: '',
         price: '',
         imageUrl: '',
         url: '',
-        buttonLabel: 'Learn more',
+        buttonLabel: say('Learn more'),
       };
     case 'pricing':
       return {
         id,
         type,
-        title: 'Pricing',
-        rows: [{ label: 'Starter', price: '', note: '' }],
+        title: say('Pricing'),
+        rows: [{ label: say('Starter'), price: '', note: '' }],
         footnote: '',
       };
     case 'footer':
-      return { id, type, text: 'You are receiving this because you spoke with {{sender_name}}.' };
+      return { id, type, text: say('You are receiving this because you spoke with {{sender_name}}.') };
   }
 }
 
 /** A design to start from: a greeting, a message, a button and a signature. */
-export function starterEmailDesign(id: (n: number) => string = (n) => `b${n}`): EmailDesign {
+export function starterEmailDesign(id: (n: number) => string = (n) => `b${n}`, say?: (english: string) => string): EmailDesign {
   return {
     version: 1,
     theme: emailThemeSchema.parse({}),
     blocks: [
-      newEmailBlock('text', id(1)),
-      newEmailBlock('button', id(2)),
-      newEmailBlock('signature', id(3)),
+      newEmailBlock('text', id(1), say),
+      newEmailBlock('button', id(2), say),
+      newEmailBlock('signature', id(3), say),
     ],
   };
 }

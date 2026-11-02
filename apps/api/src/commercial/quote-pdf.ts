@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { bidStyle, textOn, type BidStyle, type ProposalSection, type QuoteRow } from '@dealflow/types';
+import { inLanguage, pdfLanguage, pdfMoney, tr } from '../common/request-language';
 
 /**
  * Renders a quote as a PDF with the built-in Helvetica (or Times, for serif bid templates) fonts. That font covers Latin-1 only, so other
@@ -22,8 +23,13 @@ export interface PdfSeller {
   style?: BidStyle;
 }
 
+/** Labels, dates and amounts are written in the reader's language (English for Arabic, see `pdfLanguage`); what people typed is kept as typed. */
 export function renderQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> {
-  const money = (v: number) => `${q.currency} ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return inLanguage(pdfLanguage(), () => drawQuotePdf(q, seller));
+}
+
+function drawQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> {
+  const money = (v: number) => pdfMoney(v, q.currency);
   const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: latin1(`${q.reference} ${q.title}`), Author: latin1(seller.name), Creator: 'DealFlow' } });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
@@ -52,9 +58,10 @@ export function renderQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> 
   doc.fontSize(18).font(F.bold).fillColor(onBand).text(latin1(seller.name), 50, doc.y, { width: 495 });
   if (seller.header) doc.moveDown(0.2).fontSize(9).font(F.regular).fillColor(banded ? onBand : '#555').text(latin1(seller.header), { width: 495 });
   if (banded) doc.y = Math.max(doc.y, 140);
-  doc.moveDown(0.3).fontSize(10).font(F.regular).fillColor('#555').text(`${q.sections.length ? 'Proposal' : 'Quote'} ${q.reference}`, 50);
-  doc.text(`Date: ${q.createdAt.slice(0, 10)}${q.validUntil ? `    Valid until: ${q.validUntil}` : ''}`);
-  if (q.deal.companyName) doc.text(latin1(`Prepared for: ${q.deal.companyName}`));
+  doc.moveDown(0.3).fontSize(10).font(F.regular).fillColor('#555').text(latin1(q.sections.length ? tr('Proposal {reference}', { reference: q.reference }) : tr('Quote {reference}', { reference: q.reference })), 50);
+  const date = tr('Date: {date}', { date: q.createdAt.slice(0, 10) });
+  doc.text(latin1(q.validUntil ? `${date}    ${tr('Valid until: {date}', { date: q.validUntil })}` : date));
+  if (q.deal.companyName) doc.text(latin1(tr('Prepared for: {company}', { company: q.deal.companyName })));
   doc.moveDown().fillColor(accent).fontSize(16).font(F.bold).text(latin1(q.title));
   if (style.cover === 'minimal') doc.moveTo(50, doc.y + 4).lineTo(130, doc.y + 4).lineWidth(2).strokeColor(accent).stroke().lineWidth(1);
   doc.fillColor('#000');
@@ -64,10 +71,10 @@ export function renderQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> 
     if (s.body) doc.moveDown(0.2).font(F.regular).fontSize(9.5).fillColor('#000').text(latin1(s.body), { width: 495 });
     doc.moveDown(0.8);
   }
-  if (q.sections.length) doc.font(F.bold).fontSize(11.5).fillColor(accent).text('Pricing', 50).fillColor('#000').moveDown(0.4);
+  if (q.sections.length) doc.font(F.bold).fontSize(11.5).fillColor(accent).text(latin1(tr('Pricing')), 50).fillColor('#000').moveDown(0.4);
 
   const cols = [50, 260, 310, 390, 440, 545];
-  const header = ['Item', 'Qty', 'Unit price', 'Disc.', 'Net'];
+  const header = [tr('Item'), tr('Qty'), tr('Unit price'), tr('Disc.'), tr('Net')];
   const row = (cells: string[], bold = false) => {
     const y = doc.y;
     doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9);
@@ -85,20 +92,20 @@ export function renderQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> 
   doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke().moveDown(0.5);
   const total = (label: string, v: string, bold = false) => {
     const y = doc.y;
-    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 11 : 9).text(label, 330, y, { width: 110, align: 'right' }).text(v, 440, y, { width: 105, align: 'right' });
+    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 11 : 9).text(latin1(label), 330, y, { width: 110, align: 'right' }).text(v, 440, y, { width: 105, align: 'right' });
     doc.moveDown(0.3);
   };
-  total('Subtotal', money(q.subtotal));
-  if (q.discountTotal) total('Discount', `- ${money(q.discountTotal)}`);
-  if (q.taxTotal) total('Tax', money(q.taxTotal));
+  total(tr('Subtotal'), money(q.subtotal));
+  if (q.discountTotal) total(tr('Discount'), `- ${money(q.discountTotal)}`);
+  if (q.taxTotal) total(tr('Tax'), money(q.taxTotal));
   doc.fillColor(accent);
-  total('Total', money(q.total), true);
+  total(tr('Total'), money(q.total), true);
   doc.fillColor('#000');
 
   doc.x = 50;
-  for (const [label, body] of [['Notes', q.notes], ['Terms', q.terms]] as const) {
+  for (const [label, body] of [[tr('Notes'), q.notes], [tr('Terms'), q.terms]] as const) {
     if (!body) continue;
-    doc.moveDown().font('Helvetica-Bold').fontSize(10).text(label, 50).font('Helvetica').fontSize(9).text(latin1(body), { width: 495 });
+    doc.moveDown().font('Helvetica-Bold').fontSize(10).text(latin1(label), 50).font('Helvetica').fontSize(9).text(latin1(body), { width: 495 });
   }
   if (seller.footer) doc.moveDown(1.5).font('Helvetica').fontSize(8).fillColor('#666').text(latin1(seller.footer), 50, doc.y, { width: 495, align: 'center' });
   doc.end();

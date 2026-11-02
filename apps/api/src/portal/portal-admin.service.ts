@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { tr } from '../common/request-language';
 import { MailerService } from '../mail/mailer.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PortalAuthService } from './portal-auth.service';
@@ -131,7 +132,12 @@ export class PortalAdminService {
     if (!this.mailer.configured) return false;
     const seller = (await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } })).name;
     return this.mailer
-      .send({ to, subject: `${seller} invited you to their client portal`, text: `Hello ${name},\n\n${seller} has given you access to their client portal, where you can follow your projects, review proposals and send requests.\n\nChoose a password here (the link works for 7 days):\n${url}\n` })
+      // In the language of the person sending it (ADR 0052): the client's own language is not known yet.
+      .send({
+        to,
+        subject: tr('{seller} invited you to their client portal', { seller }),
+        text: `${tr('Hello {name},', { name })}\n\n${tr('{seller} has given you access to their client portal, where you can follow your projects, review proposals and send requests.', { seller })}\n\n${tr('Choose a password here (the link works for 7 days):')}\n${url}\n`,
+      })
       .then(() => true)
       .catch(() => false);
   }
@@ -307,7 +313,11 @@ export class PortalAdminService {
         const seller = (await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true } })).name;
         // Best effort: the reply is saved either way and shows in the portal.
         await this.mailer
-          .send({ to: opener.email, subject: `${seller} replied to ${requestRef(r.number)}: ${r.subject}`, text: `Hello ${opener.name},\n\nThere is a new reply to your request. Read it and answer in the portal:\n${this.portalAuth.portalUrl(settings.slug)}\n` })
+          .send({
+            to: opener.email,
+            subject: tr('{seller} replied to {ref}: {subject}', { seller, ref: requestRef(r.number), subject: r.subject }),
+            text: `${tr('Hello {name},', { name: opener.name })}\n\n${tr('There is a new reply to your request. Read it and answer in the portal:')}\n${this.portalAuth.portalUrl(settings.slug)}\n`,
+          })
           .catch(() => undefined);
       }
       return requestDetail(tx, auth.tenantId, id);

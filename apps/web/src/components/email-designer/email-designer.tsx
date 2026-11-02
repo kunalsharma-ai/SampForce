@@ -159,7 +159,7 @@ export function EmailDesigner({
     const at = selected
       ? value.blocks.findIndex((b) => b.id === selected) + 1
       : value.blocks.length;
-    const r = addBlock(value, type, at);
+    const r = addBlock(value, type, at, (english) => t.maybe(english));
     onChange(r.design);
     select(r.id, t('Added a {block} block at position {n}.', { block: name(type), n: at + 1 }));
   };

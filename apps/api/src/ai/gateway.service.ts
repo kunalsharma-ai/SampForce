@@ -4,7 +4,9 @@ import { AI_AGENTS, type AiAgentKey, type AiStatus, type AiTier, creditsFor, mon
 import { entitlementsFor } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { requestLanguage } from '../common/request-language';
 import { errorMessage } from '../worker/queue';
+import { inLanguagePrompt } from './language';
 import { AnthropicProvider, type Effort, type ModelBlock, type ModelMessage, type ModelProvider, type ModelRequest, type ModelResponse } from './provider';
 import { Redactor } from './redact';
 
@@ -140,16 +142,18 @@ export class AiGateway {
   }
 
   /**
-   * One model call with metering. The redactor (shared across the calls of one run) is applied to the
+   * One model call with metering. The system prompt gains a line asking for the person's language (see
+   * `languageInstruction`). The redactor (shared across the calls of one run) is applied to the
    * system prompt, messages and tool definitions are left as they are.
    */
   async call(ctx: CallContext, req: ModelRequest, redactor: Redactor | null): Promise<ModelResponse> {
     await this.preflight(ctx);
     const provider = this.provider!;
     const tier = AI_AGENTS[ctx.agent].tier;
+    const localized: ModelRequest = { ...req, system: inLanguagePrompt(req.system, requestLanguage()) };
     const outgoing: ModelRequest = redactor
-      ? { ...req, system: redactor.redact(req.system), messages: req.messages.map((m) => redactMessage(m, redactor)) }
-      : req;
+      ? { ...localized, system: redactor.redact(localized.system), messages: localized.messages.map((m) => redactMessage(m, redactor)) }
+      : localized;
     const started = Date.now();
     let res: ModelResponse | null = null;
     let failure: unknown = null;
