@@ -61,7 +61,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
     const parsed = SCHEMAS[entity][mode === 'create' ? 'create' : 'update'].safeParse(payload);
     const problems: Record<string, string> = parsed.success
       ? {}
-      : Object.fromEntries(parsed.error.issues.map((i: { path: (string | number)[]; message: string }) => [String(i.path[0]), i.message]));
+      : Object.fromEntries(parsed.error.issues.map((i: { path: (string | number)[]; message: string }) => [String(i.path[0]), t.maybe(i.message)]));
     for (const f of fields) {
       const p = f.type === 'tel' ? phoneProblem(values[f.name] as string) : null;
       if (p && !problems[f.name]) problems[f.name] = p;

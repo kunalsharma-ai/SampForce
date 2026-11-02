@@ -129,7 +129,7 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
             e.preventDefault();
             setSaved(false);
             const r = portalSettingsSchema.safeParse(v);
-            if (!r.success) return setError(r.error.issues[0]!.message);
+            if (!r.success) return setError(t.maybe(r.error.issues[0]!.message));
             setError(null);
             save.mutate(r.data);
           }}

@@ -16,6 +16,7 @@ import {
   INBOX_CATEGORY_LABELS,
   INBOX_STATUS_LABELS,
   LANGUAGES,
+  SERVER_TEXT,
   LEAD_STATUSES,
   MEETING_PLATFORM_LABELS,
   MERGE_FIELDS,
@@ -54,7 +55,7 @@ import { visitorLanguage } from '@/stores/regional';
 import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
-import { CATALOGUES, translate, translatePlural } from './translate';
+import { CATALOGUES, translate, translateData, translatePlural } from './translate';
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 const PLURAL = /_(zero|one|two|few|many|other)$/;
@@ -325,5 +326,26 @@ describe('visitor language', () => {
     expect(visitorLanguage(['AR'])).toBe('ar');
     expect(visitorLanguage(['ja-JP', 'zh'])).toBeNull();
     expect(visitorLanguage([])).toBeNull();
+  });
+});
+
+describe('the server text catalogue as a fallback', () => {
+  it('agrees with the page tables wherever both have a phrase', () => {
+    for (const key of SERVER_TEXT.keys()) {
+      const page = (PHRASES as Record<string, readonly string[]>)[key];
+      if (page) expect(SERVER_TEXT.row(key), key).toEqual(page);
+    }
+  });
+
+  it('translates API messages and validation text that reach a page as data', () => {
+    expect(translateData('de', 'Deal not found.')).toBe('Verkaufschance nicht gefunden.');
+    expect(translateData('es', 'Import up to 50,000 rows at a time.')).toBe('Importa hasta 50.000 filas a la vez.');
+    expect(translateData('fr', 'Text nobody wrote down.')).toBe('Text nobody wrote down.');
+    expect(translateData('en', 'Deal not found.')).toBe('Deal not found.');
+  });
+
+  it('translates a field name carried inside a server sentence when the page tables know it', () => {
+    const owner = (PHRASES as Record<string, readonly string[]>)['Owner']![2]!;
+    expect(translateData('de', 'Enter a value for Owner')).toBe(`Geben Sie einen Wert für ${owner} ein`);
   });
 });

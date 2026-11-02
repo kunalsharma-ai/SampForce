@@ -458,7 +458,7 @@ function NewRequest({ onDone }: { onDone: (r: PortalRequest | null) => void }) {
           onSubmit={(e) => {
             e.preventDefault();
             const r = portalRequestCreateSchema.safeParse(v);
-            if (!r.success) return setError(r.error.issues[0]!.message);
+            if (!r.success) return setError(t.maybe(r.error.issues[0]!.message));
             setError(null);
             create.mutate(v);
           }}

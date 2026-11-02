@@ -143,7 +143,7 @@ export class WhatsappService {
       const templates = await this.guard(auth.tenantId, conn, () => this.client.templates(keys));
       const t = templates.find((x) => x.name === input.templateName && x.language === input.language);
       if (!t) throw new AppError(`There is no approved template "${input.templateName}" (${input.language}) on this WhatsApp number.`);
-      if (input.params.length !== t.params) throw new AppError(`The template "${t.name}" needs ${t.params} value${t.params === 1 ? '' : 's'}; ${input.params.length} given.`);
+      if (input.params.length !== t.params) throw new AppError(t.params === 1 ? `The template "${t.name}" needs 1 value; ${input.params.length} given.` : `The template "${t.name}" needs ${t.params} values; ${input.params.length} given.`);
       body = t.body.replace(/\{\{(\d+)\}\}/g, (_, i: string) => input.params[Number(i) - 1] ?? '');
       templateName = t.name;
       sent = await this.guard(auth.tenantId, conn, () => this.client.sendTemplate(keys, thread.phone!, { name: t.name, language: t.language, params: input.params }), { contactId: input.contactId, summary: `Template ${t.name}` });

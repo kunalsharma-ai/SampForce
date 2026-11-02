@@ -138,7 +138,7 @@ async function call<T>(url: string, init: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const err = (json as { error?: { message?: string; description?: string } } | null)?.error;
-    throw new BillingProviderError(`Billing provider request failed (${res.status})${err?.message || err?.description ? `: ${err.message ?? err.description}` : ''}`, res.status);
+    throw new BillingProviderError(err?.message || err?.description ? `Billing provider request failed (${res.status}): ${err.message ?? err.description}` : `Billing provider request failed (${res.status})`, res.status);
   }
   return json as T;
 }

@@ -88,7 +88,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
     setError(null);
     const parsed = pipelineInputSchema.safeParse(draft);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? t('Check the stages.'));
+      setError(parsed.error.issues[0] ? t.maybe(parsed.error.issues[0].message) : t('Check the stages.'));
       return;
     }
     save.mutate(parsed.data);

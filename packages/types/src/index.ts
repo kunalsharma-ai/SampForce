@@ -37,3 +37,4 @@ export * from './navigation';
 export * from './views';
 export * from './territories';
 export * from './email-design';
+export * from './i18n';

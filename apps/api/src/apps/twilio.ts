@@ -144,7 +144,10 @@ export function describeTwilioError(code: number | undefined, detail?: string | 
     case 30034:
       return 'US texts from this number are blocked until it is registered for A2P 10DLC.';
     default:
-      return `Twilio refused the request${code ? ` (error ${code})` : ''}${detail ? `: ${detail.slice(0, 200)}` : '.'}`;
+      if (code && detail) return `Twilio refused the request (error ${code}): ${detail.slice(0, 200)}`;
+      if (code) return `Twilio refused the request (error ${code}).`;
+      if (detail) return `Twilio refused the request: ${detail.slice(0, 200)}`;
+      return 'Twilio refused the request.';
   }
 }
 

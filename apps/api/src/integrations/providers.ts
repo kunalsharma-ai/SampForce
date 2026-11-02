@@ -111,7 +111,7 @@ async function http<T>(url: string, init: RequestInit & { token?: string; form?:
   if (!res.ok) {
     const msg = (json as { error?: { message?: string } | string; error_description?: string } | null);
     const detail = typeof msg?.error === 'string' ? (msg.error_description ?? msg.error) : msg?.error?.message;
-    throw new ProviderError(`Provider request failed (${res.status})${detail ? `: ${detail}` : ''}`, res.status);
+    throw new ProviderError(detail ? `Provider request failed (${res.status}): ${detail}` : `Provider request failed (${res.status})`, res.status);
   }
   return json as T;
 }

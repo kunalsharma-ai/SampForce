@@ -1,4 +1,4 @@
-import type { LanguageCode } from '@dealflow/types';
+import { type LanguageCode, SERVER_TEXT } from '@dealflow/types';
 import { ar } from './messages/ar';
 import { de } from './messages/de';
 import { en, type Messages, type ShellKey } from './messages/en';
@@ -48,6 +48,19 @@ function interpolate(text: string, vars: Vars | undefined, locale: string): stri
 export function translate(language: LanguageCode, key: MessageKey, vars?: Vars, formatLocale: string = language): string {
   const text = CATALOGUES[language]?.[key] ?? CATALOGUES.en[key] ?? key;
   return interpolate(text, vars, formatLocale);
+}
+
+/**
+ * Text that arrives as data (an API message, a stored reason, a shared label): the page catalogue first, then the
+ * server's own text catalogue, which also matches sentences with values in them ("Import up to 5,000 rows at a
+ * time."). A value carried inside such a sentence is translated too when the page catalogue knows it (a field name).
+ * Anything else is shown as it came.
+ */
+export function translateData(language: LanguageCode, text: string, vars?: Vars, formatLocale: string = language): string {
+  const page = CATALOGUES[language]?.[text as MessageKey];
+  if (page !== undefined || language === 'en') return interpolate(page ?? text, vars, formatLocale);
+  const term = (value: string) => (CATALOGUES[language] as Record<string, string | undefined>)[value];
+  return interpolate(SERVER_TEXT.localize(language, text, term), vars, formatLocale);
 }
 
 /** Picks the plural form for `count` with Intl.PluralRules ("1 day", "2 days"; Arabic's six forms). */

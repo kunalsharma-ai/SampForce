@@ -4,7 +4,7 @@ import type { LanguageCode, TextDirection } from '@dealflow/types';
 import { createElement, Fragment, type ReactNode, useCallback, useMemo } from 'react';
 import { useRegional } from '@/stores/regional';
 import { type ActiveLocale, activeLocaleFor } from './locale';
-import { type MessageKey, type PluralKey, translate, translatePlural, type Vars } from './translate';
+import { type MessageKey, type PluralKey, translate, translateData, translatePlural, type Vars } from './translate';
 
 export type { ActiveLocale, MessageKey, PluralKey };
 export { activeLocaleFor, fmtLocale } from './locale';
@@ -34,8 +34,8 @@ export function useT(): Translator {
   return useMemo(
     () => Object.assign(base, {
         plural: (key: PluralKey, count: number, vars?: Vars) => translatePlural(language, key, count, vars, formatLocale),
-        // translate() falls back to the key itself, so unknown text is shown as it came (with its placeholders filled).
-        maybe: (text: string, vars?: Vars) => translate(language, text as MessageKey, vars, formatLocale),
+        // Unknown text is shown as it came (with its placeholders filled).
+        maybe: (text: string, vars?: Vars) => translateData(language, text, vars, formatLocale),
         language,
         formatLocale,
         dir,

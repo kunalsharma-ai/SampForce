@@ -4,6 +4,7 @@ import { Button, Card, CardContent, Input, Skeleton } from '@dealflow/ui';
 import type { PublicFormView } from '@dealflow/types';
 import { useEffect, useState } from 'react';
 import { Textarea } from '@/components/crm/select';
+import { languageHeader } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 
 type State = { kind: 'loading' } | { kind: 'missing' } | { kind: 'ready'; form: PublicFormView } | { kind: 'done'; message: string };
@@ -20,7 +21,7 @@ export function PublicForm({ token }: { token: string }) {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/v1/public/forms/${encodeURIComponent(token)}`)
+    fetch(`/api/v1/public/forms/${encodeURIComponent(token)}`, { headers: languageHeader() })
       .then(async (r) => (r.ok ? setState({ kind: 'ready', form: (await r.json()) as PublicFormView }) : setState({ kind: 'missing' })))
       .catch(() => setState({ kind: 'missing' }));
   }, [token]);
@@ -50,7 +51,7 @@ export function PublicForm({ token }: { token: string }) {
     try {
       const r = await fetch(`/api/v1/public/forms/${encodeURIComponent(token)}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { ...languageHeader(), 'content-type': 'application/json' },
         body: JSON.stringify({ ...values, consent, website }),
       });
       const body = (await r.json().catch(() => null)) as { message?: string; error?: { message: string; details?: { path: string; message: string }[] } } | null;

@@ -67,7 +67,7 @@ export class DeepgramClient {
     }
     const body = (await res.json().catch(() => null)) as DeepgramResponse | null;
     if (res.status === 401 || res.status === 403) throw new TranscriptionError('The transcription service rejected the API key. Check DEEPGRAM_API_KEY.');
-    if (!res.ok || !body?.results) throw new TranscriptionError(`The transcription service answered ${res.status}${body?.err_msg ? `: ${body.err_msg}` : ''}.`);
+    if (!res.ok || !body?.results) throw new TranscriptionError(body?.err_msg ? `The transcription service answered ${res.status}: ${body.err_msg}.` : `The transcription service answered ${res.status}.`);
     const segments: TranscriptSegment[] = (body.results.utterances ?? [])
       .filter((u) => u.transcript?.trim())
       .map((u) => ({ speaker: typeof u.speaker === 'number' ? u.speaker : null, start: u.start ?? 0, end: u.end ?? 0, text: u.transcript!.trim() }));

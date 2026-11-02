@@ -183,7 +183,10 @@ export function describeError(code: number | undefined, detail: string | undefin
     case 133010:
       return 'This phone number is not registered with the Cloud API yet.';
     default:
-      return `WhatsApp refused the request${code ? ` (error ${code})` : ''}${detail ? `: ${detail.slice(0, 200)}` : '.'}`;
+      if (code && detail) return `WhatsApp refused the request (error ${code}): ${detail.slice(0, 200)}`;
+      if (code) return `WhatsApp refused the request (error ${code}).`;
+      if (detail) return `WhatsApp refused the request: ${detail.slice(0, 200)}`;
+      return 'WhatsApp refused the request.';
   }
 }
 

@@ -1,4 +1,13 @@
 import type { ApiErrorBody } from '@dealflow/types';
+import { useRegional } from '@/stores/regional';
+
+/**
+ * The API writes its messages (errors, validation problems, sentences it composes) in the language this header
+ * names, so they match the interface the person chose rather than the browser's own preference.
+ */
+export function languageHeader(): { 'accept-language': string } {
+  return { 'accept-language': useRegional.getState().regional.language };
+}
 
 export class ApiError extends Error {
   constructor(
@@ -36,7 +45,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   const res = await fetch(`/api/v1${path}`, {
     credentials: 'include',
     ...rest,
-    headers: { ...(json !== undefined ? { 'content-type': 'application/json' } : {}), ...headers },
+    headers: { ...languageHeader(), ...(json !== undefined ? { 'content-type': 'application/json' } : {}), ...headers },
     body: json !== undefined ? JSON.stringify(json) : rest.body,
   });
 
@@ -61,8 +70,8 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
 
 /** Downloads a CSV export through the same refresh-aware path as JSON calls. */
 export async function downloadFile(path: string, fallbackName: string): Promise<void> {
-  let res = await fetch(`/api/v1${path}`, { credentials: 'include' });
-  if (res.status === 401 && (await refreshSession())) res = await fetch(`/api/v1${path}`, { credentials: 'include' });
+  let res = await fetch(`/api/v1${path}`, { credentials: 'include', headers: languageHeader() });
+  if (res.status === 401 && (await refreshSession())) res = await fetch(`/api/v1${path}`, { credentials: 'include', headers: languageHeader() });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
     throw new ApiError(res.status, body?.error?.code ?? 'ERROR', body?.error?.message ?? 'Download failed.');

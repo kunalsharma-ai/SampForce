@@ -19,7 +19,7 @@ test('Theme Studio previews a theme, applies it, and the account keeps it on ano
   await expect(page.getByRole('status').filter({ hasText: 'Unapplied changes' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.getByText('Saved to your account')).toBeVisible();
+  await expect(page.getByText('Saved to your account', { exact: true })).toBeVisible();
   const emerald = await previewVar(page, '--primary');
   expect(await rootVar(page, '--primary')).toBe(emerald);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'emerald');
@@ -93,7 +93,7 @@ test('an owner sets the workspace default and a reset returns to it', async ({ p
 
   await page.getByText('Oceanic Intelligence', { exact: true }).click();
   await page.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.getByText('Saved to your account')).toBeVisible();
+  await expect(page.getByText('Saved to your account', { exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'oceanic');
 
   await page.getByRole('button', { name: 'Reset to the workspace default' }).click();
@@ -132,7 +132,7 @@ for (const [theme, mode] of [
     await page.getByRole('radio', { name: mode }).check({ force: true });
     await page.getByText('Off', { exact: true }).click();
     await page.getByRole('button', { name: 'Apply' }).click();
-    await expect(page.getByText('Saved to your account')).toBeVisible();
+    await expect(page.getByText('Saved to your account', { exact: true })).toBeVisible();
     for (const path of ['/app/settings/appearance', '/app', '/app/leads', '/app/deals']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

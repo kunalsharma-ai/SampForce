@@ -38,7 +38,8 @@ export async function call(path, { method = 'GET', body, baseUrl, token } = {}) 
   try {
     res = await fetch(`${baseUrl}/api/v1${path}`, {
       method,
-      headers: { authorization: `Bearer ${token}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+      // The extension's own screens are in English, so its error messages are too.
+      headers: { authorization: `Bearer ${token}`, 'accept-language': 'en', ...(body ? { 'content-type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       credentials: 'omit',
     });
@@ -61,7 +62,7 @@ export async function call(path, { method = 'GET', body, baseUrl, token } = {}) 
 export async function signIn(baseUrl, path, body) {
   let res;
   try {
-    res = await fetch(`${baseUrl}/api/v1${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), credentials: 'omit' });
+    res = await fetch(`${baseUrl}/api/v1${path}`, { method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': 'en' }, body: JSON.stringify(body), credentials: 'omit' });
   } catch {
     throw new ApiError(0, 'NETWORK', `Could not reach DealFlow at ${baseUrl}. Check the address and your connection.`);
   }
