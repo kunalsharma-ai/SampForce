@@ -83,7 +83,7 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
                     {portal.data.tasks.map((task) => (
                       <li key={task.id}>
                         <label className="flex items-start gap-2">
-                          <input type="checkbox" className="mt-1" checked={task.portalVisible} disabled={!canTasks || share.isPending} onChange={(e) => share.mutate({ id: task.id, visible: e.target.checked })} aria-label={t('Show “{title}” in portal', { title: task.title })} />
+                          <input type="checkbox" className="mt-1" checked={task.portalVisible} disabled={!canTasks || share.isPending} onChange={(e) => share.mutate({ id: task.id, visible: e.target.checked })} aria-label={t('Show "{title}" in portal', { title: task.title })} />
                           <span className="flex-1">
                             {task.title}
                             <span className="block text-xs text-muted-foreground">

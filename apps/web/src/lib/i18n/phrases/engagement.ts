@@ -277,7 +277,7 @@ export const engagement = {
     'Noch keine Aufgaben bei den Verkaufschancen oder Kontakten dieses Unternehmens.',
     'لا توجد مهام على صفقات هذه الشركة أو جهات اتصالها بعد.',
   ],
-  'Show “{title}” in portal': ['Mostrar «{title}» en el portal', 'Afficher « {title} » dans le portail', '„{title}“ im Portal zeigen', 'عرض «{title}» في البوابة'],
+  'Show "{title}" in portal': ['Mostrar «{title}» en el portal', 'Afficher « {title} » dans le portail', '„{title}“ im Portal zeigen', 'عرض «{title}» في البوابة'],
   'due {date}': ['vence el {date}', 'échéance le {date}', 'fällig am {date}', 'مستحقة في {date}'],
   'done': ['hecha', 'terminée', 'erledigt', 'منجزة'],
   'Share a document': ['Compartir un documento', 'Partager un document', 'Dokument teilen', 'مشاركة مستند'],
