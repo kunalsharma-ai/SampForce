@@ -8,30 +8,33 @@ import { useState } from 'react';
 import { aiErrorMessage, useRecommendations } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 
 const GRADE_TONE = { A: 'success', B: 'primary', C: 'warning', D: 'critical' } as const;
 const RISK_TONE = { low: 'success', medium: 'warning', high: 'critical' } as const;
 
 function AiLabel({ rec }: { rec: Pick<RecommendationRow, 'promptVersion' | 'createdAt'> }) {
+  const t = useT();
   return (
     <p className="text-[11px] text-muted-foreground">
-      AI-assisted · {rec.promptVersion} · {relativeTime(rec.createdAt)}
+      {t('AI-assisted')} · {rec.promptVersion} · {relativeTime(rec.createdAt)}
     </p>
   );
 }
 
 function Signals({ signals, risk }: { signals: Signal[]; risk?: boolean }) {
+  const t = useT();
   if (!signals.length) return null;
   return (
-    <ul className="space-y-1 text-sm" aria-label="Signals">
+    <ul className="space-y-1 text-sm" aria-label={t('Signals')}>
       {signals.map((s) => (
         <li key={s.key} className="flex gap-2">
           <span className={`w-10 shrink-0 text-end tabular-nums ${risk ? 'text-critical' : s.points >= 0 ? 'text-success' : 'text-critical'}`}>
             {risk ? `−${s.points}` : s.points >= 0 ? `+${s.points}` : s.points}
           </span>
           <span>
-            {s.label}
+            {t.maybe(s.label)}
             <span className="block text-xs text-muted-foreground">{s.detail}</span>
           </span>
         </li>
@@ -47,6 +50,7 @@ function useInvalidateRecs(entityType: 'lead' | 'deal' | 'contact', id: string) 
 
 /** Explainable lead score. The signals are rule-based; only the written summary uses the AI provider. */
 export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canRun: boolean }) {
+  const t = useT();
   const canUse = useCan('ai:use');
   const recs = useRecommendations('lead', leadId);
   const invalidate = useInvalidateRecs('lead', leadId);
@@ -65,11 +69,11 @@ export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canR
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="size-4 text-accent" aria-hidden /> AI qualification
+          <Sparkles className="size-4 text-accent" aria-hidden /> {t('AI qualification')}
         </CardTitle>
         {canRun && (
           <Button size="sm" variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
-            {run.isPending ? 'Scoring…' : q ? 'Re-score' : 'Score lead'}
+            {run.isPending ? t('Scoring…') : q ? t('Re-score') : t('Score lead')}
           </Button>
         )}
       </CardHeader>
@@ -77,21 +81,21 @@ export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canR
         {recs.isPending ? (
           <Skeleton className="h-20" />
         ) : !q ? (
-          <p className="text-sm text-muted-foreground">Not scored yet. The score comes from contact details, value, source and recent activity, and each point is explained.</p>
+          <p className="text-sm text-muted-foreground">{t('Not scored yet. The score comes from contact details, value, source and recent activity, and each point is explained.')}</p>
         ) : (
           <>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-semibold tabular-nums">{q.score}</span>
               <span className="text-sm text-muted-foreground">/ 100</span>
-              <Badge tone={GRADE_TONE[q.grade]}>Grade {q.grade}</Badge>
+              <Badge tone={GRADE_TONE[q.grade]}>{t('Grade {grade}', { grade: q.grade })}</Badge>
             </div>
             {q.summary && <p className="text-sm">{q.summary}</p>}
             {q.suggestedNextStep && (
               <p className="text-sm">
-                <span className="font-medium">Suggested next step:</span> {q.suggestedNextStep}
+                <span className="font-medium">{t('Suggested next step:')}</span> {q.suggestedNextStep}
               </p>
             )}
-            {q.summaryUnavailable && <p className="text-xs text-muted-foreground">No written summary: {q.summaryUnavailable}</p>}
+            {q.summaryUnavailable && <p className="text-xs text-muted-foreground">{t('No written summary: {reason}', { reason: t.maybe(q.summaryUnavailable) })}</p>}
             <Signals signals={q.signals} />
             <AiLabel rec={rec} />
           </>
@@ -104,6 +108,7 @@ export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canR
 
 /** Deal health from activity, stage age and dates, with a recommended next step the person can accept as a task. */
 export function DealIntelligenceCard({ dealId }: { dealId: string }) {
+  const t = useT();
   const canUse = useCan('ai:use');
   const canTask = useCan('activities:write');
   const recs = useRecommendations('deal', dealId);
@@ -125,23 +130,23 @@ export function DealIntelligenceCard({ dealId }: { dealId: string }) {
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="size-4 text-accent" aria-hidden /> Deal health
+          <Sparkles className="size-4 text-accent" aria-hidden /> {t('Deal health')}
         </CardTitle>
         <Button size="sm" variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
-          {run.isPending ? 'Analysing…' : h ? 'Re-check' : 'Check health'}
+          {run.isPending ? t('Analysing…') : h ? t('Re-check') : t('Check health')}
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
         {recs.isPending ? (
           <Skeleton className="h-20" />
         ) : !h ? (
-          <p className="text-sm text-muted-foreground">Not checked yet. Health looks at recent activity, time in stage, overdue tasks and the close date.</p>
+          <p className="text-sm text-muted-foreground">{t('Not checked yet. Health looks at recent activity, time in stage, overdue tasks and the close date.')}</p>
         ) : (
           <>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-semibold tabular-nums">{h.health}</span>
               <span className="text-sm text-muted-foreground">/ 100</span>
-              <Badge tone={RISK_TONE[h.risk]}>{h.risk === 'low' ? 'Low' : h.risk === 'medium' ? 'Medium' : 'High'} risk</Badge>
+              <Badge tone={RISK_TONE[h.risk]}>{h.risk === 'low' ? t('Low risk') : h.risk === 'medium' ? t('Medium risk') : t('High risk')}</Badge>
             </div>
             <Signals signals={h.signals} risk />
             {h.nextStep && (
@@ -152,19 +157,19 @@ export function DealIntelligenceCard({ dealId }: { dealId: string }) {
                   <div className="flex gap-2">
                     {canTask && (
                       <Button size="sm" onClick={() => decide.mutate({ id: rec.id, accept: true })} disabled={decide.isPending}>
-                        <Check aria-hidden /> Create task (due in {h.nextStep.dueInDays} day{h.nextStep.dueInDays === 1 ? '' : 's'})
+                        <Check aria-hidden /> {t('Create task (due in {time})', { time: new Intl.NumberFormat(t.language, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(h.nextStep.dueInDays) })}
                       </Button>
                     )}
                     <Button size="sm" variant="outline" onClick={() => decide.mutate({ id: rec.id, accept: false })} disabled={decide.isPending}>
-                      <X aria-hidden /> Dismiss
+                      <X aria-hidden /> {t('Dismiss')}
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">{rec.status === 'ACCEPTED' ? 'Task created.' : 'Dismissed.'}</p>
+                  <p className="text-xs text-muted-foreground">{rec.status === 'ACCEPTED' ? t('Task created.') : t('Dismissed.')}</p>
                 )}
               </div>
             )}
-            {h.nextStepUnavailable && <p className="text-xs text-muted-foreground">No recommended next step: {h.nextStepUnavailable}</p>}
+            {h.nextStepUnavailable && <p className="text-xs text-muted-foreground">{t('No recommended next step: {reason}', { reason: t.maybe(h.nextStepUnavailable) })}</p>}
             <AiLabel rec={rec} />
           </>
         )}
@@ -180,6 +185,7 @@ function copy(text: string) {
 
 /** Drafts a proposal from the deal's own data. Nothing is sent; the person copies and edits it. */
 export function ProposalButton({ dealId }: { dealId: string }) {
+  const t = useT();
   const canUse = useCan('ai:use');
   const [open, setOpen] = useState(false);
   const draft = useMutation({ mutationFn: () => api<RecommendationRow<ProposalDraft>>(`/ai/deals/${dealId}/proposal`, { method: 'POST' }) });
@@ -196,13 +202,13 @@ export function ProposalButton({ dealId }: { dealId: string }) {
           if (!draft.data && !draft.isPending) draft.mutate();
         }}
       >
-        <FileText aria-hidden /> Draft proposal
+        <FileText aria-hidden /> {t('Draft proposal')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
-          <DialogTitle className="text-lg font-semibold">Proposal draft</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t('Proposal draft')}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Written from this deal&apos;s details and line items. Check every fact before you use it; nothing has been sent.
+            {t("Written from this deal's details and line items. Check every fact before you use it; nothing has been sent.")}
           </DialogDescription>
           {draft.isPending ? (
             <Skeleton className="mt-4 h-60" />
@@ -221,22 +227,22 @@ export function ProposalButton({ dealId }: { dealId: string }) {
               ))}
               {p.basedOn.length > 0 && (
                 <div className="rounded-md border border-border p-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Based on</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('Based on')}</p>
                   <ul className="list-inside list-disc space-y-0.5">{p.basedOn.map((b) => <li key={b}>{b}</li>)}</ul>
                 </div>
               )}
               {p.openQuestions.length > 0 && (
                 <div className="rounded-md border border-warning/40 bg-warning/5 p-3">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Open questions</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('Open questions')}</p>
                   <ul className="list-inside list-disc space-y-0.5">{p.openQuestions.map((b) => <li key={b}>{b}</li>)}</ul>
                 </div>
               )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => copy(asText)}>
-                  <ClipboardCopy aria-hidden /> Copy text
+                  <ClipboardCopy aria-hidden /> {t('Copy text')}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => draft.mutate()}>
-                  Redraft
+                  {t('Redraft')}
                 </Button>
               </div>
               {draft.data && <AiLabel rec={draft.data} />}
