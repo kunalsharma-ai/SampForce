@@ -1,31 +1,3 @@
-/**
- * Creates or resets a platform operator account. There are no default operator credentials: the
- * first operator is created from the command line by someone with database access.
- *
- *   OPERATOR_EMAIL=ops@example.com OPERATOR_NAME="Ops" OPERATOR_PASSWORD='…' OPERATOR_ROLE=ADMIN \
- *     pnpm --filter @dealflow/api operator:create
- */
-import { PrismaClient } from '@dealflow/database';
-import { emailSchema, passwordSchema } from '@dealflow/types';
-import { PasswordService } from '../src/auth/password.service';
-
-async function main(): Promise<void> {
-  const email = emailSchema.parse(process.env.OPERATOR_EMAIL);
-  const password = passwordSchema.parse(process.env.OPERATOR_PASSWORD);
-  const name = (process.env.OPERATOR_NAME ?? '').trim() || email;
-  const role = process.env.OPERATOR_ROLE === 'ADMIN' ? 'ADMIN' : 'SUPPORT';
-  const prisma = new PrismaClient();
-  try {
-    const passwordHash = await new PasswordService().hash(password);
-    const op = await prisma.platformOperator.upsert({ where: { email }, create: { email, name, passwordHash, role }, update: { name, passwordHash, role, status: 'ACTIVE' } });
-    await prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'operator.provisioned', metadata: { role, via: 'cli' } } });
-    console.warn(`Operator ${email} (${role}) is ready.`);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+// The code lives in src/cli so it is also compiled into the production image (node dist/cli/create-operator.js).
+// This file keeps `pnpm --filter @dealflow/api operator:create` working from a source checkout.
+import '../src/cli/create-operator';

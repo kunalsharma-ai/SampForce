@@ -1,5 +1,11 @@
 # Deploying DealFlow
 
+There are two supported ways to run DealFlow:
+
+- **One Linux server with Docker Compose**: `deploy/` holds the compose file, Caddy (automatic HTTPS), settings
+  templates and backup/restore/update scripts. Follow [deploy/SERVER_SETUP.md](../deploy/SERVER_SETUP.md).
+- **Kubernetes with the Helm chart** in `infrastructure/helm/dealflow`: the rest of this document.
+
 This is how DealFlow is meant to run in production. The Helm chart and images are built and checked in CI
 (`helm lint --strict`, `helm template | kubeconform`, image builds); the chart has **not** yet been installed on a
 real cluster. Treat the first staging install as part of acceptance.
@@ -80,6 +86,9 @@ discovery to private addresses unless `ALLOW_PRIVATE_NETWORK_TARGETS=true` (neve
 ## 6. After the first install
 
 1. Run `scripts/check-rls.sql` against the database as the owner role.
+1. Create the first operator-console admin (there are no default credentials):
+   `kubectl -n dealflow exec -it deploy/dealflow-api -- env OPERATOR_EMAIL=you@example.com OPERATOR_ROLE=ADMIN OPERATOR_PASSWORD='…' node dist/cli/create-operator.js`.
+   Then enter provider keys under Providers in the console.
 2. Sign up, enable two-step verification, sign out and back in.
 3. Confirm `/metrics` is reachable from Prometheus and not from the internet.
 4. Take a backup with `scripts/backup.sh` and restore it into a scratch database with `scripts/restore.sh`
