@@ -39,6 +39,14 @@ export const MANAGED_KEYS = {
   RAZORPAY_KEY_ID: { secret: true },
   RAZORPAY_KEY_SECRET: { secret: true },
   RAZORPAY_WEBHOOK_SECRET: { secret: true },
+  // Settings, not credentials: switches and ids an operator changes from the console (ADR 0053).
+  AI_MODEL: { secret: false },
+  ONLINE_PAYMENTS_ENABLED: { secret: false },
+  STRIPE_PRICES: { secret: false },
+  STRIPE_AUTOMATIC_TAX: { secret: false },
+  RAZORPAY_PLANS: { secret: false },
+  PRICING_PUBLISHED: { secret: false },
+  SALES_CONTACT_EMAIL: { secret: false },
 } as const satisfies Partial<Record<keyof ApiEnv, { secret: boolean }>>;
 
 export type ManagedKeyName = keyof typeof MANAGED_KEYS;
@@ -51,9 +59,22 @@ export function fingerprintOf(value: string): string {
 }
 
 /** What the console may show for a value: a non-secret in full, a secret as its last four characters (none if short). */
-export function hintFor(name: ManagedKeyName, value: string): string | null {
-  if (!MANAGED_KEYS[name].secret) return value;
-  return value.length >= 12 ? value.slice(-4) : null;
+export function hintFor(name: ManagedKeyName, value: string | boolean | number): string | null {
+  const text = String(value);
+  if (!MANAGED_KEYS[name].secret) return text;
+  return text.length >= 12 ? text.slice(-4) : null;
+}
+
+/** The typed value a stored console string stands for (a switch is stored as "true"/"false" and read as a boolean). */
+function typedValue(name: ManagedKeyName, raw: string): unknown {
+  const parsed = apiEnvSchema.shape[name].safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** The value a setting has when neither the console nor the environment sets it, if it has one. */
+export function defaultOf(name: ManagedKeyName): unknown {
+  const parsed = apiEnvSchema.shape[name].safeParse(undefined);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /**
@@ -68,18 +89,22 @@ export function parseManagedValue(name: ManagedKeyName, raw: string): { ok: true
   if (/[\u0000-\u001f\u007f]/.test(value)) return { ok: false, message: 'Line breaks and control characters are not allowed.' };
   const parsed = apiEnvSchema.shape[name].safeParse(value);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Not a valid value.' };
+  // Switches are stored in one spelling ("true"/"false") whatever was typed ("1", "0").
+  if (typeof parsed.data === 'boolean') return { ok: true, value: String(parsed.data) };
   return typeof parsed.data === 'string' && parsed.data ? { ok: true, value: parsed.data } : { ok: false, message: 'Not a valid value.' };
 }
 
 export interface ManagedKeyState {
-  source: 'console' | 'environment' | 'missing';
+  /** `default`: nobody set it, and the built-in default applies (a switch that is off, Microsoft's "common" tenant). */
+  source: 'console' | 'environment' | 'default' | 'missing';
   hint: string | null;
   updatedAt: string | null;
   updatedById: string | null;
 }
 
 interface Override {
-  value: string;
+  /** The typed value services read (a boolean for a switch). */
+  value: unknown;
   hint: string | null;
   updatedAt: Date;
   updatedById: string | null;
@@ -97,7 +122,7 @@ interface Override {
 @Injectable()
 export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown {
   private readonly log = new Logger(ProviderKeysService.name);
-  private readonly fromEnvironment = new Map<ManagedKeyName, string | undefined>();
+  private readonly fromEnvironment = new Map<ManagedKeyName, unknown>();
   private overrides = new Map<ManagedKeyName, Override>();
   private timer: NodeJS.Timeout | null = null;
   private loaded = false;
@@ -118,13 +143,13 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
     for (const name of MANAGED_KEY_NAMES) {
       const desc = Object.getOwnPropertyDescriptor(target, name);
       if (desc?.get) continue; // already installed on this object
-      this.fromEnvironment.set(name, target[name] as string | undefined);
+      this.fromEnvironment.set(name, target[name]);
       Object.defineProperty(target, name, {
         configurable: true,
         enumerable: true,
         get: () => this.overrides.get(name)?.value ?? this.fromEnvironment.get(name),
         // Assigning replaces the environment value (the fallback); a console value still wins.
-        set: (v: string | undefined) => {
+        set: (v: unknown) => {
           this.fromEnvironment.set(name, v);
         },
       });
@@ -150,7 +175,12 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
       for (const r of rows) {
         if (!isManagedKey(r.name)) continue;
         try {
-          next.set(r.name, { value: this.box.open(r.valueEnc), hint: r.hint, updatedAt: r.updatedAt, updatedById: r.updatedById });
+          const value = typedValue(r.name, this.box.open(r.valueEnc));
+          if (value === undefined) {
+            this.log.error({ name: r.name }, 'A provider setting saved in the console is no longer valid; using the environment value');
+            continue;
+          }
+          next.set(r.name, { value, hint: r.hint, updatedAt: r.updatedAt, updatedById: r.updatedById });
         } catch {
           this.log.error({ name: r.name }, 'A provider key saved in the console cannot be decrypted with ENCRYPTION_KEY; using the environment value');
         }
@@ -168,7 +198,9 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
     const o = this.overrides.get(name);
     if (o) return { source: 'console', hint: o.hint, updatedAt: o.updatedAt.toISOString(), updatedById: o.updatedById };
     const v = this.fromEnvironment.get(name);
-    return v ? { source: 'environment', hint: hintFor(name, v), updatedAt: null, updatedById: null } : { source: 'missing', hint: null, updatedAt: null, updatedById: null };
+    if (v === undefined || v === null || v === '') return { source: 'missing', hint: null, updatedAt: null, updatedById: null };
+    const hint = hintFor(name, v as string | boolean | number);
+    return { source: v === defaultOf(name) ? 'default' : 'environment', hint, updatedAt: null, updatedById: null };
   }
 
   /** Saves (string) or removes (null) console values in one transaction, then applies them in this process at once. */

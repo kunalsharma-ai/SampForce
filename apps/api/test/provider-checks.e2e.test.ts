@@ -90,7 +90,7 @@ describe('operator provider setup and live checks (stand-ins)', () => {
     const { admin, support } = await boot({ APOLLO_API_KEY: undefined, HUNTER_API_KEY: 'hunter-test-key', DEEPGRAM_API_KEY: undefined });
     const rows = (await support.get('/providers').expect(200)).body as { key: string; state: string; env: { name: string; set: boolean }[]; checkable: boolean; appStatus: string }[];
     const by = Object.fromEntries(rows.map((r) => [r.key, r]));
-    expect(rows.map((r) => r.key)).toEqual(['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay']);
+    expect(rows.map((r) => r.key)).toEqual(['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'checkout', 'stripe', 'razorpay']);
     expect(by.apollo).toMatchObject({ state: 'not_configured', checkable: true, appStatus: 'Mock Mode: labelled sample people', env: [{ name: 'APOLLO_API_KEY', set: false, required: true }] });
     expect(by.hunter).toMatchObject({ state: 'configured', env: [{ name: 'HUNTER_API_KEY', set: true }] });
     expect(by.google).toMatchObject({ checkable: true, state: 'not_configured' });

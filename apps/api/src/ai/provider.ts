@@ -41,12 +41,10 @@ export class TransientProviderError extends Error {}
  */
 export class AnthropicProvider implements ModelProvider {
   readonly name = 'anthropic';
-  readonly model: string;
   private readonly client: Anthropic;
   private readonly fallbacks: boolean;
 
-  constructor(env: ApiEnv) {
-    this.model = env.AI_MODEL;
+  constructor(private readonly env: ApiEnv) {
     this.fallbacks = env.AI_SERVER_FALLBACKS;
     // Every setting is explicit so ambient ANTHROPIC_* variables on the host never redirect traffic.
     this.client = new Anthropic({
@@ -56,6 +54,11 @@ export class AnthropicProvider implements ModelProvider {
       timeout: env.AI_REQUEST_TIMEOUT_MS,
       maxRetries: 2,
     });
+  }
+
+  /** Read at call time: a model changed in the operator console applies to the next request (ADR 0053). */
+  get model(): string {
+    return this.env.AI_MODEL;
   }
 
   async generate(req: ModelRequest): Promise<ModelResponse> {

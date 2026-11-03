@@ -222,11 +222,11 @@ export const integrations = {
     'Fügen Sie einem beliebigen Workflow einen Schritt „In Slack posten“ hinzu.',
     'أضف خطوة «النشر في Slack» إلى أي سير عمل.',
   ],
-  'An operator must add {settings} (the DealFlow Slack app’s credentials) to the deployment before anyone can connect. Nothing is sent until then.': [
-    'Un operador debe añadir {settings} (las credenciales de la aplicación de Slack de DealFlow) al despliegue antes de que alguien pueda conectarse. No se envía nada hasta entonces.',
-    'Un opérateur doit ajouter {settings} (les identifiants de l’application Slack de DealFlow) au déploiement avant que quiconque puisse se connecter. Rien n’est envoyé d’ici là.',
-    'Ein Betreiber muss {settings} (die Zugangsdaten der DealFlow-Slack-App) zur Bereitstellung hinzufügen, bevor sich jemand verbinden kann. Bis dahin wird nichts gesendet.',
-    'يجب على أحد المشغّلين إضافة {settings} (بيانات اعتماد تطبيق Slack الخاص بـ DealFlow) إلى النشر قبل أن يتمكن أي أحد من الاتصال. لا يُرسل شيء حتى ذلك الحين.',
+  'An operator must add {settings} (the DealFlow Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.': [
+    'Un operador debe añadir {settings} (las credenciales de la aplicación de Slack de DealFlow) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse. No se envía nada hasta entonces.',
+    'Un opérateur doit ajouter {settings} (les identifiants de l’application Slack de DealFlow) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter. Rien n’est envoyé d’ici là.',
+    'Ein Betreiber muss {settings} (die Zugangsdaten der DealFlow-Slack-App) in der Betreiberkonsole unter Anbieter hinzufügen, bevor sich jemand verbinden kann. Bis dahin wird nichts gesendet.',
+    'يجب على أحد المشغّلين إضافة {settings} (بيانات اعتماد تطبيق Slack الخاص بـ DealFlow) في وحدة تحكم المشغّل ضمن المزوّدين قبل أن يتمكن أي أحد من الاتصال. لا يُرسل شيء حتى ذلك الحين.',
   ],
   'Slack workspace: {name}': ['Espacio de trabajo de Slack: {name}', 'Espace de travail Slack : {name}', 'Slack-Arbeitsbereich: {name}', 'مساحة عمل Slack: {name}'],
   'Last message {time}.': ['Último mensaje {time}.', 'Dernier message {time}.', 'Letzte Nachricht {time}.', 'آخر رسالة {time}.'],
@@ -290,11 +290,11 @@ export const integrations = {
     'يضيف مسؤولو مساحة العمل قنوات Teams.',
   ],
   'Recent Teams activity': ['Actividad reciente de Teams', 'Activité Teams récente', 'Letzte Teams-Aktivität', 'نشاط Teams الأخير'],
-  'An operator must add {settings} ({credentials}) to the deployment before anyone can connect.': [
-    'Un operador debe añadir {settings} ({credentials}) al despliegue antes de que alguien pueda conectarse.',
-    'Un opérateur doit ajouter {settings} ({credentials}) au déploiement avant que quiconque puisse se connecter.',
-    'Ein Betreiber muss {settings} ({credentials}) zur Bereitstellung hinzufügen, bevor sich jemand verbinden kann.',
-    'يجب على أحد المشغّلين إضافة {settings} ({credentials}) إلى النشر قبل أن يتمكن أي أحد من الاتصال.',
+  'An operator must add {settings} ({credentials}) in the operator console under Providers before anyone can connect.': [
+    'Un operador debe añadir {settings} ({credentials}) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse.',
+    'Un opérateur doit ajouter {settings} ({credentials}) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter.',
+    'Ein Betreiber muss {settings} ({credentials}) in der Betreiberkonsole unter Anbieter hinzufügen, bevor sich jemand verbinden kann.',
+    'يجب على أحد المشغّلين إضافة {settings} ({credentials}) في وحدة تحكم المشغّل ضمن المزوّدين قبل أن يتمكن أي أحد من الاتصال.',
   ],
   'Last used {time}.': ['Último uso {time}.', 'Dernière utilisation {time}.', 'Zuletzt verwendet {time}.', 'آخر استخدام {time}.'],
   'Not used yet.': ['Aún sin usar.', 'Pas encore utilisé.', 'Noch nicht verwendet.', 'لم يُستخدم بعد.'],

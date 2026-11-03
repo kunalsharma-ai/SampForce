@@ -23,6 +23,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { WebhookReceipts } from '../common/webhook-receipts';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
@@ -73,6 +74,7 @@ export class BillingService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly providers: BillingProviders,
+    private readonly receipts: WebhookReceipts,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -419,10 +421,12 @@ export class BillingService {
     } catch (err) {
       if (err instanceof InvalidSignatureError || err instanceof SyntaxError) {
         this.log.warn({ provider: key, reason: errorMessage(err) }, 'rejected billing webhook');
+        await this.receipts.rejected(key === 'STRIPE' ? 'stripe' : 'razorpay', 'The signature did not match the webhook signing secret.');
         throw new BadRequestException({ code: 'INVALID_SIGNATURE', message: 'Webhook signature could not be verified.' });
       }
       throw err;
     }
+    await this.receipts.verified(key === 'STRIPE' ? 'stripe' : 'razorpay', ev.type);
     const tenantId = await this.resolveTenant(ev);
     if (!tenantId) {
       this.log.warn({ provider: key, type: ev.type, eventId: ev.id }, 'billing webhook for an unknown workspace');

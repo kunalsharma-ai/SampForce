@@ -8,6 +8,6 @@ import { WorkspaceService } from './workspace.service';
 @Module({
   controllers: [BillingController, WorkspaceController, PublicPricingController],
   providers: [BillingService, BillingProviders, WorkspaceService, NotificationsService],
-  exports: [BillingService],
+  exports: [BillingService, BillingProviders],
 })
 export class BillingModule {}

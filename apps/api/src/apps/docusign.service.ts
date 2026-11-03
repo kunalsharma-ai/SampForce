@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { WebhookReceipts } from '../common/webhook-receipts';
 import { PrismaService } from '../common/prisma.service';
 import { renderContractPdf } from '../commercial/contract-pdf';
 import { applyContractSignature } from '../commercial/contracts.service';
@@ -46,6 +47,7 @@ export class DocusignService {
     private readonly docusign: DocusignClient,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly receipts: WebhookReceipts,
   ) {}
 
   async send(auth: AuthContext, input: DocusignSendInput, meta: RequestMeta): Promise<SignatureEnvelopeRow> {
@@ -149,8 +151,12 @@ export class DocusignService {
     const sigs = Object.entries(headers)
       .filter(([k]) => /^x-docusign-signature-\d+$/i.test(k))
       .flatMap(([, v]) => (Array.isArray(v) ? v : v ? [v] : []));
-    if (!raw || !this.docusign.verifyConnect(raw, sigs)) throw new UnauthorizedException({ code: 'BAD_SIGNATURE', message: 'Signature check failed.' });
+    if (!raw || !this.docusign.verifyConnect(raw, sigs)) {
+      await this.receipts.rejected('docusign', 'The signature did not match the Connect HMAC key.');
+      throw new UnauthorizedException({ code: 'BAD_SIGNATURE', message: 'Signature check failed.' });
+    }
     const body = JSON.parse(raw.toString('utf8')) as ConnectMessage;
+    await this.receipts.verified('docusign', String(body.event ?? 'unknown'));
     const status = EVENT_STATUS[body.event ?? ''];
     const accountId = body.data?.accountId;
     const envelopeId = body.data?.envelopeId;

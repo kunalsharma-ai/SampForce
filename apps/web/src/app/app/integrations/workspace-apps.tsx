@@ -93,7 +93,7 @@ function SlackCard({ app }: { app: AppStatus }) {
         <p className="text-muted-foreground">{t.maybe(app.description)} {t('Add a “Post to Slack” step to any workflow.')}</p>
         {app.state === 'pending_configuration' && (
           <p className="text-muted-foreground">
-            {t('An operator must add {settings} (the DealFlow Slack app’s credentials) to the deployment before anyone can connect. Nothing is sent until then.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig) })}
+            {t('An operator must add {settings} (the DealFlow Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig) })}
           </p>
         )}
         {c && (
@@ -355,7 +355,7 @@ function OAuthAppCard({ app }: { app: AppStatus }) {
           {t.maybe(app.description)} {t.maybe(copy.blurb)}
         </p>
         {app.state === 'pending_configuration' && (
-          <p className="text-muted-foreground">{t('An operator must add {settings} ({credentials}) to the deployment before anyone can connect.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig), credentials: t.maybe(copy.credentials) })}</p>
+          <p className="text-muted-foreground">{t('An operator must add {settings} ({credentials}) in the operator console under Providers before anyone can connect.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig), credentials: t.maybe(copy.credentials) })}</p>
         )}
         {app.warnings.map((w) => (
           <p key={w} className="text-xs text-warning">
