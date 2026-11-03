@@ -167,8 +167,12 @@ docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d d
    ```
 
    Sign in at `https://crm.yourcompany.com/operator/login`.
-2. **Provider keys.** In the console open **Providers**, choose a provider, **Add keys**, then **Test
-   connection**. Keys apply within 10 seconds, no restart. Add SMTP first so password-reset emails work.
+2. **Integrations.** In the console open **Providers**. Every integration is set up there: open **How to set up …**
+   on a provider for the steps, a link to its console and the redirect or webhook URLs to copy into it, then
+   **Add keys** and **Test connection**. Keys apply within 10 seconds, no restart. Add SMTP first so password-reset
+   emails work. Online payments, price ids, the AI model and the pricing page are under **Plans and online
+   checkout** and **Anthropic**. For Stripe, Razorpay, Zoom and DocuSign the card also shows when a signed webhook
+   has arrived. The bottom of the page lists the few settings that stay in the `.env` file, and why.
 3. **Bank details.** Console **Settings**: the payment instructions printed on offline invoices.
 4. **First workspace.** Open `https://crm.yourcompany.com/signup` and create your company's workspace. Turn on
    two-step verification under your account, sign out and back in.

@@ -206,3 +206,69 @@ test('operator providers page: masked keys, saving a key applies it without a re
   await expect(ops.getByText('provider_key.cleared').first()).toBeVisible();
   await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');
 });
+
+test('operator console: setup guides with URLs to paste, checkout switches, and what stays on the server', async ({ browser }) => {
+  const email = `ops-setup-${Date.now()}@platform.test`;
+  execFileSync('node', ['-r', '@swc-node/register', 'scripts/create-operator.ts'], {
+    cwd: '../api',
+    env: { ...process.env, DATABASE_URL: databaseUrl, OPERATOR_EMAIL: email, OPERATOR_PASSWORD: 'operator-password-1', OPERATOR_NAME: 'E2E Setup', OPERATOR_ROLE: 'ADMIN' },
+  });
+  const ctx = await browser.newContext();
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const ops = await ctx.newPage();
+  await ops.goto('/operator/login');
+  await ops.getByLabel('Email').fill(email);
+  await ops.getByLabel('Password').fill('operator-password-1');
+  await ops.getByRole('button', { name: 'Sign in' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Providers' }).click();
+  await expect(ops.getByRole('heading', { level: 1, name: 'Providers' })).toBeVisible();
+
+  // The Slack guide: steps, a link to Slack's console, and the redirect URL to paste there, with a copy button.
+  const slack = ops.getByRole('region', { name: 'Slack' });
+  await slack.getByText('How to set up Slack').click();
+  await expect(slack.getByRole('link', { name: 'Open Slack apps' })).toHaveAttribute('href', 'https://api.slack.com/apps');
+  await expect(slack.getByText(/Bot Token Scopes: add chat:write/)).toBeVisible();
+  const urls = slack.getByRole('list', { name: 'URLs to paste into Slack' });
+  await expect(urls).toContainText('http://localhost:3000/api/v1/apps/slack/callback');
+  await urls.getByRole('button', { name: 'Copy Redirect URL' }).click();
+  await expect(urls.getByRole('button', { name: 'Copy Redirect URL' })).toHaveText('Copied');
+  expect(await ops.evaluate(() => navigator.clipboard.readText())).toBe('http://localhost:3000/api/v1/apps/slack/callback');
+
+  // Stripe sends signed webhooks: the card says none has arrived yet, and its guide has the endpoint URL.
+  const stripe = ops.getByRole('region', { name: 'Stripe (subscription billing)' });
+  await expect(stripe.getByLabel('Webhook status')).toContainText('No signed event received yet');
+  await stripe.getByText('How to set up Stripe (subscription billing)').click();
+  await expect(stripe.getByRole('list', { name: /URLs to paste/ })).toContainText('http://localhost:3000/api/v1/billing/webhooks/stripe');
+
+  // The settings that used to need the server's environment: switched on and off here.
+  const checkout = ops.getByRole('region', { name: 'Plans and online checkout' });
+  await expect(checkout.getByText('Settings', { exact: true })).toBeVisible();
+  await expect(checkout.getByRole('list', { name: 'Plans and online checkout keys' })).toContainText('ONLINE_PAYMENTS_ENABLEDDefault · Off');
+  await expect(checkout.getByRole('button', { name: 'Test connection' })).toHaveCount(0);
+  await checkout.getByRole('button', { name: 'Change settings' }).click();
+  const form = checkout.getByRole('form', { name: 'Edit Plans and online checkout keys' });
+  await form.getByLabel('Sales contact email SALES_CONTACT_EMAIL').fill('not-an-email');
+  await form.getByLabel('Pricing published PRICING_PUBLISHED').selectOption('true');
+  await form.getByRole('button', { name: 'Save settings' }).click();
+  await expect(form.getByText(/Invalid email/i)).toBeVisible();
+  await form.getByLabel('Sales contact email SALES_CONTACT_EMAIL').fill('');
+  await expectNoA11yViolations(ops);
+  await form.getByRole('button', { name: 'Save settings' }).click();
+  await expect(checkout.getByText('Saved. The API and worker use the new settings within seconds, without a restart.')).toBeVisible();
+  await expect(checkout.getByRole('list', { name: 'Plans and online checkout keys' })).toContainText('PRICING_PUBLISHEDSaved here · On');
+  const pricing = await ops.request.get('/api/v1/public/pricing');
+  expect((await pricing.json()).published).toBe(true);
+
+  // What stays on the server, and why; secrets are never shown.
+  const server = ops.getByRole('region', { name: 'Set once on the server' });
+  await expect(server.getByRole('list', { name: 'Server settings' })).toContainText('PUBLIC_WEB_URLSet · http://localhost:3000');
+  await expect(server).toContainText('Encrypts the keys saved in this console');
+  await expect(ops.locator('body')).not.toContainText('dealflow_app_dev');
+  await expectNoA11yViolations(ops);
+
+  // Leave the shared development database as it was.
+  await checkout.getByRole('button', { name: 'Change settings' }).click();
+  await form.getByLabel(/Remove the saved value/).check();
+  await form.getByRole('button', { name: 'Save settings' }).click();
+  await expect(checkout.getByRole('list', { name: 'Plans and online checkout keys' })).toContainText('PRICING_PUBLISHEDDefault · Off');
+});

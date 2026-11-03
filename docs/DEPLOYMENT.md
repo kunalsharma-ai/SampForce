@@ -56,6 +56,12 @@ Razorpay) can instead be entered in the operator console under Providers. They a
 override the Secret, and reach the API and worker within `PROVIDER_KEYS_REFRESH_SECONDS` (default 10) without a
 restart (ADR 0051). The secrets above `OPERATOR_JWT_SECRET` can only come from the Secret.
 
+The console also holds the checkout settings (`ONLINE_PAYMENTS_ENABLED`, `STRIPE_PRICES`, `STRIPE_AUTOMATIC_TAX`,
+`RAZORPAY_PLANS`, `PRICING_PUBLISHED`, `SALES_CONTACT_EMAIL`) and `AI_MODEL`, a setup guide per provider with the
+redirect and webhook URLs to paste into it, and whether each provider's signed webhooks arrive (ADR 0053). Only
+`DATABASE_URL`, `ENCRYPTION_KEY`, the two JWT secrets, `PUBLIC_WEB_URL` and `WEB_ORIGINS` must come from the
+deployment; the console lists them with the reason.
+
 The chart never writes secrets into ConfigMaps or values. Back up `ENCRYPTION_KEY` separately from database backups.
 
 ## 4. Install

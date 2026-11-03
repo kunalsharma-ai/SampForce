@@ -130,6 +130,12 @@ export class OperatorController {
     return this.ops.providers();
   }
 
+  /** The few settings that stay in the deployment's environment, and why. Secret values are never returned. */
+  @Get('deployment')
+  deployment() {
+    return this.ops.deploymentSettings();
+  }
+
   /** Saves or removes keys entered in the console. Admins only; values are sealed, never returned, and every change is logged. */
   @Post('providers/:key/keys')
   @HttpCode(200)

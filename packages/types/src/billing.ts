@@ -296,11 +296,39 @@ export interface PlatformAuditRow {
 }
 
 /** A provider in the operator console's provider setup list (ADR 0031, keys editable since ADR 0051). */
-export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
+export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'checkout', 'stripe', 'razorpay'] as const;
 export type ProviderKey = (typeof PROVIDER_KEYS)[number];
-/** Every provider has a connection test: a call that proves the keys and costs nothing. */
-export const PROVIDER_CHECK_KEYS = PROVIDER_KEYS;
-export type ProviderCheckKey = ProviderKey;
+/**
+ * Every provider has a connection test: a call that proves the keys and costs nothing. "checkout" is a group of
+ * settings (online payments on or off, price ids), not a provider, so there is nothing to call.
+ */
+export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
+export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
+
+/** A URL the operator pastes into the provider's own console (a redirect URL, a webhook endpoint). */
+export interface ProviderSetupUrl {
+  label: string;
+  url: string;
+  /** Where in the provider's console it goes. */
+  where: string;
+}
+
+/** Step-by-step setup for one provider, shown in the console next to its keys (ADR 0053). */
+export interface ProviderSetupGuide {
+  /** The provider's own console page where the keys are created. */
+  consoleUrl: string | null;
+  consoleLabel: string | null;
+  steps: string[];
+  urls: ProviderSetupUrl[];
+}
+
+/** Whether the provider's signed webhooks reach this deployment, for providers that send them (ADR 0053). */
+export interface ProviderWebhookStatus {
+  /** verified: an event signed with the secret set now arrived; rejected: the last one did not match; waiting: none yet. */
+  state: 'waiting' | 'verified' | 'rejected' | 'stale';
+  lastVerified: { at: string; event: string } | null;
+  lastRejected: { at: string; reason: string } | null;
+}
 
 /** One key or setting a provider reads. Values are never returned: a secret shows only its last four characters. */
 export interface OperatorProviderField {
@@ -311,8 +339,13 @@ export interface OperatorProviderField {
   required: boolean;
   /** False for settings that are not credentials (a sender address, a URL); those are shown in full. */
   secret: boolean;
-  /** console: saved in the operator console (wins); environment: from the deployment's secrets; missing: neither. */
-  source: 'console' | 'environment' | 'missing';
+  /**
+   * console: saved in the operator console (wins); environment: from the deployment's secrets; default: nobody set it
+   * and the built-in default applies; missing: neither.
+   */
+  source: 'console' | 'environment' | 'default' | 'missing';
+  /** How the console asks for it: a text box, a hidden secret box, or an on/off switch. */
+  input: 'text' | 'secret' | 'switch';
   /** Last four characters of a secret (null when it is too short to show any), or the whole non-secret value. */
   hint: string | null;
   updatedAt: string | null;
@@ -336,6 +369,19 @@ export interface OperatorProviderRow {
   state: 'not_configured' | 'configured' | 'verified' | 'failed';
   /** What workspaces see for it today. */
   appStatus: string;
+  /** How to create the keys in the provider's console, and the URLs to paste there. */
+  setup: ProviderSetupGuide;
+  /** For providers that send signed webhooks (Stripe, Razorpay, Zoom, DocuSign); null for the rest. */
+  webhook: ProviderWebhookStatus | null;
+}
+
+/** A setting that stays in the deployment's environment, and why it cannot move into the console (ADR 0053). */
+export interface DeploymentSettingRow {
+  name: string;
+  set: boolean;
+  /** The value, only for settings that are not secret (the public URL, allowed origins); otherwise null. */
+  value: string | null;
+  why: string;
 }
 
 /** Saves keys in the operator console: a string sets the value, null removes the console value (falls back to the environment). */

@@ -6,16 +6,17 @@ import { type BillingAdapter, RazorpayAdapter, StripeAdapter } from './providers
 @Injectable()
 export class BillingProviders {
   private readonly adapters: Record<BillingProviderKey, BillingAdapter>;
-  private readonly online: boolean;
 
-  constructor(@Inject(API_ENV) env: ApiEnv) {
+  constructor(@Inject(API_ENV) private readonly env: ApiEnv) {
     this.adapters = { STRIPE: new StripeAdapter(env), RAZORPAY: new RazorpayAdapter(env) };
-    this.online = env.ONLINE_PAYMENTS_ENABLED;
   }
 
-  /** Whether new subscriptions can be bought through this provider: online payments on and keys set. */
+  /**
+   * Whether new subscriptions can be bought through this provider: online payments on and keys set. Read at call time,
+   * so switching online payments on or off in the operator console applies within seconds (ADR 0053).
+   */
   sells(key: BillingProviderKey): boolean {
-    return this.online && this.adapters[key].configured;
+    return this.env.ONLINE_PAYMENTS_ENABLED && this.adapters[key].configured;
   }
 
   get(key: BillingProviderKey): BillingAdapter {

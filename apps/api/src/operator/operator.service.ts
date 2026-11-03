@@ -1,15 +1,18 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
-import type { OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput } from '@dealflow/types';
+import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
+import { BillingProviders } from '../billing/billing-providers';
 import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billing/billing.service';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { HunterClient } from '../finder/hunter';
 import { DeepgramClient } from '../meetings/deepgram';
 import { ApolloClient } from '../prospects/apollo';
-import { fingerprintOf, hintFor, isManagedKey, MANAGED_KEY_NAMES, MANAGED_KEYS, type ManagedKeyName, parseManagedValue, ProviderKeysService } from '../common/provider-keys';
+import { fingerprintOf, isManagedKey, MANAGED_KEY_NAMES, MANAGED_KEYS, type ManagedKeyName, parseManagedValue, ProviderKeysService } from '../common/provider-keys';
+import { readReceipt, receiptKey, WEBHOOK_RECEIPT_PREFIX } from '../common/webhook-receipts';
+import { DEPLOYMENT_SETTINGS } from './deployment-settings';
 import { ConnectionTests } from './connection-tests';
 import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue';
 import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
@@ -29,6 +32,7 @@ export class OperatorService {
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
     private readonly billing: BillingService,
+    private readonly sellers: BillingProviders,
     private readonly apollo: ApolloClient,
     private readonly hunter: HunterClient,
     private readonly deepgram: DeepgramClient,
@@ -208,35 +212,75 @@ export class OperatorService {
 
   private fingerprint(p: CatalogueProvider): string | null {
     const values = p.tested.map((n) => this.env[n] as string | undefined);
+    if (!values.length) return null;
     return values.some(Boolean) ? fingerprintOf(values.map((v) => v ?? '').join('\n')) : null;
   }
 
+  /** Absolute URL on this deployment's public address, for pasting into a provider's console. */
+  private publicUrl(path: string): string {
+    return `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${path}`;
+  }
+
+  private webhookStatus(p: CatalogueProvider, raw: string | undefined): ProviderWebhookStatus | null {
+    if (!p.webhook) return null;
+    const r = readReceipt(raw);
+    const key = receiptKey(this.env, p.webhook);
+    const current = r.lastVerified && key && r.lastVerified.key === key ? r.lastVerified : null;
+    const state: ProviderWebhookStatus['state'] =
+      r.lastRejected && (!current || r.lastRejected.at > current.at) ? 'rejected' : current ? 'verified' : r.lastVerified ? 'stale' : 'waiting';
+    return { state, lastVerified: r.lastVerified ? { at: r.lastVerified.at, event: r.lastVerified.event } : null, lastRejected: r.lastRejected };
+  }
+
   async providers(): Promise<OperatorProviderRow[]> {
-    const rows = await this.prisma.platformSetting.findMany({ where: { key: { startsWith: PROVIDER_CHECK_PREFIX } } });
-    const checks = new Map(rows.map((r) => [r.key.slice(PROVIDER_CHECK_PREFIX.length), readProviderCheck(r.value)]));
+    const rows = await this.prisma.platformSetting.findMany({ where: { OR: [{ key: { startsWith: PROVIDER_CHECK_PREFIX } }, { key: { startsWith: WEBHOOK_RECEIPT_PREFIX } }] } });
+    const checks = new Map(rows.filter((r) => r.key.startsWith(PROVIDER_CHECK_PREFIX)).map((r) => [r.key.slice(PROVIDER_CHECK_PREFIX.length), readProviderCheck(r.value)]));
+    const receipts = new Map(rows.filter((r) => r.key.startsWith(WEBHOOK_RECEIPT_PREFIX)).map((r) => [r.key.slice(WEBHOOK_RECEIPT_PREFIX.length), r.value]));
     const states = new Map(MANAGED_KEY_NAMES.map((n) => [n, this.keys.state(n)]));
     const editorIds = [...new Set([...states.values()].map((s) => s.updatedById).filter((x): x is string => !!x))];
     const editors = new Map((editorIds.length ? await this.prisma.platformOperator.findMany({ where: { id: { in: editorIds } }, select: { id: true, email: true } }) : []).map((o) => [o.id, o.email]));
     return PROVIDER_CATALOGUE.map((p) => {
       const env = p.fields.map((f) => {
         const st = states.get(f.name)!;
-        // MICROSOFT_TENANT and DOCUSIGN_AUTH_BASE_URL have built-in defaults, shown as set from the environment.
-        const value = this.env[f.name] as string | undefined;
+        const value: unknown = this.env[f.name];
         return {
-          name: f.name, label: f.label, required: f.required, secret: MANAGED_KEYS[f.name].secret, set: !!value,
-          source: st.source === 'missing' && value ? ('environment' as const) : st.source,
-          hint: st.hint ?? (value ? hintFor(f.name, value) : null),
+          name: f.name, label: f.label, required: f.required, secret: MANAGED_KEYS[f.name].secret,
+          input: f.switch ? ('switch' as const) : MANAGED_KEYS[f.name].secret ? ('secret' as const) : ('text' as const),
+          set: value !== undefined && value !== null && value !== '',
+          source: st.source,
+          hint: st.hint,
           updatedAt: st.updatedAt, updatedBy: st.updatedById ? (editors.get(st.updatedById) ?? null) : null, help: f.help ?? null,
         };
       });
       const configured = env.filter((x) => x.required).every((x) => x.set);
+      const checkable = p.tested.length > 0;
       const stored = checks.get(p.key) ?? null;
       // A test made with other keys (or before fingerprints were kept) is shown, but proves nothing now.
       const fp = this.fingerprint(p);
       const current = stored && stored.key !== null && stored.key === fp ? stored : null;
       const lastCheck = stored ? { ok: stored.ok, at: stored.at, message: stored.message, by: stored.by, stale: !current } : null;
       const state = !configured ? 'not_configured' : !current ? 'configured' : current.ok ? 'verified' : 'failed';
-      return { key: p.key, name: p.name, usedFor: p.usedFor, env, configured, checkable: true, checkNote: p.checkNote, lastCheck, state, appStatus: !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on };
+      const appStatus = p.key === 'checkout' ? this.checkoutStatus() : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;
+      const setup = {
+        consoleUrl: p.setup.consoleUrl ?? null, consoleLabel: p.setup.consoleLabel ?? null, steps: p.setup.steps,
+        urls: (p.setup.urls ?? []).map((u) => ({ label: u.label, url: this.publicUrl(u.path), where: u.where })),
+      };
+      return { key: p.key, name: p.name, usedFor: p.usedFor, env, configured, checkable, checkNote: p.checkNote, lastCheck, state, appStatus, setup, webhook: this.webhookStatus(p, receipts.get(p.webhook ?? '')) };
+    });
+  }
+
+  /** What workspaces see for billing right now, in one line. */
+  private checkoutStatus(): string {
+    if (!this.env.ONLINE_PAYMENTS_ENABLED) return 'Offline invoices only: workspaces request an invoice and you mark it paid';
+    const sellers = [this.sellers.sells('STRIPE') && 'Stripe', this.sellers.sells('RAZORPAY') && 'Razorpay'].filter(Boolean);
+    return sellers.length ? `Online checkout with ${sellers.join(' and ')}, and offline invoices` : 'Online payments are on, but neither Stripe nor Razorpay has its keys set, so checkout says it is not configured';
+  }
+
+  /** The settings that stay in the deployment's environment, with why (ADR 0053). Secret values are never returned. */
+  deploymentSettings(): DeploymentSettingRow[] {
+    return DEPLOYMENT_SETTINGS.map((d) => {
+      const value: unknown = this.env[d.name];
+      const set = value !== undefined && value !== null && value !== '';
+      return { name: d.name, set, value: d.show && set ? String(value) : null, why: d.why };
     });
   }
 
@@ -259,8 +303,10 @@ export class OperatorService {
         continue;
       }
       const parsed = parseManagedValue(name, raw);
-      if (parsed.ok) changes[name] = parsed.value;
-      else details.push({ path: `values.${name}`, message: parsed.message });
+      const extra = parsed.ok ? (p.fields.find((f) => f.name === name)?.validate?.(parsed.value) ?? null) : null;
+      if (!parsed.ok) details.push({ path: `values.${name}`, message: parsed.message });
+      else if (extra) details.push({ path: `values.${name}`, message: extra });
+      else changes[name] = parsed.value;
     }
     if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: details[0]!.message, details });
     const done = await this.keys.apply(changes, op.id);

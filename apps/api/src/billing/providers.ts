@@ -92,6 +92,15 @@ export interface BillingAdapter {
 }
 
 /** Parses `plan:INTERVAL=id,...`. Unknown plans or intervals are rejected so a typo cannot sell the wrong plan. */
+/** Parses a price map once per distinct value, so a mapping changed in the operator console applies at the next call. */
+function cachedPriceMap(): (raw: string) => Map<string, string> {
+  let last: { raw: string; map: Map<string, string> } | null = null;
+  return (raw) => {
+    if (last?.raw !== raw) last = { raw, map: parsePriceMap(raw) };
+    return last.map;
+  };
+}
+
 export function parsePriceMap(raw: string): Map<string, string> {
   const map = new Map<string, string>();
   for (const part of raw.split(',').map((p) => p.trim()).filter(Boolean)) {
@@ -176,10 +185,14 @@ export class StripeAdapter implements BillingAdapter {
   readonly key = 'STRIPE' as const;
   readonly hasPortal = true;
   readonly changesApply = 'now' as const;
-  private readonly prices: Map<string, string>;
+  private readonly priceMap = cachedPriceMap();
 
   constructor(private readonly env: ApiEnv) {
-    this.prices = parsePriceMap(env.STRIPE_PRICES);
+    parsePriceMap(env.STRIPE_PRICES); // a bad mapping in the environment still stops the API at start
+  }
+
+  private get prices(): Map<string, string> {
+    return this.priceMap(this.env.STRIPE_PRICES);
   }
 
   get configured(): boolean {
@@ -330,10 +343,14 @@ export class RazorpayAdapter implements BillingAdapter {
   readonly key = 'RAZORPAY' as const;
   readonly hasPortal = false;
   readonly changesApply = 'cycle_end' as const;
-  private readonly plans: Map<string, string>;
+  private readonly planMap = cachedPriceMap();
 
   constructor(private readonly env: ApiEnv) {
-    this.plans = parsePriceMap(env.RAZORPAY_PLANS);
+    parsePriceMap(env.RAZORPAY_PLANS); // a bad mapping in the environment still stops the API at start
+  }
+
+  private get plans(): Map<string, string> {
+    return this.planMap(this.env.RAZORPAY_PLANS);
   }
 
   get configured(): boolean {

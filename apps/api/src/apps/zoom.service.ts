@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { WebhookReceipts } from '../common/webhook-receipts';
 import { PrismaService } from '../common/prisma.service';
 import { ActivitiesService } from '../crm/activities.service';
 import { assertRefs } from '../crm/crm-helpers';
@@ -43,6 +44,7 @@ export class ZoomService {
     private readonly activities: ActivitiesService,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly receipts: WebhookReceipts,
   ) {}
 
   async schedule(
@@ -180,12 +182,14 @@ export class ZoomService {
     const h = (k: string) =>
       Array.isArray(headers[k]) ? headers[k]![0] : (headers[k] as string | undefined);
     if (!raw || !this.zoom.verifySignature(raw, h('x-zm-request-timestamp'), h('x-zm-signature'))) {
+      await this.receipts.rejected('zoom', 'The signature did not match the webhook secret token (or the request was too old).');
       throw new UnauthorizedException({
         code: 'BAD_SIGNATURE',
         message: 'Signature check failed.',
       });
     }
     const body = JSON.parse(raw.toString('utf8')) as ZoomEvent;
+    await this.receipts.verified('zoom', String(body.event ?? 'unknown'));
     if (body.event === 'endpoint.url_validation')
       return this.zoom.urlValidation(String(body.payload?.plainToken ?? ''));
     const accountId = body.payload?.account_id;
