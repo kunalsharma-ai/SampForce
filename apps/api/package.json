@@ -37,6 +37,7 @@
     "@opentelemetry/sdk-node": "0.300.0",
     "@opentelemetry/semantic-conventions": "1.44.0",
     "@prisma/instrumentation": "6.19.3",
+    "bidi-js": "1.0.3",
     "cookie-parser": "1.4.7",
     "exceljs": "4.4.0",
     "helmet": "8.3.0",

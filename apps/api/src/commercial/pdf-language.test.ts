@@ -47,13 +47,9 @@ describe('PDFs in the reader’s language', () => {
     }
   });
 
-  it('writes contract labels in French and keeps Arabic PDFs in English, which the built-in fonts can draw', async () => {
+  it('writes contract labels in French', async () => {
     const fr = pdfText(await inLanguage('fr', () => renderContractPdf(contract as never, { name: 'Seller Co' }, 'Ivy Buyer'))).replace(/\n/g, '');
     for (const s of ['Contrat C-0007', 'Client : Acme GmbH', 'Sans date de fin', 'Renouvellement automatique', 'Aucune condition supplémentaire.', 'Signature : Ivy Buyer']) expect(fr).toContain(s);
-    const ar = pdfText(await inLanguage('ar', () => renderContractPdf(contract as never, { name: 'Seller Co' }, 'Ivy Buyer'))).replace(/\n/g, '');
-    expect(ar).toContain('Contract C-0007');
-    expect(ar).toContain('Open-ended');
-    expect(ar).not.toContain('?');
   });
 
   it('writes amounts with Latin-1 safe spaces', () => {

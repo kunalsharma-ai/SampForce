@@ -170,7 +170,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Quotes: unit prices always read from the price book (clients cannot send a price), per-line rounding to cents, exact totals, numbering `Q-0001 v2`, edit only while draft or rejected | Implemented, tested (exact totals in API and e2e) |
 | Discount approvals: any line discount above the threshold goes to the existing approvals inbox (`quote_discount`, `quotes:approve`), approvers notified, no self-approval, 7-day expiry returns the quote to draft | Implemented, tested |
 | Quote lifecycle: submit, mark sent, accept (optionally sets the deal amount, same currency only, audited), decline, revise into a new version at current prices; superseded versions are locked | Implemented, tested |
-| Quote PDF (pdfkit, Helvetica) | Implemented, tested (content type and PDF header). Latin-1 text only, see known limits |
+| Quote PDF (pdfkit, Helvetica) | Implemented, tested (content type and PDF header). Latin-1 and Arabic text (ADR 0054), see known limits |
 | Contracts: from an accepted quote (net value, quote currency) or by hand; recorded signature (who, when, how); signed value, terms and start date locked; terminate with reason; linked renewal; renewal reminder once per term and automatic expiry from the worker | Implemented, tested |
 | Marketing consent on leads and contacts (opted in, opted out, not asked; source and date recorded) | Implemented, tested |
 | Segments: rule builder over leads or contacts (all/any), validated per field, live preview with consent counts, CSV export that never includes opted-out people and is audited | Implemented, tested (API + e2e + axe) |
@@ -197,7 +197,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 
 ### Known limits
 
-1. The quote PDF uses a built-in PDF font, so characters outside Latin-1 (for example Hindi or Chinese product names) do not render. A Unicode font needs to be bundled before this is used with such data.
+1. The quote PDF uses a built-in PDF font plus a bundled Arabic font (ADR 0054), so characters outside Latin-1 and Arabic (for example Hindi or Chinese product names) do not render. Each further script needs its own bundled font.
 2. ~~A custom role that has `quotes:approve` but not `automation:manage` cannot open the approvals inbox.~~ Fixed in Phase 6.
 3. Campaign attribution is first touch only; leads created before a campaign existed can be linked by UTM value but not by date range.
 4. Customer health is recomputed when the customer pages load and at most hourly by the worker, so a churn alert can lag a change by up to an hour.

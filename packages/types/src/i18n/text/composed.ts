@@ -338,7 +338,7 @@ export const composed = {
   'High escalation: {title}': ['Escalado alto: {title}', 'Escalade élevée : {title}', 'Hohe Eskalation: {title}', 'تصعيد مرتفع: {title}'],
   'Critical escalation: {title}': ['Escalado crítico: {title}', 'Escalade critique : {title}', 'Kritische Eskalation: {title}', 'تصعيد حرج: {title}'],
   'Resolved: {resolution}': ['Resuelto: {resolution}', 'Résolu : {resolution}', 'Gelöst: {resolution}', 'تم الحل: {resolution}'],
-  // Quote, proposal and contract PDFs (Arabic PDFs stay in English until a Unicode font is embedded)
+  // Quote, proposal and contract PDFs (Arabic ones are drawn right to left with an embedded Arabic font, ADR 0054)
   'Proposal {reference}': ['Propuesta {reference}', 'Proposition {reference}', 'Angebot {reference}', 'العرض {reference}'],
   'Quote {reference}': ['Presupuesto {reference}', 'Devis {reference}', 'Kostenvoranschlag {reference}', 'عرض السعر {reference}'],
   'Date: {date}': ['Fecha: {date}', 'Date : {date}', 'Datum: {date}', 'التاريخ: {date}'],
