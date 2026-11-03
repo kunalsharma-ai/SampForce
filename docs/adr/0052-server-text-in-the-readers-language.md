@@ -92,8 +92,7 @@ drafts followed in the batches below.
   portal invites and replies. Each is sent inside `inLanguage()`.
 - **Quote, proposal and contract PDFs** use the reader's language for labels, dates and amounts. What people typed
   (titles, sections, terms) is kept as typed. A buyer downloading a public proposal gets their browser's language.
-  PDFs use pdfkit's built-in Latin-1 fonts, which cannot draw Arabic, so Arabic readers get English PDFs
-  (`pdfLanguage()`) until a Unicode font is embedded.
+  Arabic PDFs are drawn right to left with a bundled Arabic font (ADR 0054).
 - **Browser tab titles** are translated part by part (each side of " · ") through the page catalogue.
 - **AI drafts and answers.** Every model call made during a request gets one more system-prompt line
   (`apps/api/src/ai/language.ts`). It asks the model to write for the person in their language, keeps a draft in the
