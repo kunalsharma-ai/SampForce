@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 # Build from the repository root: docker build -f apps/api/Dockerfile .
-FROM node:22-bookworm-slim AS base
-RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+FROM node:26-bookworm-slim AS base
+# Node 25+ no longer ships Corepack, so install the pnpm version package.json pins.
+RUN npm install -g pnpm@10.28.0 && npm cache clean --force \
+  && apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 
 FROM base AS build
@@ -18,9 +20,9 @@ RUN src="$(echo node_modules/.pnpm/@prisma+client*/node_modules/.prisma)" \
 
 # Schema migrations as their own small image (Kubernetes runs it as a pre-upgrade Job). It connects as the
 # schema owner: pass the owner connection string as both DATABASE_URL and MIGRATION_DATABASE_URL (the schema reads both).
-FROM node:22-bookworm-slim AS migrate
+FROM node:26-bookworm-slim AS migrate
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
-  && npm install -g prisma@6.19.3 && npm cache clean --force
+  && npm install -g --allow-scripts=prisma,@prisma/engines prisma@6.19.3 && npm cache clean --force
 WORKDIR /migrate
 COPY packages/database/prisma ./prisma
 USER node
