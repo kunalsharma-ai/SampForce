@@ -31,6 +31,7 @@ import { useMembers } from '@/lib/crm';
 import { useReport, useReportResult } from '@/lib/reports';
 import { useCan } from '@/lib/session';
 import { inSentence, type PluralKey, useT } from '@/lib/i18n';
+import { PageHelp } from '@/components/page-help';
 
 const METRIC_LABEL = {
   count: 'Count of records',
@@ -213,9 +214,12 @@ function Editor({ report }: { report?: ReportRow }) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {report ? report.name : t('New report')}
-      </h1>
+      <div className="flex items-center gap-1.5">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {report ? report.name : t('New report')}
+        </h1>
+        <PageHelp />
+      </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <Card>
           <CardHeader>

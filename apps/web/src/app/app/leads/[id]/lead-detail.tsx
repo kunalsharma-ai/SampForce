@@ -24,6 +24,7 @@ import { formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, usePipelines, use
 import { consentLabel } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 export function LeadDetail({ id }: { id: string }) {
   const lead = useRecord<LeadRow>('leads', id);
@@ -130,9 +131,12 @@ function Duplicates({ id, canWrite }: { id: string; canWrite: boolean }) {
   return (
     <Card className="border-warning/50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <AlertTriangle className="size-4 text-warning" aria-hidden /> {t('Possible duplicates')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="size-4 text-warning" aria-hidden /> {t('Possible duplicates')}
+          </CardTitle>
+          <InfoTip topic="lead.duplicates" />
+        </div>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
@@ -186,9 +190,12 @@ function Qualification({ lead, disabled }: { lead: LeadRow; disabled: boolean })
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="size-4 text-muted-foreground" aria-hidden /> {t('Qualification')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="size-4 text-muted-foreground" aria-hidden /> {t('Qualification')}
+          </CardTitle>
+          <InfoTip topic="lead.qualification" />
+        </div>
         <label htmlFor="qual-framework" className="sr-only">
           {t('Framework')}
         </label>

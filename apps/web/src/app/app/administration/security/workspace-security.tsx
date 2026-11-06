@@ -13,6 +13,7 @@ import { useSecuritySettings } from '@/lib/security';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 function Copyable({ label, value }: { label: string; value: string }) {
   const t = useT();
@@ -68,9 +69,12 @@ function MfaPolicy({ s }: { s: SecuritySettings }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {t('Two-step verification')} {s.requireMfa ? <Badge tone="success">{t('Required')}</Badge> : <Badge>{t('Optional')}</Badge>}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2">
+            {t('Two-step verification')} {s.requireMfa ? <Badge tone="success">{t('Required')}</Badge> : <Badge>{t('Optional')}</Badge>}
+          </CardTitle>
+          <InfoTip topic="security.mfaPolicy" />
+        </div>
         <CardDescription>
           {t('When required, people who have not turned it on can only reach the setup page until they do. People who sign in with single sign-on are verified by your identity provider instead.')}
         </CardDescription>
@@ -136,11 +140,14 @@ function SingleSignOn({ s }: { s: SecuritySettings }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {t('Single sign-on (OpenID Connect)')}
-          {s.sso?.enabled ? <Badge tone="success">{t('On')}</Badge> : <Badge>{t('Off')}</Badge>}
-          {s.sso?.enforced && <Badge tone="accent">{t('Required')}</Badge>}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            {t('Single sign-on (OpenID Connect)')}
+            {s.sso?.enabled ? <Badge tone="success">{t('On')}</Badge> : <Badge>{t('Off')}</Badge>}
+            {s.sso?.enforced && <Badge tone="accent">{t('Required')}</Badge>}
+          </CardTitle>
+          <InfoTip topic="security.sso" />
+        </div>
         <CardDescription>
           {t('Create an OpenID Connect web application in your identity provider with the redirect URI below, then enter its details. People sign in from “Sign in with SSO” using the sign-in name.')}
         </CardDescription>
@@ -226,7 +233,10 @@ function Scim({ s }: { s: SecuritySettings }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('SCIM provisioning')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('SCIM provisioning')}</CardTitle>
+          <InfoTip topic="security.scim" />
+        </div>
         <CardDescription>
           {t('Let your identity provider add, update and remove people automatically (SCIM 2.0, users only). Removing someone there suspends or removes them here. Owners are never changed through SCIM.')}
         </CardDescription>

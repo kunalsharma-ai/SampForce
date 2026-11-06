@@ -33,6 +33,7 @@ import {
 } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 export function QuotesWorkspace() {
   const t = useT();
@@ -264,7 +265,10 @@ function Products({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Products and prices')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Products and prices')}</CardTitle>
+          <InfoTip topic="quotes.products" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -421,7 +425,10 @@ function PriceBooks({ books, canManage }: { books?: PriceBookRow[]; canManage: b
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Price books')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Price books')}</CardTitle>
+          <InfoTip topic="quotes.priceBooks" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!books?.length ? (
@@ -499,7 +506,10 @@ function TaxRates({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Tax rates')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Tax rates')}</CardTitle>
+          <InfoTip topic="quotes.taxRates" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!rates.data?.length ? (
@@ -581,7 +591,10 @@ function Settings({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Quote rules')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Quote rules')}</CardTitle>
+          <InfoTip topic="quotes.rules" />
+        </div>
       </CardHeader>
       <CardContent>
         <form
@@ -673,7 +686,10 @@ function Branding({ canManage }: { canManage: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Proposal branding')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Proposal branding')}</CardTitle>
+          <InfoTip topic="quotes.branding" />
+        </div>
       </CardHeader>
       <CardContent>
         <form

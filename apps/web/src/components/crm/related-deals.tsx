@@ -5,6 +5,7 @@ import type { ContactRow, DealRow } from '@dealflow/types';
 import Link from 'next/link';
 import { DEAL_STATUS_TONE, formatMoney, titleCase, useRecordList } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 export function RelatedDeals({ filter }: { filter: { companyId: string } | { contactId: string } }) {
   const t = useT();
@@ -12,7 +13,10 @@ export function RelatedDeals({ filter }: { filter: { companyId: string } | { con
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('module.deals')} {deals.data ? <span className="text-muted-foreground">({deals.data.total})</span> : null}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('module.deals')} {deals.data ? <span className="text-muted-foreground">({deals.data.total})</span> : null}</CardTitle>
+          <InfoTip topic="record.relatedDeals" />
+        </div>
       </CardHeader>
       <CardContent>
         {deals.isPending ? (

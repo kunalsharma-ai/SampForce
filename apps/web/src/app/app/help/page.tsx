@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { Metadata } from 'next';
 import { PageHeader } from '@/components/page-header';
 import { Tr } from '@/lib/i18n';
+import { FeatureGuide } from './feature-guide';
 
 export const metadata: Metadata = { title: 'Help center' };
 
@@ -38,6 +39,7 @@ export default function HelpPage() {
           </dl>
         </CardContent>
       </Card>
+      <FeatureGuide />
     </div>
   );
 }

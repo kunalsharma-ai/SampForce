@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { AUTH_METHOD_LABEL, describeDevice, useSessions } from '@/lib/security';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /** The caller's live sessions, with sign-out for one device or all the others. */
 export function DeviceList() {
@@ -21,7 +22,10 @@ export function DeviceList() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Signed-in devices')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Signed-in devices')}</CardTitle>
+          <InfoTip topic="account.devices" />
+        </div>
         <CardDescription>{t('Signing a device out ends its access straight away. If you do not recognise a device, sign it out and change your password.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

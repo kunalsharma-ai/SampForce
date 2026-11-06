@@ -13,6 +13,7 @@ import { useIsPhone } from '@/lib/use-is-phone';
 import { initials, PriorityBadge, RiskIndicator } from './deal-badges';
 import { DealPanel } from './deal-panel';
 import { Tr, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 type Open = (id: string) => void;
 
@@ -67,9 +68,12 @@ export function PriorityView({ filter, onOpen }: { filter: DealViewFilter; onOpe
   return (
     <section aria-labelledby="priority-heading" className="space-y-3">
       <div>
-        <h2 id="priority-heading" className="text-base font-semibold">
-          {t('Where to focus')}
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 id="priority-heading" className="text-base font-semibold">
+            {t('Where to focus')}
+          </h2>
+          <InfoTip topic="deals.priority" />
+        </div>
         <p className="text-sm text-muted-foreground">
           {t('Open deals ranked by health risk, how close (or overdue) the close date is, size, and the priority your team set. Each card says why it is here.')}
         </p>
@@ -133,9 +137,12 @@ export function ForecastView({ filter, onOpen }: { filter: DealViewFilter; onOpe
     <section aria-labelledby="forecast-heading" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 id="forecast-heading" className="text-base font-semibold">
-            {t('Open deals by expected close')}
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 id="forecast-heading" className="text-base font-semibold">
+              {t('Open deals by expected close')}
+            </h2>
+            <InfoTip topic="deals.forecast" />
+          </div>
           <p className="text-sm text-muted-foreground">{t('Weighted value is the amount times each deal’s probability. Overdue and undated deals are kept apart so they get fixed.')}</p>
         </div>
         <p className="text-sm">
@@ -280,9 +287,12 @@ export function TerritoryView({ filter, onOpen }: { filter: DealViewFilter; onOp
     <section aria-labelledby="territory-heading" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 id="territory-heading" className="text-base font-semibold">
-            {t('Pipeline by territory')}
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 id="territory-heading" className="text-base font-semibold">
+              {t('Pipeline by territory')}
+            </h2>
+            <InfoTip topic="deals.territory" />
+          </div>
           <p className="text-sm text-muted-foreground">{t('A deal belongs to the territory that holds its company’s country. Won and lost counts cover deals closed since {date}.', { date: since })}</p>
         </div>
         {manage}
@@ -354,9 +364,12 @@ export function CalendarView({ filter, onOpen }: { filter: DealViewFilter; onOpe
           <Button variant="ghost" size="icon" onClick={() => shift(-1)} aria-label={t('Previous month')}>
             <ChevronLeft className="rtl:-scale-x-100" aria-hidden />
           </Button>
-          <h2 id="cal-heading" className="min-w-40 text-center text-base font-semibold" aria-live="polite">
-            {title}
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 id="cal-heading" className="min-w-40 text-center text-base font-semibold" aria-live="polite">
+              {title}
+            </h2>
+            <InfoTip topic="deals.calendar" />
+          </div>
           <Button variant="ghost" size="icon" onClick={() => shift(1)} aria-label={t('Next month')}>
             <ChevronRight className="rtl:-scale-x-100" aria-hidden />
           </Button>
@@ -459,9 +472,12 @@ export function TimelineView({ filter, onOpen }: { filter: DealViewFilter; onOpe
   return (
     <section aria-labelledby="tl-heading" className="space-y-3">
       <div>
-        <h2 id="tl-heading" className="text-base font-semibold">
-          {t('Timeline to close')}
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 id="tl-heading" className="text-base font-semibold">
+            {t('Timeline to close')}
+          </h2>
+          <InfoTip topic="deals.timeline" />
+        </div>
         <p className="text-sm text-muted-foreground">
           {t('Each bar runs from when the deal was opened to its expected close; red bars run from a missed close date to today. Open deals closing between {from} and {to}.', { from: formatDate(ymd(start)), to: formatDate(ymd(end)) })}
         </p>

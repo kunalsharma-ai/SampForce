@@ -13,6 +13,7 @@ import { formatDate, formatMinor, INVOICE_STATUS, SUBSCRIPTION_STATUS, useBillin
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const usd = (n: number) => `$${n}`;
 const PROVIDER_LABEL: Record<BillingProviderKey | 'OFFLINE', string> = { STRIPE: 'Stripe', RAZORPAY: 'Razorpay', OFFLINE: 'Paid by invoice' };
@@ -232,9 +233,12 @@ function Usage({ b }: { b: BillingOverview }) {
   const t = useT();
   return (
     <section aria-labelledby="usage-heading">
-      <h2 id="usage-heading" className="mb-3 text-lg font-semibold">
-        {t('Usage this month')}
-      </h2>
+      <div className="mb-3 flex items-center gap-1.5">
+        <h2 id="usage-heading" className="text-lg font-semibold">
+          {t('Usage this month')}
+        </h2>
+        <InfoTip topic="billing.usage" />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Meter label={t('Seats in use')} m={{ used: b.usage.members.used + b.usage.pendingInvitations, limit: b.usage.members.limit }} />
         <Meter label={t('Pipelines')} m={b.usage.pipelines} />
@@ -265,9 +269,12 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
   return (
     <section aria-labelledby="plans-heading">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 id="plans-heading" className="text-lg font-semibold">
-          {t('Plans')}
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 id="plans-heading" className="text-lg font-semibold">
+            {t('Plans')}
+          </h2>
+          <InfoTip topic="billing.plans" />
+        </div>
         {!b.pricingPublished && <Badge tone="warning">{t('Proposed launch pricing')}</Badge>}
         <div className="ms-auto flex flex-wrap items-end gap-3">
           <div role="radiogroup" aria-label={t('Billing interval')} className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
@@ -406,7 +413,10 @@ function Invoices() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Invoices')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Invoices')}</CardTitle>
+          <InfoTip topic="billing.invoices" />
+        </div>
         <CardDescription>{t('Amounts exclude taxes. Links open the payment provider’s copy where there is one.')}</CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">

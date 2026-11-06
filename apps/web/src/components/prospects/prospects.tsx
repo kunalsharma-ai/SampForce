@@ -28,6 +28,8 @@ import { addResultText, type ProspectFilters, prospectsApi, useListPerformance, 
 import { useSequences } from '@/lib/sequences';
 import { useCan } from '@/lib/session';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
+import { PageHelp } from '@/components/page-help';
 
 const MODE_TONE: Record<ProviderMode, 'warning' | 'success' | 'neutral'> = { mock: 'warning', pending: 'neutral', live: 'success' };
 const MODE_LABEL: Record<ProviderMode, string> = { mock: 'Mock Mode', pending: 'Pending Configuration', live: 'Connected' };
@@ -223,7 +225,10 @@ function Limits() {
       {canManage && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('Limits per person')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Limits per person')}</CardTitle>
+              <InfoTip topic="prospects.limits" />
+            </div>
           </CardHeader>
           <CardContent>
             <form className="space-y-3 text-sm" onSubmit={(e) => (e.preventDefault(), setSaved(false), save.mutate(undefined))}>
@@ -328,7 +333,10 @@ export function ProspectListView({ id }: { id: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link href="/app/prospects" className="text-sm text-muted-foreground underline underline-offset-2">{t('All prospect lists')}</Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{list.name}</h1>
+          <div className="mt-1 flex items-center gap-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight">{list.name}</h1>
+            <PageHelp />
+          </div>
           <p className="text-sm text-muted-foreground">
             {t.plural('count.prospects', list.prospects)} · {t('{n} with email', { n: list.withEmail })} · {t('{n} in CRM', { n: list.inCrm })} · {t('Assigned to {name}', { name: list.assignee?.name ?? t('nobody') })}
           </p>
@@ -551,7 +559,10 @@ function Performance({ id }: { id: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Outreach from this list')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Outreach from this list')}</CardTitle>
+          <InfoTip topic="prospects.outreach" />
+        </div>
       </CardHeader>
       <CardContent className="overflow-x-auto text-sm">
         {!rows.length ? (

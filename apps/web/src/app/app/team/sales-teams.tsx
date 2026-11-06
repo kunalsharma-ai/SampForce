@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { gamificationApi, useGamificationMutation, useTeams } from '@/lib/gamification';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /** Sales teams: groups of members for team leaderboards and team challenges. */
 export function SalesTeams() {
@@ -18,7 +19,10 @@ export function SalesTeams() {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>{t('Sales teams')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Sales teams')}</CardTitle>
+          <InfoTip topic="team.salesTeams" />
+        </div>
         {canManage && <Button size="sm" onClick={() => setEditing('new')}>{t('New team')}</Button>}
       </CardHeader>
       <CardContent>

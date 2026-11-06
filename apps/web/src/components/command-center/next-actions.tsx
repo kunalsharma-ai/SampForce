@@ -9,6 +9,7 @@ import { useId, useState } from 'react';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 const TONE: Partial<Record<NextActionKind, 'critical' | 'warning' | 'accent' | 'primary'>> = {
   reply_waiting: 'primary',
@@ -37,9 +38,12 @@ export function NextActions() {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ListTodo className="size-4 text-muted-foreground" aria-hidden /> {t('Your next best actions')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2">
+            <ListTodo className="size-4 text-muted-foreground" aria-hidden /> {t('Your next best actions')}
+          </CardTitle>
+          <InfoTip topic="commandCenter.nextActions" />
+        </div>
         <CardDescription>{t('Ranked from your replies, tasks, deal health, quotes, renewals and new leads.')}</CardDescription>
       </CardHeader>
       <CardContent>

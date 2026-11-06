@@ -9,6 +9,7 @@ import { useEmails, useIntegrations } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 /** Email history for one contact or lead, with a compose button when a mailbox is connected. */
 export function RecordEmails({
@@ -29,7 +30,10 @@ export function RecordEmails({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">{t('Email')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Email')}</CardTitle>
+          <InfoTip topic="record.emails" />
+        </div>
         {canSend && email && connected && (
           <Button size="sm" variant="outline" onClick={() => setCompose(true)}>
             <Mail aria-hidden /> {t('Send email')}

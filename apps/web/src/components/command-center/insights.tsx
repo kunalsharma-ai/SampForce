@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
+import { InfoTip } from '@/components/info-tip';
 
 const ICON = { attention: AlertTriangle, good: TrendingUp, info: Info } as const;
 const COLOR = { attention: 'text-warning', good: 'text-success', info: 'text-muted-foreground' } as const;
@@ -26,7 +27,10 @@ export function SalesInsights() {
     <Card className="h-full">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2 space-y-0">
         <div>
-          <CardTitle>{t('This week')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{t('This week')}</CardTitle>
+            <InfoTip topic="commandCenter.insights" />
+          </div>
           <CardDescription>{t('Last 7 days compared with the 7 before.')}</CardDescription>
         </div>
         <div className="flex items-center gap-1" role="group" aria-label={t('Whose numbers')}>

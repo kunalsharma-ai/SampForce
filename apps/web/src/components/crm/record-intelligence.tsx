@@ -12,6 +12,7 @@ import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
+import { InfoTip } from '@/components/info-tip';
 
 const TREND = { none: 'No engagement recorded', rising: 'Rising', steady: 'Steady', declining: 'Falling' } as const;
 const TREND_TONE = { none: 'neutral', rising: 'success', steady: 'neutral', declining: 'critical' } as const;
@@ -30,9 +31,12 @@ export function RecordIntelligencePanel({ entity, id, name }: { entity: Timeline
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Lightbulb className="size-4 text-muted-foreground" aria-hidden /> {t('Sales intelligence')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Lightbulb className="size-4 text-muted-foreground" aria-hidden /> {t('Sales intelligence')}
+          </CardTitle>
+          <InfoTip topic="record.intelligence" />
+        </div>
         {canAi && (
           <Button size="sm" variant="outline" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => ask(`Summarise our relationship with ${name} (${entity} ${id}): what has happened, how engaged they are, who matters, and what I should do next.`)}>
             <Sparkles aria-hidden /> {t('Summarise with Copilot')}

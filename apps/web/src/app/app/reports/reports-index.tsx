@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/crm';
 import { useReports } from '@/lib/reports';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 export const CHART_ICON = { table: Table2, bar: BarChart3, line: LineChart, pie: PieChart, number: Sigma } as const;
 
@@ -67,7 +68,10 @@ export function ReportsIndex() {
       )}
       {canWrite && (
         <section aria-labelledby="templates-h" className="space-y-3">
-          <h2 id="templates-h" className="text-lg font-semibold">{t('Start from a template')}</h2>
+          <div className="flex items-center gap-1.5">
+            <h2 id="templates-h" className="text-lg font-semibold">{t('Start from a template')}</h2>
+            <InfoTip topic="reports.templates" />
+          </div>
           <ul className="flex flex-wrap gap-2">
             {REPORT_TEMPLATES.map((tpl, i) => (
               <li key={tpl.name}>

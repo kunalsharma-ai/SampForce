@@ -12,6 +12,7 @@ import { todayIso, useExchangeRates, useRevenue, useTargets } from '@/lib/revenu
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 function quarterOptions(): string[] {
   const now = new Date();
@@ -71,7 +72,10 @@ function Report({ a }: { a: RevenueAnalytics }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">{t('Won by month')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Won by month')}</CardTitle>
+              <InfoTip topic="revenue.wonByMonth" />
+            </div>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
@@ -91,7 +95,10 @@ function Report({ a }: { a: RevenueAnalytics }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('Lead funnel')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Lead funnel')}</CardTitle>
+              <InfoTip topic="revenue.funnel" />
+            </div>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <p className="text-xs text-muted-foreground">{t('Leads created this quarter')}</p>
@@ -107,7 +114,10 @@ function Report({ a }: { a: RevenueAnalytics }) {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('By owner')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('By owner')}</CardTitle>
+            <InfoTip topic="revenue.byOwner" />
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {a.byOwner.length === 0 ? (
@@ -149,7 +159,10 @@ function Report({ a }: { a: RevenueAnalytics }) {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Forecast against actual')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Forecast against actual')}</CardTitle>
+            <InfoTip topic="revenue.forecastVsActual" />
+          </div>
         </CardHeader>
         <CardContent className="text-sm">
           {a.actualVsForecast.length === 0 ? (
@@ -239,7 +252,10 @@ export function Targets({ period }: { period: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Targets for {period}', { period })}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Targets for {period}', { period })}</CardTitle>
+          <InfoTip topic="revenue.targets" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {!targets.data?.length ? (
@@ -310,7 +326,10 @@ function Rates() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Exchange rates')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Exchange rates')}</CardTitle>
+          <InfoTip topic="revenue.exchangeRates" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-xs text-muted-foreground">

@@ -5,13 +5,17 @@ import type { ActivityItem } from '@dealflow/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 export function ActivityStream({ items }: { items: ActivityItem[] }) {
   const t = useT();
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>{t('Activity stream')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Activity stream')}</CardTitle>
+          <InfoTip topic="commandCenter.activity" />
+        </div>
         <CardDescription>{t('Latest audited events in this workspace')}</CardDescription>
       </CardHeader>
       <CardContent>

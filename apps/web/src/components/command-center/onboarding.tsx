@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useOnboarding } from '@/lib/billing';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 /** Getting-started checklist. Steps tick themselves off from real workspace data. */
 export function OnboardingChecklist() {
@@ -27,7 +28,10 @@ export function OnboardingChecklist() {
     <Card>
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2">
         <div>
-          <CardTitle>{t('Get your workspace ready')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{t('Get your workspace ready')}</CardTitle>
+            <InfoTip topic="commandCenter.onboarding" />
+          </div>
           <CardDescription>{t('{done} of {total} done', { done, total: q.data.steps.length })}</CardDescription>
         </div>
         {canDismiss && (

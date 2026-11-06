@@ -11,6 +11,7 @@ import { useCan } from '@/lib/session';
 import { ENQUIRY_FORM_EXAMPLE, formatDuration, installSnippet, useRecordWebActivity, useVisitor, useVisitorDashboard, useVisitorMutation, useVisitors, useVisitorSettings, visitorsApi, type VisitorSegment } from '@/lib/visitors';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 type Tab = 'dashboard' | 'visitors' | 'settings';
 
@@ -109,7 +110,10 @@ function Dashboard() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t('High-intent visitors')}</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-base">{t('High-intent visitors')}</CardTitle>
+                  <InfoTip topic="visitors.highIntent" />
+                </div>
               </CardHeader>
               <CardContent>
                 {d.highIntent.length === 0 ? (
@@ -146,7 +150,10 @@ function Dashboard() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t('Sources and campaigns')}</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-base">{t('Sources and campaigns')}</CardTitle>
+                  <InfoTip topic="visitors.sources" />
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <SimpleTable caption={t('Visits by source')} head={[t('Source'), t('Visits')]} rows={d.sources.map((s) => [s.source, s.visits])} empty={t('No visits yet.')} />
@@ -497,7 +504,10 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
     <form className="space-y-4" onSubmit={submit}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Install on your website')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Install on your website')}</CardTitle>
+            <InfoTip topic="visitors.install" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p>{t('Paste this before the closing </head> tag on every page. It only works on the websites listed below.')}</p>
@@ -522,7 +532,10 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Tracking and consent')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Tracking and consent')}</CardTitle>
+            <InfoTip topic="visitors.consent" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <label className="flex items-center gap-2">
@@ -580,7 +593,10 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Important pages')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Important pages')}</CardTitle>
+            <InfoTip topic="visitors.importantPages" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-2 overflow-x-auto text-sm">
           <table className="w-full min-w-[620px]">

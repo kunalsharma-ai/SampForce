@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useBilling, useRoles } from '@/lib/billing';
 import { useCan, useSession } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /** Permissions grouped by resource, for the role editor. */
 const GROUPS = PERMISSIONS.reduce<Record<string, string[]>>((acc, p) => {
@@ -33,7 +34,10 @@ export function RolesManager() {
     <Card>
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2">
         <div>
-          <CardTitle>{t('Roles')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{t('Roles')}</CardTitle>
+            <InfoTip topic="team.roles" />
+          </div>
           <CardDescription>
             {included === false ? t('System roles are fixed. Custom roles combine individual permissions and are included from the Professional plan. You can only grant permissions your own role has.') : t('System roles are fixed. Custom roles combine individual permissions. You can only grant permissions your own role has.')}
           </CardDescription>

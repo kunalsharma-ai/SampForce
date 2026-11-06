@@ -10,6 +10,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const SCOPE_LABEL: Record<ApiKeyScope, string> = {
   'leads:read': 'Read leads',
@@ -53,9 +54,12 @@ export function ApiKeysAndZapier() {
 
   return (
     <section aria-labelledby="api-heading" className="space-y-3">
-      <h2 id="api-heading" className="text-base font-semibold">
-        {t('Zapier and API keys')}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 id="api-heading" className="text-base font-semibold">
+          {t('Zapier and API keys')}
+        </h2>
+        <InfoTip topic="integrations.api" />
+      </div>
       <Card role="region" aria-labelledby="zapier-title">
         <CardHeader className="pb-2">
           <CardTitle id="zapier-title" className="flex flex-wrap items-center gap-2 text-sm">

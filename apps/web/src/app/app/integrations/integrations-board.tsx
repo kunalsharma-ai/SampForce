@@ -11,6 +11,7 @@ import { useIntegrations, useWebhooks } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const OUTCOME: Record<string, string> = {
   oauth_state_invalid: 'The sign-in link expired or belonged to another session. Try connecting again.',
@@ -39,9 +40,12 @@ export function MailboxConnections() {
 
   return (
     <section aria-labelledby="mailbox-heading" className="space-y-3">
-      <h2 id="mailbox-heading" className="text-base font-semibold">
-        {t('Your mailbox and calendar')}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 id="mailbox-heading" className="text-base font-semibold">
+          {t('Your mailbox and calendar')}
+        </h2>
+        <InfoTip topic="integrations.mailbox" />
+      </div>
       {connected && <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">{t('Connected. The first sync runs within a few minutes, or press Sync now.')}</p>}
       {error && (
         <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-3 text-sm text-critical">
@@ -154,9 +158,12 @@ export function WebhooksManager() {
   if (!canManage) return null;
   return (
     <section aria-labelledby="webhooks-heading" className="space-y-3">
-      <h2 id="webhooks-heading" className="text-base font-semibold">
-        {t('Outbound webhooks')}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 id="webhooks-heading" className="text-base font-semibold">
+          {t('Outbound webhooks')}
+        </h2>
+        <InfoTip topic="integrations.webhooks" />
+      </div>
       <p className="text-sm text-muted-foreground">
         {t('SampForce posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.')}
       </p>

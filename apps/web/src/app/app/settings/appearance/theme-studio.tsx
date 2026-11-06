@@ -27,6 +27,7 @@ import {
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { usePreferences } from '@/stores/preferences';
+import { InfoTip } from '@/components/info-tip';
 
 const MODE_NAMES: Record<Appearance['mode'], MessageKey> = { light: 'Light', dark: 'Dark', system: 'Automatic' };
 
@@ -154,7 +155,10 @@ export function ThemeStudio() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t('Colours')}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>{t('Colours')}</CardTitle>
+                <InfoTip topic="theme.colours" />
+              </div>
               <CardDescription>
                 {t('Leave a colour on the theme’s own, or pick yours. Colours that would be hard to read are adjusted automatically, and the report beside the preview says what changed.')}
                 {brandColor && !draft.primary ? ` ${t('Your workspace brand colour is used as the primary colour.')}` : ''}
@@ -364,7 +368,10 @@ export function ThemeStudio() {
           <Preview paint={paint} dark={dark} />
           <Card>
             <CardHeader>
-              <CardTitle>{t('Readability check')}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle>{t('Readability check')}</CardTitle>
+                <InfoTip topic="theme.readability" />
+              </div>
               <CardDescription>{dark ? t('WCAG 2.2 AA contrast for the dark variant of this draft.') : t('WCAG 2.2 AA contrast for the light variant of this draft.')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -540,7 +547,10 @@ function SavedThemes({ draft, onUse }: { draft: Appearance; onUse: (a: Appearanc
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Saved themes')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Saved themes')}</CardTitle>
+          <InfoTip topic="theme.saved" />
+        </div>
         <CardDescription>{t('Save the current draft under a name to switch back to it later. Saving under an existing name updates it.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
