@@ -34,7 +34,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 
 ## Quick start
 
-Requirements: Node 22, pnpm 10, PostgreSQL 16 (or Docker).
+Requirements: Node 26 (LTS), pnpm 10, PostgreSQL 16 (or Docker).
 
 ```bash
 pnpm install
