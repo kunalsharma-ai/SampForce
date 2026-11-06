@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Build from the repository root: docker build -f apps/web/Dockerfile --build-arg API_INTERNAL_URL=http://api:4000 .
-FROM node:22-bookworm-slim AS base
-RUN corepack enable
+FROM node:26-bookworm-slim AS base
+# Node 25+ no longer ships Corepack, so install the pnpm version package.json pins.
+RUN npm install -g pnpm@10.28.0 && npm cache clean --force
 WORKDIR /repo
 
 FROM base AS build
@@ -11,8 +12,10 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @dealflow/web... build
 
-FROM node:22-bookworm-slim AS runtime
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+FROM node:26-bookworm-slim AS runtime
+# Node 25+ defines a global localStorage on the server; turn it off so server rendering sees no browser storage,
+# as on Node 22 (otherwise code that checks for localStorage finds a stub and every process logs a warning).
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 NODE_OPTIONS=--no-webstorage
 WORKDIR /app
 COPY --from=build /repo/apps/web/.next/standalone ./
 COPY --from=build /repo/apps/web/.next/static ./apps/web/.next/static

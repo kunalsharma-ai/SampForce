@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3000",
+    "dev": "NODE_OPTIONS=\"--no-webstorage $NODE_OPTIONS\" next dev -p 3000",
+    "build": "NODE_OPTIONS=\"--no-webstorage $NODE_OPTIONS\" next build",
+    "start": "NODE_OPTIONS=\"--no-webstorage $NODE_OPTIONS\" next start -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src e2e",
     "test": "vitest run",
