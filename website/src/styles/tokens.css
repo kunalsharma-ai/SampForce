@@ -1,0 +1,57 @@
+/*
+ * SampForce design tokens. Change the brand here and the whole page follows.
+ * Colours come from the SampForce logo: ember-to-gold bolt, crimson shadow, slate wordmark,
+ * plus electric accents (volt, plasma, mint) used to colour-grade each section differently.
+ */
+:root {
+  /* Surfaces */
+  --ink: #09070e;
+  --ink-2: #110d18;
+  --ink-3: #1a1424;
+  --paper: #fff7f0;
+  --paper-2: #ffeedf;
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.18);
+
+  /* Text */
+  --text: #f6f1ec;
+  --text-soft: #c9c0cf;
+  --text-dim: #8f86a0;
+  --text-ink: #1b1220;
+  --text-ink-soft: #5b4f63;
+
+  /* Brand (from the logo) */
+  --gold: #ffc857;
+  --flare: #ff9a5a;
+  --ember: #ff6a3d;
+  --crimson: #e02424;
+  --blood: #7f1d1d;
+  --slate: #94a3b8;
+  --sampledge: #2f7bff;
+
+  /* Electric accents for colour grading */
+  --volt: #3de0ff;
+  --plasma: #9b6bff;
+  --mint: #2ee6a6;
+  --rose: #ff4d8d;
+
+  /* Gradients */
+  --grad-bolt: linear-gradient(120deg, #ffc857 0%, #ff8a4c 38%, #ff4d4d 70%, #e0245e 100%);
+  --grad-ember: linear-gradient(135deg, #ff6a3d, #e02424);
+  --grad-aurora: linear-gradient(120deg, #3de0ff, #9b6bff 50%, #ff4d8d);
+  --grad-dusk: linear-gradient(160deg, #1a1030 0%, #09070e 60%);
+
+  /* Type */
+  --font-display: 'Unbounded Variable', 'Unbounded', system-ui, sans-serif;
+  --font-body: 'Manrope Variable', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Layout */
+  --max: 1240px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --radius: 22px;
+  --radius-sm: 14px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

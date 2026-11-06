@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -7 78 78" width="128" height="128" role="img" aria-label="SampForce icon"><title>SampForce icon</title><style>
+
+.m-flt{animation:mFlt 6s ease-in-out infinite}
+@keyframes mFlt{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+.m-l{animation:mL 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mL{0%,4%{transform:translateX(-12px);opacity:0}20%,88%{transform:none;opacity:1}100%{transform:translateX(-12px);opacity:0}}
+.m-r{animation:mR 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mR{0%,8%{transform:translateX(12px);opacity:0}24%,88%{transform:none;opacity:1}100%{transform:translateX(12px);opacity:0}}
+.m-core{transform-box:fill-box;transform-origin:50% 50%;animation:mCore 1.8s ease-in-out infinite}@keyframes mCore{0%,100%{transform:scale(.8);opacity:.75}50%{transform:scale(1.15);opacity:1}}
+.m-up{transform-box:fill-box;transform-origin:50% 50%;animation:mUp 5s cubic-bezier(.3,1.6,.5,1) infinite}@keyframes mUp{0%,4%{transform:translateY(10px) scale(.4);opacity:0}20%,88%{transform:none;opacity:1}100%{transform:translateY(-6px) scale(.8);opacity:0}}
+.m-spark{transform-box:fill-box;transform-origin:50% 50%;animation:mSpk 2.5s ease-in-out infinite}@keyframes mSpk{0%,100%{transform:scale(.4) rotate(0);opacity:.3}50%{transform:scale(1.1) rotate(90deg);opacity:1}}
+.m-spin{transform-origin:32px 33px;animation:mSpin 14s linear infinite}@keyframes mSpin{to{transform:rotate(360deg)}}
+.m-gat{animation:mGat 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mGat{0%,4%{transform:translate(var(--x),var(--y));opacity:0}22%,88%{transform:none;opacity:1}100%{transform:translate(var(--x),var(--y));opacity:0}}
+.m-g1{animation:mG1 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mG1{0%,4%{transform:translateY(-12px);opacity:0}22%,88%{transform:none;opacity:1}100%{transform:translateY(-12px);opacity:0}}
+.m-g2{animation:mG2 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mG2{0%,8%{transform:translate(-11px,7px);opacity:0}26%,88%{transform:none;opacity:1}100%{transform:translate(-11px,7px);opacity:0}}
+.m-g3{animation:mG3 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes mG3{0%,12%{transform:translate(11px,7px);opacity:0}30%,88%{transform:none;opacity:1}100%{transform:translate(11px,7px);opacity:0}}
+.m-dash{animation:mDash 1.6s cubic-bezier(.5,0,.3,1) infinite}@keyframes mDash{0%,40%{transform:translateX(0)}60%{transform:translateX(4px)}100%{transform:translateX(0)}}
+.m-dash2{animation:mDash 1.6s .12s cubic-bezier(.5,0,.3,1) infinite}
+.m-route{stroke-dasharray:60;animation:mRoute 5s cubic-bezier(.6,0,.3,1) infinite}@keyframes mRoute{0%,8%{stroke-dashoffset:60}48%,88%{stroke-dashoffset:0}100%{stroke-dashoffset:60}}
+.m-peak{transform-box:fill-box;transform-origin:50% 50%;animation:mPeak 5s cubic-bezier(.3,1.8,.5,1) infinite}@keyframes mPeak{0%,46%{transform:scale(0)}56%,88%{transform:scale(1)}100%{transform:scale(0)}}
+.m-arc{transform-origin:13px 51px;animation:mArc 2.4s ease-out infinite}@keyframes mArc{0%{transform:scale(.82);opacity:.35}35%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:.55}}
+.m-pct{transform-origin:32px 31px;animation:mPct 5s cubic-bezier(.5,0,.2,1.3) infinite}@keyframes mPct{0%,22%{transform:rotate(-90deg) scale(0);opacity:0}38%,88%{transform:none;opacity:1}100%{transform:rotate(90deg) scale(0);opacity:0}}
+
+
+.f-a{animation:fA 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes fA{0%,4%{transform:translate(12px,-14px);opacity:0}20%,88%{transform:none;opacity:1}100%{transform:translate(12px,-14px);opacity:0}}
+.f-b{animation:fB 5s cubic-bezier(.3,1.4,.4,1) infinite}@keyframes fB{0%,8%{transform:translate(-12px,14px);opacity:0}24%,88%{transform:none;opacity:1}100%{transform:translate(-12px,14px);opacity:0}}
+.f-pun{transform-box:fill-box;transform-origin:50% 50%;animation:fPun 5s ease-out infinite}@keyframes fPun{0%,26%,40%,100%{transform:none}31%{transform:scale(1.09)}}
+.f-ch{opacity:0;animation:fCh 5s ease-out infinite}@keyframes fCh{0%,26%{opacity:0}30%{opacity:.75}44%,100%{opacity:0}}
+.f-st rect{animation:fSt 1.4s ease-in infinite}.f-s2{animation-delay:.45s!important}.f-s3{animation-delay:.9s!important}
+@keyframes fSt{0%{transform:translateX(6px);opacity:0}25%{opacity:1}100%{transform:translateX(-8px);opacity:0}}
+.f-sp{transform-box:fill-box;transform-origin:50% 50%;animation:fSp 5s ease-in-out infinite}@keyframes fSp{0%,28%{transform:scale(0) rotate(0);opacity:0}36%{transform:scale(1.3) rotate(90deg);opacity:1}60%,88%{transform:scale(.9) rotate(180deg);opacity:1}100%{transform:scale(0);opacity:0}}
+</style><defs>
+<linearGradient id="fza" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFC857"/><stop offset="1" stop-color="#E02424"/></linearGradient>
+<linearGradient id="fzb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E02424"/><stop offset="1" stop-color="#7F1D1D"/></linearGradient>
+<linearGradient id="fzh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<filter id="fzm" x="-30%" y="-30%" width="160%" height="170%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#E02424" flood-opacity="0.35"/></filter>
+</defs>
+<g class="m-flt" filter="url(#fzm)">
+ <g class="f-st"><rect class="f-s1" x="1" y="19" width="10" height="3.4" rx="1.7" fill="url(#fza)"/><rect class="f-s2" x="-2" y="27.5" width="8" height="3.4" rx="1.7" fill="url(#fza)"/><rect class="f-s3" x="2" y="47" width="9" height="3.4" rx="1.7" fill="url(#fzb)"/></g>
+ <g class="f-pun">
+  <g class="f-a"><polygon points="41,2 13,37.5 31.5,37.5 36.5,27" fill="url(#fza)" stroke-linejoin="round"/><polygon points="41,2 13,37.5 31.5,37.5 36.5,27" fill="url(#fzh)"/></g>
+  <g class="f-b"><polygon points="33,27 53,27 24,62 29.5,37.5" fill="url(#fzb)" stroke-linejoin="round"/><polygon points="33,27 53,27 24,62 29.5,37.5" fill="url(#fzh)" opacity=".5"/></g>
+  <polygon class="f-ch" points="41,2 13,37.5 29.5,37.5 24,62 53,27 36.5,27" fill="#FFFFFF"/>
+ </g>
+ <path class="f-sp" d="M55 4 C55.6 7.4 55.6 7.4 59 8 C55.6 8.6 55.6 8.6 55 12 C54.4 8.6 54.4 8.6 51 8 C54.4 7.4 54.4 7.4 55 4 Z" fill="#FFC857"/>
+</g></svg>
