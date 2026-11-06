@@ -122,9 +122,9 @@ describe('card payments on proposals (stand-in)', () => {
     const session = pay.sessions.at(-1)!;
     expect(url).toBe(`${pay.url}/checkout/${session.id}`);
     expect(session).toMatchObject({ provider: 'stripe', key: 'sk_test_goodSeller0001', amount: 100000, currency: w.currency, customerEmail: 'gia@globex.test', successUrl: `http://localhost:3000/p/${w.token}?payment=done`, cancelUrl: `http://localhost:3000/p/${w.token}` });
-    expect(session.metadata).toMatchObject({ dealflow_quote_id: w.quoteId, dealflow_tenant_id: w.user.tenantId });
+    expect(session.metadata).toMatchObject({ sampforce_quote_id: w.quoteId, sampforce_tenant_id: w.user.tenantId });
     const rows = (await api(w.user).get(`/apps/payments/quotes/${w.quoteId}`).expect(200)).body;
-    expect(rows).toEqual([expect.objectContaining({ id: session.metadata.dealflow_payment_id, status: 'pending', amount: 1000, currency: w.currency, provider: 'stripe' })]);
+    expect(rows).toEqual([expect.objectContaining({ id: session.metadata.sampforce_payment_id, status: 'pending', amount: 1000, currency: w.currency, provider: 'stripe' })]);
   });
 
   it('marks paid only on a correctly signed webhook with the amount asked, once, and tells the rep', async () => {
@@ -172,7 +172,7 @@ describe('card payments on proposals (stand-in)', () => {
     const { url } = (await startPay(a.token).expect(200)).body as { url: string };
     const link = pay.sessions.at(-1)!;
     expect(url).toBe(`${pay.url}/rzp/${link.id}`);
-    expect(link).toMatchObject({ provider: 'razorpay', amount: 100000, reference: link.metadata.dealflow_payment_id });
+    expect(link).toMatchObject({ provider: 'razorpay', amount: 100000, reference: link.metadata.sampforce_payment_id });
 
     // Workspace B has its own keys; a webhook signed with B's secret naming A's payment is ignored.
     const b = await workspace('Other Seller');

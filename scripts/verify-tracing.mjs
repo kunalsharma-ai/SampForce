@@ -24,7 +24,7 @@ const api = spawn('node', ['apps/api/dist/main.js'], {
     LOG_LEVEL: 'warn',
     OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:4318',
     OTEL_BSP_SCHEDULE_DELAY: '300',
-    OTEL_SERVICE_NAME: 'dealflow-api',
+    OTEL_SERVICE_NAME: 'sampforce-api',
   },
   stdio: ['ignore', 'inherit', 'inherit'],
 });

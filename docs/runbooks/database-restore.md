@@ -15,7 +15,7 @@ storage and a larger database, measure on staging and write the number here.
 ## Backups
 
 - `scripts/backup.sh` with `BACKUP_DATABASE_URL` for the `dealflow_backup` role (read-only, BYPASSRLS). Output:
-  `dealflow-<UTC>.dump` (pg_dump custom format), `.sha256` and `.json` (size, duration, last migration, tenant count).
+  `sampforce-<UTC>.dump` (pg_dump custom format), `.sha256` and `.json` (size, duration, last migration, tenant count).
 - Run it at least daily from a CronJob or your scheduler, copy to storage in another region with retention, and
   encrypt at rest. Use your provider's PITR in addition; it is not configured or tested by this repository.
 - Store `ENCRYPTION_KEY` separately: without it, restored MFA secrets, SSO client secrets, webhook secrets and
@@ -27,7 +27,7 @@ storage and a larger database, measure on staging and write the number here.
 database owned by `dealflow_owner`, restores in parallel, analyses, and verifies.
 
 ```bash
-RESTORE_ADMIN_URL=postgresql://admin@db-host:5432/postgres scripts/restore.sh dealflow-20261031T041156Z.dump dealflow_restore_1031
+RESTORE_ADMIN_URL=postgresql://admin@db-host:5432/postgres scripts/restore.sh sampforce-20261031T041156Z.dump dealflow_restore_1031
 ```
 
 `RESTORE_ADMIN_URL` must be able to create databases and load into tables with forced RLS (a superuser, or CREATEDB

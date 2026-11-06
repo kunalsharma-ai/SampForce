@@ -178,7 +178,7 @@ export function WebhooksManager() {
           >
             <div className="space-y-1.5">
               <Label htmlFor="hook-url">{t('Endpoint URL')}</Label>
-              <Input id="hook-url" type="url" placeholder="https://example.com/dealflow" value={url} onChange={(e) => setUrl(e.target.value)} maxLength={2000} />
+              <Input id="hook-url" type="url" placeholder="https://example.com/sampforce" value={url} onChange={(e) => setUrl(e.target.value)} maxLength={2000} />
             </div>
             <fieldset>
               <legend className="mb-1.5 text-sm font-medium">{t('Events')}</legend>

@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-/** "app.dealflow.example/app/leads" → "https://app.dealflow.example". Plain http only for this computer. */
+/** "app.sampforce.example/app/leads" → "https://app.sampforce.example". Plain http only for this computer. */
 export function normaliseBase(input) {
   const raw = String(input || '').trim();
   if (!raw) return null;

@@ -66,7 +66,9 @@ export class CardPaymentsClient {
   ): Promise<{ ref: string; url: string }> {
     const minor = toMinorUnits(r.amount, r.currency);
     if (minor <= 0) throw new CardPaymentError('nothing_to_pay', 'This proposal has nothing to pay.');
-    const metadata = { dealflow_payment_id: r.paymentId, dealflow_quote_id: r.quoteId, dealflow_tenant_id: r.tenantId };
+    // Shown on the payment in the merchant's Stripe or Razorpay dashboard. Payments started before the rename carry
+    // dealflow_* keys instead, which the webhook still reads.
+    const metadata = { sampforce_payment_id: r.paymentId, sampforce_quote_id: r.quoteId, sampforce_tenant_id: r.tenantId };
     if (keys.provider === 'stripe') {
       const s = await this.stripe<{ id: string; url: string }>(keys, 'POST', '/v1/checkout/sessions', {
         mode: 'payment',
@@ -111,7 +113,7 @@ export class CardPaymentsClient {
       if (!v1.some((v) => safeEqual(v, expected))) throw new CardPaymentError('bad_signature', 'Signature check failed.', 401);
       const e = JSON.parse(raw.toString('utf8')) as { type?: string; data?: { object?: { id?: string; payment_status?: string; payment_intent?: string; amount_total?: number; currency?: string; metadata?: Record<string, string>; client_reference_id?: string; customer_details?: { email?: string } } } };
       const o = e.data?.object ?? {};
-      const base = { paymentId: o.metadata?.dealflow_payment_id ?? o.client_reference_id ?? null, providerPaymentId: o.payment_intent ?? null, payerEmail: o.customer_details?.email ?? null, amountMinor: o.amount_total ?? null, currency: o.currency?.toUpperCase() ?? null };
+      const base = { paymentId: o.metadata?.sampforce_payment_id ?? o.metadata?.dealflow_payment_id ?? o.client_reference_id ?? null, providerPaymentId: o.payment_intent ?? null, payerEmail: o.customer_details?.email ?? null, amountMinor: o.amount_total ?? null, currency: o.currency?.toUpperCase() ?? null };
       if ((e.type === 'checkout.session.completed' && o.payment_status === 'paid') || e.type === 'checkout.session.async_payment_succeeded') return { ...base, outcome: 'paid' };
       if (e.type === 'checkout.session.async_payment_failed') return { ...base, outcome: 'failed' };
       if (e.type === 'checkout.session.expired') return { ...base, outcome: 'expired' };
@@ -123,7 +125,7 @@ export class CardPaymentsClient {
     const e = JSON.parse(raw.toString('utf8')) as { event?: string; payload?: { payment_link?: { entity?: { reference_id?: string; amount?: number; currency?: string; notes?: Record<string, string> } }; payment?: { entity?: { id?: string; email?: string; amount?: number; currency?: string } } } };
     const link = e.payload?.payment_link?.entity ?? {};
     const pay = e.payload?.payment?.entity;
-    const base = { paymentId: link.notes?.dealflow_payment_id ?? link.reference_id ?? null, providerPaymentId: pay?.id ?? null, payerEmail: pay?.email ?? null, amountMinor: pay?.amount ?? link.amount ?? null, currency: (pay?.currency ?? link.currency)?.toUpperCase() ?? null };
+    const base = { paymentId: link.notes?.sampforce_payment_id ?? link.notes?.dealflow_payment_id ?? link.reference_id ?? null, providerPaymentId: pay?.id ?? null, payerEmail: pay?.email ?? null, amountMinor: pay?.amount ?? link.amount ?? null, currency: (pay?.currency ?? link.currency)?.toUpperCase() ?? null };
     if (e.event === 'payment_link.paid') return { ...base, outcome: 'paid' };
     if (e.event === 'payment_link.expired' || e.event === 'payment_link.cancelled') return { ...base, outcome: 'expired' };
     return { ...base, outcome: 'ignored' };

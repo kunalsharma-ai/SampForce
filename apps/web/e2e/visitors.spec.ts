@@ -5,7 +5,7 @@ import { signUp } from './helpers';
 const SITE = 'http://shop.example.test';
 /** SampForce as the visitor's browser sees it: a public host, forwarded to the local app. Chromium blocks pages on a
  * public origin from calling localhost (Private Network Access), which a real deployment never runs into. */
-const DEALFLOW = 'http://dealflow.example.test';
+const SAMPFORCE = 'http://sampforce.example.test';
 
 async function noAxeViolations(page: Page) {
   await page.waitForLoadState('networkidle');
@@ -13,13 +13,19 @@ async function noAxeViolations(page: Page) {
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 }
 
-/** A stand-in for the customer's own website, served by Playwright, with the install snippet from SampForce. */
-async function fakeSite(context: BrowserContext, snippet: string) {
-  await context.route(`${DEALFLOW}/**`, async (route) => {
-    const response = await route.fetch({ url: route.request().url().replace(DEALFLOW, 'http://localhost:3000') });
+/**
+ * A stand-in for the customer's own website, served by Playwright, with the install snippet from SampForce.
+ * `legacy` writes the snippet and form with the names used before the rename (window.dealflow, data-dealflow-*),
+ * as on a site set up then, which must keep working.
+ */
+async function fakeSite(context: BrowserContext, snippet: string, legacy = false) {
+  await context.route(`${SAMPFORCE}/**`, async (route) => {
+    const response = await route.fetch({ url: route.request().url().replace(SAMPFORCE, 'http://localhost:3000') });
     await route.fulfill({ response });
   });
-  snippet = snippet.replace('http://localhost:3000', DEALFLOW);
+  snippet = snippet.replace('http://localhost:3000', SAMPFORCE);
+  const attr = legacy ? 'data-dealflow' : 'data-sampforce';
+  if (legacy) snippet = snippet.replaceAll('window.sampforce', 'window.dealflow').replaceAll('sampforce(', 'dealflow(');
   await context.route(`${SITE}/**`, (route) => {
     const path = new URL(route.request().url()).pathname;
     const title = path === '/' ? 'Home' : path.slice(1);
@@ -28,11 +34,11 @@ async function fakeSite(context: BrowserContext, snippet: string) {
       body: `<!doctype html><html><head><title>${title}</title>${snippet}</head><body>
 <h1>${title}</h1>
 <nav><a href="/pricing">Pricing</a> <a href="/demo">Demo</a></nav>
-<form data-dealflow-enquiry>
+<form ${attr}-enquiry>
   <input name="fullName" aria-label="Your name"><input name="email" aria-label="Work email"><input name="companyName" aria-label="Company">
   <textarea name="message" aria-label="Message"></textarea>
-  <label><input type="checkbox" name="consent"> <span data-dealflow-consent-text></span></label>
-  <p data-dealflow-error></p><button>Send</button>
+  <label><input type="checkbox" name="consent"> <span ${attr}-consent-text></span></label>
+  <p ${attr}-error></p><button>Send</button>
 </form></body></html>`,
     });
   });
@@ -74,12 +80,12 @@ test('admin installs tracking with consent; a consenting visitor is scored and b
   await fakeSite(visitorContext, snippet);
   const site = await visitorContext.newPage();
   await site.goto(`${SITE}/`);
-  await expect.poll(() => site.evaluate(() => typeof (window as unknown as { __dealflowLoaded?: boolean }).__dealflowLoaded)).toBe('boolean');
+  await expect.poll(() => site.evaluate(() => typeof (window as unknown as { __sampforceLoaded?: boolean }).__sampforceLoaded)).toBe('boolean');
   await site.waitForTimeout(500);
   // Nothing is recorded before consent.
   expect((await visitors(page))).toHaveLength(0);
 
-  await site.evaluate(() => (window as unknown as { dealflow: (c: string, a: boolean) => void }).dealflow('consent', true));
+  await site.evaluate(() => (window as unknown as { sampforce: (c: string, a: boolean) => void }).sampforce('consent', true));
   await expect.poll(async () => (await visitors(page)).length).toBe(1);
   await site.getByRole('link', { name: 'Pricing' }).click();
   await expect(site.getByRole('heading', { name: 'pricing' })).toBeVisible();
@@ -105,10 +111,21 @@ test('admin installs tracking with consent; a consenting visitor is scored and b
   await fakeSite(gpcContext, snippet);
   const gpc = await gpcContext.newPage();
   await gpc.goto(`${SITE}/pricing`);
-  await expect.poll(() => gpc.evaluate(() => typeof (window as unknown as { __dealflowLoaded?: boolean }).__dealflowLoaded)).toBe('boolean');
-  await gpc.evaluate(() => (window as unknown as { dealflow: (c: string, a: boolean) => void }).dealflow('consent', true));
+  await expect.poll(() => gpc.evaluate(() => typeof (window as unknown as { __sampforceLoaded?: boolean }).__sampforceLoaded)).toBe('boolean');
+  await gpc.evaluate(() => (window as unknown as { sampforce: (c: string, a: boolean) => void }).sampforce('consent', true));
   await gpc.waitForTimeout(1000);
   expect((await visitors(page))).toHaveLength(1);
+
+  // A site installed before the rename (window.dealflow, data-dealflow-*) is still recorded and its form still works.
+  const legacyContext = await browser.newContext();
+  await fakeSite(legacyContext, snippet, true);
+  const legacy = await legacyContext.newPage();
+  await legacy.goto(`${SITE}/`);
+  await expect.poll(() => legacy.evaluate(() => typeof (window as unknown as { __sampforceLoaded?: boolean }).__sampforceLoaded)).toBe('boolean');
+  await legacy.evaluate(() => (window as unknown as { dealflow: (c: string, a: boolean) => void }).dealflow('consent', true));
+  await expect.poll(async () => (await visitors(page)).length).toBe(2);
+  await expect(legacy.getByText('Send me product news.')).toBeVisible();
+  await legacyContext.close();
 
   // Back in SampForce: the dashboard, the visitor list, the scored signals, and the lead's website activity.
   await page.reload();

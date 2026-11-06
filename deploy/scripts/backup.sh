@@ -14,4 +14,4 @@ keep="$(env_value BACKUP_KEEP_DAYS)"; keep="${keep:-14}"
 mkdir -p "$dir" && chmod 700 "$dir"
 file="$(compose --profile tools run --rm -T backup | tail -n1)"
 echo "backup written: $dir/$(basename "$file")"
-find "$dir" -maxdepth 1 -name 'dealflow-*.dump*' -mtime "+$keep" -print -delete | sed 's/^/deleted old: /'
+find "$dir" -maxdepth 1 \( -name 'sampforce-*.dump*' -o -name 'dealflow-*.dump*' \) -mtime "+$keep" -print -delete | sed 's/^/deleted old: /'

@@ -81,7 +81,7 @@ export class WorkflowActions {
   ) {}
 
   async run(actor: AuthContext, run: RunInfo, action: WorkflowAction, ctx: EvalContext): Promise<Record<string, unknown>> {
-    const meta: RequestMeta = { requestId: `wf-${run.executionId}`, ipAddress: null, userAgent: 'dealflow-automation' };
+    const meta: RequestMeta = { requestId: `wf-${run.executionId}`, ipAddress: null, userAgent: 'sampforce-automation' };
     const need = (p: Permission) => {
       if (!actor.permissions.includes(p)) throw new ActionError(`The workflow owner's role does not allow this step (${p}).`);
     };

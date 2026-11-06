@@ -2,8 +2,8 @@
 # Restores a backup into a NEW database on this server and verifies it (checksum, row-level security, last
 # migration). With --switch it then makes the restored copy the live database:
 #
-#   scripts/restore.sh backups/dealflow-20261102T120000Z.dump            # restore and verify only
-#   scripts/restore.sh backups/dealflow-20261102T120000Z.dump --switch   # ... then switch SampForce over to it
+#   scripts/restore.sh backups/sampforce-20261102T120000Z.dump           # restore and verify only
+#   scripts/restore.sh backups/sampforce-20261102T120000Z.dump --switch  # ... then switch SampForce over to it
 #
 # Switching stops the API, worker and web app (a few seconds of downtime), renames the live database to
 # dealflow_before_<time> (kept, not dropped) and renames the restored copy to dealflow.
@@ -21,7 +21,7 @@ case "$file_abs" in "$dir_abs"/*) ;; *) echo "the backup must be inside $dir (BA
 stamp="$(date -u +%Y%m%d%H%M%S)"
 target="dealflow_restore_${stamp}"
 compose --profile tools run --rm -T --entrypoint bash backup \
-  /dealflow/scripts/restore.sh "/backups/${file_abs#"$dir_abs"/}" "$target" < /dev/null
+  /sampforce/scripts/restore.sh "/backups/${file_abs#"$dir_abs"/}" "$target" < /dev/null
 
 if [ "$switch" != "--switch" ]; then
   echo

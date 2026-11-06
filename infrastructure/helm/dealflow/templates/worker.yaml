@@ -32,7 +32,7 @@ spec:
             - { name: metrics, containerPort: {{ .Values.metrics.port }} }
           env:
             - name: OTEL_SERVICE_NAME
-              value: dealflow-worker
+              value: sampforce-worker
             {{- include "dealflow.serverEnv" . | nindent 12 }}
           envFrom:
             - secretRef:

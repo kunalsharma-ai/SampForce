@@ -203,7 +203,7 @@ export class CopilotService {
     const i = action.input as Record<string, string | number | null>;
     const link = (type: unknown, id: unknown) =>
       type === 'lead' ? { leadId: id as string } : type === 'contact' ? { contactId: id as string } : type === 'deal' ? { opportunityId: id as string } : type === 'company' ? { companyId: id as string } : {};
-    const aiMeta = { ...meta, userAgent: `dealflow-copilot run=${runId}` };
+    const aiMeta = { ...meta, userAgent: `sampforce-copilot run=${runId}` };
     switch (action.tool) {
       case 'create_task': {
         const dueAt = typeof i.dueInDays === 'number' ? new Date(Date.now() + i.dueInDays * 86_400_000).toISOString() : undefined;

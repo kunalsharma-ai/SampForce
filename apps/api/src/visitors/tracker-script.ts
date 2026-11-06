@@ -3,21 +3,23 @@
  *
  * - Does nothing when the browser sends Global Privacy Control or Do Not Track, or when the workspace has
  *   tracking off or the site is not on its allowed list (the config request then fails).
- * - In "opt_in" mode nothing is stored or sent until the site calls dealflow('consent', true) from its cookie
- *   banner. dealflow('consent', false) forgets the visitor id. In "notice" mode it records until declined.
+ * - In "opt_in" mode nothing is stored or sent until the site calls sampforce('consent', true) from its cookie
+ *   banner. sampforce('consent', false) forgets the visitor id. In "notice" mode it records until declined.
  * - The visitor id is a random value in the site's own localStorage. No fingerprinting, no third-party cookie,
  *   no IP lookup. The query string is dropped except utm_ parameters; the referrer is reduced to its host.
- * - Forms marked data-dealflow-enquiry are sent as enquiries; dealflow('enquiry', {...}) does the same in code.
+ * - Forms marked data-sampforce-enquiry are sent as enquiries; sampforce('enquiry', {...}) does the same in code.
+ * - Sites set up before the rename to SampForce keep working: window.dealflow and the data-dealflow-* attributes
+ *   are still read, as aliases of the sampforce names (ADR 0055).
  */
 export const TRACKER_SCRIPT = String.raw`(function () {
   'use strict';
   var script = document.currentScript;
-  if (!script || window.__dealflowLoaded) return;
-  window.__dealflowLoaded = true;
+  if (!script || window.__sampforceLoaded || window.__dealflowLoaded) return;
+  window.__sampforceLoaded = true;
   var key = script.getAttribute('data-site');
   if (!key) return;
   var base = new URL(script.src).origin + '/api/v1/public/track/' + encodeURIComponent(key);
-  var queue = (window.dealflow && window.dealflow.q) || [];
+  var queue = ((window.sampforce && window.sampforce.q) || []).concat((window.dealflow && window.dealflow.q) || []);
   var config = null;
   var current = null;
   var visibleSince = null;
@@ -100,12 +102,12 @@ export const TRACKER_SCRIPT = String.raw`(function () {
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
   }
   function bindForms() {
-    var forms = document.querySelectorAll('form[data-dealflow-enquiry]');
+    var forms = document.querySelectorAll('form[data-sampforce-enquiry], form[data-dealflow-enquiry]');
     Array.prototype.forEach.call(forms, function (form) {
-      if (form.__dealflow) return; form.__dealflow = true;
+      if (form.__sampforce) return; form.__sampforce = true;
       var consentBox = form.querySelector('[name="consent"]');
       if (consentBox && config && config.enquiryConsentText) {
-        var label = form.querySelector('[data-dealflow-consent-text]');
+        var label = form.querySelector('[data-sampforce-consent-text], [data-dealflow-consent-text]');
         if (label) label.textContent = config.enquiryConsentText;
       } else if (consentBox && consentBox.closest('label')) consentBox.closest('label').hidden = true;
       form.addEventListener('submit', function (ev) {
@@ -113,7 +115,7 @@ export const TRACKER_SCRIPT = String.raw`(function () {
         var fd = new FormData(form); var data = {};
         ['fullName', 'email', 'companyName', 'phone', 'message', 'website'].forEach(function (k) { var v = fd.get(k); if (typeof v === 'string' && v) data[k] = v; });
         data.consent = !!(consentBox && consentBox.checked);
-        var err = form.querySelector('[data-dealflow-error]');
+        var err = form.querySelector('[data-sampforce-error], [data-dealflow-error]');
         if (err) err.textContent = '';
         enquiry(data).then(function (res) {
           var done = document.createElement('p'); done.setAttribute('role', 'status'); done.textContent = res.message;
@@ -138,10 +140,11 @@ export const TRACKER_SCRIPT = String.raw`(function () {
       write('localStorage', 'df_vid', null); write('sessionStorage', 'df_sid', null); current = null;
     }
   }
-  window.dealflow = function (cmd, arg) {
+  window.sampforce = function (cmd, arg) {
     if (!config) { var p = new Promise(function (resolve) { queue.push([cmd, arg, resolve]); }); return p; }
     return command(cmd, arg);
   };
+  window.dealflow = window.sampforce;
 
   fetch(base + '/config', { credentials: 'omit' })
     .then(function (r) { return r.ok ? r.json() : null; })

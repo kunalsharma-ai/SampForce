@@ -269,7 +269,7 @@ export class FinderService {
         people: input.people,
         companyName: lookup.companyName,
         website: lookup.domain ?? undefined,
-        sourceUrl: lookup.domain ? `https://${lookup.domain}/` : 'https://dealflow.invalid/finder',
+        sourceUrl: lookup.domain ? `https://${lookup.domain}/` : 'https://sampforce.invalid/finder',
         sequenceId: input.sequenceId,
         auto: false,
       },

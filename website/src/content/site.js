@@ -37,7 +37,7 @@ export const site = {
   ],
 
   hero: {
-    kicker: 'New from Sampledge · formerly DealFlow',
+    kicker: 'New from Sampledge',
     titleTop: 'Revenue,',
     titleAccent: 'fully charged.',
     sub: 'SampForce puts your CRM, outreach, automation, AI agents, quotes and revenue intelligence in one workspace, so every lead turns into momentum and every deal moves closer to closed.',
