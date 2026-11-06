@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates deploy/.env and deploy/dealflow.env from the examples and fills every blank secret with a random value.
+# Creates deploy/.env and deploy/sampforce.env from the examples and fills every blank secret with a random value.
 #
 #   scripts/generate-secrets.sh crm.example.com admin@example.com
 #
@@ -26,9 +26,9 @@ done
 [ -n "$ACME_EMAIL" ] && sed -i "s/^ACME_EMAIL=.*/ACME_EMAIL=${ACME_EMAIL}/" .env
 chmod 600 .env
 
-if [ ! -e dealflow.env ]; then cp dealflow.env.example dealflow.env; chmod 600 dealflow.env; fi
+if [ ! -e sampforce.env ]; then cp sampforce.env.example sampforce.env; chmod 600 sampforce.env; fi
 
-echo "Created deploy/.env (secrets) and deploy/dealflow.env (application settings)."
+echo "Created deploy/.env (secrets) and deploy/sampforce.env (application settings)."
 echo "DOMAIN=$(env_value DOMAIN)  ACME_EMAIL=$(env_value ACME_EMAIL)"
 echo
 echo "IMPORTANT: copy ENCRYPTION_KEY to your password manager now. Backups are useless without it:"

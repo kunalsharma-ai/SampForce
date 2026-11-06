@@ -4,4 +4,4 @@
 # docker-compose.prod.yml passes from deploy/.env. Changing those passwords later does NOT change the roles; see
 # SERVER_SETUP.md, "Changing a database password".
 set -euo pipefail
-bash /dealflow/db-setup.sh dealflow
+bash /sampforce/db-setup.sh dealflow

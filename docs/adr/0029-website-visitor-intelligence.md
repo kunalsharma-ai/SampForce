@@ -21,16 +21,16 @@ data protection laws" and "Provide configurable retention and tracking controls"
    to its host. The IP address is never stored; a salted hash is kept only on enquiry events, to limit enquiries to 5
    per address per 10 minutes.
 2. **Consent first.** The default mode is "Ask first": nothing is stored or sent until the site's cookie banner calls
-   `dealflow('consent', true)`. "Notice only" (recorded unless declined) is offered with a warning that it needs legal
+   `sampforce('consent', true)`. "Notice only" (recorded unless declined) is offered with a warning that it needs legal
    sign-off. Browsers sending Global Privacy Control or Do Not Track are never recorded in either mode, in the script
-   and again on the server (`Sec-GPC`, `DNT`). `dealflow('consent', false)` and `dealflow('forget')` drop the ids.
+   and again on the server (`Sec-GPC`, `DNT`). `sampforce('consent', false)` and `sampforce('forget')` drop the ids.
 3. **Workspace controls.** Tracking is off until an admin or manager (`visitors:manage`) turns it on, and turning it on
    needs at least one allowed website. Requests from origins not on the list are refused and get no CORS header. The
    public site key only names the workspace and can be replaced. Retention is 30 to 730 days (default 180); an hourly
    worker sweep deletes older page views and sessions, and anonymous visitors not seen since. Any visitor can be erased
    from the screen; the linked lead or contact is kept. Settings changes and erasures are audited.
 4. **Identification only by the visitor's own action.** A visitor becomes known when they send an enquiry (a form
-   marked `data-dealflow-enquiry`, or `dealflow('enquiry', {...})`). The email is matched to a contact, then an open
+   marked `data-sampforce-enquiry`, or `sampforce('enquiry', {...})`). The email is matched to a contact, then an open
    lead; otherwise a lead is created with source "Website" when the workspace allows it. Marketing consent is recorded
    only when the workspace's consent text was shown and the box was ticked. Everyone else stays "Anonymous visitor",
    and the screens say most visitors will never have a name.

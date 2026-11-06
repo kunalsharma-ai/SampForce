@@ -13,7 +13,7 @@ set -euo pipefail
 OUT_DIR="${1:-./backups}"
 mkdir -p "$OUT_DIR"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-FILE="$OUT_DIR/dealflow-$STAMP.dump"
+FILE="$OUT_DIR/sampforce-$STAMP.dump"
 
 started=$(date +%s)
 pg_dump --format=custom --compress=6 --no-comments --dbname="$BACKUP_DATABASE_URL" --file="$FILE"

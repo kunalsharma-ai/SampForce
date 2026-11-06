@@ -67,7 +67,7 @@ export class ScimController {
   config() {
     return {
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
-      documentationUri: 'https://dealflow.example/docs/scim',
+      documentationUri: 'https://sampforce.example/docs/scim',
       patch: { supported: true },
       bulk: { supported: false, maxOperations: 0, maxPayloadSize: 0 },
       filter: { supported: true, maxResults: 200 },

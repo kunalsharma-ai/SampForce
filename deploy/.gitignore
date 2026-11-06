@@ -1,4 +1,5 @@
 # Real settings and backups never go into git.
 .env
 dealflow.env
+sampforce.env
 backups/

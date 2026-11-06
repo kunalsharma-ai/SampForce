@@ -1,6 +1,6 @@
 # SampForce showcase web page
 
-The product page for **SampForce by Sampledge** (formerly DealFlow), built to sit on the main Sampledge website.
+The product page for **SampForce by Sampledge**, built to sit on the main Sampledge website.
 React 19 + Vite, with three.js for the 3D scenes and Framer Motion for the scroll and hover animations.
 
 | You want to… | Read |

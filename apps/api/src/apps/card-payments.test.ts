@@ -20,7 +20,7 @@ describe('toMinorUnits', () => {
 });
 
 describe('parseWebhook', () => {
-  const stripeBody = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_1', payment_status: 'paid', payment_intent: 'pi_1', amount_total: 1000, currency: 'usd', metadata: { dealflow_payment_id: 'p1' } } } });
+  const stripeBody = JSON.stringify({ type: 'checkout.session.completed', data: { object: { id: 'cs_1', payment_status: 'paid', payment_intent: 'pi_1', amount_total: 1000, currency: 'usd', metadata: { sampforce_payment_id: 'p1' } } } });
   const sign = (body: string, t: number, secret = 'whsec_test') => `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')}`;
   const now = 1_800_000_000_000;
 

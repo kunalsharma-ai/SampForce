@@ -34,18 +34,37 @@ extension, the OpenAPI document, docs) has to say SampForce, without breaking st
 
 These are identifiers, not brand text, and changing them would break data, sessions or installations:
 
-- Package names (`@dealflow/*`), the repository, Docker image and Helm chart names, compose service names.
+- Package names (`@dealflow/*`), the repository, the Helm chart and the image names in CI and Helm, compose service
+  names and the compose project name (it names the database volume of a self-hosted install).
 - Database names and roles (`dealflow`, `dealflow_app`, `dealflow_owner`, `dealflow_backup`) and the
   `DEALFLOW_*_PASSWORD` variables.
 - Key-derivation and signing labels (`dealflow-secretbox`, `dealflow-tracking-v1`, `dealflow-proposal-v1`), and the
   JWT issuer and audience: changing them would make stored secrets unreadable and signed links invalid.
 - Prometheus metric names (`dealflow_*`), so dashboards and recording rules keep working.
 - Browser storage keys (`dealflow:*`), so people keep their theme, language and saved views.
-- The website tracker's public names (`window.dealflow(...)`, `data-dealflow-enquiry` and related attributes): sites
-  that pasted the snippet keep working.
+- The tracker's storage keys on the customer's site (`df_vid`, `df_consent`, ...), so visitors keep their consent choice.
+- Stripe and Razorpay webhooks still read `dealflow_payment_id` for payments started before the follow-up below.
 - Two-step entries people already added to an authenticator app keep their old label until they enrol again.
 
 ## Consequences
 
 - Existing installations get the new plan names on their next migration; nothing else needs a data change.
-- Extension store screenshots in `apps/extension/store/` must be retaken with the new name before submission.
+- Extension store screenshots in `apps/extension/store/` were retaken with the new name (follow-up below).
+
+## Follow-up (2026-11-06)
+
+A second pass renamed the remaining names that people see:
+
+- **Website tracker.** The install snippet and help text now use `window.sampforce(...)`, `data-sampforce-enquiry`,
+  `data-sampforce-consent-text` and `data-sampforce-error`. The script still answers to `window.dealflow` and reads
+  the `data-dealflow-*` attributes, so a site that pasted the old snippet keeps working (covered by `visitors.spec`).
+- **Card payments.** New Stripe Checkout sessions and Razorpay links carry `sampforce_payment_id`, `sampforce_quote_id`
+  and `sampforce_tenant_id`, which merchants see in their provider's dashboard.
+- **Self-host package.** `deploy/sampforce.env` (an existing `dealflow.env` is renamed on the first script run),
+  `postgres/init-sampforce.sh`, local image names `sampforce-*:local` and `SAMPFORCE_*_IMAGE` overrides, backup files
+  `sampforce-<time>.dump` (old `dealflow-*` backups are still pruned), install folder `/opt/sampforce` in the guide,
+  and `sampforce-selfhost.zip`.
+- **Smaller ones:** audit-log user agents for automation and Copilot (`sampforce-automation`, `sampforce-copilot`),
+  the default tracing service names (`sampforce-api`, `sampforce-worker`), the SCIM documentation link, the webhook URL
+  placeholder, and the "formerly DealFlow" lines on the product web page.
+

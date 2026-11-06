@@ -154,7 +154,7 @@ export function Footer() {
       </div>
       <p className="footer__note">{site.footer.note}</p>
       <p className="footer__copy">
-        © {new Date().getFullYear()} <a href={site.links.sampledge}>{site.brand.owner}</a>. {site.brand.name} was formerly DealFlow.
+        © {new Date().getFullYear()} <a href={site.links.sampledge}>{site.brand.owner}</a>.
       </p>
     </footer>
   );

@@ -778,11 +778,11 @@ export const growth = {
   ],
   'Install snippet': ['Fragmento de instalación', 'Extrait d’installation', 'Installations-Snippet', 'مقتطف التثبيت'],
   'Enquiry form example': ['Ejemplo de formulario de consulta', 'Exemple de formulaire de demande', 'Beispiel für ein Anfrageformular', 'مثال نموذج استفسار'],
-  'Any form with data-dealflow-enquiry is sent to SampForce as an enquiry. Field names: fullName, email, companyName, phone, message and consent.': [
-    'Cualquier formulario con data-dealflow-enquiry se envía a SampForce como consulta. Nombres de campo: fullName, email, companyName, phone, message y consent.',
-    'Tout formulaire avec data-dealflow-enquiry est envoyé à SampForce comme demande. Noms des champs : fullName, email, companyName, phone, message et consent.',
-    'Jedes Formular mit data-dealflow-enquiry wird als Anfrage an SampForce gesendet. Feldnamen: fullName, email, companyName, phone, message und consent.',
-    'يُرسل أي نموذج يحتوي على data-dealflow-enquiry إلى SampForce كاستفسار. أسماء الحقول: fullName وemail وcompanyName وphone وmessage وconsent.',
+  'Any form with data-sampforce-enquiry is sent to SampForce as an enquiry. Field names: fullName, email, companyName, phone, message and consent.': [
+    'Cualquier formulario con data-sampforce-enquiry se envía a SampForce como consulta. Nombres de campo: fullName, email, companyName, phone, message y consent.',
+    'Tout formulaire avec data-sampforce-enquiry est envoyé à SampForce comme demande. Noms des champs : fullName, email, companyName, phone, message et consent.',
+    'Jedes Formular mit data-sampforce-enquiry wird als Anfrage an SampForce gesendet. Feldnamen: fullName, email, companyName, phone, message und consent.',
+    'يُرسل أي نموذج يحتوي على data-sampforce-enquiry إلى SampForce كاستفسار. أسماء الحقول: fullName وemail وcompanyName وphone وmessage وconsent.',
   ],
   'Enquiry form example code': ['Código de ejemplo del formulario de consulta', 'Code d’exemple du formulaire de demande', 'Beispielcode für das Anfrageformular', 'رمز مثال نموذج الاستفسار'],
   'Replace the key (the current snippet stops working)': [
@@ -809,11 +809,11 @@ export const growth = {
   ],
   'Consent': ['Consentimiento', 'Consentement', 'Einwilligung', 'الموافقة'],
   'Ask first (recommended).': ['Preguntar primero (recomendado).', 'Demander d’abord (recommandé).', 'Zuerst fragen (empfohlen).', 'السؤال أولًا (موصى به).'],
-  'Nothing is recorded until your cookie banner calls dealflow(\'consent\', true). Required in the EU, UK and similar regions.': [
-    'No se registra nada hasta que tu banner de cookies llama a dealflow(\'consent\', true). Obligatorio en la UE, el Reino Unido y regiones similares.',
-    'Rien n’est enregistré tant que votre bannière de cookies n’appelle pas dealflow(\'consent\', true). Obligatoire dans l’UE, au Royaume-Uni et dans des régions similaires.',
-    'Nichts wird erfasst, bis Ihr Cookie-Banner dealflow(\'consent\', true) aufruft. Erforderlich in der EU, im Vereinigten Königreich und ähnlichen Regionen.',
-    'لا يُسجَّل شيء حتى يستدعي شريط ملفات تعريف الارتباط dealflow(\'consent\', true). مطلوب في الاتحاد الأوروبي والمملكة المتحدة والمناطق المماثلة.',
+  'Nothing is recorded until your cookie banner calls sampforce(\'consent\', true). Required in the EU, UK and similar regions.': [
+    'No se registra nada hasta que tu banner de cookies llama a sampforce(\'consent\', true). Obligatorio en la UE, el Reino Unido y regiones similares.',
+    'Rien n’est enregistré tant que votre bannière de cookies n’appelle pas sampforce(\'consent\', true). Obligatoire dans l’UE, au Royaume-Uni et dans des régions similaires.',
+    'Nichts wird erfasst, bis Ihr Cookie-Banner sampforce(\'consent\', true) aufruft. Erforderlich in der EU, im Vereinigten Königreich und ähnlichen Regionen.',
+    'لا يُسجَّل شيء حتى يستدعي شريط ملفات تعريف الارتباط sampforce(\'consent\', true). مطلوب في الاتحاد الأوروبي والمملكة المتحدة والمناطق المماثلة.',
   ],
   'Notice only.': ['Solo aviso.', 'Information seule.', 'Nur Hinweis.', 'إشعار فقط.'],
   'Recorded unless the visitor declines. Use only where your lawyers confirm this is allowed for your visitors.': [

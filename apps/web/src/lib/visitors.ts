@@ -51,20 +51,20 @@ export function formatDuration(seconds: number): string {
 /** The snippet a site owner pastes into their pages, with a consent call for their cookie banner. */
 export function installSnippet(origin: string, siteKey: string, consentMode: 'opt_in' | 'notice'): string {
   return [
-    '<script>window.dealflow=window.dealflow||function(){(window.dealflow.q=window.dealflow.q||[]).push(arguments)};</script>',
+    '<script>window.sampforce=window.sampforce||function(){(window.sampforce.q=window.sampforce.q||[]).push(arguments)};</script>',
     `<script async src="${origin}/api/v1/public/track/script.js" data-site="${siteKey}"></script>`,
     consentMode === 'opt_in'
-      ? '<!-- Nothing is recorded until your cookie banner calls: dealflow(\'consent\', true). Call dealflow(\'consent\', false) if they decline. -->'
-      : '<!-- Recorded until the visitor declines. Call dealflow(\'consent\', false) from your cookie banner when they do. -->',
+      ? '<!-- Nothing is recorded until your cookie banner calls: sampforce(\'consent\', true). Call sampforce(\'consent\', false) if they decline. -->'
+      : '<!-- Recorded until the visitor declines. Call sampforce(\'consent\', false) from your cookie banner when they do. -->',
   ].join('\n');
 }
 
-export const ENQUIRY_FORM_EXAMPLE = `<form data-dealflow-enquiry>
+export const ENQUIRY_FORM_EXAMPLE = `<form data-sampforce-enquiry>
   <input name="fullName" required placeholder="Your name">
   <input name="email" type="email" required placeholder="Work email">
   <input name="companyName" placeholder="Company">
   <textarea name="message" placeholder="How can we help?"></textarea>
-  <label><input type="checkbox" name="consent"> <span data-dealflow-consent-text></span></label>
-  <p data-dealflow-error></p>
+  <label><input type="checkbox" name="consent"> <span data-sampforce-consent-text></span></label>
+  <p data-sampforce-error></p>
   <button>Send</button>
 </form>`;

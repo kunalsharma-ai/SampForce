@@ -158,4 +158,4 @@ functionality, a proprietary data-enrichment database.
 1. Launch pricing (see the sustainability analysis in [PRICING_STRATEGY.md](PRICING_STRATEGY.md)).
 2. Which AI providers to contract first, and whether to offer bring-your-own-key.
 3. Primary hosting region(s) at launch (India, EU, US) and data-residency commitments.
-4. Domain strategy (e.g., `dealflow.sampledge.com` vs a dedicated domain).
+4. Domain strategy (e.g., `sampforce.sampledge.com` vs a dedicated domain).

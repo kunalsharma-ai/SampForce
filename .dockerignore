@@ -7,4 +7,5 @@
 .git
 # Self-hosted deploy settings and backups (deploy/) must never end up in an image.
 deploy/dealflow.env
+deploy/sampforce.env
 deploy/backups
