@@ -1,0 +1,35 @@
+{
+  "name": "sampforce-website",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SampForce by Sampledge: product showcase web page (React + Vite)",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:standalone": "vite build --mode standalone && node scripts/finish-standalone.mjs",
+    "build:all": "npm run build && npm run build:standalone && npm run check",
+    "preview": "vite preview --port 4173",
+    "images": "node scripts/optimise-images.mjs",
+    "check": "node scripts/check-build.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@fontsource-variable/manrope": "5.3.0",
+    "@fontsource-variable/unbounded": "5.3.0",
+    "@fontsource/instrument-serif": "5.3.0",
+    "framer-motion": "14.4.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "sharp": "0.35.5",
+    "vite": "8.3.4",
+    "vite-plugin-singlefile": "2.3.4"
+  }
+}
