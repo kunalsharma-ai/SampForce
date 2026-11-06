@@ -44,7 +44,7 @@ interface StoredSlack {
   botUserId: string | null;
 }
 
-/** Teams: each channel's Workflows URL, by DealFlow channel id. The URL is the secret. */
+/** Teams: each channel's Workflows URL, by SampForce channel id. The URL is the secret. */
 interface StoredTeams {
   webhooks: Record<string, string>;
 }
@@ -114,7 +114,7 @@ export class AppsService {
           warnings: missing.length
             ? []
             : key === 'zoom' && !this.zoom.webhookConfigured
-              ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.']
+              ? ['Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at SampForce.']
               : key === 'docusign' && !this.docusign.connectConfigured
                 ? ['Signing status updates are Pending Configuration: an operator must add DOCUSIGN_CONNECT_HMAC_KEY. Until then contracts are not marked signed automatically.']
                 : key === 'payments' && c && !(c.settings as { lastWebhookAt?: string | null }).lastWebhookAt
@@ -146,7 +146,7 @@ export class AppsService {
     }
     const missing = this.missingConfig(app);
     if (missing.length) {
-      throw new ConflictException({ code: 'PROVIDER_NOT_CONFIGURED', message: `${META[app].name} is Pending Configuration on this DealFlow installation. An operator must add ${missing.join(' and ')}.` });
+      throw new ConflictException({ code: 'PROVIDER_NOT_CONFIGURED', message: `${META[app].name} is Pending Configuration on this SampForce installation. An operator must add ${missing.join(' and ')}.` });
     }
     const state = signToken(this.stateSecret(), { t: auth.tenantId, u: auth.userId, a: app, n: randomBytes(8).toString('hex'), exp: Date.now() + 10 * 60_000 } satisfies AppState);
     const redirect = this.redirectUri(app);
@@ -206,7 +206,7 @@ export class AppsService {
         // The token is deleted below either way; the provider may already have revoked it.
       }
     }
-    // Teams Workflows URLs cannot be revoked from outside; deleting them here is all DealFlow can do, and the
+    // Teams Workflows URLs cannot be revoked from outside; deleting them here is all SampForce can do, and the
     // Integrations page tells the admin to turn the workflow off in Teams as well.
     await this.prisma.run(auth, async (tx) => {
       await tx.appConnection.delete({ where: { id: conn.id } });
@@ -271,7 +271,7 @@ export class AppsService {
     if (dupe) throw new AppError(`That workflow URL is already added as "${settings.channels.find((c) => c.id === dupe[0])?.name ?? 'another channel'}".`);
     if (settings.channels.length >= TEAMS_MAX_CHANNELS) throw new AppError(`A workspace can add up to ${TEAMS_MAX_CHANNELS} Teams channels.`);
     try {
-      await this.teams.post(url, { text: `**DealFlow is connected to ${input.name}.** Workflow updates will appear in this channel.`, link: null });
+      await this.teams.post(url, { text: `**SampForce is connected to ${input.name}.** Workflow updates will appear in this channel.`, link: null });
     } catch (e) {
       if (e instanceof TeamsError) throw new AppError(e.message);
       throw e;

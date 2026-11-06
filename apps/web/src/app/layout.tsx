@@ -4,9 +4,9 @@ import { Providers } from '@/components/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'DealFlow', template: '%s · DealFlow' },
-  description: 'DealFlow by Sampledge: the autonomous revenue intelligence platform.',
-  applicationName: 'DealFlow',
+  title: { default: 'SampForce', template: '%s · SampForce' },
+  description: 'SampForce by Sampledge: the autonomous revenue intelligence platform.',
+  applicationName: 'SampForce',
 };
 
 export const viewport: Viewport = {

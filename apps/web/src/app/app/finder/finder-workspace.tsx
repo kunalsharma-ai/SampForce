@@ -83,7 +83,7 @@ export function FinderWorkspace() {
             </form>
             <p className="text-xs text-muted-foreground">
               {u ? `${t('{used} of {limit} lookups used in the last 24 hours.', { used: u.used, limit: u.limit })} ` : ''}
-              {u?.provider ? t('Your data provider (Hunter.io) is connected and adds addresses it knows about.') : t('Using DealFlow’s own finder. An administrator can add a Hunter.io key to search wider.')}
+              {u?.provider ? t('Your data provider (Hunter.io) is connected and adds addresses it knows about.') : t('Using SampForce’s own finder. An administrator can add a Hunter.io key to search wider.')}
             </p>
             <ErrorText error={search.error} />
           </CardContent>
@@ -155,7 +155,7 @@ function ResultView({ result: r, canSave, canEnroll }: { result: FinderResult; c
           {r.companyName}
           {r.company && (
             <Link href={`/app/companies/${r.company.id}`} className="text-sm font-normal text-primary hover:underline">
-              {t('In DealFlow')}
+              {t('In SampForce')}
             </Link>
           )}
         </CardTitle>

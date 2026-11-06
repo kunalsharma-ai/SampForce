@@ -34,7 +34,7 @@ describe('eval harness (against the fixture, so this checks plumbing, not answer
   it('runs every suite and reports per-case results', async () => {
     const provider = new AnthropicProvider({ ANTHROPIC_API_KEY: 'x', AI_API_BASE_URL: fixture.url, AI_MODEL: 'claude-opus-5-5', AI_REQUEST_TIMEOUT_MS: 10_000, AI_SERVER_FALLBACKS: true } as ApiEnv);
     fixture.use((b) => {
-      if (b.system?.startsWith('You are DealFlow Copilot')) return /pipeline/.test(JSON.stringify(b.messages)) ? toolUse('pipeline_summary', {}) : json('I cannot do that.');
+      if (b.system?.startsWith('You are SampForce Copilot')) return /pipeline/.test(JSON.stringify(b.messages)) ? toolUse('pipeline_summary', {}) : json('I cannot do that.');
       if (b.system?.startsWith('You write short')) return json({ summary: 'Promising lead.', nextStep: 'Call them.' });
       if (b.system?.startsWith('You turn a sales rep')) return json({ summary: 's', decisions: [], actionItems: [{ title: 'Send recap', owner: 'me', dueInDays: null }, { title: 'Send DPA', owner: 'me', dueInDays: null }], followUpEmail: { subject: 'Thanks', body: 'Thanks' } });
       return json({ name: 'x', definitionJson: JSON.stringify({ trigger: { event: 'lead.created', conditions: { match: 'all', rules: [] } }, start: 'action_1', nodes: [{ id: 'action_1', type: 'action', action: { type: 'create_task', title: 'Call', assignTo: 'record_owner' }, next: null }] }), notes: '' });

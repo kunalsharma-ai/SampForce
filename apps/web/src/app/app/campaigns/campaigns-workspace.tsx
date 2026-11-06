@@ -94,7 +94,7 @@ export function CampaignsWorkspace() {
           )}
         </CardContent>
       </Card>
-      <p className="text-xs text-muted-foreground">{t('Spend is the budget you enter; DealFlow does not pull spend from ad platforms.')}</p>
+      <p className="text-xs text-muted-foreground">{t('Spend is the budget you enter; SampForce does not pull spend from ad platforms.')}</p>
     </div>
   );
 }

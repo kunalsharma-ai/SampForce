@@ -75,7 +75,7 @@ export class FinderService {
       const row = await tx.finderLookup.findFirst({ where: { id, tenantId: auth.tenantId, userId: auth.userId } });
       if (!row) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Lookup not found.' });
       const result = row.result as unknown as FinderResult;
-      // Refresh "already in DealFlow" so saved people show as saved.
+      // Refresh "already in SampForce" so saved people show as saved.
       const all = [...result.emails, ...result.person];
       const { out, suppressed } = await this.extension.matches(tx, auth.tenantId, [...new Set(all.map((e) => e.email))]);
       for (const e of all) {
@@ -124,7 +124,7 @@ export class FinderService {
         }
       } catch {
         provider = 'failed';
-        notes.push('The data provider did not answer, so these results come from DealFlow’s own finder only.');
+        notes.push('The data provider did not answer, so these results come from SampForce’s own finder only.');
       }
     }
 
@@ -165,7 +165,7 @@ export class FinderService {
           else if (!prev.name && f.name) prev.name = f.name;
         }
       }
-      if (blocked.includes('/')) notes.push(`${domain} asks crawlers not to read its pages, so DealFlow did not.`);
+      if (blocked.includes('/')) notes.push(`${domain} asks crawlers not to read its pages, so SampForce did not.`);
     } else if (domain) {
       notes.push(`Could not open ${domain}. It may be down or only reachable another way.`);
     } else {

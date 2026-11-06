@@ -10,7 +10,7 @@ export default function MarketingPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Marketing"
-        description="Audience segments built from your leads and contacts, and hosted lead-capture forms that record consent. DealFlow does not send marketing email yet."
+        description="Audience segments built from your leads and contacts, and hosted lead-capture forms that record consent. SampForce does not send marketing email yet."
       />
       <RequirePermission permission="marketing:read">
         <MarketingWorkspace />

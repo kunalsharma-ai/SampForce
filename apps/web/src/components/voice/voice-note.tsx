@@ -65,7 +65,7 @@ export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('No voice notes yet. Speak or type a note and DealFlow suggests tasks, notes and records for you to confirm.')}</p>
+          <p className="text-sm text-muted-foreground">{t('No voice notes yet. Speak or type a note and SampForce suggests tasks, notes and records for you to confirm.')}</p>
         ) : (
           <ul className="space-y-2 text-sm" aria-label={t('Voice notes')}>
             {items.slice(0, 5).map((n) => {
@@ -109,8 +109,8 @@ export function VoiceNoteDialog({ open, onOpenChange, record, initial }: { open:
           <DialogTitle className="text-lg font-semibold">{t('Voice note')}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {where
-              ? t('For {name}. Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.', { name: where })
-              : t('Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.')}
+              ? t('For {name}. Say or type what happened. SampForce suggests what to save and nothing is saved until you confirm it.', { name: where })
+              : t('Say or type what happened. SampForce suggests what to save and nothing is saved until you confirm it.')}
           </DialogDescription>
         </div>
         {editing || !note?.interpretedAt ? (
@@ -304,7 +304,7 @@ function Recorder({ disabled, busy, onAudio }: { disabled: boolean; busy: boolea
           </Button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">{t('Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by DealFlow.')}</p>
+      <p className="text-xs text-muted-foreground">{t('Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by SampForce.')}</p>
       {error && (
         <p role="alert" className="text-sm text-critical">
           {error}

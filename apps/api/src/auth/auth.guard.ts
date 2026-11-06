@@ -132,11 +132,11 @@ export class AuthGuard implements CanActivate {
     }
 
     if (req.auth.via === 'extension' && !this.reflector.getAllAndOverride<boolean>(EXTENSION_ACCESS, targets)) {
-      throw new ForbiddenException({ code: 'EXTENSION_NOT_ALLOWED', message: 'The browser extension cannot do this. Use DealFlow in your browser.' });
+      throw new ForbiddenException({ code: 'EXTENSION_NOT_ALLOWED', message: 'The browser extension cannot do this. Use SampForce in your browser.' });
     }
 
     if (req.auth.via === 'api_key' && !this.reflector.getAllAndOverride<boolean>(API_KEY_ACCESS, targets)) {
-      throw new ForbiddenException({ code: 'API_KEY_NOT_ALLOWED', message: 'API keys cannot do this. Sign in to DealFlow in your browser.' });
+      throw new ForbiddenException({ code: 'API_KEY_NOT_ALLOWED', message: 'API keys cannot do this. Sign in to SampForce in your browser.' });
     }
 
     const required =

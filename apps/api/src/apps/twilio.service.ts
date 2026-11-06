@@ -13,7 +13,7 @@ import { describeTwilioError, SMS_START_WORDS, SMS_STATUS_RANK, SMS_STOP_WORDS, 
 
 const TWIML_EMPTY = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
-/** Twilio's message states mapped to DealFlow's: queued and accepted are "accepted", sending is "sent". */
+/** Twilio's message states mapped to SampForce's: queued and accepted are "accepted", sending is "sent". */
 const STATUS_MAP: Record<string, SmsMessageRow['status']> = { queued: 'accepted', accepted: 'accepted', sending: 'sent', sent: 'sent', delivered: 'delivered', undelivered: 'undelivered', failed: 'failed' };
 
 /**
@@ -199,7 +199,7 @@ export class TwilioService {
     return TWIML_EMPTY;
   }
 
-  /** A status callback for a message DealFlow sent, signed by Twilio. Status only moves forward. */
+  /** A status callback for a message SampForce sent, signed by Twilio. Status only moves forward. */
   async status(hookId: string, params: Record<string, string>, signature: string | undefined): Promise<void> {
     const conn = await this.verified(hookId, 'status', params, signature);
     const tenantId = conn.tenantId;

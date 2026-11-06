@@ -33,5 +33,5 @@ secrets a deployment was missing.
 ## Consequences
 
 - The checks are tested only against local stand-ins that follow each provider's published documentation. The first
-  real check after adding a key is the first time DealFlow talks to that provider, and the page says what it answered.
+  real check after adding a key is the first time SampForce talks to that provider, and the page says what it answered.
 - Operators can see a deployment's missing keys without shell access to the servers.

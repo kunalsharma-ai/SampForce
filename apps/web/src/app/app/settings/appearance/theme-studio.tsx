@@ -342,18 +342,18 @@ export function ThemeStudio() {
                 {prefs.data?.source === 'user'
                   ? hasWorkspaceDefault
                     ? t('You are using your own settings. Resetting returns you to the workspace default.')
-                    : t('You are using your own settings. Resetting returns you to DealFlow’s default.')
+                    : t('You are using your own settings. Resetting returns you to SampForce’s default.')
                   : prefs.data?.source === 'workspace'
                     ? t('You are using the workspace default.')
-                    : t('You are using DealFlow’s default.')}
+                    : t('You are using SampForce’s default.')}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={reset.isPending || prefs.data?.source !== 'user'} onClick={() => reset.mutate(undefined, { onSuccess: (r) => setDraft(r.appearance) })}>
-                <RotateCcw aria-hidden /> {hasWorkspaceDefault ? t('Reset to the workspace default') : t('Reset to DealFlow’s default')}
+                <RotateCcw aria-hidden /> {hasWorkspaceDefault ? t('Reset to the workspace default') : t('Reset to SampForce’s default')}
               </Button>
               <Button variant="ghost" onClick={() => setDraft(DEFAULT_APPEARANCE)}>
-                {t('Load DealFlow’s default into the preview')}
+                {t('Load SampForce’s default into the preview')}
               </Button>
             </CardContent>
             {canManageWorkspace && <WorkspaceDefault draft={draft} />}
@@ -439,7 +439,7 @@ function ColorField({ id, label, value, themeValue, onChange }: { id: string; la
   );
 }
 
-/** A miniature DealFlow screen painted with the draft's tokens, isolated from the rest of the page. */
+/** A miniature SampForce screen painted with the draft's tokens, isolated from the rest of the page. */
 function Preview({ paint, dark }: { paint: ReturnType<typeof computePaint>; dark: boolean }) {
   const t = useT();
   const bars = [62, 88, 45, 74, 54, 36];
@@ -605,7 +605,7 @@ function WorkspaceDefault({ draft }: { draft: Appearance }) {
       <p className="text-sm text-muted-foreground">
         {current
           ? t('Members who have not chosen their own settings see {theme} ({mode}).', { theme: getTheme(current.themeId).name, mode: t(MODE_NAMES[current.mode]).toLowerCase() })
-          : t('No workspace default. Members who have not chosen their own settings see DealFlow’s default.')}
+          : t('No workspace default. Members who have not chosen their own settings see SampForce’s default.')}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" disabled={ws.isPending} onClick={() => ws.mutate(draft)}>

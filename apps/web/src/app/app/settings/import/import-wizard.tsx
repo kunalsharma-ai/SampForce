@@ -148,7 +148,7 @@ export function ImportWizard() {
                   <tr>
                     <th scope="col" className="pb-2 font-medium">{t('Column in file')}</th>
                     <th scope="col" className="pb-2 font-medium">{t('Sample values')}</th>
-                    <th scope="col" className="w-56 pb-2 font-medium">{t('DealFlow field')}</th>
+                    <th scope="col" className="w-56 pb-2 font-medium">{t('SampForce field')}</th>
                   </tr>
                 </thead>
                 <tbody>

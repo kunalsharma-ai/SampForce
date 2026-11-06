@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * A local stand-in for the Google and Microsoft endpoints DealFlow calls. It implements only the
+ * A local stand-in for the Google and Microsoft endpoints SampForce calls. It implements only the
  * request and response shapes the adapters use, so the adapters are exercised end to end over HTTP
  * without real accounts. Passing these tests does not prove the live providers accept our app;
  * that needs real OAuth client credentials (see docs/INTEGRATIONS.md).

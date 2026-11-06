@@ -5,12 +5,12 @@ import { z } from 'zod';
  * pages, and the order and visibility of sidebar modules. Kept per workspace because records differ between them.
  */
 
-/** In-app paths only: "/app" or "/app/…", no scheme, no "//", no backslashes, so a stored link cannot leave DealFlow. */
+/** In-app paths only: "/app" or "/app/…", no scheme, no "//", no backslashes, so a stored link cannot leave SampForce. */
 export const appPathSchema = z
   .string()
   .max(300)
-  .regex(/^\/app(\/[A-Za-z0-9._~\-/]*)?(\?[A-Za-z0-9._~\-=&%]*)?$/, 'Must be a DealFlow page')
-  .refine((p) => !p.includes('//') && !p.includes('/../') && !p.endsWith('/..'), 'Must be a DealFlow page');
+  .regex(/^\/app(\/[A-Za-z0-9._~\-/]*)?(\?[A-Za-z0-9._~\-=&%]*)?$/, 'Must be a SampForce page')
+  .refine((p) => !p.includes('//') && !p.includes('/../') && !p.endsWith('/..'), 'Must be a SampForce page');
 
 export const NAV_ITEM_KINDS = ['module', 'lead', 'contact', 'company', 'deal', 'quote', 'report', 'page'] as const;
 export type NavItemKind = (typeof NAV_ITEM_KINDS)[number];

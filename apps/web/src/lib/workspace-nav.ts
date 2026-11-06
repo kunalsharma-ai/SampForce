@@ -68,7 +68,7 @@ export function useClearRecent() {
 /** A readable label for the page: its first heading once it has rendered, else the document title. */
 function pageLabel(): string | null {
   const h1 = document.querySelector('main h1')?.textContent?.trim();
-  const title = document.title.replace(/\s*[·|–-]\s*DealFlow.*$/i, '').trim();
+  const title = document.title.replace(/\s*[·|–-]\s*SampForce.*$/i, '').trim();
   const label = h1 || title;
   return label ? label.slice(0, 120) : null;
 }

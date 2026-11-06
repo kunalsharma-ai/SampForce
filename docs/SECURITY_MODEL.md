@@ -1,6 +1,6 @@
-# DealFlow Security Model
+# SampForce Security Model
 
-DealFlow does not claim any certification or legal compliance. This document describes controls designed to
+SampForce does not claim any certification or legal compliance. This document describes controls designed to
 support obligations under GDPR, India's DPDP Act, CCPA/CPRA and CAN-SPAM; independent assessment is needed
 before any compliance statement is made.
 
@@ -24,7 +24,7 @@ before any compliance statement is made.
 | Account takeover via SSO or directory | OIDC with PKCE, state, nonce, exact issuer, JWKS signature, audience and `azp` checks, verified email, domain allow-list; SSO sessions bound to their workspace; SCIM tokens hashed; SCIM cannot change owners or people who belong to other workspaces | **Implemented, tested against a local provider** (ADR 0012) |
 | Stolen session after sign-out | Session row checked on every request; device sign-out and sign-out of all other devices | **Implemented, tested** |
 | Secrets in telemetry | URL, header and span redaction of tokens, codes and cookies | **Implemented, tested** |
-| Payment fraud / forged billing events | Hosted checkout only (no card data in DealFlow); webhooks verified by HMAC over the raw body, Stripe timestamp tolerance, idempotent per event id, state re-read from the provider | **Implemented, tested against fixtures** |
+| Payment fraud / forged billing events | Hosted checkout only (no card data in SampForce); webhooks verified by HMAC over the raw body, Stripe timestamp tolerance, idempotent per event id, state re-read from the provider | **Implemented, tested against fixtures** |
 
 ## 2. Identity and access
 

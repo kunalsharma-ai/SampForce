@@ -26,7 +26,7 @@ test('Copilot answers from CRM data and only changes things after confirmation',
   const lead = (await apiPost(page, '/leads', { fullName: 'Ada Lovelace', email: 'ada@example.com' })).lead;
 
   await page.getByRole('button', { name: 'Copilot', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'DealFlow Copilot' });
+  const panel = page.getByRole('dialog', { name: 'SampForce Copilot' });
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: 'Summarise my open pipeline.' }).click();
   await expect(panel.getByText(/This is a rule-based projection/)).toBeVisible();
@@ -57,7 +57,7 @@ test('AI Agents page shows status and lets an owner switch AI off', async ({ pag
   await page.getByRole('button', { name: 'Turn off all AI' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'AI is switched off for this workspace.' })).toBeVisible();
   await page.getByRole('button', { name: 'Copilot', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'DealFlow Copilot' }).getByLabel('Ask Copilot')).toBeDisabled();
+  await expect(page.getByRole('dialog', { name: 'SampForce Copilot' }).getByLabel('Ask Copilot')).toBeDisabled();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Turn AI back on' }).click();
   await expect(page.getByRole('button', { name: 'Turn off all AI' })).toBeVisible();

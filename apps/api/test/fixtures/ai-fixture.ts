@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
  * A local stand-in for the Claude Messages API (`POST /v1/messages`). It returns responses in the
  * API's shape so the gateway, the SDK and the tool loop run end to end without a real key. The default
  * handler is a small rule set; tests can replace it per case. Passing tests against this fixture shows
- * DealFlow's plumbing and safety rules work. It says nothing about the quality of real model answers;
+ * SampForce's plumbing and safety rules work. It says nothing about the quality of real model answers;
  * that is what the eval suites in apps/api/evals measure with a real key.
  */
 export interface FixtureRequest {
@@ -143,7 +143,7 @@ export const rules: Handler = (b) => {
       steps,
     });
   }
-  if (system.startsWith('You are DealFlow Copilot')) {
+  if (system.startsWith('You are SampForce Copilot')) {
     const tr = lastToolResult(b);
     if (!tr) {
       const q = userText(b);

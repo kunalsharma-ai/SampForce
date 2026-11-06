@@ -19,7 +19,7 @@ Workflows need to post updates to Teams channels, as they do to Slack. There wer
 Use the Teams Workflows app's webhook URLs, one URL per channel, pasted by a workspace admin.
 
 1. **Storage.** The URLs are kept sealed in the workspace's single `TEAMS` row in `app_connections`, keyed by a
-   DealFlow channel id (`tc_` + 12 hex characters). Channel names, the default channel and the error for each
+   SampForce channel id (`tc_` + 12 hex characters). Channel names, the default channel and the error for each
    channel are kept in `settings`.
 2. **Checked before saving.** Adding a channel posts a welcome Adaptive Card first, and only an accepted card saves
    it. So "Connected" always means a live call has succeeded. The generic Pending Configuration state does not
@@ -35,8 +35,8 @@ Use the Teams Workflows app's webhook URLs, one URL per channel, pasted by a wor
 
 - No Microsoft app registration is needed. Each customer creates the workflow in their own tenant, under their own
   Power Automate policies.
-- A workflow posts as the "Workflows" app, not as a DealFlow bot. DealFlow cannot list a workspace's channels or
+- A workflow posts as the "Workflows" app, not as a SampForce bot. SampForce cannot list a workspace's channels or
   turn off a workflow in Teams.
-- If DealFlow later needs interactive messages (buttons that act in DealFlow), it will need a Bot Framework app. That
+- If SampForce later needs interactive messages (buttons that act in SampForce), it will need a Bot Framework app. That
   would be a separate decision.
 - Teams is tested only against a local stand-in of the documented request shape until a real Workflows URL is used.

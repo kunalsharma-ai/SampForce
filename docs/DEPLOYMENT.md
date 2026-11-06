@@ -1,12 +1,12 @@
-# Deploying DealFlow
+# Deploying SampForce
 
-There are two supported ways to run DealFlow:
+There are two supported ways to run SampForce:
 
 - **One Linux server with Docker Compose**: `deploy/` holds the compose file, Caddy (automatic HTTPS), settings
   templates and backup/restore/update scripts. Follow [deploy/SERVER_SETUP.md](../deploy/SERVER_SETUP.md).
 - **Kubernetes with the Helm chart** in `infrastructure/helm/dealflow`: the rest of this document.
 
-This is how DealFlow is meant to run in production. The Helm chart and images are built and checked in CI
+This is how SampForce is meant to run in production. The Helm chart and images are built and checked in CI
 (`helm lint --strict`, `helm template | kubeconform`, image builds); the chart has **not** yet been installed on a
 real cluster. Treat the first staging install as part of acceptance.
 
@@ -99,6 +99,6 @@ discovery to private addresses unless `ALLOW_PRIVATE_NETWORK_TARGETS=true` (neve
 3. Confirm `/metrics` is reachable from Prometheus and not from the internet.
 4. Take a backup with `scripts/backup.sh` and restore it into a scratch database with `scripts/restore.sh`
    (docs/runbooks/database-restore.md). Record the times.
-5. Fire a test alert (scale the worker to 0 for 10 minutes and watch `DealFlowWorkerStalled`).
+5. Fire a test alert (scale the worker to 0 for 10 minutes and watch `SampForceWorkerStalled`).
 
 See also: [OBSERVABILITY.md](OBSERVABILITY.md), [runbooks](runbooks/README.md), [perf](perf/README.md).

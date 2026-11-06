@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * The DealFlow browser extension (Phase 9). It signs in with its own revocable connection token,
+ * The SampForce browser extension (Phase 9). It signs in with its own revocable connection token,
  * never with the web app's cookies, and can only reach the /extension routes.
  */
 
@@ -11,7 +11,7 @@ export const EXTENSION_TOKEN_DAYS = 90;
 export const MAX_EXTENSION_TOKENS = 5;
 /** What an extension token can do, at most. The person's role still has to allow each one. */
 export const EXTENSION_SCOPES = ['leads:read', 'leads:write', 'contacts:read', 'companies:read', 'sequences:read', 'sequences:write', 'prospects:read', 'prospects:write', 'prospects:search'] as const;
-export const EXTENSION_USER_AGENT = 'DealFlow browser extension';
+export const EXTENSION_USER_AGENT = 'SampForce browser extension';
 
 /**
  * Free and personal mailbox providers. Addresses at these domains are never captured automatically:
@@ -50,7 +50,7 @@ export const extensionTokenCreateSchema = z.object({
 });
 export type ExtensionTokenCreateInput = z.infer<typeof extensionTokenCreateSchema>;
 
-/** Signing in from the extension with DealFlow credentials (same lockout and second-factor rules as the web app). */
+/** Signing in from the extension with SampForce credentials (same lockout and second-factor rules as the web app). */
 export const extensionLoginSchema = z.object({
   email: z.string().trim().toLowerCase().email('Enter your work email').max(254),
   password: z.string().min(1, 'Enter your password').max(200),
@@ -92,7 +92,7 @@ const email = z.string().trim().toLowerCase().email().max(254);
 
 export const extensionLookupSchema = z.object({
   emails: z.array(email).max(50).default([]),
-  /** The site the person is looking at, to find the company already in DealFlow. */
+  /** The site the person is looking at, to find the company already in SampForce. */
   website: z.string().trim().max(2000).optional(),
 });
 export type ExtensionLookupInput = z.infer<typeof extensionLookupSchema>;

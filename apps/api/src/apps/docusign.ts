@@ -100,7 +100,7 @@ export class DocusignClient {
           },
         ],
       },
-      // Per-envelope Connect: status events come back to DealFlow, signed with the account's HMAC key.
+      // Per-envelope Connect: status events come back to SampForce, signed with the account's HMAC key.
       ...(e.statusUrl
         ? {
             eventNotification: {
@@ -167,7 +167,7 @@ export class DocusignClient {
     const body = (await res.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string; error_description?: string };
     if (!res.ok || !body.access_token || !body.refresh_token) {
       const revoked = body.error === 'invalid_grant' || res.status === 401;
-      throw new DocusignError(body.error ?? 'token_failed', revoked ? 'DocuSign no longer accepts the DealFlow connection. Reconnect DocuSign in Integrations.' : `DocuSign refused the sign-in (${body.error_description ?? body.error ?? res.status}).`, revoked);
+      throw new DocusignError(body.error ?? 'token_failed', revoked ? 'DocuSign no longer accepts the SampForce connection. Reconnect DocuSign in Integrations.' : `DocuSign refused the sign-in (${body.error_description ?? body.error ?? res.status}).`, revoked);
     }
     return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: Date.now() + (body.expires_in ?? 28_800) * 1000 };
   }

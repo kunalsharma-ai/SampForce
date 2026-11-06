@@ -118,7 +118,7 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
                 <span>{t('Everyone in the meeting has agreed to it being recorded and transcribed. Zoom also announces the recording.')}</span>
               </label>
             )}
-            <p className="text-xs text-muted-foreground">{t('The meeting is created in your Zoom user (your DealFlow email) and logged on this record.')}</p>
+            <p className="text-xs text-muted-foreground">{t('The meeting is created in your Zoom user (your SampForce email) and logged on this record.')}</p>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={schedule.isPending || !topic.trim() || (record && !consent)}>
                 {schedule.isPending ? t('Scheduling…') : t('Schedule Zoom meeting')}
@@ -135,7 +135,7 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
           </form>
         )}
         {items.length === 0 ? (
-          <p className="text-muted-foreground">{t('No Zoom meetings scheduled from DealFlow for this record.')}</p>
+          <p className="text-muted-foreground">{t('No Zoom meetings scheduled from SampForce for this record.')}</p>
         ) : (
           <ul className="space-y-2" aria-label={t('Zoom meetings')}>
             {items.map((m) => {

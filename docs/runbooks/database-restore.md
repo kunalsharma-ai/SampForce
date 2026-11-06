@@ -31,7 +31,7 @@ RESTORE_ADMIN_URL=postgresql://admin@db-host:5432/postgres scripts/restore.sh de
 ```
 
 `RESTORE_ADMIN_URL` must be able to create databases and load into tables with forced RLS (a superuser, or CREATEDB
-and BYPASSRLS). The three DealFlow roles must exist on the target server.
+and BYPASSRLS). The three SampForce roles must exist on the target server.
 
 ## Switch the application over (not drilled)
 

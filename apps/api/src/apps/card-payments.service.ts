@@ -14,7 +14,7 @@ import { CardPaymentError, CardPaymentsClient, type PaymentKeys, toMinorUnits } 
 type ProposalPayment = NonNullable<PublicProposal['payment']>;
 
 /**
- * Card payments on accepted proposals, into the workspace's own Stripe or Razorpay account. DealFlow never sees
+ * Card payments on accepted proposals, into the workspace's own Stripe or Razorpay account. SampForce never sees
  * card details: the customer pays on the provider's hosted page, and a payment counts only when the provider's
  * signed webhook confirms it with the amount that was asked.
  */

@@ -69,9 +69,9 @@ export class WebhookDeliverer {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'user-agent': 'DealFlow-Webhooks/1.0',
-          'X-DealFlow-Event': event.type,
-          'X-DealFlow-Delivery': d.id,
+          'user-agent': 'SampForce-Webhooks/1.0',
+          'X-SampForce-Event': event.type,
+          'X-SampForce-Delivery': d.id,
           [SIGNATURE_HEADER]: signatureHeader(this.box.open(d.webhook.secretEncrypted), body),
         },
         body,

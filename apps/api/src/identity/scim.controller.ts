@@ -74,7 +74,7 @@ export class ScimController {
       changePassword: { supported: false },
       sort: { supported: false },
       etag: { supported: false },
-      authenticationSchemes: [{ type: 'oauthbearertoken', name: 'Bearer token', description: 'A SCIM token created in DealFlow under Settings → Security.', primary: true }],
+      authenticationSchemes: [{ type: 'oauthbearertoken', name: 'Bearer token', description: 'A SCIM token created in SampForce under Settings → Security.', primary: true }],
     };
   }
 

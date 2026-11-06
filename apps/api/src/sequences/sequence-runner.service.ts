@@ -85,7 +85,7 @@ export class SequenceRunner implements OnModuleInit {
       const conn = await this.communication.mailboxFor(tx, auth.tenantId, auth.userId);
       if (!conn) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox in Integrations to send yourself a test.' });
       if ((await this.communication.sentInLastDay(tx, conn.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) {
-        throw new HttpException({ code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from DealFlow.` }, HttpStatus.TOO_MANY_REQUESTS);
+        throw new HttpException({ code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from SampForce.` }, HttpStatus.TOO_MANY_REQUESTS);
       }
       const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true, email: true } });
       const values = { ...(await variableValues(tx, auth.tenantId)), ...(person?.values ?? {}), ...senderValues(user, conn.accountEmail) };

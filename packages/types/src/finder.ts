@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { ExtensionMatch } from './extension';
 
 /**
- * Email finder (Phase 9). DealFlow's own finder reads a company's public website and works out its address
+ * Email finder (Phase 9). SampForce's own finder reads a company's public website and works out its address
  * pattern; an optional data provider (Hunter.io, with the customer's own key) adds addresses it knows about.
  * Nothing is presented as verified unless it was published on the company's site or the provider says so.
  */
@@ -24,7 +24,7 @@ export type EmailPattern = (typeof EMAIL_PATTERNS)[number];
 export type DomainSource = 'given' | 'dealflow' | 'website' | 'provider';
 export const DOMAIN_SOURCE_LABELS: Record<DomainSource, string> = {
   given: 'the website you entered',
-  dealflow: 'the company record in DealFlow',
+  dealflow: 'the company record in SampForce',
   website: 'a website that matches the company name',
   provider: 'the data provider',
 };
@@ -52,7 +52,7 @@ export interface FinderEmail {
   sourceUrl: string | null;
   /** 0–100, for provider results only. */
   confidence: number | null;
-  /** Already in DealFlow. */
+  /** Already in SampForce. */
   match: ExtensionMatch | null;
   suppressed: boolean;
 }

@@ -9,7 +9,7 @@
 Feature 8 asks for one inbox: Gmail and Outlook mailboxes, incoming and outgoing conversations synced with CRM
 records, links to leads, accounts and deals, templates and AI replies, assignment, internal notes, search and
 filters, history on records, delivery, bounce, click and reply events, categories and statuses, and mailbox sync
-logs. DealFlow already syncs Gmail and Microsoft 365, stores only messages that involve a known contact or lead,
+logs. SampForce already syncs Gmail and Microsoft 365, stores only messages that involve a known contact or lead,
 sends from the person's own mailbox, tracks sequence emails, and has the Email Assistant. The inbox builds on
 those. It is not a second mail store.
 
@@ -23,7 +23,7 @@ those. It is not a second mail store.
    conversation sets it to "Waiting on them". People can set any status, including Closed. The default view shows
    open and waiting conversations.
 3. **Replies stay in the conversation when they can.** `POST /emails/send` takes `conversationId`. When the
-   conversation is in the sender's own mailbox, Gmail files the reply in the same thread, and DealFlow stores it in
+   conversation is in the sender's own mailbox, Gmail files the reply in the same thread, and SampForce stores it in
    the same conversation for both providers. Microsoft Graph's `sendMail` cannot thread, so Outlook may show the
    reply separately. A conversation in someone else's mailbox can be read, assigned and noted by the team, but a
    reply goes from your own mailbox and starts a new conversation. The screen says so.

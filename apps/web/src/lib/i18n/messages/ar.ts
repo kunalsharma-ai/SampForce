@@ -26,7 +26,7 @@ export const ar: Messages = {
   'nav.collapseSidebar': 'طي الشريط الجانبي',
   'nav.expandSidebar': 'توسيع الشريط الجانبي',
   'nav.toggleSidebar': 'إظهار الشريط الجانبي أو إخفاؤه ( [ )',
-  'nav.home': 'مركز قيادة DealFlow',
+  'nav.home': 'مركز قيادة SampForce',
   'nav.group.Workspace': 'مساحة العمل',
   'nav.group.Engage': 'التواصل',
   'nav.group.Intelligence': 'الذكاء',
@@ -68,7 +68,7 @@ export const ar: Messages = {
 
   'top.openNav': 'فتح التنقل',
   'top.search': 'بحث',
-  'top.searchProduct': 'في DealFlow',
+  'top.searchProduct': 'في SampForce',
   'top.copilot': 'المساعد',
   'top.create': 'إنشاء',
   'top.quickCreate': 'إنشاء سريع',

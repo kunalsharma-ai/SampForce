@@ -128,7 +128,7 @@ export default defineConfig({
         OPERATOR_JWT_SECRET: 'e2e-operator-secret-at-least-32-characters',
         // Email goes to the stand-in above, never to a real mail server.
         SMTP_URL: 'smtp://127.0.0.1:4400',
-        MAIL_FROM: 'DealFlow <no-reply@dealflow.test>',
+        MAIL_FROM: 'SampForce <no-reply@dealflow.test>',
         PUBLIC_WEB_URL: 'http://localhost:3000',
         // Not real Slack credentials: Slack calls go to the stand-in above.
         SLACK_CLIENT_ID: 'slack-client-id',

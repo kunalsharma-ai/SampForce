@@ -7,7 +7,7 @@
 ## Context
 
 Until now, contracts were marked signed by hand, with the methods "on paper", "by email" or "external e-signature".
-Teams want to send the contract out for signature from DealFlow and have it become Active when the customer signs,
+Teams want to send the contract out for signature from SampForce and have it become Active when the customer signs,
 without typing the result back in.
 
 ## Decisions
@@ -15,7 +15,7 @@ without typing the result back in.
 1. **Connection.** The workspace connects one DocuSign account through Authorization Code Grant with the
    `signature extended` scopes. The account id and its `base_uri` come from userinfo. Only DocuSign hosts are
    accepted, which prevents an SSRF through a forged base URI.
-2. **The document.** DealFlow renders the contract to PDF with anchor strings, rather than using DocuSign templates.
+2. **The document.** SampForce renders the contract to PDF with anchor strings, rather than using DocuSign templates.
    That way what is signed is exactly the contract record. It is one signer, one envelope, and one open envelope per
    contract at a time.
 3. **Explicit confirmation.** Sending emails the customer, so the API requires `confirm: true` and the page requires

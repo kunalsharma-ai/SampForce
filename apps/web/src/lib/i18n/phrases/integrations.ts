@@ -10,13 +10,13 @@ export const integrations = {
     'Starten Sie Zaps, wenn sich Leads, Kontakte, Verkaufschancen oder Aufgaben ändern, und legen Sie Leads, Kontakte und Aufgaben aus anderen Apps an. Zaps verbinden sich mit einem API-Schlüssel von unten und starten innerhalb von Sekunden über Webhooks statt Abfragen.',
     'شغّل Zaps عند تغيّر العملاء المحتملين أو جهات الاتصال أو الصفقات أو المهام، وأنشئ عملاء محتملين وجهات اتصال ومهام من تطبيقات أخرى. تتصل Zaps بمفتاح API من الأسفل، وتبدأ خلال ثوانٍ عبر خطافات الويب بدلًا من الاستطلاع.',
   ],
-  'The DealFlow app for Zapier is not published on this installation yet. An operator deploys it from {path} and sets {variable}. API keys already work with Make, n8n and scripts.': [
-    'La aplicación de DealFlow para Zapier aún no está publicada en esta instalación. Un operador la despliega desde {path} y define {variable}. Las claves de API ya funcionan con Make, n8n y scripts.',
-    'L’application DealFlow pour Zapier n’est pas encore publiée sur cette installation. Un opérateur la déploie depuis {path} et définit {variable}. Les clés d’API fonctionnent déjà avec Make, n8n et des scripts.',
-    'Die DealFlow-App für Zapier ist auf dieser Installation noch nicht veröffentlicht. Ein Betreiber stellt sie aus {path} bereit und setzt {variable}. API-Schlüssel funktionieren bereits mit Make, n8n und Skripten.',
-    'تطبيق DealFlow لـ Zapier غير منشور على هذا التثبيت بعد. ينشره أحد المشغّلين من {path} ويضبط {variable}. تعمل مفاتيح API بالفعل مع Make وn8n والبرامج النصية.',
+  'The SampForce app for Zapier is not published on this installation yet. An operator deploys it from {path} and sets {variable}. API keys already work with Make, n8n and scripts.': [
+    'La aplicación de SampForce para Zapier aún no está publicada en esta instalación. Un operador la despliega desde {path} y define {variable}. Las claves de API ya funcionan con Make, n8n y scripts.',
+    'L’application SampForce pour Zapier n’est pas encore publiée sur cette installation. Un opérateur la déploie depuis {path} et définit {variable}. Les clés d’API fonctionnent déjà avec Make, n8n et des scripts.',
+    'Die SampForce-App für Zapier ist auf dieser Installation noch nicht veröffentlicht. Ein Betreiber stellt sie aus {path} bereit und setzt {variable}. API-Schlüssel funktionieren bereits mit Make, n8n und Skripten.',
+    'تطبيق SampForce لـ Zapier غير منشور على هذا التثبيت بعد. ينشره أحد المشغّلين من {path} ويضبط {variable}. تعمل مفاتيح API بالفعل مع Make وn8n والبرامج النصية.',
   ],
-  'Open DealFlow in Zapier': ['Abrir DealFlow en Zapier', 'Ouvrir DealFlow dans Zapier', 'DealFlow in Zapier öffnen', 'فتح DealFlow في Zapier'],
+  'Open SampForce in Zapier': ['Abrir SampForce en Zapier', 'Ouvrir SampForce dans Zapier', 'SampForce in Zapier öffnen', 'فتح SampForce في Zapier'],
   'API keys': ['Claves de API', 'Clés d’API', 'API-Schlüssel', 'مفاتيح API'],
   'A key acts as you, limited to the scopes you choose and to your own role. It cannot export data, change settings, members, billing or integrations, or use AI. Revoking it stops it at once and removes the Zaps made with it.': [
     'Una clave actúa como tú, limitada a los permisos que elijas y a tu propio rol. No puede exportar datos, cambiar la configuración, los miembros, la facturación ni las integraciones, ni usar la IA. Revocarla la detiene al instante y elimina los Zaps creados con ella.',
@@ -48,23 +48,23 @@ export const integrations = {
   'Scopes': ['Permisos', 'Portées', 'Bereiche', 'النطاقات'],
   'Create key': ['Crear clave', 'Créer la clé', 'Schlüssel erstellen', 'إنشاء مفتاح'],
   'Browser extension': ['Extensión del navegador', 'Extension de navigateur', 'Browsererweiterung', 'إضافة المتصفح'],
-  'DealFlow lead capture for Chrome and Edge': [
-    'Captura de prospectos de DealFlow para Chrome y Edge',
-    'Capture de prospects DealFlow pour Chrome et Edge',
-    'DealFlow-Lead-Erfassung für Chrome und Edge',
-    'التقاط العملاء المحتملين من DealFlow لمتصفحي Chrome وEdge',
+  'SampForce lead capture for Chrome and Edge': [
+    'Captura de prospectos de SampForce para Chrome y Edge',
+    'Capture de prospects SampForce pour Chrome et Edge',
+    'SampForce-Lead-Erfassung für Chrome und Edge',
+    'التقاط العملاء المحتملين من SampForce لمتصفحي Chrome وEdge',
   ],
-  'Finds email addresses on the page you are reading and saves the people as leads, checking DealFlow first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.': [
-    'Encuentra direcciones de correo en la página que estás leyendo y guarda a las personas como prospectos, comprobando primero DealFlow para no añadir a nadie dos veces. También puedes inscribirlas en una secuencia o dejar que guarde personas nuevas automáticamente mientras navegas.',
-    'Trouve les adresses e-mail sur la page que vous lisez et enregistre les personnes comme prospects, en vérifiant d’abord DealFlow pour que personne ne soit ajouté deux fois. Vous pouvez aussi les inscrire dans une séquence, ou laisser l’extension enregistrer automatiquement les nouvelles personnes pendant votre navigation.',
-    'Findet E-Mail-Adressen auf der Seite, die Sie lesen, und speichert die Personen als Leads, wobei zuerst DealFlow geprüft wird, damit niemand doppelt angelegt wird. Sie können sie auch in eine Sequenz aufnehmen oder neue Personen beim Surfen automatisch speichern lassen.',
-    'تعثر على عناوين البريد الإلكتروني في الصفحة التي تقرؤها وتحفظ الأشخاص كعملاء محتملين، مع التحقق من DealFlow أولًا حتى لا يُضاف أحد مرتين. يمكنك أيضًا تسجيلهم في تسلسل، أو السماح لها بحفظ الأشخاص الجدد تلقائيًا أثناء التصفح.',
+  'Finds email addresses on the page you are reading and saves the people as leads, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.': [
+    'Encuentra direcciones de correo en la página que estás leyendo y guarda a las personas como prospectos, comprobando primero SampForce para no añadir a nadie dos veces. También puedes inscribirlas en una secuencia o dejar que guarde personas nuevas automáticamente mientras navegas.',
+    'Trouve les adresses e-mail sur la page que vous lisez et enregistre les personnes comme prospects, en vérifiant d’abord SampForce pour que personne ne soit ajouté deux fois. Vous pouvez aussi les inscrire dans une séquence, ou laisser l’extension enregistrer automatiquement les nouvelles personnes pendant votre navigation.',
+    'Findet E-Mail-Adressen auf der Seite, die Sie lesen, und speichert die Personen als Leads, wobei zuerst SampForce geprüft wird, damit niemand doppelt angelegt wird. Sie können sie auch in eine Sequenz aufnehmen oder neue Personen beim Surfen automatisch speichern lassen.',
+    'تعثر على عناوين البريد الإلكتروني في الصفحة التي تقرؤها وتحفظ الأشخاص كعملاء محتملين، مع التحقق من SampForce أولًا حتى لا يُضاف أحد مرتين. يمكنك أيضًا تسجيلهم في تسلسل، أو السماح لها بحفظ الأشخاص الجدد تلقائيًا أثناء التصفح.',
   ],
-  'Install the extension. It is not in the Chrome Web Store yet: your DealFlow provider can share the package, which you load from {chrome} (or {edge}) with Developer mode on and {button}.': [
-    'Instala la extensión. Aún no está en Chrome Web Store: tu proveedor de DealFlow puede compartir el paquete, que cargas desde {chrome} (o {edge}) con el modo de desarrollador activado y {button}.',
-    'Installez l’extension. Elle n’est pas encore sur le Chrome Web Store : votre fournisseur DealFlow peut partager le paquet, que vous chargez depuis {chrome} (ou {edge}) avec le mode développeur activé et {button}.',
-    'Installieren Sie die Erweiterung. Sie ist noch nicht im Chrome Web Store: Ihr DealFlow-Anbieter kann das Paket bereitstellen, das Sie über {chrome} (oder {edge}) mit aktiviertem Entwicklermodus und {button} laden.',
-    'ثبّت الإضافة. ليست في سوق Chrome الإلكتروني بعد: يمكن لمزوّد DealFlow مشاركة الحزمة، التي تحمّلها من {chrome} (أو {edge}) مع تفعيل وضع المطوّر و{button}.',
+  'Install the extension. It is not in the Chrome Web Store yet: your SampForce provider can share the package, which you load from {chrome} (or {edge}) with Developer mode on and {button}.': [
+    'Instala la extensión. Aún no está en Chrome Web Store: tu proveedor de SampForce puede compartir el paquete, que cargas desde {chrome} (o {edge}) con el modo de desarrollador activado y {button}.',
+    'Installez l’extension. Elle n’est pas encore sur le Chrome Web Store : votre fournisseur SampForce peut partager le paquet, que vous chargez depuis {chrome} (ou {edge}) avec le mode développeur activé et {button}.',
+    'Installieren Sie die Erweiterung. Sie ist noch nicht im Chrome Web Store: Ihr SampForce-Anbieter kann das Paket bereitstellen, das Sie über {chrome} (oder {edge}) mit aktiviertem Entwicklermodus und {button} laden.',
+    'ثبّت الإضافة. ليست في سوق Chrome الإلكتروني بعد: يمكن لمزوّد SampForce مشاركة الحزمة، التي تحمّلها من {chrome} (أو {edge}) مع تفعيل وضع المطوّر و{button}.',
   ],
   'Load unpacked': ['Cargar descomprimida', 'Charger l’extension non empaquetée', 'Entpackte Erweiterung laden', 'تحميل غير المضغوطة'],
   'Create a connection code below. It works only for you, in this workspace, and only for the extension.': [
@@ -79,7 +79,7 @@ export const integrations = {
     'Öffnen Sie die Erweiterung, geben Sie {address} ein und fügen Sie den Code ein.',
     'افتح الإضافة، وأدخل {address} والصق الرمز.',
   ],
-  'your DealFlow address': ['tu dirección de DealFlow', 'votre adresse DealFlow', 'Ihre DealFlow-Adresse', 'عنوان DealFlow الخاص بك'],
+  'your SampForce address': ['tu dirección de SampForce', 'votre adresse SampForce', 'Ihre SampForce-Adresse', 'عنوان SampForce الخاص بك'],
   'Your role can look people up with the extension but not save leads.': [
     'Tu rol puede buscar personas con la extensión, pero no guardar prospectos.',
     'Votre rôle peut rechercher des personnes avec l’extension, mais pas enregistrer de prospects.',
@@ -138,11 +138,11 @@ export const integrations = {
     'Synchronisierung abgeschlossen: {emails} neue E-Mails, {meetings} Meetings aktualisiert.',
     'اكتملت المزامنة: {emails} رسائل جديدة، و{meetings} اجتماعات محدّثة.',
   ],
-  'Each person connects their own account. DealFlow reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.': [
-    'Cada persona conecta su propia cuenta. DealFlow lee el correo y los eventos del calendario solo para encontrar conversaciones y reuniones con tus contactos y prospectos, guarda solo esos y mantiene los tokens cifrados. Los envíos están limitados por persona y día.',
-    'Chaque personne connecte son propre compte. DealFlow lit les e-mails et les événements d’agenda uniquement pour trouver les conversations et réunions avec vos contacts et prospects, ne stocke que ceux-ci et chiffre les jetons. L’envoi est limité par personne et par jour.',
-    'Jede Person verbindet ihr eigenes Konto. DealFlow liest E-Mails und Kalendertermine nur, um Gespräche und Meetings mit Ihren Kontakten und Leads zu finden, speichert nur diese und hält Tokens verschlüsselt. Der Versand ist pro Person und Tag begrenzt.',
-    'يربط كل شخص حسابه الخاص. يقرأ DealFlow البريد وأحداث التقويم فقط للعثور على المحادثات والاجتماعات مع جهات اتصالك وعملائك المحتملين، ويخزّن تلك فقط، ويحتفظ بالرموز مشفّرة. الإرسال محدود لكل شخص يوميًا.',
+  'Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.': [
+    'Cada persona conecta su propia cuenta. SampForce lee el correo y los eventos del calendario solo para encontrar conversaciones y reuniones con tus contactos y prospectos, guarda solo esos y mantiene los tokens cifrados. Los envíos están limitados por persona y día.',
+    'Chaque personne connecte son propre compte. SampForce lit les e-mails et les événements d’agenda uniquement pour trouver les conversations et réunions avec vos contacts et prospects, ne stocke que ceux-ci et chiffre les jetons. L’envoi est limité par personne et par jour.',
+    'Jede Person verbindet ihr eigenes Konto. SampForce liest E-Mails und Kalendertermine nur, um Gespräche und Meetings mit Ihren Kontakten und Leads zu finden, speichert nur diese und hält Tokens verschlüsselt. Der Versand ist pro Person und Tag begrenzt.',
+    'يربط كل شخص حسابه الخاص. يقرأ SampForce البريد وأحداث التقويم فقط للعثور على المحادثات والاجتماعات مع جهات اتصالك وعملائك المحتملين، ويخزّن تلك فقط، ويحتفظ بالرموز مشفّرة. الإرسال محدود لكل شخص يوميًا.',
   ],
   'Not set up on this installation': ['No configurado en esta instalación', 'Non configuré sur cette installation', 'Auf dieser Installation nicht eingerichtet', 'غير مُعدّ على هذا التثبيت'],
   'Connected': ['Conectado', 'Connecté', 'Verbunden', 'متصل'],
@@ -161,11 +161,11 @@ export const integrations = {
   'Sync now': ['Sincronizar ahora', 'Synchroniser maintenant', 'Jetzt synchronisieren', 'مزامنة الآن'],
   'Disconnect': ['Desconectar', 'Déconnecter', 'Trennen', 'قطع الاتصال'],
   'Outbound webhooks': ['Webhooks salientes', 'Webhooks sortants', 'Ausgehende Webhooks', 'خطافات الويب الصادرة'],
-  'DealFlow posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.': [
-    'DealFlow envía JSON firmado a tu endpoint cuando ocurren los eventos seleccionados. Las entregas fallidas se reintentan con espera progresiva (unos 6 intentos en 9 horas); un endpoint que sigue fallando se desactiva y se avisa a los administradores.',
-    'DealFlow envoie du JSON signé à votre point de terminaison lorsque les événements sélectionnés se produisent. Les livraisons échouées sont relancées avec un délai croissant (environ 6 tentatives sur 9 heures) ; un point de terminaison qui échoue sans cesse est désactivé et les administrateurs sont prévenus.',
-    'DealFlow sendet signiertes JSON an Ihren Endpunkt, wenn die gewählten Ereignisse eintreten. Fehlgeschlagene Zustellungen werden mit zunehmender Wartezeit wiederholt (etwa 6 Versuche über 9 Stunden); ein Endpunkt, der weiter fehlschlägt, wird abgeschaltet und Admins werden benachrichtigt.',
-    'يرسل DealFlow ملفات JSON موقّعة إلى نقطة النهاية لديك عند وقوع الأحداث المحددة. تُعاد محاولة التسليمات الفاشلة مع تأخير متزايد (نحو 6 محاولات خلال 9 ساعات)؛ وتُعطَّل نقطة النهاية التي تستمر في الفشل ويُبلَّغ المسؤولون.',
+  'SampForce posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.': [
+    'SampForce envía JSON firmado a tu endpoint cuando ocurren los eventos seleccionados. Las entregas fallidas se reintentan con espera progresiva (unos 6 intentos en 9 horas); un endpoint que sigue fallando se desactiva y se avisa a los administradores.',
+    'SampForce envoie du JSON signé à votre point de terminaison lorsque les événements sélectionnés se produisent. Les livraisons échouées sont relancées avec un délai croissant (environ 6 tentatives sur 9 heures) ; un point de terminaison qui échoue sans cesse est désactivé et les administrateurs sont prévenus.',
+    'SampForce sendet signiertes JSON an Ihren Endpunkt, wenn die gewählten Ereignisse eintreten. Fehlgeschlagene Zustellungen werden mit zunehmender Wartezeit wiederholt (etwa 6 Versuche über 9 Stunden); ein Endpunkt, der weiter fehlschlägt, wird abgeschaltet und Admins werden benachrichtigt.',
+    'يرسل SampForce ملفات JSON موقّعة إلى نقطة النهاية لديك عند وقوع الأحداث المحددة. تُعاد محاولة التسليمات الفاشلة مع تأخير متزايد (نحو 6 محاولات خلال 9 ساعات)؛ وتُعطَّل نقطة النهاية التي تستمر في الفشل ويُبلَّغ المسؤولون.',
   ],
   'Events': ['Eventos', 'Événements', 'Ereignisse', 'الأحداث'],
   'Add webhook': ['Añadir webhook', 'Ajouter un webhook', 'Webhook hinzufügen', 'إضافة خطاف ويب'],
@@ -222,11 +222,11 @@ export const integrations = {
     'Fügen Sie einem beliebigen Workflow einen Schritt „In Slack posten“ hinzu.',
     'أضف خطوة «النشر في Slack» إلى أي سير عمل.',
   ],
-  'An operator must add {settings} (the DealFlow Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.': [
-    'Un operador debe añadir {settings} (las credenciales de la aplicación de Slack de DealFlow) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse. No se envía nada hasta entonces.',
-    'Un opérateur doit ajouter {settings} (les identifiants de l’application Slack de DealFlow) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter. Rien n’est envoyé d’ici là.',
-    'Ein Betreiber muss {settings} (die Zugangsdaten der DealFlow-Slack-App) in der Betreiberkonsole unter Anbieter hinzufügen, bevor sich jemand verbinden kann. Bis dahin wird nichts gesendet.',
-    'يجب على أحد المشغّلين إضافة {settings} (بيانات اعتماد تطبيق Slack الخاص بـ DealFlow) في وحدة تحكم المشغّل ضمن المزوّدين قبل أن يتمكن أي أحد من الاتصال. لا يُرسل شيء حتى ذلك الحين.',
+  'An operator must add {settings} (the SampForce Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.': [
+    'Un operador debe añadir {settings} (las credenciales de la aplicación de Slack de SampForce) en la consola de operador, en Proveedores, antes de que alguien pueda conectarse. No se envía nada hasta entonces.',
+    'Un opérateur doit ajouter {settings} (les identifiants de l’application Slack de SampForce) dans la console opérateur, sous Fournisseurs, avant que quiconque puisse se connecter. Rien n’est envoyé d’ici là.',
+    'Ein Betreiber muss {settings} (die Zugangsdaten der SampForce-Slack-App) in der Betreiberkonsole unter Anbieter hinzufügen, bevor sich jemand verbinden kann. Bis dahin wird nichts gesendet.',
+    'يجب على أحد المشغّلين إضافة {settings} (بيانات اعتماد تطبيق Slack الخاص بـ SampForce) في وحدة تحكم المشغّل ضمن المزوّدين قبل أن يتمكن أي أحد من الاتصال. لا يُرسل شيء حتى ذلك الحين.',
   ],
   'Slack workspace: {name}': ['Espacio de trabajo de Slack: {name}', 'Espace de travail Slack : {name}', 'Slack-Arbeitsbereich: {name}', 'مساحة عمل Slack: {name}'],
   'Last message {time}.': ['Último mensaje {time}.', 'Dernier message {time}.', 'Letzte Nachricht {time}.', 'آخر رسالة {time}.'],
@@ -272,11 +272,11 @@ export const integrations = {
     'إزالة {name}؟ ستفشل خطوات سير العمل التي تنشر هناك. أوقف أيضًا سير العمل الخاص بها في Teams.',
   ],
   'Default Teams channel': ['Canal de Teams predeterminado', 'Canal Teams par défaut', 'Standard-Teams-Kanal', 'قناة Teams الافتراضية'],
-  'In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. DealFlow posts a welcome card to check it before saving. The URL is stored encrypted.': [
-    'En Teams, abre el {menu} del canal, elige «Send webhook alerts to a channel» y copia la URL que te da. DealFlow publica una tarjeta de bienvenida para comprobarla antes de guardar. La URL se guarda cifrada.',
-    'Dans Teams, ouvrez le {menu} du canal, choisissez « Send webhook alerts to a channel » et copiez l’URL fournie. DealFlow publie une carte de bienvenue pour la vérifier avant d’enregistrer. L’URL est stockée chiffrée.',
-    'Öffnen Sie in Teams das {menu} des Kanals, wählen Sie „Send webhook alerts to a channel“ und kopieren Sie die angezeigte URL. DealFlow postet zur Prüfung eine Willkommenskarte, bevor gespeichert wird. Die URL wird verschlüsselt gespeichert.',
-    'في Teams، افتح {menu} الخاصة بالقناة، واختر «Send webhook alerts to a channel»، وانسخ عنوان URL الذي يظهر. ينشر DealFlow بطاقة ترحيب للتحقق منه قبل الحفظ. يُخزَّن عنوان URL مشفّرًا.',
+  'In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. SampForce posts a welcome card to check it before saving. The URL is stored encrypted.': [
+    'En Teams, abre el {menu} del canal, elige «Send webhook alerts to a channel» y copia la URL que te da. SampForce publica una tarjeta de bienvenida para comprobarla antes de guardar. La URL se guarda cifrada.',
+    'Dans Teams, ouvrez le {menu} du canal, choisissez « Send webhook alerts to a channel » et copiez l’URL fournie. SampForce publie une carte de bienvenue pour la vérifier avant d’enregistrer. L’URL est stockée chiffrée.',
+    'Öffnen Sie in Teams das {menu} des Kanals, wählen Sie „Send webhook alerts to a channel“ und kopieren Sie die angezeigte URL. SampForce postet zur Prüfung eine Willkommenskarte, bevor gespeichert wird. Die URL wird verschlüsselt gespeichert.',
+    'في Teams، افتح {menu} الخاصة بالقناة، واختر «Send webhook alerts to a channel»، وانسخ عنوان URL الذي يظهر. ينشر SampForce بطاقة ترحيب للتحقق منه قبل الحفظ. يُخزَّن عنوان URL مشفّرًا.',
   ],
   'Workflows': ['Flujos de trabajo', 'Workflows', 'Workflows', 'مسارات العمل'],
   'Channel name': ['Nombre del canal', 'Nom du canal', 'Kanalname', 'اسم القناة'],
@@ -309,11 +309,11 @@ export const integrations = {
   'Recent {name} activity': ['Actividad reciente de {name}', 'Activité {name} récente', 'Letzte {name}-Aktivität', 'نشاط {name} الأخير'],
   'Live mode': ['Modo real', 'Mode réel', 'Live-Modus', 'الوضع المباشر'],
   'Test mode': ['Modo de prueba', 'Mode test', 'Testmodus', 'وضع الاختبار'],
-  'Customers pay on the hosted page of {provider}, so DealFlow never handles card details. A proposal is marked paid only when the provider’s signed webhook confirms the amount.': [
-    'Los clientes pagan en la página alojada de {provider}, así que DealFlow nunca maneja datos de tarjetas. Una propuesta se marca como pagada solo cuando el webhook firmado del proveedor confirma el importe.',
-    'Les clients paient sur la page hébergée de {provider}, DealFlow ne manipule donc jamais les données de carte. Une proposition n’est marquée payée que lorsque le webhook signé du fournisseur confirme le montant.',
-    'Kunden zahlen auf der gehosteten Seite von {provider}, daher verarbeitet DealFlow nie Kartendaten. Ein Angebot wird erst als bezahlt markiert, wenn der signierte Webhook des Anbieters den Betrag bestätigt.',
-    'يدفع العملاء على الصفحة المستضافة لدى {provider}، لذا لا يتعامل DealFlow مع بيانات البطاقات أبدًا. لا يُعلَّم العرض كمدفوع إلا عندما يؤكد خطاف الويب الموقّع من المزوّد المبلغ.',
+  'Customers pay on the hosted page of {provider}, so SampForce never handles card details. A proposal is marked paid only when the provider’s signed webhook confirms the amount.': [
+    'Los clientes pagan en la página alojada de {provider}, así que SampForce nunca maneja datos de tarjetas. Una propuesta se marca como pagada solo cuando el webhook firmado del proveedor confirma el importe.',
+    'Les clients paient sur la page hébergée de {provider}, SampForce ne manipule donc jamais les données de carte. Une proposition n’est marquée payée que lorsque le webhook signé du fournisseur confirme le montant.',
+    'Kunden zahlen auf der gehosteten Seite von {provider}, daher verarbeitet SampForce nie Kartendaten. Ein Angebot wird erst als bezahlt markiert, wenn der signierte Webhook des Anbieters den Betrag bestätigt.',
+    'يدفع العملاء على الصفحة المستضافة لدى {provider}، لذا لا يتعامل SampForce مع بيانات البطاقات أبدًا. لا يُعلَّم العرض كمدفوع إلا عندما يؤكد خطاف الويب الموقّع من المزوّد المبلغ.',
   ],
   'Stripe or Razorpay': ['Stripe o Razorpay', 'Stripe ou Razorpay', 'Stripe oder Razorpay', 'Stripe أو Razorpay'],
   'Keys checked {time} by {name}.': [
@@ -378,11 +378,11 @@ export const integrations = {
     'Öffnen Sie in Ihrer Meta-App WhatsApp, Konfiguration, geben Sie beides ein und abonnieren Sie das Feld {field}.',
     'في تطبيق Meta، افتح WhatsApp ثم الإعداد، وأدخل كليهما، واشترك في الحقل {field}.',
   ],
-  'From WhatsApp Manager and your Meta app: the phone number id, the WhatsApp Business Account id, a System User access token with {messaging} and {management}, and the App Secret (used to check webhook signatures). DealFlow reads the number to check them, sends nothing, then stores the token and secret encrypted.': [
-    'Desde WhatsApp Manager y tu aplicación de Meta: el ID del número de teléfono, el ID de la cuenta de WhatsApp Business, un token de acceso de usuario del sistema con {messaging} y {management}, y el secreto de la aplicación (usado para comprobar las firmas de los webhooks). DealFlow lee el número para comprobarlos, no envía nada y luego guarda el token y el secreto cifrados.',
-    'Depuis WhatsApp Manager et votre application Meta : l’ID du numéro de téléphone, l’ID du compte WhatsApp Business, un jeton d’accès d’utilisateur système avec {messaging} et {management}, et le secret de l’application (utilisé pour vérifier les signatures des webhooks). DealFlow lit le numéro pour les vérifier, n’envoie rien, puis stocke le jeton et le secret chiffrés.',
-    'Aus dem WhatsApp Manager und Ihrer Meta-App: die Telefonnummer-ID, die WhatsApp-Business-Konto-ID, ein Systembenutzer-Zugriffstoken mit {messaging} und {management} sowie das App-Geheimnis (zur Prüfung der Webhook-Signaturen). DealFlow liest die Nummer zur Prüfung, sendet nichts und speichert dann Token und Geheimnis verschlüsselt.',
-    'من WhatsApp Manager وتطبيق Meta: معرّف رقم الهاتف، ومعرّف حساب WhatsApp Business، ورمز وصول لمستخدم النظام مع {messaging} و{management}، وسرّ التطبيق (يُستخدم للتحقق من توقيعات خطافات الويب). يقرأ DealFlow الرقم للتحقق منها، ولا يرسل شيئًا، ثم يخزّن الرمز والسر مشفّرين.',
+  'From WhatsApp Manager and your Meta app: the phone number id, the WhatsApp Business Account id, a System User access token with {messaging} and {management}, and the App Secret (used to check webhook signatures). SampForce reads the number to check them, sends nothing, then stores the token and secret encrypted.': [
+    'Desde WhatsApp Manager y tu aplicación de Meta: el ID del número de teléfono, el ID de la cuenta de WhatsApp Business, un token de acceso de usuario del sistema con {messaging} y {management}, y el secreto de la aplicación (usado para comprobar las firmas de los webhooks). SampForce lee el número para comprobarlos, no envía nada y luego guarda el token y el secreto cifrados.',
+    'Depuis WhatsApp Manager et votre application Meta : l’ID du numéro de téléphone, l’ID du compte WhatsApp Business, un jeton d’accès d’utilisateur système avec {messaging} et {management}, et le secret de l’application (utilisé pour vérifier les signatures des webhooks). SampForce lit le numéro pour les vérifier, n’envoie rien, puis stocke le jeton et le secret chiffrés.',
+    'Aus dem WhatsApp Manager und Ihrer Meta-App: die Telefonnummer-ID, die WhatsApp-Business-Konto-ID, ein Systembenutzer-Zugriffstoken mit {messaging} und {management} sowie das App-Geheimnis (zur Prüfung der Webhook-Signaturen). SampForce liest die Nummer zur Prüfung, sendet nichts und speichert dann Token und Geheimnis verschlüsselt.',
+    'من WhatsApp Manager وتطبيق Meta: معرّف رقم الهاتف، ومعرّف حساب WhatsApp Business، ورمز وصول لمستخدم النظام مع {messaging} و{management}، وسرّ التطبيق (يُستخدم للتحقق من توقيعات خطافات الويب). يقرأ SampForce الرقم للتحقق منها، ولا يرسل شيئًا، ثم يخزّن الرمز والسر مشفّرين.',
   ],
   'Phone number id': ['ID del número de teléfono', 'ID du numéro de téléphone', 'Telefonnummer-ID', 'معرّف رقم الهاتف'],
   'WhatsApp Business Account id': ['ID de la cuenta de WhatsApp Business', 'ID du compte WhatsApp Business', 'WhatsApp-Business-Konto-ID', 'معرّف حساب WhatsApp Business'],
@@ -430,11 +430,11 @@ export const integrations = {
     'Öffnen Sie in der Twilio-Konsole Phone Numbers, {number}, Messaging configuration, und setzen Sie „A message comes in“ auf diese URL mit HTTP POST. Der Zustellstatus braucht keine Einrichtung: Jede SMS teilt Twilio mit, wohin er gemeldet wird.',
     'في وحدة تحكم Twilio، افتح Phone Numbers ثم {number} ثم Messaging configuration، واضبط «A message comes in» على عنوان URL هذا مع HTTP POST. لا تحتاج حالة التسليم إلى إعداد: كل رسالة تخبر Twilio أين يبلّغ عنها.',
   ],
-  'From the Twilio console: the Account SID and Auth Token, and a Twilio number on that account that can send SMS. DealFlow reads the account and the number to check them, sends nothing, then stores the token encrypted. The Auth Token also checks the signature on every request Twilio sends.': [
-    'Desde la consola de Twilio: el Account SID y el Auth Token, y un número de Twilio de esa cuenta que pueda enviar SMS. DealFlow lee la cuenta y el número para comprobarlos, no envía nada y luego guarda el token cifrado. El Auth Token también comprueba la firma de cada solicitud que envía Twilio.',
-    'Depuis la console Twilio : l’Account SID et l’Auth Token, et un numéro Twilio de ce compte capable d’envoyer des SMS. DealFlow lit le compte et le numéro pour les vérifier, n’envoie rien, puis stocke le jeton chiffré. L’Auth Token vérifie aussi la signature de chaque requête envoyée par Twilio.',
-    'Aus der Twilio-Konsole: die Account SID und das Auth Token sowie eine Twilio-Nummer dieses Kontos, die SMS senden kann. DealFlow liest Konto und Nummer zur Prüfung, sendet nichts und speichert dann das Token verschlüsselt. Das Auth Token prüft außerdem die Signatur jeder Anfrage, die Twilio sendet.',
-    'من وحدة تحكم Twilio: Account SID وAuth Token، ورقم Twilio على ذلك الحساب يمكنه إرسال الرسائل النصية. يقرأ DealFlow الحساب والرقم للتحقق منهما، ولا يرسل شيئًا، ثم يخزّن الرمز مشفّرًا. يتحقق Auth Token أيضًا من توقيع كل طلب يرسله Twilio.',
+  'From the Twilio console: the Account SID and Auth Token, and a Twilio number on that account that can send SMS. SampForce reads the account and the number to check them, sends nothing, then stores the token encrypted. The Auth Token also checks the signature on every request Twilio sends.': [
+    'Desde la consola de Twilio: el Account SID y el Auth Token, y un número de Twilio de esa cuenta que pueda enviar SMS. SampForce lee la cuenta y el número para comprobarlos, no envía nada y luego guarda el token cifrado. El Auth Token también comprueba la firma de cada solicitud que envía Twilio.',
+    'Depuis la console Twilio : l’Account SID et l’Auth Token, et un numéro Twilio de ce compte capable d’envoyer des SMS. SampForce lit le compte et le numéro pour les vérifier, n’envoie rien, puis stocke le jeton chiffré. L’Auth Token vérifie aussi la signature de chaque requête envoyée par Twilio.',
+    'Aus der Twilio-Konsole: die Account SID und das Auth Token sowie eine Twilio-Nummer dieses Kontos, die SMS senden kann. SampForce liest Konto und Nummer zur Prüfung, sendet nichts und speichert dann das Token verschlüsselt. Das Auth Token prüft außerdem die Signatur jeder Anfrage, die Twilio sendet.',
+    'من وحدة تحكم Twilio: Account SID وAuth Token، ورقم Twilio على ذلك الحساب يمكنه إرسال الرسائل النصية. يقرأ SampForce الحساب والرقم للتحقق منهما، ولا يرسل شيئًا، ثم يخزّن الرمز مشفّرًا. يتحقق Auth Token أيضًا من توقيع كل طلب يرسله Twilio.',
   ],
   'Account SID': ['Account SID', 'Account SID', 'Account SID', 'Account SID'],
   'Auth Token': ['Auth Token', 'Auth Token', 'Auth Token', 'Auth Token'],
@@ -480,11 +480,11 @@ export const integrations = {
     'Aufgaben und Aktivitäten anlegen und ändern',
     'إنشاء المهام والأنشطة وتغييرها',
   ],
-  'DealFlow reads only envelopes it sent. Signed PDFs stay in DocuSign and are fetched when someone downloads them.': [
-    'DealFlow solo lee los sobres que envió. Los PDF firmados se quedan en DocuSign y se obtienen cuando alguien los descarga.',
-    'DealFlow ne lit que les enveloppes qu’il a envoyées. Les PDF signés restent dans DocuSign et sont récupérés lorsque quelqu’un les télécharge.',
-    'DealFlow liest nur Umschläge, die es gesendet hat. Signierte PDFs bleiben in DocuSign und werden abgerufen, wenn jemand sie herunterlädt.',
-    'يقرأ DealFlow المظاريف التي أرسلها فقط. تبقى ملفات PDF الموقّعة في DocuSign وتُجلب عندما ينزّلها أحد.',
+  'SampForce reads only envelopes it sent. Signed PDFs stay in DocuSign and are fetched when someone downloads them.': [
+    'SampForce solo lee los sobres que envió. Los PDF firmados se quedan en DocuSign y se obtienen cuando alguien los descarga.',
+    'SampForce ne lit que les enveloppes qu’il a envoyées. Les PDF signés restent dans DocuSign et sont récupérés lorsque quelqu’un les télécharge.',
+    'SampForce liest nur Umschläge, die es gesendet hat. Signierte PDFs bleiben in DocuSign und werden abgerufen, wenn jemand sie herunterlädt.',
+    'يقرأ SampForce المظاريف التي أرسلها فقط. تبقى ملفات PDF الموقّعة في DocuSign وتُجلب عندما ينزّلها أحد.',
   ],
   'Disconnect DocuSign? Envelopes already sent stay in DocuSign, but their status will no longer update here.': [
     '¿Desconectar DocuSign? Los sobres ya enviados se quedan en DocuSign, pero su estado ya no se actualizará aquí.',
@@ -530,11 +530,11 @@ export const integrations = {
     'Lassen Sie Kunden angenommene Angebote per Karte bezahlen, auf Ihr eigenes Stripe- oder Razorpay-Konto.',
     'اسمح للعملاء بدفع العروض المقبولة بالبطاقة، إلى حساب Stripe أو Razorpay الخاص بك.',
   ],
-  'Meetings are created in each person’s own Zoom user, matched by their DealFlow email.': [
-    'Las reuniones se crean en el usuario de Zoom de cada persona, emparejado por su correo de DealFlow.',
-    'Les réunions sont créées dans l’utilisateur Zoom de chaque personne, associé par son e-mail DealFlow.',
-    'Meetings werden im eigenen Zoom-Benutzer jeder Person angelegt, zugeordnet über ihre DealFlow-E-Mail.',
-    'تُنشأ الاجتماعات في مستخدم Zoom الخاص بكل شخص، بالمطابقة مع بريده في DealFlow.',
+  'Meetings are created in each person’s own Zoom user, matched by their SampForce email.': [
+    'Las reuniones se crean en el usuario de Zoom de cada persona, emparejado por su correo de SampForce.',
+    'Les réunions sont créées dans l’utilisateur Zoom de chaque personne, associé par son e-mail SampForce.',
+    'Meetings werden im eigenen Zoom-Benutzer jeder Person angelegt, zugeordnet über ihre SampForce-E-Mail.',
+    'تُنشأ الاجتماعات في مستخدم Zoom الخاص بكل شخص، بالمطابقة مع بريده في SampForce.',
   ],
   'Message contacts on WhatsApp from their record and from approved workflow steps, through your own WhatsApp Business number.': [
     'Envía mensajes a contactos por WhatsApp desde su registro y desde pasos de flujo aprobados, con tu propio número de WhatsApp Business.',
@@ -549,11 +549,11 @@ export const integrations = {
     'Es ist noch keine Zahlungsbestätigung eingegangen. Fügen Sie den Webhook unten im Dashboard Ihres Anbieters hinzu; Zahlungen werden erst als bezahlt markiert, wenn der Anbieter sie bestätigt.',
     'لم يصل أي تأكيد دفع بعد. أضف خطاف الويب أدناه في لوحة تحكم المزوّد؛ لا تُعلَّم المدفوعات كمدفوعة إلا عندما يؤكدها المزوّد.',
   ],
-  'Only meetings scheduled from DealFlow with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.': [
-    'Solo se importan las transcripciones de reuniones programadas desde DealFlow con grabación elegida. Las demás reuniones de la cuenta de Zoom nunca se leen.',
-    'Seules les réunions planifiées depuis DealFlow avec enregistrement choisi voient leurs transcriptions importées. Les autres réunions du compte Zoom ne sont jamais lues.',
-    'Nur von Meetings, die aus DealFlow mit Aufzeichnung geplant wurden, werden Transkripte importiert. Andere Meetings im Zoom-Konto werden nie gelesen.',
-    'تُستورد نصوص الاجتماعات المجدولة من DealFlow مع اختيار التسجيل فقط. لا تُقرأ الاجتماعات الأخرى في حساب Zoom أبدًا.',
+  'Only meetings scheduled from SampForce with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.': [
+    'Solo se importan las transcripciones de reuniones programadas desde SampForce con grabación elegida. Las demás reuniones de la cuenta de Zoom nunca se leen.',
+    'Seules les réunions planifiées depuis SampForce avec enregistrement choisi voient leurs transcriptions importées. Les autres réunions du compte Zoom ne sont jamais lues.',
+    'Nur von Meetings, die aus SampForce mit Aufzeichnung geplant wurden, werden Transkripte importiert. Andere Meetings im Zoom-Konto werden nie gelesen.',
+    'تُستورد نصوص الاجتماعات المجدولة من SampForce مع اختيار التسجيل فقط. لا تُقرأ الاجتماعات الأخرى في حساب Zoom أبدًا.',
   ],
   'Post deal, lead and task updates to Slack channels from workflows.': [
     'Publica novedades de oportunidades, prospectos y tareas en canales de Slack desde flujos de trabajo.',
@@ -646,11 +646,11 @@ export const integrations = {
     'Der Anmeldelink ist abgelaufen oder gehörte zu einer anderen Sitzung. Versuchen Sie erneut, sich zu verbinden.',
     'انتهت صلاحية رابط تسجيل الدخول أو كان يخص جلسة أخرى. حاول الاتصال مرة أخرى.',
   ],
-  'Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at DealFlow.': [
-    'La importación de transcripciones está en Configuración pendiente: un operador debe añadir ZOOM_WEBHOOK_SECRET_TOKEN y dirigir la suscripción de eventos de Zoom a DealFlow.',
-    'L’import des transcriptions est en Configuration en attente : un opérateur doit ajouter ZOOM_WEBHOOK_SECRET_TOKEN et diriger l’abonnement aux événements de Zoom vers DealFlow.',
-    'Der Transkriptimport ist Einrichtung ausstehend: Ein Betreiber muss ZOOM_WEBHOOK_SECRET_TOKEN hinzufügen und das Ereignisabonnement von Zoom auf DealFlow richten.',
-    'استيراد النصوص في انتظار الإعداد: يجب على أحد المشغّلين إضافة ZOOM_WEBHOOK_SECRET_TOKEN وتوجيه اشتراك أحداث Zoom إلى DealFlow.',
+  'Transcript import is Pending Configuration: an operator must add ZOOM_WEBHOOK_SECRET_TOKEN and point Zoom’s event subscription at SampForce.': [
+    'La importación de transcripciones está en Configuración pendiente: un operador debe añadir ZOOM_WEBHOOK_SECRET_TOKEN y dirigir la suscripción de eventos de Zoom a SampForce.',
+    'L’import des transcriptions est en Configuration en attente : un opérateur doit ajouter ZOOM_WEBHOOK_SECRET_TOKEN et diriger l’abonnement aux événements de Zoom vers SampForce.',
+    'Der Transkriptimport ist Einrichtung ausstehend: Ein Betreiber muss ZOOM_WEBHOOK_SECRET_TOKEN hinzufügen und das Ereignisabonnement von Zoom auf SampForce richten.',
+    'استيراد النصوص في انتظار الإعداد: يجب على أحد المشغّلين إضافة ZOOM_WEBHOOK_SECRET_TOKEN وتوجيه اشتراك أحداث Zoom إلى SampForce.',
   ],
   'Twilio Voice and call recording consent rules': [
     'Twilio Voice y reglas de consentimiento para grabar llamadas',
@@ -660,16 +660,16 @@ export const integrations = {
   ],
   'Twilio voice calls': ['Llamadas de voz de Twilio', 'Appels vocaux Twilio', 'Twilio-Sprachanrufe', 'مكالمات Twilio الصوتية'],
   'Yellow': ['Amarillo', 'Jaune', 'Gelb', 'أصفر'],
-  'the DealFlow DocuSign app’s integration key and secret': [
-    'la clave de integración y el secreto de la aplicación de DocuSign de DealFlow',
-    'la clé d’intégration et le secret de l’application DocuSign de DealFlow',
-    'Integrationsschlüssel und Geheimnis der DealFlow-DocuSign-App',
-    'مفتاح التكامل والسر لتطبيق DocuSign الخاص بـ DealFlow',
+  'the SampForce DocuSign app’s integration key and secret': [
+    'la clave de integración y el secreto de la aplicación de DocuSign de SampForce',
+    'la clé d’intégration et le secret de l’application DocuSign de SampForce',
+    'Integrationsschlüssel und Geheimnis der SampForce-DocuSign-App',
+    'مفتاح التكامل والسر لتطبيق DocuSign الخاص بـ SampForce',
   ],
-  'the DealFlow Zoom app’s credentials': [
-    'las credenciales de la aplicación de Zoom de DealFlow',
-    'les identifiants de l’application Zoom de DealFlow',
-    'die Zugangsdaten der DealFlow-Zoom-App',
-    'بيانات اعتماد تطبيق Zoom الخاص بـ DealFlow',
+  'the SampForce Zoom app’s credentials': [
+    'las credenciales de la aplicación de Zoom de SampForce',
+    'les identifiants de l’application Zoom de SampForce',
+    'die Zugangsdaten der SampForce-Zoom-App',
+    'بيانات اعتماد تطبيق Zoom الخاص بـ SampForce',
   ],
 } as const satisfies PhraseTable;

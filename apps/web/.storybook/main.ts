@@ -3,7 +3,7 @@ import type { StorybookConfig } from '@storybook/react-vite';
 import react from '@vitejs/plugin-react';
 
 /**
- * The DealFlow component catalogue: the design system primitives (packages/ui), the form library and other shared
+ * The SampForce component catalogue: the design system primitives (packages/ui), the form library and other shared
  * components, rendered with the real theme engine, in every theme, light or dark, and left-to-right or right-to-left.
  */
 const config: StorybookConfig = {

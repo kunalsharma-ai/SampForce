@@ -368,7 +368,7 @@ function RulesTab({ seqId, rules, onChange, readOnly }: { seqId: string; rules: 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        {t('Choose what DealFlow does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.')}
+        {t('Choose what SampForce does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.')}
       </p>
       {EMAIL_EVENTS.map((on) => (
         <RuleCard key={on} on={on} rule={ruleFor(on)} others={others} readOnly={readOnly} onChange={(a) => update(on, a)} />
@@ -485,7 +485,7 @@ function SettingsTab({ draft, setDraft, readOnly }: { draft: Draft; setDraft: (d
             ))}
           </datalist>
         </Field>
-        <Field id="send-limit" label={t('Emails per sender per day')} hint={t("Your mailbox's overall DealFlow limit also applies. Sends are spread out by a few minutes.")}>
+        <Field id="send-limit" label={t('Emails per sender per day')} hint={t("Your mailbox's overall SampForce limit also applies. Sends are spread out by a few minutes.")}>
           <Input id="send-limit" type="number" min={1} max={500} disabled={readOnly} value={s.dailyLimit} onChange={(e) => set({ dailyLimit: Math.max(1, Math.min(500, Number(e.target.value) || 1)) })} />
         </Field>
         <fieldset className="space-y-2 sm:col-span-2">

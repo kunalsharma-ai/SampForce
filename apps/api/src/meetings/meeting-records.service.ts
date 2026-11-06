@@ -129,7 +129,7 @@ export class MeetingRecordsService {
         data.source = input.source ?? r.source;
       } else if (input.source !== undefined) data.source = input.source;
       if (input.analysis) {
-        // Task links are DealFlow's to set: keep only ids of tasks this record created.
+        // Task links are SampForce's to set: keep only ids of tasks this record created.
         const known = new Set(r.taskIds);
         const analysis = { ...input.analysis, actionItems: input.analysis.actionItems.map((a) => ({ ...a, taskId: a.taskId && known.has(a.taskId) ? a.taskId : null })) };
         data.analysis = analysis as unknown as Prisma.InputJsonValue;

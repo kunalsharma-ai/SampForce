@@ -8,7 +8,7 @@
 
 Feature 11 asks for a client self-service portal: customers sign in, follow their projects, see proposals,
 contracts and documents, approve proposals, raise support and change requests, message their account team and
-receive updates. DealFlow already had companies with owners, deals, sent proposals with a signed public link
+receive updates. SampForce already had companies with owners, deals, sent proposals with a signed public link
 (ADR 0021), contracts, tasks and notifications. It had no customer accounts.
 
 ## Decisions
@@ -41,12 +41,12 @@ receive updates. DealFlow already had companies with owners, deals, sent proposa
 7. **Documents are stored in Postgres** (up to 10 MB; PDF, images, text, CSV, Word, Excel, PowerPoint) with a SHA-256,
    downloaded through 10-minute signed links that name the workspace, document and company. Downloads are sent as
    attachments with a sandboxing Content-Security-Policy.
-8. **Invoices are not shown.** DealFlow's invoices are its own SaaS billing, not invoices to the workspace's
+8. **Invoices are not shown.** SampForce's invoices are its own SaaS billing, not invoices to the workspace's
    customers. The portal says invoices are not available yet instead of showing an empty list.
 
 ## Consequences
 
-- Customers see a branded portal (the workspace logo from proposal settings and its brand colour) with no DealFlow
+- Customers see a branded portal (the workspace logo from proposal settings and its brand colour) with no SampForce
   CRM chrome.
 - Documents in the database suit the 10 MB cap; larger files or high volume would need object storage later.
 - There is no single sign-on for portal users and no customer invoicing; both are possible later additions.

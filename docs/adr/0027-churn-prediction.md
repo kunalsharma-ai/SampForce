@@ -8,7 +8,7 @@
 
 Feature 13 asks for customer churn prediction: risk scores, engagement and inactivity, deal and account history,
 renewals and contract status, unresolved issues where support data exists, retention recommendations, follow-up
-schedules, trends and risk filters. DealFlow already had Customer Success: customers are companies with an active
+schedules, trends and risk filters. SampForce already had Customer Success: customers are companies with an active
 contract, a stored rule-based health score (`customerHealth`) with explained signals, escalations, and a one-time
 "at risk" alert to the owner. A second, separate churn model would show two different answers for the same customer.
 
@@ -18,7 +18,7 @@ contract, a stored rule-based health score (`customerHealth`) with explained sig
    medium, healthy = low. `customerHealth` (now `health-v2`) gains three explained signals:
    - falling engagement (activity plus email both ways, last 30 days against the 30 before, the same rule as the
      record intelligence panel), 15 points;
-   - open client portal requests, the support data DealFlow has (5 points each, up to 15);
+   - open client portal requests, the support data SampForce has (5 points each, up to 15);
    - a deal with the company lost in the last 90 days, 10 points.
    Existing signals (inactivity, escalations, renewal within 60 days with none started, overdue tasks) are unchanged.
    There is no trained model and no probability; the page says so.

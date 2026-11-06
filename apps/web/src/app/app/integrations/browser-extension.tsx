@@ -12,7 +12,7 @@ import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
 
-/** Connection codes for the DealFlow browser extension, which saves people from web pages as leads. */
+/** Connection codes for the SampForce browser extension, which saves people from web pages as leads. */
 export function BrowserExtension() {
   const t = useT();
   const qc = useQueryClient();
@@ -42,16 +42,16 @@ export function BrowserExtension() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Puzzle className="size-4" aria-hidden /> {t('DealFlow lead capture for Chrome and Edge')}
+            <Puzzle className="size-4" aria-hidden /> {t('SampForce lead capture for Chrome and Edge')}
           </CardTitle>
           <CardDescription>
-            {t('Finds email addresses on the page you are reading and saves the people as leads, checking DealFlow first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.')}
+            {t('Finds email addresses on the page you are reading and saves the people as leads, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <ol className="list-decimal space-y-1 ps-5">
             <li>
-              {rich(t('Install the extension. It is not in the Chrome Web Store yet: your DealFlow provider can share the package, which you load from {chrome} (or {edge}) with Developer mode on and {button}.'), {
+              {rich(t('Install the extension. It is not in the Chrome Web Store yet: your SampForce provider can share the package, which you load from {chrome} (or {edge}) with Developer mode on and {button}.'), {
                 chrome: <code className="text-xs">chrome://extensions</code>,
                 edge: <code className="text-xs">edge://extensions</code>,
                 button: <em>{t('Load unpacked')}</em>,
@@ -59,7 +59,7 @@ export function BrowserExtension() {
             </li>
             <li>{t('Create a connection code below. It works only for you, in this workspace, and only for the extension.')}</li>
             <li>
-              {rich(t('Open the extension, enter {address} and paste the code.'), { address: <code className="text-xs">{origin || t('your DealFlow address')}</code> })}
+              {rich(t('Open the extension, enter {address} and paste the code.'), { address: <code className="text-xs">{origin || t('your SampForce address')}</code> })}
             </li>
           </ol>
           {!canSave && <p className="text-muted-foreground">{t('Your role can look people up with the extension but not save leads.')}</p>}

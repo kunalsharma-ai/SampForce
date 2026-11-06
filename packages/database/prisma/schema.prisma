@@ -1,4 +1,4 @@
-// DealFlow database schema.
+// SampForce database schema.
 // Conventions:
 //   * Every tenant-owned table has a non-null tenant_id and is protected by PostgreSQL
 //     row-level security (see migrations/*/migration.sql and docs/SECURITY_MODEL.md).
@@ -392,7 +392,7 @@ enum BillingProvider {
   NONE
   STRIPE
   RAZORPAY
-  /// Paid by bank transfer or another offline method against a DealFlow invoice; an operator records the payment.
+  /// Paid by bank transfer or another offline method against a SampForce invoice; an operator records the payment.
   OFFLINE
 }
 
@@ -414,7 +414,7 @@ model Subscription {
   /// A workspace gets one free trial of a paid plan.
   trialUsedAt            DateTime?          @map("trial_used_at") @db.Timestamptz(3)
   provider               BillingProvider    @default(NONE)
-  /// Provider references only. Card and bank details stay with the provider and never reach DealFlow.
+  /// Provider references only. Card and bank details stay with the provider and never reach SampForce.
   providerCustomerId     String?            @map("provider_customer_id")
   providerSubscriptionId String?            @unique @map("provider_subscription_id")
   cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
@@ -1320,7 +1320,7 @@ model AiRun {
   @@map("ai_runs")
 }
 
-/// Metering: one row per model call, converted to DealFlow AI credits.
+/// Metering: one row per model call, converted to SampForce AI credits.
 model AiUsage {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId      String   @map("tenant_id") @db.Uuid
@@ -2090,7 +2090,7 @@ model SsoConnection {
   @@map("sso_connections")
 }
 
-/// Links an identity-provider subject to a DealFlow user, per workspace.
+/// Links an identity-provider subject to a SampForce user, per workspace.
 model SsoIdentity {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId     String   @map("tenant_id") @db.Uuid
@@ -2259,7 +2259,7 @@ model SequenceEnrollment {
   @@map("sequence_enrollments")
 }
 
-/// An email a sequence sent, with what DealFlow saw happen to it.
+/// An email a sequence sent, with what SampForce saw happen to it.
 model SequenceMessage {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId       String    @map("tenant_id") @db.Uuid
@@ -2289,7 +2289,7 @@ model SequenceMessage {
   @@map("sequence_messages")
 }
 
-/// Opens, clicks, replies, bounces and unsubscribes, as DealFlow observed them. No IP addresses are stored.
+/// Opens, clicks, replies, bounces and unsubscribes, as SampForce observed them. No IP addresses are stored.
 model EmailEvent {
   id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId  String         @map("tenant_id") @db.Uuid
@@ -3042,7 +3042,7 @@ model AppConnection {
   @@map("app_connections")
 }
 
-/// What DealFlow sent to or received from a connected app: one row per message, meeting, envelope or payment event.
+/// What SampForce sent to or received from a connected app: one row per message, meeting, envelope or payment event.
 model AppEvent {
   id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId     String      @map("tenant_id") @db.Uuid
@@ -3067,7 +3067,7 @@ model AppEvent {
   @@map("app_events")
 }
 
-/// A Zoom meeting scheduled from DealFlow. Only these meetings' transcripts are ever imported.
+/// A Zoom meeting scheduled from SampForce. Only these meetings' transcripts are ever imported.
 model ZoomMeeting {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId           String   @map("tenant_id") @db.Uuid

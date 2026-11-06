@@ -40,7 +40,7 @@ describe('totp', () => {
 
   it('builds an otpauth URI and readable recovery codes', () => {
     expect(otpauthUri('ABC', 'ada@example.com')).toBe(
-      'otpauth://totp/DealFlow%3Aada%40example.com?secret=ABC&issuer=DealFlow&algorithm=SHA1&digits=6&period=30',
+      'otpauth://totp/SampForce%3Aada%40example.com?secret=ABC&issuer=SampForce&algorithm=SHA1&digits=6&period=30',
     );
     const codes = generateRecoveryCodes();
     expect(codes).toHaveLength(10);

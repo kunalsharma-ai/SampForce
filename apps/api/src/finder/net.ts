@@ -5,7 +5,7 @@ import { publicFetch } from '../common/net-guard';
 
 const TIMEOUT_MS = 6000;
 const MAX_BYTES = 1_000_000;
-export const FINDER_USER_AGENT = 'DealFlowBot/1.0 (email finder; reads public contact pages; honours robots.txt)';
+export const FINDER_USER_AGENT = 'SampForceBot/1.0 (email finder; reads public contact pages; honours robots.txt)';
 
 export interface FetchedPage {
   url: string;
@@ -63,7 +63,7 @@ export class FinderNet {
     return null;
   }
 
-  /** Paths robots.txt asks crawlers (all, or DealFlowBot) not to read. */
+  /** Paths robots.txt asks crawlers (all, or SampForceBot) not to read. */
   async disallowed(origin: string): Promise<string[]> {
     const page = await this.page(`${origin}/robots.txt`);
     if (!page) return [];
@@ -73,7 +73,7 @@ export class FinderNet {
       const line = raw.replace(/#.*/, '').trim();
       const [k, ...rest] = line.split(':');
       const v = rest.join(':').trim();
-      if (/^user-agent$/i.test(k ?? '')) applies = v === '*' || /dealflowbot/i.test(v);
+      if (/^user-agent$/i.test(k ?? '')) applies = v === '*' || /sampforcebot/i.test(v);
       else if (applies && /^disallow$/i.test(k ?? '') && v) out.push(v);
     }
     return out;

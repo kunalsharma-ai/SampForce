@@ -16,7 +16,7 @@ flag.
 
 1. **The workspace's own account and number.** Each workspace saves its Account SID, Auth Token and an SMS-capable
    number on that account. They are checked with reads (the account, then the number and its SMS capability),
-   sealed, and never returned. No operator secret; Twilio subaccounts or a shared DealFlow number are a later
+   sealed, and never returned. No operator secret; Twilio subaccounts or a shared SampForce number are a later
    decision.
 2. **Consent is a record.** `sms_consents` stores who recorded it, when, for which number and how the person agreed.
    Every text needs an active consent. This is stricter than WhatsApp, where an open 24-hour window allows a reply.
@@ -26,7 +26,7 @@ flag.
    `send_sms` workflow step is external, so every run waits for approval and checks consent when it runs. It is not
    available to AI agents.
 5. **Signed requests only.** Inbound texts and status callbacks are accepted only with a valid
-   `X-Twilio-Signature` computed over the URL DealFlow gave Twilio and the raw form fields (parsed from the raw body,
+   `X-Twilio-Signature` computed over the URL SampForce gave Twilio and the raw form fields (parsed from the raw body,
    not the framework's parser). Status only moves forward.
 6. **Matching inbound texts.** Numbers are compared in E.164, only for contacts whose number has a country code, and
    linked only when exactly one contact matches; otherwise the owner of the connection is notified.

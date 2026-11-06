@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Logical backup of the DealFlow database: pg_dump custom format, a SHA-256 checksum and a small manifest.
+# Logical backup of the SampForce database: pg_dump custom format, a SHA-256 checksum and a small manifest.
 #
 #   BACKUP_DATABASE_URL=postgresql://dealflow_backup:...@host:5432/dealflow scripts/backup.sh [out-dir]
 #

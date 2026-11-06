@@ -26,12 +26,12 @@ export const apiEnvSchema = z.object({
   /** The key being rotated out; values sealed with it still open until they are re-sealed. */
   ENCRYPTION_KEY_PREVIOUS: z.string().min(32).optional(),
   /**
-   * The email service DealFlow sends its own emails through (password resets), as an SMTP URL such as
+   * The email service SampForce sends its own emails through (password resets), as an SMTP URL such as
    * smtps://user:password@smtp.example.com:465 or smtp://user:password@smtp.example.com:587 (STARTTLS).
-   * Unset = DealFlow sends no system email, and password reset says to ask an administrator.
+   * Unset = SampForce sends no system email, and password reset says to ask an administrator.
    */
   SMTP_URL: z.string().regex(/^smtps?:\/\//, 'SMTP_URL must start with smtp:// or smtps://').optional().or(z.literal('').transform(() => undefined)),
-  /** Sender of system emails, for example "DealFlow <no-reply@example.com>". Required with SMTP_URL. */
+  /** Sender of system emails, for example "SampForce <no-reply@example.com>". Required with SMTP_URL. */
   MAIL_FROM: z.string().min(3).max(200).optional().or(z.literal('').transform(() => undefined)),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(240).default(30),
   /** Public URL of the web app, used for OAuth redirect URIs and links in notifications. */
@@ -62,7 +62,7 @@ export const apiEnvSchema = z.object({
    * this server instead of the internet, as GET /site/<host>/<path> and GET /mx/<domain>.
    */
   FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
-  /** Optional data provider for the email finder (Hunter.io). Unset = DealFlow's own finder only. */
+  /** Optional data provider for the email finder (Hunter.io). Unset = SampForce's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
   /** Prospect discovery (Apollo.io People API Search and People Enrichment). Unset = Mock Mode with sample people. */
@@ -96,7 +96,7 @@ export const apiEnvSchema = z.object({
   ZOOM_WEBHOOK_SECRET_TOKEN: z.string().optional().transform((v) => v || undefined),
   ZOOM_AUTH_BASE_URL: z.string().url().default('https://zoom.us'),
   ZOOM_API_BASE_URL: z.string().url().default('https://api.zoom.us/v2'),
-  /** Invite link to the operator's DealFlow app in Zapier (integrations/zapier). Unset: Zapier is Pending Configuration. */
+  /** Invite link to the operator's SampForce app in Zapier (integrations/zapier). Unset: Zapier is Pending Configuration. */
   ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
   WHATSAPP_API_BASE_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
@@ -128,11 +128,11 @@ export const apiEnvSchema = z.object({
 
   // ───── Billing (Phase 6). With no provider keys, checkout says it is not configured. ─────
   /**
-   * Stripe and Razorpay checkout for new subscriptions. Off: workspaces pay offline against a DealFlow invoice
+   * Stripe and Razorpay checkout for new subscriptions. Off: workspaces pay offline against a SampForce invoice
    * that an operator marks paid. Provider subscriptions that already exist keep syncing while keys are set.
    */
   ONLINE_PAYMENTS_ENABLED: bool.default('false'),
-  /** Shown on every open offline invoice: how to pay (bank details, reference to quote). Unset: the DealFlow team sends them. */
+  /** Shown on every open offline invoice: how to pay (bank details, reference to quote). Unset: the SampForce team sends them. */
   OFFLINE_PAYMENT_INSTRUCTIONS: z.string().max(2000).optional().transform((v) => v?.replace(/\\n/g, '\n').trim() || undefined),
   STRIPE_SECRET_KEY: z.string().optional().transform((v) => v || undefined),
   STRIPE_WEBHOOK_SECRET: z.string().optional().transform((v) => v || undefined),

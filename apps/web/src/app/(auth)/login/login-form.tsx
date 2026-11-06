@@ -31,7 +31,7 @@ export function LoginForm() {
       if (res.mfaRequired && res.challenge) return setChallenge(res.challenge);
       router.replace(safeNext(params.get('next')));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
     }
   });
 
@@ -84,7 +84,7 @@ export function LoginForm() {
         {t('Sign in with SSO')}
       </Link>
       <p className="text-center text-sm text-muted-foreground">
-        {t('New to DealFlow?')}{' '}
+        {t('New to SampForce?')}{' '}
         <Link href="/signup" className="font-medium text-primary hover:underline">
           {t('Start free')}
         </Link>
@@ -110,7 +110,7 @@ function SecondFactor({ challenge, onDone, onRestart }: { challenge: string; onD
       onDone();
     } catch (err) {
       if (err instanceof ApiError && err.code === 'MFA_CHALLENGE_EXPIRED') return onRestart();
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
       setCode('');
     } finally {
       setBusy(false);

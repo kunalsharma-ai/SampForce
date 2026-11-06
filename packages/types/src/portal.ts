@@ -149,7 +149,7 @@ export interface PortalDashboard {
   milestones: { id: string; title: string; dueAt: string | null; done: boolean; deal: string | null }[];
   updates: { id: string; kind: string; title: string; body: string | null; createdAt: string; unread: boolean }[];
   openRequests: number;
-  /** Invoices are not connected to DealFlow yet, so the portal says so instead of showing nothing. */
+  /** Invoices are not connected to SampForce yet, so the portal says so instead of showing nothing. */
   invoices: 'not_connected';
 }
 

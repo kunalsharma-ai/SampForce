@@ -72,7 +72,7 @@ export function MailboxConnections() {
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        {t('Each person connects their own account. DealFlow reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.')}
+        {t('Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.')}
       </p>
     </section>
   );
@@ -158,7 +158,7 @@ export function WebhooksManager() {
         {t('Outbound webhooks')}
       </h2>
       <p className="text-sm text-muted-foreground">
-        {t('DealFlow posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.')}
+        {t('SampForce posts signed JSON to your endpoint when the selected events happen. Failed deliveries retry with backoff (about 6 attempts over 9 hours); an endpoint that keeps failing is switched off and admins are notified.')}
       </p>
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -207,7 +207,7 @@ export function WebhooksManager() {
                   <Copy aria-hidden />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">{rich(t('Verify the {header} header: {format} in hex.'), { header: 'X-DealFlow-Signature', format: <code>{'t=<unix time>,v1=HMAC-SHA256(secret, "t.body")'}</code> })}</p>
+              <p className="text-xs text-muted-foreground">{rich(t('Verify the {header} header: {format} in hex.'), { header: 'X-SampForce-Signature', format: <code>{'t=<unix time>,v1=HMAC-SHA256(secret, "t.body")'}</code> })}</p>
             </div>
           )}
         </CardContent>

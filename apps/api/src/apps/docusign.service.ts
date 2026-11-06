@@ -117,7 +117,7 @@ export class DocusignService {
       throw e instanceof DocusignError ? new AppError(e.message) : e;
     });
     await this.prisma.run(auth, (tx) => this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contract.signature_voided', entityType: 'contract', entityId: env.contractId, metadata: { envelopeId: env.envelopeId, reason }, meta }));
-    await this.applyStatus(auth.tenantId, conn, env, { status: 'voided', voidedReason: reason }, 'voided in DealFlow');
+    await this.applyStatus(auth.tenantId, conn, env, { status: 'voided', voidedReason: reason }, 'voided in SampForce');
     return (await this.rows(auth, [await this.find(auth, id)]))[0]!;
   }
 

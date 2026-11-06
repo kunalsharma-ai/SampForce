@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Logo />
         <div className="max-w-md space-y-4">
           <h2 className="text-4xl font-semibold leading-tight tracking-tight">
-            <Tr text="Close smarter. Grow faster." /> <span className="text-gradient"><Tr text="Flow beyond limits." /></span>
+            <Tr text="Close smarter. Grow faster." /> <span className="text-gradient"><Tr text="Sell. Close. Grow." /></span>
           </h2>
           <p className="text-muted-foreground">
             <Tr text="One workspace for leads, deals, automation and revenue intelligence, with AI that shows its reasoning and asks before it acts." />

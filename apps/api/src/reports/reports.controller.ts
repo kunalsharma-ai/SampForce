@@ -51,7 +51,7 @@ export class ReportsController {
     const { csv, name } = await this.reports.exportCsv(auth, id, meta);
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'report';
     res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', `attachment; filename="dealflow-${slug}-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.setHeader('content-disposition', `attachment; filename="sampforce-${slug}-${new Date().toISOString().slice(0, 10)}.csv"`);
     res.setHeader('cache-control', 'no-store');
     return csv;
   }

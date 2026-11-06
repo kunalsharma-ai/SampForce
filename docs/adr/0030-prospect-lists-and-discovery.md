@@ -12,7 +12,7 @@ assignment, export, adding to the CRM and to sequences, and list performance. Th
 depend on unauthorized scraping or bypassing website restrictions. Use authorized provider APIs and permitted data
 sources. Do not invent or fabricate contact information", "Do not hardcode API keys in … browser extension source
 code", and "Until the actual API keys are configured and successful live API calls are tested, mark the integration as
-Pending Configuration or Mock Mode". DealFlow already had a lead capture extension (ADR 0015), an email finder that
+Pending Configuration or Mock Mode". SampForce already had a lead capture extension (ADR 0015), an email finder that
 reads a company's public website (ADR 0016), the CRM's duplicate rules and the sequence engine.
 
 ## Decisions

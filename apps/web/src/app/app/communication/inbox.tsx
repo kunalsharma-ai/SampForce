@@ -67,7 +67,7 @@ const STATUS_TONE: Record<InboxStatus, 'primary' | 'warning' | 'neutral'> = {
 };
 
 /**
- * Enhancement feature 8: one inbox for the team. Conversations come from connected mailboxes and DealFlow sends;
+ * Enhancement feature 8: one inbox for the team. Conversations come from connected mailboxes and SampForce sends;
  * each can be assigned, categorised, linked to a deal and discussed in internal notes.
  */
 export function Inbox() {
@@ -221,7 +221,7 @@ export function Inbox() {
                 filters.linked ||
                 (filters.status && filters.status !== 'ACTIVE')
                   ? t('No conversations match these filters.')
-                  : t('No email yet. Conversations appear here after a connected mailbox syncs, or when you send from DealFlow.')}
+                  : t('No email yet. Conversations appear here after a connected mailbox syncs, or when you send from SampForce.')}
               </CardContent>
             </Card>
           ) : (
@@ -646,7 +646,7 @@ function MessageItem({ m }: { m: InboxMessage }) {
   );
 }
 
-/** What DealFlow observed for a sent message, worded so estimates are not read as facts. */
+/** What SampForce observed for a sent message, worded so estimates are not read as facts. */
 function Tracking({ m, t }: { m: InboxMessage; t: Translator }) {
   const k = m.tracking;
   if (!k)
@@ -696,7 +696,7 @@ function SyncLogDialog({
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Mailbox sync log')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
-          {t('Each sync of a connected mailbox, newest first. DealFlow stores only messages that involve a known contact or lead.')}
+          {t('Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact or lead.')}
         </DialogDescription>
         {canSync && mine.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">

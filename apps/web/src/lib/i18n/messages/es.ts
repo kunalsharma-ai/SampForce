@@ -25,7 +25,7 @@ export const es: Messages = {
   'nav.collapseSidebar': 'Contraer la barra lateral',
   'nav.expandSidebar': 'Expandir la barra lateral',
   'nav.toggleSidebar': 'Mostrar u ocultar la barra lateral ( [ )',
-  'nav.home': 'Centro de mando de DealFlow',
+  'nav.home': 'Centro de mando de SampForce',
   'nav.group.Workspace': 'Espacio de trabajo',
   'nav.group.Engage': 'Interacción',
   'nav.group.Intelligence': 'Inteligencia',
@@ -67,7 +67,7 @@ export const es: Messages = {
 
   'top.openNav': 'Abrir la navegación',
   'top.search': 'Buscar',
-  'top.searchProduct': 'en DealFlow',
+  'top.searchProduct': 'en SampForce',
   'top.copilot': 'Copiloto',
   'top.create': 'Crear',
   'top.quickCreate': 'Creación rápida',

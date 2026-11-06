@@ -59,7 +59,7 @@ function fakeZ(bundle: Bundle): FakeZ {
   return z;
 }
 
-describe('API keys and the DealFlow Zapier app', () => {
+describe('API keys and the SampForce Zapier app', () => {
   let app: INestApplication;
   let base: string;
   let owner: TestUser;
@@ -80,7 +80,7 @@ describe('API keys and the DealFlow Zapier app', () => {
     worker = app.get(WorkerService);
     owner = await registerUser(app, 'Zap Co');
     await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
-    // Stands in for hooks.zapier.com: records what DealFlow posts.
+    // Stands in for hooks.zapier.com: records what SampForce posts.
     receiver = createServer((req, res) => {
       let raw = '';
       req.on('data', (c: Buffer) => (raw += c.toString()));

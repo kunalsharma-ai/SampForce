@@ -4,11 +4,11 @@ import type { PhraseTable } from './types';
 export const communication = {
   // Page
   'Email & Communication': ['Correo y comunicación', 'E-mail et communication', 'E-Mail & Kommunikation', 'البريد والتواصل'],
-  'One inbox for your team: conversations with contacts and leads from every connected mailbox. DealFlow stores only messages that involve a known contact or lead, never the rest of your mailbox.': [
-    'Una bandeja de entrada para tu equipo: conversaciones con contactos y leads desde cada buzón conectado. DealFlow guarda solo los mensajes en los que participa un contacto o lead conocido, nunca el resto de tu buzón.',
-    'Une seule boîte de réception pour votre équipe : les conversations avec les contacts et les prospects de chaque boîte connectée. DealFlow ne conserve que les messages impliquant un contact ou un prospect connu, jamais le reste de votre boîte.',
-    'Ein Posteingang für Ihr Team: Unterhaltungen mit Kontakten und Leads aus jedem verbundenen Postfach. DealFlow speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist, nie den Rest Ihres Postfachs.',
-    'صندوق وارد واحد لفريقك: المحادثات مع جهات الاتصال والعملاء المحتملين من كل صندوق بريد متصل. يحفظ DealFlow فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا، ولا يحفظ بقية صندوق بريدك أبدًا.',
+  'One inbox for your team: conversations with contacts and leads from every connected mailbox. SampForce stores only messages that involve a known contact or lead, never the rest of your mailbox.': [
+    'Una bandeja de entrada para tu equipo: conversaciones con contactos y leads desde cada buzón conectado. SampForce guarda solo los mensajes en los que participa un contacto o lead conocido, nunca el resto de tu buzón.',
+    'Une seule boîte de réception pour votre équipe : les conversations avec les contacts et les prospects de chaque boîte connectée. SampForce ne conserve que les messages impliquant un contact ou un prospect connu, jamais le reste de votre boîte.',
+    'Ein Posteingang für Ihr Team: Unterhaltungen mit Kontakten und Leads aus jedem verbundenen Postfach. SampForce speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist, nie den Rest Ihres Postfachs.',
+    'صندوق وارد واحد لفريقك: المحادثات مع جهات الاتصال والعملاء المحتملين من كل صندوق بريد متصل. يحفظ SampForce فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا، ولا يحفظ بقية صندوق بريدك أبدًا.',
   ],
 
   // Mailbox status and toolbar
@@ -39,11 +39,11 @@ export const communication = {
 
   // Conversation list
   'No conversations match these filters.': ['Ninguna conversación coincide con estos filtros.', 'Aucune conversation ne correspond à ces filtres.', 'Keine Unterhaltung entspricht diesen Filtern.', 'لا توجد محادثات تطابق عوامل التصفية هذه.'],
-  'No email yet. Conversations appear here after a connected mailbox syncs, or when you send from DealFlow.': [
-    'Aún no hay correo. Las conversaciones aparecen aquí cuando se sincroniza un buzón conectado o cuando envías desde DealFlow.',
-    'Pas encore d’e-mails. Les conversations apparaissent ici après la synchronisation d’une boîte connectée, ou quand vous envoyez depuis DealFlow.',
-    'Noch keine E-Mails. Unterhaltungen erscheinen hier, nachdem ein verbundenes Postfach synchronisiert wurde oder wenn Sie aus DealFlow senden.',
-    'لا يوجد بريد بعد. تظهر المحادثات هنا بعد مزامنة صندوق بريد متصل، أو عندما ترسل من DealFlow.',
+  'No email yet. Conversations appear here after a connected mailbox syncs, or when you send from SampForce.': [
+    'Aún no hay correo. Las conversaciones aparecen aquí cuando se sincroniza un buzón conectado o cuando envías desde SampForce.',
+    'Pas encore d’e-mails. Les conversations apparaissent ici après la synchronisation d’une boîte connectée, ou quand vous envoyez depuis SampForce.',
+    'Noch keine E-Mails. Unterhaltungen erscheinen hier, nachdem ein verbundenes Postfach synchronisiert wurde oder wenn Sie aus SampForce senden.',
+    'لا يوجد بريد بعد. تظهر المحادثات هنا بعد مزامنة صندوق بريد متصل، أو عندما ترسل من SampForce.',
   ],
   'Showing the 50 most recent. Narrow the filters or search to find older conversations.': [
     'Se muestran las 50 más recientes. Ajusta los filtros o busca para encontrar conversaciones más antiguas.',
@@ -106,11 +106,11 @@ export const communication = {
 
   // Sync log
   'Mailbox sync log': ['Registro de sincronización del buzón', 'Journal de synchronisation de la boîte', 'Synchronisierungsprotokoll des Postfachs', 'سجل مزامنة صندوق البريد'],
-  'Each sync of a connected mailbox, newest first. DealFlow stores only messages that involve a known contact or lead.': [
-    'Cada sincronización de un buzón conectado, de la más reciente a la más antigua. DealFlow guarda solo los mensajes en los que participa un contacto o lead conocido.',
-    'Chaque synchronisation d’une boîte connectée, de la plus récente à la plus ancienne. DealFlow ne conserve que les messages impliquant un contact ou un prospect connu.',
-    'Jede Synchronisierung eines verbundenen Postfachs, neueste zuerst. DealFlow speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist.',
-    'كل مزامنة لصندوق بريد متصل، الأحدث أولًا. يحفظ DealFlow فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا.',
+  'Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact or lead.': [
+    'Cada sincronización de un buzón conectado, de la más reciente a la más antigua. SampForce guarda solo los mensajes en los que participa un contacto o lead conocido.',
+    'Chaque synchronisation d’une boîte connectée, de la plus récente à la plus ancienne. SampForce ne conserve que les messages impliquant un contact ou un prospect connu.',
+    'Jede Synchronisierung eines verbundenen Postfachs, neueste zuerst. SampForce speichert nur Nachrichten, an denen ein bekannter Kontakt oder Lead beteiligt ist.',
+    'كل مزامنة لصندوق بريد متصل، الأحدث أولًا. يحفظ SampForce فقط الرسائل التي تخص جهة اتصال أو عميلًا محتملًا معروفًا.',
   ],
   'Sync {mailbox} now': ['Sincronizar {mailbox} ahora', 'Synchroniser {mailbox} maintenant', '{mailbox} jetzt synchronisieren', 'مزامنة {mailbox} الآن'],
   'No syncs recorded yet.': ['Aún no hay sincronizaciones registradas.', 'Aucune synchronisation enregistrée pour l’instant.', 'Noch keine Synchronisierungen erfasst.', 'لم تُسجَّل أي مزامنة بعد.'],

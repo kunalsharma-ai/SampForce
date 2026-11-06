@@ -111,7 +111,7 @@ test('Arabic shows billing and approvals right to left, starts a trial and passe
   await axe(page);
   const pro = main.getByRole('listitem').filter({ hasText: 'Professional' });
   await pro.getByRole('button', { name: /جرّبه مجانًا لمدة/ }).click();
-  await expect(main.getByText(/أنت تجرّب DealFlow Professional حتى/)).toBeVisible();
+  await expect(main.getByText(/أنت تجرّب SampForce Professional حتى/)).toBeVisible();
   await expect(main.getByRole('button', { name: /جرّبه مجانًا/ })).toHaveCount(0);
   await axe(page);
 

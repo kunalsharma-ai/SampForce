@@ -6,7 +6,7 @@ import { assertPublicUrl, guardedLookup, publicFetch, UnsafeTargetError } from '
 /**
  * A minimal OpenID Connect relying party: discovery, the authorization-code flow with PKCE (S256), and
  * ID token validation (signature from the provider's JWKS, issuer, audience, expiry, nonce). Only what
- * DealFlow needs to learn who signed in; no access tokens are kept.
+ * SampForce needs to learn who signed in; no access tokens are kept.
  */
 
 export interface ProviderMetadata {

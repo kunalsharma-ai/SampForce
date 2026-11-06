@@ -110,7 +110,7 @@ test('the browser extension privacy page is public and linked from the site foot
   await page.goto('/pricing');
   await page.getByRole('link', { name: 'Browser extension privacy' }).click();
   await expect(page).toHaveURL(/\/extension-privacy$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'DealFlow lead capture: privacy' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'SampForce lead capture: privacy' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Where it sends it' })).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations).toEqual([]);

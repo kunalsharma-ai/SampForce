@@ -10,7 +10,7 @@ spec:
   groups:
     - name: dealflow
       rules:
-        - alert: DealFlowApiErrorRate
+        - alert: SampForceApiErrorRate
           expr: |
             sum(rate(dealflow_http_request_duration_seconds_count{status="5xx"}[5m]))
               / clamp_min(sum(rate(dealflow_http_request_duration_seconds_count[5m])), 1e-9) > 0.02
@@ -19,7 +19,7 @@ spec:
           annotations:
             summary: More than 2% of API requests are failing with 5xx.
             runbook: docs/runbooks/alerts.md#dealflowapierrorrate
-        - alert: DealFlowApiLatencyHigh
+        - alert: SampForceApiLatencyHigh
           expr: |
             histogram_quantile(0.95, sum by (le) (rate(dealflow_http_request_duration_seconds_bucket[5m]))) > 1.5
           for: 15m
@@ -27,38 +27,38 @@ spec:
           annotations:
             summary: API p95 latency is above 1.5 seconds.
             runbook: docs/runbooks/alerts.md#dealflowapilatencyhigh
-        - alert: DealFlowWorkerStalled
+        - alert: SampForceWorkerStalled
           expr: time() - max(dealflow_worker_last_tick_timestamp_seconds) > 300
           for: 5m
           labels: { severity: page }
           annotations:
             summary: No worker has finished a polling cycle for 5 minutes. Automations, emails and webhooks are queued but not running.
             runbook: docs/runbooks/alerts.md#dealflowworkerstalled
-        - alert: DealFlowWorkerErrors
+        - alert: SampForceWorkerErrors
           expr: sum(rate(dealflow_worker_ticks_total{outcome="error"}[10m])) > 0.1
           for: 10m
           labels: { severity: ticket }
           annotations:
             summary: Worker cycles are failing repeatedly.
             runbook: docs/runbooks/alerts.md#dealflowworkererrors
-        - alert: DealFlowLockoutSpike
+        - alert: SampForceLockoutSpike
           expr: sum(increase(dealflow_auth_events_total{event="lockout"}[15m])) > 20
           labels: { severity: ticket }
           annotations:
             summary: Many accounts were locked in 15 minutes, which can mean password guessing.
             runbook: docs/runbooks/alerts.md#dealflowlockoutspike
-        - alert: DealFlowSsoFailures
+        - alert: SampForceSsoFailures
           expr: sum(increase(dealflow_auth_events_total{event="sso_failure"}[15m])) > 20
           labels: { severity: ticket }
           annotations:
             summary: Single sign-on is failing often; an identity provider may have changed keys or settings.
             runbook: docs/runbooks/alerts.md#dealflowssofailures
-        - alert: DealFlowPodsNotReady
+        - alert: SampForcePodsNotReady
           expr: |
             sum by (deployment) (kube_deployment_status_replicas_unavailable{namespace="{{ .Release.Namespace }}", deployment=~"{{ include "dealflow.fullname" . }}-.*"}) > 0
           for: 10m
           labels: { severity: ticket }
           annotations:
-            summary: "A DealFlow deployment has had unavailable pods for 10 minutes (needs kube-state-metrics)."
+            summary: "A SampForce deployment has had unavailable pods for 10 minutes (needs kube-state-metrics)."
             runbook: docs/runbooks/alerts.md#dealflowpodsnotready
 {{- end }}

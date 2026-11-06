@@ -61,12 +61,12 @@ async function renderConnect(error) {
   async function reach(status) {
     const base = normaliseBase(addr.value);
     if (!base) {
-      status.append(alertBox('error', 'Enter your DealFlow address, for example app.yourcompany.com. It must use https.'));
+      status.append(alertBox('error', 'Enter your SampForce address, for example app.yourcompany.com. It must use https.'));
       return null;
     }
     const granted = await chrome.permissions.request({ origins: [`${base}/*`] });
     if (!granted) {
-      status.append(alertBox('error', 'The extension needs permission to reach your DealFlow address.'));
+      status.append(alertBox('error', 'The extension needs permission to reach your SampForce address.'));
       return null;
     }
     return base;
@@ -78,7 +78,7 @@ async function renderConnect(error) {
     start();
   }
 
-  // Sign in with a DealFlow email and password (and a second-factor code when the account has one).
+  // Sign in with a SampForce email and password (and a second-factor code when the account has one).
   const email = h('input', { id: 'email', type: 'email', autocomplete: 'username', required: true });
   const password = h('input', { id: 'password', type: 'password', autocomplete: 'current-password', required: true });
   const signInStatus = h('div');
@@ -126,11 +126,11 @@ async function renderConnect(error) {
     password,
     mfa,
     signInStatus,
-    h('p', { class: 'muted small' }, 'The extension keeps its own connection, which you can end any time in DealFlow under Integrations. Your password is not stored.'),
+    h('p', { class: 'muted small' }, 'The extension keeps its own connection, which you can end any time in SampForce under Integrations. Your password is not stored.'),
     h('div', { class: 'row end' }, h('button', { class: 'primary', type: 'submit' }, 'Sign in')),
   );
 
-  // Or a connection code made in DealFlow (needed for workspaces that sign in with SSO).
+  // Or a connection code made in SampForce (needed for workspaces that sign in with SSO).
   const code = h('input', { id: 'code', type: 'password', placeholder: 'dfx_…', autocomplete: 'off', required: true });
   const status = h('div');
   const codeForm = h(
@@ -141,7 +141,7 @@ async function renderConnect(error) {
         status.replaceChildren();
         top.replaceChildren();
         const token = code.value.trim();
-        if (!token.startsWith('dfx_')) return status.append(alertBox('error', 'Paste the connection code from DealFlow. It starts with dfx_.'));
+        if (!token.startsWith('dfx_')) return status.append(alertBox('error', 'Paste the connection code from SampForce. It starts with dfx_.'));
         const base = await reach(status);
         if (!base) return;
         try {
@@ -154,12 +154,12 @@ async function renderConnect(error) {
     h('h3', { id: 'code-h' }, 'Or use a connection code'),
     h('label', { for: 'code' }, 'Connection code'),
     code,
-    h('p', { class: 'muted small' }, 'In DealFlow, open Integrations, then Browser extension, and create a connection code. It is shown once. Use this if your workspace signs in with single sign-on.'),
+    h('p', { class: 'muted small' }, 'In SampForce, open Integrations, then Browser extension, and create a connection code. It is shown once. Use this if your workspace signs in with single sign-on.'),
     status,
     h('div', { class: 'row end' }, h('button', { type: 'submit' }, 'Connect')),
   );
   app.replaceChildren(
-    h('section', {}, h('h2', {}, 'Connect to DealFlow'), h('label', { for: 'base' }, 'Your DealFlow address'), addr, top),
+    h('section', {}, h('h2', {}, 'Connect to SampForce'), h('label', { for: 'base' }, 'Your SampForce address'), addr, top),
     h('section', {}, signInForm),
     h('section', {}, codeForm),
   );
@@ -210,7 +210,7 @@ async function scan() {
 
 const FINDER_CHIP = { found: 'On their site', provider: 'Data provider', pattern: 'Pattern', guess: 'Guess' };
 
-/** Re-checks the listed addresses against DealFlow, keeping everything found so far. */
+/** Re-checks the listed addresses against SampForce, keeping everything found so far. */
 async function refreshLookup() {
   try {
     const fresh = await call('/extension/lookup', { method: 'POST', body: { emails: state.page.people.slice(0, 50).map((p) => p.email), website: state.page.url } });
@@ -229,7 +229,7 @@ function statusChip(info, p) {
   return h('span', { class: 'chip' }, 'New');
 }
 
-/** Asks DealFlow's email finder for more people at this company, read from its public website. */
+/** Asks SampForce's email finder for more people at this company, read from its public website. */
 async function findMore() {
   const page = state.page;
   state.finding = true;
@@ -271,7 +271,7 @@ function renderMain(scanning = false) {
   parts.push(autoSection());
   parts.push(
     h('div', { class: 'row end' },
-      h('a', { href: `${conn.baseUrl}/app/leads`, target: '_blank', rel: 'noopener' }, 'Open DealFlow'),
+      h('a', { href: `${conn.baseUrl}/app/leads`, target: '_blank', rel: 'noopener' }, 'Open SampForce'),
       h('button', { type: 'button', onclick: disconnect }, 'Disconnect'),
     ),
   );
@@ -283,13 +283,13 @@ function pageSection(scanning) {
   const sec = h('section', { 'aria-labelledby': 'page-h' }, h('h2', { id: 'page-h' }, 'This page'));
   if (state.pageError === 'access') {
     sec.append(
-      h('p', {}, 'To find addresses, DealFlow needs to read the page you are on. It reads a page only when you open this panel, or on every page if you turn on automatic capture below.'),
+      h('p', {}, 'To find addresses, SampForce needs to read the page you are on. It reads a page only when you open this panel, or on every page if you turn on automatic capture below.'),
       h('button', { class: 'primary', type: 'button', onclick: async () => (await chrome.permissions.request(ALL_SITES)) && scan() }, 'Allow page access'),
     );
     return sec;
   }
   if (state.pageError === 'unreadable') {
-    sec.append(h('p', { class: 'muted' }, 'DealFlow cannot read this page. Open a company website and try again.'), h('button', { type: 'button', onclick: scan }, 'Scan again'));
+    sec.append(h('p', { class: 'muted' }, 'SampForce cannot read this page. Open a company website and try again.'), h('button', { type: 'button', onclick: scan }, 'Scan again'));
     return sec;
   }
   if (scanning || !state.page) {
@@ -301,7 +301,7 @@ function pageSection(scanning) {
   const info = new Map((state.lookup?.people ?? []).map((p) => [p.email, p]));
   const company = h('input', { id: 'company', type: 'text', value: state.lookup?.company?.name ?? page.company ?? '' });
   sec.append(h('p', { class: 'muted small' }, page.domain), h('label', { for: 'company' }, 'Company'), company);
-  if (state.lookup?.company) sec.append(h('p', { class: 'small muted' }, 'Already in DealFlow as a company.'));
+  if (state.lookup?.company) sec.append(h('p', { class: 'small muted' }, 'Already in SampForce as a company.'));
 
   const findRow = h('div', { class: 'row' }, findButton(page.domain));
   if (state.findNote) findRow.append(h('p', { class: 'small', role: 'status', style: 'margin:0' }, state.findNote));
@@ -324,7 +324,7 @@ function pageSection(scanning) {
         h('label', { for: `p${i}`, class: 'addr', style: 'margin:0;font-size:13px' }, p.email, statusChip(known, p)),
         h('div', { class: 'name' },
           known?.match
-            ? h('a', { href: `${state.conn.baseUrl}/app/${known.match.entity === 'contact' ? 'contacts' : 'leads'}/${known.match.id}`, target: '_blank', rel: 'noopener', class: 'small' }, `Open ${known.match.label} in DealFlow`)
+            ? h('a', { href: `${state.conn.baseUrl}/app/${known.match.entity === 'contact' ? 'contacts' : 'leads'}/${known.match.id}`, target: '_blank', rel: 'noopener', class: 'small' }, `Open ${known.match.label} in SampForce`)
             : name,
         ),
       ),
@@ -341,7 +341,7 @@ function pageSection(scanning) {
   if (me.canEnroll && me.sequences.length) {
     sequence = h('select', { id: 'seq' }, h('option', { value: '' }, 'Do not enrol'), me.sequences.map((s) => h('option', { value: s.id }, s.name)));
     sec.append(h('label', { for: 'seq' }, 'Also enrol in a sequence'), sequence);
-    if (!me.mailboxConnected) sec.append(h('p', { class: 'small muted' }, 'Enrolling needs your Google or Microsoft mailbox connected in DealFlow.'));
+    if (!me.mailboxConnected) sec.append(h('p', { class: 'small muted' }, 'Enrolling needs your Google or Microsoft mailbox connected in SampForce.'));
   }
 
   const out = h('div');
@@ -373,7 +373,7 @@ function pageSection(scanning) {
       const created = res.results.filter((r) => r.outcome === 'created').length;
       const existing = res.results.filter((r) => r.outcome === 'existing').length;
       const lines = [`Saved ${created} new lead${created === 1 ? '' : 's'}.`];
-      if (existing) lines.push(`${existing} already in DealFlow.`);
+      if (existing) lines.push(`${existing} already in SampForce.`);
       if (res.enrollment) lines.push(`Enrolled ${res.enrollment.enrolled}${res.enrollment.skipped.length ? `, skipped ${res.enrollment.skipped.length}` : ''}.`);
       state.busy = false;
       await refreshLookup();
@@ -433,7 +433,7 @@ function outcomeText(res) {
   const where = res.destination.type === 'crm' ? 'the CRM as leads' : res.destination.name;
   const lines = [`Added ${n('added')} to ${where}.`];
   if (n('duplicate')) lines.push(`${n('duplicate')} already in that list.`);
-  if (n('existing')) lines.push(`${n('existing')} already in DealFlow.`);
+  if (n('existing')) lines.push(`${n('existing')} already in SampForce.`);
   if (n('skipped')) lines.push(`${n('skipped')} skipped.`);
   if (res.enrollment) lines.push(`Enrolled ${res.enrollment.enrolled} in the sequence.`);
   return lines.join(' ');
@@ -449,7 +449,7 @@ function prospectsSection() {
     loadLists(ps);
   }
   const sec = h('section', { 'aria-labelledby': 'prospects-h' }, h('h2', { id: 'prospects-h' }, `Prospects at ${domain}`));
-  sec.append(h('p', { class: 'muted small' }, 'People at this company from your data provider (Apollo.io). DealFlow does not read them from this page.'));
+  sec.append(h('p', { class: 'muted small' }, 'People at this company from your data provider (Apollo.io). SampForce does not read them from this page.'));
   const titles = h('input', { id: 'titles', type: 'text', value: ps.titles, placeholder: 'Head of Operations, VP Sales' });
   titles.addEventListener('input', () => (ps.titles = titles.value));
   sec.append(
@@ -528,7 +528,7 @@ function prospectsSection() {
       const notes = ps.outcome.results.filter((x) => x.reason);
       if (notes.length) out.append(h('ul', { class: 'log small', 'aria-label': 'Import notes' }, notes.map((x) => h('li', {}, `${x.name}: ${x.reason}`))));
       if (ps.outcome.destination.type === 'list') {
-        out.append(h('p', { class: 'small' }, h('a', { href: `${state.conn.baseUrl}/app/prospects/${ps.outcome.destination.id}`, target: '_blank', rel: 'noopener' }, `Open ${ps.outcome.destination.name} in DealFlow`)));
+        out.append(h('p', { class: 'small' }, h('a', { href: `${state.conn.baseUrl}/app/prospects/${ps.outcome.destination.id}`, target: '_blank', rel: 'noopener' }, `Open ${ps.outcome.destination.name} in SampForce`)));
       }
     }
     go.addEventListener('click', async () => {
@@ -590,7 +590,7 @@ function autoSection() {
   });
   sec.append(
     h('label', { class: 'switch', for: 'auto' }, box,
-      h('span', {}, 'Save new people automatically as I browse. Only addresses at the website’s own domain are saved, never personal mailboxes such as Gmail, and never anyone already in DealFlow or on the do-not-email list.'),
+      h('span', {}, 'Save new people automatically as I browse. Only addresses at the website’s own domain are saved, never personal mailboxes such as Gmail, and never anyone already in SampForce or on the do-not-email list.'),
     ),
     log,
   );
@@ -599,7 +599,7 @@ function autoSection() {
 }
 
 async function disconnect() {
-  // End the connection in DealFlow too; if DealFlow cannot be reached, it still lapses on its own.
+  // End the connection in SampForce too; if SampForce cannot be reached, it still lapses on its own.
   await call('/extension/disconnect', { method: 'POST' }).catch(() => {});
   await chrome.storage.local.remove(['token', 'me', 'autoCapture']);
   state = { conn: null, page: null, lookup: null, error: null, result: null, busy: false, prospects: null };

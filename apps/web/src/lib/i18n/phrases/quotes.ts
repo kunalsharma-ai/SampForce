@@ -63,7 +63,7 @@ export const quotes = {
   Inactive: ['Inactiva', 'Inactive', 'Inaktiv', 'غير نشطة'],
   'Tax rates': ['Tipos impositivos', 'Taux de taxe', 'Steuersätze', 'نسب الضريبة'],
   'No tax rates. Lines without a rate carry no tax.': ['No hay tipos impositivos. Las líneas sin tipo no llevan impuesto.', 'Aucun taux de taxe. Les lignes sans taux ne sont pas taxées.', 'Keine Steuersätze. Positionen ohne Satz sind steuerfrei.', 'لا توجد نسب ضريبة. البنود بلا نسبة لا تحمل ضريبة.'],
-  'You set the rates; DealFlow does not look up or validate tax rules for any country.': ['Tú defines los tipos; DealFlow no consulta ni valida normas fiscales de ningún país.', 'C’est vous qui fixez les taux ; DealFlow ne recherche ni ne valide les règles fiscales d’aucun pays.', 'Sie legen die Sätze fest; DealFlow prüft keine Steuerregeln eines Landes.', 'أنت من يحدد النسب؛ لا يبحث DealFlow عن القواعد الضريبية لأي دولة ولا يتحقق منها.'],
+  'You set the rates; SampForce does not look up or validate tax rules for any country.': ['Tú defines los tipos; SampForce no consulta ni valida normas fiscales de ningún país.', 'C’est vous qui fixez les taux ; SampForce ne recherche ni ne valide les règles fiscales d’aucun pays.', 'Sie legen die Sätze fest; SampForce prüft keine Steuerregeln eines Landes.', 'أنت من يحدد النسب؛ لا يبحث SampForce عن القواعد الضريبية لأي دولة ولا يتحقق منها.'],
   'Rate %': ['Tipo %', 'Taux %', 'Satz %', 'النسبة %'],
   'Quote rules': ['Reglas de presupuestos', 'Règles des devis', 'Angebotsregeln', 'قواعد عروض الأسعار'],
   'Discount needing approval (above %)': ['Descuento que requiere aprobación (por encima del %)', 'Remise nécessitant une approbation (au-delà de %)', 'Freigabepflichtiger Rabatt (über %)', 'الخصم الذي يحتاج موافقة (أعلى من %)'],

@@ -2,7 +2,7 @@
 
 **Status:** accepted (2026-10-30)
 
-**Context.** Phase 6 turns DealFlow into something a workspace can pay for, and gives Sampledge staff a way to run
+**Context.** Phase 6 turns SampForce into something a workspace can pay for, and gives Sampledge staff a way to run
 the platform. Both touch money and cross the tenant boundary, so they need the same guarantees as the rest of the
 product: RLS isolation, an audit trail, and no claim the code cannot back up. There are no Stripe or Razorpay
 accounts or keys in this environment.
@@ -10,7 +10,7 @@ accounts or keys in this environment.
 **Decision.**
 
 - **Hosted payment pages only.** Checkout is Stripe Checkout or a Razorpay subscription link. Card and bank
-  details never reach DealFlow; the database stores only provider references (customer, subscription, invoice
+  details never reach SampForce; the database stores only provider references (customer, subscription, invoice
   ids) and amounts the provider reports.
 - **Webhooks are the source of truth.** A paid plan becomes active when a webhook whose signature verifies over
   the raw request body says so (Stripe: `t.payload` HMAC-SHA256 with a 300 s tolerance; Razorpay: HMAC-SHA256 of
@@ -19,7 +19,7 @@ accounts or keys in this environment.
   trusting the event payload.
 - **Finding the workspace.** A provider reference already on file wins (`app_billing_tenant()`, a SECURITY
   INVOKER function over a narrow `billing_ref_lookup` policy, like form tokens). Otherwise the `tenant_id`
-  DealFlow put in checkout metadata, which must name an existing workspace. Unknown workspaces are acknowledged
+  SampForce put in checkout metadata, which must name an existing workspace. Unknown workspaces are acknowledged
   and ignored.
 - **Prices live with the provider.** `STRIPE_PRICES` / `RAZORPAY_PLANS` map each plan and interval to a provider
   price or plan id. An unmapped plan cannot be bought; the UI says so. The displayed USD rate card comes from
@@ -28,7 +28,7 @@ accounts or keys in this environment.
   Free is capped at 2 users; paid plans at the seats bought; trials at 10 seats. `UNPAID` and `CANCELED` fall back
   to Free allowances. Nothing is deleted when that happens, only new usage above the Free allowances is refused.
   Every limit check (seats, pipelines, AI credits, automation runs, custom roles) calls it.
-- **Dunning in DealFlow, not only at the provider.** `PAST_DUE` starts a `BILLING_GRACE_DAYS` window (default
+- **Dunning in SampForce, not only at the provider.** `PAST_DUE` starts a `BILLING_GRACE_DAYS` window (default
   14); the worker moves the workspace to `UNPAID` when it ends and tells billing managers. A later successful
   payment restores the plan.
 - **Trials need no card.** One per workspace (`trial_used_at`), for any self-serve plan, `TRIAL_DAYS` long. The

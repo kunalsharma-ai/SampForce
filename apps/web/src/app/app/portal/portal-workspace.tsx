@@ -161,7 +161,7 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
               </label>
             ))}
           </fieldset>
-          <p className="text-xs text-muted-foreground">{t("Invoices are not shown: customer invoicing is not connected to DealFlow yet. Internal notes, amounts on deals, health scores and other customers' records are never shown.")}</p>
+          <p className="text-xs text-muted-foreground">{t("Invoices are not shown: customer invoicing is not connected to SampForce yet. Internal notes, amounts on deals, health scores and other customers' records are never shown.")}</p>
           {(error || save.error) && <p role="alert" className="text-sm text-critical">{error ?? save.error?.message}</p>}
           {saved && <p role="status" className="text-sm">{t('Portal settings saved.')}</p>}
           <Button type="submit" disabled={save.isPending}>

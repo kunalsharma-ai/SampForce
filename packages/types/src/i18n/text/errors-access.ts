@@ -22,8 +22,8 @@ export const errorsAccess = {
   'Sign in to continue.': ['Inicia sesión para continuar.', 'Connectez-vous pour continuer.', 'Melden Sie sich an, um fortzufahren.', 'سجّل الدخول للمتابعة.'],
   'This workspace requires single sign-on. Sign in through your identity provider.': ['Este espacio de trabajo exige inicio de sesión único. Inicia sesión con tu proveedor de identidad.', 'Cet espace de travail exige l’authentification unique. Connectez-vous via votre fournisseur d’identité.', 'Dieser Arbeitsbereich erfordert Single Sign-on. Melden Sie sich über Ihren Identitätsanbieter an.', 'تتطلب مساحة العمل هذه تسجيل الدخول الموحد. سجّل الدخول عبر موفّر الهوية.'],
   'This workspace requires two-step verification. Turn it on to continue.': ['Este espacio de trabajo exige verificación en dos pasos. Actívala para continuar.', 'Cet espace de travail exige la vérification en deux étapes. Activez-la pour continuer.', 'Dieser Arbeitsbereich erfordert die Bestätigung in zwei Schritten. Schalten Sie sie ein, um fortzufahren.', 'تتطلب مساحة العمل هذه التحقق بخطوتين. فعّله للمتابعة.'],
-  'The browser extension cannot do this. Use DealFlow in your browser.': ['La extensión del navegador no puede hacer esto. Usa DealFlow en tu navegador.', 'L’extension de navigateur ne peut pas faire cela. Utilisez DealFlow dans votre navigateur.', 'Die Browsererweiterung kann das nicht. Verwenden Sie DealFlow im Browser.', 'لا يمكن لإضافة المتصفح القيام بذلك. استخدم DealFlow في متصفحك.'],
-  'API keys cannot do this. Sign in to DealFlow in your browser.': ['Las claves de API no pueden hacer esto. Inicia sesión en DealFlow en tu navegador.', 'Les clés d’API ne peuvent pas faire cela. Connectez-vous à DealFlow dans votre navigateur.', 'API-Schlüssel können das nicht. Melden Sie sich im Browser bei DealFlow an.', 'لا يمكن لمفاتيح API القيام بذلك. سجّل الدخول إلى DealFlow في متصفحك.'],
+  'The browser extension cannot do this. Use SampForce in your browser.': ['La extensión del navegador no puede hacer esto. Usa SampForce en tu navegador.', 'L’extension de navigateur ne peut pas faire cela. Utilisez SampForce dans votre navigateur.', 'Die Browsererweiterung kann das nicht. Verwenden Sie SampForce im Browser.', 'لا يمكن لإضافة المتصفح القيام بذلك. استخدم SampForce في متصفحك.'],
+  'API keys cannot do this. Sign in to SampForce in your browser.': ['Las claves de API no pueden hacer esto. Inicia sesión en SampForce en tu navegador.', 'Les clés d’API ne peuvent pas faire cela. Connectez-vous à SampForce dans votre navigateur.', 'API-Schlüssel können das nicht. Melden Sie sich im Browser bei SampForce an.', 'لا يمكن لمفاتيح API القيام بذلك. سجّل الدخول إلى SampForce في متصفحك.'],
   'Your workspace requires single sign-on. Use “Sign in with SSO” and your workspace’s sign-in name.': [
     'Tu espacio de trabajo exige inicio de sesión único. Usa «Iniciar sesión con SSO» y el nombre de inicio de sesión de tu espacio.',
     'Votre espace de travail exige l’authentification unique. Utilisez « Se connecter avec le SSO » et l’identifiant de connexion de votre espace.',
@@ -70,21 +70,21 @@ export const errorsAccess = {
   "Add {settings} first, here or in the deployment's secrets.": ['Añade primero {settings}, aquí o en los secretos del despliegue.', 'Ajoutez d’abord {settings}, ici ou dans les secrets du déploiement.', 'Fügen Sie zuerst {settings} hinzu, hier oder in den Secrets der Bereitstellung.', 'أضف {settings} أولًا، هنا أو في أسرار النشر.'],
 
   // Browser extension
-  'Your workspace requires single sign-on. Sign in to DealFlow with SSO, make a connection code under Settings, then paste it here.': [
-    'Tu espacio de trabajo exige inicio de sesión único. Inicia sesión en DealFlow con SSO, crea un código de conexión en Configuración y pégalo aquí.',
-    'Votre espace de travail exige l’authentification unique. Connectez-vous à DealFlow avec le SSO, créez un code de connexion dans Paramètres, puis collez-le ici.',
-    'Ihr Arbeitsbereich erfordert Single Sign-on. Melden Sie sich mit SSO bei DealFlow an, erstellen Sie unter Einstellungen einen Verbindungscode und fügen Sie ihn hier ein.',
-    'تتطلب مساحة عملك تسجيل الدخول الموحد. سجّل الدخول إلى DealFlow باستخدام SSO، وأنشئ رمز اتصال من الإعدادات، ثم الصقه هنا.',
+  'Your workspace requires single sign-on. Sign in to SampForce with SSO, make a connection code under Settings, then paste it here.': [
+    'Tu espacio de trabajo exige inicio de sesión único. Inicia sesión en SampForce con SSO, crea un código de conexión en Configuración y pégalo aquí.',
+    'Votre espace de travail exige l’authentification unique. Connectez-vous à SampForce avec le SSO, créez un code de connexion dans Paramètres, puis collez-le ici.',
+    'Ihr Arbeitsbereich erfordert Single Sign-on. Melden Sie sich mit SSO bei SampForce an, erstellen Sie unter Einstellungen einen Verbindungscode und fügen Sie ihn hier ein.',
+    'تتطلب مساحة عملك تسجيل الدخول الموحد. سجّل الدخول إلى SampForce باستخدام SSO، وأنشئ رمز اتصال من الإعدادات، ثم الصقه هنا.',
   ],
   'You can have {max} extension connections. Remove one you no longer use first.': ['Puedes tener {max} conexiones de la extensión. Elimina primero una que ya no uses.', 'Vous pouvez avoir {max} connexions d’extension. Supprimez d’abord celle que vous n’utilisez plus.', 'Sie können {max} Erweiterungsverbindungen haben. Entfernen Sie zuerst eine, die Sie nicht mehr nutzen.', 'يمكنك امتلاك {max} من اتصالات الإضافة. أزل أولًا اتصالًا لم تعد تستخدمه.'],
   'That connection has already ended.': ['Esa conexión ya ha terminado.', 'Cette connexion est déjà terminée.', 'Diese Verbindung ist bereits beendet.', 'انتهى ذلك الاتصال بالفعل.'],
   'Your role does not allow enrolling people in sequences.': ['Tu rol no permite inscribir personas en secuencias.', 'Votre rôle ne permet pas d’inscrire des personnes dans des séquences.', 'Ihre Rolle erlaubt es nicht, Personen in Sequenzen aufzunehmen.', 'دورك لا يسمح بتسجيل الأشخاص في السلاسل.'],
-  'That sequence is not running. Choose another or start it in DealFlow.': ['Esa secuencia no está en marcha. Elige otra o iníciala en DealFlow.', 'Cette séquence n’est pas active. Choisissez-en une autre ou démarrez-la dans DealFlow.', 'Diese Sequenz läuft nicht. Wählen Sie eine andere oder starten Sie sie in DealFlow.', 'هذه السلسلة لا تعمل. اختر سلسلة أخرى أو ابدأها في DealFlow.'],
-  'Connect your Google or Microsoft mailbox in DealFlow before enrolling people. Emails go from your own mailbox.': [
-    'Conecta tu buzón de Google o Microsoft en DealFlow antes de inscribir personas. Los correos salen de tu propio buzón.',
-    'Connectez votre boîte Google ou Microsoft dans DealFlow avant d’inscrire des personnes. Les e-mails partent de votre propre boîte.',
-    'Verbinden Sie Ihr Google- oder Microsoft-Postfach in DealFlow, bevor Sie Personen aufnehmen. E-Mails werden aus Ihrem eigenen Postfach gesendet.',
-    'اربط صندوق بريد Google أو Microsoft في DealFlow قبل تسجيل الأشخاص. تُرسل الرسائل من صندوق بريدك.',
+  'That sequence is not running. Choose another or start it in SampForce.': ['Esa secuencia no está en marcha. Elige otra o iníciala en SampForce.', 'Cette séquence n’est pas active. Choisissez-en une autre ou démarrez-la dans SampForce.', 'Diese Sequenz läuft nicht. Wählen Sie eine andere oder starten Sie sie in SampForce.', 'هذه السلسلة لا تعمل. اختر سلسلة أخرى أو ابدأها في SampForce.'],
+  'Connect your Google or Microsoft mailbox in SampForce before enrolling people. Emails go from your own mailbox.': [
+    'Conecta tu buzón de Google o Microsoft en SampForce antes de inscribir personas. Los correos salen de tu propio buzón.',
+    'Connectez votre boîte Google ou Microsoft dans SampForce avant d’inscrire des personnes. Les e-mails partent de votre propre boîte.',
+    'Verbinden Sie Ihr Google- oder Microsoft-Postfach in SampForce, bevor Sie Personen aufnehmen. E-Mails werden aus Ihrem eigenen Postfach gesendet.',
+    'اربط صندوق بريد Google أو Microsoft في SampForce قبل تسجيل الأشخاص. تُرسل الرسائل من صندوق بريدك.',
   ],
 
   // API keys and Zapier
@@ -149,7 +149,7 @@ export const errorsAccess = {
   'Only an open invoice can be marked paid.': ['Solo una factura abierta se puede marcar como pagada.', 'Seule une facture ouverte peut être marquée comme payée.', 'Nur eine offene Rechnung kann als bezahlt markiert werden.', 'لا يمكن وضع علامة مدفوعة إلا على فاتورة مفتوحة.'],
   'Only an open invoice can be voided.': ['Solo una factura abierta se puede anular.', 'Seule une facture ouverte peut être annulée.', 'Nur eine offene Rechnung kann storniert werden.', 'لا يمكن إبطال إلا فاتورة مفتوحة.'],
   'Webhook signature could not be verified.': ['No se pudo verificar la firma del webhook.', 'La signature du webhook n’a pas pu être vérifiée.', 'Die Webhook-Signatur konnte nicht geprüft werden.', 'تعذر التحقق من توقيع الويب هوك.'],
-  'This workspace’s plan is managed by the DealFlow team. Contact them to change it.': ['El plan de este espacio de trabajo lo gestiona el equipo de DealFlow. Contacta con ellos para cambiarlo.', 'L’offre de cet espace de travail est gérée par l’équipe DealFlow. Contactez-la pour la modifier.', 'Der Tarif dieses Arbeitsbereichs wird vom DealFlow-Team verwaltet. Wenden Sie sich für Änderungen an das Team.', 'يدير فريق DealFlow خطة مساحة العمل هذه. تواصل معهم لتغييرها.'],
+  'This workspace’s plan is managed by the SampForce team. Contact them to change it.': ['El plan de este espacio de trabajo lo gestiona el equipo de SampForce. Contacta con ellos para cambiarlo.', 'L’offre de cet espace de travail est gérée par l’équipe SampForce. Contactez-la pour la modifier.', 'Der Tarif dieses Arbeitsbereichs wird vom SampForce-Team verwaltet. Wenden Sie sich für Änderungen an das Team.', 'يدير فريق SampForce خطة مساحة العمل هذه. تواصل معهم لتغييرها.'],
 
   // Saved views and themes
   'You already have a view with this name.': ['Ya tienes una vista con este nombre.', 'Vous avez déjà une vue portant ce nom.', 'Sie haben bereits eine Ansicht mit diesem Namen.', 'لديك عرض بهذا الاسم بالفعل.'],

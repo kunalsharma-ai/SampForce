@@ -2,7 +2,7 @@
   "name": "@dealflow/ui",
   "version": "0.1.0",
   "private": true,
-  "description": "DealFlow design system: tokens, Tailwind preset and accessible primitives (Radix + shadcn conventions).",
+  "description": "SampForce design system: tokens, Tailwind preset and accessible primitives (Radix + shadcn conventions).",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

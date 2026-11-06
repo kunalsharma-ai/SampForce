@@ -446,11 +446,11 @@ export const automation = {
     'Bounce: Senden stoppen und Adresse markieren',
     'ارتداد: إيقاف الإرسال ووسم العنوان',
   ],
-  'DealFlow already stops all sending to a bounced address. This also flags the record for checking and asks the owner to find a working address.': [
-    'DealFlow ya detiene todos los envíos a una dirección que rebota. Esto además marca el registro para revisarlo y pide al responsable que busque una dirección que funcione.',
-    'DealFlow arrête déjà tout envoi vers une adresse en rebond. Ceci signale en plus l’enregistrement à vérifier et demande au responsable de trouver une adresse valide.',
-    'DealFlow stoppt bereits alle Sendungen an eine zurückgewiesene Adresse. Dies markiert den Datensatz zusätzlich zur Prüfung und bittet die verantwortliche Person, eine funktionierende Adresse zu finden.',
-    'يوقف DealFlow بالفعل كل الإرسال إلى عنوان مرتد. وهذا يسِم السجل أيضًا للمراجعة ويطلب من المسؤول إيجاد عنوان يعمل.',
+  'SampForce already stops all sending to a bounced address. This also flags the record for checking and asks the owner to find a working address.': [
+    'SampForce ya detiene todos los envíos a una dirección que rebota. Esto además marca el registro para revisarlo y pide al responsable que busque una dirección que funcione.',
+    'SampForce arrête déjà tout envoi vers une adresse en rebond. Ceci signale en plus l’enregistrement à vérifier et demande au responsable de trouver une adresse valide.',
+    'SampForce stoppt bereits alle Sendungen an eine zurückgewiesene Adresse. Dies markiert den Datensatz zusätzlich zur Prüfung und bittet die verantwortliche Person, eine funktionierende Adresse zu finden.',
+    'يوقف SampForce بالفعل كل الإرسال إلى عنوان مرتد. وهذا يسِم السجل أيضًا للمراجعة ويطلب من المسؤول إيجاد عنوان يعمل.',
   ],
   'Unsubscribe: confirm and tell the owner': [
     'Baja: confirmar y avisar al responsable',
@@ -458,11 +458,11 @@ export const automation = {
     'Abmeldung: bestätigen und verantwortliche Person informieren',
     'إلغاء الاشتراك: التأكيد وإبلاغ المسؤول',
   ],
-  'DealFlow suppresses the address from every sequence and marks the person opted out the moment they unsubscribe. This adds a note and tells the owner.': [
-    'DealFlow excluye la dirección de todas las secuencias y marca a la persona como dada de baja en cuanto se da de baja. Esto añade una nota y avisa al responsable.',
-    'DealFlow exclut l’adresse de toutes les séquences et marque la personne comme désinscrite dès qu’elle se désinscrit. Ceci ajoute une note et prévient le responsable.',
-    'DealFlow sperrt die Adresse in allen Sequenzen und markiert die Person als abgemeldet, sobald sie sich abmeldet. Dies fügt eine Notiz hinzu und informiert die verantwortliche Person.',
-    'يستبعد DealFlow العنوان من كل التسلسلات ويسِم الشخص كملغٍ للاشتراك لحظة إلغائه. وهذا يضيف ملاحظة ويبلغ المسؤول.',
+  'SampForce suppresses the address from every sequence and marks the person opted out the moment they unsubscribe. This adds a note and tells the owner.': [
+    'SampForce excluye la dirección de todas las secuencias y marca a la persona como dada de baja en cuanto se da de baja. Esto añade una nota y avisa al responsable.',
+    'SampForce exclut l’adresse de toutes les séquences et marque la personne comme désinscrite dès qu’elle se désinscrit. Ceci ajoute une note et prévient le responsable.',
+    'SampForce sperrt die Adresse in allen Sequenzen und markiert die Person als abgemeldet, sobald sie sich abmeldet. Dies fügt eine Notiz hinzu und informiert die verantwortliche Person.',
+    'يستبعد SampForce العنوان من كل التسلسلات ويسِم الشخص كملغٍ للاشتراك لحظة إلغائه. وهذا يضيف ملاحظة ويبلغ المسؤول.',
   ],
   'No reply in 3 days: follow up': ['Sin respuesta en 3 días: hacer seguimiento', 'Pas de réponse sous 3 jours : relancer', 'Keine Antwort in 3 Tagen: nachfassen', 'لا رد خلال 3 أيام: المتابعة'],
   'After an email goes out, wait three days. If they have not replied, send a follow-up after someone approves it. Sequences do this on their own; use this for one-off emails.': [

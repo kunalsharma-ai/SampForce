@@ -4,7 +4,7 @@ import type { PhraseTable } from './types';
 export const auth = {
   // Layout
   'Close smarter. Grow faster.': ['Cierra mejor. Crece más rápido.', 'Concluez mieux. Grandissez plus vite.', 'Klüger abschließen. Schneller wachsen.', 'أغلق صفقاتك بذكاء. وانمُ أسرع.'],
-  'Flow beyond limits.': ['Sin límites.', 'Sans limites.', 'Ohne Grenzen.', 'بلا حدود.'],
+  'Sell. Close. Grow.': ['Vende. Cierra. Crece.', 'Vendez. Concluez. Grandissez.', 'Verkaufen. Abschließen. Wachsen.', 'بِع. أغلِق. انمُ.'],
   'One workspace for leads, deals, automation and revenue intelligence, with AI that shows its reasoning and asks before it acts.': [
     'Un solo espacio para leads, oportunidades, automatización e inteligencia de ingresos, con una IA que explica su razonamiento y pregunta antes de actuar.',
     'Un seul espace pour les prospects, les opportunités, l’automatisation et l’intelligence commerciale, avec une IA qui explique son raisonnement et demande avant d’agir.',
@@ -21,13 +21,13 @@ export const auth = {
   'Signing in…': ['Iniciando sesión…', 'Connexion…', 'Anmeldung läuft…', 'جارٍ تسجيل الدخول…'],
   or: ['o', 'ou', 'oder', 'أو'],
   'Sign in with SSO': ['Iniciar sesión con SSO', 'Se connecter avec le SSO', 'Mit SSO anmelden', 'تسجيل الدخول عبر SSO'],
-  'New to DealFlow?': ['¿Eres nuevo en DealFlow?', 'Nouveau sur DealFlow ?', 'Neu bei DealFlow?', 'جديد على DealFlow؟'],
+  'New to SampForce?': ['¿Eres nuevo en SampForce?', 'Nouveau sur SampForce ?', 'Neu bei SampForce?', 'جديد على SampForce؟'],
   'Start free': ['Empieza gratis', 'Commencer gratuitement', 'Kostenlos starten', 'ابدأ مجانًا'],
-  'Could not reach DealFlow. Check your connection.': [
-    'No se pudo conectar con DealFlow. Revisa tu conexión.',
-    'Impossible de joindre DealFlow. Vérifiez votre connexion.',
-    'DealFlow ist nicht erreichbar. Prüfen Sie Ihre Verbindung.',
-    'تعذر الوصول إلى DealFlow. تحقق من اتصالك.',
+  'Could not reach SampForce. Check your connection.': [
+    'No se pudo conectar con SampForce. Revisa tu conexión.',
+    'Impossible de joindre SampForce. Vérifiez votre connexion.',
+    'SampForce ist nicht erreichbar. Prüfen Sie Ihre Verbindung.',
+    'تعذر الوصول إلى SampForce. تحقق من اتصالك.',
   ],
 
   // Two-step verification
@@ -66,11 +66,11 @@ export const auth = {
     'Geben Sie den Anmeldenamen ein, den Ihre Administration Ihnen gegeben hat, etwa acme.',
     'أدخل اسم تسجيل الدخول الذي أعطاك إياه المسؤول، مثل acme.',
   ],
-  'Your administrator sets this in DealFlow’s security settings.': [
-    'Tu administrador lo configura en los ajustes de seguridad de DealFlow.',
-    'Votre administrateur le définit dans les paramètres de sécurité de DealFlow.',
-    'Ihre Administration legt dies in den Sicherheitseinstellungen von DealFlow fest.',
-    'يضبط المسؤول هذا في إعدادات الأمان في DealFlow.',
+  'Your administrator sets this in SampForce’s security settings.': [
+    'Tu administrador lo configura en los ajustes de seguridad de SampForce.',
+    'Votre administrateur le définit dans les paramètres de sécurité de SampForce.',
+    'Ihre Administration legt dies in den Sicherheitseinstellungen von SampForce fest.',
+    'يضبط المسؤول هذا في إعدادات الأمان في SampForce.',
   ],
   Continue: ['Continuar', 'Continuer', 'Weiter', 'متابعة'],
   'Sign in with email and password': ['Iniciar sesión con correo y contraseña', 'Se connecter avec e-mail et mot de passe', 'Mit E-Mail und Passwort anmelden', 'تسجيل الدخول بالبريد الإلكتروني وكلمة المرور'],
@@ -147,11 +147,11 @@ export const auth = {
     'أدخل البريد الإلكتروني الذي تسجّل الدخول به وسنرسل إليك رابطًا لاختيار كلمة مرور جديدة.',
   ],
   'Check your email': ['Revisa tu correo', 'Consultez vos e-mails', 'Prüfen Sie Ihre E-Mails', 'تحقق من بريدك الإلكتروني'],
-  'If {email} has a DealFlow account, a reset link is on its way. It works once and expires soon. Nothing arrived? Check spam, or ask again in a few minutes.': [
-    'Si {email} tiene una cuenta de DealFlow, el enlace para restablecerla va en camino. Sirve una sola vez y caduca pronto. ¿No llegó nada? Revisa el spam o vuelve a pedirlo en unos minutos.',
-    'Si {email} a un compte DealFlow, un lien de réinitialisation est en route. Il ne sert qu’une fois et expire bientôt. Rien reçu ? Vérifiez vos spams ou redemandez dans quelques minutes.',
-    'Wenn {email} ein DealFlow-Konto hat, ist ein Link zum Zurücksetzen unterwegs. Er funktioniert einmal und läuft bald ab. Nichts angekommen? Prüfen Sie den Spam-Ordner oder fragen Sie in ein paar Minuten erneut.',
-    'إذا كان لدى {email} حساب في DealFlow، فرابط إعادة التعيين في الطريق. يعمل مرة واحدة وتنتهي صلاحيته قريبًا. لم يصلك شيء؟ تحقق من البريد العشوائي أو اطلبه مجددًا بعد بضع دقائق.',
+  'If {email} has a SampForce account, a reset link is on its way. It works once and expires soon. Nothing arrived? Check spam, or ask again in a few minutes.': [
+    'Si {email} tiene una cuenta de SampForce, el enlace para restablecerla va en camino. Sirve una sola vez y caduca pronto. ¿No llegó nada? Revisa el spam o vuelve a pedirlo en unos minutos.',
+    'Si {email} a un compte SampForce, un lien de réinitialisation est en route. Il ne sert qu’une fois et expire bientôt. Rien reçu ? Vérifiez vos spams ou redemandez dans quelques minutes.',
+    'Wenn {email} ein SampForce-Konto hat, ist ein Link zum Zurücksetzen unterwegs. Er funktioniert einmal und läuft bald ab. Nichts angekommen? Prüfen Sie den Spam-Ordner oder fragen Sie in ein paar Minuten erneut.',
+    'إذا كان لدى {email} حساب في SampForce، فرابط إعادة التعيين في الطريق. يعمل مرة واحدة وتنتهي صلاحيته قريبًا. لم يصلك شيء؟ تحقق من البريد العشوائي أو اطلبه مجددًا بعد بضع دقائق.',
   ],
   'Sending…': ['Enviando…', 'Envoi…', 'Wird gesendet…', 'جارٍ الإرسال…'],
   'Send reset link': ['Enviar enlace', 'Envoyer le lien', 'Link senden', 'إرسال رابط إعادة التعيين'],
@@ -193,7 +193,7 @@ export const auth = {
   'Join {workspace}': ['Únete a {workspace}', 'Rejoindre {workspace}', '{workspace} beitreten', 'الانضمام إلى {workspace}'],
   'You were invited as {role} with {email}.': ['Te invitaron como {role} con {email}.', 'Vous avez été invité en tant que {role} avec {email}.', 'Sie wurden als {role} mit {email} eingeladen.', 'تمت دعوتك بصفة {role} باستخدام {email}.'],
   'You already have an account; confirm it is you.': ['Ya tienes una cuenta; confirma que eres tú.', 'Vous avez déjà un compte ; confirmez qu’il s’agit bien de vous.', 'Sie haben bereits ein Konto; bestätigen Sie, dass Sie es sind.', 'لديك حساب بالفعل؛ أكّد أنك صاحبه.'],
-  'Your DealFlow password': ['Tu contraseña de DealFlow', 'Votre mot de passe DealFlow', 'Ihr DealFlow-Passwort', 'كلمة مرورك في DealFlow'],
+  'Your SampForce password': ['Tu contraseña de SampForce', 'Votre mot de passe SampForce', 'Ihr SampForce-Passwort', 'كلمة مرورك في SampForce'],
   'Choose a password': ['Elige una contraseña', 'Choisissez un mot de passe', 'Passwort wählen', 'اختر كلمة مرور'],
   'Joining…': ['Uniéndote…', 'Connexion à l’espace…', 'Beitritt läuft…', 'جارٍ الانضمام…'],
 } as const satisfies PhraseTable;

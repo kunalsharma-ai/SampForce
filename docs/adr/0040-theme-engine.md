@@ -12,12 +12,12 @@ shadows, glass, motion, chart palette, icon style and workspace background. It a
 themes, per-person storage and an optional organisation-wide theme, using tokens instead of hard-coded colours, and
 it requires every theme to stay readable.
 
-Before this change DealFlow had one dark and one light palette in `tokens.css`, a workspace brand colour that
+Before this change SampForce had one dark and one light palette in `tokens.css`, a workspace brand colour that
 replaced `--primary` as-is (with no contrast check), and theme and motion settings kept only in the browser.
 
 ## Decisions
 
-1. **Themes are data, tokens are derived.** `packages/types/src/appearance.ts` holds the catalogue: DealFlow
+1. **Themes are data, tokens are derived.** `packages/types/src/appearance.ts` holds the catalogue: SampForce
    Signature (the original look, kept as the default) and the spec's 12 themes. Each has a small base palette per mode
    (background, surface, foreground, primary, secondary, accent, six chart colours). `resolveTheme` derives every
    other token (raised surface, muted, borders, semantic colours, on-colour text) and returns HSL triplets for the
@@ -34,7 +34,7 @@ replaced `--primary` as-is (with no contrast check), and theme and motion settin
    `user_saved_themes` (up to 20 named themes) carry no `tenant_id`, like `password_reset_tokens`, because a person's
    theme follows them across workspaces. The API only reads the caller's own rows. `tenants.default_appearance` holds
    an optional workspace default, set by `tenant:manage` and audited (`tenant.appearance_default_set` / `_cleared`).
-   The effective settings are: the person's own, else the workspace default, else DealFlow's default.
+   The effective settings are: the person's own, else the workspace default, else SampForce's default.
 5. **No flash on load.** The browser caches the last painted variables (`dealflow:appearance-paint`) and an inline
    script applies them before first paint; the account's settings then win on load, unless this device has a change
    that has not reached the server yet, which is uploaded. Changes save half a second after they are made.

@@ -3,7 +3,7 @@ import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SITE = 'http://shop.example.test';
-/** DealFlow as the visitor's browser sees it: a public host, forwarded to the local app. Chromium blocks pages on a
+/** SampForce as the visitor's browser sees it: a public host, forwarded to the local app. Chromium blocks pages on a
  * public origin from calling localhost (Private Network Access), which a real deployment never runs into. */
 const DEALFLOW = 'http://dealflow.example.test';
 
@@ -13,7 +13,7 @@ async function noAxeViolations(page: Page) {
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 }
 
-/** A stand-in for the customer's own website, served by Playwright, with the install snippet from DealFlow. */
+/** A stand-in for the customer's own website, served by Playwright, with the install snippet from SampForce. */
 async function fakeSite(context: BrowserContext, snippet: string) {
   await context.route(`${DEALFLOW}/**`, async (route) => {
     const response = await route.fetch({ url: route.request().url().replace(DEALFLOW, 'http://localhost:3000') });
@@ -69,7 +69,7 @@ test('admin installs tracking with consent; a consenting visitor is scored and b
   const snippet = (await page.getByLabel('Install snippet').textContent())!;
   expect(snippet).toContain('data-site="dfs_');
 
-  // The visitor's browser: a separate context with no DealFlow session.
+  // The visitor's browser: a separate context with no SampForce session.
   const visitorContext = await browser.newContext();
   await fakeSite(visitorContext, snippet);
   const site = await visitorContext.newPage();
@@ -110,7 +110,7 @@ test('admin installs tracking with consent; a consenting visitor is scored and b
   await gpc.waitForTimeout(1000);
   expect((await visitors(page))).toHaveLength(1);
 
-  // Back in DealFlow: the dashboard, the visitor list, the scored signals, and the lead's website activity.
+  // Back in SampForce: the dashboard, the visitor list, the scored signals, and the lead's website activity.
   await page.reload();
   await expect(page.getByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
   const high = page.getByRole('list', { name: 'High-intent visitors' });

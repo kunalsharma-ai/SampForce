@@ -38,7 +38,7 @@ function toRow(s: Session): ExtensionTokenRow {
 }
 
 /**
- * The browser extension's side of DealFlow. Connections are sessions with their own token, so they show
+ * The browser extension's side of SampForce. Connections are sessions with their own token, so they show
  * in the person's devices and end with any sign-out. Leads are created through LeadsService, so the
  * usual audit trail, duplicate rules and workflows apply.
  */
@@ -187,9 +187,9 @@ export class ExtensionService {
       await this.prisma.run(auth, async (tx) => {
         const s = await tx.sequence.findFirst({ where: { id: input.sequenceId, tenantId: auth.tenantId }, select: { status: true } });
         if (!s) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Sequence not found.' });
-        if (s.status !== 'ACTIVE') throw new ConflictException({ code: 'SEQUENCE_NOT_ACTIVE', message: 'That sequence is not running. Choose another or start it in DealFlow.' });
+        if (s.status !== 'ACTIVE') throw new ConflictException({ code: 'SEQUENCE_NOT_ACTIVE', message: 'That sequence is not running. Choose another or start it in SampForce.' });
         const mailbox = await tx.integrationConnection.findFirst({ where: { tenantId: auth.tenantId, userId: auth.userId, status: 'CONNECTED' }, select: { id: true } });
-        if (!mailbox) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox in DealFlow before enrolling people. Emails go from your own mailbox.' });
+        if (!mailbox) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox in SampForce before enrolling people. Emails go from your own mailbox.' });
       });
     }
 

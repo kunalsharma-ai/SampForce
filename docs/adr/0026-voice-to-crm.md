@@ -7,7 +7,7 @@
 ## Context
 
 Feature 12 asks for voice-to-CRM: a salesperson speaks a note ("follow up with Priya tomorrow at 3 pm, add a lead,
-summarise my last call") and DealFlow turns it into tasks, notes and records, in more than one language. DealFlow
+summarise my last call") and SampForce turns it into tasks, notes and records, in more than one language. SampForce
 already had Deepgram transcription for meeting recordings (ADR 0023, Pending Configuration until a live call
 succeeds), the AI agent layer with run records and credits, and the normal task, activity, lead and contact services.
 The standing rule is that sensitive or irreversible CRM actions are never executed without the person's confirmation.

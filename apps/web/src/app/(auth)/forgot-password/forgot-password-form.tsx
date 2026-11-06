@@ -23,7 +23,7 @@ export function ForgotPasswordForm() {
       await api('/auth/password-reset/request', { method: 'POST', json: values });
       setSentTo(values.email);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
     }
   });
 
@@ -37,7 +37,7 @@ export function ForgotPasswordForm() {
         <div role="status" className="space-y-2 rounded-md border border-border bg-muted/40 p-4 text-sm">
           <p className="font-medium">{t('Check your email')}</p>
           <p>
-            {t('If {email} has a DealFlow account, a reset link is on its way. It works once and expires soon. Nothing arrived? Check spam, or ask again in a few minutes.', { email: sentTo })}
+            {t('If {email} has a SampForce account, a reset link is on its way. It works once and expires soon. Nothing arrived? Check spam, or ask again in a few minutes.', { email: sentTo })}
           </p>
         </div>
       ) : (

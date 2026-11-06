@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks a running DealFlow from the outside: HTTPS, the redirect from HTTP, the web app, the API and its database,
+# Checks a running SampForce from the outside: HTTPS, the redirect from HTTP, the web app, the API and its database,
 # and the health of every container.
 #
 #   scripts/smoke-test.sh             # uses https://DOMAIN from .env

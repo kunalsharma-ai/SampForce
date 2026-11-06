@@ -1,7 +1,7 @@
 {
   "name": "dealflow",
   "private": true,
-  "description": "DealFlow by Sampledge: AI-native revenue platform",
+  "description": "SampForce by Sampledge: AI-native revenue platform",
   "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=26"

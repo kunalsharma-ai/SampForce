@@ -45,11 +45,11 @@ export interface PlanCatalogEntry {
 
 /** Launch rate card (approved 2026-10-31). Must match the `plans` rows seeded by the database migration. */
 export const PLAN_CATALOG: PlanCatalogEntry[] = [
-  { code: 'free', name: 'DealFlow Free', monthly: 0, annualMonthly: 0, audience: 'Individuals' },
-  { code: 'launch', name: 'DealFlow Launch', monthly: 8, annualMonthly: 6, audience: 'Startups' },
-  { code: 'growth', name: 'DealFlow Growth', monthly: 15, annualMonthly: 12, audience: 'Growing teams' },
-  { code: 'professional', name: 'DealFlow Professional', monthly: 29, annualMonthly: 23, audience: 'Advanced sales teams' },
-  { code: 'business', name: 'DealFlow Business', monthly: 49, annualMonthly: 39, audience: 'Established businesses' },
-  { code: 'enterprise', name: 'DealFlow Enterprise', monthly: 79, annualMonthly: 65, audience: 'Large organizations' },
-  { code: 'enterprise_plus', name: 'DealFlow Enterprise Plus', monthly: null, annualMonthly: null, audience: 'Global enterprises' },
+  { code: 'free', name: 'SampForce Free', monthly: 0, annualMonthly: 0, audience: 'Individuals' },
+  { code: 'launch', name: 'SampForce Launch', monthly: 8, annualMonthly: 6, audience: 'Startups' },
+  { code: 'growth', name: 'SampForce Growth', monthly: 15, annualMonthly: 12, audience: 'Growing teams' },
+  { code: 'professional', name: 'SampForce Professional', monthly: 29, annualMonthly: 23, audience: 'Advanced sales teams' },
+  { code: 'business', name: 'SampForce Business', monthly: 49, annualMonthly: 39, audience: 'Established businesses' },
+  { code: 'enterprise', name: 'SampForce Enterprise', monthly: 79, annualMonthly: 65, audience: 'Large organizations' },
+  { code: 'enterprise_plus', name: 'SampForce Enterprise Plus', monthly: null, annualMonthly: null, audience: 'Global enterprises' },
 ];

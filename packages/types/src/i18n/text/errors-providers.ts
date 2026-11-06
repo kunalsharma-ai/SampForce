@@ -1,7 +1,7 @@
 import type { TextTable } from '../catalogue';
 
 /**
- * DealFlow's own messages about connected services: workspace apps (Slack, Teams, Zoom, DocuSign, card payments,
+ * SampForce's own messages about connected services: workspace apps (Slack, Teams, Zoom, DocuSign, card payments,
  * WhatsApp, SMS), mailboxes, single sign-on, billing providers, transcription, Apollo and the AI provider. Text a
  * provider sends back (carried in a placeholder) is shown as the provider wrote it.
  */
@@ -59,7 +59,7 @@ export const errorsProviders = {
   'DocuSign could not be reached.': ['No se pudo contactar con DocuSign.', 'DocuSign est injoignable.', 'DocuSign ist nicht erreichbar.', 'تعذر الوصول إلى DocuSign.'],
   'DocuSign did not answer in time.': ['DocuSign no respondió a tiempo.', 'DocuSign n’a pas répondu à temps.', 'DocuSign hat nicht rechtzeitig geantwortet.', 'لم يستجب DocuSign في الوقت المحدد.'],
   'DocuSign is limiting requests. Try again in a minute.': ['DocuSign está limitando las solicitudes. Inténtalo de nuevo en un minuto.', 'DocuSign limite les requêtes. Réessayez dans une minute.', 'DocuSign begrenzt die Anfragen. Versuchen Sie es in einer Minute erneut.', 'يحدّ DocuSign من الطلبات. حاول مرة أخرى بعد دقيقة.'],
-  'DocuSign no longer accepts the DealFlow connection. Reconnect DocuSign in Integrations.': ['DocuSign ya no acepta la conexión de DealFlow. Vuelve a conectar DocuSign en Integraciones.', 'DocuSign n’accepte plus la connexion DealFlow. Reconnectez DocuSign dans Intégrations.', 'DocuSign akzeptiert die DealFlow-Verbindung nicht mehr. Verbinden Sie DocuSign unter Integrationen erneut.', 'لم يعد DocuSign يقبل اتصال DealFlow. أعد ربط DocuSign من التكاملات.'],
+  'DocuSign no longer accepts the SampForce connection. Reconnect DocuSign in Integrations.': ['DocuSign ya no acepta la conexión de SampForce. Vuelve a conectar DocuSign en Integraciones.', 'DocuSign n’accepte plus la connexion SampForce. Reconnectez DocuSign dans Intégrations.', 'DocuSign akzeptiert die SampForce-Verbindung nicht mehr. Verbinden Sie DocuSign unter Integrationen erneut.', 'لم يعد DocuSign يقبل اتصال SampForce. أعد ربط DocuSign من التكاملات.'],
   'DocuSign refused the access token.': ['DocuSign rechazó el token de acceso.', 'DocuSign a refusé le jeton d’accès.', 'DocuSign hat das Zugriffstoken abgelehnt.', 'رفض DocuSign رمز الوصول.'],
   'DocuSign refused the sign-in (HTTP {status}).': ['DocuSign rechazó el inicio de sesión (HTTP {status}).', 'DocuSign a refusé la connexion (HTTP {status}).', 'DocuSign hat die Anmeldung abgelehnt (HTTP {status}).', 'رفض DocuSign تسجيل الدخول (HTTP {status}).'],
   'DocuSign refused the sign-in ({reason}).': ['DocuSign rechazó el inicio de sesión ({reason}).', 'DocuSign a refusé la connexion ({reason}).', 'DocuSign hat die Anmeldung abgelehnt ({reason}).', 'رفض DocuSign تسجيل الدخول ({reason}).'],
@@ -82,7 +82,7 @@ export const errorsProviders = {
   'Zoom could not be reached.': ['No se pudo contactar con Zoom.', 'Zoom est injoignable.', 'Zoom ist nicht erreichbar.', 'تعذر الوصول إلى Zoom.'],
   'Zoom did not answer in time.': ['Zoom no respondió a tiempo.', 'Zoom n’a pas répondu à temps.', 'Zoom hat nicht rechtzeitig geantwortet.', 'لم يستجب Zoom في الوقت المحدد.'],
   'Zoom is limiting requests. Try again in a minute.': ['Zoom está limitando las solicitudes. Inténtalo de nuevo en un minuto.', 'Zoom limite les requêtes. Réessayez dans une minute.', 'Zoom begrenzt die Anfragen. Versuchen Sie es in einer Minute erneut.', 'يحدّ Zoom من الطلبات. حاول مرة أخرى بعد دقيقة.'],
-  'Zoom no longer accepts the DealFlow connection. Reconnect Zoom in Integrations.': ['Zoom ya no acepta la conexión de DealFlow. Vuelve a conectar Zoom en Integraciones.', 'Zoom n’accepte plus la connexion DealFlow. Reconnectez Zoom dans Intégrations.', 'Zoom akzeptiert die DealFlow-Verbindung nicht mehr. Verbinden Sie Zoom unter Integrationen erneut.', 'لم يعد Zoom يقبل اتصال DealFlow. أعد ربط Zoom من التكاملات.'],
+  'Zoom no longer accepts the SampForce connection. Reconnect Zoom in Integrations.': ['Zoom ya no acepta la conexión de SampForce. Vuelve a conectar Zoom en Integraciones.', 'Zoom n’accepte plus la connexion SampForce. Reconnectez Zoom dans Intégrations.', 'Zoom akzeptiert die SampForce-Verbindung nicht mehr. Verbinden Sie Zoom unter Integrationen erneut.', 'لم يعد Zoom يقبل اتصال SampForce. أعد ربط Zoom من التكاملات.'],
   'Zoom no longer allows this transcript to be downloaded (the link expired).': ['Zoom ya no permite descargar esta transcripción (el enlace caducó).', 'Zoom ne permet plus de télécharger cette transcription (le lien a expiré).', 'Zoom erlaubt den Download dieses Transkripts nicht mehr (der Link ist abgelaufen).', 'لم يعد Zoom يسمح بتنزيل هذا النص (انتهت صلاحية الرابط).'],
   'Zoom redirected the transcript download too many times.': ['Zoom redirigió la descarga de la transcripción demasiadas veces.', 'Zoom a redirigé le téléchargement de la transcription trop de fois.', 'Zoom hat den Transkript-Download zu oft umgeleitet.', 'أعاد Zoom توجيه تنزيل النص مرات كثيرة جدًا.'],
   'Zoom refused the access token.': ['Zoom rechazó el token de acceso.', 'Zoom a refusé le jeton d’accès.', 'Zoom hat das Zugriffstoken abgelehnt.', 'رفض Zoom رمز الوصول.'],

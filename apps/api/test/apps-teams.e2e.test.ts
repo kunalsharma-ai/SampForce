@@ -43,7 +43,7 @@ describe('Microsoft Teams app (Workflows stand-in)', () => {
     expect((await teamsStatus(owner)).state).toBe('not_connected');
 
     const added = (await api(owner).post('/apps/teams/channels', { name: 'Sales', webhookUrl: teams.flowUrl('sales-flow') }).expect(200)).body;
-    expect(teams.cards.at(-1)).toMatchObject({ flow: 'sales-flow', text: expect.stringContaining('DealFlow is connected to Sales') });
+    expect(teams.cards.at(-1)).toMatchObject({ flow: 'sales-flow', text: expect.stringContaining('SampForce is connected to Sales') });
     expect(added).toMatchObject({ state: 'connected', connection: { accountName: 'Microsoft Teams', settings: { channels: [{ name: 'Sales', lastError: null }] } } });
     salesId = added.connection.settings.channels[0].id;
     expect(added.connection.settings.defaultChannelId).toBe(salesId);
@@ -69,7 +69,7 @@ describe('Microsoft Teams app (Workflows stand-in)', () => {
     await api(owner).put('/apps/teams/settings', { defaultChannelId: 'tc_000000000000' }).expect(400);
     await api(owner).put('/apps/teams/settings', { defaultChannelId: winsId }).expect(200);
     expect((await api(owner).post('/apps/teams/test', {}).expect(200)).body).toEqual({ channel: 'Deal wins' });
-    expect(teams.cards.at(-1)).toMatchObject({ flow: 'wins-flow', text: 'DealFlow test message. Workflow updates will appear here.' });
+    expect(teams.cards.at(-1)).toMatchObject({ flow: 'wins-flow', text: 'SampForce test message. Workflow updates will appear here.' });
     expect((await api(owner).get('/apps/teams/events').expect(200)).body[0]).toMatchObject({ kind: 'message.sent', ok: true, summary: 'Posted to Deal wins (test message)' });
   });
 
@@ -92,7 +92,7 @@ describe('Microsoft Teams app (Workflows stand-in)', () => {
     await worker.drain();
     const run = (await http.get(`/workflows/executions?workflowId=${wf.id}`).expect(200)).body[0];
     expect(run.status).toBe('SUCCEEDED');
-    expect(teams.cards.at(-1)).toEqual({ flow: 'sales-flow', text: 'New lead Grace [click] (https://evil.example)', actions: [{ type: 'Action.OpenUrl', title: 'Open in DealFlow', url: `http://localhost:3000/app/leads/${lead.id}` }] });
+    expect(teams.cards.at(-1)).toEqual({ flow: 'sales-flow', text: 'New lead Grace [click] (https://evil.example)', actions: [{ type: 'Action.OpenUrl', title: 'Open in SampForce', url: `http://localhost:3000/app/leads/${lead.id}` }] });
     expect((await http.get('/apps/teams/events').expect(200)).body[0]).toMatchObject({ kind: 'message.sent', entityType: 'lead', entityId: lead.id });
   });
 

@@ -66,7 +66,7 @@ describe('browser extension', () => {
     await http.post('/leads', { fullName: 'x' }).set('origin', EXT_ORIGIN).expect(403);
     // The connection shows in the person's devices.
     const sessions = (await http.get('/auth/sessions').expect(200)).body as { userAgent: string }[];
-    expect(sessions.some((s) => s.userAgent.startsWith('DealFlow browser extension'))).toBe(true);
+    expect(sessions.some((s) => s.userAgent.startsWith('SampForce browser extension'))).toBe(true);
   });
 
   it('looks up and saves people from a page without duplicating anyone', async () => {

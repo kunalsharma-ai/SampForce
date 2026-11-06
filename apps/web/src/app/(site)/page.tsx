@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Tr } from '@/lib/i18n';
 
 export const metadata: Metadata = {
-  title: 'DealFlow by Sampledge: the AI-native sales CRM',
+  title: 'SampForce by Sampledge: the AI-native sales CRM',
   description: 'Leads, deals, automation, quotes, contracts and revenue analytics in one workspace, with AI that explains itself and asks before it acts.',
 };
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const FEATURES = [
   { icon: KanbanSquare, title: 'Core CRM', body: 'Leads, contacts, companies and deals with Kanban pipelines, custom fields, CSV import and export, and search.' },
   { icon: GitBranch, title: 'Automation Studio', body: 'Workflows with conditions, delays and approval steps, a simulator to test them first, and signed webhooks.' },
-  { icon: Bot, title: 'Revenue Copilot', body: 'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves DealFlow.' },
+  { icon: Bot, title: 'Revenue Copilot', body: 'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.' },
   { icon: FileSignature, title: 'Quotes and contracts', body: 'Product catalogue, price books, tax rates, discount approvals, versioned quotes and contract renewals.' },
   { icon: Megaphone, title: 'Marketing', body: 'Consent-aware segments, hosted lead forms you can embed, and campaign attribution to leads and won deals.' },
   { icon: LineChart, title: 'Revenue intelligence', body: 'Forecasts with scenarios, targets, win rates and revenue by source, computed from your own records.' },
@@ -24,9 +24,9 @@ export default function LandingPage() {
   return (
     <>
       <section className="mx-auto max-w-6xl px-4 pb-16 pt-20 sm:px-6">
-        <p className="text-sm font-medium text-primary"><Tr text="DealFlow by Sampledge" /></p>
+        <p className="text-sm font-medium text-primary"><Tr text="SampForce by Sampledge" /></p>
         <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          <Tr text="Close smarter. Grow faster." /> <span className="text-gradient"><Tr text="Flow beyond limits." /></span>
+          <Tr text="Close smarter. Grow faster." /> <span className="text-gradient"><Tr text="Sell. Close. Grow." /></span>
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
           <Tr text="One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts." />

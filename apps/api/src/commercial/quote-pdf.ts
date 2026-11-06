@@ -31,7 +31,7 @@ function drawQuotePdf(q: PdfQuote, seller: PdfSeller): Promise<Buffer> {
   const rtl = requestLanguage() === 'ar';
   const unicode = rtl || hasArabic(JSON.stringify([q, seller.name, seller.header, seller.footer]));
   const title = `${q.reference} ${q.title}`;
-  const doc = new PDFDocument({ size: 'A4', margin: 50, lang: requestLanguage(), info: { Title: unicode ? title : latin1(title), Author: unicode ? seller.name : latin1(seller.name), Creator: 'DealFlow' } });
+  const doc = new PDFDocument({ size: 'A4', margin: 50, lang: requestLanguage(), info: { Title: unicode ? title : latin1(title), Author: unicode ? seller.name : latin1(seller.name), Creator: 'SampForce' } });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));

@@ -3,9 +3,9 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * A local stand-in for the Stripe and Razorpay endpoints DealFlow calls, plus helpers that sign
+ * A local stand-in for the Stripe and Razorpay endpoints SampForce calls, plus helpers that sign
  * webhooks the way each provider documents. It implements only the shapes the adapters use. Passing
- * these tests does not prove either live provider accepts DealFlow's requests; that needs test-mode
+ * these tests does not prove either live provider accepts SampForce's requests; that needs test-mode
  * keys and a real webhook endpoint (see docs/BILLING.md).
  */
 export const STRIPE_WEBHOOK_SECRET = 'whsec_fixture_secret';

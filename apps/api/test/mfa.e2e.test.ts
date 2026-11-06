@@ -28,7 +28,7 @@ describe('two-step verification and lockout', () => {
 
     await a.post('/auth/mfa/setup', { password: 'wrong-password-1' }).expect(400);
     const setup = (await a.post('/auth/mfa/setup', { password: u.password }).expect(200)).body as { secret: string; otpauthUri: string };
-    expect(setup.otpauthUri).toMatch(/^otpauth:\/\/totp\/DealFlow%3A/);
+    expect(setup.otpauthUri).toMatch(/^otpauth:\/\/totp\/SampForce%3A/);
     await a.post('/auth/mfa/enable', { code: '000000' }).expect(400);
 
     // A second device signed in before enrolment is signed out when the second factor turns on.

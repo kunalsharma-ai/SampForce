@@ -163,8 +163,8 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     const log = (await admin.get('/audit-log').expect(200)).body as { action: string; metadata: Record<string, unknown> }[];
     expect(log.filter((l) => l.action === 'provider_key.cleared').map((l) => l.metadata.name)).toEqual(expect.arrayContaining(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET']));
 
-    const mail = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'DealFlow <no-reply@dealflow.test>' } }).expect(200)).body as Row;
-    expect(field(mail, 'MAIL_FROM')).toMatchObject({ secret: false, hint: 'DealFlow <no-reply@dealflow.test>' });
+    const mail = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'SampForce <no-reply@dealflow.test>' } }).expect(200)).body as Row;
+    expect(field(mail, 'MAIL_FROM')).toMatchObject({ secret: false, hint: 'SampForce <no-reply@dealflow.test>' });
   });
 
   it('refuses values the environment variable would refuse, keys of another provider, and unknown providers', async () => {
@@ -207,7 +207,7 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     const owner = await registerUser(app, 'Keys Mail Ltd');
     await request(app.getHttpServer()).post('/api/v1/auth/password-reset/request').set('origin', ORIGIN).send({ email: owner.email }).expect(503);
     const down = await closedPort();
-    await admin.post('/providers/smtp/keys', { values: { SMTP_URL: `smtp://mailer:pa55-w0rd-secret@127.0.0.1:${down}`, MAIL_FROM: 'DealFlow <no-reply@dealflow.test>' } }).expect(200);
+    await admin.post('/providers/smtp/keys', { values: { SMTP_URL: `smtp://mailer:pa55-w0rd-secret@127.0.0.1:${down}`, MAIL_FROM: 'SampForce <no-reply@dealflow.test>' } }).expect(200);
     const failed = (await admin.post('/providers/smtp/check').expect(200)).body as Row;
     expect(failed.state).toBe('failed');
     expect(failed.lastCheck!.message).toContain('ECONNREFUSED');

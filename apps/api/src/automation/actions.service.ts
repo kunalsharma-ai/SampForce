@@ -206,7 +206,7 @@ export class WorkflowActions {
         const sig = createHmac('sha256', run.workflowId).update(`${t}.${body}`).digest('hex');
         const res = await publicFetch(url, {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'user-agent': 'DealFlow-Automation/1.0', 'X-DealFlow-Workflow-Signature': `t=${t},v1=${sig}` },
+          headers: { 'content-type': 'application/json', 'user-agent': 'SampForce-Automation/1.0', 'X-SampForce-Workflow-Signature': `t=${t},v1=${sig}` },
           body,
           redirect: 'manual',
           signal: AbortSignal.timeout(10_000),
@@ -215,19 +215,19 @@ export class WorkflowActions {
         return { status: res.status, host: url.host };
       }
       case 'post_to_chat': {
-        // Record values are escaped so they cannot add links or @mentions; the record link is added by DealFlow.
+        // Record values are escaped so they cannot add links or @mentions; the record link is added by SampForce.
         const link = recordLink(entity, id);
         const url = link ? `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}${link}` : null;
         if (action.app === 'teams') {
           try {
-            const r = await this.apps.postToTeams(actor.tenantId, { channelId: action.channelId, message: { text: teamsEscape(text(action.text)), link: url ? { title: 'Open in DealFlow', url } : null }, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
+            const r = await this.apps.postToTeams(actor.tenantId, { channelId: action.channelId, message: { text: teamsEscape(text(action.text)), link: url ? { title: 'Open in SampForce', url } : null }, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
             return { app: 'teams', channel: r.channel };
           } catch (e) {
             if (e instanceof AppError) throw new ActionError(e.message);
             throw e;
           }
         }
-        const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in DealFlow>` : '');
+        const message = slackEscape(text(action.text)) + (url ? `\n<${url}|Open in SampForce>` : '');
         try {
           const r = await this.apps.postToSlack(actor.tenantId, { channelId: action.channelId, channelName: action.channelName, text: message, actorUserId: actor.userId, entityType: entity || null, entityId: id, source: 'workflow' });
           return { app: action.app, channel: r.channel, ts: r.ts };

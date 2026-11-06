@@ -2,7 +2,7 @@
   "name": "dealflow-zapier",
   "version": "1.0.0",
   "private": true,
-  "description": "The DealFlow app for Zapier (Zapier Platform CLI). Deployed by the operator with `zapier push`; not part of the pnpm workspace.",
+  "description": "The SampForce app for Zapier (Zapier Platform CLI). Deployed by the operator with `zapier push`; not part of the pnpm workspace.",
   "main": "index.js",
   "engines": { "node": ">=18" },
   "dependencies": {

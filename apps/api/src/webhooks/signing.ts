@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 
-export const SIGNATURE_HEADER = 'X-DealFlow-Signature';
+export const SIGNATURE_HEADER = 'X-SampForce-Signature';
 
 /** `t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>.<body>")>`; receivers should reject stale timestamps. */
 export function signatureHeader(secret: string, body: string, at: Date = new Date()): string {

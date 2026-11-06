@@ -108,7 +108,7 @@ export const validation = {
   'Use a hex colour such as #2563eb': ['Usa un color hexadecimal, como #2563eb', 'Utilisez une couleur hexadécimale, comme #2563eb', 'Verwenden Sie eine Hex-Farbe wie #2563eb', 'استخدم لونًا سداسي عشريًا مثل ‎#2563eb'],
   'Change between one and ten keys at a time.': ['Cambia entre una y diez claves a la vez.', 'Modifiez entre une et dix clés à la fois.', 'Ändern Sie ein bis zehn Schlüssel auf einmal.', 'غيّر من مفتاح واحد إلى عشرة مفاتيح في كل مرة.'],
   'Each widget can appear once': ['Cada widget solo puede aparecer una vez', 'Chaque widget ne peut apparaître qu’une fois', 'Jedes Widget darf nur einmal vorkommen', 'يمكن أن تظهر كل أداة مرة واحدة فقط'],
-  'Must be a DealFlow page': ['Debe ser una página de DealFlow', 'Doit être une page DealFlow', 'Muss eine DealFlow-Seite sein', 'يجب أن تكون صفحة في DealFlow'],
+  'Must be a SampForce page': ['Debe ser una página de SampForce', 'Doit être une page SampForce', 'Muss eine SampForce-Seite sein', 'يجب أن تكون صفحة في SampForce'],
   'Provide at least one field to update': ['Indica al menos un campo para actualizar', 'Indiquez au moins un champ à modifier', 'Geben Sie mindestens ein zu änderndes Feld an', 'حدّد حقلًا واحدًا على الأقل لتحديثه'],
   'Use a locale tag such as en-GB or de-CH.': ['Usa una etiqueta regional como en-GB o de-CH.', 'Utilisez un code de paramètres régionaux comme en-GB ou de-CH.', 'Verwenden Sie ein Gebietsschema wie en-GB oder de-CH.', 'استخدم رمز إعدادات إقليمية مثل en-GB أو de-CH.'],
   'a report can appear only once': ['un informe solo puede aparecer una vez', 'un rapport ne peut apparaître qu’une fois', 'ein Bericht darf nur einmal vorkommen', 'يمكن أن يظهر التقرير مرة واحدة فقط'],

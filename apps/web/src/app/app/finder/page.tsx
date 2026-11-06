@@ -10,7 +10,7 @@ export default function FinderPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Email Finder"
-        description="Find work addresses for a company, or for one person there. DealFlow reads the company’s public website, works out how its addresses are written, and checks that the domain receives email."
+        description="Find work addresses for a company, or for one person there. SampForce reads the company’s public website, works out how its addresses are written, and checks that the domain receives email."
       />
       <RequirePermission permission="leads:read">
         <FinderWorkspace />

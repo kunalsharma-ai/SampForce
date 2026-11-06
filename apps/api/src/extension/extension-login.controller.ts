@@ -18,7 +18,7 @@ type Challenge = { mfaRequired: true; challenge: string };
 const EXTENSION_ORIGIN = /^(chrome-extension|moz-extension|safari-web-extension):\/\/[a-z0-9-]+$/i;
 
 /**
- * Signing in from the extension with a DealFlow email and password. It goes through the same password check,
+ * Signing in from the extension with a SampForce email and password. It goes through the same password check,
  * lockout and second factor as the web app, but sets no cookie: the answer is an extension connection token,
  * which only reaches routes marked @ExtensionAccess. Workspaces that enforce single sign-on still need a
  * connection code made in the web app after an SSO sign-in.
@@ -49,7 +49,7 @@ export class ExtensionLoginController {
 
   private ssoHint(e: unknown): never {
     if (e instanceof ForbiddenException && (e.getResponse() as { code?: string }).code === 'SSO_REQUIRED') {
-      throw new ForbiddenException({ code: 'SSO_REQUIRED', message: 'Your workspace requires single sign-on. Sign in to DealFlow with SSO, make a connection code under Settings, then paste it here.' });
+      throw new ForbiddenException({ code: 'SSO_REQUIRED', message: 'Your workspace requires single sign-on. Sign in to SampForce with SSO, make a connection code under Settings, then paste it here.' });
     }
     throw e;
   }

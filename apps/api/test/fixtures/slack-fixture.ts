@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * A local stand-in for the Slack Web API calls DealFlow makes (oauth.v2.access, auth.test, conversations.list,
+ * A local stand-in for the Slack Web API calls SampForce makes (oauth.v2.access, auth.test, conversations.list,
  * chat.postMessage, auth.revoke). Shapes follow Slack's published docs; passing these tests does not prove Slack
  * accepts the app. Slack answers HTTP 200 with ok:false for errors, which this copies.
  */

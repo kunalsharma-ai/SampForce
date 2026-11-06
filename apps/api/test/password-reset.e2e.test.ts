@@ -20,7 +20,7 @@ describe('password reset by email', () => {
 
   beforeAll(async () => {
     smtp = await startSmtpFixture();
-    for (const [k, v] of Object.entries({ SMTP_URL: smtp.url, MAIL_FROM: 'DealFlow <no-reply@dealflow.test>', PUBLIC_WEB_URL: 'https://app.dealflow.test' })) {
+    for (const [k, v] of Object.entries({ SMTP_URL: smtp.url, MAIL_FROM: 'SampForce <no-reply@dealflow.test>', PUBLIC_WEB_URL: 'https://app.dealflow.test' })) {
       saved[k] = process.env[k];
       process.env[k] = v;
     }
@@ -56,7 +56,7 @@ describe('password reset by email', () => {
     const mail = smtp.messages.at(-1)!;
     expect(mail.to).toEqual([user.email]);
     expect(mail.from).toBe('no-reply@dealflow.test');
-    expect(mail.subject).toBe('Reset your DealFlow password');
+    expect(mail.subject).toBe('Reset your SampForce password');
     expect(mail.text).toContain('https://app.dealflow.test/reset-password#token=');
     const token = tokenFrom(mail.text)!;
     expect(token.length).toBeGreaterThan(30);
@@ -67,7 +67,7 @@ describe('password reset by email', () => {
     await post('/auth/password-reset', { token, password: 'short' }).expect(400);
     await post('/auth/password-reset', { token, password: 'brand-new-passphrase-7' }).expect(204);
     const changed = smtp.messages.at(-1)!;
-    expect(changed.subject).toBe('Your DealFlow password was changed');
+    expect(changed.subject).toBe('Your SampForce password was changed');
 
     // Used once only.
     const again = await post('/auth/password-reset', { token, password: 'another-passphrase-9' }).expect(400);
@@ -114,7 +114,7 @@ describe('password reset by email', () => {
     await post('/auth/password-reset/request', { email: german.email }).set('accept-language', 'fr').expect(202);
     const mail = smtp.messages.at(-1)!;
     expect(mail.to).toEqual([german.email]);
-    expect(mail.subject).toBe('Setzen Sie Ihr DealFlow-Passwort zurück');
+    expect(mail.subject).toBe('Setzen Sie Ihr SampForce-Passwort zurück');
     expect(mail.text).toContain('https://app.dealflow.test/reset-password#token=');
   });
 });

@@ -185,7 +185,7 @@ function SingleSignOn({ s }: { s: SecuritySettings }) {
                 </Select>
               </Field>
             )}
-            <Toggle id="sso-enabled" label={t('Turn on single sign-on')} hint={t('DealFlow checks your provider’s discovery document when you save.')} checked={form.enabled} onChange={(v) => setForm((f) => ({ ...f, enabled: v, enforced: v && f.enforced }))} />
+            <Toggle id="sso-enabled" label={t('Turn on single sign-on')} hint={t('SampForce checks your provider’s discovery document when you save.')} checked={form.enabled} onChange={(v) => setForm((f) => ({ ...f, enabled: v, enforced: v && f.enforced }))} />
             <Toggle
               id="sso-enforced"
               label={t('Require single sign-on')}

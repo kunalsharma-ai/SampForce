@@ -365,11 +365,11 @@ export const sequences = {
     'اترك الحقول أدناه فارغة لاستخدام القالب كما هو، أو اكتب هنا لتغييره في هذه الخطوة.',
   ],
   'No template, write it here': ['Sin plantilla, escríbelo aquí', 'Aucun modèle, rédiger ici', 'Keine Vorlage, hier schreiben', 'بلا قالب، اكتبها هنا'],
-  'Choose what DealFlow does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.': [
-    'Elige qué hace DealFlow cuando alguien responde. Los rebotes y las bajas siempre detienen todos los envíos a esa dirección y la añaden a la lista de no enviar.',
-    'Choisissez ce que fait DealFlow quand quelqu’un réagit. Les rebonds et les désabonnements arrêtent toujours tout envoi à cette adresse et l’ajoutent à la liste d’exclusion.',
-    'Legen Sie fest, was DealFlow tut, wenn jemand reagiert. Unzustellbare und Abmeldungen stoppen immer jeden Versand an diese Adresse und setzen sie auf die Sperrliste.',
-    'اختر ما يفعله DealFlow عندما يتفاعل شخص ما. الارتداد وإلغاء الاشتراك يوقفان دائمًا كل إرسال إلى ذلك العنوان ويضيفانه إلى قائمة عدم المراسلة.',
+  'Choose what SampForce does when someone responds. Bounces and unsubscribes always stop all sending to that address, and add it to the do-not-email list.': [
+    'Elige qué hace SampForce cuando alguien responde. Los rebotes y las bajas siempre detienen todos los envíos a esa dirección y la añaden a la lista de no enviar.',
+    'Choisissez ce que fait SampForce quand quelqu’un réagit. Les rebonds et les désabonnements arrêtent toujours tout envoi à cette adresse et l’ajoutent à la liste d’exclusion.',
+    'Legen Sie fest, was SampForce tut, wenn jemand reagiert. Unzustellbare und Abmeldungen stoppen immer jeden Versand an diese Adresse und setzen sie auf die Sperrliste.',
+    'اختر ما يفعله SampForce عندما يتفاعل شخص ما. الارتداد وإلغاء الاشتراك يوقفان دائمًا كل إرسال إلى ذلك العنوان ويضيفانه إلى قائمة عدم المراسلة.',
   ],
   'When someone replies': ['Cuando alguien responde', 'Quand quelqu’un répond', 'Wenn jemand antwortet', 'عندما يرد شخص'],
   'When someone opens an email (approximate)': ['Cuando alguien abre un correo (aproximado)', 'Quand quelqu’un ouvre un e-mail (approximatif)', 'Wenn jemand eine E-Mail öffnet (ungefähr)', 'عندما يفتح شخص رسالة (تقريبي)'],
@@ -396,11 +396,11 @@ export const sequences = {
     'تستخدم نافذة الإرسال هذه المنطقة لكل من في السلسلة.',
   ],
   'Emails per sender per day': ['Correos por remitente y día', 'E-mails par expéditeur et par jour', 'E-Mails pro Absender und Tag', 'الرسائل لكل مرسِل يوميًا'],
-  "Your mailbox's overall DealFlow limit also applies. Sends are spread out by a few minutes.": [
-    'También se aplica el límite general de DealFlow de tu buzón. Los envíos se separan unos minutos.',
-    'La limite globale DealFlow de votre boîte s’applique aussi. Les envois sont espacés de quelques minutes.',
-    'Das allgemeine DealFlow-Limit Ihres Postfachs gilt ebenfalls. Sendungen werden um einige Minuten verteilt.',
-    'ينطبق أيضًا الحد العام لصندوقك في DealFlow. تُوزَّع الرسائل بفاصل بضع دقائق.',
+  "Your mailbox's overall SampForce limit also applies. Sends are spread out by a few minutes.": [
+    'También se aplica el límite general de SampForce de tu buzón. Los envíos se separan unos minutos.',
+    'La limite globale SampForce de votre boîte s’applique aussi. Les envois sont espacés de quelques minutes.',
+    'Das allgemeine SampForce-Limit Ihres Postfachs gilt ebenfalls. Sendungen werden um einige Minuten verteilt.',
+    'ينطبق أيضًا الحد العام لصندوقك في SampForce. تُوزَّع الرسائل بفاصل بضع دقائق.',
   ],
   Tracking: ['Seguimiento', 'Suivi', 'Tracking', 'التتبع'],
   'Track opens (approximate)': ['Seguir aperturas (aproximado)', 'Suivre les ouvertures (approximatif)', 'Öffnungen erfassen (ungefähr)', 'تتبع الفتح (تقريبي)'],

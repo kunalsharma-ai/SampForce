@@ -87,7 +87,7 @@ test('saves people found on a company page as leads, without duplicates', async 
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/panel.html?tab=${await tabIdFor(teamUrl)}`);
 
-  await panel.getByLabel('Your DealFlow address').fill('http://localhost:3000');
+  await panel.getByLabel('Your SampForce address').fill('http://localhost:3000');
   await panel.getByLabel('Connection code').fill('dfx_wrong');
   await panel.getByRole('button', { name: 'Connect' }).click();
   await expect(panel.getByRole('alert')).toContainText('connection has ended');
@@ -98,7 +98,7 @@ test('saves people found on a company page as leads, without duplicates', async 
   await expect(panel.getByText('4 addresses found.')).toBeVisible();
   await expect(panel.getByLabel('Company')).toHaveValue('Globex Research');
   // Already a lead: shown with a link and not selectable. Personal: left unticked.
-  await expect(panel.getByRole('link', { name: 'Open Raj Patel in DealFlow' })).toBeVisible();
+  await expect(panel.getByRole('link', { name: 'Open Raj Patel in SampForce' })).toBeVisible();
   await expect(panel.getByRole('checkbox', { name: /raj@globex.test/ })).toBeDisabled();
   await expect(panel.getByRole('checkbox', { name: /founder.private@gmail.com/ })).not.toBeChecked();
   await expect(panel.getByLabel('Name for jane.doe@globex.test')).toHaveValue('Jane Doe');
@@ -108,7 +108,7 @@ test('saves people found on a company page as leads, without duplicates', async 
 
   await panel.getByRole('button', { name: 'Save 2 as leads' }).click();
   await expect(panel.getByRole('status').filter({ hasText: 'Saved 2 new leads.' })).toBeVisible();
-  await expect(panel.getByRole('link', { name: 'Open Jane Doe in DealFlow' })).toBeVisible();
+  await expect(panel.getByRole('link', { name: 'Open Jane Doe in SampForce' })).toBeVisible();
 
   const leads = await (await app.request.get('/api/v1/leads?q=globex')).json();
   expect(leads.items.map((l: { fullName: string }) => l.fullName).sort()).toEqual(['Globex sales desk', 'Jane Doe', 'Raj Patel']);
@@ -125,9 +125,9 @@ test('saves people found on a company page as leads, without duplicates', async 
   expect((await (await app.request.get('/api/v1/leads?q=agency')).json()).total).toBe(0);
   expect((await (await app.request.get('/api/v1/leads?q=fan%40gmail')).json()).total).toBe(0);
 
-  // Disconnecting ends the connection in DealFlow too.
+  // Disconnecting ends the connection in SampForce too.
   await panel.getByRole('button', { name: 'Disconnect' }).click();
-  await expect(panel.getByRole('heading', { name: 'Connect to DealFlow' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Connect to SampForce' })).toBeVisible();
   await app.reload();
   await expect(app.getByRole('list', { name: 'Extension connections' })).toHaveCount(0);
 });
@@ -142,7 +142,7 @@ test('finds more people at the company through the email finder', async () => {
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/panel.html?tab=${await tabIdFor(url)}`);
   if (await panel.getByLabel('Connection code').isVisible()) {
-    await panel.getByLabel('Your DealFlow address').fill('http://localhost:3000');
+    await panel.getByLabel('Your SampForce address').fill('http://localhost:3000');
     await panel.getByLabel('Connection code').fill(code);
     await panel.getByRole('button', { name: 'Connect' }).click();
   }
@@ -155,7 +155,7 @@ test('finds more people at the company through the email finder', async () => {
   await panel.getByRole('button', { name: 'Save 4 as leads' }).click();
   await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new leads.' })).toBeVisible();
   // The people found through the finder stay listed, now as leads.
-  await expect(panel.getByRole('link', { name: 'Open Priya Raman in DealFlow' })).toBeVisible();
+  await expect(panel.getByRole('link', { name: 'Open Priya Raman in SampForce' })).toBeVisible();
 });
 
 test('signs in with a password and imports prospects at the company on screen (Mock Mode)', async () => {
@@ -166,10 +166,10 @@ test('signs in with a password and imports prospects at the company on screen (M
   await site.goto(url);
   const panel = await context.newPage();
   await panel.goto(`chrome-extension://${extensionId}/panel.html?tab=${await tabIdFor(url)}`);
-  if (!(await panel.getByRole('heading', { name: 'Connect to DealFlow' }).isVisible())) {
+  if (!(await panel.getByRole('heading', { name: 'Connect to SampForce' }).isVisible())) {
     await panel.getByRole('button', { name: 'Disconnect' }).click();
   }
-  await panel.getByLabel('Your DealFlow address').fill('http://localhost:3000');
+  await panel.getByLabel('Your SampForce address').fill('http://localhost:3000');
   await panel.getByLabel('Work email').fill(email);
   await panel.getByLabel('Password').fill('wrong-password');
   await panel.getByRole('button', { name: 'Sign in' }).click();
@@ -196,7 +196,7 @@ test('signs in with a password and imports prospects at the company on screen (M
   await prospects.getByLabel('New list name').fill('Globex research team');
   await prospects.getByRole('button', { name: 'Import 3' }).click();
   await expect(prospects.getByRole('status').filter({ hasText: 'Added 3 to Globex research team.' })).toBeVisible();
-  await expect(prospects.getByRole('link', { name: 'Open Globex research team in DealFlow' })).toBeVisible();
+  await expect(prospects.getByRole('link', { name: 'Open Globex research team in SampForce' })).toBeVisible();
   await expect(prospects.getByText(/Provider calls in the last 24 hours: 4 of 100/)).toBeVisible();
 
   // Sample people are refused by the CRM.

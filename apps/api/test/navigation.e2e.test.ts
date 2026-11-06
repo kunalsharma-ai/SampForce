@@ -46,7 +46,7 @@ describe('personal navigation', () => {
     expect(after.hiddenModules).toEqual([]);
   });
 
-  it('accepts only DealFlow pages as links', async () => {
+  it('accepts only SampForce pages as links', async () => {
     for (const href of ['https://evil.example', '//evil.example', '/app//evil', '/app/../login', 'javascript:alert(1)', '/apps', '/app/x\\y']) {
       await api(owner).patch('/me/navigation', { pinned: [{ href, label: 'x', kind: 'page' }] }).expect(400);
       await api(owner).post('/me/navigation/visits', { href, label: 'x', kind: 'page' }).expect(400);

@@ -2,7 +2,7 @@
   "name": "@dealflow/extension",
   "version": "0.1.0",
   "private": true,
-  "description": "DealFlow lead capture browser extension (Chrome and Edge, Manifest V3).",
+  "description": "SampForce lead capture browser extension (Chrome and Edge, Manifest V3).",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

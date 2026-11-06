@@ -466,7 +466,7 @@ function CompetitionDialog({ onClose }: { onClose: () => void }) {
       <DialogContent side="right" className="flex flex-col gap-4 overflow-y-auto p-5 sm:max-w-xl">
         <div>
           <DialogTitle className="text-lg font-semibold">{t('New competition')}</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">{t("Participants are notified in DealFlow. It uses a copy of today's scoring rules, so later rule changes do not move its standings.")}</DialogDescription>
+          <DialogDescription className="text-sm text-muted-foreground">{t("Participants are notified in SampForce. It uses a copy of today's scoring rules, so later rule changes do not move its standings.")}</DialogDescription>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <label className="block space-y-1 text-sm">

@@ -121,6 +121,6 @@
     };
   }
 
-  globalThis.DealFlowPage = { cleanEmail, findEmails, isPersonal, belongsTo, nameFromEmail, looksLikeName, extract };
+  globalThis.SampForcePage = { cleanEmail, findEmails, isPersonal, belongsTo, nameFromEmail, looksLikeName, extract };
   return typeof document !== 'undefined' && typeof location !== 'undefined' ? extract(document, location) : null;
 })();

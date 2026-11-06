@@ -54,7 +54,7 @@ export function SsoForm() {
         </p>
       )}
       <form onSubmit={submit} noValidate className="space-y-4">
-        <Field id="sso-workspace" label={t('Workspace sign-in name')} hint={t('Your administrator sets this in DealFlow’s security settings.')} error={error ?? undefined}>
+        <Field id="sso-workspace" label={t('Workspace sign-in name')} hint={t('Your administrator sets this in SampForce’s security settings.')} error={error ?? undefined}>
           <Input autoComplete="organization" autoCapitalize="none" spellCheck={false} value={workspace} onChange={(e) => setWorkspace(e.target.value)} />
         </Field>
         <Button type="submit" className="w-full">

@@ -8,7 +8,7 @@ import { API_ENV, type ApiEnv } from '../src/common/env';
 import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
 const TRANSCRIPT = [
-  "Speaker 0: Hi, I'm Sam from DealFlow. Thanks for joining.",
+  "Speaker 0: Hi, I'm Sam from SampForce. Thanks for joining.",
   "Speaker 1: Thanks. I'm Priya. We need single sign-on for 200 staff.",
   'Speaker 1: Honestly the annual price feels expensive for us.',
   "Speaker 0: Understood. I'll send a pricing comparison by Friday.",

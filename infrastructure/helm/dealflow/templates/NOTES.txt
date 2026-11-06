@@ -1,4 +1,4 @@
-DealFlow {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+SampForce {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
 
 {{- if .Values.migrations.enabled }}
 Database migrations ran as a pre-install/pre-upgrade hook. Check them with:

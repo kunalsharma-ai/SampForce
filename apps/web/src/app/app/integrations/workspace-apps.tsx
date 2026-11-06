@@ -93,7 +93,7 @@ function SlackCard({ app }: { app: AppStatus }) {
         <p className="text-muted-foreground">{t.maybe(app.description)} {t('Add a “Post to Slack” step to any workflow.')}</p>
         {app.state === 'pending_configuration' && (
           <p className="text-muted-foreground">
-            {t('An operator must add {settings} (the DealFlow Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig) })}
+            {t('An operator must add {settings} (the SampForce Slack app’s credentials) in the operator console under Providers before anyone can connect. Nothing is sent until then.', { settings: new Intl.ListFormat(t.language, { type: 'conjunction' }).format(app.missingConfig) })}
           </p>
         )}
         {c && (
@@ -275,7 +275,7 @@ function TeamsCard({ app }: { app: AppStatus }) {
             }}
           >
             <p className="text-xs text-muted-foreground">
-              {rich(t('In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. DealFlow posts a welcome card to check it before saving. The URL is stored encrypted.'), { menu: <strong>{t('Workflows')}</strong> })}
+              {rich(t('In Teams, open the channel’s {menu}, choose “Send webhook alerts to a channel”, and copy the URL it gives you. SampForce posts a welcome card to check it before saving. The URL is stored encrypted.'), { menu: <strong>{t('Workflows')}</strong> })}
             </p>
             <div className="grid gap-2 sm:grid-cols-[12rem_1fr]">
               <div className="space-y-1.5">
@@ -317,15 +317,15 @@ function TeamsCard({ app }: { app: AppStatus }) {
 
 const OAUTH_COPY: Record<'zoom' | 'docusign', { blurb: string; credentials: string; privacy: string; disconnect: string }> = {
   zoom: {
-    blurb: 'Meetings are created in each person’s own Zoom user, matched by their DealFlow email.',
-    credentials: 'the DealFlow Zoom app’s credentials',
-    privacy: 'Only meetings scheduled from DealFlow with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.',
+    blurb: 'Meetings are created in each person’s own Zoom user, matched by their SampForce email.',
+    credentials: 'the SampForce Zoom app’s credentials',
+    privacy: 'Only meetings scheduled from SampForce with recording chosen have their transcripts imported. Other meetings in the Zoom account are never read.',
     disconnect: 'Disconnect Zoom? Scheduling from records stops; meetings already scheduled stay in Zoom.',
   },
   docusign: {
     blurb: 'Contracts go out from this DocuSign account, one envelope per contract, only after the sender confirms.',
-    credentials: 'the DealFlow DocuSign app’s integration key and secret',
-    privacy: 'DealFlow reads only envelopes it sent. Signed PDFs stay in DocuSign and are fetched when someone downloads them.',
+    credentials: 'the SampForce DocuSign app’s integration key and secret',
+    privacy: 'SampForce reads only envelopes it sent. Signed PDFs stay in DocuSign and are fetched when someone downloads them.',
     disconnect: 'Disconnect DocuSign? Envelopes already sent stay in DocuSign, but their status will no longer update here.',
   },
 };
@@ -469,7 +469,7 @@ function PaymentsCard({ app }: { app: AppStatus }) {
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <p className="text-muted-foreground">
-          {t.maybe(app.description)} {t('Customers pay on the hosted page of {provider}, so DealFlow never handles card details. A proposal is marked paid only when the provider’s signed webhook confirms the amount.', { provider: settings ? PAYMENT_EVENTS[settings.provider].name : t('Stripe or Razorpay') })}
+          {t.maybe(app.description)} {t('Customers pay on the hosted page of {provider}, so SampForce never handles card details. A proposal is marked paid only when the provider’s signed webhook confirms the amount.', { provider: settings ? PAYMENT_EVENTS[settings.provider].name : t('Stripe or Razorpay') })}
         </p>
         {app.warnings.map((w) => (
           <p key={w} className="text-xs text-warning">
@@ -655,7 +655,7 @@ function WhatsappCard({ app }: { app: AppStatus }) {
             }}
           >
             <p className="text-xs text-muted-foreground">
-              {rich(t('From WhatsApp Manager and your Meta app: the phone number id, the WhatsApp Business Account id, a System User access token with {messaging} and {management}, and the App Secret (used to check webhook signatures). DealFlow reads the number to check them, sends nothing, then stores the token and secret encrypted.'), { messaging: <code>whatsapp_business_messaging</code>, management: <code>whatsapp_business_management</code> })}
+              {rich(t('From WhatsApp Manager and your Meta app: the phone number id, the WhatsApp Business Account id, a System User access token with {messaging} and {management}, and the App Secret (used to check webhook signatures). SampForce reads the number to check them, sends nothing, then stores the token and secret encrypted.'), { messaging: <code>whatsapp_business_messaging</code>, management: <code>whatsapp_business_management</code> })}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -792,7 +792,7 @@ function TwilioCard({ app }: { app: AppStatus }) {
             }}
           >
             <p className="text-xs text-muted-foreground">
-              {t('From the Twilio console: the Account SID and Auth Token, and a Twilio number on that account that can send SMS. DealFlow reads the account and the number to check them, sends nothing, then stores the token encrypted. The Auth Token also checks the signature on every request Twilio sends.')}
+              {t('From the Twilio console: the Account SID and Auth Token, and a Twilio number on that account that can send SMS. SampForce reads the account and the number to check them, sends nothing, then stores the token encrypted. The Auth Token also checks the signature on every request Twilio sends.')}
             </p>
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="space-y-1.5">

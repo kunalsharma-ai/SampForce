@@ -3,12 +3,12 @@ const { api } = require('./lib');
 
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
-/** Actions: each is one record created through the same API and checks as the DealFlow web app. */
+/** Actions: each is one record created through the same API and checks as the SampForce web app. */
 module.exports = {
   create_lead: {
     key: 'create_lead',
     noun: 'Lead',
-    display: { label: 'Create Lead', description: 'Creates a lead. DealFlow flags a likely duplicate instead of creating a second one silently.' },
+    display: { label: 'Create Lead', description: 'Creates a lead. SampForce flags a likely duplicate instead of creating a second one silently.' },
     operation: {
       inputFields: [
         { key: 'fullName', label: 'Full name', required: true },

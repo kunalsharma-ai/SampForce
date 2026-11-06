@@ -10,11 +10,11 @@ export interface SystemMail {
 
 export const MAIL_NOT_CONFIGURED = {
   code: 'MAIL_NOT_CONFIGURED',
-  message: 'This DealFlow site cannot send email yet. Ask your workspace administrator for help.',
+  message: 'This SampForce site cannot send email yet. Ask your workspace administrator for help.',
 };
 
 /**
- * DealFlow's own email (password resets), sent through the email service in SMTP_URL. This is separate from
+ * SampForce's own email (password resets), sent through the email service in SMTP_URL. This is separate from
  * people's connected mailboxes, which send their one-to-one and sequence emails.
  */
 @Injectable()

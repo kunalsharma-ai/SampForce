@@ -5,13 +5,13 @@
  *   LOAD_SCALE=1 DEMO_USER_PASSWORD=... node -r @swc-node/register scripts/seed-load.ts
  *
  * Scale 1 = 5,000 companies, 25,000 contacts, 25,000 leads, 20,000 deals (with stage history) and
- * 100,000 activities. The workspace owner is load-owner@dealflow.local.
+ * 100,000 activities. The workspace owner is load-owner@sampforce.local.
  */
 import { randomUUID } from 'node:crypto';
 import { PrismaClient, provisionTenant, withDbContext } from '@dealflow/database';
 import { PasswordService } from '../src/auth/password.service';
 
-const EMAIL = 'load-owner@dealflow.local';
+const EMAIL = 'load-owner@sampforce.local';
 
 async function main(): Promise<void> {
   if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed load-test data in production.');

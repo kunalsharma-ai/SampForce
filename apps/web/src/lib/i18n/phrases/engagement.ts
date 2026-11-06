@@ -143,11 +143,11 @@ export const engagement = {
   'Confirm cancel': ['Confirmar cancelación', 'Confirmer l’annulation', 'Abbruch bestätigen', 'تأكيد الإلغاء'],
   'Keep it': ['Mantenerla', 'La conserver', 'Behalten', 'الإبقاء عليها'],
   'Cancel competition': ['Cancelar competición', 'Annuler la compétition', 'Wettbewerb abbrechen', 'إلغاء المسابقة'],
-  'Participants are notified in DealFlow. It uses a copy of today\'s scoring rules, so later rule changes do not move its standings.': [
-    'Los participantes reciben un aviso en DealFlow. Usa una copia de las reglas de puntuación de hoy, así que los cambios posteriores no alteran su clasificación.',
-    'Les participants sont prévenus dans DealFlow. Elle utilise une copie des règles de notation du jour, donc les changements ultérieurs ne modifient pas son classement.',
-    'Teilnehmende werden in DealFlow benachrichtigt. Er verwendet eine Kopie der heutigen Bewertungsregeln, daher ändern spätere Regeländerungen den Stand nicht.',
-    'يُبلَّغ المشاركون في DealFlow. تستخدم نسخة من قواعد التسجيل الحالية، لذا لا تؤثر تغييرات القواعد اللاحقة على ترتيبها.',
+  'Participants are notified in SampForce. It uses a copy of today\'s scoring rules, so later rule changes do not move its standings.': [
+    'Los participantes reciben un aviso en SampForce. Usa una copia de las reglas de puntuación de hoy, así que los cambios posteriores no alteran su clasificación.',
+    'Les participants sont prévenus dans SampForce. Elle utilise une copie des règles de notation du jour, donc les changements ultérieurs ne modifient pas son classement.',
+    'Teilnehmende werden in SampForce benachrichtigt. Er verwendet eine Kopie der heutigen Bewertungsregeln, daher ändern spätere Regeländerungen den Stand nicht.',
+    'يُبلَّغ المشاركون في SampForce. تستخدم نسخة من قواعد التسجيل الحالية، لذا لا تؤثر تغييرات القواعد اللاحقة على ترتيبها.',
   ],
   'Who competes': ['Quién compite', 'Qui participe', 'Wer tritt an', 'من يتنافس'],
   'Teams (team challenge)': ['Equipos (reto por equipos)', 'Équipes (défi d’équipe)', 'Teams (Team-Challenge)', 'الفرق (تحدي الفرق)'],
@@ -341,11 +341,11 @@ export const engagement = {
   'Last quarter (Q{q} {year})': ['Trimestre pasado (T{q} {year})', 'Le trimestre dernier (T{q} {year})', 'Letztes Quartal (Q{q} {year})', 'الربع الماضي (ر{q} {year})'],
   'This year ({year})': ['Este año ({year})', 'Cette année ({year})', 'Dieses Jahr ({year})', 'هذا العام ({year})'],
   'Last year ({year})': ['Año pasado ({year})', 'L’année dernière ({year})', 'Letztes Jahr ({year})', 'العام الماضي ({year})'],
-  'Two-step verification and the devices signed in to your DealFlow account.': [
-    'La verificación en dos pasos y los dispositivos con sesión iniciada en tu cuenta de DealFlow.',
-    'La validation en deux étapes et les appareils connectés à votre compte DealFlow.',
-    'Bestätigung in zwei Schritten und die bei Ihrem DealFlow-Konto angemeldeten Geräte.',
-    'التحقق بخطوتين والأجهزة المسجّل دخولها إلى حسابك في DealFlow.',
+  'Two-step verification and the devices signed in to your SampForce account.': [
+    'La verificación en dos pasos y los dispositivos con sesión iniciada en tu cuenta de SampForce.',
+    'La validation en deux étapes et les appareils connectés à votre compte SampForce.',
+    'Bestätigung in zwei Schritten und die bei Ihrem SampForce-Konto angemeldeten Geräte.',
+    'التحقق بخطوتين والأجهزة المسجّل دخولها إلى حسابك في SampForce.',
   ],
   'AI Agents': ['Agentes de IA', 'Agents IA', 'KI-Agenten', 'وكلاء الذكاء الاصطناعي'],
   'What each agent may and may not do, whether it can run right now, and what it has cost this month. Agents propose; people decide.': [
@@ -362,11 +362,11 @@ export const engagement = {
     'تابع الحملات والعملاء المحتملين والصفقات والإيرادات التي جلبتها. الإسناد حسب أول تواصل: يُحتسب العميل المحتمل للحملة التي التقطه نموذجها أو التي رُبط بها أو التي يحمل قيمة UTM الخاصة بها.',
   ],
   'Email Finder': ['Buscador de correos', 'Recherche d’e-mails', 'E-Mail-Suche', 'البحث عن البريد'],
-  'Find work addresses for a company, or for one person there. DealFlow reads the company’s public website, works out how its addresses are written, and checks that the domain receives email.': [
-    'Encuentra direcciones de trabajo de una empresa o de una persona en ella. DealFlow lee el sitio web público de la empresa, deduce cómo se escriben sus direcciones y comprueba que el dominio recibe correo.',
-    'Trouvez les adresses professionnelles d’une entreprise ou d’une personne qui y travaille. DealFlow lit le site web public de l’entreprise, déduit le format de ses adresses et vérifie que le domaine reçoit des e-mails.',
-    'Finden Sie geschäftliche Adressen für ein Unternehmen oder eine Person dort. DealFlow liest die öffentliche Website des Unternehmens, ermittelt das Adressformat und prüft, ob die Domain E-Mails empfängt.',
-    'اعثر على عناوين العمل لشركة أو لشخص فيها. يقرأ DealFlow الموقع العام للشركة، ويستنتج طريقة كتابة عناوينها، ويتحقق من أن النطاق يستقبل البريد.',
+  'Find work addresses for a company, or for one person there. SampForce reads the company’s public website, works out how its addresses are written, and checks that the domain receives email.': [
+    'Encuentra direcciones de trabajo de una empresa o de una persona en ella. SampForce lee el sitio web público de la empresa, deduce cómo se escriben sus direcciones y comprueba que el dominio recibe correo.',
+    'Trouvez les adresses professionnelles d’une entreprise ou d’une personne qui y travaille. SampForce lit le site web public de l’entreprise, déduit le format de ses adresses et vérifie que le domaine reçoit des e-mails.',
+    'Finden Sie geschäftliche Adressen für ein Unternehmen oder eine Person dort. SampForce liest die öffentliche Website des Unternehmens, ermittelt das Adressformat und prüft, ob die Domain E-Mails empfängt.',
+    'اعثر على عناوين العمل لشركة أو لشخص فيها. يقرأ SampForce الموقع العام للشركة، ويستنتج طريقة كتابة عناوينها، ويتحقق من أن النطاق يستقبل البريد.',
   ],
   'Sales Gamification': ['Gamificación de ventas', 'Gamification des ventes', 'Vertriebs-Gamification', 'تحفيز المبيعات'],
   'Points, leaderboards, badges and competitions worked out from your CRM records. Admins and sales managers choose which activities earn points and how badges are earned.': [
@@ -391,11 +391,11 @@ export const engagement = {
     'Warum zeigen manche KPIs einen Strich?',
     'لماذا تعرض بعض مؤشرات الأداء شرطة؟',
   ],
-  'A dash means there is not enough data yet, or the module that produces the metric has not shipped. DealFlow never fills dashboards with placeholder numbers.': [
-    'Un guion significa que aún no hay datos suficientes o que el módulo que genera la métrica no se ha publicado. DealFlow nunca rellena los paneles con cifras de relleno.',
-    'Un tiret signifie qu’il n’y a pas encore assez de données, ou que le module qui produit l’indicateur n’est pas encore disponible. DealFlow ne remplit jamais les tableaux de bord de chiffres fictifs.',
-    'Ein Strich bedeutet, dass noch nicht genug Daten vorliegen oder das Modul für die Kennzahl noch nicht ausgeliefert ist. DealFlow füllt Dashboards nie mit Platzhalterzahlen.',
-    'تعني الشرطة أنه لا توجد بيانات كافية بعد، أو أن الوحدة التي تنتج المقياس لم تُطلق. لا يملأ DealFlow لوحات المعلومات بأرقام وهمية أبدًا.',
+  'A dash means there is not enough data yet, or the module that produces the metric has not shipped. SampForce never fills dashboards with placeholder numbers.': [
+    'Un guion significa que aún no hay datos suficientes o que el módulo que genera la métrica no se ha publicado. SampForce nunca rellena los paneles con cifras de relleno.',
+    'Un tiret signifie qu’il n’y a pas encore assez de données, ou que le module qui produit l’indicateur n’est pas encore disponible. SampForce ne remplit jamais les tableaux de bord de chiffres fictifs.',
+    'Ein Strich bedeutet, dass noch nicht genug Daten vorliegen oder das Modul für die Kennzahl noch nicht ausgeliefert ist. SampForce füllt Dashboards nie mit Platzhalterzahlen.',
+    'تعني الشرطة أنه لا توجد بيانات كافية بعد، أو أن الوحدة التي تنتج المقياس لم تُطلق. لا يملأ SampForce لوحات المعلومات بأرقام وهمية أبدًا.',
   ],
   'How do I reduce motion?': ['¿Cómo reduzco el movimiento?', 'Comment réduire les animations ?', 'Wie reduziere ich Bewegung?', 'كيف أقلّل الحركة؟'],
   'Open Settings → Appearance & motion and choose Reduced or Off. Low-power mode also turns off ambient effects.': [
@@ -424,11 +424,11 @@ export const engagement = {
     'تُقدَّم مواصفة OpenAPI 3.1 على /api/v1/openapi.json، مع مستكشف تفاعلي على /api/v1/docs.',
   ],
   'Marketing': ['Marketing', 'Marketing', 'Marketing', 'التسويق'],
-  'Audience segments built from your leads and contacts, and hosted lead-capture forms that record consent. DealFlow does not send marketing email yet.': [
-    'Segmentos de audiencia creados a partir de tus leads y contactos, y formularios de prospectos alojados que registran el consentimiento. DealFlow aún no envía correo de marketing.',
-    'Des segments d’audience construits à partir de vos prospects et contacts, et des formulaires de capture hébergés qui enregistrent le consentement. DealFlow n’envoie pas encore d’e-mails marketing.',
-    'Zielgruppensegmente aus Ihren Leads und Kontakten sowie gehostete Lead-Formulare, die Einwilligungen erfassen. DealFlow versendet noch keine Marketing-E-Mails.',
-    'شرائح جمهور مبنية من عملائك المحتملين وجهات اتصالك، ونماذج التقاط مستضافة تسجل الموافقة. لا يرسل DealFlow بريدًا تسويقيًا بعد.',
+  'Audience segments built from your leads and contacts, and hosted lead-capture forms that record consent. SampForce does not send marketing email yet.': [
+    'Segmentos de audiencia creados a partir de tus leads y contactos, y formularios de prospectos alojados que registran el consentimiento. SampForce aún no envía correo de marketing.',
+    'Des segments d’audience construits à partir de vos prospects et contacts, et des formulaires de capture hébergés qui enregistrent le consentement. SampForce n’envoie pas encore d’e-mails marketing.',
+    'Zielgruppensegmente aus Ihren Leads und Kontakten sowie gehostete Lead-Formulare, die Einwilligungen erfassen. SampForce versendet noch keine Marketing-E-Mails.',
+    'شرائح جمهور مبنية من عملائك المحتملين وجهات اتصالك، ونماذج التقاط مستضافة تسجل الموافقة. لا يرسل SampForce بريدًا تسويقيًا بعد.',
   ],
   'Stages, their win probabilities and the default pipeline for new deals. The number of pipelines depends on your plan.': [
     'Etapas, sus probabilidades de cierre y el embudo predeterminado para nuevas oportunidades. El número de embudos depende de tu plan.',
@@ -780,7 +780,7 @@ export const engagement = {
   'partner': ['socio', 'partenaire', 'Partner', 'شريك'],
   'other': ['otro', 'autre', 'Sonstiges', 'أخرى'],
   'the website you entered': ['el sitio web que indicaste', 'le site web saisi', 'die eingegebene Website', 'الموقع الذي أدخلته'],
-  'the company record in DealFlow': ['la ficha de la empresa en DealFlow', 'la fiche de l’entreprise dans DealFlow', 'der Unternehmensdatensatz in DealFlow', 'سجل الشركة في DealFlow'],
+  'the company record in SampForce': ['la ficha de la empresa en SampForce', 'la fiche de l’entreprise dans SampForce', 'der Unternehmensdatensatz in SampForce', 'سجل الشركة في SampForce'],
   'a website that matches the company name': [
     'un sitio web que coincide con el nombre de la empresa',
     'un site web correspondant au nom de l’entreprise',
@@ -914,11 +914,11 @@ export const engagement = {
   'Known': ['Conocido', 'Connu', 'Bekannt', 'معروف'],
   'Anonymous': ['Anónimo', 'Anonyme', 'Anonym', 'مجهول'],
   'Discovery': ['Descubrimiento', 'Découverte', 'Bedarfsanalyse', 'الاستكشاف'],
-  'The data provider did not answer, so these results come from DealFlow’s own finder only.': [
-    'El proveedor de datos no respondió, así que estos resultados proceden solo del buscador propio de DealFlow.',
-    'Le fournisseur de données n’a pas répondu, ces résultats proviennent donc uniquement de la recherche propre à DealFlow.',
-    'Der Datenanbieter hat nicht geantwortet, daher stammen diese Ergebnisse nur aus der eigenen Suche von DealFlow.',
-    'لم يستجب مزوّد البيانات، لذا تأتي هذه النتائج من أداة البحث الخاصة بـ DealFlow فقط.',
+  'The data provider did not answer, so these results come from SampForce’s own finder only.': [
+    'El proveedor de datos no respondió, así que estos resultados proceden solo del buscador propio de SampForce.',
+    'Le fournisseur de données n’a pas répondu, ces résultats proviennent donc uniquement de la recherche propre à SampForce.',
+    'Der Datenanbieter hat nicht geantwortet, daher stammen diese Ergebnisse nur aus der eigenen Suche von SampForce.',
+    'لم يستجب مزوّد البيانات، لذا تأتي هذه النتائج من أداة البحث الخاصة بـ SampForce فقط.',
   ],
   'No published address or pattern for this company, so the addresses for this person are common patterns, not checked. Sending to a wrong guess can bounce and hurt your mailbox’s reputation.': [
     'No hay ninguna dirección ni patrón publicado para esta empresa, así que las direcciones de esta persona son patrones habituales sin comprobar. Enviar a una suposición errónea puede rebotar y dañar la reputación de tu buzón.',

@@ -1,6 +1,6 @@
 /**
  * Copies src/ to dist/ and zips it for the Chrome Web Store or for loading unpacked.
- *   node build.mjs          → dist/ and dealflow-extension-<version>.zip
+ *   node build.mjs          → dist/ and sampforce-extension-<version>.zip
  *   node build.mjs --test   → dist-test/: site access granted at install, for the browser tests only
  */
 import { execFileSync } from 'node:child_process';
@@ -22,7 +22,7 @@ if (test) {
 writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
 if (!test) {
-  const zip = join(here, `dealflow-extension-${manifest.version}.zip`);
+  const zip = join(here, `sampforce-extension-${manifest.version}.zip`);
   rmSync(zip, { force: true });
   if (existsSync('/usr/bin/zip') || process.platform !== 'win32') {
     execFileSync('zip', ['-qr', zip, '.'], { cwd: out });

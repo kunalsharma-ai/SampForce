@@ -1,4 +1,4 @@
-# DealFlow on one Linux server with Docker Compose. See deploy/SERVER_SETUP.md.
+# SampForce on one Linux server with Docker Compose. See deploy/SERVER_SETUP.md.
 #
 #   cd deploy
 #   docker compose -f docker-compose.prod.yml up -d --build

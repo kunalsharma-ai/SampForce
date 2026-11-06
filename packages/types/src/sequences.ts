@@ -35,7 +35,7 @@ export type MergeValues = Partial<Record<MergeField, string | null | undefined>>
 /** `{{first_name}}`, `{{first_name|there}}`, `{{custom.region}}`, `{{var.booking_link}}`; spaces inside the braces are allowed. */
 const TAG = /\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?)\s*(?:\|([^}]*))?\}\}/g;
 
-/** True for a tag DealFlow can fill: a built-in field, a custom field or a workspace variable (existence is checked on save). */
+/** True for a tag SampForce can fill: a built-in field, a custom field or a workspace variable (existence is checked on save). */
 export function isMergeTag(tag: string): boolean {
   return tag in MERGE_FIELDS || /^(custom|var)\.[a-z][a-z0-9_]{0,39}$/.test(tag);
 }
@@ -169,7 +169,7 @@ export interface TemplatePreview {
 export const SEQUENCE_STATUSES = ['DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED'] as const;
 export type SequenceStatus = (typeof SEQUENCE_STATUSES)[number];
 
-/** What a recipient did, as DealFlow saw it. Replies and bounces come from mailbox sync; opens and clicks from tracking. */
+/** What a recipient did, as SampForce saw it. Replies and bounces come from mailbox sync; opens and clicks from tracking. */
 export const EMAIL_EVENTS = ['replied', 'opened', 'clicked', 'bounced', 'unsubscribed'] as const;
 export type EmailEvent = (typeof EMAIL_EVENTS)[number];
 export const EMAIL_EVENT_LABELS: Record<EmailEvent, string> = {

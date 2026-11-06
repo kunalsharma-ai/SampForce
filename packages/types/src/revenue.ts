@@ -117,7 +117,7 @@ export interface HealthInput {
   overdueTasks: number;
   /** Logged activity plus email both ways, last 30 days against the 30 before (feature 13). */
   engagement?: { last30: number; previous30: number };
-  /** Open customer requests from the client portal, the support data DealFlow has. */
+  /** Open customer requests from the client portal, the support data SampForce has. */
   openRequests?: { count: number; oldestDays: number };
   /** Deals with this company lost in the last 90 days. */
   lostDeals90?: number;

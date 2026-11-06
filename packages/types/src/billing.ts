@@ -11,7 +11,7 @@ export type SelfServePlan = (typeof SELF_SERVE_PLANS)[number];
 
 export const BILLING_PROVIDERS = ['STRIPE', 'RAZORPAY'] as const;
 export type BillingProviderKey = (typeof BILLING_PROVIDERS)[number];
-/** How a subscription is paid: an online provider, offline against a DealFlow invoice, or not at all. */
+/** How a subscription is paid: an online provider, offline against a SampForce invoice, or not at all. */
 export type PaymentMethod = 'NONE' | 'OFFLINE' | BillingProviderKey;
 export type Interval = 'MONTH' | 'YEAR';
 export type SubscriptionState = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID';
@@ -151,7 +151,7 @@ export interface BillingOverview {
   graceEndsAt: string | null;
   /** Providers that can take new subscriptions here: keys configured and online payments turned on. */
   providers: Record<BillingProviderKey, boolean>;
-  /** Paying offline: the open invoice, if any, and how to pay it (null: the DealFlow team sends details). */
+  /** Paying offline: the open invoice, if any, and how to pay it (null: the SampForce team sends details). */
   offline: { instructions: string | null; openInvoice: InvoiceRow | null };
   portalAvailable: boolean;
   usage: { members: UsageMeter; pendingInvitations: number; pipelines: UsageMeter; aiCredits: UsageMeter; automationRuns: UsageMeter };
@@ -233,7 +233,7 @@ export const operatorVoidSchema = z.object({ reason: z.string().trim().min(5).ma
 export const paymentInstructionsSchema = z.object({ instructions: z.string().trim().max(2000) });
 
 export interface OperatorSettings {
-  /** What open invoices show now, or null: they say the DealFlow team will send payment details. */
+  /** What open invoices show now, or null: they say the SampForce team will send payment details. */
   paymentInstructions: string | null;
   /** Where it comes from: the console (editable here), the OFFLINE_PAYMENT_INSTRUCTIONS setting, or nowhere. */
   paymentInstructionsSource: 'console' | 'config' | 'none';

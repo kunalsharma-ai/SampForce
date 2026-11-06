@@ -5,7 +5,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 /**
  * Microsoft Teams through the Teams "Workflows" app: in a channel, "Send webhook alerts to a channel" (or the Power
  * Automate trigger "When a Teams webhook request is received") gives a URL that posts an Adaptive Card to that
- * channel. Microsoft is retiring Office 365 connector webhooks in favour of Workflows, so only Workflows URLs are accepted. No DealFlow-wide
+ * channel. Microsoft is retiring Office 365 connector webhooks in favour of Workflows, so only Workflows URLs are accepted. No SampForce-wide
  * secret is needed; each URL is a secret of the workspace and is stored sealed.
  * Tested against a local stand-in that follows Microsoft's published request shape; not yet against Teams itself.
  */

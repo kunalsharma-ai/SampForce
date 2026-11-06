@@ -7,7 +7,7 @@
 ## Context
 
 ADR 0051 moved the deployment-wide provider keys into the operator console. Kunal asked that every integration be
-set up from inside DealFlow, with no environment variables, config files or backend edits. An audit of
+set up from inside SampForce, with no environment variables, config files or backend edits. An audit of
 `packages/config/src/env.ts` against the console found three gaps:
 
 1. **Settings that were still environment-only**: whether online payments are on (`ONLINE_PAYMENTS_ENABLED`), the
@@ -34,7 +34,7 @@ each workspace admin in Settings > Apps and Administration > Security, with thei
    test (`checkable: false`; `checkout` is not in `PROVIDER_CHECK_KEYS`).
 3. **Setup guides in the catalogue.** Each `PROVIDER_CATALOGUE` entry has steps, a link to the provider's console,
    and the URLs to paste there as paths. The API returns them as absolute URLs on `PUBLIC_WEB_URL`, built from the
-   same paths the code uses, and a test checks the redirect URL in each guide equals the `redirect_uri` DealFlow
+   same paths the code uses, and a test checks the redirect URL in each guide equals the `redirect_uri` SampForce
    sends.
 4. **Webhook receipts.** `WebhookReceipts` records, per provider, the time and event type of the last event whose
    signature matched, with a fingerprint of the signing secret it matched, and the time and reason of the last one

@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { smsSegments } from '@dealflow/types';
 
 /**
- * Stand-in for the Twilio REST API (2010-04-01) endpoints DealFlow uses for SMS, plus helpers to sign the requests
+ * Stand-in for the Twilio REST API (2010-04-01) endpoints SampForce uses for SMS, plus helpers to sign the requests
  * Twilio sends (X-Twilio-Signature). Shapes follow Twilio's published API reference; none of this has been compared
  * with a live response.
  *

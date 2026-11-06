@@ -16,7 +16,7 @@ and the only shortcut was Ctrl/⌘ K.
 1. **Saved per person per workspace, on the server.** Favourites and recent pages point at records, which differ
    between workspaces, so `workspace_navigation` is keyed by `(tenant_id, user_id)` and protected by a forced RLS
    policy on both columns. A person sees the same favourites on every device; one member never sees another's.
-2. **Links are validated as DealFlow paths.** `appPathSchema` accepts only `/app` and `/app/...` with a safe
+2. **Links are validated as SampForce paths.** `appPathSchema` accepts only `/app` and `/app/...` with a safe
    character set and rejects `//`, `..` and backslashes, so a stored favourite cannot send anyone off-site. Stored JSON
    is re-validated on read and anything invalid is dropped.
 3. **Recent pages are recorded by the shell, after render.** The shell posts a visit 1.5 seconds after a route

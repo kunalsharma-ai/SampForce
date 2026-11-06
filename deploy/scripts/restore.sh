@@ -3,7 +3,7 @@
 # migration). With --switch it then makes the restored copy the live database:
 #
 #   scripts/restore.sh backups/dealflow-20261102T120000Z.dump            # restore and verify only
-#   scripts/restore.sh backups/dealflow-20261102T120000Z.dump --switch   # ... then switch DealFlow over to it
+#   scripts/restore.sh backups/dealflow-20261102T120000Z.dump --switch   # ... then switch SampForce over to it
 #
 # Switching stops the API, worker and web app (a few seconds of downtime), renames the live database to
 # dealflow_before_<time> (kept, not dropped) and renames the restored copy to dealflow.
@@ -25,14 +25,14 @@ compose --profile tools run --rm -T --entrypoint bash backup \
 
 if [ "$switch" != "--switch" ]; then
   echo
-  echo "Restored into database $target (DealFlow is still using the live database)."
+  echo "Restored into database $target (SampForce is still using the live database)."
   echo "To switch over:  scripts/restore.sh $file --switch   (restores again, then switches)"
   echo "To discard it:   docker compose -f docker-compose.prod.yml exec postgres dropdb -U postgres $target"
   exit 0
 fi
 
 answer=""
-read -r -p "Switch DealFlow to the restored data? Changes since the backup will no longer be live. Type SWITCH: " answer || true
+read -r -p "Switch SampForce to the restored data? Changes since the backup will no longer be live. Type SWITCH: " answer || true
 [ "$answer" = "SWITCH" ] || { echo "not switched; $target is left in place"; exit 1; }
 compose stop caddy web worker api
 compose exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 -X -q -d postgres <<SQL

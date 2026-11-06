@@ -43,7 +43,7 @@ const EFFORT: Record<AiTier, Effort> = { fast: 'low', balanced: 'medium', deep: 
 export const monthStart = (now = new Date()) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
 /**
- * The only way DealFlow code reaches a model. Before each call it checks the tenant kill switch, the
+ * The only way SampForce code reaches a model. Before each call it checks the tenant kill switch, the
  * agent switch, the provider configuration, the credit budget and the per-user rate; after each call
  * it records metering. Redaction, when the tenant turns it on, applies to everything sent.
  */
@@ -105,7 +105,7 @@ export class AiGateway {
           name: 'Anthropic Claude',
           model: this.provider?.model ?? null,
           note: this.provider
-            ? 'An API key is set. DealFlow has not verified it until the first call succeeds; failures are shown on each run.'
+            ? 'An API key is set. SampForce has not verified it until the first call succeeds; failures are shown on each run.'
             : 'An operator must add ANTHROPIC_API_KEY in the operator console (Providers) or the deployment secrets. Until then AI features say they are unavailable.',
         },
         settings: {

@@ -8,7 +8,7 @@
 
 The spec asks for an email template designer with drag-and-drop blocks for text, images, buttons, headers,
 footers, social links, signatures, dividers, product sections, pricing tables and personalised fields, with
-desktop and mobile previews. DealFlow's templates were plain text: sequences sent a text part, plus an HTML copy of
+desktop and mobile previews. SampForce's templates were plain text: sequences sent a text part, plus an HTML copy of
 the same text when open or click tracking was on.
 
 ## Decision
@@ -25,7 +25,7 @@ the same text when open or click tracking was on.
 3. **Links are checked twice.** Button, image, product, social and website links must be `https://`, `http://` or
    `mailto:` addresses, or merge fields such as `{{var.booking_link}}`. After merge fields are filled in, a link
    that is no longer a web or mail address is dropped rather than sent. Images must be public `https://` links,
-   because email apps block everything else; DealFlow does not host email images.
+   because email apps block everything else; SampForce does not host email images.
 4. **Personalised fields are the existing merge fields.** Any text in a block can hold `{{first_name|there}}`,
    custom fields and workspace variables, inserted with the same buttons as plain templates. Saving checks that
    custom fields and variables exist; a sequence pauses for a person whose field is empty with no fallback, exactly

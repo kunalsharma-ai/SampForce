@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 /**
  * Stand-in for a workspace's own Stripe or Razorpay account, for card payments on proposals. It answers the calls
- * DealFlow makes (a key check, a Checkout Session or a Payment Link) and serves a hosted "pay" page that, like the
+ * SampForce makes (a key check, a Checkout Session or a Payment Link) and serves a hosted "pay" page that, like the
  * real providers, sends a signed webhook to the endpoint registered for that account and then returns the payer.
  * Webhook endpoints are registered with POST /_fixture/endpoints, the stand-in for the provider dashboard.
  * Shapes follow the providers' published APIs; none of this has been compared with a live response.

@@ -4,7 +4,7 @@
 monitoring, next best actions, a Customer 360 timeline, and an insights feed. The spec says to extend what exists,
 not rebuild it.
 
-**Context.** DealFlow already had rule-based deal scoring (the Deal Intelligence agent, ADR 0008), Deal
+**Context.** SampForce already had rule-based deal scoring (the Deal Intelligence agent, ADR 0008), Deal
 Intelligence recommendations, activities, email, meetings, sequences, quotes, contracts and escalations, each with
 its own list. Nothing pulled them together, nothing watched deals between visits, and the Command Center had no
 ranked "do this next" list.

@@ -177,7 +177,7 @@ export class ImportExportController {
     requirePermission(auth, ENTITY_PERMISSION[entity].read);
     const { csv, rows } = await this.io.export(auth, entity, meta);
     res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', `attachment; filename="dealflow-${entity}-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.setHeader('content-disposition', `attachment; filename="sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.csv"`);
     res.setHeader('x-row-count', String(rows));
     res.setHeader('cache-control', 'no-store');
     return csv;

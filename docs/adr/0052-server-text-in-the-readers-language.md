@@ -8,7 +8,7 @@
 ## Context
 
 Batches 1 to 9 translated every page, but the text the API writes stayed English: error messages, the field problems
-of a failed validation, Zod's own default messages, and DealFlow's explanations of what a connected service refused.
+of a failed validation, Zod's own default messages, and SampForce's explanations of what a connected service refused.
 Some of it reaches the browser as data the page cannot predict (`Import up to 5,000 rows at a time.`), and the same
 Zod schemas run in the browser and again in the API, so a message can come from either side.
 
@@ -16,7 +16,7 @@ Zod schemas run in the browser and again in the API, so a message can come from 
 
 1. **The API answers in the language the request asks for.** The web app sends `Accept-Language` with the person's
    chosen interface language on every call (`languageHeader()` in `lib/api.ts`, also on downloads and the hosted
-   form). A request without one, or in a language DealFlow does not have, is answered in English, so API clients,
+   form). A request without one, or in a language SampForce does not have, is answered in English, so API clients,
    tests and webhooks are unchanged. `pickLanguage` honours q values and matches the primary subtag (`de-AT` is
    German). The browser extension asks for English, because its own screens are English.
 2. **Messages stay English in the source.** Services keep throwing English messages; the exception filter translates
@@ -48,7 +48,7 @@ Zod schemas run in the browser and again in the API, so a message can come from 
 ## Scope of this change
 
 Translated: every error and validation message the API returns, Zod's default messages, the SMS and WhatsApp
-delivery problems, card payment reasons, and DealFlow's messages about Slack, Teams, Zoom, DocuSign, Stripe and
+delivery problems, card payment reasons, and SampForce's messages about Slack, Teams, Zoom, DocuSign, Stripe and
 Razorpay, Twilio, WhatsApp, Google and Microsoft mailboxes, single sign-on, Deepgram and Apollo.
 
 Not translated, on purpose:

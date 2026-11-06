@@ -30,7 +30,7 @@ export function SignupForm() {
       if (err instanceof ApiError && err.details) {
         for (const d of err.details) form.setError(d.path as keyof RegisterInput, { message: d.message });
       }
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
     }
   });
 

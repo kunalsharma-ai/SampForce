@@ -84,7 +84,7 @@ export function CopilotPanel({ open, onOpenChange }: { open: boolean; onOpenChan
             <Bot className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-lg font-semibold">{tr('DealFlow Copilot')}</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">{tr('SampForce Copilot')}</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {tr('Reads what your role can read. Changes wait for you to confirm.')}
             </DialogDescription>

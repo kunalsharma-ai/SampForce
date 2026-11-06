@@ -1,4 +1,4 @@
-# DealFlow by Sampledge
+# SampForce by Sampledge
 
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
@@ -48,7 +48,7 @@ PGUSER=postgres pnpm db:setup
 pnpm build                                # builds packages and generates the Prisma client
 MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
 DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow pnpm db:migrate
-pnpm db:seed                              # optional: labelled demo workspace (demo@dealflow.local)
+pnpm db:seed                              # optional: labelled demo workspace (demo@sampforce.local)
 pnpm dev                                  # web on :3000, API on :4000
 ```
 

@@ -73,12 +73,12 @@ describe('webhooks', () => {
     expect(hook.active).toBe(true);
 
     const last = received.filter((r) => r.path === '/flaky').at(-1)!;
-    const sig = String(last.headers['x-dealflow-signature']);
+    const sig = String(last.headers['x-sampforce-signature']);
     const [, t, v1] = sig.match(/^t=(\d+),v1=([0-9a-f]{64})$/)!;
     expect(createHmac('sha256', created.secret).update(`${t}.${last.body}`).digest('hex')).toBe(v1);
     const payload = JSON.parse(last.body);
     expect(payload).toMatchObject({ type: 'lead.created', data: { entityType: 'lead', entityId: lead.id } });
-    expect(last.headers['x-dealflow-event']).toBe('lead.created');
+    expect(last.headers['x-sampforce-event']).toBe('lead.created');
     // Every attempt carries the same event id, so receivers can de-duplicate.
     expect(new Set(received.filter((r) => r.path === '/flaky').map((r) => JSON.parse(r.body).id)).size).toBe(1);
   });

@@ -10,7 +10,7 @@ export default function CommunicationPage() {
     <div className="max-w-7xl">
       <PageHeader
         title="Email & Communication"
-        description="One inbox for your team: conversations with contacts and leads from every connected mailbox. DealFlow stores only messages that involve a known contact or lead, never the rest of your mailbox."
+        description="One inbox for your team: conversations with contacts and leads from every connected mailbox. SampForce stores only messages that involve a known contact or lead, never the rest of your mailbox."
       />
       <Suspense>
         <Inbox />
