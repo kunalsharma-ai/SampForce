@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Segmented } from '@/components/forms/segmented';
 import { useT } from '@/lib/i18n';
 import { usePreferences } from '@/stores/preferences';
+import { InfoTip } from '@/components/info-tip';
 
 /** Quick appearance settings on the Settings page; the Theme Studio has everything else. */
 export function AppearanceSettings() {
@@ -16,7 +17,10 @@ export function AppearanceSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Appearance & motion')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Appearance & motion')}</CardTitle>
+          <InfoTip topic="settings.appearance" />
+        </div>
         <CardDescription>
           {t('Theme: {name}. Saved to your account, so it follows you to every device.', { name: getTheme(appearance.themeId).name })}
         </CardDescription>

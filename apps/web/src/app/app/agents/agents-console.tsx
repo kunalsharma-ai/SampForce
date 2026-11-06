@@ -10,6 +10,7 @@ import { titleCase } from '@/lib/crm';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const RUN_TONE = { SUCCEEDED: 'success', FAILED: 'critical', BLOCKED: 'warning', RUNNING: 'accent', QUEUED: 'neutral' } as const;
 
@@ -64,7 +65,10 @@ function ProviderCard({ status }: { status: AiStatus }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('AI provider')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('AI provider')}</CardTitle>
+          <InfoTip topic="agents.provider" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         <div className="flex flex-wrap items-center gap-2">
@@ -85,7 +89,10 @@ function CreditsCard({ status }: { status: AiStatus }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('AI credits this month')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('AI credits this month')}</CardTitle>
+          <InfoTip topic="agents.credits" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         <p>
@@ -128,7 +135,10 @@ function ControlsCard({ status, pending, onChange }: { status: AiStatus; pending
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-base">{t('Workspace controls')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Workspace controls')}</CardTitle>
+          <InfoTip topic="agents.controls" />
+        </div>
         <Button variant={s.enabled ? 'destructive' : 'default'} size="sm" disabled={pending} onClick={() => onChange({ enabled: !s.enabled })}>
           <Power aria-hidden /> {s.enabled ? t('Turn off all AI') : t('Turn AI back on')}
         </Button>
@@ -269,7 +279,10 @@ function UsageSection() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Recent runs')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Recent runs')}</CardTitle>
+            <InfoTip topic="agents.runs" />
+          </div>
         </CardHeader>
         <CardContent>
           {u.recentRuns.length === 0 ? (

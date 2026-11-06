@@ -40,6 +40,7 @@ import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /**
  * Proposal sections shown above the price table. Templates and the AI draft only fill the editor;
@@ -300,7 +301,10 @@ export function ProposalSharing({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Online proposal')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Online proposal')}</CardTitle>
+          <InfoTip topic="quote.onlineProposal" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {canSend && (

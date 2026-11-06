@@ -11,6 +11,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /** Connection codes for the SampForce browser extension, which saves people from web pages as leads. */
 export function BrowserExtension() {
@@ -36,9 +37,12 @@ export function BrowserExtension() {
 
   return (
     <section id="extension" aria-labelledby="extension-heading" className="space-y-3">
-      <h2 id="extension-heading" className="text-base font-semibold">
-        {t('Browser extension')}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 id="extension-heading" className="text-base font-semibold">
+          {t('Browser extension')}
+        </h2>
+        <InfoTip topic="integrations.extension" />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

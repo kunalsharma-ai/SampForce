@@ -43,6 +43,8 @@ import {
 } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
+import { PageHelp } from '@/components/page-help';
 
 interface DraftLine {
   productId: string;
@@ -186,7 +188,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t('All quotes')}
       </Link>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{q.reference}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight">{q.reference}</h1>
+          <PageHelp />
+        </div>
         <Badge tone={QUOTE_STATUS[q.status].tone}>{t.maybe(QUOTE_STATUS[q.status].label)}</Badge>
         {!q.isLatest && <Badge tone="warning">{t('Superseded by a newer version')}</Badge>}
         {q.expired && <Badge tone="warning">{t('Past valid date')}</Badge>}
@@ -215,7 +220,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t('Lines')}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-base">{t('Lines')}</CardTitle>
+                <InfoTip topic="quote.lines" />
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 overflow-x-auto">
               {lines.length === 0 && !editable && (
@@ -481,7 +489,10 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t('Next step')}</CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-base">{t('Next step')}</CardTitle>
+                <InfoTip topic="quote.nextStep" />
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {editable && (
@@ -627,7 +638,10 @@ function Versions({ id, current }: { id: string; current: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Versions')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Versions')}</CardTitle>
+          <InfoTip topic="quote.versions" />
+        </div>
       </CardHeader>
       <CardContent>
         <ul className="divide-y divide-border text-sm">

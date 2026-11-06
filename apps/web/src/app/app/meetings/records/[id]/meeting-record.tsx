@@ -20,6 +20,7 @@ import { uploadRecording, useMeetingRecord, useTranscriptionStatus } from '@/lib
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { PageHelp } from '@/components/page-help';
 
 const SOURCE_LABEL = { notes: 'Notes', transcript: 'Transcript', recording: 'Transcribed recording' } as const;
 const when = (iso: string) => new Date(iso).toLocaleString(fmtLocale(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -69,7 +70,10 @@ export function MeetingRecordView({ id }: { id: string }) {
       </Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{r.title}</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight">{r.title}</h1>
+            <PageHelp />
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {when(r.occurredAt)} · {t(SOURCE_LABEL[r.source])}
             {r.createdBy && ` · ${t('added by {name}', { name: r.createdBy.name })}`}

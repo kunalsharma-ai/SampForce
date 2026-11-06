@@ -23,6 +23,7 @@ import { relativeTime } from '@/lib/format';
 import { WorkflowEditor } from './workflow-editor';
 import { AI_DRAFT_KEY, type AiWorkflowDraft, EMAIL_TEMPLATES, emptyDefinition, entityOf, TEMPLATES } from './workflow-model';
 import { inSentence, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 type Tab = 'builder' | 'simulate' | 'runs' | 'versions';
 const TABS: { key: Tab; label: string }[] = [
@@ -248,7 +249,10 @@ function SimulatePanel({ definition, valid }: { definition: WorkflowDefinition; 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Dry run against a real record')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Dry run against a real record')}</CardTitle>
+          <InfoTip topic="automation.dryRun" />
+        </div>
         <p className="text-sm text-muted-foreground">{t('Shows the path this version would take for “{trigger}”. Nothing is changed, sent or created; waits and approvals are skipped.', { trigger: t.maybe(TRIGGER_EVENTS[definition.trigger.event].label) })}</p>
       </CardHeader>
       <CardContent className="space-y-4">

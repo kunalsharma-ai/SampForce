@@ -15,6 +15,8 @@ import { formatDate } from '@/lib/crm';
 import { CONTRACT_STATUS, formatAmount, todayIso, useContract } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
+import { PageHelp } from '@/components/page-help';
 
 const METHOD_LABEL: Record<string, string> = { wet_ink: 'Signed on paper', email_confirmation: 'Confirmed by email', external_esign: 'Signed in an external e-signature tool', docusign: 'Signed with DocuSign' };
 
@@ -31,9 +33,12 @@ export function ContractDetail({ id }: { id: string }) {
         <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t('All contracts')}
       </Link>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {c.reference} · {c.name}
-        </h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {c.reference} · {c.name}
+          </h1>
+          <PageHelp />
+        </div>
         <Badge tone={CONTRACT_STATUS[c.status].tone}>{t.maybe(CONTRACT_STATUS[c.status].label)}</Badge>
         {c.renewalDue && <Badge tone="warning">{t('Renewal due')}</Badge>}
       </div>
@@ -104,7 +109,10 @@ function Actions({ c }: { c: ContractRow }) {
       {c.status === 'DRAFT' && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('Record signature')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Record signature')}</CardTitle>
+              <InfoTip topic="contract.signature" />
+            </div>
           </CardHeader>
           <CardContent>
             <form
@@ -141,7 +149,10 @@ function Actions({ c }: { c: ContractRow }) {
       {(c.status === 'ACTIVE' || c.status === 'DRAFT') && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('Term and renewal')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Term and renewal')}</CardTitle>
+              <InfoTip topic="contract.term" />
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <form

@@ -12,6 +12,8 @@ import { toFormValues } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { RecordFormDialog } from './record-form';
+import { InfoTip } from '@/components/info-tip';
+import { PageHelp } from '@/components/page-help';
 
 /** Label and value pairs. Labels are catalogue phrases; custom field names (data) pass through `t.maybe`. */
 export function DetailList({ items }: { items: [MessageKey | { text: string }, React.ReactNode][] }) {
@@ -35,7 +37,10 @@ export function CustomFieldList({ entity, values }: { entity: CrmEntity; values:
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Custom fields')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Custom fields')}</CardTitle>
+          <InfoTip topic="record.customFields" />
+        </div>
       </CardHeader>
       <CardContent>
         <DetailList
@@ -95,10 +100,13 @@ export function RecordHeader({
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            <span className="truncate">{title}</span>
-            {badges}
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
+              <span className="truncate">{title}</span>
+              {badges}
+            </h1>
+            <PageHelp />
+          </div>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
         <div className="flex flex-wrap gap-2">

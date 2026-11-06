@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { ENROLLMENT_LABEL, ENROLLMENT_TONE, useEnrollments, useSequences } from '@/lib/sequences';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 /** The sequences a lead or contact is in, with a quick way to add them to one. */
 export function RecordSequences({ leadId, contactId, email }: { leadId?: string; contactId?: string; email: string | null }) {
@@ -31,7 +32,10 @@ export function RecordSequences({ leadId, contactId, email }: { leadId?: string;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{t('module.sequences')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('module.sequences')}</CardTitle>
+          <InfoTip topic="record.sequences" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {rows.data?.length ? (

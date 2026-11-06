@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useCan, useSession } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 interface RoleRow {
   key: string;
@@ -50,7 +51,10 @@ export function Invitations() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Invitations')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Invitations')}</CardTitle>
+          <InfoTip topic="team.invitations" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {canManage && (

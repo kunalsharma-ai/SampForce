@@ -6,6 +6,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 interface AuditRow {
   id: string;
@@ -37,7 +38,10 @@ export function AuditLogTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Audit log')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Audit log')}</CardTitle>
+          <InfoTip topic="admin.auditLog" />
+        </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {q.isPending ? (

@@ -26,6 +26,7 @@ import { relativeTime } from '@/lib/format';
 import { gamificationApi, periodOptions, useAwards, useBadges, useCompetitions, useGamificationMe, useGamificationMutation, useGamificationSettings, useLeaderboard, useTeams } from '@/lib/gamification';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, type Translator, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const ICONS = { trophy: Trophy, medal: Medal, star: Star, flame: Flame, target: Target, rocket: Rocket, crown: Crown, phone: Phone } as const;
 const WINDOW_LABELS = { month: 'in a month', quarter: 'in a quarter', year: 'in a year', all_time: 'all time' } as const satisfies Record<(typeof BADGE_WINDOWS)[number], string>;
@@ -214,7 +215,10 @@ function MyPerformance({ me }: { me: GamificationMe }) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t('Your competitions')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Your competitions')}</CardTitle>
+              <InfoTip topic="gamification.competitions" />
+            </div>
           </CardHeader>
           <CardContent>
             {me.competitions.length === 0 ? (
@@ -261,7 +265,10 @@ function Leaderboards() {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-end justify-between gap-3 space-y-0">
-        <CardTitle className="text-base">{t('Leaderboard')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Leaderboard')}</CardTitle>
+          <InfoTip topic="gamification.leaderboard" />
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <div role="group" aria-label={t('Rank')} className="inline-flex rounded-md border border-border p-0.5 text-sm">
             {(['people', 'teams'] as const).map((v) => (
@@ -784,7 +791,10 @@ function RulesForm({ settings }: { settings: GamificationSettings }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('What earns points')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('What earns points')}</CardTitle>
+            <InfoTip topic="gamification.rules" />
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">

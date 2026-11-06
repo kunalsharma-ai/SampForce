@@ -13,6 +13,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useDashboard, useReports, useSavedResult } from '@/lib/reports';
 import { useT } from '@/lib/i18n';
+import { PageHelp } from '@/components/page-help';
 
 type Widget = DashboardRow['widgets'][number];
 const SPAN: Record<Widget['size'], string> = { sm: 'lg:col-span-2', md: 'lg:col-span-3', lg: 'lg:col-span-6' };
@@ -78,7 +79,10 @@ function Board({ board, reports }: { board: DashboardRow; reports: ReportRow[] }
           </div>
         ) : (
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{board.name}</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-2xl font-semibold tracking-tight">{board.name}</h1>
+              <PageHelp />
+            </div>
             <p className="text-sm text-muted-foreground">
               {board.visibility === 'WORKSPACE' ? t('Shared with the workspace') : t('Private')} · {board.createdBy?.name ?? t('Former member')}
             </p>

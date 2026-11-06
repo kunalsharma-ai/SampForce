@@ -7,6 +7,7 @@ import { useInboxThreads } from '@/lib/automation';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 /** Inbox conversations linked to a deal, so its email history sits on the record. */
 export function RecordConversations({ dealId }: { dealId: string }) {
@@ -18,7 +19,10 @@ export function RecordConversations({ dealId }: { dealId: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{tr('Conversations')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{tr('Conversations')}</CardTitle>
+          <InfoTip topic="record.conversations" />
+        </div>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (

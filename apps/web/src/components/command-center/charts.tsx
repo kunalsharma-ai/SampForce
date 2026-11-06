@@ -8,6 +8,7 @@ import { formatKpi } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { usePreferences } from '@/stores/preferences';
 import { axisTick, ChartCard, tooltipStyle } from './chart-card';
+import { InfoTip } from '@/components/info-tip';
 
 const useAnimate = () => usePreferences((s) => s.appearance.motion !== 'off' && s.appearance.motion !== 'minimal');
 const pct = (v: number | null) => (v === null ? '—' : formatKpi(v, 'percent', 'USD'));
@@ -250,7 +251,10 @@ export function GoalCard({ data, canSetTargets }: { data: DashboardCharts; canSe
   return (
     <Card className="flex h-full flex-col">
       <CardHeader>
-        <CardTitle>{t('Goal attainment')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Goal attainment')}</CardTitle>
+          <InfoTip topic="commandCenter.goals" />
+        </div>
         <CardDescription>{g ? t('{period} target, won deals only.', { period: g.period }) : t('Progress against the quarter target.')}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1">

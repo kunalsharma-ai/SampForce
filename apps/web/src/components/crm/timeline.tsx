@@ -12,6 +12,7 @@ import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { RecordTimeline } from './record-timeline';
 import { Select, Textarea } from './select';
+import { InfoTip } from '@/components/info-tip';
 
 export type RelatedRef = { leadId: string } | { contactId: string } | { companyId: string } | { opportunityId: string };
 
@@ -44,9 +45,12 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> {timeline ? tr('Timeline') : tr('Activity')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageSquare className="size-4 text-muted-foreground" aria-hidden /> {timeline ? tr('Timeline') : tr('Activity')}
+          </CardTitle>
+          <InfoTip topic="record.timeline" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {canWrite && (
@@ -153,9 +157,12 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CalendarClock className="size-4 text-muted-foreground" aria-hidden /> {tr('Open tasks')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarClock className="size-4 text-muted-foreground" aria-hidden /> {tr('Open tasks')}
+          </CardTitle>
+          <InfoTip topic="record.tasks" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {list.isPending ? (

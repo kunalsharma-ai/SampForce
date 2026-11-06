@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 const GRADE_TONE = { A: 'success', B: 'primary', C: 'warning', D: 'critical' } as const;
 const RISK_TONE = { low: 'success', medium: 'warning', high: 'critical' } as const;
@@ -68,9 +69,12 @@ export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canR
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="size-4 text-accent" aria-hidden /> {t('AI qualification')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="size-4 text-accent" aria-hidden /> {t('AI qualification')}
+          </CardTitle>
+          <InfoTip topic="record.aiQualification" />
+        </div>
         {canRun && (
           <Button size="sm" variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
             {run.isPending ? t('Scoring…') : q ? t('Re-score') : t('Score lead')}
@@ -129,9 +133,12 @@ export function DealIntelligenceCard({ dealId }: { dealId: string }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="size-4 text-accent" aria-hidden /> {t('Deal health')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="size-4 text-accent" aria-hidden /> {t('Deal health')}
+          </CardTitle>
+          <InfoTip topic="record.dealHealth" />
+        </div>
         <Button size="sm" variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
           {run.isPending ? t('Analysing…') : h ? t('Re-check') : t('Check health')}
         </Button>

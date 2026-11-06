@@ -9,6 +9,7 @@ import { formatDate, useSupportGrants } from '@/lib/billing';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 /**
  * Time-boxed permission for SampForce platform support to see this workspace's member list and audit
@@ -30,9 +31,12 @@ export function SupportAccess() {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {t('Support access')} {active ? <Badge tone="warning">{t('On until {date}', { date: new Date(active.expiresAt).toLocaleString(fmtLocale()) })}</Badge> : <Badge>{t('Off')}</Badge>}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2">
+            {t('Support access')} {active ? <Badge tone="warning">{t('On until {date}', { date: new Date(active.expiresAt).toLocaleString(fmtLocale()) })}</Badge> : <Badge>{t('Off')}</Badge>}
+          </CardTitle>
+          <InfoTip topic="admin.supportAccess" />
+        </div>
         <CardDescription>{t('Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

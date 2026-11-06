@@ -13,6 +13,7 @@ import { formatMoney } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { inSentence, type Translator, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const TARGET_SOURCE: Record<NonNullable<PlanTarget['source']>, string> = {
   set: 'Set for this period',
@@ -46,7 +47,10 @@ function TargetCard({ p, money }: { p: ForecastPlan; money: (v: number) => strin
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Target and gap')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Target and gap')}</CardTitle>
+          <InfoTip topic="forecasting.gap" />
+        </div>
       </CardHeader>
       <CardContent>
         {tg.amount === null ? (
@@ -129,7 +133,10 @@ function Risks({ p, money }: { p: ForecastPlan; money: (v: number) => string }) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Pipeline risks in this period')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Pipeline risks in this period')}</CardTitle>
+          <InfoTip topic="forecasting.risks" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {groups.map(([key, title, r, Icon]) => (

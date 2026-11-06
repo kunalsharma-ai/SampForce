@@ -16,6 +16,7 @@ import { Assumptions, PlanSection, Trends } from './forecast-plan';
 import { useCan } from '@/lib/session';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 const CATEGORY = {
   won: { label: 'Won', tone: 'success' },
@@ -147,7 +148,10 @@ function Summary({ view }: { view: ForecastView }) {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Scenarios')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Scenarios')}</CardTitle>
+            <InfoTip topic="forecasting.scenarios" />
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 text-sm sm:grid-cols-3">
           <Scenario label={t('Worst')} value={money(tot.worst)} detail={t('Only what is already won.')} />
@@ -268,9 +272,12 @@ function Snapshots({ period, currency }: { period: string; currency: string }) {
 
   return (
     <section aria-labelledby="snapshots-heading" className="space-y-4">
-      <h2 id="snapshots-heading" className="text-sm font-semibold">
-        {t('Snapshots')}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 id="snapshots-heading" className="text-sm font-semibold">
+          {t('Snapshots')}
+        </h2>
+        <InfoTip topic="forecasting.snapshots" />
+      </div>
       <Card>
         <CardContent className="space-y-4 p-4">
           <form

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 const formSchema = z.object({
   name: z.string().trim().min(2, 'At least 2 characters').max(120),
@@ -61,7 +62,10 @@ export function WorkspaceSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('Workspace')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Workspace')}</CardTitle>
+          <InfoTip topic="settings.workspace" />
+        </div>
         <CardDescription>
           {canManage ? t('Changes are recorded in the audit log.') : t('Only owners and administrators can change these settings.')}
         </CardDescription>

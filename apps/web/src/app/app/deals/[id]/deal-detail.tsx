@@ -22,6 +22,7 @@ import { api } from '@/lib/api';
 import { DEAL_STATUS_TONE, formatDate, formatMoney, titleCase, useRecord } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 export function DealDetail({ id }: { id: string }) {
   const deal = useRecord<DealRow>('deals', id);
@@ -71,7 +72,10 @@ export function DealDetail({ id }: { id: string }) {
 
       <Card className="mb-4">
         <CardContent className="p-4">
-          <h2 className="sr-only">{t('Stage')}</h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="sr-only">{t('Stage')}</h2>
+            <InfoTip topic="deal.stage" />
+          </div>
           <StageStepper deal={d} />
         </CardContent>
       </Card>

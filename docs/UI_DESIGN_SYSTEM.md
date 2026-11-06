@@ -100,6 +100,8 @@ assign/status/delete, Up/Down row movement, and cards instead of a table on phon
 Select/Combobox, DatePicker, Tabs, Toast, Record timeline, Empty states.
 Phase 3: Flow canvas nodes (React Flow), Approval card.
 Phase 7: 3D islands (Relationship Galaxy, Revenue Globe, pipeline flow), each lazy-loaded with a fallback.
+Help: Popover (`packages/ui`) and the "i" InfoTip beside every page title and key section heading, explaining what
+the feature is for, how to use it and where to use it in the reader's language (ADR 0056; text in `apps/web/src/lib/help`).
 
 ## 7. Key screens
 

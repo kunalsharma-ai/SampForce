@@ -8,6 +8,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatKpi } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { usePreferences } from '@/stores/preferences';
+import { InfoTip } from '@/components/info-tip';
 
 /** Pipeline value by stage, with an equivalent table view for screen readers and keyboard users. */
 export function PipelineChart({ pipeline, currency }: { pipeline: NonNullable<DashboardSummary['pipeline']>; currency: string }) {
@@ -21,7 +22,10 @@ export function PipelineChart({ pipeline, currency }: { pipeline: NonNullable<Da
     <Card className="h-full">
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div>
-          <CardTitle>{t('Pipeline by stage')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{t('Pipeline by stage')}</CardTitle>
+            <InfoTip topic="commandCenter.pipeline" />
+          </div>
           <CardDescription>{pipeline.name}</CardDescription>
         </div>
         <Button

@@ -25,6 +25,7 @@ import { relativeTime } from '@/lib/format';
 import { useCampaigns, useForms, useSegments } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { rich, useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 export function MarketingWorkspace() {
   const t = useT();
@@ -48,7 +49,10 @@ function Segments() {
     <div className="grid gap-4 lg:grid-cols-3">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('Saved segments')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-base">{t('Saved segments')}</CardTitle>
+            <InfoTip topic="marketing.segments" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {segments.isPending ? (
@@ -369,7 +373,10 @@ function FormBuilder() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('New lead form')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('New lead form')}</CardTitle>
+          <InfoTip topic="marketing.forms" />
+        </div>
       </CardHeader>
       <CardContent>
         <form

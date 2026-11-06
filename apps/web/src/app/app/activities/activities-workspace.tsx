@@ -11,6 +11,7 @@ import { formatDate, titleCase, toQuery, useMembers } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { InfoTip } from '@/components/info-tip';
 
 function relatedHref(r: { leadId: string | null; contactId: string | null; opportunityId: string | null; companyId?: string | null }): { href: string; label: MessageKey } | null {
   if (r.opportunityId) return { href: `/app/deals/${r.opportunityId}`, label: 'Deal' };
@@ -62,7 +63,10 @@ function TaskList() {
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center gap-2 space-y-0">
-        <CardTitle className="me-auto text-base">{t('Tasks')} {overdue > 0 && <span className="ms-1 text-sm font-normal text-critical">· {t('{count} overdue', { count: overdue })}</span>}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="me-auto text-base">{t('Tasks')} {overdue > 0 && <span className="ms-1 text-sm font-normal text-critical">· {t('{count} overdue', { count: overdue })}</span>}</CardTitle>
+          <InfoTip topic="activities.tasks" />
+        </div>
         <label htmlFor="task-scope" className="sr-only">
           {t('Whose tasks')}
         </label>
@@ -172,7 +176,10 @@ function RecentActivity() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t('Recent activity')}</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base">{t('Recent activity')}</CardTitle>
+          <InfoTip topic="activities.recent" />
+        </div>
       </CardHeader>
       <CardContent>
         {list.isPending ? (

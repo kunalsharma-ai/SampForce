@@ -33,6 +33,8 @@ import { EmailAssist } from '@/components/ai/email-assist';
 import { insertAt, MergeFieldBar, PreviewPanel } from '../merge-fields';
 import { inSentence, useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { InfoTip } from '@/components/info-tip';
+import { PageHelp } from '@/components/page-help';
 
 type Tab = 'steps' | 'rules' | 'settings' | 'people' | 'results';
 type Draft = Pick<SequenceRow, 'name' | 'description' | 'steps' | 'rules' | 'settings'>;
@@ -68,9 +70,12 @@ function Editor({ seq }: { seq: SequenceRow }) {
           <Link href="/app/sequences" className="text-xs text-muted-foreground hover:underline">
             ← {t('All sequences')}
           </Link>
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
-            {seq.name} <Badge tone={SEQUENCE_TONE[seq.status]}>{t.maybe(titleCase(seq.status))}</Badge>
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
+              {seq.name} <Badge tone={SEQUENCE_TONE[seq.status]}>{t.maybe(titleCase(seq.status))}</Badge>
+            </h1>
+            <PageHelp />
+          </div>
           <p className="text-sm text-muted-foreground">
             {t('In progress: {active} · sent: {sent} · replied: {replied} ({rate})', { active: seq.stats.active, sent: seq.stats.sent, replied: seq.stats.replied, rate: pct(seq.stats.replied, seq.stats.sent) })}
           </p>
@@ -533,7 +538,10 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
       {canWrite && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t('Enrol people')}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-base">{t('Enrol people')}</CardTitle>
+              <InfoTip topic="sequences.enrol" />
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {!open && <p className="text-warning">{t('Start the sequence before enrolling people.')}</p>}

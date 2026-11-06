@@ -7,6 +7,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { translatePlural } from '@/lib/i18n/translate';
 import { regionalSaves, useRegionalQuery, useResetRegional, useSaveRegional } from '@/lib/regional-sync';
+import { InfoTip } from '@/components/info-tip';
 
 const selectClass =
   'h-control w-full rounded-md border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';
@@ -77,10 +78,13 @@ export function RegionalSettings() {
   return (
     <Card data-testid="regional-settings">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Languages className="size-5 text-primary" aria-hidden />
-          {t('regional.title')}
-        </CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-2">
+            <Languages className="size-5 text-primary" aria-hidden />
+            {t('regional.title')}
+          </CardTitle>
+          <InfoTip topic="settings.regional" />
+        </div>
         <CardDescription>{t('regional.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">

@@ -9,6 +9,7 @@ import { useCan, useSession } from '@/lib/session';
 import { RolesManager } from './roles-manager';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
+import { InfoTip } from '@/components/info-tip';
 
 interface RoleRow {
   key: string;
@@ -38,7 +39,10 @@ export function MembersTable() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t('Members')}</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle>{t('Members')}</CardTitle>
+            <InfoTip topic="team.members" />
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {error && (
