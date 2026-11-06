@@ -813,7 +813,7 @@ export class ProspectsService {
         results.push({
           providerId: p.providerId, name: p.fullName, email: p.email,
           outcome: c.outcome === 'created' ? 'added' : c.outcome === 'existing' ? 'existing' : 'skipped',
-          ...(c.outcome === 'existing' ? { reason: `Already in DealFlow as ${c.match?.entity === 'contact' ? 'a contact' : 'a lead'}.` } : {}),
+          ...(c.outcome === 'existing' ? { reason: `Already in SampForce as ${c.match?.entity === 'contact' ? 'a contact' : 'a lead'}.` } : {}),
         });
       }
       if (captured.enrollment) {

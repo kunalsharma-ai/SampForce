@@ -46,7 +46,7 @@ const priceMap = (v: string) => {
 };
 
 /**
- * Every deployment-wide provider DealFlow reads keys for, in the order the operator console lists them.
+ * Every deployment-wide provider SampForce reads keys for, in the order the operator console lists them.
  * Per-workspace providers (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments, Teams webhooks)
  * are entered by each workspace admin under Settings > Apps and are not here.
  */
@@ -60,9 +60,9 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     setup: {
       consoleUrl: 'https://app.apollo.io/#/settings/integrations/api', consoleLabel: 'Apollo API keys',
       steps: [
-        'Sign in to Apollo with the account whose credits DealFlow should use.',
+        'Sign in to Apollo with the account whose credits SampForce should use.',
         'Open Settings > Integrations > API and choose "Create new key".',
-        'Name it "DealFlow", turn on "Set as master key" (people search needs it), and create it.',
+        'Name it "SampForce", turn on "Set as master key" (people search needs it), and create it.',
         'Copy the key, paste it below, save, then press Test connection.',
       ],
     },
@@ -75,7 +75,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     app: { off: 'Pending Configuration', on: 'Key set: each workspace shows Connected after its first verification' },
     setup: {
       consoleUrl: 'https://hunter.io/api-keys', consoleLabel: 'Hunter API keys',
-      steps: ['Sign in to Hunter and open API keys.', 'Copy the secret key (or create a new one named "DealFlow").', 'Paste it below, save, then press Test connection.'],
+      steps: ['Sign in to Hunter and open API keys.', 'Copy the secret key (or create a new one named "SampForce").', 'Paste it below, save, then press Test connection.'],
     },
   },
   {
@@ -105,7 +105,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     setup: {
       consoleUrl: 'https://console.cloud.google.com/apis/credentials', consoleLabel: 'Google Cloud credentials',
       steps: [
-        'In Google Cloud console, create (or pick) a project for DealFlow.',
+        'In Google Cloud console, create (or pick) a project for SampForce.',
         'APIs & Services > Library: enable the Gmail API and the Google Calendar API.',
         'APIs & Services > OAuth consent screen: choose External, add your app name, support email and domain, and add the scopes gmail.readonly, gmail.send and calendar.readonly.',
         'Credentials > Create credentials > OAuth client ID > Web application. Under "Authorised redirect URIs" add the redirect URL below.',
@@ -129,7 +129,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       consoleUrl: 'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', consoleLabel: 'Entra app registrations',
       steps: [
         'In the Microsoft Entra admin center, open App registrations > New registration.',
-        'Name it "DealFlow". For "Supported account types" choose accounts in any organisational directory (and personal accounts if you want them), to match the tenant "common".',
+        'Name it "SampForce". For "Supported account types" choose accounts in any organisational directory (and personal accounts if you want them), to match the tenant "common".',
         'Under Redirect URI choose the Web platform and paste the redirect URL below, then register.',
         'API permissions > Add a permission > Microsoft Graph > Delegated: offline_access, openid, email, User.Read, Mail.Read, Mail.Send, Calendars.Read.',
         'Certificates & secrets > New client secret. Copy its Value (not the Secret ID) straight away.',
@@ -150,7 +150,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     setup: {
       consoleUrl: 'https://api.slack.com/apps', consoleLabel: 'Slack apps',
       steps: [
-        'At api.slack.com/apps choose Create New App > From scratch, name it "DealFlow" and pick your own Slack workspace to develop in.',
+        'At api.slack.com/apps choose Create New App > From scratch, name it "SampForce" and pick your own Slack workspace to develop in.',
         'OAuth & Permissions > Redirect URLs: add the redirect URL below and save.',
         'OAuth & Permissions > Bot Token Scopes: add chat:write, chat:write.public, channels:read and groups:read.',
         'Manage Distribution: turn on public distribution so other Slack workspaces can install it.',
@@ -199,10 +199,10 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     setup: {
       consoleUrl: 'https://admin.docusign.com/apps-and-keys', consoleLabel: 'DocuSign Apps and Keys',
       steps: [
-        'In DocuSign eSignature Admin open Apps and Keys > Add App and Integration Key, name it "DealFlow". Use a developer account (account-d) first; production needs DocuSign\'s go-live review.',
+        'In DocuSign eSignature Admin open Apps and Keys > Add App and Integration Key, name it "SampForce". Use a developer account (account-d) first; production needs DocuSign\'s go-live review.',
         'Choose "Authorization Code Grant" and Add Secret Key. Copy the secret straight away.',
         'Under Additional settings > Redirect URIs, add the redirect URL below and save.',
-        'For signing status updates: Settings > Connect > Connect Keys > Add Secret Key, and copy it as the Connect HMAC key. DealFlow tells DocuSign where to send updates with each envelope, so no Connect configuration is needed.',
+        'For signing status updates: Settings > Connect > Connect Keys > Add Secret Key, and copy it as the Connect HMAC key. SampForce tells DocuSign where to send updates with each envelope, so no Connect configuration is needed.',
         'Paste the integration key, secret key and HMAC key below. If you use the developer environment, set the account server to https://account-d.docusign.com. Save, then press Test connection.',
       ],
       urls: [
@@ -225,7 +225,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       consoleUrl: 'https://console.anthropic.com/settings/keys', consoleLabel: 'Claude Console API keys',
       steps: [
         'Sign in to the Claude Console with the organisation that should be billed, and add a payment method under Billing.',
-        'Settings > API keys > Create key, name it "DealFlow".',
+        'Settings > API keys > Create key, name it "SampForce".',
         'Copy the key (it is shown once), paste it below, save, then press Test connection.',
       ],
     },
@@ -234,7 +234,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     key: 'smtp', name: 'Email (SMTP)', usedFor: 'Password resets, invitations, client portal email',
     fields: [
       { name: 'SMTP_URL', label: 'SMTP URL', required: true, help: 'smtps://user:password@smtp.example.com:465, or smtp://… :587 for STARTTLS.' },
-      { name: 'MAIL_FROM', label: 'Sender', required: true, help: 'For example: DealFlow <no-reply@example.com>' },
+      { name: 'MAIL_FROM', label: 'Sender', required: true, help: 'For example: SampForce <no-reply@example.com>' },
     ],
     tested: ['SMTP_URL'],
     checkNote: 'Connects to the email service and signs in, then disconnects. No email is sent.',
@@ -244,20 +244,20 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
         'Use any email service that offers SMTP (Amazon SES, Postmark, SendGrid, Mailgun, Google Workspace, Microsoft 365).',
         'Create SMTP credentials there and verify the sender domain (SPF and DKIM), so mail is not marked as spam.',
         'Write the SMTP URL as smtps://USER:PASSWORD@HOST:465, or smtp://USER:PASSWORD@HOST:587 for STARTTLS. If the user name or password has @, : or / in it, replace those with %40, %3A and %2F.',
-        'Enter the sender, for example DealFlow <no-reply@yourdomain.com>, save, then press Test connection.',
+        'Enter the sender, for example SampForce <no-reply@yourdomain.com>, save, then press Test connection.',
       ],
     },
   },
   {
-    key: 'zapier', name: 'Zapier', usedFor: 'The DealFlow app in Zapier: the invite link shown under Settings > Apps',
-    fields: [{ name: 'ZAPIER_INVITE_URL', label: 'Invite link', required: true, help: "Zapier developer platform > your DealFlow integration > Sharing. Workspaces sign in with their own DealFlow API keys." }],
+    key: 'zapier', name: 'Zapier', usedFor: 'The SampForce app in Zapier: the invite link shown under Settings > Apps',
+    fields: [{ name: 'ZAPIER_INVITE_URL', label: 'Invite link', required: true, help: "Zapier developer platform > your SampForce integration > Sharing. Workspaces sign in with their own SampForce API keys." }],
     tested: ['ZAPIER_INVITE_URL'],
     checkNote: 'Opens the invite link and checks that Zapier answers.',
     app: { off: 'Pending Configuration: no invite link', on: 'Workspace admins see the invite link' },
     setup: {
       consoleUrl: 'https://developer.zapier.com/', consoleLabel: 'Zapier developer platform',
       steps: [
-        'Publish the DealFlow integration from the integrations/zapier folder to the Zapier developer platform (zapier push).',
+        'Publish the SampForce integration from the integrations/zapier folder to the Zapier developer platform (zapier push).',
         'Open the integration > Manage > Sharing and copy the invite link.',
         'Paste it below, save, then press Test connection. Workspace admins then see the link under Settings > Apps.',
       ],
@@ -285,7 +285,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     },
   },
   {
-    key: 'stripe', name: 'Stripe (subscription billing)', usedFor: 'Online checkout for DealFlow plans. Off while ONLINE_PAYMENTS_ENABLED is false (offline invoices)',
+    key: 'stripe', name: 'Stripe (subscription billing)', usedFor: 'Online checkout for SampForce plans. Off while ONLINE_PAYMENTS_ENABLED is false (offline invoices)',
     fields: [
       { name: 'STRIPE_SECRET_KEY', label: 'Secret key', required: true, help: 'Stripe Dashboard > Developers > API keys (a restricted key works).' },
       { name: 'STRIPE_WEBHOOK_SECRET', label: 'Webhook signing secret', required: true, help: 'Developers > Webhooks > your endpoint. Proven when Stripe sends its first signed event.' },
@@ -307,7 +307,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     webhook: 'stripe',
   },
   {
-    key: 'razorpay', name: 'Razorpay (subscription billing)', usedFor: 'Online checkout for DealFlow plans in India. Off while ONLINE_PAYMENTS_ENABLED is false',
+    key: 'razorpay', name: 'Razorpay (subscription billing)', usedFor: 'Online checkout for SampForce plans in India. Off while ONLINE_PAYMENTS_ENABLED is false',
     fields: [
       { name: 'RAZORPAY_KEY_ID', label: 'Key ID', required: true, help: 'Razorpay Dashboard > Account & Settings > API keys.' },
       { name: 'RAZORPAY_KEY_SECRET', label: 'Key secret', required: true },

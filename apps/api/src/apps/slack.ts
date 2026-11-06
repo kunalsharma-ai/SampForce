@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { SlackChannel } from '@dealflow/types';
 import { API_ENV, type ApiEnv } from '../common/env';
 
-/** Bot scopes DealFlow asks for: list channels, post to channels it is in or public ones, and join public ones. */
+/** Bot scopes SampForce asks for: list channels, post to channels it is in or public ones, and join public ones. */
 export const SLACK_SCOPES = ['chat:write', 'chat:write.public', 'channels:read', 'groups:read'];
 
 export interface SlackInstall {
@@ -29,11 +29,11 @@ export class SlackError extends Error {
 
 const MESSAGES: Record<string, string> = {
   channel_not_found: 'Slack could not find that channel. Choose another channel in Integrations.',
-  not_in_channel: 'The DealFlow app is not in that private channel. Invite it in Slack with /invite @DealFlow.',
+  not_in_channel: 'The SampForce app is not in that private channel. Invite it in Slack with /invite @SampForce.',
   is_archived: 'That Slack channel is archived.',
-  invalid_auth: 'Slack no longer accepts the DealFlow connection. Reconnect Slack in Integrations.',
-  token_revoked: 'The DealFlow app was removed from Slack. Reconnect Slack in Integrations.',
-  account_inactive: 'The DealFlow app was removed from Slack. Reconnect Slack in Integrations.',
+  invalid_auth: 'Slack no longer accepts the SampForce connection. Reconnect Slack in Integrations.',
+  token_revoked: 'The SampForce app was removed from Slack. Reconnect Slack in Integrations.',
+  account_inactive: 'The SampForce app was removed from Slack. Reconnect Slack in Integrations.',
   ratelimited: 'Slack is limiting requests. The step will be retried.',
   msg_too_long: 'The message is too long for Slack.',
 };

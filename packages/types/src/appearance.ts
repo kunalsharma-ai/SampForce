@@ -130,7 +130,7 @@ export interface SavedTheme {
 }
 
 export interface PreferencesResponse {
-  /** What the person sees: their own settings, else the workspace default, else DealFlow's default. */
+  /** What the person sees: their own settings, else the workspace default, else SampForce's default. */
   appearance: Appearance;
   source: 'user' | 'workspace' | 'default';
   workspaceDefault: Appearance | null;
@@ -263,8 +263,8 @@ const LIGHT_INK = '#F5F8FF';
 export const THEMES: ThemeDefinition[] = [
   {
     id: 'signature',
-    name: 'DealFlow Signature',
-    description: 'Midnight navy, electric cyan and royal violet. The original DealFlow look.',
+    name: 'SampForce Signature',
+    description: 'Midnight navy, electric cyan and royal violet. The original SampForce look.',
     preferredMode: 'dark',
     dark: { background: '#070B1A', surface: '#10172D', foreground: '#F5F8FF', primary: '#00D9FF', secondary: '#4D8DFF', accent: '#8057FF', chart: ['#00D9FF', '#8057FF', '#00D49A', '#FFB547', '#FF6178', '#5B9BF0'] },
     light: { background: '#F7F9FD', surface: '#FFFFFF', foreground: '#0E1428', primary: '#007185', secondary: '#1F5FD1', accent: '#6A33FF', chart: ['#00879C', '#6A3BDB', '#008556', '#C26A00', '#C9304A', '#2563A8'] },

@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * Stand-in for DocuSign's OAuth service, eSignature REST API v2.1 (the calls DealFlow makes) and Connect messages,
+ * Stand-in for DocuSign's OAuth service, eSignature REST API v2.1 (the calls SampForce makes) and Connect messages,
  * following DocuSign's published docs. Nothing here is real and it has not been compared with live DocuSign responses.
  */
 export const DOCUSIGN_APP = { key: 'ds-integration-key', secret: 'ds-secret-key', hmac: 'ds-connect-hmac-key' };

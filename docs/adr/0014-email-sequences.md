@@ -5,7 +5,7 @@ integration and customisable rules for what happens at the recipient's end, alon
 and an email finder (later parts of Phase 9).
 
 **Context.** Phase 3 connected Gmail and Microsoft 365 for sync and one-to-one sending, with a per-person daily cap,
-and stated that DealFlow does not send bulk email. Sales teams want multi-step outreach that stops when someone replies.
+and stated that SampForce does not send bulk email. Sales teams want multi-step outreach that stops when someone replies.
 
 **Decision.**
 
@@ -15,7 +15,7 @@ and stated that DealFlow does not send bulk email. Sales teams want multi-step o
   `task` (for the sender), and `condition` (after a wait, has the person replied / opened / clicked; jump forward,
   carry on or stop). Each step waits a number of days after the previous one.
 - **Who sends.** Every email goes one-to-one from the **enrolling person's own connected mailbox** through the existing
-  adapters. Nothing is sent from a shared DealFlow domain. Limits: the sequence's per-sender daily limit, the mailbox's
+  adapters. Nothing is sent from a shared SampForce domain. Limits: the sequence's per-sender daily limit, the mailbox's
   `EMAIL_DAILY_SEND_LIMIT` (now counting direct and sequence sends together), a send window in the sequence's time zone,
   and a few minutes of spacing between sends. This replaces the earlier "no bulk email" wording: these are personal,
   capped, one-recipient sends that a person sets up and starts; they are not newsletters.
@@ -47,11 +47,11 @@ and stated that DealFlow does not send bulk email. Sales teams want multi-step o
 
 - Tracking needs a public address that serves `/api/v1/t/*` and `/unsubscribe/*` (`TRACKING_BASE_URL`, default
   `PUBLIC_WEB_URL`). Use a subdomain of the customer-facing domain in production.
-- Deliverability depends on each sender's mailbox reputation and domain setup (SPF, DKIM, DMARC). DealFlow does not
+- Deliverability depends on each sender's mailbox reputation and domain setup (SPF, DKIM, DMARC). SampForce does not
   warm up mailboxes or rotate senders.
 - Not verified here: sending through real Gmail or Outlook accounts, inbox placement, and the bounce formats of every
   mail system (tested with a Gmail-style notice). Legal duties for cold outreach (for example GDPR, CAN-SPAM, India's
-  DPDP Act) depend on where senders and recipients are; DealFlow records consent and honours unsubscribes but does not
+  DPDP Act) depend on where senders and recipients are; SampForce records consent and honours unsubscribes but does not
   make a workspace compliant.
 
 **Addendum, 2026-10-31: A/B tests and test sends.**
@@ -60,7 +60,7 @@ and stated that DealFlow does not send bulk email. Sales teams want multi-step o
   version, chosen from a hash of the run id and step id, so a retried send uses the same version and runs split about
   evenly. `sequence_messages.variant` records which one went out, and the Results tab shows replies, clicks, opens and
   bounces for each version. The page marks a version "ahead on replies" only once both have gone to at least 20 people,
-  and says that small differences can be chance. DealFlow does not pick a winner automatically: the sender decides and
+  and says that small differences can be chance. SampForce does not pick a winner automatically: the sender decides and
   removes the other version.
 - **Send me a test** sends one saved email step (either version) to the caller's own connected mailbox address, filled
   in for a chosen lead. Empty merge fields are shown as "[Job title missing]" rather than left blank, the subject starts

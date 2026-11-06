@@ -130,7 +130,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                 onClick={() => {
                   setExporting(true);
                   setExportError(null);
-                  downloadFile(`/exports/${entity}`, `dealflow-${entity}.csv`)
+                  downloadFile(`/exports/${entity}`, `sampforce-${entity}.csv`)
                     .catch((e: Error) => setExportError(e.message))
                     .finally(() => setExporting(false));
                 }}

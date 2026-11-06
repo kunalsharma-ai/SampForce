@@ -124,8 +124,8 @@ describe('Zoom app (stand-in)', () => {
     expect((await api(owner).get('/apps/zoom/events').expect(200)).body[0]).toMatchObject({ kind: 'meeting.failed', ok: false });
   });
 
-  it('imports the transcript of a recorded DealFlow meeting into meeting notes, and ignores other meetings', async () => {
-    // A meeting not scheduled from DealFlow, and another Zoom account: both ignored.
+  it('imports the transcript of a recorded SampForce meeting into meeting notes, and ignores other meetings', async () => {
+    // A meeting not scheduled from SampForce, and another Zoom account: both ignored.
     await post(transcriptEvent(zoom.url, '99999999999')).expect(200);
     await post(transcriptEvent(zoom.url, recordedMeetingId, 'OTHERACCOUNT')).expect(200);
     await post(transcriptEvent(zoom.url, recordedMeetingId)).expect(200);

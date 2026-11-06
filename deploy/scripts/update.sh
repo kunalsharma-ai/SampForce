@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Updates DealFlow to the latest code: backup, pull, rebuild, migrate, restart.
+# Updates SampForce to the latest code: backup, pull, rebuild, migrate, restart.
 #
 #   scripts/update.sh            # pulls the current branch with git
 #   scripts/update.sh --no-pull  # rebuild what is already on disk (for example after copying a new release zip)

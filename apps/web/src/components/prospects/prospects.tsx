@@ -728,7 +728,7 @@ function FindDialog({ listId, onClose, onDone }: { listId: string; onClose: () =
     (r) => (onDone(addResultText(t, r)), onClose()),
   );
   return (
-    <Sheet title={t('Find prospects')} description={t('Search Apollo.io through DealFlow. Each search and each email address revealed counts towards your daily allowance.')} onClose={onClose}>
+    <Sheet title={t('Find prospects')} description={t('Search Apollo.io through SampForce. Each search and each email address revealed counts towards your daily allowance.')} onClose={onClose}>
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => (e.preventDefault(), setPage(1), search.mutate(1))}>
         <label className="block space-y-1 text-sm">
           <span className="font-medium">{t('Company websites')}</span>

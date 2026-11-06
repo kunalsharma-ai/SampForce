@@ -68,14 +68,14 @@ export class CommunicationService {
     return tx.integrationConnection.findFirst({ where: { tenantId, userId, status: 'CONNECTED' }, orderBy: { updatedAt: 'desc' } });
   }
 
-  /** Emails DealFlow sent from a mailbox in the last 24 hours, direct and sequence sends together. */
+  /** Emails SampForce sent from a mailbox in the last 24 hours, direct and sequence sends together. */
   sentInLastDay(tx: TenantTx, connectionId: string): Promise<number> {
     return tx.emailMessage.count({ where: { connectionId, direction: 'OUTBOUND', createdAt: { gte: new Date(Date.now() - 86_400_000) } } });
   }
 
   /**
    * Sends one email from the caller's connected mailbox and logs it on the matching record. A daily
-   * per-mailbox cap applies to everything DealFlow sends, including sequences.
+   * per-mailbox cap applies to everything SampForce sends, including sequences.
    */
   async send(auth: AuthContext, input: SendEmailInput, meta: RequestMeta): Promise<EmailRow> {
     const conn = await this.prisma.run(auth, async (tx) => {
@@ -84,7 +84,7 @@ export class CommunicationService {
       if (!c) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox before sending email.' });
       if ((await this.sentInLastDay(tx, c.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) {
         throw new HttpException(
-          { code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from DealFlow.` },
+          { code: 'SEND_LIMIT_REACHED', message: `You have reached the limit of ${this.env.EMAIL_DAILY_SEND_LIMIT} emails per day from SampForce.` },
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }

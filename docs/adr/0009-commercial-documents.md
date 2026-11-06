@@ -3,7 +3,7 @@
 **Status:** accepted (2026-10-30)
 
 **Context.** Phase 5 adds money-bearing records (quotes, contracts) and the first unauthenticated write path
-(hosted lead forms). Both need the same guarantees as the rest of DealFlow: tenant isolation by RLS, people in
+(hosted lead forms). Both need the same guarantees as the rest of SampForce: tenant isolation by RLS, people in
 control of anything that changes prices or commitments, and no claims the product cannot back up.
 
 **Decision.**

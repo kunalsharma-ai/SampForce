@@ -3,9 +3,9 @@ import { type BillingProviderKey, type Interval, PLAN_CODES, type PlanCode, type
 import type { ApiEnv } from '../common/env';
 
 /**
- * Stripe and Razorpay adapters over plain HTTPS. They implement only the calls DealFlow makes and are
+ * Stripe and Razorpay adapters over plain HTTPS. They implement only the calls SampForce makes and are
  * exercised against local fixtures (test/fixtures/billing-fixture.ts) that mimic those shapes; they have
- * not been run against either provider's test mode. Card and bank details never pass through DealFlow:
+ * not been run against either provider's test mode. Card and bank details never pass through SampForce:
  * buyers pay on the provider's hosted page.
  */
 
@@ -24,7 +24,7 @@ export class InvalidSignatureError extends Error {}
 export interface ProviderSubscription {
   id: string;
   customerId: string | null;
-  /** null = a state DealFlow does not act on (e.g. a checkout that never completed). */
+  /** null = a state SampForce does not act on (e.g. a checkout that never completed). */
   status: SubscriptionState | null;
   planCode: PlanCode | null;
   interval: Interval | null;
@@ -53,7 +53,7 @@ export interface ProviderInvoice {
   paidAt: Date | null;
 }
 
-/** A verified webhook, reduced to what DealFlow acts on. */
+/** A verified webhook, reduced to what SampForce acts on. */
 export interface ParsedEvent {
   id: string;
   type: string;
@@ -397,7 +397,7 @@ export class RazorpayAdapter implements BillingAdapter {
       seats: Math.max(1, int(s.quantity, 1)),
       currentPeriodStart: secs(s.current_start),
       currentPeriodEnd: secs(s.current_end),
-      // Razorpay reports a scheduled cancellation through `ended_at`/status; DealFlow records its own flag on request.
+      // Razorpay reports a scheduled cancellation through `ended_at`/status; SampForce records its own flag on request.
       cancelAtPeriodEnd: false,
       trialEndsAt: null,
       tenantId: str(notes.tenant_id),
@@ -408,7 +408,7 @@ export class RazorpayAdapter implements BillingAdapter {
     return this.toSubscription(await this.req<Record<string, unknown>>('GET', `/v1/subscriptions/${encodeURIComponent(id)}`));
   }
 
-  /** Razorpay applies quantity and plan changes from the next cycle; DealFlow updates when the webhook confirms. */
+  /** Razorpay applies quantity and plan changes from the next cycle; SampForce updates when the webhook confirms. */
   async changeSubscription(id: string, change: { seats?: number; priceId?: string }) {
     await this.req('PATCH', `/v1/subscriptions/${encodeURIComponent(id)}`, {
       ...(change.priceId ? { plan_id: change.priceId } : {}),

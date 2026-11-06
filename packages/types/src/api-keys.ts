@@ -81,7 +81,7 @@ export interface ZapierMe {
 }
 
 export interface ZapierStatus {
-  /** The operator's invite link to the DealFlow Zapier app; null while it is not deployed (Pending Configuration). */
+  /** The operator's invite link to the SampForce Zapier app; null while it is not deployed (Pending Configuration). */
   inviteUrl: string | null;
   subscriptions: number;
 }

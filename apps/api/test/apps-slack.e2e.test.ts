@@ -91,7 +91,7 @@ describe('Slack app (stand-in)', () => {
     const saved = (await api(owner).put('/apps/slack/settings', { defaultChannelId: 'C0SALES', defaultChannelName: 'sales' }).expect(200)).body;
     expect(saved.connection.settings).toEqual({ defaultChannelId: 'C0SALES', defaultChannelName: 'sales' });
     await api(owner).post('/apps/slack/test', {}).expect(200);
-    expect(slack.posts.at(-1)).toMatchObject({ channel: 'C0SALES', text: 'DealFlow is connected. Workflow messages will appear here.' });
+    expect(slack.posts.at(-1)).toMatchObject({ channel: 'C0SALES', text: 'SampForce is connected. Workflow messages will appear here.' });
     const events = (await api(owner).get('/apps/slack/events').expect(200)).body;
     expect(events[0]).toMatchObject({ kind: 'message.sent', ok: true, summary: 'Posted to #sales (test message)' });
   });
@@ -117,7 +117,7 @@ describe('Slack app (stand-in)', () => {
     expect(run).toMatchObject({ status: 'SUCCEEDED' });
     const post = slack.posts.at(-1)!;
     expect(post.channel).toBe('C0WINS');
-    expect(post.text).toBe(`New lead Ada &lt;@here&gt; Lovelace from Engines &amp; Co\n<http://localhost:3000/app/leads/${lead.id}|Open in DealFlow>`);
+    expect(post.text).toBe(`New lead Ada &lt;@here&gt; Lovelace from Engines &amp; Co\n<http://localhost:3000/app/leads/${lead.id}|Open in SampForce>`);
     const events = (await http.get('/apps/slack/events').expect(200)).body;
     expect(events[0]).toMatchObject({ kind: 'message.sent', ok: true, entityType: 'lead', entityId: lead.id });
   });

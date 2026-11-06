@@ -33,7 +33,7 @@ export function BillingWorkspace() {
     <div className="space-y-6">
       {checkout === 'success' && (
         <Card role="status" className="border-success/40 p-4 text-sm">
-          {t('Thanks. The payment provider has your order; this page shows the new plan as soon as the provider confirms the payment to DealFlow, usually within a minute.')}
+          {t('Thanks. The payment provider has your order; this page shows the new plan as soon as the provider confirms the payment to SampForce, usually within a minute.')}
         </Card>
       )}
       {checkout === 'canceled' && <Card role="status" className="p-4 text-sm text-muted-foreground">{t('Checkout was canceled. Nothing was charged.')}</Card>}
@@ -119,9 +119,9 @@ function OpenInvoice({ b, inv, canManage }: { b: BillingOverview; inv: InvoiceRo
             <p className="mt-1 text-xs text-muted-foreground">{t('Quote {number} with the payment.', { number: inv.number ?? '' })}</p>
           </div>
         ) : (
-          <p className="text-muted-foreground">{t('The DealFlow team will send payment details for this invoice. Quote {number} with the payment.', { number: inv.number ?? '' })}</p>
+          <p className="text-muted-foreground">{t('The SampForce team will send payment details for this invoice. Quote {number} with the payment.', { number: inv.number ?? '' })}</p>
         )}
-        <p className="text-muted-foreground">{t('The plan starts as soon as the DealFlow team confirms the payment has arrived. You will get a notification.')}</p>
+        <p className="text-muted-foreground">{t('The plan starts as soon as the SampForce team confirms the payment has arrived. You will get a notification.')}</p>
         {canManage && (
           <Button variant="ghost" size="sm" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
             {t('Cancel this invoice')}
@@ -167,7 +167,7 @@ function CurrentPlan({ b, canManage }: { b: BillingOverview; canManage: boolean 
             : b.provider === 'OFFLINE'
               ? `${t.plural('count.seats', b.seats)} · ${b.interval === 'YEAR' ? t('annual') : t('monthly')} · ${t('paid until {date}', { date: formatDate(b.currentPeriodEnd) })}`
               : `${t.plural('count.seats', b.seats)} · ${b.interval === 'YEAR' ? t('billed annually') : t('billed monthly')}${b.currentPeriodEnd && b.status !== 'TRIALING' ? ` · ${t('current period ends {date}', { date: formatDate(b.currentPeriodEnd) })}` : ''}`}
-          {b.provider === 'NONE' && b.plan.code !== 'free' && b.status === 'ACTIVE' && ` · ${t('managed by the DealFlow team')}`}
+          {b.provider === 'NONE' && b.plan.code !== 'free' && b.status === 'ACTIVE' && ` · ${t('managed by the SampForce team')}`}
         </CardDescription>
       </CardHeader>
       {canManage && paid && (
@@ -297,10 +297,10 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
       </div>
       {offline && canManage && (
         <p className="mb-3 rounded-md border border-border p-3 text-sm text-muted-foreground">
-          {t('Plans are paid by bank transfer. Choose a plan, interval and seats to get an invoice; the plan starts when the DealFlow team confirms your payment.')}{b.trialAvailable ? ` ${t('You can also try a plan free first.')}` : ''}
+          {t('Plans are paid by bank transfer. Choose a plan, interval and seats to get an invoice; the plan starts when the SampForce team confirms your payment.')}{b.trialAvailable ? ` ${t('You can also try a plan free first.')}` : ''}
         </p>
       )}
-      {managed && <p className="mb-3 text-sm text-muted-foreground">{t('This workspace’s plan is managed by the DealFlow team. Contact them to change it.')}</p>}
+      {managed && <p className="mb-3 text-sm text-muted-foreground">{t('This workspace’s plan is managed by the SampForce team. Contact them to change it.')}</p>}
       <ErrorText error={err} />
       {change.data?.appliesAt === 'cycle_end' && <p role="status" className="mb-3 text-sm text-muted-foreground">{t('The plan change is scheduled with Razorpay and applies from the next billing cycle.')}</p>}
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -315,7 +315,7 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
                 <Badge tone="primary">{t('Current plan')}</Badge>
               ) : p.code === 'free' ? null : !p.selfServe ? (
                 b.salesContact ? (
-                  <a className="text-sm text-primary underline-offset-2 hover:underline" href={`mailto:${b.salesContact}?subject=${encodeURIComponent('DealFlow Enterprise Plus')}`}>
+                  <a className="text-sm text-primary underline-offset-2 hover:underline" href={`mailto:${b.salesContact}?subject=${encodeURIComponent('SampForce Enterprise Plus')}`}>
                     {t('Contact sales')}
                   </a>
                 ) : (
@@ -331,7 +331,7 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
                       size="sm"
                       disabled={invoice.isPending || !(Number(seats) >= 1)}
                       onClick={() => invoice.mutate({ planCode: p.code as SelfServePlan, interval, seats: Number(seats) })}
-                      aria-label={`${p.code === b.plan.code && b.provider === 'OFFLINE' ? t('Renew {plan}', { plan: p.name.replace('DealFlow ', '') }) : t('Request invoice for {plan}', { plan: p.name.replace('DealFlow ', '') })}${Number(seats) >= 1 ? `, ${formatMinor(offlineInvoiceCents(p.code as SelfServePlan, interval, Number(seats)), 'USD')}` : ''}`}
+                      aria-label={`${p.code === b.plan.code && b.provider === 'OFFLINE' ? t('Renew {plan}', { plan: p.name.replace('SampForce ', '') }) : t('Request invoice for {plan}', { plan: p.name.replace('SampForce ', '') })}${Number(seats) >= 1 ? `, ${formatMinor(offlineInvoiceCents(p.code as SelfServePlan, interval, Number(seats)), 'USD')}` : ''}`}
                     >
                       {p.code === b.plan.code && b.provider === 'OFFLINE' ? t('Renew') : t('Request invoice')}
                     </Button>
@@ -344,7 +344,7 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
                 </div>
               ) : hasPaid ? (
                 <Button size="sm" variant="outline" disabled={change.isPending || !provider || !p.checkout[provider][interval]} onClick={() => change.mutate({ planCode: p.code, interval })}>
-                  {t('Switch to {plan}', { plan: p.name.replace('DealFlow ', '') })}
+                  {t('Switch to {plan}', { plan: p.name.replace('SampForce ', '') })}
                 </Button>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -367,8 +367,8 @@ function Plans({ b, canManage }: { b: BillingOverview; canManage: boolean }) {
       </ul>
       <p className="mt-3 text-xs text-muted-foreground">
         {offline
-          ? t('Prices in USD per user per month, before tax. Invoices are paid by bank transfer; DealFlow never asks for card numbers.')
-          : t('Prices in USD per user per month, before tax. Payment, tax calculation and card details are handled on the provider’s secure page; DealFlow never sees card numbers. Promotion codes can be entered at Stripe checkout.')}
+          ? t('Prices in USD per user per month, before tax. Invoices are paid by bank transfer; SampForce never asks for card numbers.')
+          : t('Prices in USD per user per month, before tax. Payment, tax calculation and card details are handled on the provider’s secure page; SampForce never sees card numbers. Promotion codes can be entered at Stripe checkout.')}
       </p>
     </section>
   );
@@ -381,7 +381,7 @@ function PlanCard({ p, b, interval, action }: { p: CatalogPlan; b: BillingOvervi
   return (
     <li>
       <Card className={cn('flex h-full flex-col p-4', p.code === b.plan.code && 'border-primary ring-1 ring-primary/40')}>
-        <p className="text-sm font-medium">{p.name.replace('DealFlow ', '')}</p>
+        <p className="text-sm font-medium">{p.name.replace('SampForce ', '')}</p>
         <p className="mt-2 text-2xl font-semibold tabular">
           {price === null ? t('Custom') : usd(price)}
           {price ? <span className="text-xs font-normal text-muted-foreground"> {t('/user/mo')}</span> : null}

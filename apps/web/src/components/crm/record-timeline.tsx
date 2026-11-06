@@ -36,7 +36,7 @@ const FILTERS: Record<TimelineEntity, TimelineKind[]> = {
 const ABOUT_HREF = { lead: '/app/leads/', contact: '/app/contacts/', deal: '/app/deals/' } as const;
 
 /**
- * Customer 360 timeline: everything DealFlow knows about a record in one stream (activity, email, meetings,
+ * Customer 360 timeline: everything SampForce knows about a record in one stream (activity, email, meetings,
  * sequences, stage moves, quotes, contracts, forms, escalations). Companies roll up their contacts and deals.
  */
 export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: string }) {

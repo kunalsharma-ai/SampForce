@@ -1,4 +1,4 @@
-# DealFlow Pricing Strategy and Unit Economics
+# SampForce Pricing Strategy and Unit Economics
 
 **Status:** rate card approved by Kunal (Sampledge) on 2026-10-31, after the proposal of 2026-10-30. The cost model
 in sections 3 to 5 is still an estimate: check it against real usage from a beta and revisit prices if it is off.
@@ -37,7 +37,7 @@ USD, excluding taxes. Feature packaging per plan follows the brief and is mirror
 - **1 AI credit = one standard Copilot/agent step** (≈3k input + 0.5k output tokens on the fast tier).
   Deep-reasoning steps cost 4 credits. Credits are pooled across the tenant's seats and reset monthly.
 - **Overage:** AI credit packs (proposed $10 per 1,000 credits). SMS, voice and WhatsApp are passed through at
-  provider cost plus a published margin; DealFlow never promises unlimited inference, messaging or third-party usage.
+  provider cost plus a published margin; SampForce never promises unlimited inference, messaging or third-party usage.
 - **Single sign-on (OpenID Connect) and SCIM provisioning are on every plan, including Free** (decided 2026-10-31).
   They are not used as an upgrade lever; seats still count toward each plan's user limit.
 - **No mandatory onboarding fee** on self-service plans; no seat minimums below Business; storage and
@@ -103,6 +103,6 @@ payback, below the common 3:1 / 12-month guidance. Recommendations:
 ## 6. Positioning against published competitor prices
 
 Snapshot in [FEATURE_MATRIX.md](FEATURE_MATRIX.md) §1. Several competitors publish entry paid plans near
-DealFlow Launch (for example Freshsales Growth $9 and Close Solo $9 on annual billing), so the message
+SampForce Launch (for example Freshsales Growth $9 and Close Solo $9 on annual billing), so the message
 should be **predictability** (published AI allowances, no mandatory onboarding fees, clear add-ons) rather
 than "cheapest". Any public comparison needs re-verified vendor pages and legal review.

@@ -10,7 +10,7 @@ const SEEN_HOURS = 24;
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-  chrome.contextMenus.create({ id: 'dealflow-scan', title: 'Find emails on this page with DealFlow', contexts: ['page'] });
+  chrome.contextMenus.create({ id: 'dealflow-scan', title: 'Find emails on this page with SampForce', contexts: ['page'] });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -18,7 +18,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-  if (change.status === 'complete' && tab.url) autoCapture(tabId, tab.url).catch((e) => console.warn('DealFlow automatic capture', e));
+  if (change.status === 'complete' && tab.url) autoCapture(tabId, tab.url).catch((e) => console.warn('SampForce automatic capture', e));
 });
 
 function today() {

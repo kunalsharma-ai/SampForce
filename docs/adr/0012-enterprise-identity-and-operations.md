@@ -2,7 +2,7 @@
 
 **Status:** accepted (2026-10-31)
 
-**Context.** Phase 8 makes DealFlow ready for larger customers and for running in production: two-step
+**Context.** Phase 8 makes SampForce ready for larger customers and for running in production: two-step
 verification, single sign-on, automated provisioning, session control, a strict content security policy, metrics
 and traces, a Kubernetes deployment, backups that are known to restore, and runbooks. Each of these can lock people
 out or leak data if done loosely, so the rules below favour failing closed and saying plainly what is not built.
@@ -51,7 +51,7 @@ out or leak data if done loosely, so the rules below favour failing closed and s
   NetworkPolicies, and optional ServiceMonitors and alert rules. Pods run as non-root with a read-only root
   filesystem and no service-account token.
 
-**Consequences.** Customers can meet common enterprise security questionnaires item by item, but DealFlow makes no
+**Consequences.** Customers can meet common enterprise security questionnaires item by item, but SampForce makes no
 certification or compliance claim. The chart has not been rendered or installed here (no Helm binary or cluster in
 the build environment); CI lints and schema-checks it. Deferred: SAML, WebAuthn, SCIM Groups, IP allow-lists,
 password reset by email, egress NetworkPolicies, and PITR drills.

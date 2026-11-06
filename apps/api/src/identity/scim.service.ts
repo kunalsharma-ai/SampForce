@@ -206,7 +206,7 @@ export class ScimService {
         if (typeof v.familyName === 'string') name.family = v.familyName;
         if (typeof v.formatted === 'string') desired.name = v.formatted.slice(0, 120);
       }
-      // Attributes DealFlow does not store (title, phoneNumbers, enterprise extension…) are accepted and ignored.
+      // Attributes SampForce does not store (title, phoneNumbers, enterprise extension…) are accepted and ignored.
     };
     for (const op of Operations) {
       const kind = op.op.toLowerCase();
@@ -252,7 +252,7 @@ export class ScimService {
             userData.email = desired.email!;
           }
         } else if (wantsEmail) {
-          throw new ScimError(400, 'This person also belongs to other DealFlow workspaces, so their email can only be changed by them.', 'mutability');
+          throw new ScimError(400, 'This person also belongs to other SampForce workspaces, so their email can only be changed by them.', 'mutability');
         }
       }
       if (desired.active === false || (desired.active === true && m.status !== 'ACTIVE')) this.assertNotOwner(m);
@@ -287,7 +287,7 @@ export class ScimService {
 
   private assertNotOwner(m: Row): void {
     // Owners are never deactivated by provisioning, so an identity-provider mistake cannot lock the workspace.
-    if (m.role.key === 'owner') throw new ScimError(403, 'Owners are managed in DealFlow, not through SCIM.');
+    if (m.role.key === 'owner') throw new ScimError(403, 'Owners are managed in SampForce, not through SCIM.');
   }
 
   private async assertSeat(tx: TenantTx, tenantId: string): Promise<void> {

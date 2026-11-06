@@ -163,7 +163,7 @@ export class ZoomClient {
     const body = (await res.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; reason?: string; error?: string };
     if (!res.ok || !body.access_token || !body.refresh_token) {
       const revoked = body.error === 'invalid_grant' || body.error === 'invalid_client' || res.status === 401;
-      throw new ZoomError(body.error ?? 'token_failed', revoked ? 'Zoom no longer accepts the DealFlow connection. Reconnect Zoom in Integrations.' : `Zoom refused the sign-in (${body.reason ?? body.error ?? res.status}).`, revoked);
+      throw new ZoomError(body.error ?? 'token_failed', revoked ? 'Zoom no longer accepts the SampForce connection. Reconnect Zoom in Integrations.' : `Zoom refused the sign-in (${body.reason ?? body.error ?? res.status}).`, revoked);
     }
     return { accessToken: body.access_token, refreshToken: body.refresh_token, expiresAt: Date.now() + (body.expires_in ?? 3600) * 1000, scopes: (body.scope ?? '').split(/[ ,]+/).filter(Boolean) };
   }

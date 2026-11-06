@@ -8,7 +8,7 @@
 
 Feature 14 asks for performance dashboards, leaderboards, achievement badges, sales competitions, team challenges,
 target progress and personal performance tracking, and says: "Gamification must be configurable. Administrators
-should be able to decide which activities earn points and how achievements are calculated." DealFlow already had the
+should be able to decide which activities earn points and how achievements are calculated." SampForce already had the
 records that matter (activities, tasks, leads, deals), sales targets for any month, quarter or year (ADR 0024), and a
 `teams` table with no API or screen.
 
@@ -30,7 +30,7 @@ records that matter (activities, tasks, leads, deals), sales targets for any mon
 4. **Badges are rules, awards are stored.** A badge is a measure (points, deals won, revenue won, calls, meetings,
    activities, or percent of personal target), a threshold and a window (month, quarter, year or all time; target
    attainment needs a period). The worker checks hourly (and managers can check now) for the current and just-ended
-   period, stores one award per badge, person and period, notifies the person in DealFlow and writes an audit entry.
+   period, stores one award per badge, person and period, notifies the person in SampForce and writes an audit entry.
    Awards are never taken away by later rule changes. Six suggested badges can be added in one click; none exist until
    someone adds them.
 5. **Competitions and team challenges** run for a period label or custom dates, for people (optionally only members of

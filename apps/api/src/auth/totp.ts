@@ -74,7 +74,7 @@ export function verifyTotp(secret: string, code: string, opts: { now?: number; l
   return null;
 }
 
-export function otpauthUri(secret: string, account: string, issuer = 'DealFlow'): string {
+export function otpauthUri(secret: string, account: string, issuer = 'SampForce'): string {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({ secret, issuer, algorithm: 'SHA1', digits: '6', period: String(STEP_SECONDS) });
   return `otpauth://totp/${label}?${params.toString()}`;

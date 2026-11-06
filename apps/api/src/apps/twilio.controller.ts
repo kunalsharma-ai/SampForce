@@ -80,7 +80,7 @@ export class TwilioController {
     return this.twilio.inbound(hookId, formParams(req), signature);
   }
 
-  /** Status callbacks for messages DealFlow sent (signed with X-Twilio-Signature). */
+  /** Status callbacks for messages SampForce sent (signed with X-Twilio-Signature). */
   @Post('webhooks/:hookId/status')
   @Public()
   @SkipThrottle()

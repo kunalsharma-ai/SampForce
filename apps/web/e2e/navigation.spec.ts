@@ -122,5 +122,5 @@ test('keyboard shortcuts, Focus Workspace and search actions', async ({ page }) 
   // A question is offered to Copilot first, so Enter asks it.
   await expect(page.getByRole('option').first()).toHaveText(/Ask Copilot/);
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('dialog', { name: 'DealFlow Copilot' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'SampForce Copilot' })).toBeVisible();
 });

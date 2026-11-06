@@ -21,7 +21,7 @@
   secrets with each identity provider, webhook secrets, mailbox tokens by reconnecting).
 - **Cross-workspace data exposure:** SEV1. Run `scripts/check-rls.sql`, confirm the runtime role has no BYPASSRLS
   (`SELECT rolbypassrls FROM pg_roles WHERE rolname = 'dealflow_app'`), and find the code path. Customer and
-  regulator notification is a legal decision; DealFlow's documents make no compliance claim.
+  regulator notification is a legal decision; SampForce's documents make no compliance claim.
 
 ## Afterwards
 

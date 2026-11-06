@@ -18,7 +18,7 @@ function drawContractPdf(c: PdfContract, seller: { name: string }, signerName: s
   const rtl = requestLanguage() === 'ar';
   const unicode = rtl || hasArabic(JSON.stringify([c, seller.name, signerName]));
   const title = `${c.reference} ${c.name}`;
-  const doc = new PDFDocument({ size: 'A4', margin: 50, lang: requestLanguage(), info: { Title: unicode ? title : latin1(title), Author: unicode ? seller.name : latin1(seller.name), Creator: 'DealFlow' } });
+  const doc = new PDFDocument({ size: 'A4', margin: 50, lang: requestLanguage(), info: { Title: unicode ? title : latin1(title), Author: unicode ? seller.name : latin1(seller.name), Creator: 'SampForce' } });
   const chunks: Buffer[] = [];
   doc.on('data', (b: Buffer) => chunks.push(b));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));

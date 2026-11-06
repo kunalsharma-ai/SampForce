@@ -274,7 +274,7 @@ export const EMAIL_TEMPLATES: Template[] = [
   {
     key: 'email-bounced',
     name: 'Bounce: stop sending and flag the address',
-    description: 'DealFlow already stops all sending to a bounced address. This also flags the record for checking and asks the owner to find a working address.',
+    description: 'SampForce already stops all sending to a bounced address. This also flags the record for checking and asks the owner to find a working address.',
     definition: {
       trigger: { event: 'email.bounced', conditions: { match: 'all', rules: [] } },
       start: 'action_1',
@@ -287,7 +287,7 @@ export const EMAIL_TEMPLATES: Template[] = [
   {
     key: 'email-unsubscribed',
     name: 'Unsubscribe: confirm and tell the owner',
-    description: 'DealFlow suppresses the address from every sequence and marks the person opted out the moment they unsubscribe. This adds a note and tells the owner.',
+    description: 'SampForce suppresses the address from every sequence and marks the person opted out the moment they unsubscribe. This adds a note and tells the owner.',
     definition: {
       trigger: { event: 'email.unsubscribed', conditions: { match: 'all', rules: [] } },
       start: 'action_1',

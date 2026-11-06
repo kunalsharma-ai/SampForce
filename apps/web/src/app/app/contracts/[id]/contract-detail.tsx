@@ -129,7 +129,7 @@ function Actions({ c }: { c: ContractRow }) {
                   ))}
                 </Select>
               </Field>
-              <p className="text-xs text-muted-foreground">{t('This records who signed and how. DealFlow does not collect signatures itself yet.')}</p>
+              <p className="text-xs text-muted-foreground">{t('This records who signed and how. SampForce does not collect signatures itself yet.')}</p>
               <Button type="submit" size="sm" disabled={sign.isPending}>
                 {t('Mark as signed')}
               </Button>

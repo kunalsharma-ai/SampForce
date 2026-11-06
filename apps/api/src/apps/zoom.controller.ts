@@ -12,7 +12,7 @@ import { ZoomService } from './zoom.service';
 export class ZoomController {
   constructor(private readonly zoom: ZoomService) {}
 
-  /** Schedules a meeting in the signed-in person's Zoom user (by their DealFlow email) and logs it on the record. */
+  /** Schedules a meeting in the signed-in person's Zoom user (by their SampForce email) and logs it on the record. */
   @Post('meetings')
   @HttpCode(201)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

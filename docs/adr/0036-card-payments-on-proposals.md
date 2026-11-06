@@ -7,7 +7,7 @@
 ## Context
 
 Customers receive proposals by link. Sellers want them to be able to pay an accepted proposal by card straight
-away, with the money going into the seller's own payment account, not DealFlow's. DealFlow already bills its own
+away, with the money going into the seller's own payment account, not SampForce's. SampForce already bills its own
 subscriptions through Stripe and Razorpay with operator keys; that must stay separate.
 
 ## Decisions
@@ -17,7 +17,7 @@ subscriptions through Stripe and Razorpay with operator keys; that must stay sep
    /v1/checkout/sessions` or `GET /v1/payment_links`), sealed with the SecretBox, and never returned. There is no
    operator secret, so the app is never Pending Configuration; it is Not connected until keys are saved, and shows a
    warning until the first signed webhook arrives.
-2. **Hosted pages only.** Stripe Checkout Sessions and Razorpay Payment Links. DealFlow never handles card data, so
+2. **Hosted pages only.** Stripe Checkout Sessions and Razorpay Payment Links. SampForce never handles card data, so
    it stays out of PCI scope beyond SAQ A.
 3. **Paid means confirmed.** The customer returning to the proposal is not proof. A payment is marked paid only by
    the provider's signed webhook (with Stripe's 5-minute timestamp window) and only when the amount in minor units

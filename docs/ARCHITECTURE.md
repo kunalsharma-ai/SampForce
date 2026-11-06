@@ -1,4 +1,4 @@
-# DealFlow System Architecture
+# SampForce System Architecture
 
 **Status:** v1 (2026-10-30). Sections marked **Implemented** exist in this repository and are covered by tests.
 Everything else is the target design for later phases.

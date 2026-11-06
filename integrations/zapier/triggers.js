@@ -1,7 +1,7 @@
 'use strict';
 const { api, flatten } = require('./lib');
 
-/** REST-hook triggers. DealFlow posts the event id; the trigger then reads the event with the record as it is now. */
+/** REST-hook triggers. SampForce posts the event id; the trigger then reads the event with the record as it is now. */
 const EVENTS = [
   ['lead_created', 'lead.created', 'New Lead', 'Triggers when a lead is created.'],
   ['lead_updated', 'lead.updated', 'Updated Lead', 'Triggers when a lead is changed.'],

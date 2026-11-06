@@ -40,7 +40,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       </main>
       <footer className="border-t border-border/60">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-6 text-xs text-muted-foreground sm:px-6">
-          <span>{t('© {year} Sampledge. DealFlow is a product of Sampledge.', { year: new Date().getFullYear() })}</span>
+          <span>{t('© {year} Sampledge. SampForce is a product of Sampledge.', { year: new Date().getFullYear() })}</span>
           <Link href="/pricing" className="hover:text-foreground">
             {t('Pricing')}
           </Link>

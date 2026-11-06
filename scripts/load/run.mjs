@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Small HTTP load runner for DealFlow's read paths. No dependencies.
+ * Small HTTP load runner for SampForce's read paths. No dependencies.
  *
- *   API=http://localhost:4000/api/v1 EMAIL=load-owner@dealflow.local PASSWORD=... \
+ *   API=http://localhost:4000/api/v1 EMAIL=load-owner@sampforce.local PASSWORD=... \
  *   CONCURRENCY=10 SECONDS=15 node scripts/load/run.mjs > result.json
  *
  * Signs in once, then for each scenario keeps CONCURRENCY requests in flight for SECONDS and reports

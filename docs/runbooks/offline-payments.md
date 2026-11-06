@@ -1,6 +1,6 @@
 # Recording offline payments
 
-Workspaces pay by bank transfer against a DealFlow invoice (ADR 0013). An operator with the **ADMIN** role records
+Workspaces pay by bank transfer against a SampForce invoice (ADR 0013). An operator with the **ADMIN** role records
 each payment.
 
 ## Before the first invoice: enter the bank details
@@ -12,7 +12,7 @@ each payment.
    what workspaces see. Each change is written, with the full text, to the operator log, so a changed account
    number can always be traced.
 
-Until this is set, invoices say the DealFlow team will send payment details. To check a change was not made by
+Until this is set, invoices say the SampForce team will send payment details. To check a change was not made by
 someone else, look for `settings.payment_instructions_updated` in the operator log.
 
 ## Recording a payment
@@ -25,7 +25,7 @@ someone else, look for `settings.payment_instructions_updated` in the operator l
 3. Open the workspace, enter the bank or transfer reference (UTR, SWIFT reference) and the day the money arrived,
    and choose **Mark paid**. The plan starts (or renews from the end of the current period), the workspace's billing
    managers are notified, and the action is written to both audit logs.
-4. Issue any tax invoice Sampledge's accounting requires outside DealFlow.
+4. Issue any tax invoice Sampledge's accounting requires outside SampForce.
 
 Settings: the console value wins. `OFFLINE_PAYMENT_INSTRUCTIONS` (deployment config, `\n` for line breaks) is only a
 fallback for when nothing is saved in the console. `ONLINE_PAYMENTS_ENABLED=false` keeps Stripe and Razorpay checkout

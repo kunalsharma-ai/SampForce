@@ -1,4 +1,4 @@
-# DealFlow UI/UX Design Specification
+# SampForce UI/UX Design Specification
 
 ## 1. Experience principles
 
@@ -17,7 +17,7 @@ Colours are CSS variables holding HSL triplets, consumed through the Tailwind pr
 
 | Theme | Character |
 |---|---|
-| DealFlow Signature (default) | Midnight navy, electric cyan, royal violet |
+| SampForce Signature (default) | Midnight navy, electric cyan, royal violet |
 | Obsidian Intelligence | Black, charcoal, electric violet |
 | Midnight Sapphire | Navy, royal blue, cyan |
 | Aurora Enterprise | Deep indigo, teal, violet |

@@ -14,7 +14,7 @@ import { useT } from '@/lib/i18n';
 type Step = { kind: 'idle' } | { kind: 'password' } | { kind: 'scan'; setup: MfaSetupResponse } | { kind: 'codes'; codes: string[] } | { kind: 'disable' } | { kind: 'regenerate' };
 
 function message(err: unknown): string {
-  return err instanceof ApiError ? err.message : 'Could not reach DealFlow. Check your connection.';
+  return err instanceof ApiError ? err.message : 'Could not reach SampForce. Check your connection.';
 }
 
 /** Two-step verification with an authenticator app: set up, recovery codes, turn off. */
@@ -46,7 +46,7 @@ export function TwoStepCard() {
         <CardTitle className="flex items-center gap-2">
           Two-step verification {s && (s.enabled ? <Badge tone="success">{t('On')}</Badge> : <Badge>{t('Off')}</Badge>)}
         </CardTitle>
-        <CardDescription>{t('After your password, DealFlow asks for a code from an authenticator app such as Google Authenticator, Microsoft Authenticator or 1Password.')}</CardDescription>
+        <CardDescription>{t('After your password, SampForce asks for a code from an authenticator app such as Google Authenticator, Microsoft Authenticator or 1Password.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {status.isPending && <p className="text-sm text-muted-foreground">{t('Loading…')}</p>}
@@ -204,19 +204,19 @@ function ScanStep({ setup, busy, onSubmit, onCancel }: { setup: MfaSetupResponse
 function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
-  const text = `${t('DealFlow recovery codes (each works once)')}\n\n${codes.join('\n')}\n`;
+  const text = `${t('SampForce recovery codes (each works once)')}\n\n${codes.join('\n')}\n`;
   const download = () => {
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'dealflow-recovery-codes.txt';
+    a.download = 'sampforce-recovery-codes.txt';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
     <div className="space-y-3" role="region" aria-label={t('Recovery codes')}>
       <p className="text-sm">
-        <strong>{t('Save these recovery codes now.')}</strong> {t('Each one signs you in once if you lose your phone. DealFlow will not show them again.')}
+        <strong>{t('Save these recovery codes now.')}</strong> {t('Each one signs you in once if you lose your phone. SampForce will not show them again.')}
       </p>
       <ul className="grid max-w-md grid-cols-2 gap-2 rounded-md border border-border bg-muted/40 p-3 font-mono text-sm">
         {codes.map((c) => (

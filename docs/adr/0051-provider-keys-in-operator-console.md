@@ -8,7 +8,7 @@
 
 Every deployment-wide provider key (Apollo, Hunter, Deepgram, Google, Microsoft, Slack, Zoom, DocuSign, Anthropic,
 SMTP, Zapier, Stripe, Razorpay) came only from environment variables. Adding or changing one meant editing the
-deployment's secrets and restarting the API and the worker. Kunal asked for a screen in DealFlow where keys can be
+deployment's secrets and restarting the API and the worker. Kunal asked for a screen in SampForce where keys can be
 entered or updated, with the backend picking up a change straight away.
 
 Per-workspace credentials (Twilio, WhatsApp, a workspace's own Stripe or Razorpay for quote payments, Teams webhook
@@ -56,4 +56,4 @@ URLs) already have their own screens under Settings > Apps and are out of scope.
 - Anyone with operator ADMIN access can now replace a provider key. That raises the value of an operator account;
   operator sign-in, the audit log and the 20-a-minute limit are the controls.
 - Every test runs against local stand-ins built from each provider's documentation. The first test with a real key
-  is the first time DealFlow talks to that provider.
+  is the first time SampForce talks to that provider.

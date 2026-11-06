@@ -80,7 +80,7 @@ export class AppsController {
   @RequirePermissions('integrations:manage')
   test(@Auth() auth: AuthContext, @Body(new ZodPipe(slackTestSchema)) body: z.infer<typeof slackTestSchema>) {
     return this.wrap(() =>
-      this.apps.postToSlack(auth.tenantId, { channelId: body.channelId ?? null, text: 'DealFlow is connected. Workflow messages will appear here.', actorUserId: auth.userId, source: 'test message' }),
+      this.apps.postToSlack(auth.tenantId, { channelId: body.channelId ?? null, text: 'SampForce is connected. Workflow messages will appear here.', actorUserId: auth.userId, source: 'test message' }),
     );
   }
 
@@ -121,7 +121,7 @@ export class AppsController {
   @RequirePermissions('integrations:manage')
   teamsTest(@Auth() auth: AuthContext, @Body(new ZodPipe(teamsTestSchema)) body: z.infer<typeof teamsTestSchema>) {
     return this.wrap(() =>
-      this.apps.postToTeams(auth.tenantId, { channelId: body.channelId ?? null, message: { text: 'DealFlow test message. Workflow updates will appear here.', link: null }, actorUserId: auth.userId, source: 'test message' }),
+      this.apps.postToTeams(auth.tenantId, { channelId: body.channelId ?? null, message: { text: 'SampForce test message. Workflow updates will appear here.', link: null }, actorUserId: auth.userId, source: 'test message' }),
     );
   }
 

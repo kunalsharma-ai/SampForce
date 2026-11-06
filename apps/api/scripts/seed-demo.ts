@@ -9,7 +9,7 @@ import { PrismaClient, provisionTenant, type TenantTx, withDbContext } from '@de
 import { quarterPeriod } from '@dealflow/types';
 import { PasswordService } from '../src/auth/password.service';
 
-const DEMO_EMAIL = 'demo@dealflow.local';
+const DEMO_EMAIL = 'demo@sampforce.local';
 const DAY = 86_400_000;
 
 async function main(): Promise<void> {
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
       const user = await tx.user.create({ data: { email: DEMO_EMAIL, name: 'Demo User', passwordHash } });
       const { pipeline } = await provisionTenant(tx, {
         tenantId,
-        name: 'DealFlow Demo Workspace',
+        name: 'SampForce Demo Workspace',
         slug: `demo-${tenantId.slice(0, 6)}`,
         ownerUserId: user.id,
         isDemo: true,

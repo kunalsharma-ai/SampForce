@@ -5,7 +5,7 @@ import { EMAIL_STATUSES, type EmailStatus } from './crm';
 //
 // Prospects are people a team may want to contact, kept apart from leads and contacts until someone adds them to the
 // CRM. They come from people typing them in, CSV or Excel files, the browser extension, or an approved data provider
-// (Apollo.io for people and companies, Hunter.io for email verification), always through DealFlow's backend.
+// (Apollo.io for people and companies, Hunter.io for email verification), always through SampForce's backend.
 // Without a provider key the provider runs in Mock Mode: it returns sample people on reserved ".example" domains,
 // clearly labelled, which can be tried in lists but never added to the CRM, enrolled or exported.
 
@@ -95,7 +95,7 @@ export const prospectIdsSchema = z.object({ prospectIds: ids });
 export const prospectToCrmSchema = z.object({ prospectIds: ids, sequenceId: z.string().uuid().optional() });
 export const prospectAddSchema = z.object({ prospects: z.array(prospectInputSchema).min(1).max(100) });
 
-/** Column mapping for a CSV or Excel import: DealFlow field → column index in the file. */
+/** Column mapping for a CSV or Excel import: SampForce field → column index in the file. */
 export const PROSPECT_IMPORT_FIELDS = ['fullName', 'firstName', 'lastName', 'email', 'title', 'companyName', 'domain', 'industry', 'country', 'companySize', 'phone', 'notes'] as const;
 export type ProspectImportField = (typeof PROSPECT_IMPORT_FIELDS)[number];
 export const PROSPECT_IMPORT_FIELD_LABELS: Record<ProspectImportField, string> = {
@@ -108,7 +108,7 @@ export const prospectImportCommitSchema = z.object({
 export const MAX_PROSPECT_IMPORT_ROWS = 5_000;
 export const MAX_PROSPECT_IMPORT_BYTES = 5 * 1024 * 1024;
 
-/** Guesses the DealFlow field for a column heading. */
+/** Guesses the SampForce field for a column heading. */
 export function guessProspectField(header: string): ProspectImportField | null {
   const h = header.toLowerCase().replace(/[^a-z]/g, '');
   const table: [RegExp, ProspectImportField][] = [
@@ -304,7 +304,7 @@ export interface ProspectAddResult {
   /** Already in this list (same email, or same name at the same company). */
   duplicates: number;
   invalid: { row: number; message: string }[];
-  /** Already a lead or contact in DealFlow; still added to the list, marked "In CRM". */
+  /** Already a lead or contact in SampForce; still added to the list, marked "In CRM". */
   inCrm: number;
 }
 

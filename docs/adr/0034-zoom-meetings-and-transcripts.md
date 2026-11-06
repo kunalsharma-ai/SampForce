@@ -18,10 +18,10 @@ meeting in the company.
 
 1. **The workspace connects once.** The workspace connects one admin-managed Zoom General app (ADR 0032's
    `app_connections`, with provider `ZOOM` and the Zoom account id as the external id). Meetings are created with
-   `POST /users/{email}/meetings` for the signed-in person's DealFlow email, so they belong to that person in Zoom.
-2. **Only DealFlow's own meetings are read.** `zoom_meetings` records each meeting scheduled here.
+   `POST /users/{email}/meetings` for the signed-in person's SampForce email, so they belong to that person in Zoom.
+2. **Only SampForce's own meetings are read.** `zoom_meetings` records each meeting scheduled here.
    `recording.transcript_completed` events are matched against that table, and only rows where the organiser chose
-   recording are imported. DealFlow never lists or downloads other meetings' recordings.
+   recording are imported. SampForce never lists or downloads other meetings' recordings.
 3. **Consent is explicit.** Choosing cloud recording needs the organiser to confirm that participants agree. This is
    recorded in the audit log and on the meeting notes, in addition to Zoom's own recording notice.
 4. **Events are authenticated by signature only.** The check uses Zoom's v0 HMAC with a 5-minute window, and the
@@ -37,5 +37,5 @@ meeting in the company.
 
 - Zoom calls do not need Deepgram. Their transcripts flow into the same meeting notes, AI summary and review as
   uploaded recordings.
-- People who are not users in the connected Zoom account cannot schedule from DealFlow. They are told why.
+- People who are not users in the connected Zoom account cannot schedule from SampForce. They are told why.
 - Zoom is tested only against a local stand-in of its documented API until real app credentials are added.

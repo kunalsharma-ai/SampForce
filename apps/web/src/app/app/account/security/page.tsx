@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Account security' };
 export default function AccountSecurityPage() {
   return (
     <div className="max-w-3xl space-y-6">
-      <PageHeader title="Account security" description="Two-step verification and the devices signed in to your DealFlow account." />
+      <PageHeader title="Account security" description="Two-step verification and the devices signed in to your SampForce account." />
       <TwoStepCard />
       <DeviceList />
     </div>

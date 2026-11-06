@@ -16,7 +16,7 @@ sequence's own rules needed a second engine.
   workflows like any other trigger: `email.sent`, `email.opened`, `email.clicked`, `email.replied`, `email.bounced`,
   `email.unsubscribed`, `email.failed`, `sequence.enrolled`, `sequence.removed`. The record is the lead or contact
   ("person" triggers). One event per email and kind: the first open of an email, not every reload of it.
-- **No "delivered" trigger.** Gmail and Outlook do not tell a sender that a message was delivered. DealFlow knows an
+- **No "delivered" trigger.** Gmail and Outlook do not tell a sender that a message was delivered. SampForce knows an
   email was handed to the provider (sent) or came back (bounced), and says so instead of inventing delivery.
 - **Confirmed and estimated events are labelled.** Sent, replied, bounced, unsubscribed and failed are confirmed.
   Opens are estimates (image loading, privacy proxies and scanners); clicks are likely but can come from link

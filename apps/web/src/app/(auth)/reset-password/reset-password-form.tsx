@@ -49,7 +49,7 @@ export function ResetPasswordForm() {
       await api('/auth/password-reset', { method: 'POST', json: { token, password: values.password } });
       setDone(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
     }
   });
 

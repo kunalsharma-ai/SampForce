@@ -6,7 +6,7 @@
 
 ## Context
 
-The spec's pipeline views include a territory view. ADR 0044 deferred it because DealFlow had no territory model.
+The spec's pipeline views include a territory view. ADR 0044 deferred it because SampForce had no territory model.
 Companies already store an ISO 3166-1 country, and deals link to a company, so a territory can be defined by the
 countries it covers without asking anyone to tag deals by hand.
 

@@ -9,7 +9,7 @@ authentication and permissions, one exception filter, pino structured logging.
 reviewable (`@RequirePermissions('tenant:manage')`). Large hiring pool.
 
 **Alternatives.** Fastify/Hono with hand-rolled DI (less structure for a large team); tRPC (couples clients to
-TypeScript, but DealFlow needs a public REST API anyway). GraphQL may be added for flexible reporting
+TypeScript, but SampForce needs a public REST API anyway). GraphQL may be added for flexible reporting
 queries if a concrete need appears.
 
 **Consequences.** Decorator metadata needs SWC in tests and dev (`@swc-node/register`, `unplugin-swc`).

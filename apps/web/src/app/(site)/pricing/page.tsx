@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { PricingTable } from './pricing-table';
 import { Tr } from '@/lib/i18n';
 
-export const metadata: Metadata = { title: 'Pricing', description: 'DealFlow plans: per-user pricing with monthly or annual billing, and a Free plan for 2 users.' };
+export const metadata: Metadata = { title: 'Pricing', description: 'SampForce plans: per-user pricing with monthly or annual billing, and a Free plan for 2 users.' };
 export const revalidate = 300;
 
 /** Falls back to the built-in catalogue (marked unpublished) when the API is unreachable at build or render time. */
@@ -47,7 +47,7 @@ export default async function PricingPage() {
           </div>
           <div>
             <dt className="font-medium"><Tr text="What happens when an allowance runs out?" /></dt>
-            <dd className="mt-1 text-muted-foreground"><Tr text="AI credits and automation runs reset monthly. When one is used up, that feature pauses until the next month or an upgrade. DealFlow does not charge for overage automatically." /></dd>
+            <dd className="mt-1 text-muted-foreground"><Tr text="AI credits and automation runs reset monthly. When one is used up, that feature pauses until the next month or an upgrade. SampForce does not charge for overage automatically." /></dd>
           </div>
           <div>
             <dt className="font-medium"><Tr text={pricing.onlinePayments ? 'What if a payment fails?' : 'What if a renewal is not paid in time?'} /></dt>
@@ -65,8 +65,8 @@ export default async function PricingPage() {
             <dt className="font-medium"><Tr text="How do I pay?" /></dt>
             <dd className="mt-1 text-muted-foreground">
               <Tr text={pricing.onlinePayments
-                ? 'On the payment provider’s secure checkout page. DealFlow stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.'
-                : 'By bank transfer against an invoice. Choose a plan under Billing in your workspace to get an invoice with payment details; the plan starts as soon as the payment is confirmed. DealFlow never asks for card numbers. Prices exclude taxes.'} />
+                ? 'On the payment provider’s secure checkout page. SampForce stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.'
+                : 'By bank transfer against an invoice. Choose a plan under Billing in your workspace to get an invoice with payment details; the plan starts as soon as the payment is confirmed. SampForce never asks for card numbers. Prices exclude taxes.'} />
             </dd>
           </div>
         </dl>

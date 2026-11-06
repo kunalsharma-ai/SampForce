@@ -1,4 +1,4 @@
-/** DealFlow Tailwind preset. Colours resolve to CSS variables defined in src/tokens.css. */
+/** SampForce Tailwind preset. Colours resolve to CSS variables defined in src/tokens.css. */
 const token = (name) => `hsl(var(--${name}) / <alpha-value>)`;
 
 /** @type {import('tailwindcss').Config} */

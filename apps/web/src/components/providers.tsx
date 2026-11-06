@@ -56,7 +56,7 @@ function useRefetchOnLanguageChange(client: QueryClient) {
 }
 
 /**
- * Browser tab titles come from each page's metadata in English ("Deals · DealFlow"). Each part is translated when the
+ * Browser tab titles come from each page's metadata in English ("Deals · SampForce"). Each part is translated when the
  * title is set, and again when the language changes; a title with no translation stays as it is.
  */
 function useTranslatedTitle() {

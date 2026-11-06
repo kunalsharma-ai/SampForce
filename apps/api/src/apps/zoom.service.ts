@@ -28,7 +28,7 @@ interface TranscriptSource {
 const MAX_IMPORT_ATTEMPTS = 3;
 
 /**
- * Zoom meetings scheduled from DealFlow records, and the import of their cloud-recording transcripts.
+ * Zoom meetings scheduled from SampForce records, and the import of their cloud-recording transcripts.
  * Only meetings created here, with recording chosen by the organiser, are ever imported; other meetings in the Zoom
  * account are ignored even when Zoom sends events about them.
  */
@@ -194,7 +194,7 @@ export class ZoomService {
       return this.zoom.urlValidation(String(body.payload?.plainToken ?? ''));
     const accountId = body.payload?.account_id;
     if (!accountId) return { ok: true };
-    // One Zoom account can be connected to more than one DealFlow workspace.
+    // One Zoom account can be connected to more than one SampForce workspace.
     const conns = await this.connectionsForAccount(accountId);
     if (body.event === 'app_deauthorized') {
       for (const conn of conns) {

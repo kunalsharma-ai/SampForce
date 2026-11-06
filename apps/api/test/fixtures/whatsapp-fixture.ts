@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * Stand-in for the Meta Graph API endpoints DealFlow uses for WhatsApp Business (Cloud API), plus builders for the
+ * Stand-in for the Meta Graph API endpoints SampForce uses for WhatsApp Business (Cloud API), plus builders for the
  * webhook deliveries Meta sends, signed with X-Hub-Signature-256. Shapes follow Meta's published Cloud API
  * reference; none of this has been compared with a live response.
  *
@@ -71,7 +71,7 @@ export function waInbound(from: string, text: string, opts: { id?: string; name?
   });
 }
 
-/** A delivery with one status update for a message DealFlow sent. */
+/** A delivery with one status update for a message SampForce sent. */
 export function waStatus(id: string, status: 'sent' | 'delivered' | 'read' | 'failed', to: string, error?: { code: number; title: string }): string {
   return JSON.stringify({
     object: 'whatsapp_business_account',

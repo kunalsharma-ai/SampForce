@@ -72,7 +72,7 @@ export function Unsubscribe({ token }: { token: string }) {
             )}
           </>
         )}
-        <p className="text-xs text-muted-foreground">{t('Sent with DealFlow on behalf of {workspace}.', { workspace: info.workspace })}</p>
+        <p className="text-xs text-muted-foreground">{t('Sent with SampForce on behalf of {workspace}.', { workspace: info.workspace })}</p>
       </CardContent>
     </Card>
   );

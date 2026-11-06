@@ -11,7 +11,7 @@ function subscribeReduced(cb: () => void) {
   return () => m.removeEventListener('change', cb);
 }
 
-/** The motion the user wants: their DealFlow setting, combined with the operating system's for Balanced. */
+/** The motion the user wants: their SampForce setting, combined with the operating system's for Balanced. */
 export function useMotionLevel(): MotionLevel {
   const pref = usePreferences((s) => s.appearance.motion);
   const systemReduced = useSyncExternalStore(subscribeReduced, () => window.matchMedia('(prefers-reduced-motion: reduce)').matches, () => false);

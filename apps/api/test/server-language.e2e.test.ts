@@ -43,7 +43,7 @@ describe('Messages in the reader’s language', () => {
     expect(fr.body.error.message).toBe('Connectez-vous pour continuer.');
   });
 
-  it('falls back to English for a language DealFlow does not have', async () => {
+  it('falls back to English for a language SampForce does not have', async () => {
     const res = await api(owner).get(`/deals/${randomUUID()}`).set('accept-language', 'ja,pt;q=0.8').expect(404);
     expect(res.body.error.message).toBe('Deal not found.');
   });

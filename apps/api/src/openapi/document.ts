@@ -388,12 +388,12 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ id: teamsChannelId }) }, responses: { 200: ok('App status'), ...notFound, ...errors } });
   action('put', '/apps/teams/settings', 'Workspace apps', 'Set the default Teams channel (integrations:manage)', teamsSettingsSchema);
   action('post', '/apps/teams/test', 'Workspace apps', 'Post a test card to a Teams channel; 5 a minute (integrations:manage)', teamsTestSchema);
-  action('post', '/apps/zoom/meetings', 'Workspace apps', "Schedule a Zoom meeting in the caller's Zoom user (by DealFlow email), linked to one lead, contact or deal and logged as an activity; recording needs the organiser's consent confirmation (activities:write)", zoomMeetingCreateSchema);
-  action('get', '/apps/zoom/meetings', 'Workspace apps', 'Zoom meetings scheduled from DealFlow, with transcript status (activities:read)', undefined, { query: zoomMeetingListQuery });
-  r.registerPath({ method: 'post', path: '/apps/zoom/events', tags: ['Workspace apps'], summary: "Zoom event notifications (endpoint.url_validation, recording.transcript_completed, app_deauthorized); authenticated by Zoom's x-zm-signature only. Transcripts are imported only for recorded meetings scheduled from DealFlow",
+  action('post', '/apps/zoom/meetings', 'Workspace apps', "Schedule a Zoom meeting in the caller's Zoom user (by SampForce email), linked to one lead, contact or deal and logged as an activity; recording needs the organiser's consent confirmation (activities:write)", zoomMeetingCreateSchema);
+  action('get', '/apps/zoom/meetings', 'Workspace apps', 'Zoom meetings scheduled from SampForce, with transcript status (activities:read)', undefined, { query: zoomMeetingListQuery });
+  r.registerPath({ method: 'post', path: '/apps/zoom/events', tags: ['Workspace apps'], summary: "Zoom event notifications (endpoint.url_validation, recording.transcript_completed, app_deauthorized); authenticated by Zoom's x-zm-signature only. Transcripts are imported only for recorded meetings scheduled from SampForce",
     responses: { 200: ok('Handled, or the URL validation answer'), 401: { description: 'Signature check failed' }, 403: { description: 'ZOOM_WEBHOOK_SECRET_TOKEN not set' } } });
   action('post', '/apps/docusign/envelopes', 'Workspace apps', 'Email a draft contract to one signer for e-signature through DocuSign; needs confirm: true; one open envelope per contract (contracts:write)', docusignSendSchema);
-  action('get', '/apps/docusign/envelopes', 'Workspace apps', 'Envelopes sent from DealFlow and their status (contracts:read)', undefined, { query: docusignListQuery });
+  action('get', '/apps/docusign/envelopes', 'Workspace apps', 'Envelopes sent from SampForce and their status (contracts:read)', undefined, { query: docusignListQuery });
   action('post', '/apps/docusign/envelopes/{id}/void', 'Workspace apps', 'Void an envelope still out for signature (contracts:write)', docusignVoidSchema);
   action('post', '/apps/docusign/envelopes/{id}/check', 'Workspace apps', 'Read the envelope status from DocuSign; a completed envelope signs the draft contract (contracts:read)');
   r.registerPath({ method: 'get', path: '/apps/docusign/envelopes/{id}/document', tags: ['Workspace apps'], summary: 'Download the signed PDF with its certificate of completion, fetched from DocuSign (contracts:read)', security: secured,
@@ -426,7 +426,7 @@ export function buildOpenApiDocument(): object {
   action('post', '/apps/twilio/messages', 'Workspace apps', 'Send one SMS to one contact with recorded consent who has not replied STOP; needs confirm: true; 30 a minute (activities:write)', smsSendSchema);
   r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/inbound', tags: ['Workspace apps'], summary: "Twilio's inbound SMS webhook for the workspace's number (form-encoded, X-Twilio-Signature with the Auth Token); STOP withdraws consent; answers empty TwiML; retries are idempotent",
     request: { params: z.object({ hookId: z.string() }) }, responses: { 200: { description: 'Empty TwiML' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
-  r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/status', tags: ['Workspace apps'], summary: "Twilio's status callback for texts DealFlow sent (signed); status only moves forward",
+  r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/status', tags: ['Workspace apps'], summary: "Twilio's status callback for texts SampForce sent (signed); status only moves forward",
     request: { params: z.object({ hookId: z.string() }) }, responses: { 204: { description: 'Recorded' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
@@ -616,13 +616,13 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'delete', path: '/extension/connections/{id}', tags: ['Browser extension'], summary: 'End a connection (web session only)', security: secured, request: { params: idParam }, responses: { 204: ok('Ended'), ...notFound, ...errors } });
   action('get', '/extension/me', 'Browser extension', 'Who the extension is signed in as, what it may do, and running sequences (extension token)');
   action('post', '/extension/lookup', 'Browser extension', 'Match addresses and a website against leads, contacts, companies and the do-not-email list (leads:read, extension token)', extensionLookupSchema);
-  action('post', '/extension/capture', 'Browser extension', 'Save up to 25 people as leads, skipping anyone already in DealFlow, and optionally enrol them (leads:write, extension token)', extensionCaptureSchema);
+  action('post', '/extension/capture', 'Browser extension', 'Save up to 25 people as leads, skipping anyone already in SampForce, and optionally enrol them (leads:write, extension token)', extensionCaptureSchema);
   action('post', '/extension/disconnect', 'Browser extension', 'The extension ends its own connection (extension token)');
   // Phase 9: email finder (own website reader; optional Hunter.io key).
   action('post', '/finder/search', 'Email finder', 'Find a company’s website and work addresses, or a person’s likely address; counts toward FINDER_DAILY_LIMIT (leads:read)', finderSearchSchema);
   action('get', '/finder/usage', 'Email finder', 'Lookups used in the last 24 hours, the limit, and whether a provider is connected (leads:read)');
   action('get', '/finder/lookups', 'Email finder', 'Your 20 most recent lookups (leads:read)');
-  action('get', '/finder/lookups/{id}', 'Email finder', 'One of your lookups, with current "already in DealFlow" marks (leads:read)');
+  action('get', '/finder/lookups/{id}', 'Email finder', 'One of your lookups, with current "already in SampForce" marks (leads:read)');
   action('post', '/finder/lookups/{id}/save', 'Email finder', 'Save chosen people as leads (source "Email finder"), optionally enrolling them (leads:write)', finderSaveSchema);
   action('post', '/extension/find', 'Browser extension', 'Run the email finder for the domain the extension is on (leads:read, extension token)', z.object({ domain: z.string() }));
   r.registerPath({ method: 'get', path: '/t/o/{token}', tags: ['Sequences'], summary: 'Public: open-tracking image (signed token, no auth)', request: { params: z.object({ token: z.string() }) }, responses: { 200: { description: 'GIF', content: { 'image/gif': { schema: z.string() } } } } });
@@ -664,7 +664,7 @@ export function buildOpenApiDocument(): object {
   r.registerPath({ method: 'delete', path: '/gamification/badges/{id}', tags: ['Gamification'], summary: 'Delete a badge and its awards (gamification:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
   action('get', '/gamification/awards', 'Gamification', 'Recent badge awards; your own only when leaderboards are for managers (gamification:read)');
   action('get', '/gamification/competitions', 'Gamification', 'Competitions and team challenges with standings, scored with the rules copied at creation (gamification:read)');
-  r.registerPath({ method: 'post', path: '/gamification/competitions', tags: ['Gamification'], summary: 'Start a competition or team challenge for a period or custom dates; participants are notified in DealFlow (gamification:manage)', security: secured, request: body(competitionInputSchema), responses: { 201: ok('Competition'), ...errors } });
+  r.registerPath({ method: 'post', path: '/gamification/competitions', tags: ['Gamification'], summary: 'Start a competition or team challenge for a period or custom dates; participants are notified in SampForce (gamification:manage)', security: secured, request: body(competitionInputSchema), responses: { 201: ok('Competition'), ...errors } });
   action('post', '/gamification/competitions/{id}/cancel', 'Gamification', 'Cancel a competition (gamification:manage)');
   action('get', '/tenants/current/teams', 'Tenants', 'Sales teams and their active members (members:read)');
   r.registerPath({ method: 'post', path: '/tenants/current/teams', tags: ['Tenants'], summary: 'Create a sales team from active members (members:manage)', security: secured, request: body(teamInputSchema), responses: { 201: ok('Team'), ...errors } });
@@ -687,7 +687,7 @@ export function buildOpenApiDocument(): object {
 
   // Part 2: Prospect Lists and prospect discovery (Apollo.io search, Hunter.io verification; Mock Mode without keys).
   action('get', '/prospect-lists', 'Prospects', 'Prospect lists with counts, owner and assignee (prospects:read)');
-  r.registerPath({ method: 'post', path: '/prospect-lists', tags: ['Prospects'], summary: 'Create a named list; the assignee is notified in DealFlow (prospects:write)', security: secured, request: body(prospectListInputSchema), responses: { 201: ok('List'), ...errors } });
+  r.registerPath({ method: 'post', path: '/prospect-lists', tags: ['Prospects'], summary: 'Create a named list; the assignee is notified in SampForce (prospects:write)', security: secured, request: body(prospectListInputSchema), responses: { 201: ok('List'), ...errors } });
   action('get', '/prospect-lists/{id}', 'Prospects', 'A page of prospects with search, filters (industry, country, company size, title, email status, stage, source), sort and facets (prospects:read)', undefined, { query: z.object({ search: z.string().optional(), industry: z.string().optional(), country: z.string().optional(), companySize: z.string().optional(), title: z.string().optional(), emailStatus: z.string().optional(), stage: z.string().optional(), source: z.string().optional(), sort: z.string().optional(), page: z.number().int().optional() }) });
   action('put', '/prospect-lists/{id}', 'Prospects', 'Rename, describe or assign a list; audited (prospects:write)', prospectListInputSchema);
   r.registerPath({ method: 'delete', path: '/prospect-lists/{id}', tags: ['Prospects'], summary: 'Delete a list and its prospects; leads and contacts are kept (prospects:write)', security: secured, request: { params: idParam }, responses: { 204: ok('Deleted'), ...notFound, ...errors } });
@@ -845,10 +845,10 @@ export function buildOpenApiDocument(): object {
   scim('delete', '/Users/{id}', 'Remove a user from the workspace');
 
   // Theme engine (ADR 0040): the signed-in person's own settings; no workspace permission needed.
-  action('get', '/me/preferences', 'Appearance', 'Effective appearance (own, else workspace default, else DealFlow default) and its source');
+  action('get', '/me/preferences', 'Appearance', 'Effective appearance (own, else workspace default, else SampForce default) and its source');
   action('put', '/me/preferences/appearance', 'Appearance', 'Save the person’s appearance settings', appearanceSchema);
   action('delete', '/me/preferences/appearance', 'Appearance', 'Forget the person’s settings and fall back to the workspace default');
-  action('get', '/me/regional', 'Appearance', 'The person’s language and regional formats (DealFlow defaults until they choose)');
+  action('get', '/me/regional', 'Appearance', 'The person’s language and regional formats (SampForce defaults until they choose)');
   action('put', '/me/regional', 'Appearance', 'Save language (en, es, fr, de, ar) and format locale (a BCP 47 tag, or null to follow the language)', regionalSchema);
   action('delete', '/me/regional', 'Appearance', 'Forget the person’s language and formats');
   action('get', '/me/themes', 'Appearance', 'Named themes the person saved');
@@ -871,7 +871,7 @@ export function buildOpenApiDocument(): object {
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
     openapi: '3.1.0',
-    info: { title: 'DealFlow API', version: '1.0.0', description: 'DealFlow by Sampledge, REST API v1.' },
+    info: { title: 'SampForce API', version: '1.0.0', description: 'SampForce by Sampledge, REST API v1.' },
     servers: [{ url: '/api/v1' }],
   });
 }

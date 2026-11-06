@@ -1,29 +1,29 @@
-# DealFlow lead capture (browser extension)
+# SampForce lead capture (browser extension)
 
 Chrome and Edge extension (Manifest V3) that finds email addresses on the page you are reading and saves the people as
-leads in your DealFlow workspace, and finds prospects at the company on screen through the workspace's Apollo.io key
+leads in your SampForce workspace, and finds prospects at the company on screen through the workspace's Apollo.io key
 (Mock Mode sample people without one). Design and security: [ADR 0015](../../docs/adr/0015-browser-extension.md) and
 [ADR 0030](../../docs/adr/0030-prospect-lists-and-discovery.md).
 
 ## Build
 
 ```bash
-pnpm --filter @dealflow/extension build   # dist/ and dealflow-extension-<version>.zip
+pnpm --filter @dealflow/extension build   # dist/ and sampforce-extension-<version>.zip
 ```
 
 ## Install (until it is in the Chrome Web Store)
 
 1. Open `chrome://extensions` (or `edge://extensions`) and turn on Developer mode.
 2. Choose **Load unpacked** and pick `apps/extension/dist`.
-3. Click the DealFlow icon in the toolbar, enter your DealFlow address and sign in with your DealFlow email and
+3. Click the SampForce icon in the toolbar, enter your SampForce address and sign in with your SampForce email and
    password (and your two-step code if you use one).
-4. Workspaces that require single sign-on: in DealFlow, go to Integrations → Browser extension, create a connection
+4. Workspaces that require single sign-on: in SampForce, go to Integrations → Browser extension, create a connection
    code, and paste it under "Or use a connection code".
 
 ## Store listing
 
 `store/LISTING.md` has the Chrome Web Store and Edge Add-ons text, permission reasons and privacy answers;
-`store/` also holds the screenshots and promo tile. The privacy page is `/extension-privacy` on the DealFlow site.
+`store/` also holds the screenshots and promo tile. The privacy page is `/extension-privacy` on the SampForce site.
 
 ## Tests
 

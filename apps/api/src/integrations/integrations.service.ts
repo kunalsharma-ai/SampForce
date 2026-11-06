@@ -96,7 +96,7 @@ export class IntegrationsService {
     if (missing.length > 0) {
       throw new ConflictException({
         code: 'PROVIDER_NOT_CONFIGURED',
-        message: `${a.name} is not set up on this DealFlow installation. An operator must add ${missing.join(' and ')}.`,
+        message: `${a.name} is not set up on this SampForce installation. An operator must add ${missing.join(' and ')}.`,
       });
     }
     const state = signToken(this.stateSecret(), {

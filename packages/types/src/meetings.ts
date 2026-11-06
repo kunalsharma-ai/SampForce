@@ -25,7 +25,7 @@ export const meetingAnalysisSchema = z.object({
         title: text(200).min(1, 'Give the action a title'),
         owner: z.enum(['me', 'customer']),
         dueInDays: z.number().int().min(0).max(365).nullable(),
-        /** Set by DealFlow once a task was created from this item. */
+        /** Set by SampForce once a task was created from this item. */
         taskId: z.string().uuid().nullable().optional(),
       }),
     )

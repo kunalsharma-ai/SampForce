@@ -50,7 +50,7 @@ flowchart LR
 |---|---|
 | Provider independence | One `ModelProvider` interface (`generate`, `stream`, `embed`, `toolCall`); adapters per vendor; capabilities declared per model |
 | Model routing | Tasks declare a tier (`fast`, `balanced`, `deep`); tenant policy maps tiers to allowed models; automatic fallback to the next allowed provider on outage |
-| Token tracking and metering | Usage recorded per call (tenant, user, agent, model, tokens in/out, cost); converted to DealFlow AI credits; budgets checked before the call |
+| Token tracking and metering | Usage recorded per call (tenant, user, agent, model, tokens in/out, cost); converted to SampForce AI credits; budgets checked before the call |
 | Prompt versioning | Prompts are files with semantic versions and eval suites; every trace stores the version |
 | RAG | pgvector embeddings in tenant tables under RLS; retrieval filters by the caller's record-level access, not just tenant |
 | Prompt-injection defence | Retrieved content and emails are wrapped as untrusted data; tool calls derived from untrusted content always require approval; output schemas are validated |

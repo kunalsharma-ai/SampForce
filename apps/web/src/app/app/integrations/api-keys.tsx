@@ -69,13 +69,13 @@ export function ApiKeysAndZapier() {
           </p>
           {zapier.data && !zapier.data.inviteUrl && (
             <p className="text-xs text-muted-foreground">
-              {rich(t('The DealFlow app for Zapier is not published on this installation yet. An operator deploys it from {path} and sets {variable}. API keys already work with Make, n8n and scripts.'), { path: <code>integrations/zapier</code>, variable: <code>ZAPIER_INVITE_URL</code> })}
+              {rich(t('The SampForce app for Zapier is not published on this installation yet. An operator deploys it from {path} and sets {variable}. API keys already work with Make, n8n and scripts.'), { path: <code>integrations/zapier</code>, variable: <code>ZAPIER_INVITE_URL</code> })}
             </p>
           )}
           {zapier.data?.inviteUrl && (
             <Button asChild size="sm" variant="outline">
               <a href={zapier.data.inviteUrl} target="_blank" rel="noreferrer">
-                {t('Open DealFlow in Zapier')}
+                {t('Open SampForce in Zapier')}
               </a>
             </Button>
           )}

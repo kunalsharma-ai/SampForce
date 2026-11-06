@@ -178,7 +178,7 @@ describe('SCIM 2.0 provisioning', () => {
     expect(off.body).toMatchObject({ active: false, displayName: 'Lynn Chen' });
     expect((await scim().put(`/Users/${id}`, { userName: email, displayName: 'Lynn Chen', active: true }).expect(200)).body.active).toBe(true);
 
-    // The member list in DealFlow follows: deactivated people cannot use the workspace.
+    // The member list in SampForce follows: deactivated people cannot use the workspace.
     await scim().patch(`/Users/${id}`, { Operations: [{ op: 'replace', path: 'active', value: false }] }).expect(200);
     const members = (await api(owner).get('/tenants/current/members').expect(200)).body as { email: string; status: string }[];
     expect(members.find((m) => m.email === email)?.status).toBe('SUSPENDED');

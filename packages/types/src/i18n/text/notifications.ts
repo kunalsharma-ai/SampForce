@@ -77,28 +77,28 @@ export const notifications = {
   // Billing
   'Payment received for invoice {number}': ['Pago recibido de la factura {number}', 'Paiement reçu pour la facture {number}', 'Zahlung für Rechnung {number} eingegangen', 'تم استلام دفعة الفاتورة {number}'],
   '{plan} is active until {date}.': ['{plan} está activo hasta el {date}.', '{plan} est actif jusqu’au {date}.', '{plan} ist bis {date} aktiv.', '{plan} نشطة حتى {date}.'],
-  'A payment for DealFlow failed': ['Falló un pago de DealFlow', 'Un paiement DealFlow a échoué', 'Eine Zahlung für DealFlow ist fehlgeschlagen', 'فشلت دفعة لـ DealFlow'],
+  'A payment for SampForce failed': ['Falló un pago de SampForce', 'Un paiement SampForce a échoué', 'Eine Zahlung für SampForce ist fehlgeschlagen', 'فشلت دفعة لـ SampForce'],
   'Paid features stay on for {n} days while you update the payment method.': [
     'Las funciones de pago siguen activas {n} días mientras actualizas el método de pago.',
     'Les fonctions payantes restent actives {n} jours le temps de mettre à jour le moyen de paiement.',
     'Kostenpflichtige Funktionen bleiben {n} Tage aktiv, während Sie die Zahlungsmethode aktualisieren.',
     'تبقى الميزات المدفوعة مفعّلة {n} أيام ريثما تحدّث طريقة الدفع.',
   ],
-  'Your paid DealFlow plan has ended': ['Tu plan de pago de DealFlow ha terminado', 'Votre forfait payant DealFlow a pris fin', 'Ihr kostenpflichtiger DealFlow-Tarif ist beendet', 'انتهت خطتك المدفوعة في DealFlow'],
+  'Your paid SampForce plan has ended': ['Tu plan de pago de SampForce ha terminado', 'Votre forfait payant SampForce a pris fin', 'Ihr kostenpflichtiger SampForce-Tarif ist beendet', 'انتهت خطتك المدفوعة في SampForce'],
   'The workspace is on the Free plan now. All data is kept.': [
     'El espacio de trabajo está ahora en el plan Free. Se conservan todos los datos.',
     'L’espace de travail est désormais sur le forfait Free. Toutes les données sont conservées.',
     'Der Arbeitsbereich ist jetzt im Free-Tarif. Alle Daten bleiben erhalten.',
     'مساحة العمل الآن على الخطة المجانية. جميع البيانات محفوظة.',
   ],
-  'Your DealFlow trial has ended': ['Tu prueba de DealFlow ha terminado', 'Votre essai DealFlow est terminé', 'Ihre DealFlow-Testphase ist beendet', 'انتهت الفترة التجريبية لـ DealFlow'],
+  'Your SampForce trial has ended': ['Tu prueba de SampForce ha terminado', 'Votre essai SampForce est terminé', 'Ihre SampForce-Testphase ist beendet', 'انتهت الفترة التجريبية لـ SampForce'],
   'The workspace is back on the Free plan. All data is kept; choose a plan to continue with paid features.': [
     'El espacio de trabajo vuelve al plan Free. Se conservan todos los datos; elige un plan para seguir con las funciones de pago.',
     'L’espace de travail repasse sur le forfait Free. Toutes les données sont conservées ; choisissez un forfait pour continuer avec les fonctions payantes.',
     'Der Arbeitsbereich ist wieder im Free-Tarif. Alle Daten bleiben erhalten; wählen Sie einen Tarif, um kostenpflichtige Funktionen weiter zu nutzen.',
     'عادت مساحة العمل إلى الخطة المجانية. جميع البيانات محفوظة؛ اختر خطة لمواصلة استخدام الميزات المدفوعة.',
   ],
-  'Your DealFlow plan is due for renewal': ['Tu plan de DealFlow debe renovarse', 'Votre forfait DealFlow doit être renouvelé', 'Ihr DealFlow-Tarif steht zur Verlängerung an', 'حان موعد تجديد خطتك في DealFlow'],
+  'Your SampForce plan is due for renewal': ['Tu plan de SampForce debe renovarse', 'Votre forfait SampForce doit être renouvelé', 'Ihr SampForce-Tarif steht zur Verlängerung an', 'حان موعد تجديد خطتك في SampForce'],
   'The paid period has ended. Paid features stay on for {n} days from its end; request and pay the renewal invoice under Billing before then.': [
     'El periodo de pago ha terminado. Las funciones de pago siguen activas {n} días desde su fin; solicita y paga la factura de renovación en Facturación antes.',
     'La période payée est terminée. Les fonctions payantes restent actives {n} jours après sa fin ; demandez et réglez la facture de renouvellement dans Facturation d’ici là.',

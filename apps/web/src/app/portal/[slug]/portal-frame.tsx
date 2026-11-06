@@ -4,7 +4,7 @@ import type { PortalBranding } from '@dealflow/types';
 import { AuthLanguage } from '@/components/auth-language';
 import { useT } from '@/lib/i18n';
 
-/** The customer-facing frame: the seller's logo, name and colour. Nothing from DealFlow's own app shell. */
+/** The customer-facing frame: the seller's logo, name and colour. Nothing from SampForce's own app shell. */
 export function PortalFrame({ branding, missing, right, children }: { branding: PortalBranding | null; missing?: boolean; right?: React.ReactNode; children: React.ReactNode }) {
   const t = useT();
   if (missing)

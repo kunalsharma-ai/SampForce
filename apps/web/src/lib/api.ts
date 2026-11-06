@@ -37,7 +37,7 @@ function refreshSession(): Promise<boolean> {
 }
 
 /**
- * Calls the DealFlow API through the same-origin proxy. On 401 it rotates the refresh token
+ * Calls the SampForce API through the same-origin proxy. On 401 it rotates the refresh token
  * once and retries; if that fails the caller receives the 401 and the shell redirects to sign-in.
  */
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}, retry = true): Promise<T> {

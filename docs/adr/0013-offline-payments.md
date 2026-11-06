@@ -12,15 +12,15 @@ launch accepting payment offline (bank transfer against an invoice) and keep onl
   `ONLINE_PAYMENTS_OFF`, even when provider keys are set. The Stripe and Razorpay code, webhooks and portal stay in
   place so that existing provider subscriptions (if any) keep syncing and checkout can be turned back on with one
   setting.
-- A workspace's billing manager **requests an invoice** for a self-serve plan, interval and seat count. DealFlow
+- A workspace's billing manager **requests an invoice** for a self-serve plan, interval and seat count. SampForce
   issues it at rate-card prices (price × seats × months, USD, taxes excluded), numbered `DF-000001` from a shared
   sequence, stored in `invoices` with provider `OFFLINE`. One open offline invoice per workspace (partial unique
   index). The workspace can cancel it while it is open. Enterprise Plus stays sold by quote through the operator
   plan override.
 - How to pay is entered by Sampledge's own team: an ADMIN operator edits **Payment instructions** under operator
   console → Settings (stored in `platform_settings`, logged with the full text, effective immediately).
-  `OFFLINE_PAYMENT_INSTRUCTIONS` is a deployment-config fallback. DealFlow never invents bank details: with neither
-  set, the invoice says the DealFlow team will send payment details.
+  `OFFLINE_PAYMENT_INSTRUCTIONS` is a deployment-config fallback. SampForce never invents bank details: with neither
+  set, the invoice says the SampForce team will send payment details.
 - A platform **ADMIN operator records the payment** in the operator console (bank reference and date received; not
   in the future). That marks the invoice paid and applies its plan: same plan, interval and seats renews from the
   end of the current period; anything else starts a new period on the day the money arrived (no proration; any
@@ -34,6 +34,6 @@ launch accepting payment offline (bank transfer against an invoice) and keep onl
 
 **Consequences.** No card data or payment processor is involved, so nothing about payments needs a provider test
 run before launch. The cost is manual work: someone at Sampledge must watch the bank account and record each
-payment. Reminders are in-app notifications only, since DealFlow does not send email yet.
-DealFlow's invoice is a payment request, not a tax invoice: Sampledge issues any tax invoice its accounting
-requires outside DealFlow.
+payment. Reminders are in-app notifications only, since SampForce does not send email yet.
+SampForce's invoice is a payment request, not a tax invoice: Sampledge issues any tax invoice its accounting
+requires outside SampForce.

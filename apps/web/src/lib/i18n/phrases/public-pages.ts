@@ -3,11 +3,11 @@ import type { PhraseTable } from './types';
 /** Public pages: the website and pricing, the hosted lead form, unsubscribe, the proposal link and the client portal. */
 export const publicPages = {
   'Skip to content': ['Saltar al contenido', 'Aller au contenu', 'Zum Inhalt springen', 'الانتقال إلى المحتوى'],
-  '© {year} Sampledge. DealFlow is a product of Sampledge.': [
-    '© {year} Sampledge. DealFlow es un producto de Sampledge.',
-    '© {year} Sampledge. DealFlow est un produit de Sampledge.',
-    '© {year} Sampledge. DealFlow ist ein Produkt von Sampledge.',
-    '© {year} Sampledge. DealFlow منتج من Sampledge.',
+  '© {year} Sampledge. SampForce is a product of Sampledge.': [
+    '© {year} Sampledge. SampForce es un producto de Sampledge.',
+    '© {year} Sampledge. SampForce est un produit de Sampledge.',
+    '© {year} Sampledge. SampForce ist ein Produkt von Sampledge.',
+    '© {year} Sampledge. SampForce منتج من Sampledge.',
   ],
   'Browser extension privacy': ['Privacidad de la extensión del navegador', 'Confidentialité de l’extension du navigateur', 'Datenschutz der Browsererweiterung', 'خصوصية إضافة المتصفح'],
   'billed annually · {price} monthly': [
@@ -61,11 +61,11 @@ export const publicPages = {
     'سنتوقف عن إرسال رسائل المتابعة إلى {email} ونضيفه إلى قائمة عدم المراسلة لديهم.',
   ],
   'Unsubscribe': ['Darse de baja', 'Se désinscrire', 'Abmelden', 'إلغاء الاشتراك'],
-  'Sent with DealFlow on behalf of {workspace}.': [
-    'Enviado con DealFlow en nombre de {workspace}.',
-    'Envoyé avec DealFlow au nom de {workspace}.',
-    'Mit DealFlow im Auftrag von {workspace} gesendet.',
-    'أُرسل عبر DealFlow نيابةً عن {workspace}.',
+  'Sent with SampForce on behalf of {workspace}.': [
+    'Enviado con SampForce en nombre de {workspace}.',
+    'Envoyé avec SampForce au nom de {workspace}.',
+    'Mit SampForce im Auftrag von {workspace} gesendet.',
+    'أُرسل عبر SampForce نيابةً عن {workspace}.',
   ],
   'This form is not available.': ['Este formulario no está disponible.', 'Ce formulaire n’est pas disponible.', 'Dieses Formular ist nicht verfügbar.', 'هذا النموذج غير متاح.'],
   'Thank you.': ['Gracias.', 'Merci.', 'Vielen Dank.', 'شكرًا لك.'],
@@ -341,11 +341,11 @@ export const publicPages = {
     'Was passiert, wenn ein Kontingent aufgebraucht ist?',
     'ماذا يحدث عند نفاد الحصة؟',
   ],
-  'AI credits and automation runs reset monthly. When one is used up, that feature pauses until the next month or an upgrade. DealFlow does not charge for overage automatically.': [
-    'Los créditos de IA y las ejecuciones de automatización se renuevan cada mes. Cuando se agota uno, esa función se pausa hasta el mes siguiente o un cambio de plan. DealFlow no cobra excedentes automáticamente.',
-    'Les crédits d’IA et les exécutions d’automatisation se renouvellent chaque mois. Quand l’un est épuisé, la fonction est suspendue jusqu’au mois suivant ou à un changement d’offre. DealFlow ne facture jamais de dépassement automatiquement.',
-    'KI-Guthaben und Automatisierungsläufe werden monatlich zurückgesetzt. Ist eines aufgebraucht, pausiert die Funktion bis zum nächsten Monat oder einem Upgrade. DealFlow berechnet Mehrverbrauch nie automatisch.',
-    'تتجدد أرصدة الذكاء الاصطناعي وتشغيلات الأتمتة شهريًا. عند نفاد أحدها تتوقف الميزة حتى الشهر التالي أو الترقية. لا يفرض DealFlow رسومًا على التجاوز تلقائيًا.',
+  'AI credits and automation runs reset monthly. When one is used up, that feature pauses until the next month or an upgrade. SampForce does not charge for overage automatically.': [
+    'Los créditos de IA y las ejecuciones de automatización se renuevan cada mes. Cuando se agota uno, esa función se pausa hasta el mes siguiente o un cambio de plan. SampForce no cobra excedentes automáticamente.',
+    'Les crédits d’IA et les exécutions d’automatisation se renouvellent chaque mois. Quand l’un est épuisé, la fonction est suspendue jusqu’au mois suivant ou à un changement d’offre. SampForce ne facture jamais de dépassement automatiquement.',
+    'KI-Guthaben und Automatisierungsläufe werden monatlich zurückgesetzt. Ist eines aufgebraucht, pausiert die Funktion bis zum nächsten Monat oder einem Upgrade. SampForce berechnet Mehrverbrauch nie automatisch.',
+    'تتجدد أرصدة الذكاء الاصطناعي وتشغيلات الأتمتة شهريًا. عند نفاد أحدها تتوقف الميزة حتى الشهر التالي أو الترقية. لا يفرض SampForce رسومًا على التجاوز تلقائيًا.',
   ],
   'What if a payment fails?': ['¿Qué pasa si falla un pago?', 'Et si un paiement échoue ?', 'Was passiert, wenn eine Zahlung fehlschlägt?', 'ماذا لو فشلت عملية دفع؟'],
   'What if a renewal is not paid in time?': [
@@ -374,19 +374,19 @@ export const publicPages = {
     'نعم، في كل الخطط بما فيها Free. اربط مزوّد هوية يدعم OpenID Connect، ويمكنك اختياريًا إضافة الأشخاص وإزالتهم تلقائيًا عبر SCIM 2.0. يشغل المضافون بهذه الطريقة مقاعد مثل غيرهم.',
   ],
   'How do I pay?': ['¿Cómo pago?', 'Comment payer ?', 'Wie bezahle ich?', 'كيف أدفع؟'],
-  'On the payment provider’s secure checkout page. DealFlow stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.': [
-    'En la página de pago segura del proveedor de pagos. DealFlow guarda las referencias del proveedor, nunca números de tarjeta. Los precios no incluyen impuestos, que se añaden al pagar cuando corresponda.',
-    'Sur la page de paiement sécurisée du prestataire de paiement. DealFlow conserve les références du prestataire, jamais les numéros de carte. Les prix sont hors taxes ; celles-ci sont ajoutées au paiement le cas échéant.',
-    'Auf der sicheren Bezahlseite des Zahlungsanbieters. DealFlow speichert die Referenzen des Anbieters, nie Kartennummern. Die Preise verstehen sich zuzüglich Steuern, die beim Bezahlen hinzugefügt werden, wo sie anfallen.',
-    'على صفحة الدفع الآمنة لدى مزوّد الدفع. يحفظ DealFlow مراجع المزوّد ولا يحفظ أرقام البطاقات أبدًا. الأسعار غير شاملة الضرائب، وتُضاف عند الدفع حيثما تنطبق.',
+  'On the payment provider’s secure checkout page. SampForce stores the provider’s references, never card numbers. Prices exclude taxes, which are added at checkout where they apply.': [
+    'En la página de pago segura del proveedor de pagos. SampForce guarda las referencias del proveedor, nunca números de tarjeta. Los precios no incluyen impuestos, que se añaden al pagar cuando corresponda.',
+    'Sur la page de paiement sécurisée du prestataire de paiement. SampForce conserve les références du prestataire, jamais les numéros de carte. Les prix sont hors taxes ; celles-ci sont ajoutées au paiement le cas échéant.',
+    'Auf der sicheren Bezahlseite des Zahlungsanbieters. SampForce speichert die Referenzen des Anbieters, nie Kartennummern. Die Preise verstehen sich zuzüglich Steuern, die beim Bezahlen hinzugefügt werden, wo sie anfallen.',
+    'على صفحة الدفع الآمنة لدى مزوّد الدفع. يحفظ SampForce مراجع المزوّد ولا يحفظ أرقام البطاقات أبدًا. الأسعار غير شاملة الضرائب، وتُضاف عند الدفع حيثما تنطبق.',
   ],
-  'By bank transfer against an invoice. Choose a plan under Billing in your workspace to get an invoice with payment details; the plan starts as soon as the payment is confirmed. DealFlow never asks for card numbers. Prices exclude taxes.': [
-    'Por transferencia bancaria contra factura. Elige un plan en Facturación dentro de tu espacio de trabajo para recibir una factura con los datos de pago; el plan empieza en cuanto se confirma el pago. DealFlow nunca pide números de tarjeta. Los precios no incluyen impuestos.',
-    'Par virement bancaire sur facture. Choisissez une offre dans Facturation de votre espace de travail pour obtenir une facture avec les coordonnées de paiement ; l’offre démarre dès que le paiement est confirmé. DealFlow ne demande jamais de numéro de carte. Les prix sont hors taxes.',
-    'Per Banküberweisung auf Rechnung. Wählen Sie in Ihrem Arbeitsbereich unter Abrechnung einen Tarif, um eine Rechnung mit Zahlungsdaten zu erhalten; der Tarif startet, sobald die Zahlung bestätigt ist. DealFlow fragt nie nach Kartennummern. Die Preise verstehen sich zuzüglich Steuern.',
-    'بالتحويل المصرفي مقابل فاتورة. اختر خطة من الفوترة في مساحة عملك للحصول على فاتورة ببيانات الدفع؛ تبدأ الخطة فور تأكيد الدفع. لا يطلب DealFlow أرقام البطاقات أبدًا. الأسعار غير شاملة الضرائب.',
+  'By bank transfer against an invoice. Choose a plan under Billing in your workspace to get an invoice with payment details; the plan starts as soon as the payment is confirmed. SampForce never asks for card numbers. Prices exclude taxes.': [
+    'Por transferencia bancaria contra factura. Elige un plan en Facturación dentro de tu espacio de trabajo para recibir una factura con los datos de pago; el plan empieza en cuanto se confirma el pago. SampForce nunca pide números de tarjeta. Los precios no incluyen impuestos.',
+    'Par virement bancaire sur facture. Choisissez une offre dans Facturation de votre espace de travail pour obtenir une facture avec les coordonnées de paiement ; l’offre démarre dès que le paiement est confirmé. SampForce ne demande jamais de numéro de carte. Les prix sont hors taxes.',
+    'Per Banküberweisung auf Rechnung. Wählen Sie in Ihrem Arbeitsbereich unter Abrechnung einen Tarif, um eine Rechnung mit Zahlungsdaten zu erhalten; der Tarif startet, sobald die Zahlung bestätigt ist. SampForce fragt nie nach Kartennummern. Die Preise verstehen sich zuzüglich Steuern.',
+    'بالتحويل المصرفي مقابل فاتورة. اختر خطة من الفوترة في مساحة عملك للحصول على فاتورة ببيانات الدفع؛ تبدأ الخطة فور تأكيد الدفع. لا يطلب SampForce أرقام البطاقات أبدًا. الأسعار غير شاملة الضرائب.',
   ],
-  'DealFlow by Sampledge': ['DealFlow de Sampledge', 'DealFlow par Sampledge', 'DealFlow von Sampledge', 'DealFlow من Sampledge'],
+  'SampForce by Sampledge': ['SampForce de Sampledge', 'SampForce par Sampledge', 'SampForce von Sampledge', 'SampForce من Sampledge'],
   'One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.': [
     'Un solo espacio de trabajo para leads, oportunidades, automatización, presupuestos y análisis de ingresos. La IA muestra su razonamiento, respeta los permisos de cada persona y pregunta antes de actuar.',
     'Un seul espace de travail pour les prospects, les opportunités, l’automatisation, les devis et l’analyse du revenu. L’IA montre son raisonnement, reste dans les autorisations de chacun et demande avant d’agir.',
@@ -421,11 +421,11 @@ export const publicPages = {
     'سير عمل بشروط وفترات انتظار وخطوات موافقة، ومحاكٍ لاختبارها أولًا، وخطافات ويب موقّعة.',
   ],
   'Revenue Copilot': ['Revenue Copilot', 'Revenue Copilot', 'Revenue Copilot', 'Revenue Copilot'],
-  'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves DealFlow.': [
-    'Ayuda de IA para calificar leads, evaluar el riesgo de oportunidades y redactar, mostrando el razonamiento y con una persona que aprueba todo lo que sale de DealFlow.',
-    'Une assistance IA pour qualifier les prospects, évaluer le risque des opportunités et rédiger, avec le raisonnement affiché et une personne qui approuve tout ce qui quitte DealFlow.',
-    'KI-Unterstützung für Lead-Qualifizierung, Risiko von Verkaufschancen und Entwürfe, mit sichtbarer Begründung und einer Person, die alles freigibt, was DealFlow verlässt.',
-    'مساعدة بالذكاء الاصطناعي في تأهيل العملاء المحتملين وتقييم مخاطر الصفقات والصياغة، مع عرض المنطق وموافقة شخص على كل ما يغادر DealFlow.',
+  'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.': [
+    'Ayuda de IA para calificar leads, evaluar el riesgo de oportunidades y redactar, mostrando el razonamiento y con una persona que aprueba todo lo que sale de SampForce.',
+    'Une assistance IA pour qualifier les prospects, évaluer le risque des opportunités et rédiger, avec le raisonnement affiché et une personne qui approuve tout ce qui quitte SampForce.',
+    'KI-Unterstützung für Lead-Qualifizierung, Risiko von Verkaufschancen und Entwürfe, mit sichtbarer Begründung und einer Person, die alles freigibt, was SampForce verlässt.',
+    'مساعدة بالذكاء الاصطناعي في تأهيل العملاء المحتملين وتقييم مخاطر الصفقات والصياغة، مع عرض المنطق وموافقة شخص على كل ما يغادر SampForce.',
   ],
   'Quotes and contracts': ['Presupuestos y contratos', 'Devis et contrats', 'Angebote und Verträge', 'عروض الأسعار والعقود'],
   'Product catalogue, price books, tax rates, discount approvals, versioned quotes and contract renewals.': [

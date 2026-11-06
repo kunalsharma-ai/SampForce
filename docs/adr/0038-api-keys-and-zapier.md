@@ -6,7 +6,7 @@
 
 ## Context
 
-Customers want DealFlow in Zapier (and Make, n8n and their own scripts). That needs a credential that is not a
+Customers want SampForce in Zapier (and Make, n8n and their own scripts). That needs a credential that is not a
 browser session, and a way for Zapier to hear about changes without polling. The project rules forbid keys in
 client code, mass communication or exports by automation, and claiming an integration works before it has run
 against the real provider.
@@ -35,7 +35,7 @@ against the real provider.
 6. **Actions are single-record creates** (lead, contact, task) through the same services and validation as the app.
    There is no bulk send, export or delete action.
 7. **Pending Configuration until published.** The app lives in `integrations/zapier` and is tested by running its
-   functions against a local DealFlow. It is not in Zapier's directory until an operator registers and pushes it
+   functions against a local SampForce. It is not in Zapier's directory until an operator registers and pushes it
    and sets `ZAPIER_INVITE_URL`; until then the Integrations page says Pending Configuration and offers API keys
    only.
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { appPathSchema, MAX_RECENT, navKindForPath, pushRecent, updateNavigationSchema } from './navigation';
 
 describe('navigation', () => {
-  it('accepts only DealFlow paths', () => {
+  it('accepts only SampForce paths', () => {
     for (const ok of ['/app', '/app/leads', '/app/deals/0b6c1f8e-3c55-4c3e-9a7e-1d2f3a4b5c6d', '/app/reports?tab=flow']) {
       expect(appPathSchema.safeParse(ok).success, ok).toBe(true);
     }

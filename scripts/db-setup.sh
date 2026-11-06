@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates the DealFlow database roles and databases for local development and CI.
+# Creates the SampForce database roles and databases for local development and CI.
 #
 #   dealflow_owner  owns the schema and runs migrations (MIGRATION_DATABASE_URL)
 #   dealflow_app    runtime role WITHOUT BYPASSRLS, so row-level security always applies (DATABASE_URL)

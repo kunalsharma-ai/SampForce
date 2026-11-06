@@ -363,7 +363,7 @@ export function microsoftAdapter(env: ApiEnv): ProviderAdapter {
       return lower(email);
     },
     async listMessages(token, since, account) {
-      // Inbox only: messages sent from DealFlow are recorded when sent, so the Sent folder is not re-imported.
+      // Inbox only: messages sent from SampForce are recorded when sent, so the Sent folder is not re-imported.
       const q = new URLSearchParams({
         $top: String(MAX_MESSAGES),
         $orderby: 'receivedDateTime asc',

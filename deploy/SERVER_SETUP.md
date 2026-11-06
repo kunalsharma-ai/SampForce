@@ -1,6 +1,6 @@
-# Setting up DealFlow on your own server
+# Setting up SampForce on your own server
 
-This guide installs DealFlow on **one Ubuntu server** (22.04 or 24.04 LTS; Debian 12 works the same way) with
+This guide installs SampForce on **one Ubuntu server** (22.04 or 24.04 LTS; Debian 12 works the same way) with
 Docker Compose. It takes about 30 minutes, most of it waiting for the first build.
 
 If you run Kubernetes instead, use the Helm chart in `infrastructure/helm/dealflow` and follow
@@ -184,7 +184,7 @@ scripts/backup.sh
 ```
 
 writes `backups/dealflow-<time>.dump` with a `.sha256` checksum and a `.json` manifest, and deletes backups older
-than `BACKUP_KEEP_DAYS` (14). It runs while DealFlow is in use.
+than `BACKUP_KEEP_DAYS` (14). It runs while SampForce is in use.
 
 **Every day at 02:30** (crontab -e as your user):
 

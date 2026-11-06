@@ -257,7 +257,7 @@ export class VoiceNotesService {
         const company = rec?.type === 'company' ? await this.prisma.run(auth, (tx) => tx.company.findFirst({ where: { id: rec.id }, select: { name: true } })) : null;
         const notes = [
           'From a voice note.',
-          a.meeting ? 'A meeting to arrange: DealFlow does not send calendar invitations from voice notes.' : null,
+          a.meeting ? 'A meeting to arrange: SampForce does not send calendar invitations from voice notes.' : null,
           company ? `For ${company.name}.` : null,
         ].filter(Boolean).join(' ');
         const t = await this.tasks.create(auth, {

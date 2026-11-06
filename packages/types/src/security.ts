@@ -28,7 +28,7 @@ export interface MfaStatus {
   enabled: boolean;
   enabledAt: string | null;
   recoveryCodesRemaining: number;
-  /** False for people whose sign-in is managed by their workspace's identity provider (no DealFlow password). */
+  /** False for people whose sign-in is managed by their workspace's identity provider (no SampForce password). */
   canManage: boolean;
 }
 

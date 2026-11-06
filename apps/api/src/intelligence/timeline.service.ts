@@ -58,7 +58,7 @@ const personName = (c: { firstName: string; lastName: string | null }) => [c.fir
 
 /**
  * Customer 360 timeline (enhancement spec feature 2): one chronological stream per lead, contact, company or deal,
- * merged from the records DealFlow already keeps. A company's timeline rolls up its contacts and deals; a deal's
+ * merged from the records SampForce already keeps. A company's timeline rolls up its contacts and deals; a deal's
  * includes its main contact's email and meetings. Each source is shown only to people allowed to read it.
  */
 @Injectable()

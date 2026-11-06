@@ -1,9 +1,9 @@
-"""DealFlow unit-economics model.
+"""SampForce unit-economics model.
 
 Run:  python3 docs/pricing/unit_economics.py  > docs/pricing/unit-economics-output.md
 
 VENDOR PRICES come from docs/research/cost-inputs-2026-10-30.md (vendor pages, accessed 2026-10-30).
-ASSUMPTIONS are DealFlow planning estimates, not measurements. Change them here and re-run; every
+ASSUMPTIONS are SampForce planning estimates, not measurements. Change them here and re-run; every
 number in PRICING_STRATEGY.md section 4 is produced by this script.
 """
 

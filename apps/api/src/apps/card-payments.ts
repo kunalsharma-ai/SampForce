@@ -16,9 +16,9 @@ export class CardPaymentError extends Error {
   }
 }
 
-/** What a verified webhook says about one of DealFlow's payment requests. */
+/** What a verified webhook says about one of SampForce's payment requests. */
 export interface PaymentEvent {
-  /** quote_payments.id, from the metadata DealFlow set. */
+  /** quote_payments.id, from the metadata SampForce set. */
   paymentId: string | null;
   outcome: 'paid' | 'expired' | 'failed' | 'ignored';
   providerPaymentId: string | null;

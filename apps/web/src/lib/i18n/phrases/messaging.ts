@@ -193,11 +193,11 @@ export const messaging = {
   'Voice note': ['Nota de voz', 'Note vocale', 'Sprachnotiz', 'ملاحظة صوتية'],
   'Voice notes': ['Notas de voz', 'Notes vocales', 'Sprachnotizen', 'الملاحظات الصوتية'],
   'New voice note': ['Nueva nota de voz', 'Nouvelle note vocale', 'Neue Sprachnotiz', 'ملاحظة صوتية جديدة'],
-  'No voice notes yet. Speak or type a note and DealFlow suggests tasks, notes and records for you to confirm.': [
-    'Aún no hay notas de voz. Habla o escribe una nota y DealFlow te sugiere tareas, notas y registros para que los confirmes.',
-    'Aucune note vocale pour l’instant. Dictez ou tapez une note et DealFlow vous propose des tâches, des notes et des fiches à confirmer.',
-    'Noch keine Sprachnotizen. Sprechen oder tippen Sie eine Notiz, und DealFlow schlägt Aufgaben, Notizen und Datensätze zur Bestätigung vor.',
-    'لا توجد ملاحظات صوتية بعد. تحدّث أو اكتب ملاحظة وسيقترح DealFlow مهام وملاحظات وسجلات لتؤكدها.',
+  'No voice notes yet. Speak or type a note and SampForce suggests tasks, notes and records for you to confirm.': [
+    'Aún no hay notas de voz. Habla o escribe una nota y SampForce te sugiere tareas, notas y registros para que los confirmes.',
+    'Aucune note vocale pour l’instant. Dictez ou tapez une note et SampForce vous propose des tâches, des notes et des fiches à confirmer.',
+    'Noch keine Sprachnotizen. Sprechen oder tippen Sie eine Notiz, und SampForce schlägt Aufgaben, Notizen und Datensätze zur Bestätigung vor.',
+    'لا توجد ملاحظات صوتية بعد. تحدّث أو اكتب ملاحظة وسيقترح SampForce مهام وملاحظات وسجلات لتؤكدها.',
   ],
   'Untitled voice note': ['Nota de voz sin título', 'Note vocale sans titre', 'Sprachnotiz ohne Titel', 'ملاحظة صوتية بلا عنوان'],
   'Only you can see your voice notes. What you confirm is saved to the record like any other task or note.': [
@@ -209,17 +209,17 @@ export const messaging = {
   '{n} saved': ['{n} guardadas', '{n} enregistrées', '{n} gespeichert', 'حُفظ {n}'],
   'Suggestions to review': ['Sugerencias por revisar', 'Suggestions à vérifier', 'Vorschläge zur Prüfung', 'اقتراحات للمراجعة'],
   'Nothing to save': ['Nada que guardar', 'Rien à enregistrer', 'Nichts zu speichern', 'لا شيء للحفظ'],
-  'For {name}. Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.': [
-    'Para {name}. Di o escribe lo que pasó. DealFlow sugiere qué guardar y no se guarda nada hasta que lo confirmes.',
-    'Pour {name}. Dites ou tapez ce qui s’est passé. DealFlow propose quoi enregistrer et rien n’est enregistré sans votre confirmation.',
-    'Für {name}. Sagen oder tippen Sie, was passiert ist. DealFlow schlägt vor, was gespeichert wird, und nichts wird ohne Ihre Bestätigung gespeichert.',
-    'لـ {name}. قل أو اكتب ما حدث. يقترح DealFlow ما يُحفظ ولا يُحفظ شيء حتى تؤكده.',
+  'For {name}. Say or type what happened. SampForce suggests what to save and nothing is saved until you confirm it.': [
+    'Para {name}. Di o escribe lo que pasó. SampForce sugiere qué guardar y no se guarda nada hasta que lo confirmes.',
+    'Pour {name}. Dites ou tapez ce qui s’est passé. SampForce propose quoi enregistrer et rien n’est enregistré sans votre confirmation.',
+    'Für {name}. Sagen oder tippen Sie, was passiert ist. SampForce schlägt vor, was gespeichert wird, und nichts wird ohne Ihre Bestätigung gespeichert.',
+    'لـ {name}. قل أو اكتب ما حدث. يقترح SampForce ما يُحفظ ولا يُحفظ شيء حتى تؤكده.',
   ],
-  'Say or type what happened. DealFlow suggests what to save and nothing is saved until you confirm it.': [
-    'Di o escribe lo que pasó. DealFlow sugiere qué guardar y no se guarda nada hasta que lo confirmes.',
-    'Dites ou tapez ce qui s’est passé. DealFlow propose quoi enregistrer et rien n’est enregistré sans votre confirmation.',
-    'Sagen oder tippen Sie, was passiert ist. DealFlow schlägt vor, was gespeichert wird, und nichts wird ohne Ihre Bestätigung gespeichert.',
-    'قل أو اكتب ما حدث. يقترح DealFlow ما يُحفظ ولا يُحفظ شيء حتى تؤكده.',
+  'Say or type what happened. SampForce suggests what to save and nothing is saved until you confirm it.': [
+    'Di o escribe lo que pasó. SampForce sugiere qué guardar y no se guarda nada hasta que lo confirmes.',
+    'Dites ou tapez ce qui s’est passé. SampForce propose quoi enregistrer et rien n’est enregistré sans votre confirmation.',
+    'Sagen oder tippen Sie, was passiert ist. SampForce schlägt vor, was gespeichert wird, und nichts wird ohne Ihre Bestätigung gespeichert.',
+    'قل أو اكتب ما حدث. يقترح SampForce ما يُحفظ ولا يُحفظ شيء حتى تؤكده.',
   ],
   'Some suggestions from this note are already saved, so the note can no longer be changed. Start a new voice note instead.': [
     'Algunas sugerencias de esta nota ya están guardadas, así que la nota ya no se puede cambiar. Empieza una nota de voz nueva.',
@@ -279,11 +279,11 @@ export const messaging = {
   'Record again': ['Volver a grabar', 'Réenregistrer', 'Erneut aufnehmen', 'التسجيل مجددًا'],
   'Start recording': ['Empezar a grabar', 'Démarrer l’enregistrement', 'Aufnahme starten', 'بدء التسجيل'],
   'Transcribe {time}': ['Transcribir {time}', 'Transcrire {time}', '{time} transkribieren', 'تفريغ {time}'],
-  'Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by DealFlow.': [
-    'Hasta 10 minutos. El audio se envía a Deepgram para transcribirlo y DealFlow no lo guarda.',
-    'Jusqu’à 10 minutes. Le son est envoyé à Deepgram pour la transcription et n’est pas conservé par DealFlow.',
-    'Bis zu 10 Minuten. Das Audio wird zur Transkription an Deepgram gesendet und von DealFlow nicht gespeichert.',
-    'حتى 10 دقائق. يُرسل الصوت إلى Deepgram لتفريغه ولا يحتفظ به DealFlow.',
+  'Up to 10 minutes. The audio is sent to Deepgram for transcription and is not stored by SampForce.': [
+    'Hasta 10 minutos. El audio se envía a Deepgram para transcribirlo y SampForce no lo guarda.',
+    'Jusqu’à 10 minutes. Le son est envoyé à Deepgram pour la transcription et n’est pas conservé par SampForce.',
+    'Bis zu 10 Minuten. Das Audio wird zur Transkription an Deepgram gesendet und von SampForce nicht gespeichert.',
+    'حتى 10 دقائق. يُرسل الصوت إلى Deepgram لتفريغه ولا يحتفظ به SampForce.',
   ],
   'Check each item before saving.': ['Revisa cada elemento antes de guardar.', 'Vérifiez chaque élément avant d’enregistrer.', 'Prüfen Sie jeden Eintrag vor dem Speichern.', 'راجع كل عنصر قبل الحفظ.'],
   'Last call': ['Última llamada', 'Dernier appel', 'Letzter Anruf', 'آخر مكالمة'],
@@ -330,7 +330,7 @@ export const messaging = {
   ],
 
   // Copilot
-  'DealFlow Copilot': ['DealFlow Copilot', 'DealFlow Copilot', 'DealFlow Copilot', 'DealFlow Copilot'],
+  'SampForce Copilot': ['SampForce Copilot', 'SampForce Copilot', 'SampForce Copilot', 'SampForce Copilot'],
   'Reads what your role can read. Changes wait for you to confirm.': [
     'Lee lo que tu rol puede leer. Los cambios esperan a que los confirmes.',
     'Lit ce que votre rôle peut lire. Les modifications attendent votre confirmation.',
@@ -409,10 +409,10 @@ export const messaging = {
   Report: ['Informe', 'Rapport', 'Bericht', 'تقرير'],
   'Reset password': ['Restablecer contraseña', 'Réinitialiser le mot de passe', 'Passwort zurücksetzen', 'إعادة تعيين كلمة المرور'],
   Workflow: ['Flujo de trabajo', 'Workflow', 'Workflow', 'سير العمل'],
-  'DealFlow by Sampledge: the AI-native sales CRM': [
-    'DealFlow de Sampledge: el CRM de ventas nativo de IA',
-    'DealFlow par Sampledge : le CRM commercial conçu pour l’IA',
-    'DealFlow von Sampledge: das KI-native Vertriebs-CRM',
-    'DealFlow من Sampledge: نظام إدارة المبيعات المبني على الذكاء الاصطناعي',
+  'SampForce by Sampledge: the AI-native sales CRM': [
+    'SampForce de Sampledge: el CRM de ventas nativo de IA',
+    'SampForce par Sampledge : le CRM commercial conçu pour l’IA',
+    'SampForce von Sampledge: das KI-native Vertriebs-CRM',
+    'SampForce من Sampledge: نظام إدارة المبيعات المبني على الذكاء الاصطناعي',
   ],
 } satisfies PhraseTable;

@@ -1,4 +1,4 @@
-/** Talks to the person's DealFlow with the extension's own connection token. */
+/** Talks to the person's SampForce with the extension's own connection token. */
 
 export class ApiError extends Error {
   constructor(status, code, message) {
@@ -30,7 +30,7 @@ export async function connection() {
 export async function call(path, { method = 'GET', body, baseUrl, token } = {}) {
   if (!baseUrl || !token) {
     const c = await connection();
-    if (!c) throw new ApiError(401, 'NOT_CONNECTED', 'Connect the extension to DealFlow first.');
+    if (!c) throw new ApiError(401, 'NOT_CONNECTED', 'Connect the extension to SampForce first.');
     baseUrl ??= c.baseUrl;
     token ??= c.token;
   }
@@ -44,29 +44,29 @@ export async function call(path, { method = 'GET', body, baseUrl, token } = {}) 
       credentials: 'omit',
     });
   } catch {
-    throw new ApiError(0, 'NETWORK', `Could not reach DealFlow at ${baseUrl}. Check the address and your connection.`);
+    throw new ApiError(0, 'NETWORK', `Could not reach SampForce at ${baseUrl}. Check the address and your connection.`);
   }
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     const err = data?.error;
     const message =
       res.status === 401
-        ? 'This connection has ended. Create a new connection code in DealFlow and connect again.'
-        : err?.message ?? `DealFlow answered with an error (${res.status}).`;
+        ? 'This connection has ended. Create a new connection code in SampForce and connect again.'
+        : err?.message ?? `SampForce answered with an error (${res.status}).`;
     throw new ApiError(res.status, err?.code ?? 'HTTP_' + res.status, message);
   }
   return data;
 }
 
-/** Signs in with a DealFlow email and password (no token yet). Answers a connection, or a second-factor challenge. */
+/** Signs in with a SampForce email and password (no token yet). Answers a connection, or a second-factor challenge. */
 export async function signIn(baseUrl, path, body) {
   let res;
   try {
     res = await fetch(`${baseUrl}/api/v1${path}`, { method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': 'en' }, body: JSON.stringify(body), credentials: 'omit' });
   } catch {
-    throw new ApiError(0, 'NETWORK', `Could not reach DealFlow at ${baseUrl}. Check the address and your connection.`);
+    throw new ApiError(0, 'NETWORK', `Could not reach SampForce at ${baseUrl}. Check the address and your connection.`);
   }
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, data?.error?.code ?? 'HTTP_' + res.status, data?.error?.message ?? `DealFlow answered with an error (${res.status}).`);
+  if (!res.ok) throw new ApiError(res.status, data?.error?.code ?? 'HTTP_' + res.status, data?.error?.message ?? `SampForce answered with an error (${res.status}).`);
   return data;
 }

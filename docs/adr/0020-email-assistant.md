@@ -8,7 +8,7 @@
 
 Feature 5 asks for AI drafting, rewriting, subject lines, conversation summaries, suggested replies, intent,
 objections and buying signals, follow-up timing, and review before sending. Section F adds optimisation tips:
-follow-up timing, quiet steps, disengaged prospects, sequence changes. DealFlow already has one AI gateway (metering,
+follow-up timing, quiet steps, disengaged prospects, sequence changes. SampForce already has one AI gateway (metering,
 credit caps, per-agent switches, redaction, prompt versions, run log) and a recommendation store. This adds one
 agent, `email_assistant`, on that layer. It is not a second AI system.
 

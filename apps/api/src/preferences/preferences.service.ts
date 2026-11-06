@@ -51,7 +51,7 @@ export class PreferencesService {
     return this.get(auth);
   }
 
-  /** Forgets the person's own settings, so the workspace default (or DealFlow's) applies again. */
+  /** Forgets the person's own settings, so the workspace default (or SampForce's) applies again. */
   async reset(auth: AuthContext): Promise<PreferencesResponse> {
     await this.prisma.userPreference.deleteMany({ where: { userId: auth.userId } });
     return this.get(auth);
@@ -76,7 +76,7 @@ export class PreferencesService {
     return this.get(auth);
   }
 
-  /** The person's language and regional formats; DealFlow's defaults until they choose. */
+  /** The person's language and regional formats; SampForce's defaults until they choose. */
   async getRegional(auth: AuthContext): Promise<RegionalResponse> {
     const row = await this.prisma.userRegionalSetting.findUnique({ where: { userId: auth.userId } });
     if (!row) return { regional: normalizeRegional(null), source: 'default', updatedAt: null };

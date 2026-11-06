@@ -1,6 +1,6 @@
 apiVersion: v2
 name: dealflow
-description: DealFlow by Sampledge - API, background worker, web app and schema migrations.
+description: SampForce by Sampledge - API, background worker, web app and schema migrations.
 type: application
 version: 0.8.0
 appVersion: "0.8.0"

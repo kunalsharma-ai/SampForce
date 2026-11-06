@@ -34,8 +34,8 @@ export type TriggerEvent = keyof typeof TRIGGER_EVENTS;
 export type TriggerEntity = (typeof TRIGGER_EVENTS)[TriggerEvent]['entity'];
 
 /**
- * Email events DealFlow can actually observe. There is no "delivered" event: Gmail and Outlook do not report
- * delivery to the sender, so DealFlow only knows an email was handed over (sent) or came back (bounced).
+ * Email events SampForce can actually observe. There is no "delivered" event: Gmail and Outlook do not report
+ * delivery to the sender, so SampForce only knows an email was handed over (sent) or came back (bounced).
  * Opens are estimates (image loading, privacy proxies and scanners); clicks can come from security scanners too.
  */
 export const EMAIL_TRIGGER_CONFIDENCE: Partial<Record<TriggerEvent, 'confirmed' | 'estimate' | 'likely'>> = {
@@ -340,7 +340,7 @@ export interface WebhookRow {
   recentDeliveries: { id: string; eventType: string; status: 'PENDING' | 'SUCCEEDED' | 'FAILED'; attempts: number; responseCode: number | null; lastError: string | null; createdAt: string }[];
 }
 export interface WebhookCreated extends WebhookRow {
-  /** Shown once. Receivers verify `X-DealFlow-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "t.body">`. */
+  /** Shown once. Receivers verify `X-SampForce-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "t.body">`. */
   secret: string;
 }
 
@@ -480,7 +480,7 @@ export interface InboxThreadRow {
   noteCount: number;
 }
 
-/** What DealFlow observed for a sent message. Opens are estimates; "delivered" is not reported by Gmail or Outlook. */
+/** What SampForce observed for a sent message. Opens are estimates; "delivered" is not reported by Gmail or Outlook. */
 export interface InboxMessageTracking {
   openedAt: string | null;
   openCount: number;

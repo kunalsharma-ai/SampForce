@@ -20,7 +20,7 @@ describe('appearance preferences and saved themes', () => {
     await app.close();
   });
 
-  it('starts from the DealFlow default when nothing is saved', async () => {
+  it('starts from the SampForce default when nothing is saved', async () => {
     const res = await api(owner).get('/me/preferences').expect(200);
     expect(res.body).toEqual({ appearance: DEFAULT_APPEARANCE, source: 'default', workspaceDefault: null, updatedAt: null });
   });

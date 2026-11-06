@@ -1,6 +1,6 @@
-# DealFlow Product Requirements Document
+# SampForce Product Requirements Document
 
-**Product:** DealFlow, by Sampledge · **Positioning:** The Autonomous Revenue Intelligence Platform
+**Product:** SampForce, by Sampledge · **Positioning:** The Autonomous Revenue Intelligence Platform
 **Tagline:** Close Smarter. Grow Faster. Flow Beyond Limits. · **Version:** 1.0 draft, 2026-10-30
 
 ## 1. Problem

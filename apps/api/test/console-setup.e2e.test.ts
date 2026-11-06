@@ -86,7 +86,7 @@ describe('integrations set up entirely from the operator console', () => {
     restore();
   });
 
-  it('every provider has a setup guide, and each URL to paste is the one DealFlow actually sends', async () => {
+  it('every provider has a setup guide, and each URL to paste is the one SampForce actually sends', async () => {
     const all = await rows();
     for (const r of all) expect(r.setup.steps.length, r.key).toBeGreaterThan(0);
     const sent = async (key: string, values: Record<string, string>, connect: string) => {

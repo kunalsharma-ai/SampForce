@@ -247,14 +247,14 @@ export const composed = {
   'Closed Lost': ['Perdida', 'Perdue', 'Verloren', 'خاسرة'],
 
   // Emails
-  'Reset your DealFlow password': ['Restablece tu contraseña de DealFlow', 'Réinitialisez votre mot de passe DealFlow', 'Setzen Sie Ihr DealFlow-Passwort zurück', 'أعد تعيين كلمة مرور DealFlow'],
+  'Reset your SampForce password': ['Restablece tu contraseña de SampForce', 'Réinitialisez votre mot de passe SampForce', 'Setzen Sie Ihr SampForce-Passwort zurück', 'أعد تعيين كلمة مرور SampForce'],
   'Hi {name},': ['Hola, {name}:', 'Bonjour {name},', 'Hallo {name},', 'مرحبًا {name}،'],
   'Hello {name},': ['Hola, {name}:', 'Bonjour {name},', 'Hallo {name},', 'مرحبًا {name}،'],
-  'Someone asked to reset the password for your DealFlow account. To choose a new password, open this link:': [
-    'Alguien pidió restablecer la contraseña de tu cuenta de DealFlow. Para elegir una nueva, abre este enlace:',
-    'Quelqu’un a demandé la réinitialisation du mot de passe de votre compte DealFlow. Pour en choisir un nouveau, ouvrez ce lien :',
-    'Jemand hat angefordert, das Passwort Ihres DealFlow-Kontos zurückzusetzen. Öffnen Sie diesen Link, um ein neues Passwort zu wählen:',
-    'طلب أحدهم إعادة تعيين كلمة مرور حسابك في DealFlow. لاختيار كلمة مرور جديدة، افتح هذا الرابط:',
+  'Someone asked to reset the password for your SampForce account. To choose a new password, open this link:': [
+    'Alguien pidió restablecer la contraseña de tu cuenta de SampForce. Para elegir una nueva, abre este enlace:',
+    'Quelqu’un a demandé la réinitialisation du mot de passe de votre compte SampForce. Pour en choisir un nouveau, ouvrez ce lien :',
+    'Jemand hat angefordert, das Passwort Ihres SampForce-Kontos zurückzusetzen. Öffnen Sie diesen Link, um ein neues Passwort zu wählen:',
+    'طلب أحدهم إعادة تعيين كلمة مرور حسابك في SampForce. لاختيار كلمة مرور جديدة، افتح هذا الرابط:',
   ],
   'The link works once and expires in {n} minutes. If you did not ask for this, ignore this email: your password has not changed.': [
     'El enlace funciona una vez y caduca en {n} minutos. Si no lo pediste, ignora este correo: tu contraseña no ha cambiado.',
@@ -262,12 +262,12 @@ export const composed = {
     'Der Link funktioniert einmal und läuft in {n} Minuten ab. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail: Ihr Passwort wurde nicht geändert.',
     'يعمل الرابط مرة واحدة وتنتهي صلاحيته خلال {n} دقيقة. إن لم تطلب ذلك فتجاهل هذه الرسالة: لم تتغير كلمة مرورك.',
   ],
-  'Your DealFlow password was changed': ['Se cambió tu contraseña de DealFlow', 'Votre mot de passe DealFlow a été modifié', 'Ihr DealFlow-Passwort wurde geändert', 'تم تغيير كلمة مرور DealFlow'],
-  'The password for your DealFlow account was just changed with a reset link, and every device was signed out.': [
-    'La contraseña de tu cuenta de DealFlow se acaba de cambiar con un enlace de restablecimiento y se cerró la sesión en todos los dispositivos.',
-    'Le mot de passe de votre compte DealFlow vient d’être modifié via un lien de réinitialisation, et tous les appareils ont été déconnectés.',
-    'Das Passwort Ihres DealFlow-Kontos wurde gerade über einen Link zum Zurücksetzen geändert, und alle Geräte wurden abgemeldet.',
-    'تم للتو تغيير كلمة مرور حسابك في DealFlow عبر رابط إعادة التعيين، وسُجّل الخروج من جميع الأجهزة.',
+  'Your SampForce password was changed': ['Se cambió tu contraseña de SampForce', 'Votre mot de passe SampForce a été modifié', 'Ihr SampForce-Passwort wurde geändert', 'تم تغيير كلمة مرور SampForce'],
+  'The password for your SampForce account was just changed with a reset link, and every device was signed out.': [
+    'La contraseña de tu cuenta de SampForce se acaba de cambiar con un enlace de restablecimiento y se cerró la sesión en todos los dispositivos.',
+    'Le mot de passe de votre compte SampForce vient d’être modifié via un lien de réinitialisation, et tous les appareils ont été déconnectés.',
+    'Das Passwort Ihres SampForce-Kontos wurde gerade über einen Link zum Zurücksetzen geändert, und alle Geräte wurden abgemeldet.',
+    'تم للتو تغيير كلمة مرور حسابك في SampForce عبر رابط إعادة التعيين، وسُجّل الخروج من جميع الأجهزة.',
   ],
   'If this was not you, contact your workspace administrator straight away.': [
     'Si no fuiste tú, contacta de inmediato con el administrador de tu espacio de trabajo.',

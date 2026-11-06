@@ -40,7 +40,7 @@ test('billing page, trial, onboarding checklist and a custom role', async ({ pag
 
   const pro = page.getByRole('listitem').filter({ hasText: 'Professional' });
   await pro.getByRole('button', { name: /Try free for 14 days/ }).click();
-  await expect(page.getByText(/You are trying DealFlow Professional until/)).toBeVisible();
+  await expect(page.getByText(/You are trying SampForce Professional until/)).toBeVisible();
   await expect(page.getByRole('button', { name: /Try free/ })).toHaveCount(0);
 
   await page.goto('/app/team');
@@ -92,7 +92,7 @@ test('operator console: sign-in, workspace list, support access and an audited o
   await expect(ops.getByText('tenant.plan_overridden').first()).toBeVisible();
 
   await page.goto('/app/billing');
-  await expect(page.getByText(/managed by the DealFlow team/).first()).toBeVisible();
+  await expect(page.getByText(/managed by the SampForce team/).first()).toBeVisible();
 });
 
 test('pay by invoice: the workspace requests an invoice and the plan starts when an operator records the payment', async ({ page, browser }) => {

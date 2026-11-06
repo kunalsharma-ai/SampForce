@@ -20,7 +20,7 @@ export class ApiKeysController {
     return this.keys.list(auth);
   }
 
-  /** Whether the operator has published the DealFlow Zapier app, and how many Zapier subscriptions exist. */
+  /** Whether the operator has published the SampForce Zapier app, and how many Zapier subscriptions exist. */
   @Get('zapier')
   @RequirePermissions('integrations:manage')
   zapier(@Auth() auth: AuthContext) {
@@ -42,7 +42,7 @@ export class ApiKeysController {
   }
 }
 
-/** What the DealFlow Zapier app calls, with an API key: the connection test, REST-hook subscriptions and event data. */
+/** What the SampForce Zapier app calls, with an API key: the connection test, REST-hook subscriptions and event data. */
 @Controller('zapier')
 @ApiKeyAccess()
 export class ZapierController {

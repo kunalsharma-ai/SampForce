@@ -1,5 +1,5 @@
 /*
- * DealFlow design tokens. Values are HSL triplets so Tailwind can apply alpha.
+ * SampForce design tokens. Values are HSL triplets so Tailwind can apply alpha.
  * Dark is the signature theme (Midnight Navy / Electric Cyan / Royal Violet); light mode keeps
  * the same hues at accessible contrast. --primary can be overridden per tenant (brand colour).
  */

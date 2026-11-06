@@ -105,11 +105,11 @@ export const administration = {
   'Role for new people': ['Rol para personas nuevas', 'Rôle des nouvelles personnes', 'Rolle für neue Personen', 'دور الأشخاص الجدد'],
   'Choose a role': ['Elige un rol', 'Choisissez un rôle', 'Rolle auswählen', 'اختر دورًا'],
   'Turn on single sign-on': ['Activar el inicio de sesión único', 'Activer l’authentification unique', 'Single Sign-on einschalten', 'تفعيل الدخول الموحّد'],
-  'DealFlow checks your provider’s discovery document when you save.': [
-    'DealFlow comprueba el documento de descubrimiento de tu proveedor al guardar.',
-    'DealFlow vérifie le document de découverte de votre fournisseur à l’enregistrement.',
-    'DealFlow prüft beim Speichern das Discovery-Dokument Ihres Anbieters.',
-    'يتحقق DealFlow من مستند الاكتشاف لدى موفّرك عند الحفظ.',
+  'SampForce checks your provider’s discovery document when you save.': [
+    'SampForce comprueba el documento de descubrimiento de tu proveedor al guardar.',
+    'SampForce vérifie le document de découverte de votre fournisseur à l’enregistrement.',
+    'SampForce prüft beim Speichern das Discovery-Dokument Ihres Anbieters.',
+    'يتحقق SampForce من مستند الاكتشاف لدى موفّرك عند الحفظ.',
   ],
   'Require single sign-on': ['Exigir inicio de sesión único', 'Exiger l’authentification unique', 'Single Sign-on verlangen', 'إلزام الدخول الموحّد'],
   'Members can no longer use a password for this workspace. Owners keep password sign-in as a way back in.': [
@@ -164,11 +164,11 @@ export const administration = {
   'Create token': ['Crear token', 'Créer un jeton', 'Token erstellen', 'إنشاء رمز'],
   'Support access': ['Acceso del soporte', 'Accès du support', 'Support-Zugriff', 'وصول الدعم'],
   'On until {date}': ['Activado hasta el {date}', 'Activé jusqu’au {date}', 'An bis {date}', 'مفعّل حتى {date}'],
-  'Let DealFlow support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.': [
-    'Permite que el soporte de DealFlow vea los miembros y el registro de auditoría de este espacio de trabajo durante un tiempo limitado, por ejemplo mientras ayuda con un problema. El soporte nunca ve leads, oportunidades ni otros registros del CRM.',
-    'Permettez au support DealFlow de voir les membres et le journal d’audit de cet espace de travail pendant une durée limitée, par exemple pendant qu’il vous aide à résoudre un problème. Le support ne voit jamais les prospects, opportunités ni autres enregistrements CRM.',
-    'Lassen Sie den DealFlow-Support die Mitglieder und das Prüfprotokoll dieses Arbeitsbereichs für begrenzte Zeit sehen, etwa während er bei einem Problem hilft. Der Support sieht nie Leads, Deals oder andere CRM-Datensätze.',
-    'اسمح لدعم DealFlow برؤية أعضاء مساحة العمل وسجل التدقيق لمدة محدودة، مثلًا أثناء المساعدة في مشكلة. لا يرى الدعم أبدًا العملاء المحتملين أو الصفقات أو سجلات إدارة العملاء الأخرى.',
+  'Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.': [
+    'Permite que el soporte de SampForce vea los miembros y el registro de auditoría de este espacio de trabajo durante un tiempo limitado, por ejemplo mientras ayuda con un problema. El soporte nunca ve leads, oportunidades ni otros registros del CRM.',
+    'Permettez au support SampForce de voir les membres et le journal d’audit de cet espace de travail pendant une durée limitée, par exemple pendant qu’il vous aide à résoudre un problème. Le support ne voit jamais les prospects, opportunités ni autres enregistrements CRM.',
+    'Lassen Sie den SampForce-Support die Mitglieder und das Prüfprotokoll dieses Arbeitsbereichs für begrenzte Zeit sehen, etwa während er bei einem Problem hilft. Der Support sieht nie Leads, Deals oder andere CRM-Datensätze.',
+    'اسمح لدعم SampForce برؤية أعضاء مساحة العمل وسجل التدقيق لمدة محدودة، مثلًا أثناء المساعدة في مشكلة. لا يرى الدعم أبدًا العملاء المحتملين أو الصفقات أو سجلات إدارة العملاء الأخرى.',
   ],
   'Granted by {name}: “{reason}”': ['Concedido por {name}: «{reason}»', 'Accordé par {name} : « {reason} »', 'Gewährt von {name}: „{reason}“', 'منحه {name}: «{reason}»'],
   'Turn off now': ['Desactivar ahora', 'Désactiver maintenant', 'Jetzt ausschalten', 'إيقاف الآن'],

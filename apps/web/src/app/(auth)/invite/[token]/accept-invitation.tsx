@@ -51,7 +51,7 @@ export function AcceptInvitation({ token }: { token: string }) {
       await api('/auth/invitations/accept', { method: 'POST', json: { token, password, ...(inv.hasAccount ? {} : { name }) } });
       router.replace('/app');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('Could not reach DealFlow. Check your connection.'));
+      setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
       setBusy(false);
     }
   }
@@ -72,7 +72,7 @@ export function AcceptInvitation({ token }: { token: string }) {
         )}
         <Field
           id="password"
-          label={inv.hasAccount ? t('Your DealFlow password') : t('Choose a password')}
+          label={inv.hasAccount ? t('Your SampForce password') : t('Choose a password')}
           error={errors.password}
           hint={inv.hasAccount ? t('You already have an account; confirm it is you.') : t('At least 10 characters, with a letter and a number.')}
         >

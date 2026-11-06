@@ -1,16 +1,16 @@
 # ADR 0015: Lead-capture browser extension
 
-**Status:** accepted, 2026-10-31. **Requested by:** Kunal (Sampledge): a DealFlow extension that people install so
+**Status:** accepted, 2026-10-31. **Requested by:** Kunal (Sampledge): a SampForce extension that people install so
 that leads are created from the websites they visit, as part of Phase 9 (see ADR 0014 for sequences).
 
 **Context.** The web app authenticates with HttpOnly SameSite cookies and an Origin allow-list against CSRF. An
-extension runs on a `chrome-extension://` origin, its address differs per install, and DealFlow is installed at a
+extension runs on a `chrome-extension://` origin, its address differs per install, and SampForce is installed at a
 different address per customer, so neither the cookie nor the allow-list fits.
 
 **Decision.**
 
 - **Its own connection, not the web session.** People create a connection code (`dfx_…`, 32 random bytes) under
-  Integrations → Browser extension and paste it into the extension with their DealFlow address. A connection is a row in
+  Integrations → Browser extension and paste it into the extension with their SampForce address. A connection is a row in
   `sessions` with `extension_token_hash` (SHA-256; the code is shown once), so it appears under the person's signed-in
   devices and ends with "sign out other devices", turning on two-step verification, or removing the member. It lasts
   90 days, cannot be refreshed into a web session (its refresh hash is never handed out), and at most five are live.
@@ -42,8 +42,8 @@ different address per customer, so neither the cookie nor the allow-list fits.
 **Consequences.** The extension is not in the Chrome Web Store yet; Sampledge needs a developer account and a privacy
 policy for the listing. Edge uses the same package. Firefox would need a different side panel API and is not built.
 Whether saving people found on public pages is lawful for a given customer and country is for their legal review;
-DealFlow records the source page in the audit log so customers can answer "where did you get my address?".
+SampForce records the source page in the audit log so customers can answer "where did you get my address?".
 
-**Update, 2026-10-31.** The privacy page is at `/extension-privacy` on the DealFlow site, and the store listing kit
+**Update, 2026-10-31.** The privacy page is at `/extension-privacy` on the SampForce site, and the store listing kit
 (text, permission reasons, privacy-form answers, screenshots, promo tile) is in `apps/extension/store/`. Submission
 still needs Sampledge's developer accounts.

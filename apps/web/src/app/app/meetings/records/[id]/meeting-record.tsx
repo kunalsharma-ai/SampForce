@@ -228,7 +228,7 @@ function TranscriptCard({ r, status, canWrite }: { r: MeetingRecord; status: Tra
                 if (file) upload.mutate(file, { onSuccess: () => { setFile(null); setConsent(false); setEditing(false); } });
               }}
             >
-              <Field id="mr-file" label={t('Recording (audio or video)')} hint={t('Up to {mb} MB. The file is sent to Deepgram for transcription and is not stored by DealFlow. A new transcription replaces the text above.', { mb: status?.maxUploadMb ?? 100 })}>
+              <Field id="mr-file" label={t('Recording (audio or video)')} hint={t('Up to {mb} MB. The file is sent to Deepgram for transcription and is not stored by SampForce. A new transcription replaces the text above.', { mb: status?.maxUploadMb ?? 100 })}>
                 <input
                   type="file"
                   accept="audio/*,video/*"

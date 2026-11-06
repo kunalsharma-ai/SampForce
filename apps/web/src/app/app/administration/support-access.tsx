@@ -11,7 +11,7 @@ import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
 
 /**
- * Time-boxed permission for DealFlow platform support to see this workspace's member list and audit
+ * Time-boxed permission for SampForce platform support to see this workspace's member list and audit
  * log. Support never sees CRM records, and every look is logged.
  */
 export function SupportAccess() {
@@ -33,7 +33,7 @@ export function SupportAccess() {
         <CardTitle className="flex items-center gap-2">
           {t('Support access')} {active ? <Badge tone="warning">{t('On until {date}', { date: new Date(active.expiresAt).toLocaleString(fmtLocale()) })}</Badge> : <Badge>{t('Off')}</Badge>}
         </CardTitle>
-        <CardDescription>{t('Let DealFlow support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.')}</CardDescription>
+        <CardDescription>{t('Let SampForce support see this workspace’s members and audit log for a limited time, for example while they help with a problem. Support never sees leads, deals or other CRM records.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {active ? (

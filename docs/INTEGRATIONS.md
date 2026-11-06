@@ -17,7 +17,7 @@
 | Card payments on proposals (workspace app: customers pay accepted proposals into the workspace's own Stripe or Razorpay account) | **Not connected** until an admin saves keys; keys are saved only after a read that charges nothing succeeds. Shows a warning until the first signed webhook arrives. A proposal is marked paid only by the provider's signed webhook with the exact amount asked. Implemented and tested against a local stand-in of Stripe Checkout Sessions and Razorpay Payment Links only; not yet tested against either provider. | No deployment secret. Each workspace's keys and webhook secret are workspace secrets, stored encrypted |
 | WhatsApp Business (workspace app: one-to-one messages from contact records and approved workflow steps, through the workspace's own Cloud API number) | **Not connected** until an admin saves credentials; they are saved only after a read of the number succeeds (nothing is sent). Replies and delivery status are Pending Configuration until Meta's first signed webhook arrives. Implemented and tested against a local stand-in of Meta's Graph API (Cloud API) only; not yet tested against Meta. | No deployment secret. Each workspace's System User token and App Secret are workspace secrets, stored encrypted. Optional `WHATSAPP_API_BASE_URL` (default Graph API v21.0) |
 | Workspace API keys (REST API for Zapier, Make, n8n and scripts) | Implemented and tested end to end against the local API. Keys are shown once and stored hashed; only CRM record, pipeline, activity and task routes accept them. | No deployment secret |
-| Zapier (triggers on REST hooks; create lead, contact and task actions) | **Pending Configuration** until an operator publishes the app in `integrations/zapier` and sets `ZAPIER_INVITE_URL`. Its functions are tested against a local DealFlow only; it has not been pushed to or run inside Zapier. | Optional `ZAPIER_INVITE_URL` |
+| Zapier (triggers on REST hooks; create lead, contact and task actions) | **Pending Configuration** until an operator publishes the app in `integrations/zapier` and sets `ZAPIER_INVITE_URL`. Its functions are tested against a local SampForce only; it has not been pushed to or run inside Zapier. | Optional `ZAPIER_INVITE_URL` |
 | SMS through Twilio (workspace app: one-to-one texts from contact records and approved workflow steps, through the workspace's own Twilio number) | **Not connected** until an admin saves credentials; they are saved only after reads of the account and number succeed (nothing is sent). Replies and delivery status are Pending Configuration until Twilio's first signed request arrives. Implemented and tested against a local stand-in of Twilio's REST API only; not yet tested against Twilio. | No deployment secret. Each workspace's Auth Token is a workspace secret, stored encrypted. Optional `TWILIO_API_BASE_URL` |
 | Twilio voice calls | Not built yet | Shown as "Not available yet" in the app |
 
@@ -64,7 +64,7 @@ first time someone connects or uses them.
 
 ## Setting up Slack
 
-Slack is a workspace app: one admin installs it for the whole DealFlow workspace, and workflows post to
+Slack is a workspace app: one admin installs it for the whole SampForce workspace, and workflows post to
 channels with a "Post to Slack" step. Nobody's personal Slack account is used.
 
 1. At api.slack.com/apps create an app ("From scratch"). Under **OAuth & Permissions** add the redirect URL
@@ -94,15 +94,15 @@ How it behaves:
 ## Setting up Microsoft Teams
 
 Teams uses the **Workflows** app in Teams, which Microsoft recommends as it retires Office 365 connector webhooks.
-No Entra ID app registration or DealFlow-wide secret is needed.
+No Entra ID app registration or SampForce-wide secret is needed.
 
 1. In Teams, open the channel, choose **Workflows** and the template **Send webhook alerts to a channel** (or build a
    Power Automate flow with the trigger "When a Teams webhook request is received" and the action "Post card in a chat
    or channel"). Copy the URL it shows.
-2. In DealFlow, Integrations, Microsoft Teams: enter a channel name and paste the URL, then **Add channel**. DealFlow
+2. In SampForce, Integrations, Microsoft Teams: enter a channel name and paste the URL, then **Add channel**. SampForce
    posts a welcome card first and saves the channel only if Teams accepts it.
 3. Add up to 20 channels and pick a default. Workflow steps "Post to Slack or Teams" with Microsoft Teams chosen post
-   an Adaptive Card with the message and an "Open in DealFlow" button.
+   an Adaptive Card with the message and an "Open in SampForce" button.
 
 How it behaves:
 
@@ -113,13 +113,13 @@ How it behaves:
 - If Teams answers 401, 403, 404 or 410 (the workflow was deleted, turned off or its URL changed), that channel is
   marked "Not accepting messages" and the app shows **Needs attention** until a post to it succeeds again or it is
   removed. A 429 is reported as rate limiting.
-- Removing a channel deletes its URL; DealFlow cannot turn off the workflow in Teams, so the page reminds the admin to.
+- Removing a channel deletes its URL; SampForce cannot turn off the workflow in Teams, so the page reminds the admin to.
 - Record values cannot add their own links to the card (markdown link syntax is broken up).
 
 ## Setting up Zoom
 
 Zoom is a workspace app: an admin connects the company's Zoom account once. People then schedule Zoom meetings from
-any lead, contact or deal, in their own Zoom user (matched by their DealFlow email), and the meeting is logged on the
+any lead, contact or deal, in their own Zoom user (matched by their SampForce email), and the meeting is logged on the
 record. If the organiser chooses cloud recording and confirms participants' consent, the transcript is added to
 meeting notes after the meeting, ready for the existing AI meeting summary and review.
 
@@ -132,7 +132,7 @@ meeting notes after the meeting, ready for the existing AI meeting summary and r
    and subscribe to **Recording: Transcript files have completed** and **App deauthorized**. Turn on
    "include a download token". Copy the **Secret Token**.
 4. Set `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET` and `ZOOM_WEBHOOK_SECRET_TOKEN` in the deployment's secret manager and
-   restart the API. Then press **Validate** on the event subscription in Zoom. DealFlow answers Zoom's URL validation
+   restart the API. Then press **Validate** on the event subscription in Zoom. SampForce answers Zoom's URL validation
    challenge.
 5. A workspace admin presses **Connect Zoom** under Integrations. Scheduling the first meeting is the first live call.
 
@@ -142,7 +142,7 @@ How it behaves:
   tokens). A refused refresh shows **Needs reconnecting**.
 - If the person's email is not a user in the Zoom account, scheduling fails with that explanation. Nothing is created.
 - Events must carry a valid `x-zm-signature` (HMAC-SHA256 of `v0:{timestamp}:{body}`) no more than 5 minutes old.
-  Events for Zoom accounts or meetings DealFlow does not know are ignored. **Only meetings scheduled from DealFlow
+  Events for Zoom accounts or meetings SampForce does not know are ignored. **Only meetings scheduled from SampForce
   with recording chosen are ever imported.**
 - The worker downloads the WebVTT transcript, at most 5 MB, following only checked public redirects. It stores the
   text and speaker segments in meeting notes, with the organiser's consent recorded. An expired link is reported
@@ -158,7 +158,7 @@ on the completion date, with "Signed with DocuSign" as the method.
 
 1. In DocuSign **Apps and Keys**, add an app (integration key) with **Authorization Code Grant**, and add a secret
    key. Add the redirect URI `<PUBLIC_WEB_URL>/api/v1/apps/docusign/callback`.
-2. Under **Connect**, add an **HMAC key** (Connect, HMAC). DealFlow sets the status callback on each envelope and
+2. Under **Connect**, add an **HMAC key** (Connect, HMAC). SampForce sets the status callback on each envelope and
    asks DocuSign to sign it. No account-wide Connect configuration is needed.
 3. Set `DOCUSIGN_INTEGRATION_KEY`, `DOCUSIGN_SECRET_KEY` and `DOCUSIGN_CONNECT_HMAC_KEY` in the deployment's secret
    manager. For the developer (demo) environment, also set `DOCUSIGN_AUTH_BASE_URL=https://account-d.docusign.com`.
@@ -170,28 +170,28 @@ How it behaves:
 
 - The account and its API address (`base_uri`) come from DocuSign's userinfo. Only `https` addresses on
   `docusign.net` or `docusign.com` are accepted. Tokens are sealed and refreshed under a row lock.
-- DealFlow renders the contract (name, customer, value, dates, terms) as a PDF, with hidden `/sn1/` and `/ds1/`
+- SampForce renders the contract (name, customer, value, dates, terms) as a PDF, with hidden `/sn1/` and `/ds1/`
   anchors where the signature and date fields go.
 - One open envelope per contract. **Void** (with a reason) and **Check status** are on the contract page.
-  **Download signed PDF** fetches the combined document and certificate from DocuSign on demand; DealFlow does not
+  **Download signed PDF** fetches the combined document and certificate from DocuSign on demand; SampForce does not
   store a copy.
 - Connect messages must carry a valid `X-DocuSign-Signature-N` (base64 HMAC-SHA256 of the body; any key in a
-  rotation matches). Envelopes DealFlow did not send are acknowledged and ignored. Status only moves forward, and a
+  rotation matches). Envelopes SampForce did not send are acknowledged and ignored. Status only moves forward, and a
   completed, declined or voided envelope stays that way.
 - A declined or voided envelope leaves the contract as a draft, with the reason shown.
 
 ## Setting up card payments on proposals
 
 Card payments are a workspace app, and each workspace uses **its own** Stripe or Razorpay account: the money goes
-straight to the seller, and DealFlow never sees card details. This is separate from DealFlow's own subscription
-billing (`STRIPE_SECRET_KEY` and friends in docs/BILLING.md), which pays the DealFlow operator. No operator secret is
+straight to the seller, and SampForce never sees card details. This is separate from SampForce's own subscription
+billing (`STRIPE_SECRET_KEY` and friends in docs/BILLING.md), which pays the SampForce operator. No operator secret is
 needed.
 
 Stripe:
 
 1. In the Stripe dashboard, create a **restricted key** with **Checkout Sessions: Write** (a secret key also works).
    Use test-mode keys first.
-2. In DealFlow, under Integrations, Card payments, choose Stripe, paste the key, and press **Check and save**. Paste
+2. In SampForce, under Integrations, Card payments, choose Stripe, paste the key, and press **Check and save**. Paste
    any `whsec_` value for now if the endpoint does not exist yet, then replace it in step 4.
 3. Copy the **Webhook URL** shown on the card. In Stripe, add a webhook endpoint with that URL and the events
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
@@ -201,8 +201,8 @@ Stripe:
 Razorpay:
 
 1. In Razorpay, Account & Settings, generate an API key (key id and secret). Use test mode first.
-2. Under Webhooks, add the Webhook URL from the DealFlow card with a secret you choose, and the events
-   `payment_link.paid`, `payment_link.expired` and `payment_link.cancelled`. Save the same secret in DealFlow.
+2. Under Webhooks, add the Webhook URL from the SampForce card with a secret you choose, and the events
+   `payment_link.paid`, `payment_link.expired` and `payment_link.cancelled`. Save the same secret in SampForce.
 
 How it behaves:
 
@@ -210,7 +210,7 @@ How it behaves:
   total above zero and is shared. Before that the customer sees why they cannot pay yet. The rep's preview shows the
   button turned off.
 - Each press creates a Stripe Checkout Session or a Razorpay Payment Link (expires after 24 hours) for the exact
-  quote total, with DealFlow's payment id in its metadata, and sends the customer to the provider's hosted page.
+  quote total, with SampForce's payment id in its metadata, and sends the customer to the provider's hosted page.
 - A payment counts only when the provider's webhook arrives with a valid signature (Stripe: `Stripe-Signature`,
   timestamp within 5 minutes; Razorpay: `X-Razorpay-Signature`) **and** the amount and currency match what was asked.
   A mismatch is logged and not counted. Retries are idempotent. The rep is notified and `quote.paid` is audited.
@@ -223,13 +223,13 @@ How it behaves:
 
 ## Setting up WhatsApp Business
 
-Each workspace uses **its own** WhatsApp Business Platform (Cloud API) number in Meta. DealFlow never sends from a
+Each workspace uses **its own** WhatsApp Business Platform (Cloud API) number in Meta. SampForce never sends from a
 shared number, and there is no operator secret.
 
 1. In Meta Business Manager, have a Meta app with the WhatsApp product, a registered business phone number, and a
    **System User** with an access token that has `whatsapp_business_messaging` and `whatsapp_business_management`.
-2. In DealFlow, under Integrations, WhatsApp Business, enter the **phone number id**, the **WhatsApp Business
-   Account id**, the token and the app's **App Secret**, then press **Check and save**. DealFlow reads the number and
+2. In SampForce, under Integrations, WhatsApp Business, enter the **phone number id**, the **WhatsApp Business
+   Account id**, the token and the app's **App Secret**, then press **Check and save**. SampForce reads the number and
    checks that it belongs to that business account; nothing is sent.
 3. Copy the **Callback URL** and **Verify token** from the card into the Meta app (WhatsApp, Configuration) and
    subscribe to the `messages` field. Meta's verification request is answered automatically. The warning on the card
@@ -237,22 +237,22 @@ shared number, and there is no operator secret.
 
 How it behaves:
 
-- **Consent first.** A business-initiated message must be an approved template, and DealFlow sends one only if the
+- **Consent first.** A business-initiated message must be an approved template, and SampForce sends one only if the
   contact's WhatsApp consent is recorded (who recorded it, when, and how the person agreed). A reply of STOP (or
   UNSUBSCRIBE, OPT OUT) withdraws it and notifies the contact's owner. Consent can also be withdrawn by hand.
 - **The 24-hour window.** Free-form replies are allowed only within 24 hours of the contact's last message, as
   WhatsApp requires; otherwise only a template.
-- **Numbers.** Only phone numbers written with a country code (`+44…` or `0044…`) are used. DealFlow never guesses a
+- **Numbers.** Only phone numbers written with a country code (`+44…` or `0044…`) are used. SampForce never guesses a
   country. Inbound messages are linked to a contact only when exactly one contact has that number; others are kept
   unlinked, and the admin who connected WhatsApp is notified.
 - **One to one only.** Every send is one message to one contact, confirmed by the sender ("Send this WhatsApp
   message to +… now"), or a workflow step that needs an approval for each run. There is no bulk send, and AI agents
   cannot send WhatsApp messages.
-- **Status.** "Accepted by WhatsApp" is all DealFlow knows when it sends. Sent, Delivered, Read and Failed come only
+- **Status.** "Accepted by WhatsApp" is all SampForce knows when it sends. Sent, Delivered, Read and Failed come only
   from Meta's signed status webhooks and only move forward. Read appears only if the person has read receipts on.
 - **Templates.** Approved templates whose only variables are in the body are offered. Templates with media headers
   or button variables are not supported yet. Media messages received are shown as "(image message: open WhatsApp to
-  see it)"; DealFlow does not download media.
+  see it)"; SampForce does not download media.
 - Webhooks must carry a valid `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with the App Secret). Each
   workspace has its own URL id and secret, so one workspace cannot write into another. Retries are stored once.
 - A refused token (Meta error 190 or a missing permission) marks the app Needs new credentials; replacing them keeps
@@ -260,12 +260,12 @@ How it behaves:
 
 ## Setting up SMS (Twilio)
 
-Each workspace uses its own Twilio account and number. There is no DealFlow-wide Twilio secret.
+Each workspace uses its own Twilio account and number. There is no SampForce-wide Twilio secret.
 
 1. In the Twilio console, note the **Account SID** and **Auth Token**, and buy or choose a number with SMS
    capability. For US numbers, complete A2P 10DLC registration first, or carriers will filter the texts (error 30007
    or 30034). Trial accounts can only text verified numbers and add a trial notice.
-2. In DealFlow, an admin opens Integrations, **SMS (Twilio)**, and saves the three values. DealFlow reads the
+2. In SampForce, an admin opens Integrations, **SMS (Twilio)**, and saves the three values. SampForce reads the
    account and checks the number belongs to it and can send SMS. Nothing is sent. The Auth Token is stored
    encrypted and never shown again.
 3. Copy the **Inbound message URL** into the number's Messaging configuration, "A message comes in", HTTP POST.
@@ -283,7 +283,7 @@ Rules the app enforces:
 - Every request from Twilio is checked with `X-Twilio-Signature` (HMAC-SHA1 with the Auth Token over the exact URL
   and the sorted form fields). Status only moves forward; undelivered and failed are final and notify the sender.
 - The segment count (GSM-7 or UCS-2) is shown before sending, since Twilio bills per segment.
-- Numbers must be written with their country code; DealFlow never guesses a country.
+- Numbers must be written with their country code; SampForce never guesses a country.
 
 ## Setting up Zapier and API keys
 
@@ -299,12 +299,12 @@ API keys work as soon as this version is deployed:
 The Zapier app needs a one-time publish by an operator (see `integrations/zapier/README.md`):
 
 1. `cd integrations/zapier && npm install && npx zapier login`
-2. `npx zapier register "DealFlow"` once, then `npx zapier push`.
+2. `npx zapier register "SampForce"` once, then `npx zapier push`.
 3. Invite users from the Zapier developer platform, or submit for public review.
 4. Set `ZAPIER_INVITE_URL` to the invite or directory link and restart the API. The Integrations page then shows
    **Available** with a link, instead of Pending Configuration.
 5. Before calling it working, build a test Zap with a private invite: connect with a key, turn on "New Lead",
-   create a lead in DealFlow and check the Zap run, then run "Create Lead" and check the lead appears.
+   create a lead in SampForce and check the Zap run, then run "Create Lead" and check the lead appears.
 
 Each trigger is a REST hook: turning a Zap on creates a webhook for that one event (marked "Made by a Zap" in the
 Webhooks list), and turning it off removes it. Samples in the Zap editor are your latest real records; if there
@@ -319,7 +319,7 @@ are none yet, create one first.
 - Sync runs every 15 minutes per connection (and on "Sync now"). Only messages and events that involve
   an existing contact or lead are stored. The first sync looks back 30 days (up to 200 Gmail messages);
   calendar covers the past 30 and next 60 days.
-- Microsoft sync reads the Inbox only. Mail sent from DealFlow is recorded when sent; mail sent from
+- Microsoft sync reads the Inbox only. Mail sent from SampForce is recorded when sent; mail sent from
   Outlook directly is not imported yet.
 - A revoked or expired sign-in marks the connection "Needs attention", stops scheduled syncs and notifies
   the person. After 5 consecutive other failures the connection is also paused.
@@ -327,21 +327,21 @@ are none yet, create one first.
   (default 200) per person per 24 hours. Headers are sanitised. A sent email is logged as an EMAIL
   activity on the matching contact or lead. Sequence emails (Phase 9, ADR 0014) count towards the same limit.
 - Email sequences send one-to-one from each person's own connected mailbox, inside a send window and under a
-  per-sequence daily limit. Mailbox sync also detects replies and bounces to sequence emails. DealFlow does not
+  per-sequence daily limit. Mailbox sync also detects replies and bounces to sequence emails. SampForce does not
   send newsletters or bulk email from a shared domain.
 - Tracking and unsubscribe links point at `TRACKING_BASE_URL` (default `PUBLIC_WEB_URL`), which must be reachable
   from the internet and serve `/api/v1/t/*` and `/unsubscribe/*`.
 
 ## Browser extension
 
-The DealFlow lead-capture extension for Chrome and Edge (`apps/extension`, ADR 0015) saves people found on web pages
+The SampForce lead-capture extension for Chrome and Edge (`apps/extension`, ADR 0015) saves people found on web pages
 as leads. Each person creates a connection code under Integrations → Browser extension; the extension can only look
 people up, save leads and enrol them, within what the person's role allows. Connections show under the person's
 signed-in devices and end with any "sign out other devices". Automatic capture is off by default and only saves
 addresses at the website's own domain, never personal mailboxes. It is not in the Chrome Web Store yet: load
 `apps/extension/dist` unpacked (see `apps/extension/README.md`).
 
-From version 0.2.0 people can also sign in from the extension with their DealFlow email and password (and their
+From version 0.2.0 people can also sign in from the extension with their SampForce email and password (and their
 second-factor code), which creates the same kind of connection; workspaces that enforce single sign-on still use a
 connection code. "Find prospects" shows people at the company whose website is open, from Apollo.io through the API
 (Mock Mode sample people without a key), and imports the chosen people to a prospect list or the CRM (ADR 0030).
@@ -360,7 +360,7 @@ been tested against a local stand-in, so check the first results after adding it
 2. Restart the API. The meeting notes page changes from "Pending Configuration" to "Configured, not yet verified".
 3. Upload a short recording with consent confirmed. After it succeeds the page shows "Verified".
 
-Recordings are streamed to Deepgram and not stored by DealFlow. Meet, Zoom and Teams are recognised from calendar
+Recordings are streamed to Deepgram and not stored by SampForce. Meet, Zoom and Teams are recognised from calendar
 links only; there is no Zoom, Meet or Teams API connection and no meeting bot.
 
 The same key transcribes voice notes (up to 25 MB each, with a language choice or automatic detection). Voice
@@ -371,7 +371,7 @@ recordings are not stored either, and any successful transcription, meeting or v
 - Admins with `integrations:manage` add an https endpoint and choose events. The signing secret is shown
   once and stored encrypted.
 - Body: `{ id, type, createdAt, data: { entityType, entityId, actorUserId, changes } }`. Headers:
-  `X-DealFlow-Event`, `X-DealFlow-Delivery`, and `X-DealFlow-Signature: t=<unix>,v1=<hex>` where
+  `X-SampForce-Event`, `X-SampForce-Delivery`, and `X-SampForce-Signature: t=<unix>,v1=<hex>` where
   `v1 = HMAC-SHA256(secret, "<t>.<raw body>")`. Reject timestamps older than a few minutes.
 - At-least-once delivery. A non-2xx answer or timeout (10 s) retries after 1 min, 5 min, 30 min, 2 h and
   6 h (`WEBHOOK_MAX_ATTEMPTS`, default 6 attempts), then the delivery is marked failed and can be

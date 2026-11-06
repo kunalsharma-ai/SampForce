@@ -4,7 +4,7 @@ import { z } from 'zod';
 //
 // A small first-party script records page views on the customer's own website, only after the visitor consents
 // (or, where the admin confirms the law allows it, until they decline). Visitors stay anonymous until they send an
-// enquiry or submit a DealFlow form. There is no IP lookup, fingerprinting or third-party identity data.
+// enquiry or submit a SampForce form. There is no IP lookup, fingerprinting or third-party identity data.
 
 /** opt_in: nothing is recorded until the site calls dealflow('consent', true). notice: recorded unless declined. */
 export const CONSENT_MODES = ['opt_in', 'notice'] as const;

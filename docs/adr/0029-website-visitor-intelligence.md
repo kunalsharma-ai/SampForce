@@ -40,7 +40,7 @@ data protection laws" and "Provide configurable retention and tracking controls"
    prediction of who will buy. When a known visitor first crosses the workspace threshold, the lead or contact owner
    gets an in-app notification and the `visitor.high_intent` event can start a workflow in the existing automation
    engine.
-6. **Attribution** uses the first touch's UTM parameters; a `utm_campaign` matching a DealFlow campaign name is linked
+6. **Attribution** uses the first touch's UTM parameters; a `utm_campaign` matching a SampForce campaign name is linked
    to that campaign, and the dashboard shows visits, visitors and leads per campaign.
 
 ## Consequences

@@ -5,7 +5,7 @@
 **Context.** Phase 7 adds a report builder with dashboards, and four visual explorers: the Relationship Galaxy,
 the Revenue Globe, pipeline flow and pipeline replay. The builder lets people describe a query, which is the
 classic route to SQL injection and to reading another role's data. The explorers need history (when a deal entered
-each stage) that DealFlow had only kept as audit-log text, and 3D graphics that must not make the product slower,
+each stage) that SampForce had only kept as audit-log text, and 3D graphics that must not make the product slower,
 less accessible or unusable on weak devices.
 
 **Decision.**
@@ -38,7 +38,7 @@ less accessible or unusable on weak devices.
   Rendering is on demand (no GPU work while idle) except during auto-rotation; the pixel ratio is capped at 2 and
   steps down to 1 when frames run slow. The force layout runs once in a Web Worker. The 3D code is about 250 KB
   gzipped and is fetched only by the Galaxy and Globe pages.
-- **Motion.** Reduced motion (the OS setting or DealFlow's own) stops auto-rotation, damping and animated flow
+- **Motion.** Reduced motion (the OS setting or SampForce's own) stops auto-rotation, damping and animated flow
   lines; replay still plays on request but moves dots without tweening. Motion "off" disables all animation.
 
 **Consequences.**

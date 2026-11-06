@@ -7,7 +7,7 @@
 ## Context
 
 Feature 9 asks for proposal templates, AI-assisted content, branding, an online proposal, sending by email and
-knowing when it was opened. DealFlow already has quotes with price books, discount approval, versions, a PDF and
+knowing when it was opened. SampForce already has quotes with price books, discount approval, versions, a PDF and
 contracts from accepted quotes. A separate proposal object would duplicate prices and approvals and let the two
 drift apart.
 

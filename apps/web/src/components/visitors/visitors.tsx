@@ -59,7 +59,7 @@ export function VisitorsWorkspace() {
         {current === 'settings' && <SettingsPanel key={settings.data.updatedAt ?? 'new'} s={settings.data} canManage={canManage} justSaved={justSaved} onSaved={() => (setTab('settings'), setJustSaved(true))} />}
       </div>
       <p className="text-xs text-muted-foreground">
-        {t('Visitors stay anonymous until they send an enquiry. DealFlow does not look up IP addresses, fingerprint browsers or buy identity data, so most visitors will never have a name.')}
+        {t('Visitors stay anonymous until they send an enquiry. SampForce does not look up IP addresses, fingerprint browsers or buy identity data, so most visitors will never have a name.')}
       </p>
     </div>
   );
@@ -156,7 +156,7 @@ function Dashboard() {
                   rows={d.campaigns.map((c) => [c.campaign ? c.campaign.name : t('{value} (no matching campaign)', { value: c.utmCampaign ?? '' }), c.visits, c.visitors, c.leads])}
                   empty={t('No visits with a utm_campaign yet.')}
                 />
-                <p className="text-xs text-muted-foreground">{t("Source is utm_source, otherwise the referring site. A utm_campaign is matched to a DealFlow campaign by its UTM campaign value; leads from enquiries take the visitor's first campaign.")}</p>
+                <p className="text-xs text-muted-foreground">{t("Source is utm_source, otherwise the referring site. A utm_campaign is matched to a SampForce campaign by its UTM campaign value; leads from enquiries take the visitor's first campaign.")}</p>
               </CardContent>
             </Card>
           </div>
@@ -504,7 +504,7 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
           <pre tabIndex={0} className="overflow-x-auto rounded-md bg-muted p-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t('Install snippet')}><code>{installSnippet(origin, s.siteKey, form.consentMode)}</code></pre>
           <details>
             <summary className="cursor-pointer">{t('Enquiry form example')}</summary>
-            <p className="mt-2 text-muted-foreground">{t('Any form with data-dealflow-enquiry is sent to DealFlow as an enquiry. Field names: fullName, email, companyName, phone, message and consent.')}</p>
+            <p className="mt-2 text-muted-foreground">{t('Any form with data-dealflow-enquiry is sent to SampForce as an enquiry. Field names: fullName, email, companyName, phone, message and consent.')}</p>
             <pre tabIndex={0} aria-label={t('Enquiry form example code')} className="mt-2 overflow-x-auto rounded-md bg-muted p-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><code>{ENQUIRY_FORM_EXAMPLE}</code></pre>
           </details>
           {canManage && (

@@ -31,7 +31,7 @@ export class Redactor {
     return out;
   }
 
-  /** Card-like numbers are never restored: nothing in DealFlow should echo them back. */
+  /** Card-like numbers are never restored: nothing in SampForce should echo them back. */
   restore(text: string): string {
     return text.replace(/\[(EMAIL|PHONE|CARD)_\d+\]/g, (ph) => (ph.startsWith('[CARD_') ? '[number removed]' : (this.toValue.get(ph) ?? ph)));
   }

@@ -58,7 +58,7 @@ export class HunterClient {
   }
 
   /**
-   * Email Verifier. Hunter's status is mapped onto DealFlow's email statuses: valid, invalid, accept_all → catch_all,
+   * Email Verifier. Hunter's status is mapped onto SampForce's email statuses: valid, invalid, accept_all → catch_all,
    * disposable and webmail → risky, anything else → unknown.
    */
   async verify(email: string): Promise<'valid' | 'invalid' | 'catch_all' | 'risky' | 'unknown'> {

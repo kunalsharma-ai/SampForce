@@ -13,9 +13,9 @@ import {
 } from './appearance';
 
 describe('theme catalogue', () => {
-  it('has the 12 themes from the design spec plus the DealFlow signature theme', () => {
+  it('has the 12 themes from the design spec plus the SampForce signature theme', () => {
     expect(THEMES.map((t) => t.name)).toEqual([
-      'DealFlow Signature',
+      'SampForce Signature',
       'Obsidian Intelligence',
       'Midnight Sapphire',
       'Aurora Enterprise',

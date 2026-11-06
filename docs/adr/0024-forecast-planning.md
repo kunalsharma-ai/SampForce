@@ -8,7 +8,7 @@
 
 Feature 10 asks for revenue forecasts from pipeline and history, closure probability estimates, monthly, quarterly
 and yearly views, targets against actuals, individual and team forecasts, revenue gaps and pipeline risks, win/loss
-trends, best, expected and worst cases, accuracy tracking, manager-adjustable assumptions and dashboards. DealFlow
+trends, best, expected and worst cases, accuracy tracking, manager-adjustable assumptions and dashboards. SampForce
 already had a weighted quarter forecast with worst, base and best scenarios, per-owner totals, immutable snapshots
 that recompute exactly, an AI explanation of snapshot changes, quarterly targets, and revenue analytics.
 

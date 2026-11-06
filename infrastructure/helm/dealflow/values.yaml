@@ -1,4 +1,4 @@
-# DealFlow Helm values. Secrets are never set here: create a Secret (or use an external secrets operator)
+# SampForce Helm values. Secrets are never set here: create a Secret (or use an external secrets operator)
 # and name it in `secrets.existingSecret`. See docs/DEPLOYMENT.md.
 
 image:
@@ -32,7 +32,7 @@ config:
   ONLINE_PAYMENTS_ENABLED: "false"
   # Fallback bank details for offline invoices. Normally entered in the operator console under Settings instead.
   OFFLINE_PAYMENT_INSTRUCTIONS: ""
-  # Sender for account email such as password reset links; needs SMTP_URL in the Secret. Example: "DealFlow <no-reply@your-domain>".
+  # Sender for account email such as password reset links; needs SMTP_URL in the Secret. Example: "SampForce <no-reply@your-domain>".
   MAIL_FROM: ""
 
 api:

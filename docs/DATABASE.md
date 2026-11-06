@@ -1,4 +1,4 @@
-# DealFlow Database Design
+# SampForce Database Design
 
 PostgreSQL 16. Prisma schema: [`packages/database/prisma/schema.prisma`](../packages/database/prisma/schema.prisma).
 Migrations: [`packages/database/prisma/migrations`](../packages/database/prisma/migrations).

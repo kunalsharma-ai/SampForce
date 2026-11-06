@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Takes a database backup (pg_dump custom format + SHA-256 checksum + manifest) into BACKUP_DIR and deletes
-# backups older than BACKUP_KEEP_DAYS. Safe while DealFlow is running.
+# backups older than BACKUP_KEEP_DAYS. Safe while SampForce is running.
 #
 #   scripts/backup.sh
 #

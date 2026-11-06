@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
  * Mock Mode: what the prospect search returns while no APOLLO_API_KEY is set. Every company is on the reserved
  * ".example" top-level domain (RFC 2606), so no sample address can ever reach a real mailbox, and every person is
  * flagged sample. Results are deterministic for the same search, so screens and tests are repeatable. These are not
- * real people and DealFlow never presents them as such.
+ * real people and SampForce never presents them as such.
  */
 const FIRST = ['Avery', 'Jordan', 'Riley', 'Morgan', 'Casey', 'Quinn', 'Rowan', 'Harper', 'Emerson', 'Sasha', 'Kai', 'Noor', 'Arun', 'Mei', 'Tomas', 'Lena'];
 const LAST = ['Sample', 'Example', 'Demo', 'Placeholder', 'Testwood', 'Mockford', 'Trialson', 'Previewer'];

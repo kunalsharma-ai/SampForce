@@ -1,4 +1,4 @@
-# Caddy reverse proxy for DealFlow. DOMAIN and ACME_EMAIL come from deploy/.env.
+# Caddy reverse proxy for SampForce. DOMAIN and ACME_EMAIL come from deploy/.env.
 # Caddy gets a Let's Encrypt certificate for DOMAIN on first start (ports 80 and 443 must be open and DNS must
 # point at this server) and renews it on its own. Plain HTTP is redirected to HTTPS.
 {

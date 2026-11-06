@@ -18,7 +18,7 @@ helm upgrade dealflow infrastructure/helm/dealflow -n dealflow --reuse-values --
 The migration Job runs first. If it fails, Helm stops and the old pods keep serving. Check
 `kubectl -n dealflow logs job/dealflow-migrate`.
 
-Watch for 15 minutes: `DealFlowApiErrorRate`, p95 latency, worker last tick, sign-in failures. Sign in, open a
+Watch for 15 minutes: `SampForceApiErrorRate`, p95 latency, worker last tick, sign-in failures. Sign in, open a
 deal, run a report.
 
 ## Roll back

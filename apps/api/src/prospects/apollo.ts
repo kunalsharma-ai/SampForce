@@ -22,7 +22,7 @@ type ApolloPerson = {
   organization?: ApolloOrg | null;
 };
 
-/** Apollo's email_status onto DealFlow's: only "verified" counts as verified. */
+/** Apollo's email_status onto SampForce's: only "verified" counts as verified. */
 export function apolloEmailStatus(s: string | null | undefined): EmailStatus | null {
   if (!s) return null;
   if (s === 'verified') return 'valid';

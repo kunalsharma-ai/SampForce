@@ -128,7 +128,7 @@ commercial panels on records. New tables: `quotes` and `contracts`; new plural k
   checks go through `t.maybe` and are checked by the data-label test, read from the source where they are defined.
 - **The upload zone's file checks** take the translator as an argument, with an English default, so the shared
   `fileProblem` check stays usable in tests and outside React.
-- **Names stay as they are**: plan names ("DealFlow Professional"), Stripe and Razorpay, and money in the format
+- **Names stay as they are**: plan names ("SampForce Professional"), Stripe and Razorpay, and money in the format
   locale.
 
 Still English here: the section text a bid template starts with and the example lines in the gallery preview (it is
@@ -204,7 +204,7 @@ New tables: `growth` and `engagement`; 30 new plural keys, among them `count.pro
 Still English here: error messages and details returned by the API (including import row errors and provider notices
 with dates), the AI provider's own notes, intent signal labels and other visitor labels computed by the API, Email
 Finder notes that name a domain, competition and award period keys, and browser tab titles. Public pages that visitors
-and customers see without a DealFlow account (hosted forms, the portal sign-in, unsubscribe and the website) are a
+and customers see without a SampForce account (hosted forms, the portal sign-in, unsubscribe and the website) are a
 separate batch, because they need the visitor's language rather than a saved setting.
 
 ## Scope of batch 9: public pages
@@ -213,7 +213,7 @@ Translated: the website (landing page, pricing and its questions, header and foo
 unsubscribe page, the proposal link (including card payment), the client portal sign-in, invitation and reset pages and
 the whole portal. New table: `publicPages`; plurals `count.openRequests` and `count.upToUsers`.
 
-- **The visitor's language.** People on these pages have no DealFlow account to read a setting from. A device that has
+- **The visitor's language.** People on these pages have no SampForce account to read a setting from. A device that has
   never stored a language now starts in the first supported language from the browser's list (`navigator.languages`,
   matched on the primary subtag, so `de-AT` is German), both in the regional store and in the first-paint script, so
   an Arabic browser never flashes left to right. Signing in still applies the account's own setting, and a language

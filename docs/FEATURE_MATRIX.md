@@ -1,4 +1,4 @@
-# DealFlow Competitive Feature Matrix
+# SampForce Competitive Feature Matrix
 
 **Status:** v1, 2026-10-30. **Evidence:** every competitor price and named capability below comes from
 [research/competitor-research-2026-10-30.md](research/competitor-research-2026-10-30.md), which records the
@@ -35,11 +35,11 @@ change often; re-verify before using them in marketing.
 
 **What this tells us for positioning (no claims about competitor gaps):**
 
-1. AI is now commonly metered (credits, sessions or per-user add-ons). DealFlow should publish its allowance
+1. AI is now commonly metered (credits, sessions or per-user add-ons). SampForce should publish its allowance
    and overage price on the pricing page, in the same units it meters.
 2. Several vendors state onboarding or implementation charges, minimum seat counts or required add-ons.
-   DealFlow's self-service plans state none (see [PRICING_STRATEGY.md](PRICING_STRATEGY.md)).
-3. DealFlow's proposed entry price ($8 monthly / $6 annual) sits below most published entry paid plans.
+   SampForce's self-service plans state none (see [PRICING_STRATEGY.md](PRICING_STRATEGY.md)).
+3. SampForce's proposed entry price ($8 monthly / $6 annual) sits below most published entry paid plans.
    Freshsales Growth ($9 annual) and Close Solo ($9 annual) are close, so price alone is not the differentiator.
 
 ## 2. Capability categories
@@ -52,7 +52,7 @@ These appear on most vendor pricing pages in the research set. Each vendor's "Na
 section in the research file records exactly what its page names; this table does not attribute capabilities
 to individual vendors beyond that file.
 
-| Capability | DealFlow phase |
+| Capability | SampForce phase |
 |---|---|
 | Contact, company, lead and deal management | 2 |
 | Multiple pipelines, Kanban, custom stages | 2 |
@@ -68,7 +68,7 @@ to individual vendors beyond that file.
 
 ### Category B: should improve (same capability, simpler or clearer)
 
-| Area | DealFlow approach |
+| Area | SampForce approach |
 |---|---|
 | Plan complexity and add-on sprawl | One rate card, AI and automation allowances printed per plan, no mandatory onboarding fee on self-service plans |
 | Dashboard trust | Every KPI shows its formula in a tooltip; "no data" renders as a dash with the reason, never as a fake zero (**done in Phase 1**) |
@@ -110,7 +110,7 @@ to individual vendors beyond that file.
 | Call / meeting recording and transcription | Speech-to-text provider | Recording-consent laws vary by jurisdiction |
 | AI providers (Anthropic, OpenAI, Google) | API keys, DPAs, data-retention settings | Subprocessor disclosure, DPA review |
 | E-signature (DocuSign etc.) | Developer account and production review | eIDAS / ESIGN applicability |
-| Payments (Stripe, Razorpay, PayPal) | Merchant accounts, webhooks | PCI scope (DealFlow never stores card data), RBI rules for India |
+| Payments (Stripe, Razorpay, PayPal) | Merchant accounts, webhooks | PCI scope (SampForce never stores card data), RBI rules for India |
 | Data enrichment / sales research agent | Licensed data sources only | Website terms, GDPR/DPDP lawful basis |
 | Email sending at scale | Dedicated sending domain, SPF/DKIM/DMARC, provider account | CAN-SPAM, GDPR, CASL |
 

@@ -1,4 +1,4 @@
-# DealFlow Test Strategy
+# SampForce Test Strategy
 
 **Rule:** a feature is not "complete" until its acceptance tests pass in CI.
 

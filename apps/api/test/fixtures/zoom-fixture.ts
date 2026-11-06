@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /**
- * Stand-in for Zoom OAuth (General app), the REST API v2 calls DealFlow makes and a transcript download, following
+ * Stand-in for Zoom OAuth (General app), the REST API v2 calls SampForce makes and a transcript download, following
  * Zoom's published docs. Nothing here is real and it has not been compared with live Zoom responses.
  */
 export const ZOOM_APP = { id: 'zoom-client-id', secret: 'zoom-client-secret', webhookSecret: 'zoom-webhook-secret' };
@@ -121,7 +121,7 @@ export async function startZoomFixture(port = 0): Promise<ZoomFixture> {
   return { url, calls, meetings, expired, deadRefresh, notUsers, liveRefreshTokens: () => [...refresh], expireAll: () => access.forEach((t) => expired.add(t)), close: () => new Promise((r) => server.close(() => r())) };
 }
 
-/** Signs a Zoom event the way Zoom does, for tests that post events to DealFlow. */
+/** Signs a Zoom event the way Zoom does, for tests that post events to SampForce. */
 export function signZoomEvent(body: object, secret = ZOOM_APP.webhookSecret, ts = Math.floor(Date.now() / 1000)): { raw: string; headers: Record<string, string> } {
   const raw = JSON.stringify(body);
   return { raw, headers: { 'content-type': 'application/json', 'x-zm-request-timestamp': String(ts), 'x-zm-signature': `v0=${createHmac('sha256', secret).update(`v0:${ts}:${raw}`).digest('hex')}` } };

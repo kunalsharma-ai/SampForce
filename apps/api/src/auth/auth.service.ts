@@ -121,17 +121,17 @@ export class AuthService {
     await inLanguage(await this.languageOf(user.id), () =>
       this.mailer.send({
         to: user.email,
-        subject: tr('Reset your DealFlow password'),
+        subject: tr('Reset your SampForce password'),
         text: [
           tr('Hi {name},', { name: user.name }),
           '',
-          tr('Someone asked to reset the password for your DealFlow account. To choose a new password, open this link:'),
+          tr('Someone asked to reset the password for your SampForce account. To choose a new password, open this link:'),
           '',
           link,
           '',
           tr('The link works once and expires in {n} minutes. If you did not ask for this, ignore this email: your password has not changed.', { n: minutes }),
           '',
-          'DealFlow',
+          'SampForce',
         ].join('\n'),
       }),
     );
@@ -163,15 +163,15 @@ export class AuthService {
     await inLanguage(await this.languageOf(row.userId), () =>
       this.mailer.send({
         to: row.user.email,
-        subject: tr('Your DealFlow password was changed'),
+        subject: tr('Your SampForce password was changed'),
         text: [
           tr('Hi {name},', { name: row.user.name }),
           '',
-          tr('The password for your DealFlow account was just changed with a reset link, and every device was signed out.'),
+          tr('The password for your SampForce account was just changed with a reset link, and every device was signed out.'),
           '',
           tr('If this was not you, contact your workspace administrator straight away.'),
           '',
-          'DealFlow',
+          'SampForce',
         ].join('\n'),
       }),
     ).catch(() => undefined);

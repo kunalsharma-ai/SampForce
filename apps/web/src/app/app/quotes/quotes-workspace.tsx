@@ -515,7 +515,7 @@ function TaxRates({ canManage }: { canManage: boolean }) {
           </ul>
         )}
         <p className="text-xs text-muted-foreground">
-          {t('You set the rates; DealFlow does not look up or validate tax rules for any country.')}
+          {t('You set the rates; SampForce does not look up or validate tax rules for any country.')}
         </p>
         {canManage && (
           <form

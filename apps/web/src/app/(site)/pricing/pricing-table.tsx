@@ -30,7 +30,7 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
           const sales = !p.selfServe && p.code !== 'free';
           return (
             <li key={p.code} className="flex flex-col rounded-xl border border-border bg-surface/60 p-5">
-              <h2 className="font-medium">{p.name.replace('DealFlow ', '')}</h2>
+              <h2 className="font-medium">{p.name.replace('SampForce ', '')}</h2>
               <p className="text-xs text-muted-foreground">{t.maybe(p.audience)}</p>
               <p className="mt-4 text-3xl font-semibold tabular">
                 {price === null ? t('Custom') : `$${price}`}
@@ -55,7 +55,7 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
               <div className="mt-5">
                 {sales ? (
                   pricing.salesContact ? (
-                    <a href={`mailto:${pricing.salesContact}?subject=${encodeURIComponent('DealFlow Enterprise Plus')}`} className="block rounded-md border border-border px-3 py-2 text-center text-sm font-medium hover:bg-muted">
+                    <a href={`mailto:${pricing.salesContact}?subject=${encodeURIComponent('SampForce Enterprise Plus')}`} className="block rounded-md border border-border px-3 py-2 text-center text-sm font-medium hover:bg-muted">
                       {t('Contact sales')}
                     </a>
                   ) : (

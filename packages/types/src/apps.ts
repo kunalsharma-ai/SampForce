@@ -5,7 +5,7 @@ export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments', 'what
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**
- * - pending_configuration: this DealFlow installation has no app credentials for it yet (an operator adds them).
+ * - pending_configuration: this SampForce installation has no app credentials for it yet (an operator adds them).
  * - not_connected: ready; a workspace admin has not connected an account.
  * - connected: connected, and the last call to the provider succeeded.
  * - error: connected, but the provider refused the last call (for example the app was removed); reconnect.
@@ -64,7 +64,7 @@ export { slackChannelId };
 
 // ───── Microsoft Teams (Workflows webhooks, one URL per channel) ─────
 
-/** DealFlow's own id for a Teams channel added in Integrations. */
+/** SampForce's own id for a Teams channel added in Integrations. */
 const teamsChannelId = z.string().regex(/^tc_[a-f0-9]{12}$/, 'Choose a Teams channel');
 export { teamsChannelId };
 
@@ -94,7 +94,7 @@ export const teamsTestSchema = z.object({ channelId: teamsChannelId.optional() }
 /** Channel ids a "Post to chat" step may name: a Slack channel id, or a Teams channel added in Integrations. */
 export const chatChannelId = z.string().regex(/^([CG][A-Z0-9]{2,20}|tc_[a-f0-9]{12})$/);
 
-// ───── Zoom (meetings scheduled from DealFlow, and their transcripts) ─────
+// ───── Zoom (meetings scheduled from SampForce, and their transcripts) ─────
 
 export type ZoomTranscriptStatus = 'none' | 'waiting' | 'ready' | 'imported' | 'failed';
 

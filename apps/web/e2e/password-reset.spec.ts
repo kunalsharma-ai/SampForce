@@ -28,7 +28,7 @@ test('forgot password: email a link, choose a new password, sign in with it', as
   await expect
     .poll(async () => {
       const mail = (await (await request.get(MAILBOX)).json()) as { to: string[]; subject: string; text: string }[];
-      const m = mail.findLast((x) => x.to.includes(email) && x.subject === 'Reset your DealFlow password');
+      const m = mail.findLast((x) => x.to.includes(email) && x.subject === 'Reset your SampForce password');
       link = /(http\S+reset-password#token=[\w-]+)/.exec(m?.text ?? '')?.[1] ?? '';
       return link;
     })

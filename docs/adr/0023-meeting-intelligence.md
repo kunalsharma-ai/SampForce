@@ -8,7 +8,7 @@
 
 Feature 7 asks for Google Meet, Zoom and Teams meetings, recording and transcript processing, speaker
 identification, summaries, key points, requirements, objections, decisions, action items, commitments, automatic
-tasks, follow-up emails and CRM updates. DealFlow already synced calendar events with known contacts and had a
+tasks, follow-up emails and CRM updates. SampForce already synced calendar events with known contacts and had a
 one-shot "summarise meeting notes" dialog. This replaces that dialog with a meeting record that a person reviews.
 
 ## Decisions
@@ -17,7 +17,7 @@ one-shot "summarise meeting notes" dialog. This replaces that dialog with a meet
    reading and its review state. It can belong to a synced calendar meeting (one record per meeting) or stand
    alone for a call that was not in a calendar. It links to a deal, contact or lead.
 2. **Meeting platforms come from the calendar.** Google events give `hangoutLink` or `conferenceData`, Graph events
-   give `onlineMeeting.joinUrl`, and either may put a Zoom link in the location. DealFlow stores the link, labels it
+   give `onlineMeeting.joinUrl`, and either may put a Zoom link in the location. SampForce stores the link, labels it
    Google Meet, Zoom or Teams, and shows a Join link. There is no Zoom, Meet or Teams API integration and no bot
    that joins calls. Recordings come from the person, who downloads them from their meeting tool.
 3. **Recordings are transcribed by Deepgram, streamed and not stored.** The upload is streamed straight to

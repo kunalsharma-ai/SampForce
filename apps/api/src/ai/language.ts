@@ -9,7 +9,7 @@ export function languageInstruction(language: LanguageCode): string | null {
   if (language === 'en') return null;
   const name = LANGUAGES.find((l) => l.code === language)!.english;
   return [
-    `Language: the person using DealFlow works in ${name}.`,
+    `Language: the person using SampForce works in ${name}.`,
     `Write everything meant for them to read (answers, summaries, reasons, explanations, suggested tasks) in ${name}.`,
     `Write new drafts in ${name} too, unless the request or the text being worked on is clearly in another language; then keep that language.`,
     'Keep names, company names, numbers, dates, merge fields such as {{first_name}}, JSON keys and listed option values exactly as given.',

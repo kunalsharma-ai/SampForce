@@ -1,10 +1,10 @@
 'use strict';
 
-/** The DealFlow address the person entered, without a trailing slash. */
+/** The SampForce address the person entered, without a trailing slash. */
 const base = (bundle) => String(bundle.authData.baseUrl || '').replace(/\/+$/, '');
 const api = (bundle, path) => `${base(bundle)}/api/v1${path}`;
 
-/** Sends the API key on every request. DealFlow keys start with dfk_. */
+/** Sends the API key on every request. SampForce keys start with dfk_. */
 function addApiKey(request, z, bundle) {
   if (bundle.authData && bundle.authData.apiKey) {
     request.headers = Object.assign({}, request.headers, { Authorization: `Bearer ${bundle.authData.apiKey}` });
@@ -12,17 +12,17 @@ function addApiKey(request, z, bundle) {
   return request;
 }
 
-/** DealFlow answers errors as { error: { code, message } }; show that message in Zapier. */
+/** SampForce answers errors as { error: { code, message } }; show that message in Zapier. */
 function checkError(response, z) {
   if (response.status >= 400) {
-    let message = `DealFlow answered HTTP ${response.status}.`;
+    let message = `SampForce answered HTTP ${response.status}.`;
     try {
       const body = typeof response.data === 'object' && response.data ? response.data : JSON.parse(response.content);
       if (body && body.error && body.error.message) message = body.error.message;
     } catch (e) {
       // keep the generic message
     }
-    throw new z.errors.Error(message, response.status === 401 ? 'AuthenticationError' : 'DealFlowError', response.status);
+    throw new z.errors.Error(message, response.status === 401 ? 'AuthenticationError' : 'SampForceError', response.status);
   }
   return response;
 }

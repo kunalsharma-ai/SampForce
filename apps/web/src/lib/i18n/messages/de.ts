@@ -25,7 +25,7 @@ export const de: Messages = {
   'nav.collapseSidebar': 'Seitenleiste einklappen',
   'nav.expandSidebar': 'Seitenleiste ausklappen',
   'nav.toggleSidebar': 'Seitenleiste ein- oder ausblenden ( [ )',
-  'nav.home': 'DealFlow-Kommandozentrale',
+  'nav.home': 'SampForce-Kommandozentrale',
   'nav.group.Workspace': 'Arbeitsbereich',
   'nav.group.Engage': 'Kundenkontakt',
   'nav.group.Intelligence': 'Analyse',
@@ -67,7 +67,7 @@ export const de: Messages = {
 
   'top.openNav': 'Navigation öffnen',
   'top.search': 'Suchen',
-  'top.searchProduct': 'in DealFlow',
+  'top.searchProduct': 'in SampForce',
   'top.copilot': 'Copilot',
   'top.create': 'Erstellen',
   'top.quickCreate': 'Schnell erstellen',

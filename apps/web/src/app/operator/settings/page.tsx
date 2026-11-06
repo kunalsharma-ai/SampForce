@@ -14,7 +14,7 @@ import { fmtLocale } from '@/lib/i18n/locale';
 const SOURCE: Record<OperatorSettings['paymentInstructionsSource'], string> = {
   console: 'Set here',
   config: 'From the OFFLINE_PAYMENT_INSTRUCTIONS deployment setting. Saving here replaces it.',
-  none: 'Not set. Open invoices say the DealFlow team will send payment details.',
+  none: 'Not set. Open invoices say the SampForce team will send payment details.',
 };
 
 export default function OperatorSettingsPage() {
@@ -66,7 +66,7 @@ export default function OperatorSettingsPage() {
           )}
           <div>
             <p className="text-sm font-medium">What open invoices show now</p>
-            <p className="mt-1 whitespace-pre-line rounded-md border border-border bg-muted/30 p-3 text-sm">{s.paymentInstructions ?? 'The DealFlow team will send payment details for this invoice.'}</p>
+            <p className="mt-1 whitespace-pre-line rounded-md border border-border bg-muted/30 p-3 text-sm">{s.paymentInstructions ?? 'The SampForce team will send payment details for this invoice.'}</p>
           </div>
         </CardContent>
       </Card>

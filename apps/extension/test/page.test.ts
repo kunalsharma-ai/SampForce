@@ -13,10 +13,10 @@ type Page = {
 };
 
 // The page reader is a plain script injected into tabs; load it the same way, without a document.
-const ctx: { DealFlowPage?: Page } = {};
+const ctx: { SampForcePage?: Page } = {};
 createContext(ctx);
 const ret = runInContext(readFileSync(join(import.meta.dirname, '../src/lib/page.js'), 'utf8'), ctx);
-const P = ctx.DealFlowPage!;
+const P = ctx.SampForcePage!;
 
 describe('page reader', () => {
   it('returns nothing when there is no page to read', () => {

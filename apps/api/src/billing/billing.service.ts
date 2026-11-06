@@ -60,7 +60,7 @@ const providerFailed = (err: unknown) =>
 
 /**
  * Subscriptions, checkout, seats and invoices. Two ways to pay: online, where buyers pay on the provider's
- * hosted page and the provider's signed webhooks are the source of truth (DealFlow never sees card details);
+ * hosted page and the provider's signed webhooks are the source of truth (SampForce never sees card details);
  * and offline, where the workspace requests an invoice, pays it by bank transfer, and a platform operator
  * records the payment, which starts or renews the plan.
  */
@@ -168,7 +168,7 @@ export class BillingService {
       throw new ConflictException({ code: 'ALREADY_SUBSCRIBED', message: 'This workspace already has a paid subscription. Change its plan or seats instead.' });
     }
     if (sub.provider === 'NONE' && sub.planCode !== 'free' && sub.status === 'ACTIVE') {
-      throw new ConflictException({ code: 'MANAGED_PLAN', message: 'This workspace’s plan is managed by the DealFlow team. Contact them to change it.' });
+      throw new ConflictException({ code: 'MANAGED_PLAN', message: 'This workspace’s plan is managed by the SampForce team. Contact them to change it.' });
     }
     if (input.seats < members) throw new BadRequestException({ code: 'TOO_FEW_SEATS', message: `The workspace has ${members} active members; buy at least that many seats.` });
 
@@ -454,7 +454,7 @@ export class BillingService {
       }
       if (ev.paymentFailed) {
         await this.notifyBilling(tx, tenantId, {
-          type: 'billing.payment_failed', title: 'A payment for DealFlow failed',
+          type: 'billing.payment_failed', title: 'A payment for SampForce failed',
           body: `Paid features stay on for ${this.env.BILLING_GRACE_DAYS} days while you update the payment method.`, link: '/app/billing',
         });
       }
@@ -462,7 +462,7 @@ export class BillingService {
     });
   }
 
-  /** Finds the workspace: a provider reference already on file wins; otherwise the metadata DealFlow set at checkout. */
+  /** Finds the workspace: a provider reference already on file wins; otherwise the metadata SampForce set at checkout. */
   private async resolveTenant(ev: ParsedEvent): Promise<string | null> {
     for (const ref of ev.refs) {
       const rows = await this.prisma.$transaction((tx) => tx.$queryRaw<{ t: string | null }[]>`SELECT app_billing_tenant(${ref})::text AS t`);
@@ -486,7 +486,7 @@ export class BillingService {
         data: { planCode: 'free', status: 'ACTIVE', seats: 1, billingInterval: 'MONTH', providerSubscriptionId: null, cancelAtPeriodEnd: false, pastDueSince: null, currentPeriodEnd: null, trialEndsAt: null },
       });
       await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_ended', entityType: 'subscription', entityId: current.id, metadata: { provider, planCode: current.planCode, eventType } });
-      await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid DealFlow plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
+      await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid SampForce plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
       return;
     }
     if (!remote.planCode) this.log.warn({ provider, subscriptionId: remote.id }, 'subscription price is not in the configured price map; keeping the current plan');
@@ -502,7 +502,7 @@ export class BillingService {
       currentPeriodStart: remote.currentPeriodStart ?? current.currentPeriodStart,
       currentPeriodEnd: remote.currentPeriodEnd,
       trialEndsAt: remote.trialEndsAt,
-      // Razorpay does not report a scheduled cancellation on the subscription, so DealFlow keeps its own flag there.
+      // Razorpay does not report a scheduled cancellation on the subscription, so SampForce keeps its own flag there.
       cancelAtPeriodEnd: provider === 'STRIPE' ? remote.cancelAtPeriodEnd : current.cancelAtPeriodEnd,
       pastDueSince: remote.status === 'PAST_DUE' || remote.status === 'UNPAID' ? (current.pastDueSince ?? new Date()) : null,
     };
@@ -548,7 +548,7 @@ export class BillingService {
           });
           if (ended.count) {
             await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.trial_ended', entityType: 'subscription' });
-            await this.notifyBilling(tx, tenantId, { type: 'billing.trial_ended', title: 'Your DealFlow trial has ended', body: 'The workspace is back on the Free plan. All data is kept; choose a plan to continue with paid features.', link: '/app/billing' });
+            await this.notifyBilling(tx, tenantId, { type: 'billing.trial_ended', title: 'Your SampForce trial has ended', body: 'The workspace is back on the Free plan. All data is kept; choose a plan to continue with paid features.', link: '/app/billing' });
             return 1;
           }
           const sub = await tx.subscription.findUnique({ where: { tenantId } });
@@ -556,13 +556,13 @@ export class BillingService {
             if (sub.cancelAtPeriodEnd) {
               await tx.subscription.update({ where: { tenantId }, data: { planCode: 'free', status: 'ACTIVE', seats: 1, billingInterval: 'MONTH', provider: 'NONE', cancelAtPeriodEnd: false, currentPeriodEnd: null } });
               await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.subscription_ended', entityType: 'subscription', entityId: sub.id, metadata: { provider: 'OFFLINE', planCode: sub.planCode } });
-              await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid DealFlow plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
+              await this.notifyBilling(tx, tenantId, { type: 'billing.subscription_ended', title: 'Your paid SampForce plan has ended', body: 'The workspace is on the Free plan now. All data is kept.', link: '/app/billing' });
             } else {
               // The grace period counts from the end of the paid period.
               await tx.subscription.update({ where: { tenantId }, data: { status: 'PAST_DUE', pastDueSince: sub.currentPeriodEnd } });
               await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'SYSTEM', action: 'billing.period_ended_unpaid', entityType: 'subscription', entityId: sub.id });
               await this.notifyBilling(tx, tenantId, {
-                type: 'billing.renewal_due', title: 'Your DealFlow plan is due for renewal',
+                type: 'billing.renewal_due', title: 'Your SampForce plan is due for renewal',
                 body: `The paid period has ended. Paid features stay on for ${this.env.BILLING_GRACE_DAYS} days from its end; request and pay the renewal invoice under Billing before then.`, link: '/app/billing',
               });
             }

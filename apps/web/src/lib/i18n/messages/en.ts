@@ -30,7 +30,7 @@ export const en = {
   'nav.collapseSidebar': 'Collapse sidebar',
   'nav.expandSidebar': 'Expand sidebar',
   'nav.toggleSidebar': 'Toggle sidebar ( [ )',
-  'nav.home': 'DealFlow Command Center',
+  'nav.home': 'SampForce Command Center',
   'nav.group.Workspace': 'Workspace',
   'nav.group.Engage': 'Engage',
   'nav.group.Intelligence': 'Intelligence',
@@ -74,7 +74,7 @@ export const en = {
   // Top bar
   'top.openNav': 'Open navigation',
   'top.search': 'Search',
-  'top.searchProduct': 'DealFlow',
+  'top.searchProduct': 'SampForce',
   'top.copilot': 'Copilot',
   'top.create': 'Create',
   'top.quickCreate': 'Quick create',
