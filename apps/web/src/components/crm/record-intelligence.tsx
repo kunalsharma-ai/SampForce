@@ -13,6 +13,7 @@ import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 const TREND = { none: 'No engagement recorded', rising: 'Rising', steady: 'Steady', declining: 'Falling' } as const;
 const TREND_TONE = { none: 'neutral', rising: 'success', steady: 'neutral', declining: 'critical' } as const;
@@ -21,7 +22,7 @@ const TREND_TONE = { none: 'neutral', rising: 'success', steady: 'neutral', decl
  * Sales intelligence for one record: engagement, buying signals, decision-makers, account value, and the record's
  * next best actions. "Summarise with Copilot" asks Copilot, which reads the same data and cites the record.
  */
-export function RecordIntelligencePanel({ entity, id, name }: { entity: TimelineEntity; id: string; name: string }) {
+function RecordIntelligencePanelPanel({ entity, id, name }: { entity: TimelineEntity; id: string; name: string }) {
   const canAi = useCan('ai:use');
   const t = useT();
   const ask = useCopilot((s) => s.ask);
@@ -222,3 +223,6 @@ function RecordAction({ item, focus, canTask, onDone, onDismiss }: { item: NextA
     </li>
   );
 }
+
+/** Shown only while the plan includes sales_intelligence (ADR 0057). */
+export const RecordIntelligencePanel = gated('sales_intelligence', RecordIntelligencePanelPanel);

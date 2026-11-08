@@ -22,6 +22,8 @@ import {
   MERGE_FIELDS,
   NEXT_ACTION_LABELS,
   PLAN_CATALOG,
+  FEATURES,
+  FEATURE_GROUPS,
   PROPOSAL_TEMPLATES,
   REPORT_CATALOG,
   REPORT_TEMPLATES,
@@ -293,6 +295,15 @@ describe('page phrases', () => {
       expect(labels.length).toBeGreaterThan(0);
       expect(labels.filter((l) => !(l in PHRASES))).toEqual([]);
     });
+
+  // Plan features (ADR 0057): their names, descriptions and groups come from the shared catalogue and are translated
+  // by the server text table `features` (the API puts the names into its refusals), which t.maybe() falls back to.
+  it('translates every plan feature name, description and group', () => {
+    const serverKeys = new Set(SERVER_TEXT.keys());
+    const texts = [...FEATURES.flatMap((f) => [f.label, f.description]), ...FEATURE_GROUPS];
+    expect(texts.filter((x) => !(x in PHRASES) && !serverKeys.has(x))).toEqual([]);
+    expect(translateData('de', 'Email sequences')).not.toBe('Email sequences');
+  });
 });
 
 describe('translate', () => {

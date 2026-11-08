@@ -278,6 +278,7 @@ model Tenant {
   navigation             WorkspaceNavigation[]
   savedViews             SavedView[]
   territories            Territory[]
+  featureOverrides       TenantFeatureOverride[]
   territoryCountries     TerritoryCountry[]
   roles                  Role[]
   memberships            Membership[]
@@ -3295,4 +3296,20 @@ model ApiKey {
 
   @@index([tenantId, createdAt])
   @@map("api_keys")
+}
+
+/// A plan feature granted (enabled = true) or withheld (false) for one workspace by a platform operator, whatever its
+/// plan includes (ADR 0057). Removing the row hands the decision back to the plan.
+model TenantFeatureOverride {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  feature   String
+  enabled   Boolean
+  reason    String
+  updatedBy String   @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, feature])
+  @@map("tenant_feature_overrides")
 }

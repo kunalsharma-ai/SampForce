@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
 import type { RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { MailerService } from '../mail/mailer.service';
 
@@ -55,7 +56,9 @@ export class PortalAuthService {
       await tx.$executeRaw`SELECT set_config('app.portal_slug', ${slug.toLowerCase()}, true)`;
       return tx.portalSettings.findFirst({ where: { slug: slug.toLowerCase(), enabled: true }, select: { tenantId: true } });
     });
-    return row?.tenantId ?? null;
+    if (!row) return null;
+    // A portal whose workspace's plan no longer includes it (ADR 0057) reads as switched off.
+    return (await this.prisma.run({ tenantId: row.tenantId }, (tx) => hasFeature(tx, row.tenantId, 'client_portal'))) ? row.tenantId : null;
   }
 
   async branding(slug: string): Promise<PortalBranding> {
@@ -110,7 +113,7 @@ export class PortalAuthService {
       const s = await tx.portalSession.findFirst({ where: { tenantId, tokenHash: sha256(token), expiresAt: { gt: new Date() } }, include: { user: true } });
       if (!s || s.user.status !== 'active') return null;
       const settings = await tx.portalSettings.findUnique({ where: { tenantId }, select: { enabled: true } });
-      if (!settings?.enabled) return null;
+      if (!settings?.enabled || !(await hasFeature(tx, tenantId, 'client_portal'))) return null;
       if (Date.now() - s.lastSeenAt.getTime() > 5 * 60_000) await tx.portalSession.update({ where: { id: s.id }, data: { lastSeenAt: new Date() } });
       return { tenantId, sessionId: s.id, user: { id: s.user.id, name: s.user.name, email: s.user.email, role: s.user.role as 'viewer' | 'approver', companyId: s.user.companyId } };
     });

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
 import { badgeInputSchema, competitionInputSchema, gamificationSettingsSchema, leaderboardQuerySchema, type z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { GamificationService } from './gamification.service';
 
@@ -8,6 +8,7 @@ const uuid = new ParseUUIDPipe();
 
 /** Enhancement feature 14: points, leaderboards, badges, competitions and team challenges. */
 @Controller('gamification')
+@RequireFeature('gamification')
 export class GamificationController {
   constructor(private readonly gamification: GamificationService) {}
 

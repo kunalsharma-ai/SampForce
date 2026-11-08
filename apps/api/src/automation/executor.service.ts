@@ -224,7 +224,10 @@ export class WorkflowExecutor {
       where: { tenantId: event.tenantId, status: 'ACTIVE', triggerType: event.type, deletedAt: null, activeVersionId: { not: null } },
     });
     if (workflows.length === 0) return 0;
-    const runLimit = (await entitlementsFor(tx, event.tenantId)).entitlements.automationRunsPerMonth;
+    const ent = await entitlementsFor(tx, event.tenantId);
+    // Workflows stay saved but do not run while the plan leaves Automation Studio out (ADR 0057).
+    if (!ent.features.includes('automation')) return 0;
+    const runLimit = ent.entitlements.automationRunsPerMonth;
     const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
     let used = await tx.workflowExecution.count({ where: { tenantId: event.tenantId, startedAt: { gte: monthStart } } });
     const payload = (event.payload ?? {}) as Record<string, unknown>;

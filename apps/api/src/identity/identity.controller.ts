@@ -11,7 +11,7 @@ import {
   type SsoConnectionView,
 } from '@dealflow/types';
 import { setAuthCookies } from '../auth/cookies';
-import { Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { authEvents } from '../observability/metrics';
@@ -87,6 +87,7 @@ export class SecurityController {
   }
 
   @Put('sso')
+  @RequireFeature('sso_scim')
   @RequirePermissions('tenant:manage')
   saveSso(@Auth() auth: AuthContext, @Body(new ZodPipe(ssoConnectionSchema)) body: SsoConnectionInput, @Meta() meta: RequestMeta): Promise<SsoConnectionView> {
     return this.security.saveSso(auth, body, meta);
@@ -100,6 +101,7 @@ export class SecurityController {
   }
 
   @Post('scim-tokens')
+  @RequireFeature('sso_scim')
   @RequirePermissions('tenant:manage')
   createScimToken(@Auth() auth: AuthContext, @Body(new ZodPipe(scimTokenCreateSchema)) body: { name: string }, @Meta() meta: RequestMeta): Promise<ScimTokenView & { token: string }> {
     return this.security.createScimToken(auth, body.name, meta);

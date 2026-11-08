@@ -11,11 +11,11 @@ import {
   type Interval,
   type InvoiceRequestInput,
   type InvoiceRow,
-  monthlyCreditAllowance,
   offlineInvoiceCents,
   PLAN_CATALOG,
   PLAN_ENTITLEMENTS,
   type PlanCode,
+  type PlanEntitlements,
   SELF_SERVE_PLANS,
   type SelfServePlan,
   TRIAL_SEATS,
@@ -28,6 +28,7 @@ import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
 import { BillingProviders } from './billing-providers';
+import { featureOverrides, planDefinitions } from './entitlements';
 import { BillingProviderError, InvalidSignatureError, type ParsedEvent, type ProviderSubscription } from './providers';
 
 const DAY = 86_400_000;
@@ -83,7 +84,8 @@ export class BillingService {
   overview(auth: AuthContext): Promise<BillingOverview> {
     return this.prisma.run(auth, async (tx) => {
       const sub = await this.subscription(tx, auth.tenantId);
-      const ent = effectiveEntitlements(sub);
+      const [plans, overrides] = await Promise.all([planDefinitions(tx), featureOverrides(tx, auth.tenantId)]);
+      const ent = effectiveEntitlements(sub, { plans, overrides });
       const [members, pending, pipelines, used, runs, ai, openInvoice] = await Promise.all([
         tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE' } }),
         tx.invitation.count({ where: { tenantId: auth.tenantId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } } }),
@@ -93,7 +95,7 @@ export class BillingService {
         tx.aiSettings.findUnique({ where: { tenantId: auth.tenantId }, select: { monthlyCreditCap: true } }),
         tx.invoice.findFirst({ where: { tenantId: auth.tenantId, provider: 'OFFLINE', status: 'OPEN' } }),
       ]);
-      const allowance = monthlyCreditAllowance(ent.appliedPlan, members);
+      const allowance = ent.entitlements.monthlyAiCredits * Math.max(1, members);
       const cap = ai?.monthlyCreditCap ?? null;
       const stripe = this.providers.get('STRIPE');
       return {
@@ -121,7 +123,8 @@ export class BillingService {
           aiCredits: { used: used._sum.credits ?? 0, limit: cap === null ? allowance : Math.min(allowance, cap) },
           automationRuns: { used: runs, limit: ent.entitlements.automationRunsPerMonth },
         },
-        catalog: this.catalog(),
+        features: ent.features,
+        catalog: this.catalog(plans),
         salesContact: this.env.SALES_CONTACT_EMAIL ?? null,
         pricingPublished: this.env.PRICING_PUBLISHED,
         trialDays: this.env.TRIAL_DAYS,
@@ -129,14 +132,19 @@ export class BillingService {
     });
   }
 
+  /** The rate card with the live plan definitions, for the public pricing page. */
+  async liveCatalog(): Promise<CatalogPlan[]> {
+    return this.catalog(await planDefinitions(this.prisma));
+  }
+
   /** The rate card with which provider/interval combinations can actually be bought here. */
-  catalog(): CatalogPlan[] {
+  catalog(plans: Record<PlanCode, PlanEntitlements> = PLAN_ENTITLEMENTS): CatalogPlan[] {
     const selfServe = new Set<string>(SELF_SERVE_PLANS);
     return PLAN_CATALOG.map((p) => {
       const can = (k: BillingProviderKey, i: Interval) => selfServe.has(p.code) && this.providers.sells(k) && !!this.providers.get(k).priceId(p.code, i);
       return {
         code: p.code, name: p.name, audience: p.audience, monthly: p.monthly, annualMonthly: p.annualMonthly,
-        entitlements: PLAN_ENTITLEMENTS[p.code], selfServe: selfServe.has(p.code),
+        entitlements: plans[p.code], selfServe: selfServe.has(p.code),
         checkout: { STRIPE: { MONTH: can('STRIPE', 'MONTH'), YEAR: can('STRIPE', 'YEAR') }, RAZORPAY: { MONTH: can('RAZORPAY', 'MONTH'), YEAR: can('RAZORPAY', 'YEAR') } },
       };
     });
@@ -219,13 +227,14 @@ export class BillingService {
   }
 
   async changePlan(auth: AuthContext, planCode: SelfServePlan, interval: Interval, meta: RequestMeta) {
-    const { sub, members, pipelines } = await this.prisma.run(auth, async (tx) => ({
+    const { sub, members, pipelines, plans } = await this.prisma.run(auth, async (tx) => ({
       sub: await this.subscription(tx, auth.tenantId),
       members: await tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE' } }),
       pipelines: await tx.pipeline.count({ where: { tenantId: auth.tenantId, deletedAt: null } }),
+      plans: await planDefinitions(tx),
     }));
     if (sub.planCode === planCode && sub.billingInterval === interval) throw new BadRequestException({ code: 'NO_CHANGE', message: 'The workspace is already on that plan.' });
-    const blockers = downgradeBlockers(planCode, sub.seats, { members, pipelines });
+    const blockers = downgradeBlockers(planCode, sub.seats, { members, pipelines }, plans);
     if (blockers.length) {
       throw new ConflictException({ code: 'DOWNGRADE_BLOCKED', message: 'Current usage is above that plan’s limits.', details: blockers.map((message) => ({ path: 'planCode', message })) });
     }
@@ -332,7 +341,7 @@ export class BillingService {
       if (input.seats < members + pending) {
         throw new BadRequestException({ code: 'TOO_FEW_SEATS', message: `${members + pending} seats are in use, counting pending invitations. Ask for at least that many.`, details: [{ path: 'seats', message: `At least ${members + pending}` }] });
       }
-      const blockers = downgradeBlockers(input.planCode, input.seats, { members, pipelines });
+      const blockers = downgradeBlockers(input.planCode, input.seats, { members, pipelines }, await planDefinitions(tx));
       if (blockers.length) throw new ConflictException({ code: 'DOWNGRADE_BLOCKED', message: 'Current usage is above that plan’s limits.', details: blockers.map((message) => ({ path: 'planCode', message })) });
 
       const [{ n }] = (await tx.$queryRaw<{ n: bigint }[]>`SELECT nextval('offline_invoice_number_seq') AS n`) as [{ n: bigint }];

@@ -1,11 +1,12 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { type AppConnection, type AppProvider, Prisma, type TenantTx } from '@dealflow/database';
-import { APP_KEYS, type AppEventRow, type AppKey, type AppStatus, type SlackChannel, type SlackSettings, type TeamsAddChannelInput, type TeamsChannel, type TeamsSettings } from '@dealflow/types';
+import { APP_FEATURES, APP_KEYS, type AppEventRow, type AppKey, type AppStatus, type SlackChannel, type SlackSettings, type TeamsAddChannelInput, type TeamsChannel, type TeamsSettings } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox, signToken, verifyToken } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { SlackClient, SlackError } from './slack';
 import { TeamsClient, TeamsError, type TeamsMessage } from './teams';
@@ -389,6 +390,8 @@ export class AppsService {
   async requireConnection(tenantId: string, app: AppKey): Promise<AppConnection> {
     const conn = await this.prisma.run({ tenantId }, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId, provider: META[app].provider } } }));
     if (!conn || conn.status === 'DISCONNECTED') throw new AppError(`${META[app].name} is not connected. A workspace admin can connect it in Integrations.`);
+    // A connected app stops working while the plan leaves it out (ADR 0057); the connection is kept for when it returns.
+    if (!(await this.prisma.run({ tenantId }, (tx) => hasFeature(tx, tenantId, APP_FEATURES[app])))) throw new AppError(`${META[app].name} is not included in your plan. A workspace admin can upgrade on the Billing page.`);
     return conn;
   }
 

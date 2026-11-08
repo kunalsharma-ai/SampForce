@@ -11,6 +11,7 @@ import { relativeTime } from '@/lib/format';
 import { useMeetingRecords } from '@/lib/meetings';
 import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { gated } from '@/components/shell/feature-locked';
 
 export interface MeetingTarget {
   meetingId?: string;
@@ -20,7 +21,7 @@ export interface MeetingTarget {
 }
 
 /** Opens meeting notes for a calendar meeting or a record: creates the notes page (or reuses the meeting's) and goes there. */
-export function MeetingNotesButton({ target, label = 'Meeting notes', title = 'Meeting notes' }: { target: MeetingTarget; label?: string; title?: string }) {
+function MeetingNotesButtonPanel({ target, label = 'Meeting notes', title = 'Meeting notes' }: { target: MeetingTarget; label?: string; title?: string }) {
   const t = useT();
   const canWrite = useCan('activities:write');
   const router = useRouter();
@@ -79,7 +80,7 @@ export function MeetingRecordList({ items, empty }: { items: MeetingRecordRow[];
 }
 
 /** Meeting notes linked to a deal, contact or lead. */
-export function RecordMeetings({ target }: { target: Omit<MeetingTarget, 'meetingId'> }) {
+function RecordMeetingsPanel({ target }: { target: Omit<MeetingTarget, 'meetingId'> }) {
   const t = useT();
   const canRead = useCan('activities:read');
   const records = useMeetingRecords(target, canRead);
@@ -96,3 +97,9 @@ export function RecordMeetings({ target }: { target: Omit<MeetingTarget, 'meetin
     </Card>
   );
 }
+
+/** Shown only while the plan includes meeting_intelligence (ADR 0057). */
+export const MeetingNotesButton = gated('meeting_intelligence', MeetingNotesButtonPanel);
+
+/** Shown only while the plan includes meeting_intelligence (ADR 0057). */
+export const RecordMeetings = gated('meeting_intelligence', RecordMeetingsPanel);

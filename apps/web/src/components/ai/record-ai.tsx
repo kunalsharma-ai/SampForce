@@ -11,6 +11,7 @@ import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 const GRADE_TONE = { A: 'success', B: 'primary', C: 'warning', D: 'critical' } as const;
 const RISK_TONE = { low: 'success', medium: 'warning', high: 'critical' } as const;
@@ -50,7 +51,7 @@ function useInvalidateRecs(entityType: 'lead' | 'deal' | 'contact', id: string) 
 }
 
 /** Explainable lead score. The signals are rule-based; only the written summary uses the AI provider. */
-export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canRun: boolean }) {
+function LeadQualificationCardPanel({ leadId, canRun }: { leadId: string; canRun: boolean }) {
   const t = useT();
   const canUse = useCan('ai:use');
   const recs = useRecommendations('lead', leadId);
@@ -111,7 +112,7 @@ export function LeadQualificationCard({ leadId, canRun }: { leadId: string; canR
 }
 
 /** Deal health from activity, stage age and dates, with a recommended next step the person can accept as a task. */
-export function DealIntelligenceCard({ dealId }: { dealId: string }) {
+function DealIntelligenceCardPanel({ dealId }: { dealId: string }) {
   const t = useT();
   const canUse = useCan('ai:use');
   const canTask = useCan('activities:write');
@@ -191,7 +192,7 @@ function copy(text: string) {
 }
 
 /** Drafts a proposal from the deal's own data. Nothing is sent; the person copies and edits it. */
-export function ProposalButton({ dealId }: { dealId: string }) {
+function ProposalButtonPanel({ dealId }: { dealId: string }) {
   const t = useT();
   const canUse = useCan('ai:use');
   const [open, setOpen] = useState(false);
@@ -261,3 +262,11 @@ export function ProposalButton({ dealId }: { dealId: string }) {
   );
 }
 
+/** Shown only while the plan includes ai_assistant (ADR 0057). */
+export const LeadQualificationCard = gated('ai_assistant', LeadQualificationCardPanel);
+
+/** Shown only while the plan includes ai_assistant (ADR 0057). */
+export const DealIntelligenceCard = gated('ai_assistant', DealIntelligenceCardPanel);
+
+/** Shown only while the plan includes ai_assistant (ADR 0057). */
+export const ProposalButton = gated('ai_assistant', ProposalButtonPanel);

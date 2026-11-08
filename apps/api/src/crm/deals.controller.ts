@@ -15,7 +15,7 @@ import {
   territoryUpdateSchema,
   z,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealsService } from './deals.service';
 import { PipelinesService } from './pipelines.service';
@@ -166,6 +166,7 @@ export class PipelinesController {
 
 /** Sales territories: anyone who reads deals sees them; owners and administrators define them. */
 @Controller('territories')
+@RequireFeature('territories')
 @ApiKeyAccess()
 export class TerritoriesController {
   constructor(private readonly territories: TerritoriesService) {}

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { dashboardInputSchema, immersiveQuerySchema, reportDefinitionSchema, reportInputSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ImmersiveService } from './immersive.service';
 import { ReportsService } from './reports.service';
@@ -10,6 +10,7 @@ const uuid = new ParseUUIDPipe();
 const runSchema = z.object({ definition: reportDefinitionSchema });
 
 @Controller('reports')
+@RequireFeature('reports')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
@@ -71,6 +72,7 @@ export class ReportsController {
 }
 
 @Controller('dashboards')
+@RequireFeature('reports')
 export class DashboardsController {
   constructor(private readonly reports: ReportsService) {}
 
@@ -107,6 +109,7 @@ export class DashboardsController {
 }
 
 @Controller('insights')
+@RequireFeature('reports')
 export class ImmersiveController {
   constructor(private readonly immersive: ImmersiveService) {}
 

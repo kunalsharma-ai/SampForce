@@ -41,6 +41,8 @@ async function main(): Promise<void> {
         ownerUserId: user.id,
         isDemo: true,
       });
+      // The demo shows every module, so it runs on the top plan (plan features, ADR 0057). Nothing is billed.
+      await tx.subscription.update({ where: { tenantId }, data: { planCode: 'enterprise_plus', seats: 10, status: 'ACTIVE' } });
       const stages = await tx.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { position: 'asc' } });
       const stage = (i: number) => stages[i]!.id;
 

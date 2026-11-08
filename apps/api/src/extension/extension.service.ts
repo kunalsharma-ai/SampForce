@@ -20,6 +20,7 @@ import type { Session, TenantTx } from '@dealflow/database';
 import { createHash, randomBytes } from 'node:crypto';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
+import { assertFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { LeadsService } from '../crm/leads.service';
 import { SequencesService } from '../sequences/sequences.service';
@@ -75,6 +76,7 @@ export class ExtensionService {
     meta: RequestMeta,
     via: 'code' | 'password',
   ): Promise<ExtensionTokenCreated> {
+    await this.prisma.run({ tenantId }, (tx) => assertFeature(tx, tenantId, 'browser_extension'));
     const live = { userId, activeTenantId: tenantId, extensionTokenHash: { not: null }, revokedAt: null, expiresAt: { gt: new Date() } };
     const count = await this.prisma.session.count({ where: live });
     if (count >= MAX_EXTENSION_TOKENS) {

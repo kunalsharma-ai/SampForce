@@ -3,7 +3,7 @@ import type { Membership, Role, TenantTx, User } from '@dealflow/database';
 import { z } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
-import { entitlementsFor } from '../billing/entitlements';
+import { entitlementsFor, hasFeature } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { hashScimToken } from './security.service';
@@ -105,6 +105,7 @@ export class ScimService {
     });
     if (!row) throw new ScimError(401, 'The token is not valid or has been revoked.');
     await this.prisma.run({ tenantId: row.tenantId }, async (tx) => {
+      if (!(await hasFeature(tx, row.tenantId, 'sso_scim'))) throw new ScimError(403, 'SCIM provisioning is not included in this workspace’s plan.');
       // Record use at most once a minute.
       if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > 60_000) await tx.scimToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } });
     });

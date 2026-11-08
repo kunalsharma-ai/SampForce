@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { type InvoiceRow, type OperatorTenantDetail, PLAN_CATALOG, PLAN_CODES, type SubscriptionState } from '@dealflow/types';
+import { FEATURE_GROUPS, type FeatureKey, FEATURES, type InvoiceRow, type OperatorTenantDetail, PLAN_CATALOG, PLAN_CODES, type SubscriptionState } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -50,6 +50,7 @@ export default function OperatorTenantPage() {
           </CardContent>
         )}
       </Card>
+      <WorkspaceFeatures d={d} admin={admin} />
       <Card>
         <CardHeader>
           <CardTitle>Invoices</CardTitle>
@@ -244,5 +245,91 @@ function Suspend({ d }: { d: OperatorTenantDetail }) {
       </div>
       <ErrorText error={act.error} />
     </form>
+  );
+}
+
+type Choice = 'plan' | 'on' | 'off';
+
+/** Which features this workspace can use, and the platform admin's per-workspace overrides (ADR 0057). */
+function WorkspaceFeatures({ d, admin }: { d: OperatorTenantDetail; admin: boolean }) {
+  const f = d.features;
+  const current = (k: FeatureKey): Choice => {
+    const o = f.overrides.find((x) => x.feature === k);
+    return o ? (o.enabled ? 'on' : 'off') : 'plan';
+  };
+  const [choices, setChoices] = useState<Partial<Record<FeatureKey, Choice>>>({});
+  const [reason, setReason] = useState('');
+  const save = useOperatorAction(d.id, 'features');
+  const changed = (Object.entries(choices) as [FeatureKey, Choice][]).filter(([k, c]) => c !== current(k));
+  const planName = PLAN_CATALOG.find((p) => p.code === f.appliedPlan)?.name ?? f.appliedPlan;
+  return (
+    <Card data-operator-features="">
+      <CardHeader>
+        <CardTitle>Features</CardTitle>
+        <CardDescription>
+          {f.effective.length} of {FEATURES.length} features. The {planName} plan includes {f.planFeatures.length}
+          {d.subscription && d.subscription.planCode !== f.appliedPlan ? ` (the subscription is ${d.subscription.planCode} but ${SUBSCRIPTION_STATUS[d.subscription.status].label.toLowerCase()}, so Free applies)` : ''}
+          {f.overrides.length > 0 ? `; ${f.overrides.length} set for this workspace only.` : '.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          className="space-y-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate(
+              { overrides: Object.fromEntries(changed.map(([k, c]) => [k, c === 'plan' ? null : c === 'on'])), reason },
+              {
+                onSuccess: () => {
+                  setChoices({});
+                  setReason('');
+                },
+              },
+            );
+          }}
+        >
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {FEATURE_GROUPS.map((group) => (
+              <fieldset key={group} className="space-y-1.5">
+                <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group}</legend>
+                {FEATURES.filter((x) => x.group === group).map((x) => {
+                  const o = f.overrides.find((y) => y.feature === x.key);
+                  const on = f.effective.includes(x.key);
+                  return (
+                    <div key={x.key} className="flex items-center gap-2 text-sm" title={o ? `Set by ${o.updatedBy} on ${formatDate(o.updatedAt)}: ${o.reason}` : x.description}>
+                      <span className={on ? '' : 'text-muted-foreground line-through decoration-muted-foreground/40'}>{x.label}</span>
+                      {o && <Badge tone={o.enabled ? 'success' : 'critical'}>{o.enabled ? 'added' : 'removed'}</Badge>}
+                      {admin && (
+                        <select
+                          aria-label={`${x.label} for this workspace`}
+                          className="ms-auto rounded border border-border bg-background px-1 py-0.5 text-xs"
+                          value={choices[x.key] ?? current(x.key)}
+                          onChange={(e) => setChoices((s) => ({ ...s, [x.key]: e.target.value as Choice }))}
+                        >
+                          <option value="plan">As plan ({f.planFeatures.includes(x.key) ? 'on' : 'off'})</option>
+                          <option value="on">Always on</option>
+                          <option value="off">Always off</option>
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
+              </fieldset>
+            ))}
+          </div>
+          {admin && (
+            <div className="flex flex-wrap items-end gap-3">
+              <Field id="ft-reason" label="Reason (recorded in both audit logs)" className="min-w-64 flex-1">
+                <Input id="ft-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} required />
+              </Field>
+              <Button type="submit" disabled={save.isPending || changed.length === 0 || reason.trim().length < 5}>
+                Apply {changed.length > 0 ? `${changed.length} change${changed.length === 1 ? '' : 's'}` : ''}
+              </Button>
+            </div>
+          )}
+          <ErrorText error={save.error} />
+        </form>
+      </CardContent>
+    </Card>
   );
 }

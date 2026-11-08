@@ -7,11 +7,12 @@ import { Activity } from 'lucide-react';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { gated } from '@/components/shell/feature-locked';
 
 const TONE: Record<DealRisk, 'success' | 'warning' | 'critical'> = { low: 'success', medium: 'warning', high: 'critical' };
 
 /** The deal health monitor's stored score for one deal and its daily trend (no AI involved). */
-export function DealHealthTrend({ dealId }: { dealId: string }) {
+function DealHealthTrendPanel({ dealId }: { dealId: string }) {
   const t = useT();
   const q = useQuery({ queryKey: ['deal-health', dealId], queryFn: () => api<DealHealthDetail>(`/deals/${dealId}/health`) });
   const points = q.data?.history ?? [];
@@ -69,3 +70,6 @@ export function DealHealthTrend({ dealId }: { dealId: string }) {
     </Card>
   );
 }
+
+/** Shown only while the plan includes sales_intelligence (ADR 0057). */
+export const DealHealthTrend = gated('sales_intelligence', DealHealthTrendPanel);

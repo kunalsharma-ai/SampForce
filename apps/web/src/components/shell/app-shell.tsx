@@ -10,11 +10,13 @@ import { useAppearanceSync } from '@/lib/appearance-sync';
 import { useT } from '@/lib/i18n';
 import { useRegionalSync } from '@/lib/regional-sync';
 import { useSession, useSignOut } from '@/lib/session';
+import { useLockedFeature } from '@/lib/features';
 import { useRecordVisits } from '@/lib/workspace-nav';
 import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { CustomizeMenuDialog } from './customize-menu';
+import { FeatureLocked } from './feature-locked';
 import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { MobileBottomNav } from './mobile-nav';
 import { Sidebar } from './sidebar';
@@ -28,6 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useRecordVisits(!!data && !data.restriction);
   useRegionalSync(!!data);
   const t = useT();
+  // A page outside the workspace's plan shows the upgrade page; the API refuses its data anyway (ADR 0057).
+  const locked = useLockedFeature(pathname);
   const focus = useShell((s) => s.focus);
   const setFocus = useShell((s) => s.setFocus);
   useEffect(() => {
@@ -69,6 +73,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </p>
           ) : data?.restriction && !(data.restriction === 'mfa_enrolment' && pathname === '/app/account/security') ? (
             <PolicyGate restriction={data.restriction} />
+          ) : locked ? (
+            <FeatureLocked feature={locked} />
           ) : (
             // Enter-only transition. An exit animation (AnimatePresence) would briefly render the
             // new route inside the old wrapper and then remount it, discarding anything typed. The key also includes the

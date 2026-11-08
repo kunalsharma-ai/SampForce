@@ -1,11 +1,12 @@
 'use client';
 
-import type { NavItem } from '@dealflow/types';
+import { featureForPath, type NavItem } from '@dealflow/types';
 import { Badge, cn, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
-import { ChevronsLeft, Clock, FileText, Handshake, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
+import { ChevronsLeft, Clock, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useFeatures } from '@/lib/features';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { type ModuleDef, moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
 import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav';
@@ -116,6 +117,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const modules = orderedModules(nav);
   const recent = nav.recent.filter((r) => r.href !== pathname).slice(0, RECENT_SHOWN);
   const t = useT();
+  const features = useFeatures();
 
   return (
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
@@ -159,6 +161,8 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
             <ul className="space-y-0.5">
               {list.map((m) => {
                 const href = moduleHref(m);
+                const feature = featureForPath(href);
+                const locked = !!feature && !features.has(feature);
                 return (
                   <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
                     <NavLink
@@ -170,11 +174,16 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
                       onNavigate={onNavigate}
                       layoutId={`${idPrefix}-active`}
                       badge={
-                        m.status === 'planned' && (
+                        m.status === 'planned' ? (
                           <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
                             {phaseLabel(m.phase, true)}
                           </Badge>
-                        )
+                        ) : locked ? (
+                          <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
+                            <Lock className="size-3.5" aria-hidden />
+                            <span className="sr-only">{t('Not in your plan')}</span>
+                          </span>
+                        ) : null
                       }
                     />
                   </li>

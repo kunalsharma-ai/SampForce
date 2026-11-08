@@ -58,7 +58,7 @@ describe('DocuSign app (stand-in)', () => {
     restore = setEnv({ DOCUSIGN_INTEGRATION_KEY: DOCUSIGN_APP.key, DOCUSIGN_SECRET_KEY: DOCUSIGN_APP.secret, DOCUSIGN_CONNECT_HMAC_KEY: DOCUSIGN_APP.hmac, DOCUSIGN_AUTH_BASE_URL: ds.url });
     app = await startApp();
     owner = await registerUser(app, 'Signing Co');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     contractId = await contract('Globex annual');
   });
 

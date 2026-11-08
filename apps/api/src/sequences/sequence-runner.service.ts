@@ -5,6 +5,7 @@ import { emailDesignSchema, emailDesignStrings, MERGE_FIELDS, renderEmailDesign,
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { LeadsService } from '../crm/leads.service';
 import { TasksService } from '../crm/tasks.service';
@@ -140,6 +141,8 @@ export class SequenceRunner implements OnModuleInit {
     const finish = (status: EnrollmentStatus, lastError: string | null = null) => set({ status, finishedAt: new Date(), nextRunAt: null, lastError });
 
     if (e.sequence.status !== 'ACTIVE') return void (await set({ nextRunAt: new Date(Date.now() + 60 * MINUTE) }));
+    // Outside the plan (ADR 0057) nothing is sent; the enrollment waits and carries on if the feature returns.
+    if (!(await this.prisma.run({ tenantId }, (tx) => hasFeature(tx, tenantId, 'sequences')))) return void (await set({ nextRunAt: new Date(Date.now() + 6 * 60 * MINUTE) }));
     const steps = seqSteps(e.sequence);
     const step = steps[e.stepIndex];
     if (!step) return void (await finish('COMPLETED'));

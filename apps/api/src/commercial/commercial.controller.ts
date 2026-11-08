@@ -23,7 +23,7 @@ import {
   taxRateInputSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { ZodPipe } from '../common/zod.pipe';
 import { CatalogService } from './catalog.service';
@@ -39,6 +39,7 @@ const contractListQuery = z.object({ status: z.string().max(30).optional(), comp
 const includeInactive = z.object({ all: z.coerce.boolean().optional() });
 
 @Controller('catalog')
+@RequireFeature('quotes')
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
 
@@ -117,6 +118,7 @@ export class CatalogController {
 }
 
 @Controller('quotes')
+@RequireFeature('quotes')
 export class QuotesController {
   constructor(
     private readonly quotes: QuotesService,
@@ -128,6 +130,7 @@ export class QuotesController {
   @Post(':id/send')
   @HttpCode(200)
   @RequirePermissions('quotes:write', 'activities:write')
+  @RequireFeature('proposals')
   send(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(proposalSendSchema)) body: ProposalSendInput, @Meta() meta: RequestMeta) {
     return this.proposals.send(auth, id, body, meta);
   }
@@ -141,6 +144,7 @@ export class QuotesController {
 
   /** Turn the online link on or off; off revokes every copy of the link to this version. */
   @Post(':id/share')
+  @RequireFeature('proposals')
   @HttpCode(200)
   @RequirePermissions('quotes:write')
   share(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(z.object({ enabled: z.boolean() }))) body: { enabled: boolean }, @Meta() meta: RequestMeta) {
@@ -207,6 +211,7 @@ export class QuotesController {
 }
 
 @Controller('contracts')
+@RequireFeature('contracts')
 export class ContractsController {
   constructor(private readonly contracts: ContractsService) {}
 

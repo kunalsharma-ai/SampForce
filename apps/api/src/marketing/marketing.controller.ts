@@ -11,7 +11,7 @@ import {
   segmentRulesSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CampaignsService } from './campaigns.service';
 import { FormsService } from './forms.service';
@@ -22,6 +22,7 @@ const previewBody = z.object({ entity: z.enum(['lead', 'contact']), rules: segme
 const exportQuery = z.object({ optedInOnly: z.enum(['true', 'false']).default('true') });
 
 @Controller('segments')
+@RequireFeature('marketing')
 export class SegmentsController {
   constructor(private readonly segments: SegmentsService) {}
 
@@ -74,6 +75,7 @@ export class SegmentsController {
 }
 
 @Controller('forms')
+@RequireFeature('marketing')
 export class FormsController {
   constructor(private readonly forms: FormsService) {}
 
@@ -124,6 +126,7 @@ export class PublicFormsController {
 }
 
 @Controller('campaigns')
+@RequireFeature('campaigns')
 export class CampaignsController {
   constructor(private readonly campaigns: CampaignsService) {}
 

@@ -1,7 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
+  type OperatorFeatureOverridesInput,
+  operatorFeatureOverridesSchema,
+  type OperatorPlanDefinitionInput,
+  operatorPlanDefinitionSchema,
+  PLAN_CODES,
+  type PlanCode,
   type OperatorPaymentInput,
   type OperatorPlanInput,
   operatorLoginSchema,
@@ -111,6 +117,32 @@ export class OperatorController {
     @Req() req: Request,
   ) {
     return this.ops.voidInvoice(op, id, invoiceId, body.reason, ip(req));
+  }
+
+  /** Every plan's features and limits, as workspaces get them now (ADR 0057). */
+  @Get('plans')
+  plans() {
+    return this.ops.plans();
+  }
+
+  /** Changes what a plan includes, for every workspace on it at once. Admins only; logged with the reason. */
+  @Put('plans/:code')
+  @OperatorRoles('ADMIN')
+  setPlanDefinition(
+    @Operator() op: OperatorContext,
+    @Param('code', new ZodPipe(z.enum(PLAN_CODES))) code: PlanCode,
+    @Body(new ZodPipe(operatorPlanDefinitionSchema)) body: OperatorPlanDefinitionInput,
+    @Req() req: Request,
+  ) {
+    return this.ops.setPlanDefinition(op, code, body, ip(req));
+  }
+
+  /** Grants or withholds features for one workspace whatever its plan says. Admins only; in both audit logs. */
+  @Post('tenants/:id/features')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  features(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(operatorFeatureOverridesSchema)) body: OperatorFeatureOverridesInput, @Req() req: Request) {
+    return this.ops.setFeatureOverrides(op, id, body, ip(req));
   }
 
   @Get('settings')

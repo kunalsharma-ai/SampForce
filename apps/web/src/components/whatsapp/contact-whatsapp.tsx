@@ -11,6 +11,7 @@ import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { gated } from '@/components/shell/feature-locked';
 
 const STATUS: Record<WhatsappMessageRow['status'], { label: string; tone: 'neutral' | 'success' | 'critical' | 'primary' }> = {
   accepted: { label: 'Accepted by WhatsApp', tone: 'neutral' },
@@ -36,7 +37,7 @@ function sentLine(tr: Translator, m: WhatsappMessageRow): string {
 }
 
 /** WhatsApp for one contact: consent, the conversation, and one-to-one sending. Shown once WhatsApp Business is connected. */
-export function ContactWhatsapp({ contactId }: { contactId: string }) {
+function ContactWhatsappPanel({ contactId }: { contactId: string }) {
   const canRead = useCan('contacts:read');
   const canSend = useCan('activities:write');
   const canConsent = useCan('contacts:write');
@@ -238,3 +239,6 @@ export function ContactWhatsapp({ contactId }: { contactId: string }) {
     </Card>
   );
 }
+
+/** Shown only while the plan includes whatsapp (ADR 0057). */
+export const ContactWhatsapp = gated('whatsapp', ContactWhatsappPanel);

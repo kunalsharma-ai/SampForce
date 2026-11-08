@@ -1,37 +1,56 @@
+import { defaultPlanFeatures, type FeatureKey, normaliseFeatures } from './features';
+
 /**
  * Proposed launch plan catalogue (see docs/PRICING_STRATEGY.md). These are proposals, not
  * published prices. Entitlements are enforced through `effectiveEntitlements` in billing.ts.
  */
-export const PLAN_CODES = [
-  'free',
-  'launch',
-  'growth',
-  'professional',
-  'business',
-  'enterprise',
-  'enterprise_plus',
-] as const;
-export type PlanCode = (typeof PLAN_CODES)[number];
+export { PLAN_CODES, type PlanCode } from './plan-codes';
+import { PLAN_CODES, type PlanCode } from './plan-codes';
 
-export interface PlanEntitlements {
+export interface PlanLimits {
   maxUsers: number | null;
   maxPipelines: number | null;
   monthlyAiCredits: number;
   automationRunsPerMonth: number;
-  apiAccess: boolean;
-  /** Workspace-defined roles beyond the five system roles. */
-  customRoles: boolean;
 }
 
-export const PLAN_ENTITLEMENTS: Record<PlanCode, PlanEntitlements> = {
-  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, apiAccess: false, customRoles: false },
-  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, apiAccess: false, customRoles: false },
-  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, apiAccess: true, customRoles: false },
-  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, apiAccess: true, customRoles: true },
-  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, apiAccess: true, customRoles: true },
-  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, apiAccess: true, customRoles: true },
-  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, apiAccess: true, customRoles: true },
+export interface PlanEntitlements extends PlanLimits {
+  /** What the plan includes (ADR 0057). Custom roles and API access are features too. */
+  features: FeatureKey[];
+}
+
+const LIMITS: Record<PlanCode, PlanLimits> = {
+  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500 },
+  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000 },
+  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000 },
+  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000 },
+  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000 },
+  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000 },
+  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000 },
 };
+
+/**
+ * The shipped plan definitions. The `plans` table holds the live ones, which platform operators edit in the console;
+ * these apply only where a row has no value (a new deployment before migration, or a key a later release added).
+ */
+export const PLAN_ENTITLEMENTS: Record<PlanCode, PlanEntitlements> = Object.fromEntries(
+  PLAN_CODES.map((c) => [c, { ...LIMITS[c], features: defaultPlanFeatures(c) }]),
+) as Record<PlanCode, PlanEntitlements>;
+
+/** Reads a stored `plans.entitlements` value, filling anything missing or malformed from the shipped definition. */
+export function parsePlanEntitlements(code: PlanCode, stored: unknown): PlanEntitlements {
+  const d = PLAN_ENTITLEMENTS[code];
+  const s = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
+  const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
+  const cap = (v: unknown, fallback: number | null) => (v === null ? null : typeof v === 'number' && Number.isInteger(v) && v >= 1 ? v : fallback);
+  return {
+    maxUsers: 'maxUsers' in s ? cap(s.maxUsers, d.maxUsers) : d.maxUsers,
+    maxPipelines: 'maxPipelines' in s ? cap(s.maxPipelines, d.maxPipelines) : d.maxPipelines,
+    monthlyAiCredits: num(s.monthlyAiCredits, d.monthlyAiCredits),
+    automationRunsPerMonth: num(s.automationRunsPerMonth, d.automationRunsPerMonth),
+    features: Array.isArray(s.features) ? normaliseFeatures(s.features.filter((f): f is string => typeof f === 'string')) : d.features,
+  };
+}
 
 export interface PlanCatalogEntry {
   code: PlanCode;

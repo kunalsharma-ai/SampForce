@@ -1,13 +1,14 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { type FinderSaveInput, finderSaveSchema, type FinderSearchInput, finderSearchSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { FinderService } from './finder.service';
 
 const uuid = new ParseUUIDPipe();
 
 @Controller('finder')
+@RequireFeature('email_finder')
 export class FinderController {
   constructor(private readonly finder: FinderService) {}
 
@@ -47,6 +48,7 @@ export class FinderController {
 
 /** The extension's "find more at this company" button. */
 @Controller('extension')
+@RequireFeature('email_finder')
 export class ExtensionFinderController {
   constructor(private readonly finder: FinderService) {}
 

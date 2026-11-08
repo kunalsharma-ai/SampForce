@@ -24,6 +24,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -145,17 +146,18 @@ export class VisitorsService {
     return tenantId;
   }
 
-  private async site(siteKey: string, origin: string | undefined): Promise<{ tenantId: string; s: Settings }> {
+  private async site(siteKey: string, origin: string | undefined): Promise<{ tenantId: string; s: Settings; inPlan: boolean }> {
     const tenantId = await this.resolve(siteKey);
-    const s = await this.prisma.run({ tenantId }, (tx) => this.load(tx, tenantId));
+    const [s, inPlan] = await this.prisma.run({ tenantId }, async (tx) => [await this.load(tx, tenantId), await hasFeature(tx, tenantId, 'website_visitors')] as const);
     if (!originAllowed(origin, s.allowedDomains)) throw new ForbiddenException({ code: 'ORIGIN_NOT_ALLOWED', message: 'This website is not on the allowed list for tracking.' });
-    return { tenantId, s };
+    return { tenantId, s, inPlan };
   }
 
   /** What the script needs to know. Only answered for allowed websites, so other sites' scripts stay idle. */
   async publicConfig(siteKey: string, origin: string | undefined) {
-    const { s } = await this.site(siteKey, origin);
-    return { enabled: s.enabled, consentMode: s.consentMode, enquiryConsentText: s.enquiryConsentText };
+    const { s, inPlan } = await this.site(siteKey, origin);
+    // Outside the plan (ADR 0057) the script is told tracking is off, so it stays idle on the customer's website.
+    return { enabled: s.enabled && inPlan, consentMode: s.consentMode, enquiryConsentText: s.enquiryConsentText };
   }
 
   /**
@@ -163,8 +165,8 @@ export class VisitorsService {
    * Track signal are accepted and dropped. Returns how many events were stored.
    */
   async collect(siteKey: string, origin: string | undefined, raw: unknown, privacySignal: boolean): Promise<{ stored: number }> {
-    const { tenantId, s } = await this.site(siteKey, origin);
-    if (privacySignal) return { stored: 0 };
+    const { tenantId, s, inPlan } = await this.site(siteKey, origin);
+    if (privacySignal || !inPlan) return { stored: 0 };
     const parsed = collectSchema.safeParse(typeof raw === 'string' ? safeJson(raw) : raw);
     if (!parsed.success) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Invalid tracking data.' });
     const body = parsed.data;
@@ -220,7 +222,8 @@ export class VisitorsService {
 
   /** A website enquiry: links the visitor to a contact or open lead with the same email, or creates a lead. */
   async enquiry(siteKey: string, origin: string | undefined, raw: unknown, ip: string | null): Promise<{ message: string }> {
-    const { tenantId, s } = await this.site(siteKey, origin);
+    const { tenantId, s, inPlan } = await this.site(siteKey, origin);
+    if (!inPlan) throw new ForbiddenException({ code: 'ORIGIN_NOT_ALLOWED', message: 'This website is not on the allowed list for tracking.' });
     const parsed = enquirySchema.safeParse(typeof raw === 'string' ? safeJson(raw) : raw);
     if (!parsed.success) {
       throw new BadRequestException({ code: 'VALIDATION_FAILED', message: parsed.error.issues[0]?.message ?? 'Please check the form.', details: parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })) });

@@ -10,6 +10,7 @@ import { agentReason, aiErrorMessage, useAiStatus } from '@/lib/ai';
 import { api } from '@/lib/api';
 import { inSentence, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { gated } from '@/components/shell/feature-locked';
 
 export interface EmailAssistTarget {
   leadId?: string;
@@ -25,7 +26,7 @@ type Proposal = { subject: string; body: string; notes: string[]; warnings: stri
  * The Email Assistant inside an editor: draft from an objective, rewrite, change tone, suggest subjects.
  * Results are shown as a proposal; nothing changes in the editor until the person chooses "Use this", and nothing is sent.
  */
-export function EmailAssist({
+function EmailAssistPanel({
   subject,
   body,
   onApply,
@@ -198,3 +199,6 @@ export function EmailAssist({
     </div>
   );
 }
+
+/** Shown only while the plan includes ai_assistant (ADR 0057). */
+export const EmailAssist = gated('ai_assistant', EmailAssistPanel);

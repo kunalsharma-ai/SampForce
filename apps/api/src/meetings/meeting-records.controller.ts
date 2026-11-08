@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import type { Request } from 'express';
 import { Readable } from 'node:stream';
 import { meetingRecordCreateSchema, type MeetingRecordCreate, meetingRecordUpdateSchema, type MeetingRecordUpdate, meetingTasksSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { MeetingRecordsService } from './meeting-records.service';
 
@@ -11,6 +11,7 @@ const uuid = new ParseUUIDPipe();
 
 /** Enhancement feature 7: meeting notes, transcripts and recordings turned into reviewed CRM information. */
 @Controller('meeting-records')
+@RequireFeature('meeting_intelligence')
 export class MeetingRecordsController {
   constructor(private readonly meetings: MeetingRecordsService) {}
 

@@ -46,7 +46,7 @@ describe('offline payment', () => {
     await db.platformSetting.deleteMany();
     await db.platformOperator.createMany({ data: [{ email: adminEmail, name: 'Ada Ops', passwordHash, role: 'ADMIN' }, { email: supportEmail, name: 'Sam Support', passwordHash, role: 'SUPPORT' }] });
     await db.$disconnect();
-    owner = await registerUser(app, 'Bank Transfer Ltd');
+    owner = await registerUser(app, 'Bank Transfer Ltd', { plan: 'free' });
     member = await inviteMember(app, owner, 'member');
     admin = request.agent(app.getHttpServer());
     support = request.agent(app.getHttpServer());

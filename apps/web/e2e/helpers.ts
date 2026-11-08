@@ -1,6 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 
-export async function signUp(page: Page, org = 'E2E Org') {
+/**
+ * Signs up a new workspace. It starts on Free like any real sign-up; unless `plan` says otherwise it is then moved to
+ * Enterprise Plus, so specs can reach every feature (ADR 0057). Pass `{ plan: 'free' }` to test the Free plan itself.
+ */
+export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus' }: { plan?: string } = {}) {
   const id = Math.random().toString(36).slice(2, 10);
   const email = `e2e-${id}@example.com`;
   await page.goto('/signup');
@@ -11,7 +15,25 @@ export async function signUp(page: Page, org = 'E2E Org') {
   await page.getByRole('button', { name: 'Start free' }).click();
   await expect(page).toHaveURL(/\/app/);
   await expect(page.getByRole('heading', { name: 'Welcome, Test' })).toBeVisible();
+  if (plan !== 'free') {
+    await setPlan(page, plan);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Welcome, Test' })).toBeVisible();
+  }
   return { email, password: 'correcthorse1' };
+}
+
+/** Moves the signed-in workspace to a plan (active, 10 seats), as a paid subscription or an operator would. */
+export async function setPlan(page: Page, planCode: string) {
+  const { execFileSync } = await import('node:child_process');
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  const url = process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
+  const tenant = `'${String(me.tenant.id).replace(/'/g, "''")}'`;
+  const sql = `BEGIN;
+SELECT set_config('app.tenant_id', ${tenant}, true);
+UPDATE subscriptions SET plan_code = '${planCode.replace(/[^a-z_]/g, '')}', seats = 10, status = 'ACTIVE' WHERE tenant_id = ${tenant};
+COMMIT;`;
+  execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
 }
 
 /**

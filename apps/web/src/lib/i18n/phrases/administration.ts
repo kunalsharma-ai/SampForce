@@ -225,11 +225,11 @@ export const administration = {
   'Two-step off': ['Dos pasos desactivado', 'Deux étapes désactivée', 'Zweistufig aus', 'الخطوتان غير مفعّلتين'],
   'Role for {name}': ['Rol de {name}', 'Rôle de {name}', 'Rolle für {name}', 'دور {name}'],
   'Roles': ['Roles', 'Rôles', 'Rollen', 'الأدوار'],
-  'System roles are fixed. Custom roles combine individual permissions and are included from the Professional plan. You can only grant permissions your own role has.': [
-    'Los roles del sistema son fijos. Los roles personalizados combinan permisos individuales y se incluyen a partir del plan Professional. Solo puedes conceder permisos que tenga tu propio rol.',
-    'Les rôles système sont fixes. Les rôles personnalisés combinent des autorisations individuelles et sont inclus à partir du plan Professional. Vous ne pouvez accorder que les autorisations de votre propre rôle.',
-    'Systemrollen sind fest. Benutzerdefinierte Rollen kombinieren einzelne Berechtigungen und sind ab dem Professional-Tarif enthalten. Sie können nur Berechtigungen vergeben, die Ihre eigene Rolle hat.',
-    'أدوار النظام ثابتة. تجمع الأدوار المخصصة صلاحيات منفردة وتتوفر بدءًا من خطة Professional. لا يمكنك منح إلا الصلاحيات التي يملكها دورك.',
+  'System roles are fixed. Custom roles are not included in your plan. You can only grant permissions your own role has.': [
+    'Los roles del sistema son fijos. Los roles personalizados no están incluidos en tu plan. Solo puedes conceder permisos que tenga tu propio rol.',
+    'Les rôles système sont fixes. Les rôles personnalisés ne sont pas inclus dans votre offre. Vous ne pouvez accorder que les autorisations de votre propre rôle.',
+    'Systemrollen sind fest. Eigene Rollen sind in Ihrem Tarif nicht enthalten. Sie können nur Berechtigungen vergeben, die Ihre eigene Rolle hat.',
+    'أدوار النظام ثابتة. الأدوار المخصصة غير مشمولة في خطتك. لا يمكنك منح إلا الصلاحيات التي يملكها دورك.',
   ],
   'System roles are fixed. Custom roles combine individual permissions. You can only grant permissions your own role has.': [
     'Los roles del sistema son fijos. Los roles personalizados combinan permisos individuales. Solo puedes conceder permisos que tenga tu propio rol.',

@@ -48,7 +48,7 @@ describe('SMS through Twilio (stand-in)', () => {
     app = await startApp();
     worker = app.get(WorkerService);
     owner = await registerUser(app, 'SMS Co');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     const o = api(owner);
     ids.gia = (await o.post('/contacts', { firstName: 'Gia', lastName: 'Buyer', email: 'gia@globex.test', phone: '+44 7700 900456' }).expect(201)).body.id;
     ids.local = (await o.post('/contacts', { firstName: 'Lou', lastName: 'Local', phone: '07700 900111' }).expect(201)).body.id;
@@ -226,7 +226,7 @@ describe('SMS through Twilio (stand-in)', () => {
 
   it('another workspace’s endpoint cannot write into this one, and disconnecting keeps history', async () => {
     const other = await registerUser(app, 'Other SMS');
-    await asTenant(other.tenantId, (tx) => tx.subscription.update({ where: { tenantId: other.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(other.tenantId, (tx) => tx.subscription.update({ where: { tenantId: other.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     const so = (await keys(other, good).expect(200)).body as TwStatus;
     expect(so.connection!.settings.inboundUrl).not.toBe(status.connection!.settings.inboundUrl);
     await twilioPost(so.connection!.settings.inboundUrl, twInbound(GIA, 'for the other workspace')).expect(200);

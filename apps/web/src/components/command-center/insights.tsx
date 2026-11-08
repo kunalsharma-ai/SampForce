@@ -11,12 +11,13 @@ import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 const ICON = { attention: AlertTriangle, good: TrendingUp, info: Info } as const;
 const COLOR = { attention: 'text-warning', good: 'text-success', info: 'text-muted-foreground' } as const;
 
 /** The week in numbers: last seven days against the seven before, every figure from workspace records. */
-export function SalesInsights() {
+function SalesInsightsPanel() {
   const [scope, setScope] = useState<InsightScope>('mine');
   const canAi = useCan('ai:use');
   const ask = useCopilot((s) => s.ask);
@@ -106,3 +107,6 @@ function InsightRow({ insight: i }: { insight: Insight }) {
     </li>
   );
 }
+
+/** Shown only while the plan includes sales_intelligence (ADR 0057). */
+export const SalesInsights = gated('sales_intelligence', SalesInsightsPanel, 'note');

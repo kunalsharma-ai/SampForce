@@ -8,7 +8,7 @@ import { PrismaService } from '../common/prisma.service';
 
 /**
  * Workspace-defined roles. The five system roles cannot be changed; custom roles need a plan with
- * the customRoles entitlement, and nobody can hand out a permission they do not hold themselves.
+ * the custom_roles plan feature, and nobody can hand out a permission they do not hold themselves.
  */
 @Injectable()
 export class RolesService {
@@ -76,7 +76,7 @@ export class RolesService {
   }
 
   private async assertAllowed(tx: TenantTx, auth: AuthContext, permissions: string[]) {
-    if (!(await entitlementsFor(tx, auth.tenantId)).entitlements.customRoles) throw planLimit('Custom roles are included from the Professional plan.');
+    if (!(await entitlementsFor(tx, auth.tenantId)).features.includes('custom_roles')) throw planLimit('Custom roles are not included in your plan.');
     assertCanGrant(auth, permissions);
   }
 }

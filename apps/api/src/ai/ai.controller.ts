@@ -22,7 +22,7 @@ import {
   workflowDraftRequestSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AgentsService } from './agents.service';
 import { AiService } from './ai.service';
@@ -37,6 +37,7 @@ const compareQuery = z.object({ from: z.string().uuid(), to: z.string().uuid() }
 
 /** AI governance, Copilot and agents. Every route needs `ai:use`; agents also check the permission of the work they do. */
 @Controller('ai')
+@RequireFeature('ai_assistant')
 export class AiController {
   constructor(
     private readonly ai: AiService,
@@ -204,6 +205,7 @@ const trendsQuery = z.object({ granularity: z.enum(['month', 'quarter', 'year'])
 
 /** Rule-based forecasting and snapshots. No AI is involved in any number here. */
 @Controller('forecast')
+@RequireFeature('forecasting')
 export class ForecastController {
   constructor(
     private readonly forecast: ForecastService,

@@ -9,7 +9,7 @@ describe('core CRM', () => {
 
   beforeAll(async () => {
     app = await startApp();
-    u = await registerUser(app, 'CRM Co');
+    u = await registerUser(app, 'CRM Co', { plan: 'free' });
     http = api(u);
   });
   afterAll(async () => {

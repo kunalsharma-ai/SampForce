@@ -38,8 +38,8 @@ describe('operator console', () => {
     const passwordHash = await new PasswordService().hash(password);
     await db.platformOperator.createMany({ data: [{ email: adminEmail, name: 'Ada Ops', passwordHash, role: 'ADMIN' }, { email: supportEmail, name: 'Sam Support', passwordHash, role: 'SUPPORT' }] });
     await db.$disconnect();
-    owner = await registerUser(app, 'Operated Ltd');
-    other = await registerUser(app, 'Bystander Ltd');
+    owner = await registerUser(app, 'Operated Ltd', { plan: 'free' });
+    other = await registerUser(app, 'Bystander Ltd', { plan: 'free' });
     await api(owner).post('/leads', { fullName: 'Secret Lead', email: 'secret@lead.test' }).expect(201);
     admin = request.agent(app.getHttpServer());
     support = request.agent(app.getHttpServer());

@@ -12,6 +12,7 @@ import { ENQUIRY_FORM_EXAMPLE, formatDuration, installSnippet, useRecordWebActiv
 import { fmtLocale } from '@/lib/i18n/locale';
 import { rich, useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 type Tab = 'dashboard' | 'visitors' | 'settings';
 
@@ -428,7 +429,7 @@ function VisitorBody({ v }: { v: VisitorDetail }) {
 }
 
 /** Website activity on a lead or contact page. Hidden when the person has no recorded visits. */
-export function RecordWebActivityCard({ type, id }: { type: 'lead' | 'contact'; id: string }) {
+function RecordWebActivityCardPanel({ type, id }: { type: 'lead' | 'contact'; id: string }) {
   const t = useT();
   const can = useCan('visitors:read');
   const q = useRecordWebActivity(type, id, can);
@@ -645,3 +646,6 @@ function SettingsPanel({ s, canManage, justSaved, onSaved }: { s: VisitorSetting
     </form>
   );
 }
+
+/** Shown only while the plan includes website_visitors (ADR 0057). */
+export const RecordWebActivityCard = gated('website_visitors', RecordWebActivityCardPanel);

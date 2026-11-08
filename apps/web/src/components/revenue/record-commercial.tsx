@@ -8,9 +8,10 @@ import { NewQuote, QuoteTable } from '@/app/app/quotes/quotes-workspace';
 import { useContracts, useCustomer, useEscalations, useQuotes } from '@/lib/revenue';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { gated } from '@/components/shell/feature-locked';
 
 /** Quotes on a deal page. */
-export function DealQuotes({ deal }: { deal: { id: string; name: string } }) {
+function DealQuotesPanel({ deal }: { deal: { id: string; name: string } }) {
   const t = useT();
   const canRead = useCan('quotes:read');
   const canWrite = useCan('quotes:write');
@@ -30,7 +31,7 @@ export function DealQuotes({ deal }: { deal: { id: string; name: string } }) {
 }
 
 /** Contracts, customer health and escalations on a company page. */
-export function CompanyCommercial({ company }: { company: { id: string; name: string } }) {
+function CompanyCommercialPanel({ company }: { company: { id: string; name: string } }) {
   const t = useT();
   const canContracts = useCan('contracts:read');
   const canSuccess = useCan('success:read');
@@ -80,3 +81,9 @@ export function CompanyCommercial({ company }: { company: { id: string; name: st
     </>
   );
 }
+
+/** Shown only while the plan includes quotes (ADR 0057). */
+export const DealQuotes = gated('quotes', DealQuotesPanel);
+
+/** Shown only while the plan includes quotes (ADR 0057). */
+export const CompanyCommercial = gated('quotes', CompanyCommercialPanel);

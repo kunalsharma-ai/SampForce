@@ -11,7 +11,7 @@ import {
   timelineQuerySchema,
   type z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealHealthService } from './deal-health.service';
 import { InsightsService } from './insights.service';
@@ -34,18 +34,21 @@ export class IntelligenceController {
   ) {}
 
   @Get('deal-health')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('deals:read')
   dealHealthList(@Auth() auth: AuthContext, @Query(new ZodPipe(dealHealthQuerySchema)) q: z.infer<typeof dealHealthQuerySchema>) {
     return this.health.list(auth, q);
   }
 
   @Get('deal-health/summary')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('deals:read')
   dealHealthSummary(@Auth() auth: AuthContext) {
     return this.health.summary(auth);
   }
 
   @Post('deal-health/refresh')
+  @RequireFeature('sales_intelligence')
   @HttpCode(200)
   @RequirePermissions('deals:read')
   @Throttle({ default: { limit: 6, ttl: 60_000 } })
@@ -54,12 +57,14 @@ export class IntelligenceController {
   }
 
   @Get('deals/:id/health')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('deals:read')
   dealHealthDetail(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.health.detail(auth, id);
   }
 
   @Get('next-actions')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('dashboard:read')
   nextActionList(@Auth() auth: AuthContext, @Query(new ZodPipe(nextActionQuerySchema)) q: z.infer<typeof nextActionQuerySchema>) {
     if (!q.recordType || !q.recordId) return this.nextActions.list(auth);
@@ -68,6 +73,7 @@ export class IntelligenceController {
   }
 
   @Post('next-actions/dismiss')
+  @RequireFeature('sales_intelligence')
   @HttpCode(200)
   @RequirePermissions('dashboard:read')
   dismiss(@Auth() auth: AuthContext, @Body(new ZodPipe(nextActionDismissSchema)) body: z.infer<typeof nextActionDismissSchema>) {
@@ -75,6 +81,7 @@ export class IntelligenceController {
   }
 
   @Post('next-actions/accept')
+  @RequireFeature('sales_intelligence')
   @HttpCode(200)
   @RequirePermissions('dashboard:read', 'activities:write')
   accept(@Auth() auth: AuthContext, @Body(new ZodPipe(nextActionAcceptSchema)) body: z.infer<typeof nextActionAcceptSchema>, @Meta() meta: RequestMeta) {
@@ -93,6 +100,7 @@ export class IntelligenceController {
   }
 
   @Get('intelligence/:entity/:id')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('dashboard:read')
   recordIntelligence(@Auth() auth: AuthContext, @Param('entity', new ParseEnumPipe(TIMELINE_ENTITIES)) entity: TimelineEntity, @Param('id', uuid) id: string) {
     if (!auth.permissions.includes(FOCUS_PERMISSION[entity])) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot read this record.' });
@@ -100,6 +108,7 @@ export class IntelligenceController {
   }
 
   @Get('insights')
+  @RequireFeature('sales_intelligence')
   @RequirePermissions('dashboard:read')
   feed(@Auth() auth: AuthContext, @Query(new ZodPipe(insightQuerySchema)) q: z.infer<typeof insightQuerySchema>) {
     return this.insights.feed(auth, q.scope);

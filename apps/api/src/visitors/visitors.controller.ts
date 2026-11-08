@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Header, HttpCode, Param, ParseUUIDPipe, 
 import { Throttle } from '@nestjs/throttler';
 import { VISITOR_DASHBOARD_DAYS, visitorSettingsSchema, z } from '@dealflow/types';
 import type { Request, Response } from 'express';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { CrossSite } from '../common/origin.guard';
 import { ZodPipe } from '../common/zod.pipe';
 import { TRACKER_SCRIPT } from './tracker-script';
@@ -14,6 +14,7 @@ const dashboardQuery = z.object({ days: z.coerce.number().int().refine((d) => (V
 const recordQuery = z.object({ type: z.enum(['lead', 'contact']), id: z.string().uuid() });
 
 @Controller('visitors')
+@RequireFeature('website_visitors')
 export class VisitorsController {
   constructor(private readonly visitors: VisitorsService) {}
 
