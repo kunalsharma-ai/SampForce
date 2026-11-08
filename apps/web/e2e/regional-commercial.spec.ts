@@ -99,7 +99,7 @@ test('German records a contract signature and shows it with its translated metho
 });
 
 test('Arabic shows billing and approvals right to left, starts a trial and passes the accessibility check', async ({ page }) => {
-  await signUp(page, 'فوترة');
+  await signUp(page, 'فوترة', { plan: 'free' });
   await chooseLanguage(page, 'ar');
 
   await page.goto('/app/billing');

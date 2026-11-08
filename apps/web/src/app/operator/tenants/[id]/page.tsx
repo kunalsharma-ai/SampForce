@@ -319,11 +319,11 @@ function WorkspaceFeatures({ d, admin }: { d: OperatorTenantDetail; admin: boole
           </div>
           {admin && (
             <div className="flex flex-wrap items-end gap-3">
-              <Field id="ft-reason" label="Reason (recorded in both audit logs)" className="min-w-64 flex-1">
+              <Field id="ft-reason" label="Reason for the feature changes (recorded in both audit logs)" className="min-w-64 flex-1">
                 <Input id="ft-reason" value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} required />
               </Field>
               <Button type="submit" disabled={save.isPending || changed.length === 0 || reason.trim().length < 5}>
-                Apply {changed.length > 0 ? `${changed.length} change${changed.length === 1 ? '' : 's'}` : ''}
+                Save features{changed.length > 0 ? ` (${changed.length} change${changed.length === 1 ? '' : 's'})` : ''}
               </Button>
             </div>
           )}

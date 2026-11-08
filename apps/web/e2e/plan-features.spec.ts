@@ -61,8 +61,8 @@ test('a Free workspace sees what its plan leaves out, and gets it when the plan 
   await ops.getByRole('link', { name: 'Plan Locks Ltd' }).first().click();
   const features = ops.locator('[data-operator-features]');
   await features.getByLabel('Email sequences for this workspace').selectOption('on');
-  await features.getByLabel('Reason (recorded in both audit logs)').fill('Pilot of sequences agreed with sales');
-  await features.getByRole('button', { name: 'Apply 1 change' }).click();
+  await features.getByLabel('Reason for the feature changes (recorded in both audit logs)').fill('Pilot of sequences agreed with sales');
+  await features.getByRole('button', { name: 'Save features (1 change)' }).click();
   await expect(features.getByText('added')).toBeVisible();
 
   await page.goto('/app/sequences');
