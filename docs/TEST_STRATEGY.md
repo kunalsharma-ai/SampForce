@@ -7,22 +7,27 @@
 | Layer | Tooling | Location | Runs |
 |---|---|---|---|
 | Unit | Vitest | `packages/*/src/**/*.test.ts`, `apps/*/src/**/*.test.ts` | Every push |
-| API integration (real Postgres, real RLS) | Vitest + Supertest + SWC | `apps/api/test/*.e2e.test.ts` | Every push |
-| Database security | Vitest against the runtime role | `apps/api/test/tenancy.e2e.test.ts` | Every push |
+| API integration (real MongoDB replica set, the guarded client) | Vitest + Supertest + SWC | `apps/api/test/*.e2e.test.ts` | Every push |
+| Database security | Vitest through the guarded client the API uses: every workspace-guard rule, lookups, worker and operator scans, append-only collections, nested reads and writes | `apps/api/test/workspace-guard.e2e.test.ts`, `apps/api/test/tenancy.e2e.test.ts` and the `*-isolation` suites | Every push |
 | End-to-end (production builds) | Playwright (Chromium desktop + Pixel 7) | `apps/web/e2e` | Every push |
 | Accessibility | axe-core via Playwright, WCAG 2.0/2.1/2.2 A+AA tags, light and dark | `apps/web/e2e/app.spec.ts` | Every push |
 | Component catalogue | Storybook build + Playwright: every story renders without errors and passes axe in dark, light and Arabic (RTL) | `apps/web/e2e/catalogue.storybook.ts` | Every push |
 | Localisation | Vitest: every catalogue has every key, matching placeholders and every plural form the language uses; every page phrase has four translations with the same placeholders and sits in one table; every label that reaches pages as data (type label maps, statuses, API KPI, onboarding and signal labels read from the API source, theme descriptions, contrast check labels, single sign-on errors, the shared schemas' validation messages, email sequence labels, the email design checks, AI availability reasons, inbox and meeting labels, meeting-note stages, Zoom transcript states the compose and meeting analysis checks, quote, contract, billing and approval statuses, bid and proposal templates, plan audiences, signature methods and the Quick Bid checks, the report catalogue with every measure and date grouping, report templates and definition checks, report and forecast screen labels, churn risks, health signals, cadences and retention actions, app cards, OAuth outcomes, API key scopes, administration statuses, workflow triggers, actions, operators, condition fields and templates, AI agents with their permissions and run statuses, campaign channels and statuses, segment fields and operators, form fields, prospect sources, import fields and finder statuses, visitor page kinds, portal roles, request categories and settings, gamification metrics, badge rules and competition windows, the planned module list and the help topics) has a phrase; the browser-language match for visitors picks the first supported language on its primary subtag. Playwright: German shell, Arabic RTL with axe, Spanish Command Center and lead create-to-detail workflow with axe, Arabic deals board with axe, a language picked at sign-up carried to the new account (Spanish settings and an activities task workflow with axe, then a fresh browser), Arabic sign-in page with axe, German email sequences with a designed template saved and a new sequence's rules and send window (axe), Arabic template designer with axe, German team inbox (category, owner and a note saved, filters and sync log) with axe, German meeting notes analysed, reviewed (with the schema check in German) and turned into a task with axe, Arabic meetings page with axe, German catalogue, bid templates and Quick Bid Studio (checks in German, a draft saved) with axe, German contract signature with axe, Arabic billing with a trial started and Arabic approvals with axe, German report built from a template, saved, filtered (checks and match counts in German) and pinned to a new dashboard, German pipeline flow and forecast with axe, Arabic customer success filtered by churn risk with axe, German Automation Studio workflow from a template saved and activated (German statuses and run count) with axe, German team page and new-team dialog with axe, Arabic API key created on the integrations page and Arabic workspace security with axe, German gamification turned on with points, the breakdown and leaderboard periods in German (axe), German prospect list imported from CSV with German counts (axe), Arabic website tracking set up and a lead form created with axe, a German-browser visitor's hosted lead form (labels and the API's validation message in German) with axe, an Arabic-browser customer accepting a portal invitation and seeing the portal right to left with axe, a French-browser visitor's pricing page switched to German with the language picker (axe) | `apps/web/src/lib/i18n/i18n.test.ts`, `apps/web/e2e/regional.spec.ts`, `apps/web/e2e/regional-sequences.spec.ts`, `apps/web/e2e/regional-communication.spec.ts`, `apps/web/e2e/regional-commercial.spec.ts`, `apps/web/e2e/regional-analytics.spec.ts`, `apps/web/e2e/regional-admin.spec.ts`, `apps/web/e2e/regional-growth.spec.ts`, `apps/web/e2e/regional-public.spec.ts` | Every push |
 | Sales territories (ADR 0049) | Vitest + Supertest: create, edit and delete with one territory per country, case-insensitive names, member 403, cross-tenant 404, audit; per-territory open, weighted, overdue, won and lost figures, other-currency deals counted not summed, reasons for unassigned deals, deals following a company's country, owner filter. Playwright: define territories in settings, the country conflict message, the Territory view figures and side panel, removing a country moves its deals, axe | `apps/api/test/territories.e2e.test.ts`, `apps/web/e2e/territories.spec.ts` | Every push |
 | Email template designer (ADR 0050) | Vitest: every block type renders, typed and merged text is escaped, unsafe links and images are refused, merge fields in links are filled and dropped when they are not web or mail addresses, only web links are tracked, the plain-text part, readable text on accent colours; outline edits (add, move, duplicate, remove, drag and drop). Vitest + Supertest: designed templates stored with their plain-text body, unknown fields and unsafe links refused, HTML preview for a lead with escaping, test send as HTML, sequence send as HTML with tracked links, unsubscribe line and pixel, own-text steps stay plain, pause on an empty field. Playwright: build an email from palette clicks and drags, reorder by drag and by buttons, merge fields, a refused link, desktop and phone previews, preview for a lead, save and reload, axe | `packages/types/src/email-design.test.ts`, `apps/web/src/components/email-designer/design-model.test.ts`, `apps/api/test/email-design.e2e.test.ts`, `apps/web/e2e/email-designer.spec.ts` | Every push |
-| Migration | `prisma migrate deploy` on an empty DB | CI step | Every push |
+| Database set-up | `pnpm db:setup` twice on an empty database (the second run must change nothing) | CI step | Every push |
 | Performance | `scripts/load/run.mjs` against a seeded workspace (`seed:load`); results in docs/perf | Phase 8 (manual; not in CI) | Before releases |
 | Security | `pnpm audit --prod`, secret scan, CSP-violation check in the browser suite; CodeQL and ZAP not set up | Phase 8 | Before releases |
 | AI evaluation | Golden datasets per prompt with deterministic scorers (`pnpm --filter @dealflow/api eval`, needs a real key; `--fixture` checks the harness only) | `apps/api/evals` | On prompt change |
 | AI plumbing | API and browser tests against a local Claude Messages API fixture | `apps/api/test/fixtures/ai-fixture.ts`, `apps/api/test/ai*.e2e.test.ts`, `apps/web/e2e/ai.spec.ts` | Every push |
 | Workflow execution | Pure engine unit tests; API tests drive the worker with `WorkerService.drain()`; providers replaced by a local HTTP fixture | `apps/api/src/automation/*.test.ts`, `apps/api/test/automation*.e2e.test.ts` | Every push |
 | Billing | Provider sandbox + webhook fixtures, proration math unit tests | Phase 6 | Every push |
-| Backup restore | `scripts/backup.sh` then `scripts/restore.sh` into a new DB (checksum, RLS check, runtime-role check), row counts compared | Phase 8 (drilled manually) | Weekly on staging |
+| Backup restore | `scripts/backup.sh` (mongodump) then `scripts/restore.sh` into a new database (checksum, every collection against the manifest's counts, unique indexes present) | Drilled manually (docs/runbooks/database-restore.md) | Weekly on staging |
+
+## Results before MongoDB
+
+The results below were recorded on PostgreSQL. Lines that mention `scripts/check-rls.sql` or RLS describe checks
+that the workspace-guard suite and the isolation suites now make (ADR 0058).
 
 ## Phase 1 results (2026-10-30)
 
@@ -152,15 +157,14 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 ## Running locally
 
 ```bash
-pnpm db:setup                     # roles + dealflow, dealflow_test databases (needs a superuser PG connection)
-pnpm db:migrate                   # dev database
-MIGRATION_DATABASE_URL=…/dealflow_test DATABASE_URL=…/dealflow_test pnpm db:migrate
-pnpm build && pnpm lint && pnpm typecheck && pnpm test
+docker compose up -d mongo         # MongoDB 8, one-member replica set on localhost:27017
+pnpm build && pnpm db:setup        # collections and indexes in the dev database (DATABASE_URL)
+pnpm lint && pnpm typecheck && pnpm test   # the API suite drops and rebuilds sampforce_test (TEST_DATABASE_URL)
 pnpm test:e2e                     # starts the built API and web app
 ```
 
 ## Test data
 
-Integration tests create their own tenants with random emails and truncate tables before each run.
+Integration tests create their own tenants with random emails; the test database is dropped and set up again before each run.
 The demo seed (`pnpm db:seed`) is for development only, refuses to run with `NODE_ENV=production`, and marks
 its workspace `is_demo`, which the UI labels with a banner.

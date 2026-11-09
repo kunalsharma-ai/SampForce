@@ -17,25 +17,26 @@ real cluster. Treat the first staging install as part of acceptance.
 | API | `dealflow-api` | `node dist/main.js` | HPA on CPU (2–10) | Port 4000, metrics on 9464 |
 | Worker | `dealflow-api` | `node dist/worker.js` | Fixed replicas (2) | Queue claims use `FOR UPDATE SKIP LOCKED`, so copies are safe. `/healthz` on the metrics port fails after 5 minutes without a completed cycle |
 | Web | `dealflow-web` | `node apps/web/server.js` | HPA on CPU (2–6) | Port 3000, `/healthz`; proxies `/api/*` to `API_INTERNAL_URL` |
-| Migrations | `dealflow-migrate` | `prisma migrate deploy` | Helm pre-install/pre-upgrade Job | Uses `MIGRATION_DATABASE_URL` |
+| Database set-up | `dealflow-migrate` | `node node_modules/@dealflow/database/dist/setup-cli.js` (collections, indexes, plans; idempotent) | Helm pre-install/pre-upgrade Job | Uses `MIGRATION_DATABASE_URL` |
 
-Dependencies you provide: PostgreSQL 16 (managed), an ingress controller with TLS, a secret store, and optionally
+Dependencies you provide: MongoDB 8 as a replica set (managed, such as Atlas, or your own; transactions need a replica set), an ingress controller with TLS, a secret store, and optionally
 Prometheus (Operator) and an OpenTelemetry collector. Redis is not required by the current code.
 
 ## 2. Database
 
-1. Create the roles and grants with `scripts/db-setup.sh` (as an admin), using real passwords from your secret
-   store (`DEALFLOW_OWNER_PASSWORD`, `DEALFLOW_APP_PASSWORD`, `DEALFLOW_BACKUP_PASSWORD`):
-   - `dealflow_owner` owns the schema and runs migrations.
-   - `dealflow_app` is the runtime role, **without BYPASSRLS**. Row-level security depends on this.
-   - `dealflow_backup` is read-only **with BYPASSRLS**, used only by backups.
-   On a managed service, check how it lets you grant BYPASSRLS before relying on the backup role.
-2. Size the connection pool: Prisma defaults to `2 × CPUs + 1` connections per process. Set
-   `?connection_limit=` on `DATABASE_URL` so that (API pods + worker pods) × limit stays under the server's
-   `max_connections` with headroom. Under the Phase 8 load test, pool exhaustion showed up as
-   "Unable to start a transaction in the given time" before the fix to slow queries.
-3. The application sets `plan_cache_mode = force_custom_plan` and `jit = off` per transaction (ADR 0012); no server
-   change is needed. Setting `jit = off` server-wide is also reasonable for this workload.
+1. Use a MongoDB 8 **replica set** (three members in production; Atlas clusters are replica sets). SampForce uses
+   multi-document transactions, which a standalone server does not support.
+2. Create three users on the SampForce database, with real passwords from your secret store
+   (`deploy/mongo/init-sampforce.js` shows the exact roles):
+   - `sampforce_app`: `readWrite` on the database. The API and the worker. Workspace isolation is enforced by
+     SampForce's database client (ADR 0058), so this user must not be shared with other tools.
+   - `sampforce_admin`: `readWrite` and `dbAdmin`. The set-up Job, which creates and drops indexes.
+   - `sampforce_backup`: MongoDB's built-in `backup` role, used only by `scripts/backup.sh`.
+3. Size the connection pool with `maxPoolSize` on `DATABASE_URL` (the driver's default is 100 per process) so that
+   (API pods + worker pods) × pool stays well under what your cluster tier allows.
+4. Busy documents make transactions retry rather than wait (MongoDB aborts a conflicting transaction at once;
+   `withDbContext` retries up to 12 times). Retries appear as `WriteConflict` in debug logs; a steady stream of them
+   on one workspace points at a hot document.
 
 ## 3. Secrets
 
@@ -43,8 +44,8 @@ Create one Secret (or sync it from your secret manager) and name it in `secrets.
 
 | Key | Required | Notes |
 |---|---|---|
-| `DATABASE_URL` | yes | `dealflow_app` |
-| `MIGRATION_DATABASE_URL` | yes | `dealflow_owner`; used by the migration Job only |
+| `DATABASE_URL` | yes | `mongodb://` or `mongodb+srv://` URL for `sampforce_app`, naming the database |
+| `MIGRATION_DATABASE_URL` | yes | Same database, `sampforce_admin`; used by the set-up Job only |
 | `JWT_ACCESS_SECRET` | yes | ≥ 32 random characters |
 | `ENCRYPTION_KEY` | yes | 32 random bytes, base64 or hex. Losing it makes MFA secrets, SSO client secrets, webhook secrets and mailbox tokens unreadable |
 | `OPERATOR_JWT_SECRET` | no | Enables the operator console |
@@ -75,9 +76,11 @@ helm upgrade --install dealflow infrastructure/helm/dealflow \
 ```
 
 - Use an immutable image tag (the commit SHA), never `latest`.
-- Migrations run before the new pods start. A failed migration fails the release and leaves the old pods serving.
-- Keep migrations backwards compatible with the previous release (add, backfill, then remove in a later release),
-  because old pods keep serving during a rolling update.
+- Database set-up (new collections and indexes) runs before the new pods start. A failed set-up fails the release
+  and leaves the old pods serving.
+- Keep schema changes backwards compatible with the previous release (add, back-fill, then remove in a later
+  release), because old pods keep serving during a rolling update. Removing a field from the schema leaves it in old
+  documents; drop it with a script once no release reads it.
 - `metrics.serviceMonitor.enabled` and `metrics.prometheusRule.enabled` need the Prometheus Operator CRDs.
 
 ## 5. Security settings in the chart
@@ -91,7 +94,6 @@ discovery to private addresses unless `ALLOW_PRIVATE_NETWORK_TARGETS=true` (neve
 
 ## 6. After the first install
 
-1. Run `scripts/check-rls.sql` against the database as the owner role.
 1. Create the first operator-console admin (there are no default credentials):
    `kubectl -n dealflow exec -it deploy/dealflow-api -- env OPERATOR_EMAIL=you@example.com OPERATOR_ROLE=ADMIN OPERATOR_PASSWORD='…' node dist/cli/create-operator.js`.
    Then enter provider keys under Providers in the console.

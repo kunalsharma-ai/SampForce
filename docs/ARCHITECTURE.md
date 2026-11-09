@@ -11,7 +11,7 @@ Everything else is the target design for later phases.
 3. **Every consequential action is explainable and auditable**: who or what did it, why, and with whose approval.
 4. **One data model, one event stream.** Sales, marketing, success, automation and AI all read and write the
    same entities and emit the same domain events.
-5. **Boring, proven infrastructure**: PostgreSQL, Redis, S3-compatible storage, containers.
+5. **Boring, proven infrastructure**: MongoDB (replica set), Redis, S3-compatible storage, containers.
 
 ## 2. Context
 
@@ -22,7 +22,7 @@ flowchart LR
   visitor[Prospects] --> marketing[apps/marketing<br/>Phase 6]
   web -->|/api/v1 same-origin proxy| api[apps/api<br/>NestJS]
   adminapp --> api
-  api --> pg[(PostgreSQL 16<br/>RLS + pgvector)]
+  api --> pg[(MongoDB 8<br/>replica set)]
   api --> redis[(Redis<br/>cache, rate limits, BullMQ)]
   api --> s3[(S3-compatible<br/>object storage)]
   worker[apps/worker<br/>Phase 3: BullMQ + Temporal] --> pg
@@ -46,7 +46,7 @@ dealflow/
 ├── packages/
 │   ├── types/          Zod schemas + shared types: one source for API validation, forms and OpenAPI
 │   ├── config/         Validated environment loading
-│   ├── database/       Prisma schema, migrations (incl. RLS), tenant-context helper, provisioning
+│   ├── database/       Prisma schema (MongoDB), workspace guard, index set-up, tenant-context helper, provisioning
 │   ├── ui/             Design tokens, Tailwind preset, accessible primitives (Radix, shadcn conventions)
 │   ├── ai/             (Phase 4) provider-independent AI gateway
 │   ├── automation/     (Phase 3) workflow definition schema, engine and node library
@@ -56,7 +56,7 @@ dealflow/
 ├── infrastructure/     docker/ and helm/dealflow (Phase 8 chart); no Terraform
 ├── docs/               This documentation
 ├── scripts/            db-setup.sh and operational scripts
-├── docker-compose.yml  Local Postgres (pgvector), Redis, API, web
+├── docker-compose.yml  Local MongoDB (replica set), Redis, API, web
 └── .github/workflows/  CI: build, lint, typecheck, unit + integration + e2e + accessibility tests
 ```
 
@@ -74,8 +74,9 @@ Packages are introduced when their first real consumer ships, so the tree never 
 4. Controllers validate input with the shared Zod schemas (`ZodPipe`) and call services.
 5. Services run tenant queries through `prisma.run(ctx, fn)`, which opens a transaction and sets
    `app.tenant_id` / `app.user_id` with `set_config(..., true)` (transaction-scoped, safe with pooling).
-6. PostgreSQL **row-level security** policies on every tenant table compare `tenant_id` with that setting.
-   The runtime role `dealflow_app` has no `BYPASSRLS`, and tables use `FORCE ROW LEVEL SECURITY`.
+6. The **workspace guard** in the database client (`packages/database/src/scope.ts`) adds `tenant_id` to every
+   read and checks it on every write, for every collection that has one (ADR 0058; until 2026-11-09 this was
+   PostgreSQL forced row-level security).
 7. Audit events are written **inside the same transaction** as the change they describe.
 8. Errors leave through one filter as `{ error: { code, message, requestId, details? } }`; logs are
    structured JSON (pino) with the request id and with cookies and auth headers stripped.
@@ -93,13 +94,14 @@ Packages are introduced when their first real consumer ships, so the tree never 
 
 ## 6. Data layer
 
-- PostgreSQL 16 with Prisma 6. Schema and ERD: [DATABASE.md](DATABASE.md).
-- Three roles: `dealflow_owner` (migrations), `dealflow_app` (runtime, RLS enforced) and `dealflow_backup`
-  (read-only, BYPASSRLS, backups only).
-- Every tenant transaction sets `plan_cache_mode = force_custom_plan` and `jit = off` (docs/perf/README.md).
-- Hand-written SQL migrations add RLS policies, append-only grants on `audit_logs`, and reference data.
-- pgvector (Phase 4) holds embeddings in tenant-scoped tables under the same RLS policies, so retrieval for
-  AI can never cross tenants.
+- MongoDB 8 (a replica set, for transactions) with Prisma 6's MongoDB connector. Schema and ERD:
+  [DATABASE.md](DATABASE.md). Why MongoDB and what replaced each PostgreSQL feature: [ADR 0058](adr/0058-mongodb.md).
+- Three database users: `sampforce_admin` (index set-up), `sampforce_app` (runtime, readWrite on one database) and
+  `sampforce_backup` (MongoDB's backup role).
+- `pnpm db:setup` creates collections, the indexes the schema declares and the ones it cannot (partial,
+  case-insensitive), and seeds the plan catalogue. There are no migrations.
+- Embeddings for retrieval are not stored yet (pgvector was planned under PostgreSQL); MongoDB Atlas Vector Search
+  or a separate index would hold them, scoped by workspace like everything else.
 - OpenSearch (Phase 2+) indexes are partitioned by tenant (index-per-tenant for large tenants, filtered
   aliases otherwise); the indexer runs with the tenant context of the source row.
 - Object storage keys are prefixed `tenants/{tenantId}/…`; uploads go through signed URLs issued after an
@@ -137,8 +139,8 @@ successful health check with real credentials; in tests adapters run against rec
 ## 10. Deployment
 
 - **Implemented:** Dockerfiles for API and web (standalone Next.js output), `docker-compose.yml` for a
-  local stack, GitHub Actions CI with Postgres running migrations, all test suites and accessibility checks.
-- **Phase 8 (done):** Helm chart with a pre-upgrade migration Job, HPAs, PDBs, NetworkPolicies, ServiceMonitors
+  local stack, GitHub Actions CI with a database running all test suites and accessibility checks.
+- **Phase 8 (done):** Helm chart with a pre-upgrade database set-up Job, HPAs, PDBs, NetworkPolicies, ServiceMonitors
   and alert rules (checked in CI, not yet installed on a cluster); Prometheus metrics and OpenTelemetry traces;
   backup and restore scripts with measured drill times; runbooks. See [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Not done:** read replicas, Redis, CDN configuration, blue-green deploys, PITR drills.
@@ -150,5 +152,5 @@ successful health check with real credentials; in tests adapters run against rec
 | AI provider | Copilot and agents show "unavailable"; queued agent tasks retry with backoff; CRM unaffected |
 | Redis | Rate limits fall back to in-memory per instance; background jobs pause; requests still served |
 | Email/calendar provider | Sync status turns red on the Integrations page; retries with backoff; manual logging still works |
-| OpenSearch | Search falls back to Postgres trigram search with reduced ranking |
+| OpenSearch | Search falls back to the built-in word search with trigram-style ranking |
 | WebGL unavailable / low-power | 2D charts and tables render instead of 3D scenes |

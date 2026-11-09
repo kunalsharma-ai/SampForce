@@ -1,6 +1,6 @@
 # ADR 0003: Shared schema with PostgreSQL row-level security
 
-**Status:** accepted (2026-10-30)
+**Status:** superseded by [ADR 0058](0058-mongodb.md) (2026-11-09); accepted 2026-10-30
 
 **Decision.** All tenants share tables. Every tenant table has `tenant_id` and a FORCEd RLS policy. The
 runtime role cannot bypass RLS. The API sets `app.tenant_id` per transaction via `set_config(…, true)`.

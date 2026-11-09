@@ -7,9 +7,11 @@ If you run Kubernetes instead, use the Helm chart in `infrastructure/helm/dealfl
 [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md). Everything below is for the single-server setup.
 
 SampForce was called DealFlow before November 2026. A few technical names keep the old spelling because changing
-them would break an existing install: the database (`dealflow`), its roles (`dealflow_owner`, `dealflow_app`,
-`dealflow_backup`) and their `DEALFLOW_*_PASSWORD` settings, the Docker Compose project (it names the database
-volume) and the Helm chart. An install set up under the old name in `/opt/dealflow` keeps working where it is, and
+them would break an existing install: the Docker Compose project (it names the data volumes) and the Helm chart.
+Since the move to MongoDB (November 2026) the database is `sampforce` and its users are `sampforce_app`,
+`sampforce_admin` and `sampforce_backup`. An install that ran on PostgreSQL cannot be upgraded in place: there is no
+tool that copies PostgreSQL data into MongoDB, so a new install starts with an empty database.
+An install set up under the old name in `/opt/dealflow` keeps working where it is, and
 its `dealflow.env` is renamed to `sampforce.env` the first time any script in `deploy/scripts` runs.
 
 ## What gets installed
@@ -19,11 +21,11 @@ Internet ──443/80──▶ Caddy (TLS, automatic Let's Encrypt certificate)
                        ├── /api/v1/*  ──▶ api     (NestJS, port 4000)
                        └── everything ──▶ web     (Next.js, port 3000)
                      worker  (background jobs: email, workflows, webhooks, AI runs)
-                     postgres 16 (data in a Docker volume)
-                     migrate (runs database migrations on every start, then exits)
+                     mongo 8 (one-member replica set, data in a Docker volume)
+                     migrate (creates collections and indexes on every start, then exits)
 ```
 
-Only Caddy is reachable from outside (ports 80 and 443). Postgres, the API, the worker and the web server listen
+Only Caddy is reachable from outside (ports 80 and 443). MongoDB, the API, the worker and the web server listen
 on Docker's internal network only. All app containers run as a non-root user with a read-only filesystem and no
 Linux capabilities.
 
@@ -31,13 +33,13 @@ Linux capabilities.
 |---|---|
 | `docker-compose.prod.yml` | The whole stack |
 | `Caddyfile` | Reverse proxy and HTTPS |
-| `.env.example` | Domain, passwords and keys. `scripts/generate-secrets.sh` turns it into `.env` |
+| `.env.example` | Domain, passwords and keys. `scripts/generate-secrets.sh` turns it into `.env` (and writes `mongo/keyfile`) |
 | `sampforce.env.example` | Every optional application setting, with its default. Becomes `sampforce.env` |
-| `postgres/init-sampforce.sh` | Creates the database roles on first start |
+| `mongo/init-sampforce.js`, `mongo/start.sh`, `mongo/healthcheck.sh` | Create the database users on first start, start MongoDB as a replica set with a key file, and start the set |
 | `scripts/generate-secrets.sh` | Creates `.env` with random passwords and keys |
 | `scripts/create-operator.sh` | Creates your operator-console login |
 | `scripts/backup.sh`, `scripts/restore.sh` | Database backup, restore and switch-over |
-| `scripts/update.sh` | Backup, pull new code, rebuild, migrate, restart |
+| `scripts/update.sh` | Backup, pull new code, rebuild, set up the database, restart |
 | `scripts/smoke-test.sh` | Checks the running install from the outside |
 
 ## 1. The server
@@ -137,11 +139,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 The first build takes 10 to 20 minutes. On the first start:
 
-1. Postgres creates the `dealflow` database and three roles: `dealflow_owner` (owns the schema),
-   `dealflow_app` (what the app uses, **without** permission to bypass row-level security) and `dealflow_backup`
-   (read-only, for backups).
-2. `migrate` applies every database migration and exits. It runs again on every `up`; with nothing new to apply it
-   finishes in a second.
+1. MongoDB starts as a one-member replica set (transactions need one) and creates three users on the `sampforce`
+   database: `sampforce_app` (what the API and worker use, read and write only), `sampforce_admin` (creates
+   indexes) and `sampforce_backup` (MongoDB's backup role).
+2. `migrate` creates the collections, the indexes and the plan catalogue, and exits. It runs again on every `up`;
+   with nothing new to do it finishes in a few seconds.
 3. The API, worker and web app start. Caddy waits for the web app to be healthy, then requests the certificate.
 
 Follow progress with `docker compose -f docker-compose.prod.yml ps` and
@@ -157,12 +159,8 @@ scripts/smoke-test.sh
 ```
 
 It checks the HTTP to HTTPS redirect, the web app, the login and pricing pages, that the API reaches the
-database, that metrics are not public, and that every container reports healthy. Then confirm row-level security
-is in force:
-
-```bash
-docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d dealflow -v ON_ERROR_STOP=1 < ../scripts/check-rls.sql
-```
+database, that metrics are not public, and that every container reports healthy. Workspace isolation is enforced
+by SampForce's own database client, so there is no separate database check to run.
 
 ## 8. First logins
 
@@ -189,7 +187,7 @@ docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d d
 scripts/backup.sh
 ```
 
-writes `backups/sampforce-<time>.dump` with a `.sha256` checksum and a `.json` manifest, and deletes backups older
+writes `backups/sampforce-<time>.archive.gz` (a compressed `mongodump`) with a `.sha256` checksum and a `.json` manifest, and deletes backups older
 than `BACKUP_KEEP_DAYS` (14). It runs while SampForce is in use.
 
 **Every day at 02:30** (crontab -e as your user):
@@ -210,19 +208,22 @@ Keep `.env` (or at least `ENCRYPTION_KEY`) in your password manager, separately 
 **Restore.** Test this once after installing, and record the time it takes:
 
 ```bash
-scripts/restore.sh backups/sampforce-20261102T023000Z.dump            # restores into a new database and verifies it
-scripts/restore.sh backups/sampforce-20261102T023000Z.dump --switch   # same, then makes it the live database
+scripts/restore.sh backups/sampforce-20261102T023000Z.archive.gz            # restores into a new database and verifies it
+scripts/restore.sh backups/sampforce-20261102T023000Z.archive.gz --switch   # same, then makes it the live database
 ```
 
 The first form leaves the live database alone. `--switch` asks you to type `SWITCH`, stops the app for a few
-seconds, renames the live database to `dealflow_before_<time>` (kept, not deleted) and puts the restored one in its
-place. Anything entered after the backup was taken is no longer live (it is still in `dealflow_before_<time>`).
+seconds, sets `SAMPFORCE_DB` in `.env` to the restored database (`sampforce_restore_<time>`) and starts the app
+on it. MongoDB cannot rename a database, so the old live database is kept under its own name, not deleted; the
+script prints the command to drop it once you are sure. Anything entered after the backup was taken is no longer
+live (it is still in the old database).
 To restore onto a new server: do steps 1 to 6 with the **same `.env`** (copied from your password manager), copy
 the backup into `deploy/backups/`, then run the `--switch` form. See also
 [docs/runbooks/database-restore.md](../docs/runbooks/database-restore.md).
 
 This is a nightly logical backup: at worst you lose the day's changes since the last one. If you need
-point-in-time recovery, use a managed Postgres with PITR and point the app at it (ask for that variant).
+point-in-time recovery, use a managed MongoDB with continuous backups (such as Atlas) and point the app at it
+(ask for that variant).
 
 ## 10. Updating
 
@@ -231,7 +232,7 @@ scripts/update.sh              # git checkout: backup, git pull, rebuild, migrat
 scripts/update.sh --no-pull    # after unpacking a new release zip over /opt/sampforce
 ```
 
-Migrations run before the new API starts. If one fails, `up` stops and the running containers keep serving; read
+Database set-up runs before the new API starts. If it fails, `up` stops and the running containers keep serving; read
 `docker compose -f docker-compose.prod.yml logs migrate`.
 
 ## 11. Day to day
@@ -243,7 +244,7 @@ Migrations run before the new API starts. If one fails, `up` stops and the runni
 | Restart one service | `docker compose -f docker-compose.prod.yml restart api` |
 | Apply a changed `sampforce.env` | `docker compose -f docker-compose.prod.yml up -d` |
 | Stop everything | `docker compose -f docker-compose.prod.yml down` (data volumes are kept) |
-| Database shell | `docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -d dealflow` |
+| Database shell | `docker compose -f docker-compose.prod.yml exec mongo bash -c 'mongosh -u root -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin'`, then `use sampforce` |
 | Disk use | `docker system df` and `du -sh backups` |
 
 Logs are capped at 50 MB per container. Never run `docker compose down -v`: `-v` deletes the database volume.
@@ -254,14 +255,16 @@ steps are: put the old key in `sampforce.env` as `ENCRYPTION_KEY_PREVIOUS`, put 
 `docker compose -f docker-compose.prod.yml run --rm api node dist/cli/reseal-secrets.js --dry-run` and again
 without `--dry-run`, then remove `ENCRYPTION_KEY_PREVIOUS` and run `up -d` again.
 
-**Changing a database password**: the roles are created once, from `.env` on the first start, so editing `.env`
+**Changing a database password**: the users are created once, from `.env` on the first start, so editing `.env`
 alone breaks the connection. Change both:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "ALTER ROLE dealflow_app PASSWORD 'new-hex-password'"
-# set DEALFLOW_APP_PASSWORD=new-hex-password in .env, then:
+docker compose -f docker-compose.prod.yml exec mongo bash -c 'mongosh -u root -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --quiet --eval "db.getSiblingDB(\"admin\").changeUserPassword(\"sampforce_app\", \"new-hex-password\")"'
+# set SAMPFORCE_APP_PASSWORD=new-hex-password in .env, then:
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+The users live in the `admin` database. The same works for `sampforce_admin` and `sampforce_backup`.
 
 Use letters and digits only (for example `openssl rand -hex 32`), because the password goes into a URL.
 
@@ -273,15 +276,20 @@ Use letters and digits only (for example `openssl rand -hex 32`), because the pa
 | `api` keeps restarting, logs `Invalid API environment configuration` | A value in `sampforce.env` is malformed or empty. Comment the line out instead of leaving `KEY=` |
 | `migrate` exited with an error | `docker compose -f docker-compose.prod.yml logs migrate`. The previous version keeps serving |
 | Build stops with `Killed` or `JavaScript heap out of memory` | Not enough RAM: add swap (step 2) and run the build again |
-| `password authentication failed for user "dealflow_app"` | `.env` was regenerated after the first start. Restore the original `.env`, or change the role password (above) |
+| `Authentication failed` in the api, worker or migrate logs | `.env` was regenerated after the first start. Restore the original `.env`, or change the user's password (above) |
+| `mongo` stays unhealthy, logs mention the key file | `mongo/keyfile` is missing or was changed. Restore it with `.env`; `scripts/generate-secrets.sh` writes it only once |
 | Password-reset emails do not arrive | Add SMTP in the operator console under Providers and press Test connection |
 
 ## 13. What has and has not been tested
 
-Tested in a sandbox with this exact compose file: a fresh start from an empty volume, migrations, every container
+Tested in a sandbox with this exact compose file (on PostgreSQL, before the move to MongoDB; see the note below):
+a fresh start from an empty volume, migrations, every container
 healthy under the hardened settings, HTTPS through Caddy (with a local certificate, because a sandbox cannot get a
 Let's Encrypt one), HTTP to HTTPS redirect, sign-up, creating a deal, operator creation, console sign-in and saving a provider key, a backup as a
 non-root user, a restore with `--switch` (data, logins and console keys came back as of the backup), and a full
 `down` / `up` keeping all data. Not tested: a real Let's Encrypt certificate, a real Ubuntu VM and the
 `apt-get` step inside the images (the sandbox cannot reach Debian mirrors). Treat your first install as the
 acceptance test and run `scripts/smoke-test.sh` and a restore drill on it.
+
+Since the move to MongoDB the stack has been checked again as described in the pull request that made it; until a
+restore drill has been run on your own server, treat the backup and restore steps above as untested there.
