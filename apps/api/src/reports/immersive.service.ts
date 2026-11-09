@@ -54,7 +54,7 @@ export class ImmersiveService {
       const openValue = new Map<string, number>();
       for (const d of deals) {
         if (d.status !== 'OPEN' || !d.companyId) continue;
-        openValue.set(d.companyId, (openValue.get(d.companyId) ?? 0) + (convert(d.amount.toNumber(), d.currency) ?? 0));
+        openValue.set(d.companyId, (openValue.get(d.companyId) ?? 0) + (convert(Number(d.amount), d.currency) ?? 0));
       }
       const companies = await tx.company.findMany({
         where: { tenantId: auth.tenantId, deletedAt: null },
@@ -85,7 +85,7 @@ export class ImmersiveService {
         const onCompany = d.companyId && ids.has(d.companyId);
         const onContact = d.contactId && contactIds.has(d.contactId);
         if (!onCompany && !onContact) continue;
-        nodes.push({ id: d.id, kind: 'deal', label: d.name, companyId: onCompany ? d.companyId : null, status: d.status, value: convert(d.amount.toNumber(), d.currency), href: `/app/deals/${d.id}` });
+        nodes.push({ id: d.id, kind: 'deal', label: d.name, companyId: onCompany ? d.companyId : null, status: d.status, value: convert(Number(d.amount), d.currency), href: `/app/deals/${d.id}` });
         if (onCompany) edges.push({ source: d.id, target: d.companyId!, kind: 'deal_of' });
         if (onContact) edges.push({ source: d.id, target: d.contactId!, kind: 'contact_on' });
       }
@@ -185,7 +185,7 @@ export class ImmersiveService {
           const m = median.get(s.id);
           return {
             id: s.id, name: s.name, category: s.category, position: s.position, openDeals: here.length,
-            openValue: Math.round(here.reduce((sum, d) => sum + (convert(d.amount.toNumber(), d.currency) ?? 0), 0) * 100) / 100,
+            openValue: Math.round(here.reduce((sum, d) => sum + (convert(Number(d.amount), d.currency) ?? 0), 0) * 100) / 100,
             medianDays: m === undefined || m === null ? null : Math.round(m * 10) / 10,
           };
         }),
@@ -240,7 +240,7 @@ export class ImmersiveService {
         pipelineId: pipeline.id,
         pipelineName: pipeline.name,
         stages: pipeline.stages.map((s) => ({ id: s.id, name: s.name, category: s.category, position: s.position })),
-        deals: deals.map((d) => ({ id: d.id, name: d.name, value: convert(d.amount.toNumber(), d.currency) })),
+        deals: deals.map((d) => ({ id: d.id, name: d.name, value: convert(Number(d.amount), d.currency) })),
         events: kept.map((e) => ({ dealId: e.opportunityId, at: e.occurredAt.toISOString(), fromStageId: e.fromStageId, toStageId: e.toStageId })),
         from: from.toISOString(),
         to: to.toISOString(),

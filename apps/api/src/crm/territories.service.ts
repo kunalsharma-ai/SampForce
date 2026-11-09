@@ -198,7 +198,7 @@ export class TerritoriesService {
         const a = acc.get(keyOf(d.company?.country))!;
         if (d.status === 'WON') {
           a.wonCount += 1;
-          if (d.currency === tenant.defaultCurrency) a.wonValue += d.amount.toNumber();
+          if (d.currency === tenant.defaultCurrency) a.wonValue += Number(d.amount);
         } else a.lostCount += 1;
       }
 

@@ -13,7 +13,7 @@ import { CommunicationService } from '../integrations/communication.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { parseAddresses, type ProviderEmail } from '../integrations/providers';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { claimDue, errorMessage } from '../worker/queue';
 import { loadPerson, personSubject, senderValues, variableValues } from './people';
 import { SequencesService, seqRules, seqSettings, seqSteps } from './sequences.service';
 import { buildDesignedSequenceEmail, buildSequenceEmail, TrackingSigner } from './tracking';
@@ -112,15 +112,16 @@ export class SequenceRunner implements OnModuleInit {
   // ───────────── Sending ─────────────
 
   async runDue(limit = 25): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE sequence_enrollments SET next_run_at = now() + interval '10 minutes'
-        WHERE id IN (
-          SELECT id FROM sequence_enrollments WHERE status = 'ACTIVE' AND next_run_at <= now()
-          ORDER BY next_run_at LIMIT ${limit} FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id`,
-    );
+    const now = new Date();
+    const due = (
+      await claimDue(this.prisma.sequenceEnrollment, {
+        where: { status: 'ACTIVE', nextRunAt: { lte: now } },
+        lease: { nextRunAt: new Date(now.getTime() + 10 * 60_000) },
+        select: { tenantId: true },
+        orderBy: { nextRunAt: 'asc' },
+        limit,
+      })
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId }));
     for (const d of due) {
       try {
         await this.step(d.tenant_id, d.id);

@@ -1,3 +1,4 @@
+import { updateDbContext } from '@dealflow/database';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { SsoErrorCode } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -51,10 +52,7 @@ export class SsoService {
 
   /** Looks up an enabled connection by its public sign-in name, without a tenant context (narrow RLS policy). */
   private async connectionBySlug(loginSlug: string) {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.sso_login_slug', ${loginSlug}, true)`;
-      return tx.ssoConnection.findFirst({ where: { loginSlug, enabled: true } });
-    });
+    return this.prisma.run({ lookup: { SsoConnection: { loginSlug } } }, (tx) => tx.ssoConnection.findFirst({ where: { loginSlug, enabled: true } }));
   }
 
   /** Starts a sign-in: returns the identity provider URL to redirect to, and the signed state for the cookie. */
@@ -121,7 +119,7 @@ export class SsoService {
         if (!userId) {
           const user = await tx.user.create({ data: { email: identity.email, name: identity.name ?? identity.email.split('@')[0]!, passwordHash: PasswordService.UNUSABLE, emailVerifiedAt: new Date() } });
           userId = user.id;
-          await tx.$executeRaw`SELECT set_config('app.user_id', ${userId}, true)`;
+          updateDbContext({ userId });
         }
         membership = await tx.membership.create({ data: { tenantId, userId, roleId } });
         if (invitation) await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });

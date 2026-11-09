@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
-import { Prisma, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, Prisma, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
 import {
   ENROLLMENT_FINISHED,
   type EnrollInput,
@@ -270,7 +270,7 @@ export class SequencesService {
   addSuppressions(auth: AuthContext, emails: string[], meta: RequestMeta): Promise<{ added: number }> {
     return this.prisma.run(auth, async (tx) => {
       const unique = [...new Set(emails)];
-      const r = await tx.emailSuppression.createMany({ data: unique.map((email) => ({ tenantId: auth.tenantId, email, reason: 'MANUAL' as const, createdById: auth.userId })), skipDuplicates: true });
+      const r = await createManySkipDuplicates(tx.emailSuppression, 'EmailSuppression', unique.map((email) => ({ tenantId: auth.tenantId, email, reason: 'MANUAL' as const, createdById: auth.userId })));
       await tx.sequenceEnrollment.updateMany({
         where: { tenantId: auth.tenantId, email: { in: unique }, status: { in: ['ACTIVE', 'PAUSED'] } },
         data: { status: 'STOPPED', finishedAt: new Date(), nextRunAt: null, lastError: 'Added to the do-not-email list.' },

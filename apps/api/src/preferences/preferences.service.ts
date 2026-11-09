@@ -61,7 +61,7 @@ export class PreferencesService {
     await this.prisma.run(auth, async (tx) => {
       await tx.tenant.update({
         where: { id: auth.tenantId },
-        data: { defaultAppearance: appearance ? (appearance as unknown as Prisma.InputJsonValue) : Prisma.DbNull },
+        data: { defaultAppearance: appearance ? (appearance as unknown as Prisma.InputJsonValue) : null },
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,

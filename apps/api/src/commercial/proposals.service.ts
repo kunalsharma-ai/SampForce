@@ -153,11 +153,11 @@ export class ProposalsService {
         superseded: !q.isLatest,
         currency: q.currency,
         sections: (q.sections as unknown as ProposalSection[]) ?? [],
-        lines: q.lines.map((l) => ({ name: l.name, description: l.description, quantity: l.quantity.toNumber(), unitPrice: l.unitPrice.toNumber(), discountPercent: l.discountPercent.toNumber(), taxPercent: l.taxPercent.toNumber(), netTotal: l.netTotal.toNumber() })),
-        subtotal: q.subtotal.toNumber(),
-        discountTotal: q.discountTotal.toNumber(),
-        taxTotal: q.taxTotal.toNumber(),
-        total: q.total.toNumber(),
+        lines: q.lines.map((l) => ({ name: l.name, description: l.description, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), discountPercent: Number(l.discountPercent), taxPercent: Number(l.taxPercent), netTotal: Number(l.netTotal) })),
+        subtotal: Number(q.subtotal),
+        discountTotal: Number(q.discountTotal),
+        taxTotal: Number(q.taxTotal),
+        total: Number(q.total),
         terms: q.terms,
       };
     });

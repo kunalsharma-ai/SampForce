@@ -6,7 +6,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { applyQuoteDecision, assertCanDecideQuote, QUOTE_APPROVAL_KIND } from '../commercial/quote-approval';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
-import { claim } from '../worker/queue';
+import { claimDue } from '../worker/queue';
 import type { ExecutionContext } from './executor.service';
 
 type ApprovalWith = Prisma.ApprovalRequestGetPayload<{ include: { execution: { include: { workflow: { select: { id: true; name: true } } } } } }>;
@@ -101,13 +101,17 @@ export class ApprovalsService {
 
   /** Expires stale requests and cancels the runs waiting on them. */
   async expireDue(): Promise<number> {
-    const rows = await claim<{ id: string; tenant_id: string; execution_id: string | null; kind: string; quote_id: string | null }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE approval_requests SET status = 'EXPIRED'
-        WHERE id IN (SELECT id FROM approval_requests WHERE status = 'PENDING' AND expires_at <= now() LIMIT 100 FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id, execution_id, kind, payload->>'quoteId' AS quote_id`,
-    );
+    const rows = (
+      await claimDue(this.prisma.approvalRequest, {
+        where: { status: 'PENDING', expiresAt: { lte: new Date() } },
+        lease: { status: 'EXPIRED' },
+        select: { tenantId: true, executionId: true, kind: true, payload: true },
+        limit: 100,
+      })
+    ).map((r) => {
+      const quoteId = (r.payload as { quoteId?: unknown } | null)?.quoteId;
+      return { id: r.id, tenant_id: r.tenantId, execution_id: r.executionId, kind: r.kind, quote_id: typeof quoteId === 'string' ? quoteId : null };
+    });
     for (const r of rows) {
       if (r.kind === QUOTE_APPROVAL_KIND && r.quote_id) {
         await this.prisma.run({ tenantId: r.tenant_id }, (tx) => applyQuoteDecision(tx, r.tenant_id, r.quote_id!, 'EXPIRED'));

@@ -1,3 +1,4 @@
+import { nullsLast } from '@dealflow/database';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
 import { type ListQuery, type OwnerRef, parseSortParam } from '@dealflow/types';
@@ -30,7 +31,7 @@ export function orderBy<T extends string>(q: Pick<ListQuery, 'sort' | 'order'>, 
   const last = list[list.length - 1]!;
   // Empty values sort last in both directions for nullable columns, so "highest priority first" starts with real values.
   const dir = (k: { field: string; desc: boolean }) =>
-    (nullable as readonly string[]).includes(k.field) ? { sort: k.desc ? 'desc' : 'asc', nulls: 'last' } : k.desc ? 'desc' : 'asc';
+    (nullable as readonly string[]).includes(k.field) ? nullsLast(k.desc ? 'desc' : 'asc') : k.desc ? 'desc' : 'asc';
   return [...list.map((k) => ({ [k.field]: dir(k) })), { id: last.desc ? 'desc' : 'asc' }] as Record<string, 'asc' | 'desc'>[];
 }
 
@@ -86,7 +87,7 @@ export async function assertRefs(tx: TenantTx, tenantId: string, refs: RefCheck,
 }
 
 export const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() : null);
-export const num = (d: { toNumber(): number } | null | undefined): number | null => (d ? d.toNumber() : null);
+export const num = (d: number | null | undefined): number | null => (d === null || d === undefined ? null : d);
 
 /** Returns only the keys whose values changed, for audit metadata. */
 export function diff(before: Record<string, unknown>, input: Record<string, unknown>): Record<string, { from: unknown; to: unknown }> {

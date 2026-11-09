@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { type AppConnection, Prisma, type SmsMessage } from '@dealflow/database';
+import { type AppConnection, createManySkipDuplicates, Prisma, type SmsMessage } from '@dealflow/database';
 import { type AppStatus, type SmsMessageRow, type SmsSendInput, type SmsThread, type TwilioConnectInput, type TwilioSettings } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -174,10 +174,7 @@ export class TwilioService {
         LIMIT 2`;
       // Only an unambiguous match is linked; the panel shows the conversation on every contact with that number.
       const contact = matches.length === 1 ? matches[0]! : null;
-      const created = await tx.smsMessage.createMany({
-        data: [{ tenantId, connectionId: conn.id, contactId: contact?.id ?? null, direction: 'in', phone: from, twilioSid: sid, body, segments: Math.max(1, Number(params.NumSegments ?? 1) || 1), status: 'received', source: 'webhook' }],
-        skipDuplicates: true,
-      });
+      const created = await createManySkipDuplicates(tx.smsMessage, 'SmsMessage', [{ tenantId, connectionId: conn.id, contactId: contact?.id ?? null, direction: 'in', phone: from, twilioSid: sid, body, segments: Math.max(1, Number(params.NumSegments ?? 1) || 1), status: 'received', source: 'webhook' }]);
       if (!created.count) return null;
       if (stop) await tx.smsConsent.updateMany({ where: { tenantId, phone: from, revokedAt: null }, data: { revokedAt: new Date(), revokedBy: 'contact (replied STOP)' } });
       const who = contact ? [contact.first_name, contact.last_name].filter(Boolean).join(' ') || from : from;
@@ -251,8 +248,7 @@ export class TwilioService {
 
   private async byHook(hookId: string): Promise<AppConnection | null> {
     if (!/^[a-f0-9]{24}$/.test(hookId)) return null;
-    const conn = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.app_provider', 'TWILIO', true), set_config('app.app_account', ${hookId}, true)`;
+    const conn = await this.prisma.run({ lookup: { AppConnection: { provider: 'TWILIO', externalAccountId: hookId } } }, async (tx) => {
       return tx.appConnection.findFirst({ where: { provider: 'TWILIO', externalAccountId: hookId } });
     });
     return conn && conn.status !== 'DISCONNECTED' ? conn : null;

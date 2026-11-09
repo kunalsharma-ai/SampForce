@@ -6,7 +6,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, notFound, ownerRefs } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { scan, errorMessage } from '../worker/queue';
 import { nextNumber } from './quotes.service';
 
 const include = {
@@ -68,7 +68,7 @@ export class ContractsService {
         // The contract value is the quote's net amount (before tax), in the quote's currency.
         opportunityId ??= quote.opportunityId;
         companyId ??= quote.opportunity.companyId;
-        value = quote.subtotal.minus(quote.discountTotal).toNumber();
+        value = quote.subtotal - quote.discountTotal;
         currency = quote.currency;
       }
       if (!currency) {
@@ -161,14 +161,20 @@ export class ContractsService {
    * then acts inside each tenant's context.
    */
   async runDue(): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`
-        SELECT id, tenant_id FROM contracts
-        WHERE status = 'ACTIVE' AND end_date IS NOT NULL
-          AND ((reminder_sent_at IS NULL AND end_date - renewal_notice_days <= current_date) OR end_date < current_date)
-        LIMIT 100`,
+    // The notice window is per contract (end date minus its notice days), so candidates are filtered here.
+    const todayStart = new Date(`${today()}T00:00:00.000Z`);
+    const candidates = await scan(() =>
+      this.prisma.contract.findMany({
+        where: { status: 'ACTIVE', endDate: { not: null }, OR: [{ reminderSentAt: null }, { endDate: { lt: todayStart } }] },
+        select: { id: true, tenantId: true, endDate: true, reminderSentAt: true, renewalNoticeDays: true },
+        orderBy: { endDate: 'asc' },
+        take: 2000,
+      }),
     );
+    const due = candidates
+      .filter((c) => c.endDate! < todayStart || (c.reminderSentAt === null && c.endDate!.getTime() - c.renewalNoticeDays * 86_400_000 <= todayStart.getTime()))
+      .slice(0, 100)
+      .map((c) => ({ id: c.id, tenant_id: c.tenantId }));
     let done = 0;
     for (const d of due) {
       try {
@@ -231,7 +237,7 @@ export function toContractRow(c: ContractWith, names: Map<string, { id: string; 
     deal: c.opportunity,
     quote: c.quote ? { id: c.quote.id, reference: formatReference('Q', c.quote.number, c.quote.version) } : null,
     owner: c.ownerId ? (names.get(c.ownerId) ?? null) : null,
-    value: c.value.toNumber(),
+    value: Number(c.value),
     currency: c.currency,
     startDate: ymd(c.startDate),
     endDate: end,

@@ -1,3 +1,4 @@
+import { transactionLock } from '@dealflow/database';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
 import {
@@ -116,14 +117,14 @@ export class PortalService {
             reference: `Q-${String(q.number).padStart(4, '0')}${q.version > 1 ? ` v${q.version}` : ''}`,
             title: q.title,
             status: q.status,
-            total: q.total.toNumber(),
+            total: Number(q.total),
             currency: q.currency,
             validUntil,
             canDecide: s.allowApprovals && ctx.user.role === 'approver' && q.status === 'SENT' && !(validUntil && validUntil < today),
             decidedAt: q.decidedAt?.toISOString() ?? null,
           };
         }),
-        contracts: contracts.map((c) => ({ id: c.id, name: c.name, status: c.status, startDate: c.startDate.toISOString().slice(0, 10), endDate: c.endDate?.toISOString().slice(0, 10) ?? null, value: c.value.toNumber(), currency: c.currency })),
+        contracts: contracts.map((c) => ({ id: c.id, name: c.name, status: c.status, startDate: c.startDate.toISOString().slice(0, 10), endDate: c.endDate?.toISOString().slice(0, 10) ?? null, value: Number(c.value), currency: c.currency })),
         milestones: milestones.map((t) => ({ id: t.id, title: t.title, dueAt: t.dueAt?.toISOString() ?? null, done: t.status === 'DONE', deal: t.opportunity?.name ?? null })),
         updates: updates.map((u) => ({ id: u.id, kind: u.kind, title: u.title, body: u.body, createdAt: u.createdAt.toISOString(), unread: !seen || u.createdAt > seen })),
         openRequests,
@@ -197,7 +198,7 @@ export class PortalService {
   createRequest(ctx: PortalContext, input: { subject: string; category: string; body: string }, meta: RequestMeta): Promise<PortalRequest> {
     return this.run(ctx, async (tx, s) => {
       if (!s.allowRequests) throw off('Support requests');
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`portal_request:${ctx.tenantId}`}))`;
+      await transactionLock(tx, `portal_request:${ctx.tenantId}`);
       const last = await tx.portalRequest.aggregate({ where: { tenantId: ctx.tenantId }, _max: { number: true } });
       const company = await tx.company.findFirstOrThrow({ where: { id: ctx.user.companyId, tenantId: ctx.tenantId }, select: { name: true, ownerId: true } });
       const r = await tx.portalRequest.create({

@@ -1,3 +1,4 @@
+import { nullsLast } from '@dealflow/database';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@dealflow/database';
 import type { TaskInput, TaskRow } from '@dealflow/types';
@@ -39,8 +40,8 @@ export class TasksService {
         },
         orderBy:
           q.status === 'OPEN'
-            ? [{ dueAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }]
-            : [{ completedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
+            ? [{ dueAt: nullsLast('asc') }, { createdAt: 'asc' }]
+            : [{ completedAt: nullsLast('desc') }, { updatedAt: 'desc' }],
         take: 200,
       });
       const owners = await ownerRefs(tx, rows.map((r) => r.assigneeId));

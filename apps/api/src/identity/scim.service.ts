@@ -99,8 +99,7 @@ export class ScimService {
     const token = header?.match(/^Bearer\s+(\S+)$/i)?.[1];
     if (!token) throw new ScimError(401, 'Missing bearer token.');
     const hash = hashScimToken(token);
-    const row = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.scim_token_hash', ${hash}, true)`;
+    const row = await this.prisma.run({ lookup: { ScimToken: { tokenHash: hash } } }, async (tx) => {
       return tx.scimToken.findFirst({ where: { tokenHash: hash, revokedAt: null }, select: { id: true, tenantId: true, lastUsedAt: true } });
     });
     if (!row) throw new ScimError(401, 'The token is not valid or has been revoked.');

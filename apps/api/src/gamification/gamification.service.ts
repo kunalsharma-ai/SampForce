@@ -35,7 +35,7 @@ import { PrismaService } from '../common/prisma.service';
 import { badRef, notFound } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { loadRates } from '../revenue/fx';
-import { claim, errorMessage } from '../worker/queue';
+import { scanTenants, errorMessage } from '../worker/queue';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -228,7 +228,7 @@ export class GamificationService {
       const s = of(d.ownerId!);
       add(s, 'deal_won', ymd(d.closedAt!), 1);
       s.dealsWon++;
-      const v = toBase(d.amount.toNumber(), d.currency, base, rates);
+      const v = toBase(Number(d.amount), d.currency, base, rates);
       if (v === null) missingRates++;
       else s.revenue += v;
     }
@@ -260,7 +260,7 @@ export class GamificationService {
       tx.salesTarget.findMany({ where: { tenantId, period: w.label, userId: { not: null } }, select: { userId: true, amount: true } }),
       tx.gamificationAward.groupBy({ by: ['userId'], where: { tenantId }, _count: { _all: true } }),
     ]);
-    const target = new Map(targets.map((t) => [t.userId!, t.amount.toNumber()]));
+    const target = new Map(targets.map((t) => [t.userId!, Number(t.amount)]));
     const badges = new Map(badgeCounts.map((b) => [b.userId, b._count._all]));
     const scores = members.map((u) => {
       const s = scored.stats.get(u.id);
@@ -308,7 +308,7 @@ export class GamificationService {
         const w = windowOf(periodLabelOf(now, g));
         const t = await tx.salesTarget.findFirst({ where: { tenantId: auth.tenantId, period: w.label, userId: auth.userId }, select: { amount: true } });
         const won = r2((await this.score(tx, auth.tenantId, w)).stats.get(auth.userId)?.revenue ?? 0);
-        const target = t?.amount.toNumber() ?? null;
+        const target = Number(t?.amount) ?? null;
         targets.push({ period: w.label, granularity: g, target, won, attainment: target ? r1((won / target) * 100) : null });
       }
       const awards = await this.awardRows(tx, { tenantId: auth.tenantId, userId: auth.userId }, 50);
@@ -376,7 +376,7 @@ export class GamificationService {
 
   private async awardRows(tx: TenantTx, where: Prisma.GamificationAwardWhereInput, take: number): Promise<AwardRow[]> {
     const rows = await tx.gamificationAward.findMany({ where, orderBy: { awardedAt: 'desc' }, take, include: { badge: { select: { id: true, name: true, icon: true, description: true } }, user: { select: { id: true, name: true } } } });
-    return rows.map((r) => ({ id: r.id, badge: r.badge, user: r.user, period: r.period, value: r.value.toNumber(), awardedAt: r.awardedAt.toISOString() }));
+    return rows.map((r) => ({ id: r.id, badge: r.badge, user: r.user, period: r.period, value: Number(r.value), awardedAt: r.awardedAt.toISOString() }));
   }
 
   /** Checks every active badge for every active member and stores new awards (with a notification). Returns how many. */
@@ -403,11 +403,11 @@ export class GamificationService {
       }
       for (const w of windows.values()) {
         const scored = await scoredFor(w);
-        const targets = b.metric === 'target_attainment' ? new Map((await tx.salesTarget.findMany({ where: { tenantId, period: w.label, userId: { not: null } } })).map((t) => [t.userId!, t.amount.toNumber()])) : null;
+        const targets = b.metric === 'target_attainment' ? new Map((await tx.salesTarget.findMany({ where: { tenantId, period: w.label, userId: { not: null } } })).map((t) => [t.userId!, Number(t.amount)])) : null;
         for (const userId of memberIds) {
           if (existing.has(`${b.id}|${userId}|${w.label}`)) continue;
           const value = metricValue(b.metric as BadgeMetric, s.rules, scored.stats.get(userId), targets?.get(userId) ?? null);
-          if (value === null || value < b.threshold.toNumber()) continue;
+          if (value === null || value < Number(b.threshold)) continue;
           await tx.gamificationAward.create({ data: { tenantId, badgeId: b.id, userId, period: w.label, value: r2(value) } });
           existing.add(`${b.id}|${userId}|${w.label}`);
           created++;
@@ -430,7 +430,7 @@ export class GamificationService {
   async sweep(force = false): Promise<number> {
     if (!force && Date.now() - this.lastSweep < HOUR) return 0;
     this.lastSweep = Date.now();
-    const tenants = await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT tenant_id FROM gamification_settings WHERE enabled LIMIT 1000`);
+    const tenants = (await scanTenants(this.prisma.gamificationSettings, { enabled: true })).map((tenant_id) => ({ tenant_id }));
     let n = 0;
     for (const t of tenants) {
       try {
@@ -512,7 +512,7 @@ export class GamificationService {
       const parsed = scoringRulesSchema.safeParse(r.rules);
       const rules = parsed.success ? parsed.data : DEFAULT_SCORING_RULES;
       const teamIds = r.teamIds.length ? r.teamIds : r.kind === 'team' ? teams.map((t) => t.id) : [];
-      const goal = r.goal?.toNumber() ?? null;
+      const goal = r.goal?? null;
       let standings: CompetitionStanding[] = [];
       let mine: CompetitionStanding | null = null;
       if (status !== 'upcoming') {
@@ -583,5 +583,5 @@ function badgeData(b: BadgeInput) {
 }
 
 function toBadgeRow(r: Prisma.GamificationBadgeGetPayload<{ include: { _count: { select: { awards: true } } } }>): BadgeRow {
-  return { id: r.id, name: r.name, description: r.description, icon: r.icon as BadgeRow['icon'], metric: r.metric as BadgeMetric, threshold: r.threshold.toNumber(), window: r.window as BadgeWindow, active: r.active, awardedCount: r._count.awards };
+  return { id: r.id, name: r.name, description: r.description, icon: r.icon as BadgeRow['icon'], metric: r.metric as BadgeMetric, threshold: Number(r.threshold), window: r.window as BadgeWindow, active: r.active, awardedCount: r._count.awards };
 }

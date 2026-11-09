@@ -1,3 +1,4 @@
+import { createManySkipDuplicates } from '@dealflow/database';
 import { Injectable } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
 import type { NotificationRow } from '@dealflow/types';
@@ -57,8 +58,7 @@ export class NotificationsService {
   async send(tx: TenantTx, tenantId: string, userIds: (string | null | undefined)[], n: NotificationDraft): Promise<void> {
     const users = [...new Set(userIds.filter((u): u is string => !!u))];
     if (users.length === 0) return;
-    await tx.notification.createMany({
-      data: users.map((userId) => ({
+    await createManySkipDuplicates(tx.notification, 'Notification', users.map((userId) => ({
         tenantId,
         userId,
         type: n.type,
@@ -66,9 +66,7 @@ export class NotificationsService {
         body: n.body?.slice(0, 1000) ?? null,
         link: n.link ?? null,
         eventId: n.eventId ?? null,
-      })),
-      skipDuplicates: true,
-    });
+      })));
   }
 
   /** Active members of the tenant whose role grants `permission`. */

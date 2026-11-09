@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { Prisma, roundMoney, type TenantTx, transactionLock } from '@dealflow/database';
 import {
   formatReference,
   needsDiscountApproval,
@@ -143,7 +143,7 @@ export class QuotesService {
         if (q.status !== 'DRAFT') throw fail('Only a draft quote can be submitted.');
         if (q.lines.length === 0) throw fail('Add at least one product before submitting.');
         const settings = await readSettings(tx, auth.tenantId);
-        const max = q.maxDiscountPercent.toNumber();
+        const max = Number(q.maxDiscountPercent);
         if (needsDiscountApproval(max, settings.discountApprovalThreshold)) {
           const ref = formatReference('Q', q.number, q.version);
           const approval = await tx.approvalRequest.create({
@@ -151,8 +151,8 @@ export class QuotesService {
               tenantId: auth.tenantId,
               kind: QUOTE_APPROVAL_KIND,
               title: `Approve ${max}% discount on ${ref}`,
-              summary: `${q.title} for ${q.opportunity.name}: total ${q.total.toNumber()} ${q.currency}, highest line discount ${max}% (limit ${settings.discountApprovalThreshold}%).`,
-              payload: { quoteId: id, reference: ref, total: q.total.toNumber(), currency: q.currency, maxDiscountPercent: max, threshold: settings.discountApprovalThreshold, requestedBy: auth.userId },
+              summary: `${q.title} for ${q.opportunity.name}: total ${Number(q.total)} ${q.currency}, highest line discount ${max}% (limit ${settings.discountApprovalThreshold}%).`,
+              payload: { quoteId: id, reference: ref, total: Number(q.total), currency: q.currency, maxDiscountPercent: max, threshold: settings.discountApprovalThreshold, requestedBy: auth.userId },
               permission: 'quotes:approve',
               expiresAt: new Date(Date.now() + 7 * DAY),
             },
@@ -168,13 +168,13 @@ export class QuotesService {
         if (q.status !== 'SENT' && q.status !== 'APPROVED') throw fail('Only an approved or sent quote can be accepted or declined.');
         await set(action === 'accept' ? 'ACCEPTED' : 'DECLINED', { decidedAt: new Date() });
         if (action === 'accept' && opts.updateDealAmount) {
-          const amount = q.subtotal.minus(q.discountTotal);
+          const amount = roundMoney(q.subtotal - q.discountTotal);
           const deal = await tx.opportunity.findFirstOrThrow({ where: { id: q.opportunityId } });
           if (deal.currency !== q.currency) throw fail(`The deal is in ${deal.currency} and the quote in ${q.currency}, so the deal amount was not changed.`);
           await tx.opportunity.update({ where: { id: q.opportunityId }, data: { amount } });
           await this.audit.record(tx, {
             tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.updated', entityType: 'opportunity', entityId: q.opportunityId,
-            metadata: { changes: { amount: { from: deal.amount.toNumber(), to: amount.toNumber() } }, fromQuote: id }, meta,
+            metadata: { changes: { amount: { from: Number(deal.amount), to: amount } }, fromQuote: id }, meta,
           });
         }
       } else {
@@ -187,7 +187,7 @@ export class QuotesService {
           },
         });
         // Prices are re-read from the price book, so a revision picks up any price change since.
-        await this.writeLines(tx, auth.tenantId, next.id, q.priceBookId, q.lines.map((l) => ({ productId: l.productId, quantity: l.quantity.toNumber(), discountPercent: l.discountPercent.toNumber(), taxRateId: l.taxRateId, description: l.description })));
+        await this.writeLines(tx, auth.tenantId, next.id, q.priceBookId, q.lines.map((l) => ({ productId: l.productId, quantity: Number(l.quantity), discountPercent: Number(l.discountPercent), taxRateId: l.taxRateId, description: l.description })));
         resultId = next.id;
       }
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: `quote.${action}`, entityType: 'quote', entityId: resultId, metadata: { from: q.status, number: q.number, version: q.version }, meta });
@@ -226,8 +226,8 @@ export class QuotesService {
     await tx.quoteLine.deleteMany({ where: { quoteId } });
     const calc = lines.map((l, i) => {
       const e = price.get(l.productId)!;
-      const taxPercent = l.taxRateId ? tax.get(l.taxRateId)!.rate.toNumber() : 0;
-      const c = { quantity: l.quantity, unitPrice: e.unitPrice.toNumber(), discountPercent: l.discountPercent, taxPercent };
+      const taxPercent = l.taxRateId ? Number(tax.get(l.taxRateId)!.rate) : 0;
+      const c = { quantity: l.quantity, unitPrice: Number(e.unitPrice), discountPercent: l.discountPercent, taxPercent };
       const t = lineTotals(c);
       return {
         row: {
@@ -270,12 +270,12 @@ export function toQuoteRow(q: QuoteWith, names: Map<string, { id: string; name: 
     validUntil,
     notes: q.notes,
     terms: q.terms,
-    subtotal: q.subtotal.toNumber(),
-    discountTotal: q.discountTotal.toNumber(),
-    taxTotal: q.taxTotal.toNumber(),
-    total: q.total.toNumber(),
-    maxDiscountPercent: q.maxDiscountPercent.toNumber(),
-    needsApproval: needsDiscountApproval(q.maxDiscountPercent.toNumber(), threshold),
+    subtotal: Number(q.subtotal),
+    discountTotal: Number(q.discountTotal),
+    taxTotal: Number(q.taxTotal),
+    total: Number(q.total),
+    maxDiscountPercent: Number(q.maxDiscountPercent),
+    needsApproval: needsDiscountApproval(Number(q.maxDiscountPercent), threshold),
     approvalId: q.approvalId,
     deal: { id: q.opportunity.id, name: q.opportunity.name, companyId: q.opportunity.companyId, companyName: q.opportunity.company?.name ?? null },
     priceBook: q.priceBook,
@@ -288,17 +288,17 @@ export function toQuoteRow(q: QuoteWith, names: Map<string, { id: string; name: 
     accentColor: q.accentColor,
     share: { enabled: q.shareEnabled, firstViewedAt: q.firstViewedAt?.toISOString() ?? null, lastViewedAt: q.lastViewedAt?.toISOString() ?? null, viewCount: q.viewCount },
     lines: q.lines.map((l) => ({
-      id: l.id, productId: l.productId, position: l.position, name: l.name, description: l.description, quantity: l.quantity.toNumber(), unitPrice: l.unitPrice.toNumber(),
-      discountPercent: l.discountPercent.toNumber(), taxRateId: l.taxRateId, taxPercent: l.taxPercent.toNumber(), netTotal: l.netTotal.toNumber(), taxTotal: l.taxTotal.toNumber(),
+      id: l.id, productId: l.productId, position: l.position, name: l.name, description: l.description, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice),
+      discountPercent: Number(l.discountPercent), taxRateId: l.taxRateId, taxPercent: Number(l.taxPercent), netTotal: Number(l.netTotal), taxTotal: Number(l.taxTotal),
     })),
     createdAt: q.createdAt.toISOString(),
     updatedAt: q.updatedAt.toISOString(),
   };
 }
 
-/** Next document number for the tenant, serialised by a transaction-scoped advisory lock. */
+/** Next document number for the tenant, serialised by a transaction lock. */
 export async function nextNumber(tx: TenantTx, tenantId: string, kind: 'quote' | 'contract'): Promise<number> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${tenantId}:${kind}`}))`;
+  await transactionLock(tx, `${tenantId}:${kind}`);
   const agg = kind === 'quote' ? await tx.quote.aggregate({ where: { tenantId }, _max: { number: true } }) : await tx.contract.aggregate({ where: { tenantId }, _max: { number: true } });
   return (agg._max.number ?? 0) + 1;
 }

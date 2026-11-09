@@ -7,7 +7,7 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { scanTenants, errorMessage } from '../worker/queue';
 import { SlicedSweep } from '../worker/sliced-sweep';
 
 const HOUR = 3_600_000;
@@ -157,7 +157,7 @@ export class DealHealthService {
   async sweep(force = false): Promise<number> {
     return this.sweeper.run(
       force,
-      async () => (await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT tenant_id FROM subscriptions LIMIT 5000`)).map((t) => t.tenant_id),
+      () => scanTenants(this.prisma.subscription, {}, 5000),
       async (tenantId) => {
         try {
           await this.prisma.run({ tenantId }, (tx) => this.refresh(tx, tenantId));

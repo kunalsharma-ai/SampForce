@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { type IntegrationConnection, Prisma, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, type IntegrationConnection, Prisma, type TenantTx } from '@dealflow/database';
 import { INTEGRATION_PROVIDERS, type IntegrationProviderKey, type ProviderStatus } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -9,7 +9,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { claimDue, errorMessage } from '../worker/queue';
 import { googleAdapter, microsoftAdapter, type ProviderAdapter, type ProviderEmail, ProviderError, ReauthRequiredError, type TokenSet } from './providers';
 
 interface OAuthState {
@@ -212,8 +212,7 @@ export class IntegrationsService {
           for (const m of messages) {
             const hit = [m.from, ...m.to, ...m.cc].map((e) => matches.get(e)).find(Boolean);
             if (!hit) continue;
-            const r = await tx.emailMessage.createMany({
-              data: [{
+            const r = await createManySkipDuplicates(tx.emailMessage, 'EmailMessage', [{
                 tenantId,
                 connectionId: conn.id,
                 providerMessageId: m.providerMessageId,
@@ -228,9 +227,7 @@ export class IntegrationsService {
                 sentAt: m.sentAt,
                 contactId: hit.contactId ?? null,
                 leadId: hit.contactId ? null : (hit.leadId ?? null),
-              }],
-              skipDuplicates: true,
-            });
+              }]);
             emails += r.count;
           }
 
@@ -292,15 +289,16 @@ export class IntegrationsService {
 
   /** Worker entry point: syncs connections whose next sync time has passed. */
   async syncDue(limit = 10): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE integration_connections SET next_sync_at = now() + interval '10 minutes'
-        WHERE id IN (
-          SELECT id FROM integration_connections WHERE status = 'CONNECTED' AND next_sync_at <= now()
-          ORDER BY next_sync_at LIMIT ${limit} FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id`,
-    );
+    const now = new Date();
+    const due = (
+      await claimDue(this.prisma.integrationConnection, {
+        where: { status: 'CONNECTED', nextSyncAt: { lte: now } },
+        lease: { nextSyncAt: new Date(now.getTime() + 10 * 60_000) },
+        select: { tenantId: true },
+        orderBy: { nextSyncAt: 'asc' },
+        limit,
+      })
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId }));
     for (const c of due) await this.sync(c.id, c.tenant_id).catch(() => undefined);
     return due.length;
   }

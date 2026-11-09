@@ -116,7 +116,7 @@ export class VoiceNotesService {
       const row = await tx.voiceNote.update({
         where: { id },
         // Editing the words throws away the proposals made from the old words.
-        data: { ...(input.language ? { language: input.language } : {}), ...(changed ? { transcript: input.transcript || null, interpretation: Prisma.DbNull, interpretedAt: null } : {}) },
+        data: { ...(input.language ? { language: input.language } : {}), ...(changed ? { transcript: input.transcript || null, interpretation: null, interpretedAt: null } : {}) },
       });
       return this.view(tx, row);
     });
@@ -152,7 +152,7 @@ export class VoiceNotesService {
           where: { id },
           data: {
             transcript: result.text.slice(0, 50_000), source: 'recording', transcriptionStatus: 'done', transcriptionProvider: 'deepgram', detectedLanguage: result.detectedLanguage,
-            durationSeconds: result.durationSeconds, interpretation: Prisma.DbNull, interpretedAt: null,
+            durationSeconds: result.durationSeconds, interpretation: null, interpretedAt: null,
           },
         });
         await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'voice_note.transcribed', entityType: 'voice_note', entityId: id, metadata: { provider: 'deepgram', durationSeconds: result.durationSeconds, language, detectedLanguage: result.detectedLanguage }, meta });
@@ -304,7 +304,7 @@ export class VoiceNotesService {
       ? rec.type === 'deal' ? { dealId: rec.id } : rec.type === 'contact' ? { contactId: rec.id } : rec.type === 'lead' ? { leadId: rec.id } : { deal: { companyId: rec.id } }
       : { createdById: auth.userId };
     const mr = auth.permissions.includes('activities:read')
-      ? await tx.meetingRecord.findFirst({ where: { tenantId: t, analysis: { not: Prisma.DbNull }, ...mrWhere }, orderBy: { occurredAt: 'desc' }, select: { id: true, title: true, occurredAt: true, analysis: true } })
+      ? await tx.meetingRecord.findFirst({ where: { tenantId: t, analysis: { not: null }, ...mrWhere }, orderBy: { occurredAt: 'desc' }, select: { id: true, title: true, occurredAt: true, analysis: true } })
       : null;
     const actWhere: Prisma.ActivityWhereInput = rec ? { [rec.type === 'deal' ? 'opportunityId' : `${rec.type}Id`]: rec.id } : { ownerId: auth.userId };
     const act = auth.permissions.includes('activities:read')
@@ -367,7 +367,7 @@ export class VoiceNotesService {
       language: r.language as VoiceLanguage,
       detectedLanguage: r.detectedLanguage,
       transcript: r.transcript,
-      durationSeconds: r.durationSeconds?.toNumber() ?? null,
+      durationSeconds: r.durationSeconds?? null,
       transcriptionStatus: r.transcriptionStatus as VoiceNote['transcriptionStatus'],
       transcriptionError: r.transcriptionError,
       record: rec && name !== null ? { ...rec, name } : null,

@@ -91,7 +91,7 @@ export class CardPaymentsService {
       const contact = quote.opportunity.contactId ? await tx.contact.findFirst({ where: { id: quote.opportunity.contactId, tenantId }, select: { email: true } }) : null;
       return { q: quote, email: contact?.email ?? null };
     });
-    const total = q.total.toNumber();
+    const total = Number(q.total);
     const expired = !!q.validUntil && q.validUntil.toISOString().slice(0, 10) < new Date().toISOString().slice(0, 10) && q.status === 'SENT';
     const reason = payReason({ status: q.status, isLatest: q.isLatest, total, currency: q.currency, expired }, conn);
     if (reason) throw new ConflictException({ code: 'CANNOT_PAY', message: reason });
@@ -120,8 +120,7 @@ export class CardPaymentsService {
   /** The provider's webhook for one workspace, found by the id in its URL and checked with that workspace's secret. */
   async webhook(hookId: string, raw: Buffer | undefined, headers: Record<string, string | string[] | undefined>): Promise<{ received: true }> {
     if (!/^[a-f0-9]{24}$/.test(hookId) || !raw) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Unknown webhook.' });
-    const conn = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.app_provider', 'PAYMENTS', true), set_config('app.app_account', ${hookId}, true)`;
+    const conn = await this.prisma.run({ lookup: { AppConnection: { provider: 'PAYMENTS', externalAccountId: hookId } } }, async (tx) => {
       return tx.appConnection.findFirst({ where: { provider: 'PAYMENTS', externalAccountId: hookId } });
     });
     if (!conn) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Unknown webhook.' });
@@ -143,7 +142,7 @@ export class CardPaymentsService {
     if (!payment || payment.status === 'paid') return { received: true };
 
     if (ev.outcome === 'paid') {
-      const asked = toMinorUnits(payment.amount.toNumber(), payment.currency);
+      const asked = toMinorUnits(Number(payment.amount), payment.currency);
       if (ev.amountMinor !== asked || (ev.currency && ev.currency !== payment.currency.toUpperCase())) {
         await this.apps.recordEvent(tenantId, conn, { kind: 'payment.mismatch', ok: false, externalId: ev.providerPaymentId, summary: `A payment for this proposal did not match the amount asked (${ev.currency ?? '?'} ${ev.amountMinor ?? '?'} vs ${payment.currency} ${asked}); not marked paid`, actorUserId: null, entityType: 'quote', entityId: payment.quoteId });
         return { received: true };
@@ -153,14 +152,14 @@ export class CardPaymentsService {
         if (!moved.count) return;
         const q = await tx.quote.findFirstOrThrow({ where: { id: payment.quoteId, tenantId } });
         const ref = `Q-${String(q.number).padStart(4, '0')}${q.version > 1 ? ` v${q.version}` : ''}`;
-        await this.audit.record(tx, { tenantId, actorUserId: null, action: 'quote.paid', entityType: 'quote', entityId: q.id, metadata: { provider: payment.provider, amount: payment.amount.toNumber(), currency: payment.currency, providerPaymentId: ev.providerPaymentId } });
+        await this.audit.record(tx, { tenantId, actorUserId: null, action: 'quote.paid', entityType: 'quote', entityId: q.id, metadata: { provider: payment.provider, amount: Number(payment.amount), currency: payment.currency, providerPaymentId: ev.providerPaymentId } });
         if (q.createdById) {
           await this.notifications.send(tx, tenantId, [q.createdById], { type: 'quote.paid', title: `Proposal ${ref} was paid`, body: ev.payerEmail
-            ? `${payment.currency} ${payment.amount.toNumber().toFixed(2)} by card from ${ev.payerEmail}, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`
-            : `${payment.currency} ${payment.amount.toNumber().toFixed(2)} by card, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`, link: `/app/quotes/${q.id}` });
+            ? `${payment.currency} ${Number(payment.amount).toFixed(2)} by card from ${ev.payerEmail}, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`
+            : `${payment.currency} ${Number(payment.amount).toFixed(2)} by card, confirmed by ${payment.provider === 'stripe' ? 'Stripe' : 'Razorpay'}.`, link: `/app/quotes/${q.id}` });
         }
       });
-      await this.apps.recordEvent(tenantId, conn, { kind: 'payment.paid', ok: true, externalId: ev.providerPaymentId, summary: `Paid: ${payment.currency} ${payment.amount.toNumber().toFixed(2)}${ev.payerEmail ? ` by ${ev.payerEmail}` : ''}`, actorUserId: null, entityType: 'quote', entityId: payment.quoteId });
+      await this.apps.recordEvent(tenantId, conn, { kind: 'payment.paid', ok: true, externalId: ev.providerPaymentId, summary: `Paid: ${payment.currency} ${Number(payment.amount).toFixed(2)}${ev.payerEmail ? ` by ${ev.payerEmail}` : ''}`, actorUserId: null, entityType: 'quote', entityId: payment.quoteId });
       return { received: true };
     }
     await this.prisma.run({ tenantId }, (tx) => tx.quotePayment.updateMany({ where: { id: payment.id, status: 'pending' }, data: { status: ev.outcome } }));
@@ -206,7 +205,7 @@ function toRow(r: QuotePayment): QuotePaymentRow {
     quoteId: r.quoteId,
     provider: r.provider as QuotePaymentRow['provider'],
     status: r.status as QuotePaymentRow['status'],
-    amount: r.amount.toNumber(),
+    amount: Number(r.amount),
     currency: r.currency,
     payerEmail: r.payerEmail,
     providerPaymentId: r.providerPaymentId,

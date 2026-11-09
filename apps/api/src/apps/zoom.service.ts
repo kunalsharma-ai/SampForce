@@ -15,7 +15,7 @@ import { WebhookReceipts } from '../common/webhook-receipts';
 import { PrismaService } from '../common/prisma.service';
 import { ActivitiesService } from '../crm/activities.service';
 import { assertRefs } from '../crm/crm-helpers';
-import { claim, errorMessage } from '../worker/queue';
+import { scan, errorMessage } from '../worker/queue';
 import { AppError, AppsService, type StoredZoom } from './apps.service';
 import { refreshUnderLock } from './oauth-refresh';
 import { parseZoomVtt, ZoomClient, ZoomError } from './zoom';
@@ -260,10 +260,16 @@ export class ZoomService {
 
   /** Worker job: imports transcripts Zoom has delivered into meeting notes. */
   async importDue(): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`SELECT id, tenant_id FROM zoom_meetings WHERE transcript_status = 'ready' OR (transcript_status = 'importing' AND updated_at < now() - interval '10 minutes') ORDER BY updated_at LIMIT 10`,
-    );
+    const due = (
+      await scan(() =>
+        this.prisma.zoomMeeting.findMany({
+          where: { OR: [{ transcriptStatus: 'ready' }, { transcriptStatus: 'importing', updatedAt: { lt: new Date(Date.now() - 10 * 60_000) } }] },
+          orderBy: { updatedAt: 'asc' },
+          take: 10,
+          select: { id: true, tenantId: true },
+        }),
+      )
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId }));
     let n = 0;
     for (const d of due) {
       try {
@@ -423,8 +429,7 @@ export class ZoomService {
   }
 
   private async connectionsForAccount(accountId: string): Promise<AppConnection[]> {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.app_provider', 'ZOOM', true), set_config('app.app_account', ${accountId}, true)`;
+    return this.prisma.run({ lookup: { AppConnection: { provider: 'ZOOM', externalAccountId: accountId } } }, async (tx) => {
       return tx.appConnection.findMany({
         where: { provider: 'ZOOM', externalAccountId: accountId },
         take: 50,

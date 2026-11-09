@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
+import { Prisma, type TenantTx } from '@dealflow/database';
 import { FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -56,10 +56,7 @@ export class OperatorService {
   }
 
   private scan<T>(fn: (tx: ScanTx) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.operator_scan', 'on', true)`;
-      return fn(tx);
-    });
+    return this.prisma.run({ operatorScan: true }, (tx) => fn(tx));
   }
 
   async tenants(op: OperatorContext, q: { search?: string }, ip: string | null): Promise<OperatorTenantRow[]> {
@@ -132,7 +129,7 @@ export class OperatorService {
 
   async plans(): Promise<OperatorPlanRow[]> {
     const [defs, rows, counts] = await Promise.all([
-      planDefinitions(this.prisma),
+      planDefinitions(this.prisma as unknown as TenantTx),
       this.prisma.plan.findMany({ select: { code: true, updatedAt: true } }),
       this.scan((tx) => tx.subscription.groupBy({ by: ['planCode'], _count: { _all: true } })),
     ]);
@@ -156,7 +153,7 @@ export class OperatorService {
 
   /** Changes a plan's features and limits for every workspace on it. Applies on each workspace's next request. */
   async setPlanDefinition(op: OperatorContext, code: PlanCode, input: OperatorPlanDefinitionInput, ip: string | null): Promise<OperatorPlanRow[]> {
-    const before = (await planDefinitions(this.prisma))[code];
+    const before = (await planDefinitions(this.prisma as unknown as TenantTx))[code];
     const features = normaliseFeatures(input.features);
     const next = { ...input.limits, features };
     await this.prisma.plan.update({ where: { code }, data: { entitlements: next as unknown as Prisma.InputJsonValue } });
@@ -248,7 +245,7 @@ export class OperatorService {
   async settings(): Promise<OperatorSettings> {
     const row = await this.prisma.platformSetting.findUnique({ where: { key: PAYMENT_INSTRUCTIONS_KEY } });
     const by = row?.updatedById ? await this.prisma.platformOperator.findUnique({ where: { id: row.updatedById }, select: { email: true } }) : null;
-    const paymentInstructions = await this.billing.paymentInstructions(this.prisma);
+    const paymentInstructions = await this.billing.paymentInstructions(this.prisma as unknown as TenantTx);
     return {
       paymentInstructions,
       paymentInstructionsSource: row?.value ? 'console' : paymentInstructions ? 'config' : 'none',

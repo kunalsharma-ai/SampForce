@@ -35,7 +35,7 @@ import {
   type z,
   type prospectUpdateSchema,
 } from '@dealflow/types';
-import { Prisma, type Prospect, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, nullsLast, Prisma, type Prospect, type TenantTx } from '@dealflow/database';
 import { Workbook } from 'exceljs';
 import { assertSafeZip, UnsafeZipError } from './zip-guard';
 import { AuditService } from '../audit/audit.service';
@@ -47,7 +47,7 @@ import { toCsv } from '../crm/csv';
 import { ExtensionService } from '../extension/extension.service';
 import { HunterClient } from '../finder/hunter';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim } from '../worker/queue';
+import { scanTenants } from '../worker/queue';
 import { SequencesService } from '../sequences/sequences.service';
 import { currentCheck, PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from '../operator/provider-checks';
 import { ApolloClient, ProviderError } from './apollo';
@@ -217,7 +217,7 @@ export class ProspectsService {
       await this.findList(tx, auth.tenantId, listId);
       const where = this.where(auth.tenantId, listId, q);
       const orderBy: Prisma.ProspectOrderByWithRelationInput[] =
-        q.sort === 'name' ? [{ fullName: 'asc' }] : q.sort === 'company' ? [{ companyName: { sort: 'asc', nulls: 'last' } }, { fullName: 'asc' }] : q.sort === 'title' ? [{ title: { sort: 'asc', nulls: 'last' } }] : q.sort === 'country' ? [{ country: { sort: 'asc', nulls: 'last' } }] : [{ createdAt: 'desc' }, { id: 'asc' }];
+        q.sort === 'name' ? [{ fullName: 'asc' }] : q.sort === 'company' ? [{ companyName: nullsLast('asc') }, { fullName: 'asc' }] : q.sort === 'title' ? [{ title: nullsLast('asc') }] : q.sort === 'country' ? [{ country: nullsLast('asc') }] : [{ createdAt: 'desc' }, { id: 'asc' }];
       const [rows, total, list] = await Promise.all([
         tx.prospect.findMany({ where, orderBy, skip: (q.page - 1) * PROSPECT_PAGE_SIZE, take: PROSPECT_PAGE_SIZE, include: { lead: { select: { id: true, fullName: true } }, contact: { select: { id: true, firstName: true, lastName: true } } } }),
         tx.prospect.count({ where }),
@@ -503,7 +503,7 @@ export class ProspectsService {
     }
     const listIds = [...new Set(rows.map((r) => r.listId))];
     await this.prisma.run(auth, (tx) =>
-      tx.prospectOutreach.createMany({ data: listIds.map((listId) => ({ tenantId: auth.tenantId, listId, sequenceId: input.sequenceId!, createdById: auth.userId })), skipDuplicates: true }),
+      createManySkipDuplicates(tx.prospectOutreach, 'ProspectOutreach', listIds.map((listId) => ({ tenantId: auth.tenantId, listId, sequenceId: input.sequenceId!, createdById: auth.userId }))),
     );
     return { results, enrollment };
   }
@@ -855,7 +855,7 @@ export class ProspectsService {
   async sweep(): Promise<number> {
     if (Date.now() - this.lastSweep < 3_600_000) return 0;
     this.lastSweep = Date.now();
-    const tenants = await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT DISTINCT tenant_id FROM prospect_imports WHERE created_at < now() - interval '1 day' LIMIT 5000`);
+    const tenants = (await scanTenants(this.prisma.prospectImport, { createdAt: { lt: new Date(Date.now() - DAY) } }, 5000)).map((tenant_id) => ({ tenant_id }));
     let n = 0;
     for (const t of tenants) {
       const { count } = await this.prisma.run({ tenantId: t.tenant_id }, (tx) => tx.prospectImport.deleteMany({ where: { tenantId: t.tenant_id, createdAt: { lt: new Date(Date.now() - DAY) } } }));

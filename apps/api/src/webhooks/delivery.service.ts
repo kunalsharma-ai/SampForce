@@ -6,7 +6,7 @@ import { publicFetch } from '../common/net-guard';
 import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { claimDue, errorMessage } from '../worker/queue';
 import { retryDelayMs, SIGNATURE_HEADER, signatureHeader } from './signing';
 
 const TIMEOUT_MS = 10_000;
@@ -29,15 +29,16 @@ export class WebhookDeliverer {
   ) {}
 
   async deliverDue(limit = 25): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE webhook_deliveries SET next_attempt_at = now() + ${`${LEASE_MS} milliseconds`}::interval
-        WHERE id IN (
-          SELECT id FROM webhook_deliveries WHERE status = 'PENDING' AND next_attempt_at <= now()
-          ORDER BY next_attempt_at LIMIT ${limit} FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id`,
-    );
+    const now = new Date();
+    const due = (
+      await claimDue(this.prisma.webhookDelivery, {
+        where: { status: 'PENDING', nextAttemptAt: { lte: now } },
+        lease: { nextAttemptAt: new Date(now.getTime() + LEASE_MS) },
+        select: { tenantId: true },
+        orderBy: { nextAttemptAt: 'asc' },
+        limit,
+      })
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId }));
     await Promise.all(due.map((d) => this.deliver(d.id, d.tenant_id).catch((err) => this.log.error({ deliveryId: d.id, err: errorMessage(err) }, 'delivery crashed'))));
     return due.length;
   }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
 import { PrismaService } from '../common/prisma.service';
-import { claim, errorMessage } from '../worker/queue';
+import { claimDue, errorMessage } from '../worker/queue';
 import { AgentsService, systemActor } from './agents.service';
 
 const MAX_ATTEMPTS = 3;
@@ -22,16 +22,16 @@ export class AiRunner {
   ) {}
 
   async runDue(limit = 10): Promise<number> {
-    const rows = await claim<{ id: string; tenant_id: string; agent: string; entity_id: string | null }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE ai_runs SET status = 'RUNNING', attempts = attempts + 1, lease_until = now() + ${`${LEASE_MS} milliseconds`}::interval
-        WHERE id IN (
-          SELECT id FROM ai_runs
-          WHERE (status = 'QUEUED' AND run_at <= now()) OR (status = 'RUNNING' AND lease_until < now() AND attempts < ${MAX_ATTEMPTS})
-          ORDER BY run_at LIMIT ${limit} FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id, agent, entity_id`,
-    );
+    const now = new Date();
+    const rows = (
+      await claimDue(this.prisma.aiRun, {
+        where: { OR: [{ status: 'QUEUED', runAt: { lte: now } }, { status: 'RUNNING', leaseUntil: { lt: now }, attempts: { lt: MAX_ATTEMPTS } }] },
+        lease: { status: 'RUNNING', attempts: { increment: 1 }, leaseUntil: new Date(now.getTime() + LEASE_MS) },
+        select: { tenantId: true, agent: true, entityId: true },
+        orderBy: { runAt: 'asc' },
+        limit,
+      })
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId, agent: r.agent, entity_id: r.entityId }));
     for (const r of rows) {
       try {
         if (r.agent === 'lead_qualification' && r.entity_id) {

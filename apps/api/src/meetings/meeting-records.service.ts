@@ -124,7 +124,7 @@ export class MeetingRecordsService {
       if (input.dealId !== undefined) data.dealId = input.dealId;
       if (input.transcript !== undefined && input.transcript !== r.transcript) {
         // Speaker turns no longer match edited text, so the edited text is what the AI reads from now on.
-        data.segments = Prisma.DbNull;
+        data.segments = null;
         data.transcript = input.transcript || null;
         data.source = input.source ?? r.source;
       } else if (input.source !== undefined) data.source = input.source;

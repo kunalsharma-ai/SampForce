@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { Prisma, type TenantTx, visitorSiteTenant } from '@dealflow/database';
 import {
   collectSchema,
   DEFAULT_VISITOR_SETTINGS,
@@ -28,7 +28,7 @@ import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { scanTenants, errorMessage } from '../worker/queue';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -140,8 +140,7 @@ export class VisitorsService {
 
   private async resolve(siteKey: string): Promise<string> {
     if (!/^dfs_[\w-]{10,40}$/.test(siteKey)) throw gone();
-    const rows = await this.prisma.$queryRaw<{ t: string | null }[]>`SELECT app_visitor_site_tenant(${siteKey})::text AS t`;
-    const tenantId = rows[0]?.t;
+    const tenantId = await visitorSiteTenant(this.prisma, siteKey);
     if (!tenantId) throw gone();
     return tenantId;
   }
@@ -186,7 +185,7 @@ export class VisitorsService {
         const campaignId = utm?.campaign ? ((await tx.campaign.findFirst({ where: { tenantId, utmCampaign: { equals: utm.campaign, mode: 'insensitive' } }, select: { id: true } }))?.id ?? null) : null;
         const referrer = firstPage?.referrer && firstPage.referrer !== host ? firstPage.referrer : null;
         visitor = await tx.webVisitor.create({
-          data: { tenantId, clientId: body.visitorId, firstSeenAt: now, lastSeenAt: now, firstTouch: utm || referrer ? ({ ...(utm ?? {}), referrer } as Prisma.InputJsonValue) : Prisma.DbNull, campaignId },
+          data: { tenantId, clientId: body.visitorId, firstSeenAt: now, lastSeenAt: now, firstTouch: utm || referrer ? ({ ...(utm ?? {}), referrer } as Prisma.InputJsonValue) : null, campaignId },
         });
       }
       let session = await tx.webSession.findUnique({ where: { tenantId_clientId: { tenantId, clientId: body.sessionId } } });
@@ -196,7 +195,7 @@ export class VisitorsService {
         newVisit = true;
         const referrer = firstPage?.referrer && firstPage.referrer !== host ? firstPage.referrer.slice(0, 200) : null;
         session = await tx.webSession.create({
-          data: { tenantId, visitorId: visitor.id, clientId: body.sessionId, startedAt: now, lastAt: now, landingPath: firstPage?.path ?? body.events[0]!.path, referrerHost: referrer, utm: cleanUtm(firstPage?.utm) ?? Prisma.DbNull },
+          data: { tenantId, visitorId: visitor.id, clientId: body.sessionId, startedAt: now, lastAt: now, landingPath: firstPage?.path ?? body.events[0]!.path, referrerHost: referrer, utm: cleanUtm(firstPage?.utm) ?? null },
         });
       }
       let pages = 0;
@@ -499,7 +498,7 @@ export class VisitorsService {
   async sweep(force = false): Promise<number> {
     if (!force && Date.now() - this.lastSweep < HOUR) return 0;
     this.lastSweep = Date.now();
-    const tenants = await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT tenant_id FROM visitor_settings LIMIT 5000`);
+    const tenants = (await scanTenants(this.prisma.visitorSettings, {}, 5000)).map((tenant_id) => ({ tenant_id }));
     let n = 0;
     for (const t of tenants) {
       try {

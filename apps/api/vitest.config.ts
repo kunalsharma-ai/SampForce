@@ -11,11 +11,8 @@ export default defineConfig({
     testTimeout: 20_000,
     env: {
       NODE_ENV: 'test',
-      LOG_LEVEL: 'silent',
-      DATABASE_URL:
-        process.env.TEST_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow_test',
-      TEST_OWNER_DATABASE_URL:
-        process.env.TEST_OWNER_DATABASE_URL ?? 'postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow_test',
+      LOG_LEVEL: process.env.TEST_LOG_LEVEL ?? 'silent',
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? 'mongodb://localhost:27017/sampforce_test?replicaSet=rs0',
       JWT_ACCESS_SECRET: 'test-secret-that-is-at-least-32-characters-long',
       WEB_ORIGINS: 'http://localhost:3000',
       AUTH_RATE_LIMIT_PER_MINUTE: '1000',

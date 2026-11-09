@@ -68,7 +68,7 @@ export class DocusignService {
         reference,
         name: contract.name,
         company: contract.company,
-        value: contract.value.toNumber(),
+        value: Number(contract.value),
         currency: contract.currency,
         startDate: contract.startDate.toISOString().slice(0, 10),
         endDate: contract.endDate?.toISOString().slice(0, 10) ?? null,
@@ -237,8 +237,7 @@ export class DocusignService {
   }
 
   private connectionsForAccount(accountId: string): Promise<AppConnection[]> {
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.app_provider', 'DOCUSIGN', true), set_config('app.app_account', ${accountId}, true)`;
+    return this.prisma.run({ lookup: { AppConnection: { provider: 'DOCUSIGN', externalAccountId: accountId } } }, async (tx) => {
       return tx.appConnection.findMany({ where: { provider: 'DOCUSIGN', externalAccountId: accountId }, take: 50 });
     });
   }

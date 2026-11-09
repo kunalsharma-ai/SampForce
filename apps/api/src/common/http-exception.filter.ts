@@ -59,6 +59,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
     } else {
       this.logger.error({ err: exception, requestId }, 'Unhandled error');
+      if (process.env.TEST_PRINT_ERRORS) console.error('UNHANDLED', exception);
     }
 
     // Messages are written in English and sent in the reader's language (Accept-Language); codes stay as they are.

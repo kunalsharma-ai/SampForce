@@ -1,3 +1,4 @@
+import { formTenant } from '@dealflow/database';
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHmac, randomBytes } from 'node:crypto';
 import type { Prisma, TenantTx } from '@dealflow/database';
@@ -129,8 +130,7 @@ export class FormsService {
 
   private async resolve(token: string): Promise<{ tenantId: string }> {
     if (!/^[\w-]{10,64}$/.test(token)) throw formGone();
-    const rows = await this.prisma.$queryRaw<{ t: string | null }[]>`SELECT app_form_tenant(${token})::text AS t`;
-    const tenantId = rows[0]?.t;
+    const tenantId = await formTenant(this.prisma, token);
     if (!tenantId) throw formGone();
     // A form whose workspace's plan no longer has lead forms (ADR 0057) reads as gone to the public.
     if (!(await this.prisma.run({ tenantId }, (tx) => hasFeature(tx, tenantId, 'marketing')))) throw formGone();

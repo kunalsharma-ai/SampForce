@@ -44,7 +44,7 @@ export class ForecastPlanService {
       const label = view.period.label;
 
       const targetRows = await tx.salesTarget.findMany({ where: { tenantId, period: { in: [label, ...childPeriods(label), ...parentOf(label)] } } });
-      const targetFor = (userId: string | null): PlanTarget => resolveTarget(label, targetRows.filter((t) => t.userId === userId).map((t) => ({ period: t.period, amount: t.amount.toNumber() })));
+      const targetFor = (userId: string | null): PlanTarget => resolveTarget(label, targetRows.filter((t) => t.userId === userId).map((t) => ({ period: t.period, amount: Number(t.amount) })));
       const target = targetFor(null);
       const open = view.lines.filter((l) => l.status === 'OPEN');
       const openAmount = open.reduce((a, l) => a + l.amount, 0);
@@ -150,7 +150,7 @@ export class ForecastPlanService {
           const r = d.lossReason?.trim() || 'No reason given';
           reasons.set(r, (reasons.get(r) ?? 0) + 1);
         }
-        const wonAmount = r2(won.reduce((a, d) => a + (toBase(d.amount.toNumber(), d.currency, currency, rates) ?? 0), 0));
+        const wonAmount = r2(won.reduce((a, d) => a + (toBase(Number(d.amount), d.currency, currency, rates) ?? 0), 0));
         const cycle = won.length ? Math.round(won.reduce((a, d) => a + (d.closedAt!.getTime() - d.createdAt.getTime()) / DAY, 0) / won.length) : null;
         const snap = await tx.forecastSnapshot.findFirst({ where: { tenantId, periodStart: start, periodEnd: end, currency }, orderBy: { createdAt: 'asc' }, select: { totals: true } });
         const predicted = snap ? (snap.totals as unknown as ForecastTotals).base : null;

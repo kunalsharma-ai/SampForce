@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { billingTenant, createManySkipDuplicates, nextSequenceValue, Prisma, type TenantTx } from '@dealflow/database';
 import {
   type BillingOverview,
   type BillingProviderKey,
@@ -26,7 +26,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { WebhookReceipts } from '../common/webhook-receipts';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { scan, errorMessage } from '../worker/queue';
 import { BillingProviders } from './billing-providers';
 import { featureOverrides, planDefinitions } from './entitlements';
 import { BillingProviderError, InvalidSignatureError, type ParsedEvent, type ProviderSubscription } from './providers';
@@ -134,7 +134,7 @@ export class BillingService {
 
   /** The rate card with the live plan definitions, for the public pricing page. */
   async liveCatalog(): Promise<CatalogPlan[]> {
-    return this.catalog(await planDefinitions(this.prisma));
+    return this.catalog(await planDefinitions(this.prisma as unknown as TenantTx));
   }
 
   /** The rate card with which provider/interval combinations can actually be bought here. */
@@ -344,7 +344,7 @@ export class BillingService {
       const blockers = downgradeBlockers(input.planCode, input.seats, { members, pipelines }, await planDefinitions(tx));
       if (blockers.length) throw new ConflictException({ code: 'DOWNGRADE_BLOCKED', message: 'Current usage is above that plan’s limits.', details: blockers.map((message) => ({ path: 'planCode', message })) });
 
-      const [{ n }] = (await tx.$queryRaw<{ n: bigint }[]>`SELECT nextval('offline_invoice_number_seq') AS n`) as [{ n: bigint }];
+      const n = await nextSequenceValue(tx, 'offline_invoice_number');
       const total = offlineInvoiceCents(input.planCode, input.interval, input.seats);
       const inv = await tx.invoice.create({
         data: {
@@ -449,7 +449,7 @@ export class BillingService {
       return { received: true, ignored: 'workspace_mismatch' };
     }
     return this.prisma.run({ tenantId }, async (tx) => {
-      const { count } = await tx.billingEvent.createMany({ data: [{ tenantId, provider: key, providerEventId: ev.id, type: ev.type }], skipDuplicates: true });
+      const { count } = await createManySkipDuplicates(tx.billingEvent, 'BillingEvent', [{ tenantId, provider: key, providerEventId: ev.id, type: ev.type }]);
       if (count === 0) return { received: true as const, duplicate: true as const };
       if (remote) await this.applySubscription(tx, tenantId, key, remote, ev.type);
       if (ev.invoice) {
@@ -474,8 +474,8 @@ export class BillingService {
   /** Finds the workspace: a provider reference already on file wins; otherwise the metadata SampForce set at checkout. */
   private async resolveTenant(ev: ParsedEvent): Promise<string | null> {
     for (const ref of ev.refs) {
-      const rows = await this.prisma.$transaction((tx) => tx.$queryRaw<{ t: string | null }[]>`SELECT app_billing_tenant(${ref})::text AS t`);
-      if (rows[0]?.t) return rows[0].t;
+      const tenantId = await billingTenant(this.prisma, ref);
+      if (tenantId) return tenantId;
     }
     if (ev.tenantHint && UUID.test(ev.tenantHint)) {
       const exists = await this.prisma.run({ tenantId: ev.tenantHint }, (tx) => tx.tenant.findUnique({ where: { id: ev.tenantHint! }, select: { id: true } }));
@@ -536,17 +536,30 @@ export class BillingService {
     if (!force && Date.now() - this.lastSweep < MINUTE) return 0;
     this.lastSweep = Date.now();
     const graceStart = new Date(Date.now() - this.env.BILLING_GRACE_DAYS * DAY);
-    const due = await claim<{ tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`SELECT tenant_id FROM subscriptions
-                 WHERE (status = 'TRIALING' AND trial_ends_at < now() AND provider_subscription_id IS NULL)
-                    OR (provider = 'OFFLINE' AND status = 'ACTIVE' AND current_period_end < now())
-                    OR (provider = 'OFFLINE' AND status = 'ACTIVE' AND NOT cancel_at_period_end
-                        AND current_period_end < now() + make_interval(days => ${RENEWAL_REMINDER_DAYS}::int)
-                        AND (renewal_reminded_at IS NULL OR renewal_reminded_at < current_period_end - make_interval(days => ${RENEWAL_REMINDER_DAYS + 1}::int)))
-                    OR (status = 'PAST_DUE' AND past_due_since < ${graceStart})
-                 LIMIT 200`,
+    const nowMs = Date.now();
+    const candidates = await scan(() =>
+      this.prisma.subscription.findMany({
+        where: {
+          OR: [
+            { status: 'TRIALING', trialEndsAt: { lt: new Date(nowMs) }, providerSubscriptionId: null },
+            { provider: 'OFFLINE', status: 'ACTIVE', currentPeriodEnd: { lt: new Date(nowMs + RENEWAL_REMINDER_DAYS * DAY) } },
+            { status: 'PAST_DUE', pastDueSince: { lt: graceStart } },
+          ],
+        },
+        select: { tenantId: true, status: true, provider: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, renewalRemindedAt: true },
+        take: 2000,
+      }),
     );
+    // The renewal reminder compares two fields of the same subscription, which is checked here.
+    const due = candidates
+      .filter((s) => {
+        if (s.provider !== 'OFFLINE' || s.status !== 'ACTIVE' || !s.currentPeriodEnd) return true;
+        if (s.currentPeriodEnd.getTime() < nowMs) return true;
+        if (s.cancelAtPeriodEnd) return false;
+        return !s.renewalRemindedAt || s.renewalRemindedAt.getTime() < s.currentPeriodEnd.getTime() - (RENEWAL_REMINDER_DAYS + 1) * DAY;
+      })
+      .slice(0, 200)
+      .map((s) => ({ tenant_id: s.tenantId }));
     let n = 0;
     for (const { tenant_id: tenantId } of due) {
       try {

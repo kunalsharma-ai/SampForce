@@ -36,7 +36,7 @@ export class CatalogService {
       });
       return rows.map((p) => ({
         id: p.id, sku: p.sku, name: p.name, description: p.description, unit: p.unit, active: p.active,
-        prices: p.prices.map((e) => ({ priceBookId: e.priceBookId, currency: e.priceBook.currency, unitPrice: e.unitPrice.toNumber() })),
+        prices: p.prices.map((e) => ({ priceBookId: e.priceBookId, currency: e.priceBook.currency, unitPrice: Number(e.unitPrice) })),
       }));
     });
   }
@@ -108,14 +108,14 @@ export class CatalogService {
       // Price changes are commercially sensitive, so the audit log keeps old and new values.
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'price.changed', entityType: 'price_book', entityId: priceBookId,
-        metadata: { productId, product: product.name, currency: book.currency, from: before?.unitPrice.toNumber() ?? null, to: unitPrice }, meta,
+        metadata: { productId, product: product.name, currency: book.currency, from: Number(before?.unitPrice) ?? null, to: unitPrice }, meta,
       });
     });
   }
 
   taxRates(auth: AuthContext): Promise<TaxRateRow[]> {
     return this.prisma.run(auth, async (tx) =>
-      (await tx.taxRate.findMany({ where: { tenantId: auth.tenantId }, orderBy: { name: 'asc' } })).map((t) => ({ id: t.id, name: t.name, rate: t.rate.toNumber(), active: t.active })),
+      (await tx.taxRate.findMany({ where: { tenantId: auth.tenantId }, orderBy: { name: 'asc' } })).map((t) => ({ id: t.id, name: t.name, rate: Number(t.rate), active: t.active })),
     );
   }
 
@@ -163,7 +163,7 @@ export class CatalogService {
 export async function readSettings(tx: TenantTx, tenantId: string): Promise<CommercialSettingsRow> {
   const s = await tx.commercialSettings.findUnique({ where: { tenantId } });
   return {
-    discountApprovalThreshold: s?.discountApprovalThreshold.toNumber() ?? 10,
+    discountApprovalThreshold: Number(s?.discountApprovalThreshold) ?? 10,
     quoteValidityDays: s?.quoteValidityDays ?? 30,
     quoteTerms: s?.quoteTerms ?? null,
     proposalHeader: s?.proposalHeader ?? null,

@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, Prisma, type TenantTx } from '@dealflow/database';
 import { type WorkflowAction, workflowDefinitionSchema } from '@dealflow/types';
 import { entitlementsFor } from '../billing/entitlements';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { claimDue, errorMessage } from '../worker/queue';
 import { recordLink, WorkflowActions } from './actions.service';
 import { runInAutomationScope } from './automation-context';
 import { advance, type EvalContext, type RunState, type StepRecord } from './engine';
@@ -36,19 +36,20 @@ export class WorkflowExecutor {
 
   /** Claims due executions (new, resumed after a delay, or approved) and runs each one. */
   async runDue(limit = 20): Promise<number> {
-    const due = await claim<{ id: string; tenant_id: string }>(
-      this.prisma,
-      Prisma.sql`
-        UPDATE workflow_executions SET locked_until = now() + ${`${LEASE_MS} milliseconds`}::interval, attempts = attempts + 1
-        WHERE id IN (
-          SELECT id FROM workflow_executions
-          WHERE status IN ('RUNNING', 'WAITING') AND (resume_at IS NULL OR resume_at <= now())
-            AND (locked_until IS NULL OR locked_until < now())
-          ORDER BY resume_at NULLS FIRST
-          LIMIT ${limit}
-          FOR UPDATE SKIP LOCKED)
-        RETURNING id, tenant_id`,
-    );
+    const now = new Date();
+    const due = (
+      await claimDue(this.prisma.workflowExecution, {
+        where: {
+          status: { in: ['RUNNING', 'WAITING'] },
+          AND: [{ OR: [{ resumeAt: null }, { resumeAt: { lte: now } }] }, { OR: [{ lockedUntil: null }, { lockedUntil: { lt: now } }] }],
+        },
+        lease: { lockedUntil: new Date(now.getTime() + LEASE_MS), attempts: { increment: 1 } },
+        select: { tenantId: true },
+        // MongoDB sorts nulls first ascending, as NULLS FIRST did.
+        orderBy: { resumeAt: 'asc' },
+        limit,
+      })
+    ).map((r) => ({ id: r.id, tenant_id: r.tenantId }));
     for (const row of due) {
       try {
         await this.runOne(row.id, row.tenant_id);
@@ -253,8 +254,7 @@ export class WorkflowExecutor {
         this.log.warn({ tenantId: event.tenantId, runLimit }, 'monthly automation run limit reached');
         throw new RunLimitReached(runLimit);
       }
-      const r = await tx.workflowExecution.createMany({
-        data: [{
+      const r = await createManySkipDuplicates(tx.workflowExecution, 'WorkflowExecution', [{
           tenantId: event.tenantId,
           workflowId: wf.id,
           versionId: version.id,
@@ -264,9 +264,7 @@ export class WorkflowExecutor {
           context: { event: eventCtx } as unknown as Prisma.InputJsonValue,
           depth: event.depth,
           resumeAt: new Date(),
-        }],
-        skipDuplicates: true,
-      });
+        }]);
       started += r.count;
       used += r.count;
     }

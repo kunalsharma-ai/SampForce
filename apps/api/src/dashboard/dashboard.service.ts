@@ -95,7 +95,7 @@ export class DashboardService {
         JOIN pipeline_stages s ON s.id = o.stage_id
         WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.currency = ${currency} ${ownerSql} ${pipelineSql}`;
 
-      const n = (v: Prisma.Decimal | null | undefined) => (v ? Number(v) : 0);
+      const n = (v: Prisma.Decimal | number | null | undefined) => (v ? Number(v) : 0);
       const wonValue = n(money?.won_value);
       const wonCount = Number(money?.won_count ?? 0);
       const openCount = Number(money?.open_count ?? 0);

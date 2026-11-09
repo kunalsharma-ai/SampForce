@@ -80,7 +80,7 @@ export class NavigationService {
 
   /** Saves the layout; null returns to the default. */
   async saveDashboardLayout(auth: AuthContext, layout: DashboardLayout | null): Promise<{ layout: DashboardLayout | null }> {
-    const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+    const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : null;
     await this.prisma.run(auth, (tx) =>
       tx.workspaceNavigation.upsert({
         where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } },

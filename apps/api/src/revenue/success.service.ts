@@ -22,7 +22,7 @@ import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, notFound, ownerRefs } from '../crm/crm-helpers';
 import { TasksService } from '../crm/tasks.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, errorMessage } from '../worker/queue';
+import { scanTenants, errorMessage } from '../worker/queue';
 import { SlicedSweep } from '../worker/sliced-sweep';
 
 const DAY = 86_400_000;
@@ -140,7 +140,7 @@ export class SuccessService {
         company: { id: company.id, name: company.name },
         owner: ownerId ? (owners.get(ownerId) ?? null) : null,
         activeContracts: cs.length,
-        contractValue: Math.round(sameCurrency.reduce((a, c) => a + c.value.toNumber(), 0) * 100) / 100,
+        contractValue: Math.round(sameCurrency.reduce((a, c) => a + Number(c.value), 0) * 100) / 100,
         currency: base,
         nextRenewal: ending ? { contractId: ending.id, reference: formatReference('C', ending.number), endDate: ymd(ending.endDate!), daysToEnd: daysToRenewal! } : null,
         openEscalations: escalations.length,
@@ -282,7 +282,7 @@ export class SuccessService {
   async sweep(force = false): Promise<number> {
     return this.sweeper.run(
       force,
-      async () => (await claim<{ tenant_id: string }>(this.prisma, Prisma.sql`SELECT DISTINCT tenant_id FROM contracts WHERE status = 'ACTIVE' AND company_id IS NOT NULL LIMIT 1000`)).map((t) => t.tenant_id),
+      () => scanTenants(this.prisma.contract, { status: 'ACTIVE', companyId: { not: null } }),
       async (tenantId) => {
         try {
           await this.prisma.run({ tenantId }, (tx) => this.refresh(tx, tenantId));
