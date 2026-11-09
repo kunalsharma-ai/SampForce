@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  # A new name per revision, so each upgrade runs its own migration.
+  # A new name per revision, so each upgrade runs its own database set-up.
   name: {{ include "dealflow.fullname" . }}-migrate-{{ .Release.Revision }}
   labels:
     {{- include "dealflow.labels" . | nindent 4 }}
@@ -29,12 +29,9 @@ spec:
           image: {{ include "dealflow.image" (dict "root" . "name" .Values.image.migrate) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            # Migrations run as the schema owner, never as the runtime role. The schema names both variables
-            # (url and directUrl) and Prisma refuses to start if either is missing, so both point at the owner.
+            # Index set-up runs as the MongoDB user with dbAdmin (it creates and drops indexes); the API and worker
+            # use a user with readWrite only.
             - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef: { name: {{ .Values.secrets.existingSecret }}, key: MIGRATION_DATABASE_URL }
-            - name: MIGRATION_DATABASE_URL
               valueFrom:
                 secretKeyRef: { name: {{ .Values.secrets.existingSecret }}, key: MIGRATION_DATABASE_URL }
             - name: HOME

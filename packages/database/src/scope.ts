@@ -482,14 +482,14 @@ export function workspaceGuard(base: PrismaClient) {
             a.create = roundDecimals(model, fillNulls(model, withDerivedFields(model, a.create, true)));
             a.update = roundDecimals(model, withDerivedFields(model, a.update));
           } else if (operation === 'update' || operation === 'updateMany') a.data = roundDecimals(model, fillNestedUpdates(model, withDerivedFields(model, a.data)));
+          // Append-only collections, workspace or platform-wide (was REVOKE UPDATE / DELETE from the app role).
+          if (!ctx?.system) {
+            if ((operation === 'update' || operation === 'updateMany' || operation === 'upsert') && NO_UPDATE.has(model)) {
+              throw new TenantIsolationError(`${model} records are append-only`);
+            }
+            if ((operation === 'delete' || operation === 'deleteMany') && NO_DELETE.has(model)) throw new TenantIsolationError(`${model} records cannot be deleted`);
+          }
           if (ctx?.system || !isWorkspaceModel(model)) return READ_OPS.has(operation) ? readWithOrdering(operation, a, query) : query(a);
-
-          if (operation === 'update' || operation === 'updateMany' || operation === 'upsert') {
-            if (NO_UPDATE.has(model)) throw new TenantIsolationError(`${model} records are append-only`);
-          }
-          if (operation === 'delete' || operation === 'deleteMany') {
-            if (NO_DELETE.has(model)) throw new TenantIsolationError(`${model} records cannot be deleted`);
-          }
 
           if (READ_OPS.has(operation)) {
             const filter = await filterFor(model, 'read', ctx, lookups);

@@ -2,10 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * End-to-end suite. Runs the production builds of the API and web app (run `pnpm build`
- * first). E2E_DATABASE_URL must point at a migrated database using the dealflow_app role.
+ * first). E2E_DATABASE_URL must point at a MongoDB database that `pnpm db:setup` has prepared.
  */
 const databaseUrl =
-  process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
+  process.env.E2E_DATABASE_URL ?? 'mongodb://localhost:27017/sampforce?replicaSet=rs0&directConnection=true';
 
 export default defineConfig({
   testDir: './e2e',

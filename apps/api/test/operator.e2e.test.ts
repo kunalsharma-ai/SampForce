@@ -118,8 +118,8 @@ describe('operator console', () => {
     const platform = (await op(admin).get(`/audit-log?tenantId=${owner.tenantId}`).expect(200)).body as { action: string; operator: { email: string } }[];
     expect(platform.find((a) => a.action === 'tenant.plan_overridden')!.operator.email).toBe(adminEmail);
     const db = appClient();
-    await expect(db.platformAuditLog.updateMany({ data: { action: 'tampered' } })).rejects.toThrow(/permission denied/);
-    await expect(db.platformAuditLog.deleteMany({})).rejects.toThrow(/permission denied/);
+    await expect(db.platformAuditLog.updateMany({ data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
+    await expect(db.platformAuditLog.deleteMany({})).rejects.toThrow(/cannot be deleted/);
     await db.$disconnect();
   });
 

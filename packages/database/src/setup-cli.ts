@@ -1,7 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import { setupDatabase } from './setup';
 
-/** `pnpm --filter @dealflow/database db:setup`: run after `prisma db push` on every deploy. */
+/**
+ * `pnpm --filter @dealflow/database db:setup` (the migrate image runs `node dist/setup-cli.js`): creates the
+ * collections and indexes the schema declares, drops stale ones and seeds the plan catalogue. Safe to run on every
+ * deploy; a second run changes nothing.
+ */
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {

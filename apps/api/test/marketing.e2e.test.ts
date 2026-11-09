@@ -144,7 +144,7 @@ describe('marketing', () => {
     });
 
     it('stored submissions cannot be edited by the app role', async () => {
-      await expect(asTenant(owner.tenantId, (tx) => tx.formSubmission.updateMany({ where: { formId: ids.form }, data: { consent: true } }))).rejects.toThrow(/permission denied/);
+      await expect(asTenant(owner.tenantId, (tx) => tx.formSubmission.updateMany({ where: { formId: ids.form }, data: { consent: true } }))).rejects.toThrow(/append-only/);
     });
   });
 

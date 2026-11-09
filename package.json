@@ -14,7 +14,7 @@
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @dealflow/web test:e2e",
     "db:setup": "bash scripts/db-setup.sh",
-    "db:migrate": "pnpm --filter @dealflow/database migrate:deploy",
+    "db:setup": "pnpm --filter @dealflow/database db:setup",
     "db:seed": "pnpm --filter @dealflow/api seed:demo",
     "format": "prettier --write ."
   },

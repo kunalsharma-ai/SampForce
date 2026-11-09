@@ -1,8 +1,8 @@
 SampForce {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
 
 {{- if .Values.migrations.enabled }}
-Database migrations ran as a pre-install/pre-upgrade hook. Check them with:
-  kubectl -n {{ .Release.Namespace }} logs job/{{ include "dealflow.fullname" . }}-migrate
+Database set-up (collections and indexes) ran as a pre-install/pre-upgrade hook. Check it with:
+  kubectl -n {{ .Release.Namespace }} logs job/{{ include "dealflow.fullname" . }}-migrate-{{ .Release.Revision }}
 {{- end }}
 
 {{- if .Values.ingress.enabled }}

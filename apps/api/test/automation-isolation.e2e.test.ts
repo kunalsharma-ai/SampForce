@@ -110,6 +110,6 @@ describe('automation and communication tenant isolation', () => {
     const seenByOwner = await withDbContext(db, { tenantId: a.tenantId, userId: owner.userId }, (tx) => tx.notification.count({ where: { title: 'For rep only' } }));
     const seenByRep = await withDbContext(db, { tenantId: a.tenantId, userId: rep.userId }, (tx) => tx.notification.count({ where: { title: 'For rep only' } }));
     expect([seenByOwner, seenByRep]).toEqual([0, 1]);
-    await expect(withDbContext(db, { tenantId: a.tenantId }, (tx) => tx.domainEvent.deleteMany({}))).rejects.toThrow(/permission denied/);
+    await expect(withDbContext(db, { tenantId: a.tenantId }, (tx) => tx.domainEvent.deleteMany({}))).rejects.toThrow(/cannot be deleted/);
   });
 });

@@ -18,15 +18,15 @@ RUN src="$(echo node_modules/.pnpm/@prisma+client*/node_modules/.prisma)" \
   && dest="$(echo /out/node_modules/.pnpm/@prisma+client*/node_modules)" \
   && test -d "$src" && test -d "$dest" && cp -r "$src" "$dest/"
 
-# Schema migrations as their own small image (Kubernetes runs it as a pre-upgrade Job). It connects as the
-# schema owner: pass the owner connection string as both DATABASE_URL and MIGRATION_DATABASE_URL (the schema reads both).
-FROM node:26-bookworm-slim AS migrate
-RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
-  && npm install -g --allow-scripts=prisma,@prisma/engines prisma@6.19.3 && npm cache clean --force
-WORKDIR /migrate
-COPY packages/database/prisma ./prisma
+# Database set-up as its own image (Kubernetes runs it as a pre-upgrade Job, Compose before the API): creates the
+# collections and indexes the schema declares and seeds the plan catalogue. Idempotent; needs only DATABASE_URL.
+FROM base AS migrate
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /out .
+COPY --from=build /repo/packages/database/prisma ./node_modules/@dealflow/database/prisma
 USER node
-CMD ["prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+CMD ["node", "node_modules/@dealflow/database/dist/setup-cli.js"]
 
 FROM base AS runtime
 ENV NODE_ENV=production
@@ -37,3 +37,4 @@ USER node
 EXPOSE 4000 9464
 HEALTHCHECK --interval=15s --timeout=3s CMD node -e "fetch('http://localhost:4000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/main.js"]
+

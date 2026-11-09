@@ -13,43 +13,34 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      PGHOST: localhost
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow_test
-      DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow_test
-      E2E_DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow
+      # Two databases on one MongoDB replica set: the API suite drops and rebuilds sampforce_test; the browser suite
+      # runs against sampforce.
+      TEST_DATABASE_URL: mongodb://localhost:27017/sampforce_test?replicaSet=rs0
+      DATABASE_URL: mongodb://localhost:27017/sampforce?replicaSet=rs0
+      E2E_DATABASE_URL: mongodb://localhost:27017/sampforce?replicaSet=rs0
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
+      # Service containers cannot take arguments, and transactions need a replica set, so MongoDB starts here.
+      - name: Start MongoDB (single-node replica set)
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 60); do docker exec mongo mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' >/dev/null 2>&1 && break; sleep 1; done
+          docker exec mongo mongosh --quiet --eval "rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] })"
+          for i in $(seq 1 60); do [ "$(docker exec mongo mongosh --quiet --eval 'db.hello().isWritablePrimary')" = "true" ] && break; sleep 1; done
+          docker exec mongo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Create database roles and databases
-        run: bash scripts/db-setup.sh dealflow dealflow_test
-      - name: Apply migrations
-        run: |
-          pnpm --filter @dealflow/database migrate:deploy
-          MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
-            pnpm --filter @dealflow/database migrate:deploy
-      - name: Every tenant table has forced row-level security
-        run: |
-          for db in dealflow dealflow_test; do
-            psql "postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/$db" -v ON_ERROR_STOP=1 -f scripts/check-rls.sql
-          done
       - run: pnpm build
+      - name: Database set-up (collections, indexes, plans), twice to prove it is idempotent
+        run: |
+          pnpm db:setup
+          pnpm db:setup
       - run: pnpm lint
       - run: pnpm typecheck
       - name: Unit and API integration tests (incl. tenant isolation)
@@ -78,7 +69,7 @@ jobs:
         run: docker build -f apps/api/Dockerfile -t dealflow-api:ci .
       - name: Build web image
         run: docker build -f apps/web/Dockerfile -t dealflow-web:ci .
-      - name: Build migration image
+      - name: Build database set-up image
         run: docker build -f apps/api/Dockerfile --target migrate -t dealflow-migrate:ci .
 
   helm:
