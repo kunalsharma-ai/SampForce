@@ -14,7 +14,7 @@ import {
   VOICE_RECORD_TYPES,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { MeetingRecordsService } from '../meetings/meeting-records.service';
 import { VoiceNotesService } from './voice-notes.service';
@@ -24,6 +24,7 @@ const uuid = new ParseUUIDPipe();
 
 /** Enhancement feature 12: voice notes turned into CRM actions the person confirms (ADR 0026). */
 @Controller('voice-notes')
+@RequireFeature('voice_notes')
 export class VoiceNotesController {
   constructor(
     private readonly voice: VoiceNotesService,

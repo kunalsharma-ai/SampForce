@@ -5,6 +5,7 @@ import { formSubmissionSchema, type LeadFormInput, type LeadFormRow, type Public
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { assertCampaign, assertRefs, notFound, ownerRefs } from '../crm/crm-helpers';
 
@@ -131,6 +132,8 @@ export class FormsService {
     const rows = await this.prisma.$queryRaw<{ t: string | null }[]>`SELECT app_form_tenant(${token})::text AS t`;
     const tenantId = rows[0]?.t;
     if (!tenantId) throw formGone();
+    // A form whose workspace's plan no longer has lead forms (ADR 0057) reads as gone to the public.
+    if (!(await this.prisma.run({ tenantId }, (tx) => hasFeature(tx, tenantId, 'marketing')))) throw formGone();
     return { tenantId };
   }
 }

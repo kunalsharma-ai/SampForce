@@ -27,8 +27,7 @@ export function RolesManager() {
   const canManage = useCan('members:manage');
   const billing = useBilling(useCan('billing:read'));
   const [editing, setEditing] = useState<RoleRow | 'new' | null>(null);
-  const applied = billing.data?.catalog.find((p) => p.code === billing.data?.appliedPlan);
-  const included = applied?.entitlements.customRoles;
+  const included = billing.data ? billing.data.features.includes('custom_roles') : undefined;
 
   return (
     <Card>
@@ -39,7 +38,7 @@ export function RolesManager() {
             <InfoTip topic="team.roles" />
           </div>
           <CardDescription>
-            {included === false ? t('System roles are fixed. Custom roles combine individual permissions and are included from the Professional plan. You can only grant permissions your own role has.') : t('System roles are fixed. Custom roles combine individual permissions. You can only grant permissions your own role has.')}
+            {included === false ? t('System roles are fixed. Custom roles are not included in your plan. You can only grant permissions your own role has.') : t('System roles are fixed. Custom roles combine individual permissions. You can only grant permissions your own role has.')}
           </CardDescription>
         </div>
         {canManage && included !== false && editing === null && (

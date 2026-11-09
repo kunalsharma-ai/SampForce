@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import { AI_AGENTS, type AiAgentKey, type AiStatus, type AiTier, creditsFor, monthlyCreditAllowance } from '@dealflow/types';
-import { entitlementsFor } from '../billing/entitlements';
+import { AI_AGENTS, type AiAgentKey, type AiStatus, type AiTier, creditsFor } from '@dealflow/types';
+import { entitlementsFor, hasFeature } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { requestLanguage } from '../common/request-language';
@@ -15,7 +15,7 @@ export const AI_PROVIDER = Symbol('AI_PROVIDER');
 /** Why AI cannot run right now. The message is shown to people as is. */
 export class AiUnavailable extends HttpException {
   constructor(
-    readonly code: 'AI_NOT_CONFIGURED' | 'AI_DISABLED' | 'AGENT_DISABLED' | 'AI_CREDITS_EXHAUSTED' | 'AI_RATE_LIMITED' | 'AI_PROVIDER_ERROR',
+    readonly code: 'AI_NOT_CONFIGURED' | 'AI_NOT_IN_PLAN' | 'AI_DISABLED' | 'AGENT_DISABLED' | 'AI_CREDITS_EXHAUSTED' | 'AI_RATE_LIMITED' | 'AI_PROVIDER_ERROR',
     message: string,
   ) {
     const status =
@@ -25,7 +25,9 @@ export class AiUnavailable extends HttpException {
           ? HttpStatus.TOO_MANY_REQUESTS
           : code === 'AI_CREDITS_EXHAUSTED'
             ? HttpStatus.PAYMENT_REQUIRED
-            : HttpStatus.CONFLICT;
+            : code === 'AI_NOT_IN_PLAN'
+              ? HttpStatus.FORBIDDEN
+              : HttpStatus.CONFLICT;
     super({ code, message }, status);
   }
 }
@@ -76,7 +78,8 @@ export class AiGateway {
       tx.membership.count({ where: { tenantId, status: 'ACTIVE' } }),
       tx.aiUsage.aggregate({ where: { tenantId, createdAt: { gte: monthStart() } }, _sum: { credits: true } }),
     ]);
-    const allowance = monthlyCreditAllowance(ent.appliedPlan, seats);
+    // The plan's live allowance (operators can change it in the console, ADR 0057), pooled across active seats.
+    const allowance = ent.entitlements.monthlyAiCredits * Math.max(1, seats);
     const limit = cap === null ? allowance : Math.min(allowance, cap);
     const usedCredits = used._sum.credits ?? 0;
     return { used: usedCredits, allowance, limit, remaining: Math.max(0, limit - usedCredits), seats };
@@ -126,6 +129,7 @@ export class AiGateway {
     const agent = AI_AGENTS[ctx.agent];
     return this.prisma.run({ tenantId: ctx.tenantId, userId: ctx.userId ?? '' }, async (tx) => {
       const s = await this.settings(tx, ctx.tenantId);
+      if (!(await hasFeature(tx, ctx.tenantId, 'ai_assistant'))) throw new AiUnavailable('AI_NOT_IN_PLAN', 'AI is not included in this workspace’s plan. A workspace admin can upgrade on the Billing page.');
       if (!s.enabled) throw new AiUnavailable('AI_DISABLED', 'AI is switched off for this workspace. An administrator can turn it back on in AI Agents.');
       if (s.disabledAgents.includes(ctx.agent)) throw new AiUnavailable('AGENT_DISABLED', `The ${agent.name} agent is switched off for this workspace.`);
       if (!this.provider) throw new AiUnavailable('AI_NOT_CONFIGURED', 'No AI provider is configured on this installation, so this needs an operator to add an API key.');

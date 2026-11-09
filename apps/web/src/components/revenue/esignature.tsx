@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
+import { gated } from '@/components/shell/feature-locked';
 
 const STATUS: Record<EnvelopeStatus, { label: string; tone: 'neutral' | 'primary' | 'success' | 'critical' | 'warning' }> = {
   sent: { label: 'Sent, waiting for signature', tone: 'primary' },
@@ -19,7 +20,7 @@ const STATUS: Record<EnvelopeStatus, { label: string; tone: 'neutral' | 'primary
 };
 
 /** DocuSign on a contract: send the draft for e-signature (after explicit confirmation) and follow its envelopes. */
-export function ContractESignature({ c }: { c: ContractRow }) {
+function ContractESignaturePanel({ c }: { c: ContractRow }) {
   const t = useT();
   const qc = useQueryClient();
   const canWrite = useCan('contracts:write');
@@ -164,3 +165,6 @@ export function ContractESignature({ c }: { c: ContractRow }) {
     </Card>
   );
 }
+
+/** Shown only while the plan includes docusign (ADR 0057). */
+export const ContractESignature = gated('docusign', ContractESignaturePanel);

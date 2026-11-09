@@ -19,10 +19,12 @@ describe('authentication', () => {
   });
 
   it('registers a user, provisions a workspace and returns the session', async () => {
-    const u = await registerUser(app, 'Acme Research');
+    const u = await registerUser(app, 'Acme Research', { plan: 'free' });
     const me = await u.agent.get('/api/v1/auth/me').expect(200);
     expect(me.body.user.email).toBe(u.email);
-    expect(me.body.tenant).toMatchObject({ id: u.tenantId, name: 'Acme Research', plan: 'free', isDemo: false });
+    expect(me.body.tenant).toMatchObject({ id: u.tenantId, name: 'Acme Research', plan: 'free', appliedPlan: 'free', isDemo: false });
+    // A new workspace starts on Free, with Free's features only (ADR 0057).
+    expect(me.body.tenant.features).toEqual(['email_sync', 'ai_assistant', 'automation', 'reports', 'sso_scim']);
     expect(me.body.role).toBe('owner');
     expect(me.body.permissions).toContain('billing:manage');
     expect(me.body.memberships).toHaveLength(1);

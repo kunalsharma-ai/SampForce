@@ -338,6 +338,30 @@ export const organizationHelp = {
       'استخدمه عندما يكبر فريقك أو يحتاج ميزات خطة أعلى.',
     ],
   },
+  'billing.features': {
+    title: 'Features in your plan',
+    what: [
+      'Which SampForce features your plan includes. A lock marks one it leaves out; its pages show what upgrading adds.',
+      'Qué funciones de SampForce incluye tu plan. Un candado marca las que no incluye; sus páginas muestran qué añade mejorar el plan.',
+      'Les fonctions de SampForce incluses dans votre offre. Un cadenas signale celles qui n’y sont pas ; leurs pages indiquent ce qu’apporte une offre supérieure.',
+      'Welche SampForce-Funktionen Ihr Tarif enthält. Ein Schloss markiert fehlende; deren Seiten zeigen, was ein Upgrade bringt.',
+      'ميزات SampForce التي تشملها خطتك. يشير القفل إلى ميزة غير مشمولة، وتعرض صفحاتها ما تضيفه الترقية.',
+    ],
+    how: [
+      'Pick a plan below that includes what you need. Changes apply as soon as the new plan starts; nothing you created is deleted when a feature leaves your plan.',
+      'Elige abajo un plan que incluya lo que necesitas. Los cambios se aplican en cuanto empieza el nuevo plan; nada de lo que creaste se borra si una función sale de tu plan.',
+      'Choisissez ci-dessous une offre qui inclut ce dont vous avez besoin. Les changements s’appliquent dès le début de la nouvelle offre ; rien de ce que vous avez créé n’est supprimé si une fonction quitte votre offre.',
+      'Wählen Sie unten einen Tarif mit dem, was Sie brauchen. Änderungen gelten, sobald der neue Tarif beginnt; nichts, was Sie angelegt haben, wird gelöscht, wenn eine Funktion aus Ihrem Tarif fällt.',
+      'اختر أدناه خطة تشمل ما تحتاجه. تسري التغييرات فور بدء الخطة الجديدة، ولا يُحذف شيء أنشأته عندما تخرج ميزة من خطتك.',
+    ],
+    where: [
+      'Check it before you plan new work, or when a page says it is not in your plan. The SampForce team can also add or turn off a feature for your workspace; those are marked.',
+      'Revísalo antes de planificar trabajo nuevo, o cuando una página diga que no está en tu plan. El equipo de SampForce también puede añadir o desactivar una función para tu espacio; esas aparecen marcadas.',
+      'Consultez-la avant de planifier un nouveau travail, ou quand une page indique qu’elle n’est pas dans votre offre. L’équipe SampForce peut aussi ajouter ou désactiver une fonction pour votre espace ; elles sont signalées.',
+      'Prüfen Sie es, bevor Sie neue Arbeit planen oder wenn eine Seite meldet, dass sie nicht in Ihrem Tarif ist. Das SampForce-Team kann für Ihren Arbeitsbereich auch Funktionen hinzufügen oder abschalten; diese sind markiert.',
+      'راجعه قبل التخطيط لعمل جديد، أو عندما تقول صفحة إنها ليست في خطتك. يمكن لفريق SampForce أيضًا إضافة ميزة أو إيقافها لمساحة عملك، وتظهر هذه مميَّزة.',
+    ],
+  },
   'billing.invoices': {
     title: 'Invoices',
     what: [
@@ -926,11 +950,11 @@ export const organizationHelp = {
       'خطة مساحة عمل واحدة ومقاعدها وفواتيرها وحالتها. يظهر الأعضاء وسجل التدقيق فقط أثناء منح وصول الدعم.',
     ],
     how: [
-      'Change the plan or seats, record a payment received by bank transfer, or suspend and restore the workspace.',
-      'Cambia el plan o los puestos, registra un pago por transferencia o suspende y restablece el espacio.',
-      'Modifiez l’offre ou les sièges, enregistrez un paiement reçu par virement, ou suspendez et rétablissez l’espace.',
-      'Ändern Sie Tarif oder Plätze, erfassen Sie eine Überweisung oder sperren und entsperren Sie den Arbeitsbereich.',
-      'غيّر الخطة أو المقاعد، أو سجّل دفعة وصلت بتحويل بنكي، أو علّق مساحة العمل واستعدها.',
+      'Change the plan or seats, turn single features on or off for this workspace only, record a payment received by bank transfer, or suspend and restore the workspace.',
+      'Cambia el plan o los puestos, activa o desactiva funciones solo para este espacio, registra un pago por transferencia o suspende y restablece el espacio.',
+      'Modifiez l’offre ou les sièges, activez ou désactivez des fonctionnalités pour cet espace seulement, enregistrez un paiement reçu par virement, ou suspendez et rétablissez l’espace.',
+      'Ändern Sie Tarif oder Plätze, schalten Sie einzelne Funktionen nur für diesen Arbeitsbereich ein oder aus, erfassen Sie eine Überweisung oder sperren und entsperren Sie den Arbeitsbereich.',
+      'غيّر الخطة أو المقاعد، أو شغّل ميزات أو أوقفها لمساحة العمل هذه وحدها، أو سجّل دفعة وصلت بتحويل بنكي، أو علّق مساحة العمل واستعدها.',
     ],
     where: [
       'Use it when a customer contacts you about their account.',
@@ -938,6 +962,30 @@ export const organizationHelp = {
       'Utilisez-la quand un client vous contacte au sujet de son compte.',
       'Nutzen Sie es, wenn sich ein Kunde wegen seines Kontos meldet.',
       'استخدمها عندما يتواصل معك عميل بشأن حسابه.',
+    ],
+  },
+  'page.operatorPlans': {
+    title: 'Plans',
+    what: [
+      'Which features and limits each plan includes. Workspaces get what their plan includes, plus any feature you turned on or off for them alone.',
+      'Qué funciones y límites incluye cada plan. Cada espacio recibe lo que incluye su plan, más las funciones que actives o desactives solo para él.',
+      'Les fonctionnalités et limites de chaque offre. Chaque espace reçoit ce que comprend son offre, plus les fonctionnalités activées ou désactivées pour lui seul.',
+      'Welche Funktionen und Grenzen jeder Tarif enthält. Arbeitsbereiche erhalten, was ihr Tarif enthält, plus Funktionen, die Sie nur für sie ein- oder ausgeschaltet haben.',
+      'الميزات والحدود التي تتضمنها كل خطة. تحصل مساحات العمل على ما تتضمنه خطتها، إضافة إلى أي ميزة شغّلتها أو أوقفتها لها وحدها.',
+    ],
+    how: [
+      'Press Edit on a plan, tick its features, set its limits, give a reason and save. The change applies to every workspace on that plan straight away and shows on the pricing page.',
+      'Pulsa Editar en un plan, marca sus funciones, fija sus límites, indica un motivo y guarda. El cambio se aplica al instante a todos los espacios de ese plan y aparece en la página de precios.',
+      'Cliquez sur Modifier sur une offre, cochez ses fonctionnalités, fixez ses limites, indiquez un motif et enregistrez. Le changement s’applique aussitôt à tous les espaces de cette offre et apparaît sur la page des tarifs.',
+      'Klicken Sie bei einem Tarif auf Bearbeiten, wählen Sie Funktionen, legen Sie Grenzen fest, nennen Sie einen Grund und speichern Sie. Die Änderung gilt sofort für alle Arbeitsbereiche dieses Tarifs und erscheint auf der Preisseite.',
+      'اضغط تعديل على خطة، وحدّد ميزاتها، واضبط حدودها، واكتب سببًا واحفظ. يسري التغيير فورًا على كل مساحات العمل في تلك الخطة ويظهر في صفحة الأسعار.',
+    ],
+    where: [
+      'Removing a feature deletes nothing: the workspace’s data stays and comes back when the feature does. Every change is in the operator log.',
+      'Quitar una función no borra nada: los datos del espacio se conservan y vuelven con la función. Cada cambio queda en el registro de operadores.',
+      'Retirer une fonctionnalité ne supprime rien : les données de l’espace sont conservées et reviennent avec la fonctionnalité. Chaque changement figure dans le journal des opérateurs.',
+      'Das Entfernen einer Funktion löscht nichts: Die Daten bleiben erhalten und sind mit der Funktion wieder da. Jede Änderung steht im Betreiberprotokoll.',
+      'إزالة ميزة لا تحذف شيئًا: تبقى بيانات مساحة العمل وتعود مع عودة الميزة. كل تغيير مسجّل في سجل المشغّلين.',
     ],
   },
   'page.operatorProviders': {

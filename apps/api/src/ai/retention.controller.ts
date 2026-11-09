@@ -1,6 +1,6 @@
 import { Controller, ForbiddenException, HttpCode, Param, ParseUUIDPipe, Post, UnprocessableEntityException } from '@nestjs/common';
 import { CHURN_RISK, type RetentionBrief, retentionBriefSchema } from '@dealflow/types';
-import { Auth, type AuthContext, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { SuccessService } from '../revenue/success.service';
 import { AgentOutputError, AgentsService } from './agents.service';
 import { PermissionDenied } from './record-context';
@@ -8,6 +8,7 @@ import { untrusted } from './redact';
 
 /** Feature 13: the Retention Advisor writes a briefing from the churn-risk facts. A draft; nothing is created. */
 @Controller('success/customers')
+@RequireFeature('customer_success')
 export class RetentionController {
   constructor(
     private readonly success: SuccessService,

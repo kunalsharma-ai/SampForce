@@ -3,7 +3,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { type WhatsappConnectInput, whatsappConnectSchema, whatsappConsentSchema, type WhatsappSendInput, whatsappSendSchema } from '@dealflow/types';
 import type { z } from 'zod';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { WhatsappService } from './whatsapp.service';
@@ -21,6 +21,7 @@ async function plain<T>(fn: () => Promise<T>): Promise<T> {
 
 /** WhatsApp Business: the workspace's credentials, contact conversations and consent, sending, and Meta's webhook. */
 @Controller('apps/whatsapp')
+@RequireFeature('whatsapp')
 export class WhatsappController {
   constructor(private readonly whatsapp: WhatsappService) {}
 

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { type InboxQuery, inboxNoteSchema, inboxQuerySchema, type InboxUpdate, inboxUpdateSchema, sendEmailSchema, type SendEmailInput, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { CommunicationService } from './communication.service';
@@ -35,6 +35,7 @@ export class IntegrationsController {
   }
 
   @Post(':provider/connect')
+  @RequireFeature('email_sync')
   @HttpCode(200)
   @RequirePermissions('activities:write')
   connect(@Auth() auth: AuthContext, @Param('provider') provider: string) {
@@ -43,6 +44,7 @@ export class IntegrationsController {
 
   /** OAuth redirect target. Always lands the browser back on the integrations page with an outcome. */
   @Get(':provider/callback')
+  @RequireFeature('email_sync')
   @RequirePermissions('activities:write')
   async callback(
     @Auth() auth: AuthContext,
@@ -67,6 +69,7 @@ export class IntegrationsController {
   }
 
   @Post(':provider/sync')
+  @RequireFeature('email_sync')
   @HttpCode(200)
   @RequirePermissions('activities:write')
   sync(@Auth() auth: AuthContext, @Param('provider') provider: string) {
@@ -98,6 +101,7 @@ export class CommunicationController {
   }
 
   @Post('emails/send')
+  @RequireFeature('email_sync')
   @RequirePermissions('activities:write')
   send(@Auth() auth: AuthContext, @Body(new ZodPipe(sendEmailSchema)) body: SendEmailInput, @Meta() meta: RequestMeta) {
     return this.communication.send(auth, body, meta);
@@ -114,6 +118,7 @@ export class CommunicationController {
 
 /** Enhancement feature 8: conversations, assignment, categories, notes and mailbox sync logs. */
 @Controller('inbox')
+@RequireFeature('team_inbox')
 export class InboxController {
   constructor(private readonly inbox: InboxService) {}
 

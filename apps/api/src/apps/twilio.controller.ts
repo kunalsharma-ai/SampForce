@@ -3,7 +3,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { smsConsentSchema, type SmsSendInput, smsSendSchema, type TwilioConnectInput, twilioConnectSchema } from '@dealflow/types';
 import type { z } from 'zod';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { TwilioService } from './twilio.service';
@@ -29,6 +29,7 @@ function formParams(req: RawBodyRequest<Request>): Record<string, string> {
 
 /** SMS through the workspace's Twilio number: credentials, contact conversations and consent, sending, and Twilio's requests. */
 @Controller('apps/twilio')
+@RequireFeature('sms')
 export class TwilioController {
   constructor(private readonly twilio: TwilioService) {}
 

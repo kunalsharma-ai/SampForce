@@ -12,9 +12,10 @@ import { ENROLLMENT_LABEL, ENROLLMENT_TONE, useEnrollments, useSequences } from 
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 /** The sequences a lead or contact is in, with a quick way to add them to one. */
-export function RecordSequences({ leadId, contactId, email }: { leadId?: string; contactId?: string; email: string | null }) {
+function RecordSequencesPanel({ leadId, contactId, email }: { leadId?: string; contactId?: string; email: string | null }) {
   const canRead = useCan('sequences:read');
   const t = useT();
   const canWrite = useCan('sequences:write');
@@ -78,3 +79,6 @@ export function RecordSequences({ leadId, contactId, email }: { leadId?: string;
     </Card>
   );
 }
+
+/** Shown only while the plan includes sequences (ADR 0057). */
+export const RecordSequences = gated('sequences', RecordSequencesPanel);

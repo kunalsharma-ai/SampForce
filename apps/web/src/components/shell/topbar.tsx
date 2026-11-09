@@ -39,6 +39,7 @@ import type { Permission } from '@dealflow/types';
 import { useT } from '@/lib/i18n';
 import { useSession, useSignOut, useSwitchTenant } from '@/lib/session';
 import { useCopilot } from '@/stores/copilot';
+import { useHasFeature } from '@/lib/features';
 import { type QuickCreateKind, useQuickCreate } from '@/stores/quick-create';
 import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
@@ -85,6 +86,7 @@ export function Topbar() {
   const setShortcutsOpen = useShell((s) => s.setShortcutsOpen);
   const copilotOpen = useCopilot((s) => s.open);
   const setCopilotOpen = useCopilot((s) => s.setOpen);
+  const hasAi = useHasFeature('ai_assistant');
   const [navOpen, setNavOpen] = useState(false);
   const t = useT();
 
@@ -126,11 +128,15 @@ export function Topbar() {
       <FavouriteButton />
 
       <div className="ms-auto flex items-center gap-1">
-        <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => setCopilotOpen(true)}>
-          <Bot aria-hidden />
-          <span className="hidden sm:inline">{t('top.copilot')}</span>
-        </Button>
-        <CopilotPanel open={copilotOpen} onOpenChange={setCopilotOpen} />
+        {hasAi && (
+          <>
+            <Button variant="outline" size="sm" className="gap-1.5 border-accent/40 hover:bg-accent/10 [&_svg]:text-accent" onClick={() => setCopilotOpen(true)}>
+              <Bot aria-hidden />
+              <span className="hidden sm:inline">{t('top.copilot')}</span>
+            </Button>
+            <CopilotPanel open={copilotOpen} onOpenChange={setCopilotOpen} />
+          </>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

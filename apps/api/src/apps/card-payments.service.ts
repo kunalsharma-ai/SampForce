@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppError, AppsService } from './apps.service';
@@ -172,8 +173,9 @@ export class CardPaymentsService {
   }
 
   private async connection(tenantId: string): Promise<AppConnection | null> {
-    const c = await this.prisma.run({ tenantId }, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId, provider: 'PAYMENTS' } } }));
-    return c && c.status !== 'DISCONNECTED' ? c : null;
+    // Card payment works only while the plan includes it (ADR 0057); the connection is kept for when it returns.
+    const [c, inPlan] = await this.prisma.run({ tenantId }, async (tx) => [await tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId, provider: 'PAYMENTS' } } }), await hasFeature(tx, tenantId, 'card_payments')] as const);
+    return c && inPlan && c.status !== 'DISCONNECTED' ? c : null;
   }
 
   private keys(conn: AppConnection): PaymentKeys {

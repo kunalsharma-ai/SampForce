@@ -27,7 +27,7 @@ import {
   PORTAL_SLUG_PATTERN,
   type PublicProposal,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { ZodPipe } from '../common/zod.pipe';
@@ -230,6 +230,7 @@ export class ClientPortalController {
 // ─────────────── Workspace members ───────────────
 
 @Controller('portal')
+@RequireFeature('client_portal')
 export class PortalAdminController {
   constructor(private readonly admin: PortalAdminService) {}
 

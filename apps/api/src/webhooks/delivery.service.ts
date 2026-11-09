@@ -3,6 +3,7 @@ import { Prisma } from '@dealflow/database';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { publicFetch } from '../common/net-guard';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
@@ -53,6 +54,10 @@ export class WebhookDeliverer {
     const { d, event } = loaded;
     if (!d.webhook.active || d.webhook.deletedAt) {
       await this.prisma.run(ctx, (tx) => tx.webhookDelivery.update({ where: { id: d.id }, data: { status: 'FAILED', lastError: 'Webhook is disabled' } }));
+      return;
+    }
+    if (!(await this.prisma.run(ctx, (tx) => hasFeature(tx, tenantId, 'webhooks')))) {
+      await this.prisma.run(ctx, (tx) => tx.webhookDelivery.update({ where: { id: d.id }, data: { status: 'FAILED', lastError: 'Webhooks are not included in the workspace plan' } }));
       return;
     }
 

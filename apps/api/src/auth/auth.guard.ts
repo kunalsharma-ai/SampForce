@@ -17,6 +17,7 @@ import {
   IS_PUBLIC,
   REQUIRED_PERMISSIONS,
 } from '../common/auth-context';
+import { featureNotIncluded, hasFeature, ssoEnforcedNow } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { ACCESS_COOKIE } from './cookies';
 import { TokenService } from './token.service';
@@ -83,8 +84,9 @@ export class AuthGuard implements CanActivate {
         (!session.revokedAt || !!session.replacedById);
       if (membership && sessionLive) {
         const { tenant } = membership;
+        const ssoRequired = tenant.ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, claims.tid, true));
         const restriction =
-          tenant.ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner'
+          ssoRequired
             ? 'sso_required'
             : tenant.requireMfa && claims.amr === 'password'
               ? 'mfa_enrolment'
@@ -171,6 +173,8 @@ export class AuthGuard implements CanActivate {
       }),
     );
     if (!membership) return undefined;
+    // API keys work only while the plan includes API access (ADR 0057); the key itself is kept.
+    if (!(await this.prisma.run({ tenantId: row.tenantId }, (tx) => hasFeature(tx, row.tenantId, 'api_access')))) throw featureNotIncluded('api_access');
     if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > 60_000) {
       await this.prisma.run({ tenantId: row.tenantId }, (tx) => tx.apiKey.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }));
     }
@@ -202,8 +206,9 @@ export class AuthGuard implements CanActivate {
     if (!membership) return undefined;
     const method = (['password', 'mfa', 'sso'].includes(session.authMethod) ? session.authMethod : 'password') as AuthContext['authMethod'];
     const { tenant } = membership;
+    const ssoRequired = tenant.ssoEnforced && method !== 'sso' && membership.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, session.activeTenantId, true));
     const restriction =
-      tenant.ssoEnforced && method !== 'sso' && membership.role.key !== 'owner' ? 'sso_required' : tenant.requireMfa && method === 'password' ? 'mfa_enrolment' : undefined;
+      ssoRequired ? 'sso_required' : tenant.requireMfa && method === 'password' ? 'mfa_enrolment' : undefined;
     // Record use at most once a minute.
     if (!session.lastUsedAt || Date.now() - session.lastUsedAt.getTime() > 60_000) {
       await this.prisma.session.update({ where: { id: session.id }, data: { lastUsedAt: new Date() } });

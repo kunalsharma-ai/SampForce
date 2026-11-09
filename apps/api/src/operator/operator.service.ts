@@ -1,10 +1,12 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
+import { FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
 import { BillingProviders } from '../billing/billing-providers';
 import { BillingService, PAYMENT_INSTRUCTIONS_KEY, toInvoiceRow } from '../billing/billing.service';
+import { entitlementsFor, planDefinitions } from '../billing/entitlements';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { HunterClient } from '../finder/hunter';
@@ -107,7 +109,92 @@ export class OperatorService {
       });
     }
     await this.log(op.id, support ? 'tenant.viewed_with_support_access' : 'tenant.viewed', id, {}, ip);
-    return { ...row, invoices: invoices.map(toInvoiceRow), support };
+    return { ...row, invoices: invoices.map(toInvoiceRow), support, features: await this.workspaceFeatures(id) };
+  }
+
+  // ───────────── Plan features (ADR 0057) ─────────────
+
+  private async workspaceFeatures(id: string): Promise<OperatorWorkspaceFeatures> {
+    return this.prisma.run({ tenantId: id }, async (tx) => {
+      const [ent, rows] = await Promise.all([
+        entitlementsFor(tx, id),
+        tx.tenantFeatureOverride.findMany({ where: { tenantId: id }, orderBy: { feature: 'asc' } }),
+      ]);
+      const known = new Set<string>(FEATURE_KEYS);
+      return {
+        appliedPlan: ent.appliedPlan,
+        planFeatures: ent.entitlements.features,
+        overrides: rows.filter((r) => known.has(r.feature)).map((r) => ({ feature: r.feature as FeatureKey, enabled: r.enabled, reason: r.reason, updatedBy: r.updatedBy, updatedAt: r.updatedAt.toISOString() })),
+        effective: ent.features,
+      };
+    });
+  }
+
+  async plans(): Promise<OperatorPlanRow[]> {
+    const [defs, rows, counts] = await Promise.all([
+      planDefinitions(this.prisma),
+      this.prisma.plan.findMany({ select: { code: true, updatedAt: true } }),
+      this.scan((tx) => tx.subscription.groupBy({ by: ['planCode'], _count: { _all: true } })),
+    ]);
+    const updated = new Map(rows.map((r) => [r.code, r.updatedAt]));
+    const count = new Map(counts.map((c) => [c.planCode, c._count._all]));
+    return PLAN_CATALOG.map((p) => {
+      const d = defs[p.code];
+      const shipped = new Set(PLAN_ENTITLEMENTS[p.code].features);
+      const live = new Set(d.features);
+      return {
+        code: p.code,
+        name: p.name,
+        features: d.features,
+        limits: { maxUsers: d.maxUsers, maxPipelines: d.maxPipelines, monthlyAiCredits: d.monthlyAiCredits, automationRunsPerMonth: d.automationRunsPerMonth },
+        changedFromDefault: FEATURE_KEYS.filter((k) => shipped.has(k) !== live.has(k)),
+        workspaces: count.get(p.code) ?? 0,
+        updatedAt: (updated.get(p.code) ?? new Date(0)).toISOString(),
+      };
+    });
+  }
+
+  /** Changes a plan's features and limits for every workspace on it. Applies on each workspace's next request. */
+  async setPlanDefinition(op: OperatorContext, code: PlanCode, input: OperatorPlanDefinitionInput, ip: string | null): Promise<OperatorPlanRow[]> {
+    const before = (await planDefinitions(this.prisma))[code];
+    const features = normaliseFeatures(input.features);
+    const next = { ...input.limits, features };
+    await this.prisma.plan.update({ where: { code }, data: { entitlements: next as unknown as Prisma.InputJsonValue } });
+    const added = features.filter((f) => !before.features.includes(f));
+    const removed = before.features.filter((f) => !features.includes(f));
+    await this.log(op.id, 'plan.definition_changed', null, {
+      plan: code, reason: input.reason, added, removed,
+      limits: { from: { maxUsers: before.maxUsers, maxPipelines: before.maxPipelines, monthlyAiCredits: before.monthlyAiCredits, automationRunsPerMonth: before.automationRunsPerMonth }, to: input.limits },
+    }, ip);
+    return this.plans();
+  }
+
+  /** Grants (true) or withholds (false) features for one workspace; null hands the feature back to the plan. */
+  async setFeatureOverrides(op: OperatorContext, id: string, input: OperatorFeatureOverridesInput, ip: string | null): Promise<OperatorTenantDetail> {
+    await this.prisma.run({ tenantId: id }, async (tx) => {
+      const tenant = await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
+      if (!tenant) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
+      const changes: { feature: string; enabled: boolean | null }[] = [];
+      for (const [feature, enabled] of Object.entries(input.overrides) as [FeatureKey, boolean | null][]) {
+        if (enabled === null) {
+          const del = await tx.tenantFeatureOverride.deleteMany({ where: { tenantId: id, feature } });
+          if (del.count) changes.push({ feature, enabled: null });
+        } else {
+          await tx.tenantFeatureOverride.upsert({
+            where: { tenantId_feature: { tenantId: id, feature } },
+            create: { tenantId: id, feature, enabled, reason: input.reason, updatedBy: op.email },
+            update: { enabled, reason: input.reason, updatedBy: op.email },
+          });
+          changes.push({ feature, enabled });
+        }
+      }
+      await this.audit.record(tx, {
+        tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.features_overridden', entityType: 'tenant', entityId: id,
+        metadata: { operator: op.email, reason: input.reason, changes },
+      });
+    });
+    await this.log(op.id, 'tenant.features_overridden', id, { overrides: input.overrides, reason: input.reason }, ip);
+    return this.tenant(op, id, ip);
   }
 
   /** Manual plan changes for sales-led deals, credits and corrections. Recorded in both audit logs. */

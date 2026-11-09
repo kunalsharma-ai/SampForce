@@ -22,7 +22,7 @@ import {
 } from '@dealflow/types';
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ProspectsService } from './prospects.service';
 
@@ -44,6 +44,7 @@ async function readFile(req: Request, name: string | undefined): Promise<{ name:
 }
 
 @Controller('prospect-lists')
+@RequireFeature('prospect_lists')
 export class ProspectListsController {
   constructor(private readonly prospects: ProspectsService) {}
 
@@ -138,6 +139,7 @@ export class ProspectListsController {
 }
 
 @Controller('prospects')
+@RequireFeature('prospect_lists')
 export class ProspectsController {
   constructor(private readonly prospects: ProspectsService) {}
 
@@ -205,6 +207,7 @@ export class ProspectsController {
 
 /** What the browser extension may do with prospects: its own token reaches only these routes. */
 @Controller('extension')
+@RequireFeature('prospect_lists')
 @ExtensionAccess()
 export class ExtensionProspectsController {
   constructor(private readonly prospects: ProspectsService) {}

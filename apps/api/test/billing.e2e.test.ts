@@ -14,7 +14,7 @@ describe('billing without provider keys', () => {
   let owner: TestUser;
   beforeAll(async () => {
     app = await startApp();
-    owner = await registerUser(app, 'Unbilled Ltd');
+    owner = await registerUser(app, 'Unbilled Ltd', { plan: 'free' });
   });
   afterAll(async () => {
     await app.close();
@@ -59,9 +59,9 @@ describe('billing with Stripe and Razorpay fixtures', () => {
       process.env[k] = v;
     }
     app = await startApp();
-    owner = await registerUser(app, 'Stripe Buyer Ltd');
+    owner = await registerUser(app, 'Stripe Buyer Ltd', { plan: 'free' });
     member = await inviteMember(app, owner, 'member');
-    rzOwner = await registerUser(app, 'Razorpay Buyer Ltd');
+    rzOwner = await registerUser(app, 'Razorpay Buyer Ltd', { plan: 'free' });
   });
   afterAll(async () => {
     await app.close();
@@ -225,7 +225,7 @@ describe('trials and plan entitlements', () => {
   let owner: TestUser;
   beforeAll(async () => {
     app = await startApp();
-    owner = await registerUser(app, 'Trial Co Ltd');
+    owner = await registerUser(app, 'Trial Co Ltd', { plan: 'free' });
   });
   afterAll(async () => {
     await app.close();

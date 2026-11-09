@@ -1,8 +1,8 @@
 'use client';
 
 import { cn } from '@dealflow/ui';
-import type { PublicPricing } from '@dealflow/types';
-import { Check } from 'lucide-react';
+import { FEATURE_GROUPS, FEATURES, type PublicPricing } from '@dealflow/types';
+import { Check, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { fmtLocale } from '@/lib/i18n/locale';
@@ -43,8 +43,9 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
                   e.maxPipelines ? t.plural('count.pipelines', e.maxPipelines) : t('Unlimited pipelines'),
                   t('{n} AI credits per user per month', { n: e.monthlyAiCredits.toLocaleString(fmtLocale()) }),
                   t('{n} automation runs per month', { n: e.automationRunsPerMonth.toLocaleString(fmtLocale()) }),
-                  e.customRoles ? t('Custom roles and permissions') : t('Standard roles'),
-                  t('Single sign-on (OpenID Connect) and SCIM'),
+                  t('{n} of {total} features', { n: e.features.length, total: FEATURES.length }),
+                  e.features.includes('custom_roles') ? t('Custom roles and permissions') : t('Standard roles'),
+                  ...(e.features.includes('sso_scim') ? [t('Single sign-on (OpenID Connect) and SCIM')] : []),
                 ].map((f) => (
                   <li key={f} className="flex gap-2">
                     <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
@@ -72,6 +73,60 @@ export function PricingTable({ pricing }: { pricing: PublicPricing }) {
         })}
       </ul>
       <p className="mt-4 text-xs text-muted-foreground">{t('Prices in {currency}, excluding taxes.', { currency: pricing.currency })}</p>
+      <FeatureComparison pricing={pricing} />
     </>
+  );
+}
+
+/** Which plan includes which feature, read from the live plan catalogue (the platform admin can change it, ADR 0057). */
+function FeatureComparison({ pricing }: { pricing: PublicPricing }) {
+  const t = useT();
+  return (
+    <section aria-labelledby="compare-features" className="mt-12">
+      <h2 id="compare-features" className="text-lg font-semibold">
+        {t('Compare features')}
+      </h2>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-[640px] text-sm" data-pricing-features="">
+          <thead>
+            <tr className="border-b border-border bg-muted/40 text-start">
+              <th scope="col" className="px-3 py-2 text-start font-medium">
+                {t('Feature')}
+              </th>
+              {pricing.plans.map((p) => (
+                <th key={p.code} scope="col" className="px-3 py-2 text-center font-medium">
+                  {p.name.replace('SampForce ', '')}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {FEATURE_GROUPS.map((group) => (
+            <tbody key={group}>
+              <tr>
+                <th colSpan={pricing.plans.length + 1} scope="colgroup" className="bg-muted/20 px-3 py-1.5 text-start text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t.maybe(group)}
+                </th>
+              </tr>
+              {FEATURES.filter((f) => f.group === group).map((f) => (
+                <tr key={f.key} className="border-t border-border/60">
+                  <th scope="row" className="px-3 py-1.5 text-start font-normal">
+                    {t.maybe(f.label)}
+                  </th>
+                  {pricing.plans.map((p) => (
+                    <td key={p.code} className="px-3 py-1.5 text-center">
+                      {p.entitlements.features.includes(f.key) ? (
+                        <Check className="mx-auto size-4 text-primary" aria-label={t('Included')} />
+                      ) : (
+                        <Minus className="mx-auto size-4 text-muted-foreground/60" aria-label={t('Not included')} />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </section>
   );
 }

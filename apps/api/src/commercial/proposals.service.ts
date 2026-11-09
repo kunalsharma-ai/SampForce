@@ -5,6 +5,7 @@ import { CardPaymentsService } from '../apps/card-payments.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { CommunicationService } from '../integrations/communication.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -80,15 +81,20 @@ export class ProposalsService {
   /** The public proposal page. Each load counts as a view; the rep is told on the first one. */
   async view(token: string, opts: { count: boolean }): Promise<PublicProposal | null> {
     const t = this.signer.verify(token);
-    if (!t) return null;
+    if (!t || !(await this.inPlan(t.tenantId))) return null;
     return this.load(t.tenantId, t.messageId, { count: opts.count, shared: true });
   }
 
   /** "Pay by card" on the public link: only for a shared, accepted, latest version with the workspace's own payments app connected. */
   async pay(token: string): Promise<{ url: string } | null> {
     const t = this.signer.verify(token);
-    if (!t) return null;
+    if (!t || !(await this.inPlan(t.tenantId))) return null;
     return this.payments.start(t.tenantId, t.messageId, token);
+  }
+
+  /** Online proposal links work only while the workspace's plan includes proposals (ADR 0057); otherwise they read as not shared. */
+  private inPlan(tenantId: string): Promise<boolean> {
+    return this.prisma.run({ tenantId }, (tx) => hasFeature(tx, tenantId, 'proposals'));
   }
 
   /** The client portal shows a company's sent proposals to its signed-in people, whether or not the public link is on. */

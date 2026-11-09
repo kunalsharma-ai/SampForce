@@ -40,7 +40,7 @@ describe('card payments on proposals (stand-in)', () => {
   /** A workspace with a deal, an approved and shared quote of 10 x 100, and its public token. */
   async function workspace(name: string) {
     const user = await registerUser(app, name);
-    await asTenant(user.tenantId, (tx) => tx.subscription.update({ where: { tenantId: user.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(user.tenantId, (tx) => tx.subscription.update({ where: { tenantId: user.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     const o = api(user);
     const product = (await o.post('/catalog/products', { name: 'Seat licence', unit: 'seat' }).expect(201)).body.id;
     const currency = (await o.get('/tenants/current').expect(200)).body.defaultCurrency ?? 'USD';
@@ -61,7 +61,7 @@ describe('card payments on proposals (stand-in)', () => {
     restore = setEnv({ STRIPE_API_BASE_URL: pay.url, RAZORPAY_API_BASE_URL: pay.url });
     app = await startApp();
     owner = await registerUser(app, 'Pay Co');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'professional', seats: 10 } }));
   });
 
   afterAll(async () => {

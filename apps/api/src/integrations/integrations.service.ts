@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox, signToken, verifyToken } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { hasFeature } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { claim, errorMessage } from '../worker/queue';
@@ -187,6 +188,8 @@ export class IntegrationsService {
         async (tx) => {
           const conn = await tx.integrationConnection.findFirst({ where: { id: connectionId, tenantId } });
           if (!conn || conn.status === 'DISCONNECTED') return { emails: 0, meetings: 0 };
+          // Mailboxes stay connected but are not read while the plan leaves sync out (ADR 0057).
+          if (!(await hasFeature(tx, tenantId, 'email_sync'))) return { emails: 0, meetings: 0 };
           const adapter = this.adapters[conn.provider];
           const token = await this.accessToken(tx, conn);
           const now = new Date();

@@ -47,7 +47,7 @@ describe('WhatsApp Business app (stand-in)', () => {
     app = await startApp();
     worker = app.get(WorkerService);
     owner = await registerUser(app, 'WA Co');
-    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(owner.tenantId, (tx) => tx.subscription.update({ where: { tenantId: owner.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     const o = api(owner);
     ids.gia = (await o.post('/contacts', { firstName: 'Gia', lastName: 'Buyer', email: 'gia@globex.test', phone: '+44 7700 900456' }).expect(201)).body.id;
     ids.local = (await o.post('/contacts', { firstName: 'Lou', lastName: 'Local', phone: '07700 900111' }).expect(201)).body.id;
@@ -235,7 +235,7 @@ describe('WhatsApp Business app (stand-in)', () => {
 
   it('another workspace’s webhook cannot write into this one, and disconnecting keeps history', async () => {
     const other = await registerUser(app, 'Other WA');
-    await asTenant(other.tenantId, (tx) => tx.subscription.update({ where: { tenantId: other.tenantId }, data: { planCode: 'growth', seats: 10 } }));
+    await asTenant(other.tenantId, (tx) => tx.subscription.update({ where: { tenantId: other.tenantId }, data: { planCode: 'professional', seats: 10 } }));
     const so = (await keys(other, { ...good, appSecret: 'abcdefabcdefabcdefabcdefabcdefab' }).expect(200)).body as WaStatus;
     // Signed with this workspace's secret but sent to the other's URL: refused.
     await deliver(waInbound(GIA, 'cross'), WA.appSecret, so.connection!.settings.webhookUrl).expect(401);

@@ -27,7 +27,7 @@ test('a first visit in a French browser gets French messages from the API', asyn
 });
 
 test('a conflict reported by the API appears in German in a German workspace', async ({ page }) => {
-  await signUp(page, 'Fehler GmbH');
+  await signUp(page, 'Fehler GmbH', { plan: 'free' });
   await page.goto('/app/settings');
   const card = page.getByTestId('regional-settings');
   await card.getByLabel('Language').selectOption('de');

@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { type ApiKeyCreateInput, apiKeyCreateSchema, ZAPIER_EVENTS, type ZapierEvent, zapierSubscribeSchema } from '@dealflow/types';
 import { BadRequestException } from '@nestjs/common';
 import type { z } from 'zod';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ApiKeysService } from './api-keys.service';
 
@@ -11,6 +11,7 @@ const uuid = new ParseUUIDPipe({ version: '4' });
 
 /** Workspace API keys, managed by admins in the browser (never with a key). */
 @Controller('api-keys')
+@RequireFeature('api_access')
 export class ApiKeysController {
   constructor(private readonly keys: ApiKeysService) {}
 
@@ -44,6 +45,7 @@ export class ApiKeysController {
 
 /** What the SampForce Zapier app calls, with an API key: the connection test, REST-hook subscriptions and event data. */
 @Controller('zapier')
+@RequireFeature('api_access')
 @ApiKeyAccess()
 export class ZapierController {
   constructor(private readonly keys: ApiKeysService) {}

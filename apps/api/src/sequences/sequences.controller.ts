@@ -19,7 +19,7 @@ import {
   templatePreviewSchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { EmailAnalyticsService } from './analytics.service';
 import { SequenceRunner } from './sequence-runner.service';
@@ -39,6 +39,7 @@ const templateListQuery = z.object({ category: z.string().trim().max(40).optiona
 
 /** Workspace email variables: {{var.key}}. */
 @Controller('email-variables')
+@RequireFeature('email_templates')
 export class EmailVariablesController {
   constructor(private readonly variables: EmailVariablesService) {}
 
@@ -63,6 +64,7 @@ export class EmailVariablesController {
 }
 
 @Controller('email-templates')
+@RequireFeature('email_templates')
 export class EmailTemplatesController {
   constructor(private readonly templates: TemplatesService) {}
 
@@ -118,6 +120,7 @@ export class EmailTemplatesController {
 }
 
 @Controller('sequences')
+@RequireFeature('sequences')
 export class SequencesController {
   constructor(
     private readonly sequences: SequencesService,

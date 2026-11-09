@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { relativeTime } from '@/lib/format';
 import { useCan } from '@/lib/session';
+import { gated } from '@/components/shell/feature-locked';
 
 const STATUS: Record<SmsMessageRow['status'], { label: string; tone: 'neutral' | 'success' | 'critical' | 'primary' }> = {
   accepted: { label: 'Accepted by Twilio', tone: 'neutral' },
@@ -46,7 +47,7 @@ function segmentLine(tr: Translator, seg: ReturnType<typeof smsSegments>): strin
 }
 
 /** SMS for one contact: consent and opt-out, the conversation, and one-to-one sending. Shown once SMS (Twilio) is connected. */
-export function ContactSms({ contactId }: { contactId: string }) {
+function ContactSmsPanel({ contactId }: { contactId: string }) {
   const canRead = useCan('contacts:read');
   const canSend = useCan('activities:write');
   const canConsent = useCan('contacts:write');
@@ -195,3 +196,6 @@ export function ContactSms({ contactId }: { contactId: string }) {
     </Card>
   );
 }
+
+/** Shown only while the plan includes sms (ADR 0057). */
+export const ContactSms = gated('sms', ContactSmsPanel);

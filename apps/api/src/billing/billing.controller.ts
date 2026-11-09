@@ -163,7 +163,7 @@ export class PublicPricingController {
   @Get()
   @Public()
   @Throttle({ default: { limit: 120, ttl: 60_000 } })
-  pricing() {
+  async pricing() {
     return {
       published: this.env.PRICING_PUBLISHED,
       currency: 'USD',
@@ -171,7 +171,7 @@ export class PublicPricingController {
       graceDays: this.env.BILLING_GRACE_DAYS,
       salesContact: this.env.SALES_CONTACT_EMAIL ?? null,
       onlinePayments: this.env.ONLINE_PAYMENTS_ENABLED,
-      plans: this.billing.catalog().map(({ checkout, ...p }) => ({ ...p, buyOnline: Object.values(checkout).some((c) => c.MONTH || c.YEAR) })),
+      plans: (await this.billing.liveCatalog()).map(({ checkout, ...p }) => ({ ...p, buyOnline: Object.values(checkout).some((c) => c.MONTH || c.YEAR) })),
     };
   }
 }

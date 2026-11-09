@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { useCan } from '@/lib/session';
 import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
+import { gated } from '@/components/shell/feature-locked';
 
 type Target = { leadId?: string; contactId?: string; dealId?: string };
 
@@ -30,7 +31,7 @@ function defaultStart(): string {
 }
 
 /** Zoom meetings for a lead, contact or deal: schedule one and see its transcript status. Shown once Zoom is connected. */
-export function RecordZoomMeetings({ target }: { target: Target }) {
+function RecordZoomMeetingsPanel({ target }: { target: Target }) {
   const t = useT();
   const canRead = useCan('activities:read');
   const canWrite = useCan('activities:write');
@@ -165,3 +166,6 @@ export function RecordZoomMeetings({ target }: { target: Target }) {
     </Card>
   );
 }
+
+/** Shown only while the plan includes zoom (ADR 0057). */
+export const RecordZoomMeetings = gated('zoom', RecordZoomMeetingsPanel);

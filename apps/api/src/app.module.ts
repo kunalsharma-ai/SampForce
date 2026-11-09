@@ -9,6 +9,7 @@ import { AutomationModule } from './automation/automation.module';
 import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { FeatureGuard } from './billing/feature.guard';
 import { CommercialModule } from './commercial/commercial.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { PreferencesModule } from './preferences/preferences.module';
@@ -92,6 +93,8 @@ import { redactUrl } from './observability/redact';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: OriginGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
+    // After AuthGuard, which sets the workspace: plan features (ADR 0057).
+    { provide: APP_GUARD, useClass: FeatureGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })

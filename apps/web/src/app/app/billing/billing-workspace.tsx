@@ -1,9 +1,9 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, Input, Skeleton } from '@dealflow/ui';
-import { type BillingOverview, type BillingProviderKey, type CatalogPlan, type Interval, type InvoiceRow, offlineInvoiceCents, PLAN_CATALOG, type SelfServePlan, type UsageMeter } from '@dealflow/types';
+import { type BillingOverview, type BillingProviderKey, type CatalogPlan, FEATURE_GROUPS, FEATURES, type Interval, type InvoiceRow, offlineInvoiceCents, PLAN_CATALOG, type SelfServePlan, type UsageMeter } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react';
+import { Check, ExternalLink, Lock } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Select } from '@/components/crm/select';
@@ -42,6 +42,7 @@ export function BillingWorkspace() {
       {b.offline.openInvoice && <OpenInvoice b={b} inv={b.offline.openInvoice} canManage={canManage} />}
       <CurrentPlan b={b} canManage={canManage} />
       <Usage b={b} />
+      <PlanFeatures b={b} />
       <Plans b={b} canManage={canManage} />
       <Invoices />
     </div>
@@ -399,11 +400,55 @@ function PlanCard({ p, b, interval, action }: { p: CatalogPlan; b: BillingOvervi
           <li>{ent.maxPipelines === null ? t('Unlimited pipelines') : t.plural('count.pipelines', ent.maxPipelines)}</li>
           <li>{ent.monthlyAiCredits.toLocaleString(fmtLocale())} {t('AI credits / user / month')}</li>
           <li>{ent.automationRunsPerMonth.toLocaleString(fmtLocale())} {t('automation runs / month')}</li>
-          <li>{ent.customRoles ? t('Custom roles') : t('Standard roles')}</li>
+          <li>{t('{n} of {total} features', { n: ent.features.length, total: FEATURES.length })}</li>
         </ul>
         {action && <div className="mt-3">{action}</div>}
       </Card>
     </li>
+  );
+}
+
+/** What the plan includes, by group, with what the SampForce team granted or withheld for this workspace (ADR 0057). */
+function PlanFeatures({ b }: { b: BillingOverview }) {
+  const t = useT();
+  const has = new Set(b.features);
+  const plan = b.catalog.find((p) => p.code === b.appliedPlan);
+  const inPlan = new Set(plan?.entitlements.features ?? []);
+  return (
+    <Card data-billing-features="">
+      <CardHeader>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>{t('Features in your plan')}</CardTitle>
+          <InfoTip topic="billing.features" />
+        </div>
+        <CardDescription>{t('{n} of {total} features', { n: b.features.length, total: FEATURES.length })}</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {FEATURE_GROUPS.map((g) => (
+          <section key={g} aria-labelledby={`feature-group-${g}`}>
+            <h3 id={`feature-group-${g}`} className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t.maybe(g)}
+            </h3>
+            <ul className="space-y-1 text-sm">
+              {FEATURES.filter((f) => f.group === g).map((f) => {
+                const on = has.has(f.key);
+                const changed = on !== inPlan.has(f.key);
+                return (
+                  <li key={f.key} className={cn('flex items-start gap-2', !on && 'text-muted-foreground')} data-feature={f.key} data-included={on ? 'yes' : 'no'}>
+                    {on ? <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden /> : <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />}
+                    <span>
+                      <span title={t.maybe(f.description)}>{t.maybe(f.label)}</span>
+                      <span className="sr-only">: {on ? t('Included') : t('Not in your plan')}</span>
+                      {changed && <span className="ms-1 text-xs text-muted-foreground">({on ? t('added for your workspace') : t('turned off for your workspace')})</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

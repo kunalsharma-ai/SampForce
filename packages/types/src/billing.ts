@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
 import { PERMISSIONS } from './permissions';
+import { applyFeatureOverrides, type FeatureKey, type FeatureOverride, type OperatorWorkspaceFeatures } from './features';
 import { PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode, type PlanEntitlements } from './plans';
 
 // ───────────── Plans and entitlements ─────────────
@@ -29,6 +30,14 @@ export interface EffectiveEntitlements {
   seatLimit: number | null;
   /** True when a paid plan's allowances are withheld because it is unpaid or canceled. */
   restricted: boolean;
+  /** What the workspace can use: the applied plan's features with operator overrides for this workspace (ADR 0057). */
+  features: FeatureKey[];
+}
+
+/** Live plan definitions (the `plans` table) and this workspace's feature overrides. Missing plans use the shipped ones. */
+export interface EntitlementSources {
+  plans?: Partial<Record<PlanCode, PlanEntitlements>>;
+  overrides?: readonly FeatureOverride[];
 }
 
 /**
@@ -37,18 +46,19 @@ export interface EffectiveEntitlements {
  * Free allowances. Nothing is deleted when that happens: existing data stays readable and editable,
  * only new usage above the Free allowances is refused.
  */
-export function effectiveEntitlements(sub: { planCode: string; status: SubscriptionState; seats: number } | null): EffectiveEntitlements {
+export function effectiveEntitlements(sub: { planCode: string; status: SubscriptionState; seats: number } | null, sources: EntitlementSources = {}): EffectiveEntitlements {
   const planCode = (sub && sub.planCode in PLAN_ENTITLEMENTS ? sub.planCode : 'free') as PlanCode;
   const restricted = !!sub && planCode !== 'free' && (sub.status === 'UNPAID' || sub.status === 'CANCELED');
   const appliedPlan: PlanCode = restricted ? 'free' : planCode;
-  const entitlements = PLAN_ENTITLEMENTS[appliedPlan];
+  const entitlements = sources.plans?.[appliedPlan] ?? PLAN_ENTITLEMENTS[appliedPlan];
   const seatLimit = entitlements.maxUsers ?? (sub?.status === 'TRIALING' ? Math.max(sub.seats, TRIAL_SEATS) : Math.max(1, sub?.seats ?? 1));
-  return { planCode, appliedPlan, entitlements, seatLimit, restricted };
+  const features = applyFeatureOverrides(entitlements.features, sources.overrides ?? []);
+  return { planCode, appliedPlan, entitlements, seatLimit, restricted, features };
 }
 
 /** Limits that would be exceeded by moving to `target`, given current usage. Empty means the move is allowed. */
-export function downgradeBlockers(target: PlanCode, seats: number, usage: { members: number; pipelines: number }): string[] {
-  const ent = PLAN_ENTITLEMENTS[target];
+export function downgradeBlockers(target: PlanCode, seats: number, usage: { members: number; pipelines: number }, plans?: EntitlementSources['plans']): string[] {
+  const ent = plans?.[target] ?? PLAN_ENTITLEMENTS[target];
   const out: string[] = [];
   const seatCap = ent.maxUsers ?? seats;
   if (usage.members > seatCap) out.push(`${usage.members} active members, but the new plan allows ${seatCap}.`);
@@ -155,6 +165,8 @@ export interface BillingOverview {
   offline: { instructions: string | null; openInvoice: InvoiceRow | null };
   portalAvailable: boolean;
   usage: { members: UsageMeter; pendingInvitations: number; pipelines: UsageMeter; aiCredits: UsageMeter; automationRuns: UsageMeter };
+  /** Features the workspace can use now: its plan's, with any the SampForce team granted or withheld (ADR 0057). */
+  features: FeatureKey[];
   catalog: CatalogPlan[];
   salesContact: string | null;
   /** False while the rate card is a proposal; the UI labels prices a preview. */
@@ -267,6 +279,8 @@ export interface OperatorTenantRow {
 
 export interface OperatorTenantDetail extends OperatorTenantRow {
   invoices: InvoiceRow[];
+  /** What the workspace's plan includes, the operator's overrides for it and the result (ADR 0057). */
+  features: OperatorWorkspaceFeatures;
   /** Present only while the workspace has granted support access. */
   support: null | {
     members: { name: string; email: string; role: string; joinedAt: string }[];

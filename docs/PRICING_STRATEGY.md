@@ -20,8 +20,10 @@ approved; local and test setups keep the preview labels.
 | Enterprise | $79 / user | $65 / user | Large organizations |
 | Enterprise Plus | Custom | Custom | Global enterprises |
 
-USD, excluding taxes. Feature packaging per plan follows the brief and is mirrored in
-`packages/types/src/plans.ts` (entitlements) and the `plans` table.
+USD, excluding taxes. Feature packaging per plan follows the brief. The shipped defaults are in
+`packages/types/src/features.ts`; the live packaging is in the `plans` table, which the platform admin edits in the
+operator console (Plans), and can be changed for one workspace there too (ADR 0057). Free has 5 features, Launch 11,
+Growth 26, Professional and above all 36.
 
 ## 2. Published allowances (what makes the price predictable)
 

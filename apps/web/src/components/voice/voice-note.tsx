@@ -20,6 +20,7 @@ import { relativeTime } from '@/lib/format';
 import { type Translator, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { voiceApi, useVoiceMutation, useVoiceNotes, useVoiceTranscriptionStatus } from '@/lib/voice';
+import { gated } from '@/components/shell/feature-locked';
 
 export interface VoiceRecordTarget {
   type: VoiceRecordType;
@@ -32,7 +33,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 const languageName = (code: string | null) => VOICE_LANGUAGES.find(([c]) => c === code)?.[1] ?? code;
 
 /** A button that opens a new voice note, optionally tied to a record. */
-export function VoiceNoteButton({ record, label: given, variant = 'outline', iconOnly }: { record: VoiceRecordTarget | null; label?: string; variant?: 'outline' | 'ghost'; iconOnly?: boolean }) {
+function VoiceNoteButtonPanel({ record, label: given, variant = 'outline', iconOnly }: { record: VoiceRecordTarget | null; label?: string; variant?: 'outline' | 'ghost'; iconOnly?: boolean }) {
   const t = useT();
   const label = given ?? t('Voice note');
   const canWrite = useCan('activities:write');
@@ -50,7 +51,7 @@ export function VoiceNoteButton({ record, label: given, variant = 'outline', ico
 }
 
 /** Your voice notes on a lead, contact, deal or company. Notes are private to the person who made them. */
-export function RecordVoiceNotes({ record }: { record: VoiceRecordTarget }) {
+function RecordVoiceNotesPanel({ record }: { record: VoiceRecordTarget }) {
   const t = useT();
   const canWrite = useCan('activities:write');
   const notes = useVoiceNotes({ type: record.type, id: record.id }, canWrite);
@@ -527,3 +528,9 @@ function ActionFields({ id, action, onChange }: { id: string; action: VoiceActio
       );
   }
 }
+
+/** Shown only while the plan includes voice_notes (ADR 0057). */
+export const VoiceNoteButton = gated('voice_notes', VoiceNoteButtonPanel);
+
+/** Shown only while the plan includes voice_notes (ADR 0057). */
+export const RecordVoiceNotes = gated('voice_notes', RecordVoiceNotesPanel);

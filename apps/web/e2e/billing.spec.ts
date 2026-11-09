@@ -26,7 +26,7 @@ test('public landing and pricing pages are honest about the launch preview', asy
 });
 
 test('billing page, trial, onboarding checklist and a custom role', async ({ page }) => {
-  await signUp(page, 'Billing Flow');
+  await signUp(page, 'Billing Flow', { plan: 'free' });
   const checklist = page.getByRole('heading', { name: 'Get your workspace ready' });
   await expect(checklist).toBeVisible();
   await expect(page.getByText('Create your first deal')).toBeVisible();
@@ -63,7 +63,7 @@ test('operator console: sign-in, workspace list, support access and an audited o
     env: { ...process.env, DATABASE_URL: databaseUrl, OPERATOR_EMAIL: email, OPERATOR_PASSWORD: 'operator-password-1', OPERATOR_NAME: 'E2E Operator', OPERATOR_ROLE: 'ADMIN' },
   });
 
-  await signUp(page, 'Operated Workspace');
+  await signUp(page, 'Operated Workspace', { plan: 'free' });
   await page.goto('/app/administration');
   await page.getByLabel('Reason').fill('Investigating an import problem');
   await page.getByRole('button', { name: 'Grant access' }).click();
@@ -115,7 +115,7 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   await expectNoA11yViolations(ops);
 
   const workspace = `Invoice Buyer ${Date.now()}`;
-  await signUp(page, workspace);
+  await signUp(page, workspace, { plan: 'free' });
   await page.goto('/app/billing');
   await page.getByRole('radio', { name: 'Monthly' }).click();
   await page.getByLabel('Seats', { exact: true }).fill('2');

@@ -8,12 +8,13 @@ import {
   type ExtensionTokenCreateInput,
   extensionTokenCreateSchema,
 } from '@dealflow/types';
-import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ExtensionService } from './extension.service';
 
 /** Connections are managed from the web app only; an extension token cannot create or list them. */
 @Controller('extension/connections')
+@RequireFeature('browser_extension')
 export class ExtensionConnectionsController {
   constructor(private readonly extension: ExtensionService) {}
 
@@ -36,6 +37,7 @@ export class ExtensionConnectionsController {
 }
 
 @Controller('extension')
+@RequireFeature('browser_extension')
 @ExtensionAccess()
 export class ExtensionController {
   constructor(private readonly extension: ExtensionService) {}

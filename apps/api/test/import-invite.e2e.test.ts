@@ -135,7 +135,7 @@ describe('invitations', () => {
   });
 
   it('enforces the free plan user limit, counting pending invitations', async () => {
-    const free = api(await registerUser(app, 'Free Plan'));
+    const free = api(await registerUser(app, 'Free Plan', { plan: 'free' }));
     await free.post('/tenants/current/invitations', { email: 'one@example.com', roleKey: 'member' }).expect(201);
     const res = await free.post('/tenants/current/invitations', { email: 'two@example.com', roleKey: 'member' }).expect(403);
     expect(res.body.error.code).toBe('PLAN_LIMIT');

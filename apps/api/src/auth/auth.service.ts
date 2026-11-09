@@ -21,7 +21,7 @@ import {
   type RegisterInput,
   type SessionSummary,
 } from '@dealflow/types';
-import { entitlementsFor } from '../billing/entitlements';
+import { entitlementsFor, ssoEnforcedNow } from '../billing/entitlements';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -432,12 +432,13 @@ export class AuthService {
   }
 
   async me(auth: AuthContext): Promise<MeResponse> {
-    const [user, tenant, memberships] = await Promise.all([
+    const [user, tenant, memberships, ent] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId } }),
       this.prisma.run(auth, (tx) =>
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, include: { subscription: true } }),
       ),
       this.listMemberships(auth.userId, auth),
+      this.prisma.run(auth, (tx) => entitlementsFor(tx, auth.tenantId)),
     ]);
     return {
       user: { id: user.id, name: user.name, email: user.email },
@@ -448,6 +449,8 @@ export class AuthService {
         plan: tenant.subscription?.planCode ?? 'free',
         isDemo: tenant.isDemo,
         brandColor: tenant.brandColor,
+        features: ent.features,
+        appliedPlan: ent.appliedPlan,
       },
       role: auth.roleKey,
       permissions: auth.permissions,
@@ -548,7 +551,7 @@ export class AuthService {
     );
     const blocked = new Set<string>();
     if (scope && !scope.ssoTenantId) {
-      for (const m of rows) if (m.tenant.ssoEnforced && m.role.key !== 'owner') blocked.add(m.tenantId);
+      for (const m of rows) if (m.tenant.ssoEnforced && m.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, m.tenantId, true))) blocked.add(m.tenantId);
     }
     const allowed = rows.filter((m) => (scope?.ssoTenantId ? m.tenantId === scope.ssoTenantId : !blocked.has(m.tenantId)));
     return allowed.map((m) => ({

@@ -1,12 +1,13 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { type DomainEventType, webhookInputSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { WebhooksService } from './webhooks.service';
 
 const updateSchema = webhookInputSchema.partial().extend({ active: z.boolean().optional() });
 
 @Controller('webhooks')
+@RequireFeature('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}
 

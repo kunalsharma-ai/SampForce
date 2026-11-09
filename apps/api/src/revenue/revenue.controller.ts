@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
 import { analyticsQuerySchema, CHURN_TREND_DAYS, type CustomerFollowUps, customerFollowUpsSchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, forecastQuerySchema, salesTargetInputSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AnalyticsService } from './analytics.service';
 import { SuccessService } from './success.service';
@@ -9,6 +9,7 @@ const uuid = new ParseUUIDPipe();
 const escalationQuery = z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() });
 
 @Controller('analytics')
+@RequireFeature('revenue_intelligence')
 export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
 
@@ -54,6 +55,7 @@ const customerQuery = z.object({ band: z.enum(['healthy', 'watch', 'at_risk']).o
 const trendQuery = z.object({ days: z.coerce.number().int().refine((d) => (CHURN_TREND_DAYS as readonly number[]).includes(d), 'Use 30, 90 or 180').default(90) });
 
 @Controller('success')
+@RequireFeature('customer_success')
 export class SuccessController {
   constructor(private readonly success: SuccessService) {}
 

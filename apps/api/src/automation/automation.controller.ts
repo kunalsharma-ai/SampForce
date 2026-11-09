@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { approvalDecisionSchema, simulateSchema, TRIGGER_EVENTS, UPDATABLE_FIELDS, type WorkflowInput, workflowInputSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ApprovalsService } from './approvals.service';
 import { WorkflowsService } from './workflows.service';
@@ -16,6 +16,7 @@ const approvalQuery = z.object({ status: z.enum(['PENDING', 'DECIDED']).default(
 
 /** Automation Studio. Building, running and approving workflows all need `automation:manage`. */
 @Controller('workflows')
+@RequireFeature('automation')
 export class WorkflowsController {
   constructor(private readonly workflows: WorkflowsService) {}
 

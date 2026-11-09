@@ -2,13 +2,14 @@ import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDP
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { type PaymentsConnectInput, paymentsConnectSchema } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { CardPaymentsService } from './card-payments.service';
 
 /** Card payments on proposals: saving the workspace's keys, payment history, and the provider webhook. */
 @Controller('apps/payments')
+@RequireFeature('card_payments')
 export class CardPaymentsController {
   constructor(private readonly payments: CardPaymentsService) {}
 

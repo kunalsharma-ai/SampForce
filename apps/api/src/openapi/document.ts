@@ -1,6 +1,7 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
   VOICE_RECORD_TYPES,
+  PLAN_CODES,
   customerFollowUpsSchema,
   badgeInputSchema,
   competitionInputSchema,
@@ -58,6 +59,8 @@ import {
   operatorLoginSchema,
   operatorPaymentSchema,
   operatorPlanSchema,
+  operatorPlanDefinitionSchema,
+  operatorFeatureOverridesSchema,
   operatorStatusSchema,
   operatorVoidSchema,
   paymentInstructionsSchema,
@@ -750,6 +753,10 @@ export function buildOpenApiDocument(): object {
   op('get', '/tenants/{id}', 'one workspace; members and audit log only under a support grant');
   op('post', '/tenants/{id}/plan', 'override plan, seats and status (ADMIN)', operatorPlanSchema);
   op('post', '/tenants/{id}/status', 'suspend or reactivate (ADMIN)', operatorStatusSchema);
+  op('post', '/tenants/{id}/features', 'turn plan features on or off for one workspace whatever its plan says; null goes back to the plan (ADMIN)', operatorFeatureOverridesSchema);
+  op('get', '/plans', 'every plan: its features, limits, what differs from the shipped defaults, and how many workspaces use it');
+  r.registerPath({ method: 'put', path: '/operator/plans/{code}', tags: ['Operator'], summary: 'Operator console: set the features and limits a plan includes; applies to every workspace on it at once (ADMIN)',
+    request: { params: z.object({ code: z.enum(PLAN_CODES) }), ...body(operatorPlanDefinitionSchema) }, responses: { 200: ok('Plans'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled or not found') } });
   op('get', '/invoices/open', 'offline invoices waiting for payment, across workspaces');
   for (const [path, summary, schema] of [
     ['paid', 'record the offline payment of an open invoice; starts or renews the plan it names (ADMIN)', operatorPaymentSchema],

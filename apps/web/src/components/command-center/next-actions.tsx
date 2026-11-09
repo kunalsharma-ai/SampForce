@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { InfoTip } from '@/components/info-tip';
+import { gated } from '@/components/shell/feature-locked';
 
 const TONE: Partial<Record<NextActionKind, 'critical' | 'warning' | 'accent' | 'primary'>> = {
   reply_waiting: 'primary',
@@ -21,7 +22,7 @@ const TONE: Partial<Record<NextActionKind, 'critical' | 'warning' | 'accent' | '
 };
 
 /** "Do this next": the signed-in person's ranked list, each item with the rule that put it there. */
-export function NextActions() {
+function NextActionsPanel() {
   const qc = useQueryClient();
   const canTask = useCan('activities:write');
   const t = useT();
@@ -152,3 +153,6 @@ function NextActionItem({ item, canTask, onDone, onDismiss, busy }: { item: Next
     </li>
   );
 }
+
+/** Shown only while the plan includes sales_intelligence (ADR 0057). */
+export const NextActions = gated('sales_intelligence', NextActionsPanel, 'note');

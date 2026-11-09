@@ -1,16 +1,25 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { type SlackSettings, slackSettingsSchema, slackTestSchema, type TeamsAddChannelInput, teamsAddChannelSchema, teamsChannelId, teamsSettingsSchema, teamsTestSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { APP_FEATURES, type AppKey, type FeatureKey, type SlackSettings, slackSettingsSchema, slackTestSchema, type TeamsAddChannelInput, teamsAddChannelSchema, teamsChannelId, teamsSettingsSchema, teamsTestSchema, z } from '@dealflow/types';
+import { Auth, type AuthContext, type AuthedRequest, Meta, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError, AppsService } from './apps.service';
+
+/** The plan feature each workspace app belongs to (ADR 0057). */
+const appFeature = (req: AuthedRequest): FeatureKey | null => {
+  // Disconnecting always works, so a workspace that lost an app with its plan can still remove the connection.
+  if (req.method === 'DELETE' && /\/apps\/[a-z]+\/?$/.test(req.path)) return null;
+  const app = (req.params as Record<string, string | undefined>).app ?? req.path.split('/apps/')[1]?.split('/')[0];
+  return app && app in APP_FEATURES ? APP_FEATURES[app as AppKey] : null;
+};
 
 const callbackQuery = z.object({ code: z.string().max(4000).optional(), state: z.string().max(4000).optional(), error: z.string().max(200).optional() });
 
 /** Workspace apps: anyone can see what is connected; admins connect, configure and disconnect. */
 @Controller('apps')
+@RequireFeature(appFeature)
 export class AppsController {
   constructor(
     private readonly apps: AppsService,

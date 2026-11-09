@@ -1,6 +1,6 @@
 import { createParamDecorator, type ExecutionContext, SetMetadata } from '@nestjs/common';
 import type { Request } from 'express';
-import type { Permission } from '@dealflow/types';
+import type { FeatureKey, Permission } from '@dealflow/types';
 
 export interface AuthContext {
   userId: string;
@@ -71,3 +71,12 @@ export function requestMeta(req: AuthedRequest): RequestMeta {
 export const Meta = createParamDecorator((_: unknown, ctx: ExecutionContext): RequestMeta =>
   requestMeta(ctx.switchToHttp().getRequest<AuthedRequest>()),
 );
+
+export const REQUIRED_FEATURE = 'dealflow:feature';
+/**
+ * The plan feature a controller or route belongs to (ADR 0057). FeatureGuard refuses it with FEATURE_NOT_IN_PLAN
+ * when the workspace's plan, with operator overrides, does not include it. A function picks the feature from the
+ * request (one route serving several apps); returning null means no feature applies.
+ */
+export type FeatureSelector = FeatureKey | ((req: AuthedRequest) => FeatureKey | null);
+export const RequireFeature = (feature: FeatureSelector) => SetMetadata(REQUIRED_FEATURE, feature);

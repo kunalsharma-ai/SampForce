@@ -3,7 +3,7 @@ import type { SsoErrorCode } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { type IssuedTokens, AuthService } from '../auth/auth.service';
 import { PasswordService } from '../auth/password.service';
-import { entitlementsFor } from '../billing/entitlements';
+import { entitlementsFor, hasFeature } from '../billing/entitlements';
 import type { RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox, signToken, verifyToken } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -60,7 +60,8 @@ export class SsoService {
   /** Starts a sign-in: returns the identity provider URL to redirect to, and the signed state for the cookie. */
   async start(loginSlug: string, loginHint?: string): Promise<{ url: string; cookie: string }> {
     const conn = await this.connectionBySlug(loginSlug.trim().toLowerCase());
-    if (!conn) throw new SsoFailure('unknown_workspace');
+    // A plan without single sign-on reads as single sign-on turned off (ADR 0057).
+    if (!conn || !(await this.prisma.run({ tenantId: conn.tenantId }, (tx) => hasFeature(tx, conn.tenantId, 'sso_scim')))) throw new SsoFailure('unknown_workspace');
     let meta;
     try {
       meta = await discover(conn.issuer, this.env.ALLOW_PRIVATE_NETWORK_TARGETS);
@@ -108,6 +109,7 @@ export class SsoService {
 
     const result = await this.prisma.run({ tenantId, userId }, async (tx) => {
       const ent = await entitlementsFor(tx, tenantId);
+      if (!ent.features.includes('sso_scim')) throw new SsoFailure('unknown_workspace');
       let membership = userId ? await tx.membership.findUnique({ where: { tenantId_userId: { tenantId, userId } } }) : null;
       if (membership && membership.status !== 'ACTIVE') throw new SsoFailure('suspended');
       let joinedVia: 'invitation' | 'jit' | null = null;

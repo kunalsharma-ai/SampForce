@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaClient } from '@dealflow/database';
+import type { PlanCode } from '@dealflow/types';
 import { createApp } from '../src/bootstrap';
 
 export const ORIGIN = 'http://localhost:3000';
@@ -29,7 +30,12 @@ export interface TestUser {
   tenantId: string;
 }
 
-export async function registerUser(app: INestApplication, org = 'Org'): Promise<TestUser> {
+/**
+ * Signs up a new workspace. Sign-up starts on Free; most suites test a feature rather than plan packaging, so the
+ * workspace is then moved to `plan` (Enterprise Plus by default, which includes every feature, ADR 0057). Suites
+ * that test Free's limits pass `{ plan: 'free' }`.
+ */
+export async function registerUser(app: INestApplication, org = 'Org', opts: { plan?: PlanCode } = {}): Promise<TestUser> {
   const email = `u-${randomUUID().slice(0, 8)}@example.com`;
   const password = 'correcthorse1';
   const agent = request.agent(app.getHttpServer());
@@ -38,7 +44,15 @@ export async function registerUser(app: INestApplication, org = 'Org'): Promise<
     .set('origin', ORIGIN)
     .send({ name: `User ${org}`, email, password, organizationName: org })
     .expect(201);
-  return { agent, email, password, tenantId: res.body.tenantId as string };
+  const tenantId = res.body.tenantId as string;
+  const plan = opts.plan ?? 'enterprise_plus';
+  if (plan !== 'free') await setPlan(tenantId, plan);
+  return { agent, email, password, tenantId };
+}
+
+/** Moves a workspace to a plan (active, 10 seats), as a paid subscription or an operator would. */
+export async function setPlan(tenantId: string, planCode: PlanCode, seats = 10): Promise<void> {
+  await asTenant(tenantId, (tx) => tx.subscription.update({ where: { tenantId }, data: { planCode, seats, status: 'ACTIVE' } }));
 }
 
 /** Thin wrapper that adds the Origin header (CSRF guard) to every unsafe request. */

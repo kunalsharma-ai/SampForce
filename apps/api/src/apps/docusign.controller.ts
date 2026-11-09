@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDP
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { type DocusignSendInput, docusignListQuery, docusignSendSchema, docusignVoidSchema, type z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { DocusignService } from './docusign.service';
@@ -11,6 +11,7 @@ const uuid = new ParseUUIDPipe({ version: '4' });
 
 /** Contracts sent for e-signature through DocuSign, and DocuSign Connect status events. */
 @Controller('apps/docusign')
+@RequireFeature('docusign')
 export class DocusignController {
   constructor(private readonly docusign: DocusignService) {}
 

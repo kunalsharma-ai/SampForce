@@ -1,3 +1,5 @@
+import type { FeatureKey } from './features';
+import type { PlanCode } from './plan-codes';
 import { z } from 'zod';
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(254);
@@ -52,7 +54,18 @@ export interface SessionUser {
 
 export interface MeResponse {
   user: SessionUser;
-  tenant: { id: string; name: string; slug: string; plan: string; isDemo: boolean; brandColor: string | null };
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+    isDemo: boolean;
+    brandColor: string | null;
+    /** Features the workspace's plan includes now (ADR 0057); pages for anything else show the upgrade page. */
+    features: FeatureKey[];
+    /** The plan whose features apply (Free while a paid plan is unpaid or canceled). */
+    appliedPlan: PlanCode;
+  };
   role: string;
   permissions: string[];
   memberships: MembershipSummary[];
