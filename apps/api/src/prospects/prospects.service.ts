@@ -108,10 +108,16 @@ export class ProspectsService {
   private async listRows(tx: TenantTx, tenantId: string, ids?: string[]): Promise<ProspectListRow[]> {
     const lists = await tx.prospectList.findMany({ where: { tenantId, ...(ids ? { id: { in: ids } } : {}) }, orderBy: { updatedAt: 'desc' } });
     if (!lists.length) return [];
-    const counts = await tx.$queryRaw<{ list_id: string; total: bigint; in_crm: bigint; with_email: bigint; samples: bigint }[]>`
-      SELECT list_id, count(*) AS total, count(*) FILTER (WHERE lead_id IS NOT NULL OR contact_id IS NOT NULL) AS in_crm,
-             count(email) AS with_email, count(*) FILTER (WHERE sample) AS samples
-      FROM prospects WHERE tenant_id = ${tenantId}::uuid AND list_id = ANY(${lists.map((l) => l.id)}::uuid[]) GROUP BY list_id`;
+    const listIds = lists.map((l) => l.id);
+    const base = { tenantId, listId: { in: listIds } };
+    const [all, withEmail, inCrm, samples] = await Promise.all([
+      tx.prospect.groupBy({ by: ['listId'], where: base, _count: { _all: true } }),
+      tx.prospect.groupBy({ by: ['listId'], where: { ...base, email: { not: null } }, _count: { _all: true } }),
+      tx.prospect.groupBy({ by: ['listId'], where: { ...base, OR: [{ leadId: { not: null } }, { contactId: { not: null } }] }, _count: { _all: true } }),
+      tx.prospect.groupBy({ by: ['listId'], where: { ...base, sample: true }, _count: { _all: true } }),
+    ]);
+    const n = (rows: Array<{ listId: string; _count: { _all: number } }>, id: string) => rows.find((r) => r.listId === id)?._count._all ?? 0;
+    const counts = listIds.map((id) => ({ list_id: id, total: n(all, id), in_crm: n(inCrm, id), with_email: n(withEmail, id), samples: n(samples, id) }));
     const byList = new Map(counts.map((c) => [c.list_id, c]));
     const names = await this.names(tx, tenantId);
     const ref = (id: string | null) => (id && names.has(id) ? { id, name: names.get(id)! } : null);

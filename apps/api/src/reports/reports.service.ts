@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import type { Prisma, TenantTx } from '@dealflow/database';
+import { aggregate, type Prisma, type TenantTx } from '@dealflow/database';
 import {
   type DashboardInput,
   type DashboardRow,
@@ -18,7 +18,8 @@ import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
 import { toCsv } from '../crm/csv';
 import { labelRows } from './report-labels';
-import { groupedQuery, isMoney, type QueryContext, totalsQuery } from './report-sql';
+import { ENTITY_SPECS, groupedPipeline, isMoney, type QueryContext, totalsPipeline } from './report-pipeline';
+import { loadRates } from '../revenue/fx';
 
 /** Reports read many rows; a runaway definition must not hold a connection. */
 const STATEMENT_TIMEOUT_MS = 10_000;
@@ -159,10 +160,11 @@ export class ReportsService {
 
   private async execute(tx: TenantTx, auth: AuthContext, def: ReportDefinition): Promise<ReportResult> {
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true, defaultTimezone: true } });
-    const ctx: QueryContext = { tenantId: auth.tenantId, baseCurrency: tenant.defaultCurrency, timezone: tenant.defaultTimezone || 'UTC' };
-    await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${STATEMENT_TIMEOUT_MS}`);
-    const grouped = await tx.$queryRaw<{ g: string | null; v: number | null }[]>(groupedQuery(def, ctx));
-    const [totals] = await tx.$queryRaw<{ v: number | null; n: number; ex: number; excur: string[] }[]>(totalsQuery(def, ctx));
+    const ctx: QueryContext = { tenantId: auth.tenantId, baseCurrency: tenant.defaultCurrency, timezone: tenant.defaultTimezone || 'UTC', rates: await loadRates(tx, auth.tenantId) };
+    const delegate = tx[ENTITY_SPECS[def.entity].model] as unknown as { aggregateRaw(args: { pipeline: object[]; options?: object }): unknown };
+    const limited = { aggregateRaw: (args: { pipeline: object[] }) => delegate.aggregateRaw({ ...args, options: { maxTimeMS: STATEMENT_TIMEOUT_MS } }) };
+    const grouped = (await aggregate<{ _id: string | null; v: number | null }>(limited, groupedPipeline(def, ctx))).map((r) => ({ g: r._id, v: r.v }));
+    const [totals] = await aggregate<{ v: number | null; n: number; ex: number; excur: Array<string | null> }>(limited, totalsPipeline(def, ctx));
     const truncated = grouped.length > def.limit;
     const shown = grouped.slice(0, def.limit);
     const field = def.groupBy ? reportField(def.entity, def.groupBy.field) : undefined;
@@ -181,7 +183,7 @@ export class ReportsService {
       total: Math.round((totals?.v ?? 0) * 100) / 100,
       records: totals?.n ?? 0,
       currency: money ? ctx.baseCurrency : null,
-      excluded: money && totals && totals.ex > 0 ? { records: totals.ex, currencies: totals.excur.filter(Boolean).sort() } : null,
+      excluded: money && totals && totals.ex > 0 ? { records: totals.ex, currencies: totals.excur.filter((c): c is string => !!c).sort() } : null,
       truncated,
       generatedAt: new Date().toISOString(),
     };

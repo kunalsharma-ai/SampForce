@@ -1,6 +1,7 @@
+import { storeEmail } from './threading';
 import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { createManySkipDuplicates, type IntegrationConnection, Prisma, type TenantTx } from '@dealflow/database';
+import { type IntegrationConnection, type TenantTx } from '@dealflow/database';
 import { INTEGRATION_PROVIDERS, type IntegrationProviderKey, type ProviderStatus } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -212,7 +213,7 @@ export class IntegrationsService {
           for (const m of messages) {
             const hit = [m.from, ...m.to, ...m.cc].map((e) => matches.get(e)).find(Boolean);
             if (!hit) continue;
-            const r = await createManySkipDuplicates(tx.emailMessage, 'EmailMessage', [{
+            const r = await storeEmail(tx, {
                 tenantId,
                 connectionId: conn.id,
                 providerMessageId: m.providerMessageId,
@@ -227,8 +228,8 @@ export class IntegrationsService {
                 sentAt: m.sentAt,
                 contactId: hit.contactId ?? null,
                 leadId: hit.contactId ? null : (hit.leadId ?? null),
-              }]);
-            emails += r.count;
+              });
+            if (r) emails++;
           }
 
           let meetings = 0;

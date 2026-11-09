@@ -17,7 +17,7 @@ const ymd = (d: Date) => d.toISOString().slice(0, 10);
 interface FactRow {
   id: string;
   name: string;
-  amount: Prisma.Decimal;
+  amount: number;
   currency: string;
   status: string;
   expected_close_date: Date | null;
@@ -37,38 +37,81 @@ interface FactRow {
   people_prev30: number;
 }
 
-/** Facts for the open deals of one workspace (or one deal), in a single query. */
+/**
+ * Facts for the open deals of one workspace (or one deal). A handful of batched queries, joined here: the deal's
+ * people are its main contact plus the contacts at its company.
+ */
 export async function loadDealFacts(tx: TenantTx, tenantId: string, dealId?: string): Promise<FactRow[]> {
-  return tx.$queryRaw<FactRow[]>`
-    SELECT o.id, o.name, o.amount, o.currency, o.status::text AS status, o.expected_close_date, o.created_at, o.contact_id, o.owner_id,
-           s.name AS stage_name,
-           (SELECT max(e.occurred_at) FROM deal_stage_events e WHERE e.opportunity_id = o.id AND e.to_stage_id = o.stage_id) AS stage_entered_at,
-           (SELECT max(a.occurred_at) FROM activities a WHERE a.opportunity_id = o.id AND a.deleted_at IS NULL) AS last_activity_at,
-           (SELECT count(*)::int FROM tasks t WHERE t.opportunity_id = o.id AND t.deleted_at IS NULL AND t.status = 'OPEN') AS open_tasks,
-           (SELECT count(*)::int FROM tasks t WHERE t.opportunity_id = o.id AND t.deleted_at IS NULL AND t.status = 'OPEN' AND t.due_at < now()) AS overdue_tasks
-      FROM opportunities o JOIN pipeline_stages s ON s.id = o.stage_id
-      CROSS JOIN LATERAL (
-        -- The deal's people: its main contact plus the contacts at its company.
-        SELECT coalesce(array_agg(c.id), '{}') AS ids FROM contacts c
-         WHERE c.deleted_at IS NULL AND (c.id = o.contact_id OR (o.company_id IS NOT NULL AND c.company_id = o.company_id))
-      ) p
-      CROSS JOIN LATERAL (
-        SELECT
-          (SELECT count(*)::int FROM activities a WHERE a.deleted_at IS NULL AND (a.opportunity_id = o.id OR a.contact_id = ANY(p.ids)) AND a.occurred_at >= now() - interval '14 days')
-            + (SELECT count(*)::int FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.sent_at >= now() - interval '14 days') AS touches14,
-          (SELECT count(*)::int FROM activities a WHERE a.deleted_at IS NULL AND (a.opportunity_id = o.id OR a.contact_id = ANY(p.ids)) AND a.occurred_at >= now() - interval '28 days' AND a.occurred_at < now() - interval '14 days')
-            + (SELECT count(*)::int FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.sent_at >= now() - interval '28 days' AND m.sent_at < now() - interval '14 days') AS touches_prev14,
-          (SELECT max(m.sent_at) FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND') AS last_inbound_at,
-          (SELECT max(m.sent_at) FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'OUTBOUND') AS last_outbound_at,
-          (SELECT count(DISTINCT x.cid)::int FROM (
-             SELECT a.contact_id AS cid FROM activities a WHERE a.deleted_at IS NULL AND a.contact_id = ANY(p.ids) AND a.occurred_at >= now() - interval '30 days'
-             UNION SELECT m.contact_id FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND' AND m.sent_at >= now() - interval '30 days') x) AS people30,
-          (SELECT count(DISTINCT x.cid)::int FROM (
-             SELECT a.contact_id AS cid FROM activities a WHERE a.deleted_at IS NULL AND a.contact_id = ANY(p.ids) AND a.occurred_at >= now() - interval '60 days' AND a.occurred_at < now() - interval '30 days'
-             UNION SELECT m.contact_id FROM email_messages m WHERE m.contact_id = ANY(p.ids) AND m.direction = 'INBOUND' AND m.sent_at >= now() - interval '60 days' AND m.sent_at < now() - interval '30 days') x) AS people_prev30
-      ) e
-     WHERE o.tenant_id = ${tenantId}::uuid AND o.deleted_at IS NULL
-       AND ${dealId ? Prisma.sql`o.id = ${dealId}::uuid` : Prisma.sql`o.status = 'OPEN'`}`;
+  const deals = await tx.opportunity.findMany({
+    where: { tenantId, deletedAt: null, ...(dealId ? { id: dealId } : { status: 'OPEN' }) },
+    select: { id: true, name: true, amount: true, currency: true, status: true, expectedCloseDate: true, createdAt: true, contactId: true, companyId: true, ownerId: true, stageId: true, stage: { select: { name: true } } },
+  });
+  if (!deals.length) return [];
+  const now = Date.now();
+  const ago = (days: number) => new Date(now - days * DAY);
+  const dealIds = deals.map((d) => d.id);
+  const contactIds = [...new Set(deals.flatMap((d) => (d.contactId ? [d.contactId] : [])))];
+  const companyIds = [...new Set(deals.flatMap((d) => (d.companyId ? [d.companyId] : [])))];
+  const people = await tx.contact.findMany({
+    where: { tenantId, deletedAt: null, OR: [{ id: { in: contactIds } }, { companyId: { in: companyIds } }] },
+    select: { id: true, companyId: true },
+  });
+  const allPeople = people.map((p) => p.id);
+  const [stageEvents, lastActs, tasks, acts, emails, lastMail] = await Promise.all([
+    tx.dealStageEvent.groupBy({ by: ['opportunityId', 'toStageId'], where: { tenantId, opportunityId: { in: dealIds } }, _max: { occurredAt: true } }),
+    tx.activity.groupBy({ by: ['opportunityId'], where: { tenantId, deletedAt: null, opportunityId: { in: dealIds } }, _max: { occurredAt: true } }),
+    tx.task.findMany({ where: { tenantId, deletedAt: null, status: 'OPEN', opportunityId: { in: dealIds } }, select: { opportunityId: true, dueAt: true } }),
+    tx.activity.findMany({
+      where: { tenantId, deletedAt: null, occurredAt: { gte: ago(60) }, OR: [{ opportunityId: { in: dealIds } }, { contactId: { in: allPeople } }] },
+      select: { id: true, opportunityId: true, contactId: true, occurredAt: true },
+    }),
+    tx.emailMessage.findMany({ where: { tenantId, contactId: { in: allPeople }, sentAt: { gte: ago(60) } }, select: { contactId: true, direction: true, sentAt: true } }),
+    tx.emailMessage.groupBy({ by: ['contactId', 'direction'], where: { tenantId, contactId: { in: allPeople } }, _max: { sentAt: true } }),
+  ]);
+  const t14 = now - 14 * DAY, t28 = now - 28 * DAY, t30 = now - 30 * DAY, t60 = now - 60 * DAY;
+  const maxDate = (ds: Array<Date | null | undefined>): Date | null => {
+    let m: Date | null = null;
+    for (const d of ds) if (d && (!m || d > m)) m = d;
+    return m;
+  };
+  return deals.map((o) => {
+    const ids = new Set(people.filter((p) => p.id === o.contactId || (o.companyId && p.companyId === o.companyId)).map((p) => p.id));
+    const myActs = acts.filter((a) => a.opportunityId === o.id || (a.contactId && ids.has(a.contactId)));
+    const myMail = emails.filter((m) => m.contactId && ids.has(m.contactId));
+    const inWindow = (t: number, from: number, to = Infinity) => t >= from && t < to;
+    const touches = (from: number, to?: number) =>
+      myActs.filter((a) => inWindow(a.occurredAt.getTime(), from, to)).length + myMail.filter((m) => inWindow(m.sentAt.getTime(), from, to)).length;
+    const peopleIn = (from: number, to?: number) => {
+      const set = new Set<string>();
+      for (const a of myActs) if (a.contactId && ids.has(a.contactId) && inWindow(a.occurredAt.getTime(), from, to)) set.add(a.contactId);
+      for (const m of myMail) if (m.direction === 'INBOUND' && inWindow(m.sentAt.getTime(), from, to)) set.add(m.contactId!);
+      return set.size;
+    };
+    const last = (dir: 'INBOUND' | 'OUTBOUND') => maxDate(lastMail.filter((g) => g.direction === dir && g.contactId && ids.has(g.contactId)).map((g) => g._max.sentAt));
+    const myTasks = tasks.filter((t) => t.opportunityId === o.id);
+    return {
+      id: o.id,
+      name: o.name,
+      amount: o.amount,
+      currency: o.currency,
+      status: o.status,
+      expected_close_date: o.expectedCloseDate,
+      created_at: o.createdAt,
+      contact_id: o.contactId,
+      owner_id: o.ownerId,
+      stage_name: o.stage.name,
+      stage_entered_at: stageEvents.find((e) => e.opportunityId === o.id && e.toStageId === o.stageId)?._max.occurredAt ?? null,
+      last_activity_at: lastActs.find((g) => g.opportunityId === o.id)?._max.occurredAt ?? null,
+      open_tasks: myTasks.length,
+      overdue_tasks: myTasks.filter((t) => t.dueAt && t.dueAt.getTime() < now).length,
+      touches14: touches(t14),
+      touches_prev14: touches(t28, t14),
+      last_inbound_at: last('INBOUND'),
+      last_outbound_at: last('OUTBOUND'),
+      people30: peopleIn(t30),
+      people_prev30: peopleIn(t60, t30),
+    };
+  });
 }
 
 export function toDealFacts(r: FactRow): DealFacts {

@@ -60,20 +60,28 @@ export class AutomationRecords {
 
   private emailActivity(tenantId: string, type: 'lead' | 'contact', id: string, since?: string): Promise<EmailActivity> {
     return this.prisma.run({ tenantId }, async (tx) => {
-      const col = Prisma.raw(type === 'lead' ? 'lead_id' : 'contact_id');
+      const who = type === 'lead' ? { leadId: id } : { contactId: id };
       const from = since ? new Date(since) : new Date();
-      const rows = await tx.$queryRaw<{ last_sent: Date | null; last_reply: Date | null; last_open: Date | null; last_click: Date | null; opens30: number; clicks30: number; replies30: number; active: number; inbound_since: number }[]>`
-        SELECT max(m.sent_at) AS last_sent,
-               greatest(max(m.replied_at), (SELECT max(x.sent_at) FROM email_messages x WHERE x.tenant_id = ${tenantId}::uuid AND x.${col} = ${id}::uuid AND x.direction = 'INBOUND')) AS last_reply,
-               max(m.opened_at) AS last_open, max(m.clicked_at) AS last_click,
-               count(*) FILTER (WHERE m.opened_at > now() - interval '30 days')::int AS opens30,
-               count(*) FILTER (WHERE m.clicked_at > now() - interval '30 days')::int AS clicks30,
-               count(*) FILTER (WHERE m.replied_at > now() - interval '30 days')::int AS replies30,
-               (SELECT count(*) FROM sequence_enrollments y WHERE y.tenant_id = ${tenantId}::uuid AND y.${col} = ${id}::uuid AND y.status IN ('ACTIVE', 'PAUSED'))::int AS active,
-               (SELECT count(*) FROM email_messages x WHERE x.tenant_id = ${tenantId}::uuid AND x.${col} = ${id}::uuid AND x.direction = 'INBOUND' AND x.sent_at > ${from})::int AS inbound_since
-          FROM sequence_messages m JOIN sequence_enrollments e ON e.id = m.enrollment_id
-         WHERE m.tenant_id = ${tenantId}::uuid AND e.${col} = ${id}::uuid`;
-      const r = rows[0]!;
+      const month = new Date(Date.now() - 30 * 86_400_000);
+      const [sent, lastInbound, active, inboundSince] = await Promise.all([
+        tx.sequenceMessage.findMany({ where: { tenantId, enrollment: who }, select: { sentAt: true, repliedAt: true, openedAt: true, clickedAt: true } }),
+        tx.emailMessage.findFirst({ where: { tenantId, ...who, direction: 'INBOUND' }, orderBy: { sentAt: 'desc' }, select: { sentAt: true } }),
+        tx.sequenceEnrollment.count({ where: { tenantId, ...who, status: { in: ['ACTIVE', 'PAUSED'] } } }),
+        tx.emailMessage.count({ where: { tenantId, ...who, direction: 'INBOUND', sentAt: { gt: from } } }),
+      ]);
+      const latest = (ds: Array<Date | null | undefined>): Date | null => ds.reduce<Date | null>((m, d) => (d && (!m || d > m) ? d : m), null);
+      const recent = (d: Date | null) => !!d && d > month;
+      const r = {
+        last_sent: latest(sent.map((m) => m.sentAt)),
+        last_reply: latest([...sent.map((m) => m.repliedAt), lastInbound?.sentAt]),
+        last_open: latest(sent.map((m) => m.openedAt)),
+        last_click: latest(sent.map((m) => m.clickedAt)),
+        opens30: sent.filter((m) => recent(m.openedAt)).length,
+        clicks30: sent.filter((m) => recent(m.clickedAt)).length,
+        replies30: sent.filter((m) => recent(m.repliedAt)).length,
+        active,
+        inbound_since: inboundSince,
+      };
       const after = (d: Date | null) => !!d && d > from;
       return {
         lastSentAt: r.last_sent?.toISOString() ?? null,

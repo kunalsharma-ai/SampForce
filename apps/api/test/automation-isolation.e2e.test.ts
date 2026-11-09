@@ -1,8 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
-import { withDbContext } from '@dealflow/database';
+import { type DbContext, withDbContext } from '@dealflow/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { WorkerService } from '../src/worker/worker.service';
-import { api, appClient, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
+import { api, appClient, asTenant, countCollection, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
 const TABLES = [
   'domain_events',
@@ -20,7 +20,7 @@ const TABLES = [
 ] as const;
 const QUEUE_TABLES = ['domain_events', 'workflow_executions', 'webhook_deliveries', 'integration_connections', 'approval_requests'];
 
-/** Row-level security for every Phase 3 table, checked with the runtime database role. */
+/** Workspace isolation (the database guard) for every Phase 3 table, checked through the guarded client. */
 describe('automation and communication tenant isolation', () => {
   let app: INestApplication;
   let a: TestUser;
@@ -68,12 +68,8 @@ describe('automation and communication tenant isolation', () => {
     await db.$disconnect();
   });
 
-  const count = (table: string, ctx: { tenantId?: string; userId?: string }, extra = '') =>
-    withDbContext(db, ctx, async (tx) => {
-      if (extra) await tx.$executeRawUnsafe(extra);
-      const r = await tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${table} WHERE tenant_id = $1::uuid`, a.tenantId);
-      return Number(r[0]!.n);
-    });
+  const count = (table: string, ctx: DbContext, extra: DbContext = {}) =>
+    withDbContext(db, { ...ctx, ...extra }, (tx) => countCollection(tx, table, { tenantId: a.tenantId }));
 
   it('tenant A has data in every table', async () => {
     const owner = await asTenant(a.tenantId, (tx) => tx.membership.findFirstOrThrow({ where: { tenantId: a.tenantId } }));
@@ -88,7 +84,7 @@ describe('automation and communication tenant isolation', () => {
   });
 
   it('the worker scan flag opens only queue tables, and only for reading due work', async () => {
-    const scan = "SELECT set_config('app.worker_scan', 'on', true)";
+    const scan: DbContext = { workerScan: true };
     for (const t of TABLES) {
       const n = await count(t, {}, scan);
       if (QUEUE_TABLES.includes(t)) expect(n, t).toBeGreaterThan(0);

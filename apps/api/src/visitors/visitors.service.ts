@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { Prisma, type TenantTx, visitorSiteTenant } from '@dealflow/database';
+import { aggregate, Prisma, rawDate, type TenantTx, visitorSiteTenant } from '@dealflow/database';
 import {
   collectSchema,
   DEFAULT_VISITOR_SETTINGS,
@@ -231,7 +231,9 @@ export class VisitorsService {
     const ipHash = ip ? createHmac('sha256', this.env.JWT_ACCESS_SECRET).update(`enquiry-ip:${ip}`).digest('hex') : null;
     return this.prisma.run({ tenantId }, async (tx) => {
       if (ipHash) {
-        const recent = await tx.webEvent.count({ where: { tenantId, type: 'enquiry', occurredAt: { gte: new Date(Date.now() - 10 * 60_000) }, data: { path: ['ipHash'], equals: ipHash } } });
+        // JSON path filters are not available on MongoDB through Prisma; the window holds few enquiries (capped per day).
+        const window = await tx.webEvent.findMany({ where: { tenantId, type: 'enquiry', occurredAt: { gte: new Date(Date.now() - 10 * 60_000) } }, select: { data: true } });
+        const recent = window.filter((w) => (w.data as { ipHash?: string } | null)?.ipHash === ipHash).length;
         if (recent >= MAX_ENQUIRIES_PER_IP_PER_10_MIN) throw new HttpException({ code: 'RATE_LIMITED', message: 'Too many enquiries. Please try again later.' }, HttpStatus.TOO_MANY_REQUESTS);
       }
       // A per-workspace ceiling as well, since a flood from many addresses passes the per-address check.
@@ -422,12 +424,21 @@ export class VisitorsService {
       const t = auth.tenantId;
       const end = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + DAY);
       const start = new Date(end.getTime() - days * DAY);
-      const daily = await tx.$queryRaw<{ day: Date; visitors: number; visits: number; page_views: number }[]>(Prisma.sql`
-        SELECT d::date AS day,
-          (SELECT count(DISTINCT s.visitor_id)::int FROM web_sessions s WHERE s.tenant_id = ${t}::uuid AND s.started_at >= d AND s.started_at < d + interval '1 day') AS visitors,
-          (SELECT count(*)::int FROM web_sessions s WHERE s.tenant_id = ${t}::uuid AND s.started_at >= d AND s.started_at < d + interval '1 day') AS visits,
-          (SELECT count(*)::int FROM web_events e WHERE e.tenant_id = ${t}::uuid AND e.type = 'page' AND e.occurred_at >= d AND e.occurred_at < d + interval '1 day') AS page_views
-        FROM generate_series(${start}::timestamptz, ${end}::timestamptz - interval '1 day', interval '1 day') AS d`);
+      const range = (field: string) => ({ $match: { [field]: { $gte: rawDate(start), $lt: rawDate(end) } } });
+      const byDay = (field: string) => ({ $dateToString: { format: '%Y-%m-%d', date: `$${field}` } });
+      const [sessionDays, pageDays] = await Promise.all([
+        aggregate<{ _id: string; visits: number; visitors: number }>(tx.webSession, [
+          range('started_at'),
+          { $group: { _id: byDay('started_at'), visits: { $sum: 1 }, ids: { $addToSet: '$visitor_id' } } },
+          { $project: { visits: 1, visitors: { $size: '$ids' } } },
+        ]),
+        aggregate<{ _id: string; n: number }>(tx.webEvent, [range('occurred_at'), { $match: { type: 'page' } }, { $group: { _id: byDay('occurred_at'), n: { $sum: 1 } } }]),
+      ]);
+      const daily = Array.from({ length: days }, (_, i) => {
+        const day = ymd(new Date(start.getTime() + i * DAY));
+        const sd = sessionDays.find((x) => x._id === day);
+        return { day, visitors: sd?.visitors ?? 0, visits: sd?.visits ?? 0, page_views: pageDays.find((x) => x._id === day)?.n ?? 0 };
+      });
       const inRange = { tenantId: t, occurredAt: { gte: start, lt: end } };
       const [visits, visitorIds, pageViews, enquiries, leadsCreated] = await Promise.all([
         tx.webSession.count({ where: { tenantId: t, startedAt: { gte: start, lt: end } } }),
@@ -442,9 +453,16 @@ export class VisitorsService {
         tx.webVisitor.count({ where: { id: { in: ids }, visits: { gte: 2 } } }),
         tx.webVisitor.findMany({ where: { tenantId: t, lastSeenAt: { gte: start }, intentScore: { gte: s.highIntentScore } }, include: visitorInclude, orderBy: [{ intentScore: 'desc' }, { lastSeenAt: 'desc' }], take: 10 }),
       ]);
-      const pages = await tx.$queryRaw<{ path: string; views: number; visitors: number }[]>(Prisma.sql`
-        SELECT path, count(*)::int AS views, count(DISTINCT visitor_id)::int AS visitors FROM web_events
-        WHERE tenant_id = ${t}::uuid AND type = 'page' AND occurred_at >= ${start} AND occurred_at < ${end} GROUP BY path ORDER BY views DESC LIMIT 200`);
+      const pages = (
+        await aggregate<{ _id: string | null; views: number; ids: number }>(tx.webEvent, [
+          range('occurred_at'),
+          { $match: { type: 'page' } },
+          { $group: { _id: '$path', views: { $sum: 1 }, set: { $addToSet: '$visitor_id' } } },
+          { $project: { views: 1, ids: { $size: '$set' } } },
+          { $sort: { views: -1, _id: 1 } },
+          { $limit: 200 },
+        ])
+      ).map((p) => ({ path: p._id as string, views: p.views, visitors: p.ids }));
       const important = new Map<string, { label: string; kind: ImportantPage['kind']; views: number; visitors: number }>();
       for (const p of pages) {
         const pg = pageOf(s.importantPages, p.path);
@@ -454,12 +472,25 @@ export class VisitorsService {
         cur.visitors += p.visitors;
         important.set(pg.label, cur);
       }
-      const sources = await tx.$queryRaw<{ source: string; visits: number }[]>(Prisma.sql`
-        SELECT COALESCE(NULLIF(utm->>'source', ''), referrer_host, 'Direct') AS source, count(*)::int AS visits FROM web_sessions
-        WHERE tenant_id = ${t}::uuid AND started_at >= ${start} AND started_at < ${end} GROUP BY 1 ORDER BY 2 DESC LIMIT 10`);
-      const camp = await tx.$queryRaw<{ utm_campaign: string; visits: number; visitors: number }[]>(Prisma.sql`
-        SELECT utm->>'campaign' AS utm_campaign, count(*)::int AS visits, count(DISTINCT visitor_id)::int AS visitors FROM web_sessions
-        WHERE tenant_id = ${t}::uuid AND started_at >= ${start} AND started_at < ${end} AND COALESCE(utm->>'campaign', '') <> '' GROUP BY 1 ORDER BY 2 DESC LIMIT 10`);
+      const utmSource = { $ifNull: ['$utm.source', ''] };
+      const sources = (
+        await aggregate<{ _id: string; visits: number }>(tx.webSession, [
+          range('started_at'),
+          { $group: { _id: { $ifNull: [{ $cond: [{ $eq: [utmSource, ''] }, null, utmSource] }, '$referrer_host', 'Direct'] }, visits: { $sum: 1 } } },
+          { $sort: { visits: -1, _id: 1 } },
+          { $limit: 10 },
+        ])
+      ).map((x) => ({ source: x._id, visits: x.visits }));
+      const camp = (
+        await aggregate<{ _id: string; visits: number; visitors: number }>(tx.webSession, [
+          range('started_at'),
+          { $match: { 'utm.campaign': { $nin: [null, ''] } } },
+          { $group: { _id: '$utm.campaign', visits: { $sum: 1 }, set: { $addToSet: '$visitor_id' } } },
+          { $project: { visits: 1, visitors: { $size: '$set' } } },
+          { $sort: { visits: -1, _id: 1 } },
+          { $limit: 10 },
+        ])
+      ).map((x) => ({ utm_campaign: x._id, visits: x.visits, visitors: x.visitors }));
       const campaigns = await tx.campaign.findMany({ where: { tenantId: t, utmCampaign: { in: camp.map((c) => c.utm_campaign), mode: 'insensitive' } }, select: { id: true, name: true, utmCampaign: true } });
       const campaignRows = [];
       for (const c of camp) {
@@ -471,7 +502,7 @@ export class VisitorsService {
         days,
         enabled: s.enabled,
         totals: { visitors: ids.length, visits, pageViews, identified, enquiries: enquiries.length, leadsCreated, highIntent: highIntent.length, returning },
-        daily: daily.map((d) => ({ day: ymd(d.day), visitors: d.visitors, visits: d.visits, pageViews: d.page_views })),
+        daily: daily.map((d) => ({ day: d.day, visitors: d.visitors, visits: d.visits, pageViews: d.page_views })),
         topPages: pages.slice(0, 10).map((p) => ({ ...p, label: pageOf(s.importantPages, p.path)?.label ?? null })),
         importantPages: [...important.values()].sort((a, b) => b.views - a.views),
         sources,

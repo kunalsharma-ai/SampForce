@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { aggregate, Prisma, rawDate, type TenantTx } from '@dealflow/database';
 import {
   type AwardRow,
   type BadgeInput,
@@ -187,21 +187,21 @@ export class GamificationService {
 
   /** Counts every scoring event per person per UTC day in the window, straight from CRM records. */
   private async score(tx: TenantTx, tenantId: string, w: Window): Promise<Scored> {
-    const rows = await tx.$queryRaw<{ user_id: string; kind: string; day: Date; n: number }[]>(Prisma.sql`
-      SELECT owner_id AS user_id, type::text AS kind, (occurred_at AT TIME ZONE 'UTC')::date AS day, count(*)::int AS n
-        FROM activities WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND owner_id IS NOT NULL AND occurred_at >= ${w.start} AND occurred_at < ${w.end} GROUP BY 1, 2, 3
-      UNION ALL
-      SELECT assignee_id, 'task_completed', (completed_at AT TIME ZONE 'UTC')::date, count(*)::int
-        FROM tasks WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND assignee_id IS NOT NULL AND completed_at >= ${w.start} AND completed_at < ${w.end} GROUP BY 1, 3
-      UNION ALL
-      SELECT owner_id, 'lead_created', (created_at AT TIME ZONE 'UTC')::date, count(*)::int
-        FROM leads WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND owner_id IS NOT NULL AND created_at >= ${w.start} AND created_at < ${w.end} GROUP BY 1, 3
-      UNION ALL
-      SELECT owner_id, 'lead_converted', (converted_at AT TIME ZONE 'UTC')::date, count(*)::int
-        FROM leads WHERE tenant_id = ${tenantId}::uuid AND owner_id IS NOT NULL AND converted_at >= ${w.start} AND converted_at < ${w.end} GROUP BY 1, 3
-      UNION ALL
-      SELECT owner_id, 'deal_created', (created_at AT TIME ZONE 'UTC')::date, count(*)::int
-        FROM opportunities WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND owner_id IS NOT NULL AND created_at >= ${w.start} AND created_at < ${w.end} GROUP BY 1, 3`);
+    // Per person, kind and UTC day; each collection is grouped by the database and the rows are joined here.
+    const dayCount = (delegate: Parameters<typeof aggregate>[0], person: string, at: string, kind: string | null, match: object = {}) =>
+      aggregate<{ _id: { user_id: string; kind: string; day: string }; n: number }>(delegate, [
+        { $match: { ...match, [person]: { $ne: null }, [at]: { $gte: rawDate(w.start), $lt: rawDate(w.end) } } },
+        { $group: { _id: { user_id: `$${person}`, kind: kind ?? '$type', day: { $dateToString: { format: '%Y-%m-%d', date: `$${at}` } } }, n: { $sum: 1 } } },
+      ]);
+    const rows = (
+      await Promise.all([
+        dayCount(tx.activity, 'owner_id', 'occurred_at', null, { deleted_at: null }),
+        dayCount(tx.task, 'assignee_id', 'completed_at', 'task_completed', { deleted_at: null }),
+        dayCount(tx.lead, 'owner_id', 'created_at', 'lead_created', { deleted_at: null }),
+        dayCount(tx.lead, 'owner_id', 'converted_at', 'lead_converted'),
+        dayCount(tx.opportunity, 'owner_id', 'created_at', 'deal_created', { deleted_at: null }),
+      ])
+    ).flat().map((r) => ({ ...r._id, n: r.n }));
     const won = await tx.opportunity.findMany({
       where: { tenantId, deletedAt: null, status: 'WON', ownerId: { not: null }, closedAt: { gte: w.start, lt: w.end } },
       select: { ownerId: true, amount: true, currency: true, closedAt: true },
@@ -221,7 +221,7 @@ export class GamificationService {
     };
     for (const r of rows) {
       const key = (ACTIVITY_RULE[r.kind] ?? r.kind) as ScoringRuleKey;
-      add(of(r.user_id), key, ymd(r.day), r.n);
+      add(of(r.user_id), key, r.day, r.n);
     }
     let missingRates = 0;
     for (const d of won) {

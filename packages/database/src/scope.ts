@@ -471,6 +471,8 @@ export function workspaceGuard(base: PrismaClient) {
         async $allOperations({ model, operation, args, query }) {
           const ctx = currentDbContext();
           const a = { ...(args as Record<string, unknown>) };
+          // MongoDB refuses an insert_many with no documents, where PostgreSQL inserted nothing.
+          if (operation === 'createMany' && Array.isArray(a.data) && a.data.length === 0) return { count: 0 };
           if (a.where) a.where = escapeStringFilters(a.where);
           if (a.orderBy) a.orderBy = rankOrderBy(model, a.orderBy);
           if (a.include) a.include = escapeStringFilters(a.include);
@@ -558,4 +560,12 @@ function rawAnd(filter: unknown, guard: Where, model: string): Record<string, un
   const g = rawFilter(guard, model);
   if (!filter || Object.keys(filter as object).length === 0) return g;
   return { $and: [filter, g] };
+}
+
+/** A date for a raw MongoDB filter or pipeline (Prisma takes raw arguments as extended JSON). */
+export const rawDate = (d: Date): { $date: string } => ({ $date: d.toISOString() });
+
+/** Runs a raw aggregation and types its rows. The workspace guard adds the workspace `$match` first. */
+export async function aggregate<T>(delegate: { aggregateRaw(args: { pipeline: object[] }): unknown }, pipeline: object[]): Promise<T[]> {
+  return (await delegate.aggregateRaw({ pipeline })) as unknown as T[];
 }

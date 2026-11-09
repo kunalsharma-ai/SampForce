@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createPrismaClient, PrismaClient } from '@dealflow/database';
+import { createPrismaClient, Prisma, PrismaClient } from '@dealflow/database';
 import type { PlanCode } from '@dealflow/types';
 import { createApp } from '../src/bootstrap';
 
@@ -88,4 +88,12 @@ export async function asTenant<T>(tenantId: string, fn: (tx: import('@dealflow/d
   } finally {
     await db.$disconnect();
   }
+}
+
+/** Counts documents in a collection (by its MongoDB name) through the guarded transaction client. */
+export function countCollection(tx: import('@dealflow/database').TenantTx, collection: string, where: Record<string, unknown> = {}): Promise<number> {
+  const model = Prisma.dmmf.datamodel.models.find((m) => (m.dbName ?? m.name) === collection);
+  if (!model) throw new Error(`No model for collection ${collection}`);
+  const delegate = (tx as unknown as Record<string, { count(args: object): Promise<number> }>)[model.name.charAt(0).toLowerCase() + model.name.slice(1)]!;
+  return delegate.count({ where });
 }
