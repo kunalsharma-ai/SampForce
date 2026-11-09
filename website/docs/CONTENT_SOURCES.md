@@ -12,7 +12,7 @@ from the shipped product or from dated vendor pages, and nothing is called "test
 | Copilot reads straight away, changes wait for confirmation | Copilot panel text and behaviour (`/app` → Copilot) |
 | SSO (OpenID Connect) + SCIM on every plan including Free | `docs/PRICING_STRATEGY.md` §2 (decided 2026-10-31) |
 | Two-step verification, recovery codes, lockout, device sign-out | Phase 8, `docs/SECURITY_MODEL.md` |
-| Row-level security tenant isolation | ADR 0003, `scripts/check-rls.sql` |
+| Tenant isolation on every query | ADR 0058, `packages/database/src/scope.ts`, `apps/api/test/workspace-guard.e2e.test.ts` |
 | Encrypted secrets and key rotation | `docs/runbooks/key-rotation.md` |
 | WCAG 2.2 AA checks on key pages, light and dark | Playwright + axe suite in `apps/web/e2e` (checks, not a certification) |
 | 5 languages incl. Arabic right-to-left, Arabic PDFs | ADR 0047, 0052, 0054 |

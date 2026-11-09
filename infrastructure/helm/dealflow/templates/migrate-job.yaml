@@ -30,7 +30,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             # Index set-up runs as the MongoDB user with dbAdmin (it creates and drops indexes); the API and worker
-            # use a user with readWrite only.
+            # use a user limited to reading and writing documents (docs/DEPLOYMENT.md, "Database").
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef: { name: {{ .Values.secrets.existingSecret }}, key: MIGRATION_DATABASE_URL }

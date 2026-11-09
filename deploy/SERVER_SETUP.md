@@ -140,7 +140,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 The first build takes 10 to 20 minutes. On the first start:
 
 1. MongoDB starts as a one-member replica set (transactions need one) and creates three users on the `sampforce`
-   database: `sampforce_app` (what the API and worker use, read and write only), `sampforce_admin` (creates
+   database: `sampforce_app` (what the API and worker use: it can read and write documents but not drop or change indexes), `sampforce_admin` (creates
    indexes) and `sampforce_backup` (MongoDB's backup role).
 2. `migrate` creates the collections, the indexes and the plan catalogue, and exits. It runs again on every `up`;
    with nothing new to do it finishes in a few seconds.
@@ -282,14 +282,19 @@ Use letters and digits only (for example `openssl rand -hex 32`), because the pa
 
 ## 13. What has and has not been tested
 
-Tested in a sandbox with this exact compose file (on PostgreSQL, before the move to MongoDB; see the note below):
-a fresh start from an empty volume, migrations, every container
-healthy under the hardened settings, HTTPS through Caddy (with a local certificate, because a sandbox cannot get a
-Let's Encrypt one), HTTP to HTTPS redirect, sign-up, creating a deal, operator creation, console sign-in and saving a provider key, a backup as a
-non-root user, a restore with `--switch` (data, logins and console keys came back as of the backup), and a full
-`down` / `up` keeping all data. Not tested: a real Let's Encrypt certificate, a real Ubuntu VM and the
-`apt-get` step inside the images (the sandbox cannot reach Debian mirrors). Treat your first install as the
-acceptance test and run `scripts/smoke-test.sh` and a restore drill on it.
+Tested in a sandbox with this exact compose file, on MongoDB:
 
-Since the move to MongoDB the stack has been checked again as described in the pull request that made it; until a
-restore drill has been run on your own server, treat the backup and restore steps above as untested there.
+- a fresh start from empty volumes, with every container healthy under the hardened settings;
+- HTTPS through Caddy (with a local certificate, because a sandbox cannot get a Let's Encrypt one) and the HTTP to
+  HTTPS redirect;
+- sign-up, companies, contacts, leads, deals (create, move, edit, delete), tasks, activities, search, a report,
+  the dashboard and the insights views;
+- operator creation and console sign-in;
+- a backup as a non-root user, and a restore with `--switch` (data and logins came back as of the backup; later
+  data stayed in the old database);
+- the password change above, and that `sampforce_app` cannot drop indexes, collections or the database;
+- a full `down` / `up` keeping all data.
+
+Not tested: a real Let's Encrypt certificate, a real Ubuntu VM and the `apt-get` step inside the images (the
+sandbox cannot reach Debian mirrors). Treat your first install as the acceptance test and run
+`scripts/smoke-test.sh` and a restore drill on it.

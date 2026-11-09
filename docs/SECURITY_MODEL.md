@@ -8,7 +8,7 @@ before any compliance statement is made.
 
 | Threat | Primary controls | Status |
 |---|---|---|
-| Cross-tenant data access | Workspace guard in the database client on every query (ADR 0058; was PostgreSQL forced RLS) + the API's MongoDB user limited to readWrite on one database + per-request membership check + tests (`workspace-guard.e2e` and the isolation suites) | **Implemented, tested**. Enforced by the application, not the database: code that bypassed the guarded client could cross workspaces, so the API has no other database client |
+| Cross-tenant data access | Workspace guard in the database client on every query (ADR 0058; was PostgreSQL forced RLS) + the API's MongoDB user limited to reading and writing documents in one database (no index or collection changes) + per-request membership check + tests (`workspace-guard.e2e` and the isolation suites) | **Implemented, tested**. Enforced by the application, not the database: code that bypassed the guarded client could cross workspaces, so the API has no other database client |
 | Credential stuffing / brute force | argon2id, generic errors, constant-time unknown-user path, per-IP rate limits on auth, lockout after 10 failures (15 min), TOTP two-step verification with single-use recovery codes, workspace policy to require it | **Implemented, tested** (Phase 8) |
 | Session theft | HttpOnly SameSite cookies, short access tokens, rotating refresh tokens with reuse detection | **Implemented, tested** |
 | CSRF | SameSite=Lax + Origin allow-list on unsafe methods + JSON-only bodies | **Implemented, tested** |

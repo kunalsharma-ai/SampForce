@@ -46,10 +46,19 @@ restored=$(date +%s)
 
 "${MONGOSH[@]}" --eval "
   const admin = db.getSiblingDB('admin');
-  for (const [user, roles] of [['sampforce_app', ['readWrite']], ['sampforce_admin', ['readWrite', 'dbAdmin']]]) {
+  // sampforce_app holds the custom role sampforce_runtime (documents only, no index changes); add the new database
+  // to it. A server set up without that role falls back to readWrite.
+  const runtime = admin.getRole('sampforce_runtime', { showPrivileges: true });
+  if (runtime) {
+    const actions = runtime.privileges[0].actions;
+    admin.grantPrivilegesToRole('sampforce_runtime', [{ resource: { db: '$TARGET', collection: '' }, actions }]);
+  }
+  for (const [user, roles] of [['sampforce_app', runtime ? [] : ['readWrite']], ['sampforce_admin', ['readWrite', 'dbAdmin']]]) {
+    if (!roles.length) continue;
     if (admin.getUser(user)) admin.grantRolesToUser(user, roles.map((role) => ({ role, db: '$TARGET' })));
     else print('warning: no user ' + user + ' on this server; create it before switching');
   }
+  print('sampforce_app and sampforce_admin can use $TARGET');
 "
 
 echo "verifying"

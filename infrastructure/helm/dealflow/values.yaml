@@ -14,7 +14,7 @@ imagePullSecrets: []
 publicUrl: https://app.example.com
 
 secrets:
-  # Secret with keys: DATABASE_URL (MongoDB replica-set URL for a user with readWrite on the database),
+  # Secret with keys: DATABASE_URL (MongoDB replica-set URL for a user with the sampforce_runtime role, see docs/DEPLOYMENT.md),
   # MIGRATION_DATABASE_URL (same database, a user with readWrite and dbAdmin, for index set-up),
   # JWT_ACCESS_SECRET, ENCRYPTION_KEY, and optionally OPERATOR_JWT_SECRET, ANTHROPIC_API_KEY,
   # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_*, SMTP_URL (see .env.example).

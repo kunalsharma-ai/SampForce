@@ -7,7 +7,7 @@ const bool = z
 export const apiEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(4000),
-  /** Connection used at runtime: a MongoDB user with readWrite on the SampForce database (no admin roles). */
+  /** Connection used at runtime: a MongoDB user that can read and write documents in the SampForce database, nothing more (docs/DEPLOYMENT.md). */
   // A MongoDB connection string (mongodb:// or mongodb+srv://). Not z.url(): a replica-set string lists several hosts.
   DATABASE_URL: z.string().regex(/^mongodb(\+srv)?:\/\/\S+$/, 'must be a mongodb:// or mongodb+srv:// connection string'),
   REDIS_URL: z.string().url().optional(),

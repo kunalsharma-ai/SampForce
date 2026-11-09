@@ -170,7 +170,8 @@ isolation checks they had under row-level security.
 3. Indexes Prisma cannot express (partial, case-insensitive) go in `EXTRA_INDEXES` in `setup.ts`.
 4. A new required field on existing documents needs a back-fill script, since old documents will not have it.
    Expand, back-fill, then contract, as before.
-5. `db:setup` runs as a user with `dbAdmin` (it drops indexes); the API's user has `readWrite` only.
+5. `db:setup` runs as a user with `dbAdmin` (it drops indexes); the API's user can only read and write documents
+   (the `sampforce_runtime` role), so it cannot remove an index.
 
 ## Retention (defaults; per-tenant configuration was planned for Phase 8 and is not built)
 

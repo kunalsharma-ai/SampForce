@@ -96,7 +96,7 @@ Packages are introduced when their first real consumer ships, so the tree never 
 
 - MongoDB 8 (a replica set, for transactions) with Prisma 6's MongoDB connector. Schema and ERD:
   [DATABASE.md](DATABASE.md). Why MongoDB and what replaced each PostgreSQL feature: [ADR 0058](adr/0058-mongodb.md).
-- Three database users: `sampforce_admin` (index set-up), `sampforce_app` (runtime, readWrite on one database) and
+- Three database users: `sampforce_admin` (index set-up), `sampforce_app` (runtime: documents only, in one database) and
   `sampforce_backup` (MongoDB's backup role).
 - `pnpm db:setup` creates collections, the indexes the schema declares and the ones it cannot (partial,
   case-insensitive), and seeds the plan catalogue. There are no migrations.

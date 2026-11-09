@@ -59,8 +59,8 @@ Every query made through the client the API uses passes through a Prisma extensi
 - **Isolation is enforced by the application, not the database.** A bug in the guard, or code that uses a raw
   MongoDB driver instead of the guarded client, could cross workspaces; PostgreSQL would have refused. Mitigations:
   the API has one way to reach the database (`PrismaService`, the guarded client); `test/workspace-guard.e2e.test.ts`
-  and the existing isolation suites exercise every rule; the MongoDB user the API connects as has `readWrite` on the
-  SampForce database only. Enterprise Plus can still get a dedicated database.
+  and the existing isolation suites exercise every rule; the MongoDB user the API connects as can only read and write
+  documents in the SampForce database (a custom role; it cannot drop or change indexes or collections). Enterprise Plus can still get a dedicated database.
 - Transactions are optimistic: hot documents (a counter, a popular deal) cause retries rather than waits. `fn` passed
   to `withDbContext` must not have side effects outside the database that cannot run twice (this was already true).
 - Several reports and dashboards now load the matching documents and aggregate them in the API. Fine at the sizes

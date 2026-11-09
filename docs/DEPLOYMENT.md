@@ -28,8 +28,11 @@ Prometheus (Operator) and an OpenTelemetry collector. Redis is not required by t
    multi-document transactions, which a standalone server does not support.
 2. Create three users on the SampForce database, with real passwords from your secret store
    (`deploy/mongo/init-sampforce.js` shows the exact roles):
-   - `sampforce_app`: `readWrite` on the database. The API and the worker. Workspace isolation is enforced by
-     SampForce's database client (ADR 0058), so this user must not be shared with other tools.
+   - `sampforce_app`: the API and the worker. Give it a custom role, `sampforce_runtime`, with the actions
+     find, insert, update, remove, createCollection, listCollections, listIndexes, collStats, dbStats, killCursors on the database. Do not use the built-in `readWrite`: it can also drop indexes and collections, and the
+     unique indexes are part of how SampForce keeps data consistent. (Atlas: Database Access, Custom Roles.)
+     Workspace isolation is enforced by SampForce's database client (ADR 0058), so this user must not be shared
+     with other tools.
    - `sampforce_admin`: `readWrite` and `dbAdmin`. The set-up Job, which creates and drops indexes.
    - `sampforce_backup`: MongoDB's built-in `backup` role, used only by `scripts/backup.sh`.
 3. Size the connection pool with `maxPoolSize` on `DATABASE_URL` (the driver's default is 100 per process) so that

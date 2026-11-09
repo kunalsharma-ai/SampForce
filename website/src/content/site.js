@@ -274,7 +274,7 @@ export const site = {
     eyebrow: 'Built to be trusted',
     title: 'Enterprise-grade, *on every plan*',
     items: [
-      { title: 'Tenant isolation', text: 'Row-level security in the database keeps every workspace’s data apart.' },
+      { title: 'Tenant isolation', text: 'A shared guard on every database query keeps every workspace’s data apart.' },
       { title: 'SSO + SCIM', text: 'OpenID Connect sign-in and SCIM 2.0 provisioning, on every plan.' },
       { title: 'Two-step verification', text: 'Authenticator codes, recovery codes, lockout and device sign-out.' },
       { title: 'Audit trail', text: 'Every change, by people or agents, is recorded and searchable.' },
