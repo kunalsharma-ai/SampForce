@@ -23,58 +23,36 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
   return { email, password: 'correcthorse1' };
 }
 
+/** Default database of the end-to-end stack (see playwright.config.ts). */
+export const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? 'mongodb://localhost:27017/sampforce?replicaSet=rs0&directConnection=true';
+
+/** Writes test data through the API's own database client, inside the workspace (apps/api/scripts/e2e-fixture.ts). */
+async function fixture(input: Record<string, unknown>) {
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('node', ['-r', '@swc-node/register', 'scripts/e2e-fixture.ts', JSON.stringify(input)], {
+    cwd: '../api',
+    env: { ...process.env, DATABASE_URL: E2E_DATABASE_URL },
+    stdio: 'pipe',
+  });
+}
+
 /** Moves the signed-in workspace to a plan (active, 10 seats), as a paid subscription or an operator would. */
 export async function setPlan(page: Page, planCode: string) {
-  const { execFileSync } = await import('node:child_process');
   const me = await (await page.request.get('/api/v1/auth/me')).json();
-  const url = process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
-  const tenant = `'${String(me.tenant.id).replace(/'/g, "''")}'`;
-  const sql = `BEGIN;
-SELECT set_config('app.tenant_id', ${tenant}, true);
-UPDATE subscriptions SET plan_code = '${planCode.replace(/[^a-z_]/g, '')}', seats = 10, status = 'ACTIVE' WHERE tenant_id = ${tenant};
-COMMIT;`;
-  execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
+  await fixture({ action: 'setPlan', tenantId: me.tenant.id, planCode });
 }
 
 /**
- * Inserts a received email for the signed-in workspace, as mailbox sync would, so screens that read inbound mail can
- * be tested without a real Gmail account. Uses the app role inside the workspace's RLS context.
+ * Stores a received email for the signed-in workspace, as mailbox sync would, so screens that read inbound mail can
+ * be tested without a real Gmail account. It joins its inbox conversation like synced mail.
  */
 export async function seedInboundEmail(page: Page, email: { from: string; subject: string; body: string; contactId?: string }) {
-  const { execFileSync } = await import('node:child_process');
   const me = await (await page.request.get('/api/v1/auth/me')).json();
-  const url = process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
-  const q = (v: string | null) => (v === null ? 'NULL' : `'${v.replace(/'/g, "''")}'`);
-  const tenant = q(me.tenant.id);
-  const user = q(me.user.id);
-  const sql = `BEGIN;
-SELECT set_config('app.tenant_id', ${tenant}, true), set_config('app.user_id', ${user}, true);
-WITH c AS (
-  INSERT INTO integration_connections (tenant_id, user_id, provider, account_email, scopes, credentials_encrypted, updated_at)
-  VALUES (${tenant}, ${user}, 'GOOGLE', 'me@seller.test', '{}', 'v1.x.y.z', now())
-  ON CONFLICT (tenant_id, user_id, provider) DO UPDATE SET updated_at = now() RETURNING id)
-INSERT INTO email_messages (tenant_id, connection_id, provider_message_id, direction, from_address, to_addresses, cc_addresses, subject, snippet, body_text, sent_at, contact_id)
-SELECT ${tenant}, c.id, gen_random_uuid()::text, 'INBOUND', ${q(email.from)}, '{me@seller.test}', '{}', ${q(email.subject)}, ${q(email.body.slice(0, 80))}, ${q(email.body)}, now(), ${email.contactId ? `${q(email.contactId)}::uuid` : 'NULL'} FROM c;
-COMMIT;`;
-  execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
+  await fixture({ action: 'inboundEmail', tenantId: me.tenant.id, userId: me.user.id, ...email });
 }
 
 /** Inserts a calendar meeting as if it had been synced from Google Calendar. */
 export async function seedMeeting(page: Page, m: { title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }) {
-  const { execFileSync } = await import('node:child_process');
   const me = await (await page.request.get('/api/v1/auth/me')).json();
-  const url = process.env.E2E_DATABASE_URL ?? 'postgresql://dealflow_app:dealflow_app_dev@localhost:5432/dealflow';
-  const q = (v: string | null) => (v === null ? 'NULL' : `'${v.replace(/'/g, "''")}'`);
-  const tenant = q(me.tenant.id);
-  const user = q(me.user.id);
-  const sql = `BEGIN;
-SELECT set_config('app.tenant_id', ${tenant}, true), set_config('app.user_id', ${user}, true);
-WITH c AS (
-  INSERT INTO integration_connections (tenant_id, user_id, provider, account_email, scopes, credentials_encrypted, updated_at)
-  VALUES (${tenant}, ${user}, 'GOOGLE', 'me@seller.test', '{}', 'v1.x.y.z', now())
-  ON CONFLICT (tenant_id, user_id, provider) DO UPDATE SET updated_at = now() RETURNING id)
-INSERT INTO meetings (tenant_id, connection_id, provider_event_id, title, starts_at, ends_at, attendees, contact_ids, join_url, updated_at)
-SELECT ${tenant}, c.id, gen_random_uuid()::text, ${q(m.title)}, now() + interval '${m.hoursFromNow} hours', now() + interval '${m.hoursFromNow + 1} hours', ARRAY[${q(m.attendee)}, 'me@seller.test'], ARRAY[${q(m.contactId)}]::uuid[], ${q(m.joinUrl ?? null)}, now() FROM c;
-COMMIT;`;
-  execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-c', sql], { stdio: 'pipe' });
+  await fixture({ action: 'meeting', tenantId: me.tenant.id, userId: me.user.id, ...m });
 }

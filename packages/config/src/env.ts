@@ -7,8 +7,9 @@ const bool = z
 export const apiEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(4000),
-  /** Connection used at runtime. Must be a role WITHOUT BYPASSRLS so row-level security applies. */
-  DATABASE_URL: z.string().url(),
+  /** Connection used at runtime: a MongoDB user that can read and write documents in the SampForce database, nothing more (docs/DEPLOYMENT.md). */
+  // A MongoDB connection string (mongodb:// or mongodb+srv://). Not z.url(): a replica-set string lists several hosts.
+  DATABASE_URL: z.string().regex(/^mongodb(\+srv)?:\/\/\S+$/, 'must be a mongodb:// or mongodb+srv:// connection string'),
   REDIS_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),

@@ -189,7 +189,7 @@ export const why = {
 export const security = {
   title: 'Enterprise-grade, on day one.',
   items: [
-    { t: 'Tenant isolation in the database', d: 'PostgreSQL row-level security on every table; the app role cannot bypass it.' },
+    { t: 'Tenant isolation on every query', d: 'Every database query is held to its own workspace by one shared guard, with tests for every rule.' },
     { t: 'Two-step sign-in', d: 'Authenticator apps, recovery codes, lockout and device sign-out.' },
     { t: 'Single sign-on + SCIM', d: 'OpenID Connect sign-in and SCIM 2.0 provisioning, on every plan.' },
     { t: 'Roles and audit trail', d: 'Custom roles with fine-grained permissions and a full audit log.' },

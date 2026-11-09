@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
+import { Prisma, transactionLock } from '@dealflow/database';
 import type { CopilotAnswer, CopilotRequest, CopilotTurn, ProposedAction } from '@dealflow/types';
 import { randomUUID } from 'node:crypto';
 import { AuditService } from '../audit/audit.service';
@@ -162,8 +162,8 @@ export class CopilotService {
    */
   async decide(auth: AuthContext, runId: string, actionId: string, decision: 'confirm' | 'dismiss', meta: RequestMeta): Promise<ProposedAction> {
     const claimed = await this.prisma.run(auth, async (tx) => {
-      const [locked] = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM ai_runs WHERE id = ${runId}::uuid AND tenant_id = ${auth.tenantId}::uuid AND user_id = ${auth.userId}::uuid AND agent = 'copilot' FOR UPDATE`;
+      const locked = await tx.aiRun.findFirst({ where: { id: runId, tenantId: auth.tenantId, userId: auth.userId, agent: 'copilot' }, select: { id: true } });
+      if (locked) await transactionLock(tx, `ai_run:${runId}`);
       if (!locked) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Copilot answer not found.' });
       const run = await tx.aiRun.findUniqueOrThrow({ where: { id: runId } });
       const output = run.output as unknown as CopilotAnswer;

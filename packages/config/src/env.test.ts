@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadApiEnv } from './env';
 
 const base = {
-  DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+  DATABASE_URL: 'mongodb://u:p@db1:27017,db2:27017/sampforce?replicaSet=rs0',
   JWT_ACCESS_SECRET: 'x'.repeat(32),
 };
 
@@ -11,6 +11,12 @@ describe('loadApiEnv', () => {
     const env = loadApiEnv(base);
     expect(env.API_PORT).toBe(4000);
     expect(env.COOKIE_SECURE).toBe(false);
+  });
+
+  it('takes MongoDB connection strings, including replica sets and SRV records, and nothing else', () => {
+    expect(loadApiEnv(base).DATABASE_URL).toContain('replicaSet=rs0');
+    expect(loadApiEnv({ ...base, DATABASE_URL: 'mongodb+srv://u:p@cluster0.example.net/sampforce' }).DATABASE_URL).toMatch(/^mongodb\+srv/);
+    expect(() => loadApiEnv({ ...base, DATABASE_URL: 'postgresql://u:p@localhost:5432/db' })).toThrow(/DATABASE_URL/);
   });
 
   it('rejects short secrets with a readable message', () => {

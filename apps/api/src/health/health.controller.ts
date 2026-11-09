@@ -20,7 +20,7 @@ export class HealthController {
   @Get('ready')
   async ready() {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await this.prisma.$runCommandRaw({ ping: 1 });
       return { status: 'ok', checks: { database: 'ok' } };
     } catch {
       throw new ServiceUnavailableException({ code: 'NOT_READY', message: 'Database unavailable.' });

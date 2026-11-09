@@ -14,7 +14,8 @@ imagePullSecrets: []
 publicUrl: https://app.example.com
 
 secrets:
-  # Secret with keys: DATABASE_URL (runtime role, no BYPASSRLS), MIGRATION_DATABASE_URL (schema owner),
+  # Secret with keys: DATABASE_URL (MongoDB replica-set URL for a user with the sampforce_runtime role, see docs/DEPLOYMENT.md),
+  # MIGRATION_DATABASE_URL (same database, a user with readWrite and dbAdmin, for index set-up),
   # JWT_ACCESS_SECRET, ENCRYPTION_KEY, and optionally OPERATOR_JWT_SECRET, ANTHROPIC_API_KEY,
   # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_*, SMTP_URL (see .env.example).
   existingSecret: dealflow-secrets
@@ -67,7 +68,8 @@ web:
     targetCPUUtilizationPercentage: 70
 
 migrations:
-  # Runs `prisma migrate deploy` as a pre-install/pre-upgrade hook, so new code never meets an old schema.
+  # Runs the database set-up (collections, indexes, plan catalogue) as a pre-install/pre-upgrade hook, so new code
+  # never meets missing indexes. Idempotent.
   enabled: true
   backoffLimit: 1
   activeDeadlineSeconds: 600

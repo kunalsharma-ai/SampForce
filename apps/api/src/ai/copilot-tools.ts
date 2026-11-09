@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import type { Citation, Permission, ProposedAction, SearchHit } from '@dealflow/types';
 import { randomUUID } from 'node:crypto';
 import type { AuthContext } from '../common/auth-context';
@@ -300,21 +299,31 @@ export class CopilotTools {
     const stalled = typeof input.stalled_days === 'number' ? input.stalled_days : null;
     const minAmount = typeof input.min_amount === 'number' ? input.min_amount : null;
     const now = new Date();
-    const rows = await this.prisma.run(auth, (tx) =>
-      tx.$queryRaw<{ id: string; name: string; amount: Prisma.Decimal; currency: string; stage: string; probability: number; close: Date | null; owner: string | null; last_activity: Date | null }[]>`
-        SELECT o.id::text, o.name, o.amount, o.currency, s.name AS stage, COALESCE(o.probability, s.probability) AS probability,
-               o.expected_close_date AS close, u.name AS owner,
-               (SELECT max(a.occurred_at) FROM activities a WHERE a.tenant_id = o.tenant_id AND a.opportunity_id = o.id AND a.deleted_at IS NULL) AS last_activity
-        FROM opportunities o
-        JOIN pipeline_stages s ON s.id = o.stage_id
-        LEFT JOIN users u ON u.id = o.owner_id
-        WHERE o.tenant_id = ${auth.tenantId}::uuid AND o.deleted_at IS NULL AND o.status = ${status}::"OpportunityStatus"
-          ${input.mine_only ? Prisma.sql`AND o.owner_id = ${auth.userId}::uuid` : Prisma.empty}
-          ${minAmount !== null ? Prisma.sql`AND o.amount >= ${minAmount}` : Prisma.empty}
-          ${within !== null ? Prisma.sql`AND o.expected_close_date >= ${isoDay(now)}::date AND o.expected_close_date <= ${isoDay(new Date(now.getTime() + within * DAY))}::date` : Prisma.empty}
-        ORDER BY o.amount DESC
-        LIMIT 200`,
-    );
+    const rows = await this.prisma.run(auth, async (tx) => {
+      const deals = await tx.opportunity.findMany({
+        where: {
+          tenantId: auth.tenantId,
+          deletedAt: null,
+          status,
+          ...(input.mine_only ? { ownerId: auth.userId } : {}),
+          ...(minAmount !== null ? { amount: { gte: minAmount } } : {}),
+          ...(within !== null ? { expectedCloseDate: { gte: new Date(`${isoDay(now)}T00:00:00.000Z`), lte: new Date(`${isoDay(new Date(now.getTime() + within * DAY))}T00:00:00.000Z`) } } : {}),
+        },
+        select: { id: true, name: true, amount: true, currency: true, probability: true, expectedCloseDate: true, ownerId: true, stage: { select: { name: true, probability: true } } },
+        orderBy: { amount: 'desc' },
+        take: 200,
+      });
+      const [owners, last] = await Promise.all([
+        tx.user.findMany({ where: { id: { in: [...new Set(deals.map((d) => d.ownerId).filter((v): v is string => !!v))] } }, select: { id: true, name: true } }),
+        tx.activity.groupBy({ by: ['opportunityId'], where: { tenantId: auth.tenantId, deletedAt: null, opportunityId: { in: deals.map((d) => d.id) } }, _max: { occurredAt: true } }),
+      ]);
+      const ownerName = new Map(owners.map((u) => [u.id, u.name]));
+      const lastAt = new Map(last.map((g) => [g.opportunityId, g._max.occurredAt]));
+      return deals.map((d) => ({
+        id: d.id, name: d.name, amount: d.amount, currency: d.currency, stage: d.stage.name, probability: d.probability ?? d.stage.probability,
+        close: d.expectedCloseDate, owner: d.ownerId ? (ownerName.get(d.ownerId) ?? null) : null, last_activity: lastAt.get(d.id) ?? null,
+      }));
+    });
     const cutoff = stalled !== null ? new Date(now.getTime() - stalled * DAY) : null;
     const picked = rows.filter((r) => !cutoff || !r.last_activity || r.last_activity < cutoff).slice(0, limit);
     for (const r of picked) state.citations.set(`deal:${r.id}`, { entity: 'deal', id: r.id, label: r.name });

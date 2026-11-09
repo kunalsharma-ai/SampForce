@@ -1,5 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { nullsLast, Prisma, type TenantTx } from '@dealflow/database';
 import { type CampaignInput, type CampaignResults, type CampaignRow, campaignRatios } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -23,7 +23,7 @@ export class CampaignsService {
 
   list(auth: AuthContext): Promise<CampaignRow[]> {
     return this.prisma.run(auth, async (tx) => {
-      const rows = await tx.campaign.findMany({ where: { tenantId: auth.tenantId }, orderBy: [{ startDate: { sort: 'desc', nulls: 'last' } }, { name: 'asc' }] });
+      const rows = await tx.campaign.findMany({ where: { tenantId: auth.tenantId }, orderBy: [{ startDate: nullsLast('desc') }, { name: 'asc' }] });
       const names = await ownerRefs(tx, rows.map((r) => r.ownerId));
       return Promise.all(rows.map(async (c) => toRow(c, names, await results(tx, auth.tenantId, c))));
     });
@@ -80,13 +80,13 @@ export async function results(tx: TenantTx, tenantId: string, c: CampaignModel):
       otherCurrencyDeals++;
       continue;
     }
-    if (d.status === 'OPEN') pipeline += d.amount.toNumber();
+    if (d.status === 'OPEN') pipeline += Number(d.amount);
     if (d.status === 'WON') {
-      won += d.amount.toNumber();
+      won += Number(d.amount);
       wonDeals++;
     }
   }
-  const budget = c.budget?.toNumber() ?? null;
+  const budget = c.budget?? null;
   return {
     leads: leads.length,
     qualified: leads.filter((l) => l.status === 'QUALIFIED' || l.status === 'CONVERTED').length,
@@ -103,7 +103,7 @@ export async function results(tx: TenantTx, tenantId: string, c: CampaignModel):
 function toRow(c: CampaignModel, names: Map<string, { id: string; name: string }>, r: CampaignResults): CampaignRow {
   return {
     id: c.id, name: c.name, channel: c.channel as CampaignRow['channel'], status: c.status, startDate: ymd(c.startDate), endDate: ymd(c.endDate),
-    budget: c.budget?.toNumber() ?? null, currency: c.currency, utmCampaign: c.utmCampaign, owner: c.ownerId ? (names.get(c.ownerId) ?? null) : null,
+    budget: c.budget?? null, currency: c.currency, utmCampaign: c.utmCampaign, owner: c.ownerId ? (names.get(c.ownerId) ?? null) : null,
     description: c.description, results: r, createdAt: c.createdAt.toISOString(),
   };
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { withDbScope } from '@dealflow/database';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -81,14 +82,11 @@ describe('operator console', () => {
 
   it('the operator scan cannot reach CRM tables', async () => {
     const db = appClient();
-    const leads = await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.operator_scan', 'on', true)`;
-      return tx.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM leads`;
-    });
-    const subs = await db.$transaction(async (tx) => tx.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM subscriptions`);
+    const leads = await withDbScope({ operatorScan: true }, () => db.lead.count());
+    const subs = await withDbScope({}, () => db.subscription.count());
     await db.$disconnect();
-    expect(Number(leads[0]!.n)).toBe(0);
-    expect(Number(subs[0]!.n)).toBe(0);
+    expect(leads).toBe(0);
+    expect(subs).toBe(0);
   });
 
   it('shows members and the audit log only while the workspace grants support access', async () => {
@@ -120,8 +118,8 @@ describe('operator console', () => {
     const platform = (await op(admin).get(`/audit-log?tenantId=${owner.tenantId}`).expect(200)).body as { action: string; operator: { email: string } }[];
     expect(platform.find((a) => a.action === 'tenant.plan_overridden')!.operator.email).toBe(adminEmail);
     const db = appClient();
-    await expect(db.platformAuditLog.updateMany({ data: { action: 'tampered' } })).rejects.toThrow(/permission denied/);
-    await expect(db.platformAuditLog.deleteMany({})).rejects.toThrow(/permission denied/);
+    await expect(db.platformAuditLog.updateMany({ data: { action: 'tampered' } })).rejects.toThrow(/append-only/);
+    await expect(db.platformAuditLog.deleteMany({})).rejects.toThrow(/cannot be deleted/);
     await db.$disconnect();
   });
 

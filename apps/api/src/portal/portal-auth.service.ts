@@ -52,8 +52,7 @@ export class PortalAuthService {
 
   /** The workspace behind a portal's public name, only when the portal is switched on. */
   async tenantForSlug(slug: string): Promise<string | null> {
-    const row = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.portal_slug', ${slug.toLowerCase()}, true)`;
+    const row = await this.prisma.run({ lookup: { PortalSettings: { slug: slug.toLowerCase() } } }, async (tx) => {
       return tx.portalSettings.findFirst({ where: { slug: slug.toLowerCase(), enabled: true }, select: { tenantId: true } });
     });
     if (!row) return null;
@@ -97,9 +96,10 @@ export class PortalAuthService {
 
   private async countFailure(tenantId: string, userId: string, meta: RequestMeta): Promise<void> {
     await this.prisma.run({ tenantId }, async (tx) => {
-      const [u] = await tx.$queryRaw<{ failed_logins: number; email: string }[]>`
-        UPDATE portal_users SET failed_logins = failed_logins + 1 WHERE id = ${userId}::uuid AND tenant_id = ${tenantId}::uuid RETURNING failed_logins, email`;
-      if (!u || u.failed_logins < MAX_FAILED) return;
+      const hit = await tx.portalUser.updateMany({ where: { id: userId, tenantId }, data: { failedLogins: { increment: 1 } } });
+      if (hit.count === 0) return;
+      const u = await tx.portalUser.findUniqueOrThrow({ where: { id: userId }, select: { failedLogins: true, email: true } });
+      if (u.failedLogins < MAX_FAILED) return;
       await tx.portalUser.update({ where: { id: userId }, data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000), failedLogins: 0 } });
       await this.audit.record(tx, { tenantId, actorUserId: null, action: 'portal.user_locked', entityType: 'portal_user', entityId: userId, metadata: { email: u.email }, meta });
     });

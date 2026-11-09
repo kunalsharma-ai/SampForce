@@ -13,7 +13,7 @@ describe('password reset by email', () => {
   let user: TestUser;
   let http: ReturnType<typeof request>;
   const saved: Record<string, string | undefined> = {};
-  const admin = new PrismaClient({ datasources: { db: { url: process.env.TEST_OWNER_DATABASE_URL } } });
+  const admin = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
 
   const post = (url: string, body: object) => http.post(`/api/v1${url}`).set('origin', ORIGIN).send(body);
   const tokenFrom = (text: string) => /reset-password#token=([A-Za-z0-9_-]+)/.exec(text)?.[1];

@@ -74,7 +74,7 @@ describe('tenant isolation', () => {
       .expect(401);
   });
 
-  describe('row-level security at the database layer', () => {
+  describe('workspace guard on every query (replaces PostgreSQL row-level security)', () => {
     it('hides all tenant rows when no context is set', async () => {
       expect(await db.lead.count()).toBe(0);
       expect(await db.tenant.count()).toBe(0);
@@ -96,7 +96,7 @@ describe('tenant isolation', () => {
         withDbContext(db, { tenantId: a.tenantId }, (tx) =>
           tx.lead.create({ data: { tenantId: b.tenantId, fullName: 'Injected' } }),
         ),
-      ).rejects.toThrow(/row-level security/);
+      ).rejects.toThrow(/outside the current workspace/);
       const updated = await withDbContext(db, { tenantId: a.tenantId }, (tx) =>
         tx.lead.updateMany({ where: { tenantId: b.tenantId }, data: { fullName: 'Overwritten' } }),
       );
@@ -111,10 +111,10 @@ describe('tenant isolation', () => {
     it('keeps the audit log append-only for the application role', async () => {
       await expect(
         withDbContext(db, { tenantId: a.tenantId }, (tx) => tx.auditLog.deleteMany({})),
-      ).rejects.toThrow(/permission denied/);
+      ).rejects.toThrow(/cannot be deleted/);
       await expect(
         withDbContext(db, { tenantId: a.tenantId }, (tx) => tx.auditLog.updateMany({ data: { action: 'x' } })),
-      ).rejects.toThrow(/permission denied/);
+      ).rejects.toThrow(/append-only/);
     });
   });
 });

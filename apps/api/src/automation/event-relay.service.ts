@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { type DomainEvent, Prisma, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, type DomainEvent, type TenantTx } from '@dealflow/database';
 import { TRIGGER_EVENTS } from '@dealflow/types';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { claim, enterTenant, errorMessage } from '../worker/queue';
+import { errorMessage, scan } from '../worker/queue';
 import { MAX_AUTOMATION_DEPTH } from './automation-context';
 import { evaluateGroup } from './engine';
 import { recordLabel, recordLink, RunLimitReached, WorkflowExecutor } from './executor.service';
@@ -40,31 +40,33 @@ export class EventRelay {
   }
 
   private async relayNext(skip: string[]): Promise<{ id: string; ok: boolean } | null> {
-    let claimed: { id: string; tenant_id: string } | undefined;
+    const candidate = await scan(() =>
+      this.prisma.domainEvent.findFirst({
+        where: { processedAt: null, attempts: { lt: MAX_EVENT_ATTEMPTS }, ...(skip.length ? { id: { notIn: skip } } : {}) },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, tenantId: true },
+      }),
+    );
+    if (!candidate) return null;
+    const { id, tenantId } = candidate;
     try {
-      return await this.prisma.$transaction(
+      return await this.prisma.run(
+        { tenantId },
         async (tx) => {
-          await tx.$executeRaw`SELECT set_config('app.worker_scan', 'on', true)`;
-          const rows = await tx.$queryRaw<{ id: string; tenant_id: string }[]>`
-            SELECT id, tenant_id FROM domain_events
-            WHERE processed_at IS NULL AND attempts < ${MAX_EVENT_ATTEMPTS}
-              ${skip.length ? Prisma.sql`AND id <> ALL(${skip}::uuid[])` : Prisma.empty}
-            ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED`;
-          claimed = rows[0];
-          if (!claimed) return null;
-          await enterTenant(tx, claimed.tenant_id);
-          const event = await tx.domainEvent.findUniqueOrThrow({ where: { id: claimed.id } });
+          // Writing the event first takes it for this transaction (was FOR UPDATE SKIP LOCKED): a second worker
+          // relaying the same event gets a write conflict, retries after this one commits, and then finds it done.
+          const taken = await tx.domainEvent.updateMany({ where: { id, processedAt: null }, data: { attempts: { increment: 1 } } });
+          if (taken.count === 0) return { id, ok: true };
+          const event = await tx.domainEvent.findUniqueOrThrow({ where: { id } });
           const note = await this.fanOut(tx, event);
-          await tx.domainEvent.update({ where: { id: event.id }, data: { processedAt: new Date(), attempts: { increment: 1 }, lastError: note } });
-          return { id: event.id, ok: true };
+          await tx.domainEvent.update({ where: { id }, data: { processedAt: new Date(), lastError: note } });
+          return { id, ok: true };
         },
-        { timeout: 60_000 },
+        { timeoutMs: 60_000 },
       );
     } catch (err) {
-      if (!claimed) throw err;
-      const id = claimed.id;
       this.log.warn({ eventId: id, err: errorMessage(err) }, 'event relay failed');
-      await claim(this.prisma, Prisma.sql`UPDATE domain_events SET attempts = attempts + 1, last_error = ${errorMessage(err)} WHERE id = ${id}::uuid RETURNING id`);
+      await scan(() => this.prisma.domainEvent.updateMany({ where: { id }, data: { attempts: { increment: 1 }, lastError: errorMessage(err) } }));
       return { id, ok: false };
     }
   }
@@ -100,10 +102,7 @@ export class EventRelay {
       select: { id: true },
     });
     if (hooks.length > 0) {
-      await tx.webhookDelivery.createMany({
-        data: hooks.map((h) => ({ tenantId: event.tenantId, webhookId: h.id, eventId: event.id, eventType: event.type })),
-        skipDuplicates: true,
-      });
+      await createManySkipDuplicates(tx.webhookDelivery, 'WebhookDelivery', hooks.map((h) => ({ tenantId: event.tenantId, webhookId: h.id, eventId: event.id, eventType: event.type })));
     }
 
     await this.notify(tx, event, loadRecord);

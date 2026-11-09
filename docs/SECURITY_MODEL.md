@@ -8,7 +8,7 @@ before any compliance statement is made.
 
 | Threat | Primary controls | Status |
 |---|---|---|
-| Cross-tenant data access | PostgreSQL RLS (FORCE) + non-bypass runtime role + per-request membership check + tests | **Implemented, tested** |
+| Cross-tenant data access | Workspace guard in the database client on every query (ADR 0058; was PostgreSQL forced RLS) + the API's MongoDB user limited to reading and writing documents in one database (no index or collection changes) + per-request membership check + tests (`workspace-guard.e2e` and the isolation suites) | **Implemented, tested**. Enforced by the application, not the database: code that bypassed the guarded client could cross workspaces, so the API has no other database client |
 | Credential stuffing / brute force | argon2id, generic errors, constant-time unknown-user path, per-IP rate limits on auth, lockout after 10 failures (15 min), TOTP two-step verification with single-use recovery codes, workspace policy to require it | **Implemented, tested** (Phase 8) |
 | Session theft | HttpOnly SameSite cookies, short access tokens, rotating refresh tokens with reuse detection | **Implemented, tested** |
 | CSRF | SameSite=Lax + Origin allow-list on unsafe methods + JSON-only bodies | **Implemented, tested** |
@@ -20,7 +20,7 @@ before any compliance statement is made.
 | Secrets leakage | Env-only secrets validated at boot; no secrets in repo; log redaction of cookies/auth headers | **Implemented** |
 | AI misuse / prompt injection | Tool allowlists, approval tiers, untrusted-content wrapping, cost caps | Designed (Phase 4) |
 | Malicious uploads | Signed uploads, type/size limits, malware scanning, tenant-prefixed keys | Designed (Phase 2) |
-| Platform operator overreach | Separate auth realm (own accounts, key, cookie, guard); cross-tenant reads limited by RLS to tenants, subscriptions, memberships, invoices and support grants; members and audit log only under an owner's time-boxed grant; CRM records never; every action in an append-only platform log and the workspace audit log | **Implemented, tested** (Phase 6, ADR 0010) |
+| Platform operator overreach | Separate auth realm (own accounts, key, cookie, guard); cross-tenant reads limited by the workspace guard's operator scan to tenants, subscriptions, memberships, invoices and support grants; members and audit log only under an owner's time-boxed grant; CRM records never; every action in an append-only platform log and the workspace audit log | **Implemented, tested** (Phase 6, ADR 0010) |
 | Account takeover via SSO or directory | OIDC with PKCE, state, nonce, exact issuer, JWKS signature, audience and `azp` checks, verified email, domain allow-list; SSO sessions bound to their workspace; SCIM tokens hashed; SCIM cannot change owners or people who belong to other workspaces | **Implemented, tested against a local provider** (ADR 0012) |
 | Stolen session after sign-out | Session row checked on every request; device sign-out and sign-out of all other devices | **Implemented, tested** |
 | Secrets in telemetry | URL, header and span redaction of tokens, codes and cookies | **Implemented, tested** |
@@ -48,12 +48,12 @@ before any compliance statement is made.
 | Area | Control |
 |---|---|
 | In transit | TLS 1.2+ everywhere; HSTS; `COOKIE_SECURE=true` enforced in production at boot |
-| At rest | Managed Postgres and object storage encryption; integration credentials envelope-encrypted with per-tenant keys (Phase 3) |
+| At rest | MongoDB storage encryption (your provider's, or encrypted disks on a self-hosted server) and object storage encryption; integration credentials envelope-encrypted with per-tenant keys (Phase 3) |
 | Secrets | Environment / secret manager only; `.env.example` holds placeholders; JWT secret ≥ 32 chars enforced |
-| Backups | `scripts/backup.sh` with a read-only BYPASSRLS backup role; restores into a new database with verification, drilled in Phase 8 (docs/runbooks/database-restore.md). Scheduling, off-site storage, encryption and PITR are the operator's and provider's job and are not tested here |
+| Backups | `scripts/backup.sh` (mongodump) as a user with only MongoDB's backup role; restores into a new database with verification (docs/runbooks/database-restore.md). Scheduling, off-site storage, encryption and PITR are the operator's and provider's job and are not tested here |
 | Key rotation | `ENCRYPTION_KEY_PREVIOUS` plus a re-seal script; drilled (docs/runbooks/key-rotation.md) |
 | Export controls | Exports require `data:export`, are audited, and are rate-limited; AI agents cannot export. Report CSV exports follow the same rule (Phase 7) |
-| Report builder | Definitions are validated against a fixed field catalogue and compiled with bound parameters only; runs need the entity's read permission, stay inside RLS with an explicit tenant filter, and time out after 10 s (ADR 0011) |
+| Report builder | Definitions are validated against a fixed field catalogue and compiled to an aggregation pipeline in which user values are only ever literals (`$literal`), never operators or field paths; runs need the entity's read permission, stay inside the workspace guard with an explicit tenant filter (joins match the workspace too), and time out after 10 s (ADR 0011, ADR 0058) |
 
 ## 4. Privacy operations (Phases 2–8)
 
@@ -81,4 +81,4 @@ are logged to the application log (no tenant to attribute them to).
 - Dependency pinning with a lockfile; Dependabot/Renovate and `pnpm audit` in CI (Phase 2).
 - Dependency audit with pinned overrides (Phase 8: 6 of 8 advisories fixed, 2 mitigated; docs/security/PENTEST_PREP.md).
 - SAST (CodeQL) and container scanning in CI are not set up yet; an external penetration test is needed before general availability.
-- Security review checklist on PRs that touch auth, RLS, file handling or AI tools.
+- Security review checklist on PRs that touch auth, the workspace guard (`packages/database/src/scope.ts`), file handling or AI tools.

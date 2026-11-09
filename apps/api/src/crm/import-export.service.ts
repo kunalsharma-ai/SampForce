@@ -218,23 +218,33 @@ export class ImportExportService {
     const names = keys.filter((k) => k.startsWith('name:')).map((k) => k.slice(5));
     const domains = keys.filter((k) => k.startsWith('domain:')).map((k) => k.slice(7));
     const found = new Set<string>();
-    const table = entity === 'leads' ? Prisma.sql`leads` : entity === 'contacts' ? Prisma.sql`contacts` : Prisma.sql`companies`;
-    if (emails.length && entity !== 'companies') {
-      const rows = await tx.$queryRaw<{ v: string }[]>`SELECT lower(email) AS v FROM ${table} WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND lower(email) = ANY(${emails})`;
-      rows.forEach((r) => found.add(`email:${r.v}`));
+    // Case-insensitive matches; values are escaped by the database client. Batches keep each filter small.
+    const chunks = <T>(xs: T[], n = 200): T[][] => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
+    const people = entity === 'leads' ? tx.lead : entity === 'contacts' ? tx.contact : null;
+    const findPeople = (where: Prisma.LeadWhereInput & Prisma.ContactWhereInput) =>
+      entity === 'leads'
+        ? tx.lead.findMany({ where: { tenantId, deletedAt: null, ...where }, select: { email: true, phoneDigits: true } })
+        : tx.contact.findMany({ where: { tenantId, deletedAt: null, ...where }, select: { email: true, phoneDigits: true } });
+    if (emails.length && people) {
+      for (const part of chunks(emails)) {
+        const rows = await findPeople({ email: { in: part, mode: 'insensitive' } });
+        rows.forEach((r) => r.email && found.add(`email:${r.email.toLowerCase()}`));
+      }
     }
-    if (phones.length && entity !== 'companies') {
-      const rows = await tx.$queryRaw<{ v: string }[]>`SELECT right(regexp_replace(phone, '\\D', '', 'g'), 10) AS v FROM ${table} WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND phone IS NOT NULL AND right(regexp_replace(phone, '\\D', '', 'g'), 10) = ANY(${phones})`;
-      rows.forEach((r) => found.add(`phone:${r.v}`));
+    if (phones.length && people) {
+      for (const part of chunks(phones)) {
+        const rows = await findPeople({ phoneDigits: { in: part } });
+        rows.forEach((r) => r.phoneDigits && found.add(`phone:${r.phoneDigits}`));
+      }
     }
     if (entity === 'companies') {
-      if (names.length) {
-        const rows = await tx.$queryRaw<{ v: string }[]>`SELECT lower(name) AS v FROM companies WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND lower(name) = ANY(${names})`;
-        rows.forEach((r) => found.add(`name:${r.v}`));
+      for (const part of chunks(names)) {
+        const rows = await tx.company.findMany({ where: { tenantId, deletedAt: null, name: { in: part, mode: 'insensitive' } }, select: { name: true } });
+        rows.forEach((r) => found.add(`name:${r.name.toLowerCase()}`));
       }
-      if (domains.length) {
-        const rows = await tx.$queryRaw<{ v: string }[]>`SELECT lower(domain) AS v FROM companies WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND lower(domain) = ANY(${domains})`;
-        rows.forEach((r) => found.add(`domain:${r.v}`));
+      for (const part of chunks(domains)) {
+        const rows = await tx.company.findMany({ where: { tenantId, deletedAt: null, domain: { in: part, mode: 'insensitive' } }, select: { domain: true } });
+        rows.forEach((r) => r.domain && found.add(`domain:${r.domain.toLowerCase()}`));
       }
     }
     return found;
@@ -245,8 +255,13 @@ export class ImportExportService {
     const unique = [...new Map(names.map((n) => [n.toLowerCase(), n])).entries()];
     const map = new Map<string, string>();
     if (unique.length === 0) return map;
-    const rows = await tx.$queryRaw<{ id: string; v: string }[]>`SELECT DISTINCT ON (lower(name)) id::text, lower(name) AS v FROM companies WHERE tenant_id = ${auth.tenantId}::uuid AND deleted_at IS NULL AND lower(name) = ANY(${unique.map(([k]) => k)}) ORDER BY lower(name), created_at`;
-    rows.forEach((r) => map.set(r.v, r.id));
+    // The oldest company wins when several share a name.
+    const rows = await tx.company.findMany({
+      where: { tenantId: auth.tenantId, deletedAt: null, name: { in: unique.map(([k]) => k), mode: 'insensitive' } },
+      select: { id: true, name: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    rows.forEach((r) => map.has(r.name.toLowerCase()) || map.set(r.name.toLowerCase(), r.id));
     for (const [key, name] of unique) {
       if (map.has(key)) continue;
       const c = await tx.company.create({ data: { tenantId: auth.tenantId, ownerId: auth.userId, name: name.slice(0, 200) }, select: { id: true } });

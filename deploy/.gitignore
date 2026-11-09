@@ -3,3 +3,5 @@
 dealflow.env
 sampforce.env
 backups/
+# The MongoDB replica-set key (scripts/generate-secrets.sh creates it).
+mongo/keyfile

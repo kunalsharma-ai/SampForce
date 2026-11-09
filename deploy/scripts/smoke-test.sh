@@ -22,7 +22,7 @@ check "login page"                   200 "$(code "https://$domain/login")"
 check "pricing page"                 200 "$(code "https://$domain/pricing")"
 check "api ready (database reachable)" 200 "$(code "https://$domain/api/v1/health/ready")"
 check "metrics not public"           404 "$(code "https://$domain/metrics")"
-for svc in postgres api worker web; do
+for svc in mongo api worker web; do
   id="$(compose ps -q "$svc")"
   state="$( [ -n "$id" ] && docker inspect -f '{{.State.Health.Status}}' "$id" || echo missing)"
   check "container $svc healthy" healthy "$state"

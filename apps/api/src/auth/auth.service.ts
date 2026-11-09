@@ -10,7 +10,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, provisionTenant, slugify } from '@dealflow/database';
+import { invitationTenant, Prisma, provisionTenant, slugify, updateDbContext } from '@dealflow/database';
 import {
   type AcceptInvitationInput,
   type InvitationPreview,
@@ -194,7 +194,7 @@ export class AuthService {
   async register(input: RegisterInput, meta: RequestMeta): Promise<IssuedTokens> {
     const passwordHash = await this.passwords.hash(input.password);
     const tenantId = randomUUID();
-    // Slugs carry a random suffix: tenants are invisible to each other under RLS, so we
+    // Slugs carry a random suffix: tenants are invisible to each other under the workspace guard, so we
     // cannot (and must not) probe whether another workspace already uses a name.
     const slug = `${slugify(input.organizationName)}-${randomBytes(3).toString('hex')}`;
 
@@ -203,7 +203,7 @@ export class AuthService {
         const user = await tx.user.create({
           data: { email: input.email, name: input.name, passwordHash, lastLoginAt: new Date() },
         });
-        await tx.$executeRaw`SELECT set_config('app.user_id', ${user.id}, true)`;
+        updateDbContext({ userId: user.id });
         await provisionTenant(tx, {
           tenantId,
           name: input.organizationName,
@@ -463,8 +463,7 @@ export class AuthService {
 
   /** Resolves a pending invitation's tenant without a tenant context (SECURITY DEFINER lookup by token hash). */
   private async invitationTenant(token: string): Promise<string> {
-    const rows = await this.prisma.$queryRaw<{ t: string | null }[]>`SELECT app_invitation_tenant(${TokenService.hashRefresh(token)})::text AS t`;
-    const tenantId = rows[0]?.t;
+    const tenantId = await invitationTenant(this.prisma, TokenService.hashRefresh(token));
     if (!tenantId) throw new NotFoundException(INVITATION_INVALID);
     return tenantId;
   }

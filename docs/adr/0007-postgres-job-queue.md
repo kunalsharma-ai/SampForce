@@ -1,6 +1,6 @@
 # ADR 0007: PostgreSQL outbox and job queue for automation (no separate queue service yet)
 
-**Status:** accepted (2026-10-30)
+**Status:** superseded by [ADR 0058](0058-mongodb.md) (2026-11-09); accepted 2026-10-30
 
 **Decision.** Background work in Phase 3 (event relay, workflow runs, delays, approval expiry, webhook
 delivery, mailbox sync) runs on PostgreSQL:

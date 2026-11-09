@@ -24,7 +24,7 @@ export function round(value: number | null, digits = 2): number | null {
 
 export type BucketUnit = 'week' | 'month';
 
-/** Start of the UTC week (Monday, as Postgres date_trunc) or month containing `d`. */
+/** Start of the UTC week (Monday, ISO weeks) or month containing `d`. */
 export function bucketStart(d: Date, unit: BucketUnit): Date {
   if (unit === 'month') return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
   const day = (d.getUTCDay() + 6) % 7;

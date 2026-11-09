@@ -86,16 +86,27 @@ export class ForecastService {
    */
   async stageWinRates(tx: TenantTx, tenantId: string, s: ForecastSettingsInput): Promise<StageWinRate[]> {
     const since = new Date(Date.now() - s.historyMonths * 30.44 * 86_400_000);
-    const counts = await tx.$queryRaw<{ stage_id: string; won: bigint; lost: bigint }[]>`
-      SELECT e.to_stage_id AS stage_id,
-             count(DISTINCT o.id) FILTER (WHERE o.status = 'WON') AS won,
-             count(DISTINCT o.id) FILTER (WHERE o.status = 'LOST') AS lost
-        FROM deal_stage_events e
-        JOIN opportunities o ON o.id = e.opportunity_id
-       WHERE e.tenant_id = ${tenantId}::uuid AND o.tenant_id = ${tenantId}::uuid AND o.deleted_at IS NULL
-         AND o.status IN ('WON', 'LOST') AND o.closed_at >= ${since}
-       GROUP BY e.to_stage_id`;
-    const byStage = new Map(counts.map((c) => [c.stage_id, { won: Number(c.won), lost: Number(c.lost) }]));
+    const closed = await tx.opportunity.findMany({
+      where: { tenantId, deletedAt: null, status: { in: ['WON', 'LOST'] }, closedAt: { gte: since } },
+      select: { id: true, status: true },
+    });
+    const statusOf = new Map(closed.map((o) => [o.id, o.status]));
+    const reached = await tx.dealStageEvent.findMany({
+      where: { tenantId, opportunityId: { in: closed.map((o) => o.id) } },
+      select: { opportunityId: true, toStageId: true },
+    });
+    // A deal counts once per stage it reached, however often it moved there.
+    const byStage = new Map<string, { won: number; lost: number }>();
+    const seen = new Set<string>();
+    for (const e of reached) {
+      const key = `${e.toStageId}:${e.opportunityId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const c = byStage.get(e.toStageId) ?? { won: 0, lost: 0 };
+      if (statusOf.get(e.opportunityId) === 'WON') c.won++;
+      else c.lost++;
+      byStage.set(e.toStageId, c);
+    }
     const stages = await tx.pipelineStage.findMany({
       where: { tenantId, category: 'OPEN' },
       select: { id: true, name: true, probability: true, position: true, pipeline: { select: { name: true } } },

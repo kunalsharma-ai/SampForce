@@ -1,3 +1,4 @@
+import { storeEmail } from './threading';
 import { ConflictException, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { EmailMessage, IntegrationConnection, Meeting, TenantTx } from '@dealflow/database';
@@ -141,8 +142,9 @@ export class CommunicationService {
         contactId = hit?.contactId;
         leadId = hit?.contactId ? undefined : hit?.leadId;
       }
-      const email = await tx.emailMessage.create({
-        data: {
+      const email = (await storeEmail(
+        tx,
+        {
           tenantId: auth.tenantId,
           connectionId: conn.id,
           providerMessageId: result.providerMessageId ?? `dealflow:${randomUUID()}`,
@@ -159,8 +161,8 @@ export class CommunicationService {
           contactId: contactId ?? null,
           leadId: leadId ?? null,
         },
-        include: { connection: { select: { provider: true } } },
-      });
+        { connection: { select: { provider: true } } },
+      ))!;
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: audit.action, entityType: 'email', entityId: email.id,
         metadata: { provider: conn.provider, contactId, leadId, ...audit.metadata }, meta,

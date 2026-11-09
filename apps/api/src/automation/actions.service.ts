@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { Prisma } from '@dealflow/database';
 import { AppError, AppsService } from '../apps/apps.service';
 import { slackEscape } from '../apps/slack';
 import { teamsEscape } from '../apps/teams';
@@ -145,13 +144,16 @@ export class WorkflowActions {
         const person = this.person(entity, id);
         need(person.type === 'lead' ? 'leads:write' : 'contacts:write');
         const score = await this.prisma.run(actor, async (tx) => {
-          const table = Prisma.raw(person.type === 'lead' ? 'leads' : 'contacts');
-          const rows = await tx.$queryRaw<{ engagement_score: number }[]>`
-            UPDATE ${table} SET engagement_score = LEAST(100, GREATEST(0, COALESCE(engagement_score, 0) + ${action.points}::int)), updated_at = now()
-             WHERE id = ${person.id}::uuid AND tenant_id = ${actor.tenantId}::uuid AND deleted_at IS NULL
-         RETURNING engagement_score`;
-          if (!rows.length) throw new ActionError('The lead or contact no longer exists.');
-          return rows[0]!.engagement_score;
+          // Read and write in one transaction: a concurrent change to the same record is a write conflict, retried.
+          const where = { id: person.id, tenantId: actor.tenantId, deletedAt: null };
+          const current = person.type === 'lead'
+            ? await tx.lead.findFirst({ where, select: { engagementScore: true } })
+            : await tx.contact.findFirst({ where, select: { engagementScore: true } });
+          if (!current) throw new ActionError('The lead or contact no longer exists.');
+          const next = Math.min(100, Math.max(0, (current.engagementScore ?? 0) + action.points));
+          if (person.type === 'lead') await tx.lead.update({ where: { id: person.id }, data: { engagementScore: next } });
+          else await tx.contact.update({ where: { id: person.id }, data: { engagementScore: next } });
+          return next;
         });
         return { engagementScore: score, points: action.points };
       }

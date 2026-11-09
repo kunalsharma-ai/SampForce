@@ -1,47 +1,115 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { RetryableDuplicateError } from './duplicates';
+import { currentDbContext, type DbContext, dbContextStorage, workspaceGuard } from './scope';
+
+const ROOT_CLIENT = Symbol('sampforce.rootClient');
+
+export type { DbContext } from './scope';
 
 export type TenantTx = Prisma.TransactionClient;
 
-export interface DbContext {
-  /** Tenant whose rows are visible inside the transaction. */
-  tenantId?: string | null;
-  /** Authenticated user, used by policies that let users see their own memberships. */
-  userId?: string | null;
+function makeClient(url?: string) {
+  const base = new PrismaClient(url ? { datasources: { db: { url } } } : undefined);
+  return base.$extends(workspaceGuard(base));
 }
 
-export function createPrismaClient(url?: string): PrismaClient {
-  return new PrismaClient(url ? { datasources: { db: { url } } } : undefined);
-}
+/** The guarded client type. Its queries follow the workspace rules in scope.ts. */
+export type SampforceClient = ReturnType<typeof makeClient>;
 
 /**
- * Runs `fn` inside a transaction with the row-level-security context set.
+ * Creates the guarded client every part of the API uses. Pass `{ system: true }` to `withDbContext` for owner
+ * access (scripts and test set-up only).
+ */
+export function createPrismaClient(url?: string): SampforceClient {
+  return makeClient(url);
+}
+
+/** Prisma's error for a MongoDB write conflict or transient transaction error, which is safe to retry. */
+function isRetryable(err: unknown): boolean {
+  if (err instanceof RetryableDuplicateError) return true;
+  if (err instanceof Prisma.PrismaClientKnownRequestError) return err.code === 'P2034';
+  const msg = err instanceof Error ? err.message : '';
+  return /WriteConflict|TransientTransactionError|write conflict/i.test(msg);
+}
+
+const MAX_ATTEMPTS = 12;
+
+/**
+ * Runs `fn` inside a MongoDB transaction with the workspace context set.
  *
- * `set_config(..., true)` scopes the settings to the transaction, so a pooled connection
- * can never leak one tenant's context into another request. Every tenant-scoped query in
- * the API must go through this helper; the database role used at runtime has no BYPASSRLS,
- * so a query issued outside it simply sees no tenant rows.
- *
- * `plan_cache_mode = force_custom_plan`: Prisma prepares every statement, and after five runs Postgres may
- * switch to a generic plan that ignores the parameter values. Tenant sizes differ by orders of magnitude, so a
- * generic plan estimates one row per tenant and picks nested loops; the Phase 8 load test measured the pipeline
- * replay query going from 30 ms to 20 s that way. Planning per execution costs well under a millisecond here.
- * `jit = off`: report queries with per-row currency lookups get high cost estimates, which trigger JIT
- * compilation; in the same load test JIT took 390 ms of a 410 ms report. These are short OLTP queries.
+ * The context lives in AsyncLocalStorage for the duration of `fn`, so every query made through the transaction
+ * client (and any helper it calls) is filtered to the context's workspace by the guard in scope.ts. MongoDB does not
+ * wait for locks: two transactions writing the same document make one of them fail with a write conflict at once,
+ * where PostgreSQL would have queued it. Those transactions are retried with a short random back-off, so callers see
+ * the same "eventually one after the other" behaviour as before. `fn` must therefore not have side effects outside
+ * the database that cannot run twice.
  */
 export async function withDbContext<T>(
-  prisma: PrismaClient,
+  prisma: SampforceClient | PrismaClient,
   ctx: DbContext,
   fn: (tx: TenantTx) => Promise<T>,
   options?: { timeoutMs?: number },
 ): Promise<T> {
-  return prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.tenant_id', ${ctx.tenantId ?? ''}, true),
-                                  set_config('app.user_id', ${ctx.userId ?? ''}, true),
-                                  set_config('plan_cache_mode', 'force_custom_plan', true),
-                                  set_config('jit', 'off', true)`;
-      return fn(tx);
-    },
-    { timeout: options?.timeoutMs ?? 10_000 },
-  );
+  const client = prisma as unknown as PrismaClient;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await dbContextStorage.run({ ...ctx, [ROOT_CLIENT]: client } as DbContext, () =>
+        client.$transaction(async (tx) => await fn(tx), { timeout: options?.timeoutMs ?? 10_000, maxWait: 10_000 }),
+      );
+    } catch (err) {
+      if (attempt >= MAX_ATTEMPTS || !isRetryable(err)) throw err;
+      // Exponential back-off with jitter, up to a second: a transaction holding a lock may be waiting on a provider.
+      const ceiling = Math.min(1000, 10 * 2 ** attempt);
+      await new Promise((r) => setTimeout(r, Math.floor(ceiling / 2 + Math.random() * (ceiling / 2))));
+    }
+  }
+}
+
+/** Runs `fn` with the workspace context set but without a transaction (for long read-only scans). */
+export function withDbScope<T>(ctx: DbContext, fn: () => Promise<T>): Promise<T> {
+  // Awaited inside run(): Prisma queries are lazy and would otherwise execute after the context has ended.
+  return dbContextStorage.run({ ...ctx }, async () => await fn());
+}
+
+async function ensureCounter(id: string): Promise<void> {
+  const root = (currentDbContext() as Record<symbol, unknown> | undefined)?.[ROOT_CLIENT] as PrismaClient | undefined;
+  if (!root) throw new Error('counters need withDbContext');
+  // Outside the transaction on purpose: two transactions creating the same counter would otherwise abort with a
+  // duplicate key; created here, the race is harmless.
+  const exists = await root.counter.findUnique({ where: { id }, select: { id: true } });
+  if (exists) return;
+  try {
+    await root.counter.create({ data: { id, value: 0 } });
+  } catch (err) {
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')) throw err;
+  }
+}
+
+/**
+ * Serialises transactions on `key` until the current one ends (was pg_advisory_xact_lock). Writing the lock
+ * document makes a second transaction that writes it fail with a write conflict, and withDbContext retries it
+ * after this one commits.
+ */
+export async function transactionLock(tx: TenantTx, key: string): Promise<void> {
+  await bumpCounter(tx, `lock:${key}`);
+}
+
+/**
+ * Increments a counter inside the transaction. A counter created just now (outside the transaction) is not in the
+ * transaction's snapshot, so the first use of a new counter restarts the transaction once.
+ */
+async function bumpCounter(tx: TenantTx, id: string): Promise<number> {
+  await ensureCounter(id);
+  try {
+    const row = await tx.counter.update({ where: { id }, data: { value: { increment: 1 } } });
+    return row.value;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') throw new RetryableDuplicateError();
+    throw err;
+  }
+}
+
+/** The next value of a named sequence, inside the current transaction (was nextval). Starts at 1. */
+export async function nextSequenceValue(tx: TenantTx, name: string): Promise<number> {
+  return bumpCounter(tx, `seq:${name}`);
 }

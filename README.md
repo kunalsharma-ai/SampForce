@@ -2,7 +2,7 @@
 
 **The Autonomous Revenue Intelligence Platform.** Close Smarter. Grow Faster. Flow Beyond Limits.
 
-AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS, PostgreSQL (row-level security) and
+AI-native sales CRM: a multi-tenant SaaS built with Next.js, NestJS on Express, MongoDB (workspace isolation in the database client) and
 TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enterprise Readiness)**. See
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for exactly what works today and what is next.
 
@@ -10,7 +10,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 
 - Sign up → a workspace is provisioned with five roles, a default sales pipeline and the Free plan
 - Sign in/out, rotating refresh sessions with theft detection, multiple workspaces per user
-- Tenant isolation enforced by PostgreSQL row-level security, with tests
+- Tenant isolation enforced by the database client's workspace guard on every query (ADR 0058), with tests
 - Role-based permissions on every endpoint; append-only audit log with UI
 - Command Center with 15 KPIs computed from live data (formulas shown, no placeholder numbers)
 - Dark/light themes, tenant brand colour, motion controls (system/full/reduced/off), low-power mode
@@ -34,20 +34,18 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 
 ## Quick start
 
-Requirements: Node 26 (LTS), pnpm 10, PostgreSQL 16 (or Docker).
+Requirements: Node 26 (LTS), pnpm 10, MongoDB 7.0 or newer as a replica set (or Docker).
 
 ```bash
 pnpm install
 cp .env.example .env                      # then set JWT_ACCESS_SECRET (openssl rand -base64 48)
 
-# Databases: either use Docker…
-docker compose up -d postgres redis       # runs scripts/db-setup.sh on first start
-# …or a local Postgres superuser:
-PGUSER=postgres pnpm db:setup
+# Databases: either use Docker (a one-member replica set; transactions need one)…
+docker compose up -d mongo redis
+# …or your own MongoDB 7.0+ started with --replSet and initiated (rs.initiate()); set DATABASE_URL in .env.
 
 pnpm build                                # builds packages and generates the Prisma client
-MIGRATION_DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow \
-DATABASE_URL=postgresql://dealflow_owner:dealflow_owner_dev@localhost:5432/dealflow pnpm db:migrate
+pnpm db:setup                             # collections, indexes and plans (idempotent, no migrations)
 pnpm db:seed                              # optional: labelled demo workspace (demo@sampforce.local)
 pnpm dev                                  # web on :3000, API on :4000
 ```
@@ -56,7 +54,7 @@ pnpm dev                                  # web on :3000, API on :4000
 
 ```bash
 pnpm lint && pnpm typecheck
-pnpm test        # unit + API integration (needs the dealflow_test database migrated)
+pnpm test        # unit + API integration (drops and rebuilds sampforce_test on TEST_DATABASE_URL)
 pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 ```
 
@@ -67,12 +65,12 @@ pnpm test:e2e    # Playwright e2e + axe accessibility on production builds
 | `apps/api` | NestJS REST API |
 | `apps/web` | Next.js CRM application |
 | `packages/types` | Zod schemas, permissions, plans, shared types |
-| `packages/database` | Prisma schema, migrations (RLS), tenant-context helper |
+| `packages/database` | Prisma schema (MongoDB), workspace guard, index set-up, tenant-context helper |
 | `packages/ui` | Design tokens, Tailwind preset, accessible components |
 | `packages/config` | Validated environment configuration |
-| `infrastructure/helm/dealflow` | Helm chart (API, worker, web, migrations, autoscaling, policies, alerts) |
+| `infrastructure/helm/dealflow` | Helm chart (API, worker, web, database set-up, autoscaling, policies, alerts) |
 | `deploy/` | Self-hosting on one Linux server: Docker Compose, Caddy HTTPS, settings templates, backup/restore/update scripts ([guide](deploy/SERVER_SETUP.md)) |
-| `scripts/` | Database setup, RLS check, backup, restore, load-test runner |
+| `scripts/` | Backup, restore, load-test runner |
 | `docs/` | PRD, architecture, ERD, AI/automation, security, tests, UI spec, pricing, feature matrix, ADRs, deployment, runbooks |
 
 ## Documentation

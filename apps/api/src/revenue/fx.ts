@@ -9,5 +9,5 @@ export async function loadRates(tx: TenantTx, tenantId: string, asOf = new Date(
     distinct: ['currency'],
     select: { currency: true, rate: true },
   });
-  return new Map(rows.map((r) => [r.currency, r.rate.toNumber()]));
+  return new Map(rows.map((r) => [r.currency, Number(r.rate)]));
 }

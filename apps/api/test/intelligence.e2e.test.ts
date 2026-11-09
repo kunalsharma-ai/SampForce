@@ -77,10 +77,7 @@ describe('sales intelligence', () => {
 
   it('ranks next best actions with reasons, turns one into a task, and remembers dismissals', async () => {
     const lead = (await api(owner).post('/leads', { fullName: 'Nia New', email: 'nia@buyer.test' }).expect(201)).body.lead.id as string;
-    await admin.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.tenant_id', ${owner.tenantId}, true)`;
-      await tx.lead.update({ where: { id: lead }, data: { createdAt: new Date(Date.now() - 3 * DAY) } });
-    });
+    await admin.lead.update({ where: { id: lead }, data: { createdAt: new Date(Date.now() - 3 * DAY) } });
     const overdueTask = (await api(owner).post('/tasks', { title: 'Overdue follow-up', dueAt: new Date(Date.now() - 2 * DAY).toISOString() }).expect(201)).body.id;
 
     const list = (await api(owner).get('/next-actions').expect(200)).body as NextActionList;

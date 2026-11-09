@@ -95,7 +95,7 @@ export class DealsService {
           stage: { id: s.id, name: s.name, position: s.position, probability: s.probability, category: s.category },
           deals: deals.filter((d) => d.stageId === s.id).map((d) => toDealRow(d, owners)),
           total: byStage.get(s.id)?._count._all ?? 0,
-          value: byStage.get(s.id)?._sum.amount?.toNumber() ?? 0,
+          value: byStage.get(s.id)?._sum.amount?? 0,
         })),
       };
     });
@@ -114,7 +114,7 @@ export class DealsService {
         take: 1000,
       });
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-      const max = Math.max(1, ...rows.map((r) => r.amount.toNumber()));
+      const max = Math.max(1, ...rows.map((r) => Number(r.amount)));
       const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
       const ranked = rows.map((r) => {
         const deal = toDealRow(r, owners);
@@ -362,7 +362,7 @@ export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: s
   return {
     id: r.id,
     name: r.name,
-    amount: r.amount.toNumber(),
+    amount: Number(r.amount),
     currency: r.currency,
     probability: r.probability,
     effectiveProbability: r.probability ?? r.stage.probability,

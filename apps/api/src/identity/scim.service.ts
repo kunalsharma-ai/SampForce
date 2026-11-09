@@ -94,13 +94,12 @@ export class ScimService {
     return `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}/api/v1/scim/v2/Users/${id}`;
   }
 
-  /** Resolves the bearer token to its workspace (narrow RLS policy on the token hash), and checks the plan. */
+  /** Resolves the bearer token to its workspace (a lookup on the token hash only), and checks the plan. */
   async authenticate(header: string | undefined): Promise<{ tenantId: string; tokenId: string }> {
     const token = header?.match(/^Bearer\s+(\S+)$/i)?.[1];
     if (!token) throw new ScimError(401, 'Missing bearer token.');
     const hash = hashScimToken(token);
-    const row = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.scim_token_hash', ${hash}, true)`;
+    const row = await this.prisma.run({ lookup: { ScimToken: { tokenHash: hash } } }, async (tx) => {
       return tx.scimToken.findFirst({ where: { tokenHash: hash, revokedAt: null }, select: { id: true, tenantId: true, lastUsedAt: true } });
     });
     if (!row) throw new ScimError(401, 'The token is not valid or has been revoked.');

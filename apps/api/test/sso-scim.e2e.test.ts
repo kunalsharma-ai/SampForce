@@ -85,7 +85,8 @@ describe('single sign-on (OpenID Connect)', () => {
     // Signing in again matches the provider subject, not the email.
     const again = await ssoSignIn(app, slug);
     expect(again.landed).toBe('http://localhost:3000/app');
-    const audit = await asTenant(owner.tenantId, (tx) => tx.auditLog.findMany({ where: { action: 'auth.login', metadata: { path: ['method'], equals: 'sso' } } }));
+    const logins = await asTenant(owner.tenantId, (tx) => tx.auditLog.findMany({ where: { action: 'auth.login' } }));
+    const audit = logins.filter((l) => (l.metadata as { method?: string } | null)?.method === 'sso');
     expect(audit.length).toBeGreaterThanOrEqual(2);
   });
 

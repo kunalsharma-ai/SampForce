@@ -8,10 +8,12 @@
  * 100,000 activities. The workspace owner is load-owner@sampforce.local.
  */
 import { randomUUID } from 'node:crypto';
-import { PrismaClient, provisionTenant, withDbContext } from '@dealflow/database';
+import { createPrismaClient, provisionTenant, type TenantTx, withDbContext } from '@dealflow/database';
 import { PasswordService } from '../src/auth/password.service';
 
 const EMAIL = 'load-owner@sampforce.local';
+const DAY = 86_400_000;
+const BATCH = 5000;
 
 async function main(): Promise<void> {
   if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed load-test data in production.');
@@ -20,7 +22,7 @@ async function main(): Promise<void> {
   const scale = Math.max(0.01, Number(process.env.LOAD_SCALE ?? '1'));
   const n = (base: number) => Math.round(base * scale);
 
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     if (await prisma.user.findUnique({ where: { email: EMAIL } })) {
       console.warn(`${EMAIL} already exists; nothing to do.`);
@@ -28,46 +30,58 @@ async function main(): Promise<void> {
     }
     const tenantId = randomUUID();
     const started = Date.now();
-    await withDbContext(prisma, { tenantId }, async (tx) => {
+    const { userId, pipelineId, stages } = await withDbContext(prisma, { tenantId }, async (tx) => {
       const user = await tx.user.create({ data: { email: EMAIL, name: 'Load Test Owner', passwordHash: await new PasswordService().hash(password) } });
       const { pipeline } = await provisionTenant(tx, { tenantId, name: 'Load Test Workspace', slug: `load-${tenantId.slice(0, 6)}`, ownerUserId: user.id, isDemo: true, planCode: 'enterprise' });
       await tx.subscription.updateMany({ where: { tenantId }, data: { seats: 50 } });
-      const t = tenantId;
-      const p = pipeline.id;
-      const u = user.id;
+      const stages = await tx.pipelineStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { position: 'asc' }, select: { id: true, category: true } });
+      return { userId: user.id, pipelineId: pipeline.id, stages };
+    });
+    const t = tenantId;
+    const u = userId;
+    const now = Date.now();
+    const daysAgo = (d: number) => new Date(now - d * DAY);
+    const pick = <T>(xs: readonly T[], g: number): T => xs[g % xs.length]!;
+    const COUNTRIES = ['IN', 'US', 'GB', 'DE', 'SG', 'AE'] as const;
+    // MongoDB transactions are kept short, so records go in batches, each in its own transaction.
+    const insert = async <R>(label: string, rows: R[], write: (tx: TenantTx, batch: R[]) => Promise<unknown>) => {
+      for (let i = 0; i < rows.length; i += BATCH) await withDbContext(prisma, { tenantId }, (tx) => write(tx, rows.slice(i, i + BATCH)), { timeoutMs: 120_000 });
+      console.warn(`${label}: ${rows.length}`);
+    };
+    const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
 
-      await tx.$executeRaw`INSERT INTO companies (id, tenant_id, name, industry, country, owner_id, updated_at)
-        SELECT gen_random_uuid(), ${t}::uuid, 'Load Company ' || g, (ARRAY['Retail','Healthcare services','Logistics','Market research','Software'])[1 + g % 5],
-               (ARRAY['IN','US','GB','DE','SG','AE'])[1 + g % 6], ${u}::uuid, now()
-        FROM generate_series(1, ${n(5000)}::int) g`;
-      await tx.$executeRaw`INSERT INTO contacts (id, tenant_id, company_id, first_name, last_name, email, country, owner_id, created_at, updated_at)
-        SELECT gen_random_uuid(), ${t}::uuid, c.id, 'Contact' , g::text, 'contact' || g || '@example.com', c.country, ${u}::uuid,
-               now() - (g % 720) * interval '1 day', now()
-        FROM generate_series(1, ${n(25000)}::int) g
-        JOIN (SELECT id, country, row_number() OVER (ORDER BY id) - 1 AS rn FROM companies WHERE tenant_id = ${t}::uuid) c ON c.rn = g % ${n(5000)}::int`;
-      await tx.$executeRaw`INSERT INTO leads (id, tenant_id, full_name, company_name, email, country, source, status, estimated_value, currency, owner_id, created_at, updated_at)
-        SELECT gen_random_uuid(), ${t}::uuid, 'Load Lead ' || g, 'Load Company ' || (1 + g % 5000), 'lead' || g || '@example.com',
-               (ARRAY['IN','US','GB','DE','SG','AE'])[1 + g % 6], (ARRAY['Website','Referral','Event','Outbound'])[1 + g % 4],
-               (ARRAY['NEW','CONTACTED','QUALIFIED','UNQUALIFIED'])[1 + g % 4]::"LeadStatus", (g % 90 + 10) * 1000, 'USD', ${u}::uuid,
-               now() - (g % 540) * interval '1 day', now()
-        FROM generate_series(1, ${n(25000)}::int) g`;
-      await tx.$executeRaw`INSERT INTO opportunities (id, tenant_id, pipeline_id, stage_id, name, amount, currency, status, expected_close_date, closed_at, owner_id, company_id, created_at, updated_at)
-        SELECT gen_random_uuid(), ${t}::uuid, ${p}::uuid, s.id, 'Load Deal ' || g, (g % 200 + 5) * 500, 'USD',
-               CASE s.category WHEN 'WON' THEN 'WON'::"OpportunityStatus" WHEN 'LOST' THEN 'LOST'::"OpportunityStatus" ELSE 'OPEN'::"OpportunityStatus" END,
-               (now() + ((g % 180) - 60) * interval '1 day')::date,
-               CASE WHEN s.category IN ('WON','LOST') THEN now() - (g % 365) * interval '1 day' END,
-               ${u}::uuid, c.id, now() - (g % 400 + 1) * interval '1 day', now()
-        FROM generate_series(1, ${n(20000)}::int) g
-        JOIN (SELECT id, category, row_number() OVER (ORDER BY position) - 1 AS rn, count(*) OVER () AS total FROM pipeline_stages WHERE pipeline_id = ${p}::uuid) s ON s.rn = g % s.total
-        JOIN (SELECT id, row_number() OVER (ORDER BY id) - 1 AS rn FROM companies WHERE tenant_id = ${t}::uuid) c ON c.rn = g % ${n(5000)}::int`;
-      await tx.$executeRaw`INSERT INTO deal_stage_events (id, tenant_id, opportunity_id, pipeline_id, from_stage_id, to_stage_id, actor_user_id, occurred_at)
-        SELECT gen_random_uuid(), o.tenant_id, o.id, o.pipeline_id, NULL, o.stage_id, ${u}::uuid, o.created_at FROM opportunities o WHERE o.tenant_id = ${t}::uuid`;
-      await tx.$executeRaw`INSERT INTO activities (id, tenant_id, type, subject, occurred_at, owner_id, opportunity_id, updated_at)
-        SELECT gen_random_uuid(), ${t}::uuid, (ARRAY['CALL','EMAIL','MEETING','NOTE'])[1 + g % 4]::"ActivityType", 'Load activity ' || g,
-               now() - (g % 365) * interval '1 day', ${u}::uuid, o.id, now()
-        FROM generate_series(1, ${n(100000)}::int) g
-        JOIN (SELECT id, row_number() OVER (ORDER BY id) - 1 AS rn FROM opportunities WHERE tenant_id = ${t}::uuid) o ON o.rn = g % ${n(20000)}::int`;
-    }, { timeoutMs: 30 * 60_000 });
+    const companies = range(n(5000)).map((g) => ({
+      id: randomUUID(), tenantId: t, name: `Load Company ${g}`, industry: pick(['Retail', 'Healthcare services', 'Logistics', 'Market research', 'Software'], g - 1),
+      country: pick(COUNTRIES, g - 1), ownerId: u,
+    }));
+    await insert('companies', companies, (tx, b) => tx.company.createMany({ data: b }));
+    await insert('contacts', range(n(25000)).map((g) => {
+      const c = companies[g % companies.length]!;
+      return { tenantId: t, companyId: c.id, firstName: 'Contact', lastName: String(g), email: `contact${g}@example.com`, country: c.country, ownerId: u, createdAt: daysAgo(g % 720) };
+    }), (tx, b) => tx.contact.createMany({ data: b }));
+    await insert('leads', range(n(25000)).map((g) => ({
+      tenantId: t, fullName: `Load Lead ${g}`, companyName: `Load Company ${1 + (g % 5000)}`, email: `lead${g}@example.com`, country: pick(COUNTRIES, g),
+      source: pick(['Website', 'Referral', 'Event', 'Outbound'], g), status: pick(['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED'] as const, g),
+      estimatedValue: ((g % 90) + 10) * 1000, currency: 'USD', ownerId: u, createdAt: daysAgo(g % 540),
+    })), (tx, b) => tx.lead.createMany({ data: b }));
+    const deals = range(n(20000)).map((g) => {
+      const s = stages[g % stages.length]!;
+      const closed = s.category === 'WON' || s.category === 'LOST';
+      const close = daysAgo(60 - (g % 180));
+      return {
+        id: randomUUID(), tenantId: t, pipelineId, stageId: s.id, name: `Load Deal ${g}`, amount: ((g % 200) + 5) * 500, currency: 'USD',
+        status: (s.category === 'WON' ? 'WON' : s.category === 'LOST' ? 'LOST' : 'OPEN') as 'WON' | 'LOST' | 'OPEN',
+        expectedCloseDate: new Date(Date.UTC(close.getUTCFullYear(), close.getUTCMonth(), close.getUTCDate())),
+        closedAt: closed ? daysAgo(g % 365) : null, ownerId: u, companyId: companies[g % companies.length]!.id, createdAt: daysAgo((g % 400) + 1),
+      };
+    });
+    await insert('deals', deals, (tx, b) => tx.opportunity.createMany({ data: b }));
+    await insert('stage history', deals.map((d) => ({ tenantId: t, opportunityId: d.id, pipelineId, fromStageId: null, toStageId: d.stageId, actorUserId: u, occurredAt: d.createdAt })),
+      (tx, b) => tx.dealStageEvent.createMany({ data: b }));
+    await insert('activities', range(n(100000)).map((g) => ({
+      tenantId: t, type: pick(['CALL', 'EMAIL', 'MEETING', 'NOTE'] as const, g), subject: `Load activity ${g}`, occurredAt: daysAgo(g % 365), ownerId: u,
+      opportunityId: deals[g % deals.length]!.id,
+    })), (tx, b) => tx.activity.createMany({ data: b }));
     console.warn(`Load Test Workspace ${tenantId} seeded at scale ${scale} in ${Math.round((Date.now() - started) / 1000)}s. Owner: ${EMAIL}`);
   } finally {
     await prisma.$disconnect();

@@ -192,8 +192,8 @@ export class AgentsService {
           )
         : null;
       const quoteFacts = quote && {
-        status: quote.status, currency: quote.currency, subtotal: quote.subtotal.toNumber(), discountTotal: quote.discountTotal.toNumber(), taxTotal: quote.taxTotal.toNumber(), total: quote.total.toNumber(),
-        lines: quote.lines.map((l) => ({ product: l.name, quantity: l.quantity.toNumber(), unitPrice: l.unitPrice.toNumber(), discountPercent: l.discountPercent.toNumber(), net: l.netTotal.toNumber() })),
+        status: quote.status, currency: quote.currency, subtotal: Number(quote.subtotal), discountTotal: Number(quote.discountTotal), taxTotal: Number(quote.taxTotal), total: Number(quote.total),
+        lines: quote.lines.map((l) => ({ product: l.name, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), discountPercent: Number(l.discountPercent), net: Number(l.netTotal) })),
       };
       const out = await this.structured(auth, run, 'proposal_draft', 'proposalDraft', proposalSchema, { deal: deal.facts, company, contact, quote: quoteFacts });
       const rec = await this.saveRec(auth, run.id, 'proposal_draft', 'proposal_draft', 'deal', dealId, out, PROMPTS.proposalDraft.version, meta);

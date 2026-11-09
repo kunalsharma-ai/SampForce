@@ -1,7 +1,7 @@
 /**
  * Re-seals every stored secret with the current ENCRYPTION_KEY after a key rotation.
  *
- *   ENCRYPTION_KEY=<new> ENCRYPTION_KEY_PREVIOUS=<old> DATABASE_URL=<runtime role> \
+ *   ENCRYPTION_KEY=<new> ENCRYPTION_KEY_PREVIOUS=<old> DATABASE_URL=<mongodb url> \
  *     node -r @swc-node/register scripts/reseal-secrets.ts [--dry-run] [--only=platform_secrets,webhooks]
  *   (production image: node dist/cli/reseal-secrets.js with the same flags)
  *
@@ -10,16 +10,22 @@
  * sealed with the new key are left alone, so the script can be re-run safely. It stops on the first value that
  * opens with neither key and prints where it is; nothing is overwritten in that case.
  */
-import { PrismaClient, withDbContext } from '@dealflow/database';
+import { createPrismaClient, type TenantTx, withDbContext, withDbScope } from '@dealflow/database';
 import { SecretBox } from '../common/crypto';
 
 const TENANT_COLUMNS = [
-  { table: 'sso_connections', column: 'client_secret_enc' },
-  { table: 'webhooks', column: 'secret_encrypted' },
-  { table: 'integration_connections', column: 'credentials_encrypted' },
+  { table: 'sso_connections', model: 'ssoConnection', column: 'client_secret_enc', field: 'clientSecretEnc' },
+  { table: 'webhooks', model: 'webhook', column: 'secret_encrypted', field: 'secretEncrypted' },
+  { table: 'integration_connections', model: 'integrationConnection', column: 'credentials_encrypted', field: 'credentialsEncrypted' },
   // Workspace apps (Slack, Zoom, DocuSign, Teams, card payments, WhatsApp, Twilio).
-  { table: 'app_connections', column: 'credentials_encrypted' },
+  { table: 'app_connections', model: 'appConnection', column: 'credentials_encrypted', field: 'credentialsEncrypted' },
 ] as const;
+
+/** The few delegate methods used here, for any of the models above. */
+interface SecretDelegate {
+  findMany(args: object): Promise<Array<Record<string, string | null> & { id: string }>>;
+  updateMany(args: object): Promise<{ count: number }>;
+}
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
@@ -29,7 +35,7 @@ async function main(): Promise<void> {
   if (!process.env.ENCRYPTION_KEY) throw new Error('Set ENCRYPTION_KEY (the new key).');
   if (!process.env.ENCRYPTION_KEY_PREVIOUS) throw new Error('Set ENCRYPTION_KEY_PREVIOUS (the key being retired).');
   const box = new SecretBox({ ENCRYPTION_KEY: process.env.ENCRYPTION_KEY, ENCRYPTION_KEY_PREVIOUS: process.env.ENCRYPTION_KEY_PREVIOUS, JWT_ACCESS_SECRET: '' });
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   const counts: Record<string, { checked: number; resealed: number }> = {};
   const count = (k: string, resealed: boolean) => {
     counts[k] ??= { checked: 0, resealed: 0 };
@@ -44,34 +50,35 @@ async function main(): Promise<void> {
     }
   };
   try {
-    // users has no tenant column; the runtime role reads it directly.
-    const users = want('users') ? await prisma.$queryRaw<{ id: string; v: string }[]>`SELECT id::text, mfa_secret_enc AS v FROM users WHERE mfa_secret_enc IS NOT NULL` : [];
+    // users has no workspace; the guard lets the script read it directly. Each update only matches the value read,
+    // so a concurrent change is never overwritten.
+    const users = want('users') ? await prisma.user.findMany({ where: { mfaSecretEnc: { not: null } }, select: { id: true, mfaSecretEnc: true } }) : [];
     for (const u of users) {
-      const next = reseal(`users.mfa_secret_enc (${u.id})`, u.v);
+      const next = reseal(`users.mfa_secret_enc (${u.id})`, u.mfaSecretEnc!);
       count('users.mfa_secret_enc', !!next);
-      if (next && !dryRun) await prisma.$executeRaw`UPDATE users SET mfa_secret_enc = ${next} WHERE id = ${u.id}::uuid AND mfa_secret_enc = ${u.v}`;
+      if (next && !dryRun) await prisma.user.updateMany({ where: { id: u.id, mfaSecretEnc: u.mfaSecretEnc }, data: { mfaSecretEnc: next } });
     }
-    // Provider keys from the operator console (ADR 0051): deployment-wide, no tenant column.
-    const keys = want('platform_secrets') ? await prisma.$queryRaw<{ name: string; v: string }[]>`SELECT name, value_enc AS v FROM platform_secrets` : [];
+    // Provider keys from the operator console (ADR 0051): deployment-wide, no workspace.
+    const keys = want('platform_secrets') ? await prisma.platformSecret.findMany({ select: { name: true, valueEnc: true } }) : [];
     for (const k of keys) {
-      const next = reseal(`platform_secrets.value_enc (${k.name})`, k.v);
+      const next = reseal(`platform_secrets.value_enc (${k.name})`, k.valueEnc);
       count('platform_secrets.value_enc', !!next);
-      if (next && !dryRun) await prisma.$executeRaw`UPDATE platform_secrets SET value_enc = ${next} WHERE name = ${k.name} AND value_enc = ${k.v}`;
+      if (next && !dryRun) await prisma.platformSecret.updateMany({ where: { name: k.name, valueEnc: k.valueEnc }, data: { valueEnc: next } });
     }
-    // Tenant tables force row-level security, so each tenant is handled inside its own context.
+    // Workspace collections are only reachable inside a workspace context, so each workspace is handled in its own.
     const tenantColumns = TENANT_COLUMNS.filter((c) => want(c.table));
-    const tenants = !tenantColumns.length ? [] : await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.operator_scan', 'on', true)`;
-      return tx.$queryRaw<{ id: string }[]>`SELECT id::text FROM tenants`;
-    });
+    const tenants = !tenantColumns.length ? [] : await withDbScope({ operatorScan: true }, () => prisma.tenant.findMany({ select: { id: true } }));
     for (const t of tenants) {
-      await withDbContext(prisma, { tenantId: t.id }, async (tx) => {
-        for (const { table, column } of tenantColumns) {
-          const rows = await tx.$queryRawUnsafe<{ id: string; v: string }[]>(`SELECT id::text, ${column} AS v FROM ${table} WHERE tenant_id = $1::uuid AND ${column} IS NOT NULL`, t.id);
+      await withDbContext(prisma, { tenantId: t.id }, async (tx: TenantTx) => {
+        for (const { table, model, column, field } of tenantColumns) {
+          const delegate = (tx as unknown as Record<string, SecretDelegate>)[model]!;
+          const rows = await delegate.findMany({ where: { tenantId: t.id }, select: { id: true, [field]: true } });
           for (const r of rows) {
-            const next = reseal(`${table}.${column} (${r.id})`, r.v);
+            const v = r[field];
+            if (!v) continue;
+            const next = reseal(`${table}.${column} (${r.id})`, v);
             count(`${table}.${column}`, !!next);
-            if (next && !dryRun) await tx.$executeRawUnsafe(`UPDATE ${table} SET ${column} = $1 WHERE id = $2::uuid AND ${column} = $3`, next, r.id, r.v);
+            if (next && !dryRun) await delegate.updateMany({ where: { id: r.id, [field]: v }, data: { [field]: next } });
           }
         }
       });

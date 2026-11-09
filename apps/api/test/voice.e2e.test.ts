@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { Prisma } from '@dealflow/database';
 import type { VoiceNote } from '@dealflow/types';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -143,8 +144,11 @@ describe('voice to CRM', () => {
     const auto = await note(undefined, null);
     await u.agent.post(`/api/v1/voice-notes/${auto.id}/recording?consent=true`).set('origin', 'http://localhost:3000').set('content-type', 'audio/webm').send(Buffer.alloc(100, 1)).expect(200);
     expect(dg.requests.at(-1)!.query).toContain('detect_language=true');
-    const cols = await asTenant(u.tenantId, (tx) => tx.$queryRaw<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_name = 'voice_notes'`);
-    expect(cols.map((c) => c.column_name).some((c) => /audio|blob|data/.test(c))).toBe(false);
+    // No field of a stored voice note can hold audio.
+    const fields = Prisma.dmmf.datamodel.models.find((m) => m.name === 'VoiceNote')!.fields.map((f) => f.dbName ?? f.name);
+    expect(fields.some((c) => /audio|blob|data/.test(c))).toBe(false);
+    const stored = await asTenant(u.tenantId, (tx) => tx.voiceNote.findFirstOrThrow({ where: { id: auto.id } }));
+    expect(Object.keys(stored).some((c) => /audio|blob|data/i.test(c))).toBe(false);
   });
 
   it('keeps voice notes personal and checks each permission', async () => {

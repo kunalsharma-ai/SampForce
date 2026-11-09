@@ -7,11 +7,10 @@
 #   .env          secrets and server settings that compose fills into this file (DOMAIN, passwords, keys)
 #   sampforce.env optional application settings, passed as-is to the API and the worker
 #
-# Only Caddy publishes ports (80 and 443). Postgres, the API, the worker and the web server are reachable only
+# Only Caddy publishes ports (80 and 443). MongoDB, the API, the worker and the web server are reachable only
 # on the internal network. Caddy obtains and renews the TLS certificate for DOMAIN from Let's Encrypt.
 
-# The compose project keeps its original name: it names the database volume, so renaming it would start an
-# existing install on an empty database.
+# The compose project keeps its original name: it names the volumes, so renaming it would orphan them.
 name: dealflow
 
 x-hardened: &hardened
@@ -28,7 +27,7 @@ x-hardened: &hardened
 # override these by accident.
 x-app-env: &app-env
   NODE_ENV: production
-  DATABASE_URL: postgresql://dealflow_app:${DEALFLOW_APP_PASSWORD:?run scripts/generate-secrets.sh}@postgres:5432/dealflow?connection_limit=${DB_CONNECTION_LIMIT:-10}
+  DATABASE_URL: mongodb://sampforce_app:${SAMPFORCE_APP_PASSWORD:?run scripts/generate-secrets.sh}@mongo:27017/${SAMPFORCE_DB:-sampforce}?replicaSet=rs0&authSource=admin&maxPoolSize=${DB_CONNECTION_LIMIT:-10}
   JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run scripts/generate-secrets.sh}
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run scripts/generate-secrets.sh}
   OPERATOR_JWT_SECRET: ${OPERATOR_JWT_SECRET:?run scripts/generate-secrets.sh}
@@ -38,30 +37,38 @@ x-app-env: &app-env
   METRICS_PORT: '9464'
 
 services:
-  postgres:
-    image: postgres:16-bookworm
+  # MongoDB 7.0 (see docs/DATABASE.md for why not 8), a one-member replica set with authentication (see mongo/start.sh and mongo/healthcheck.sh).
+  mongo:
+    image: mongo:7.0
     restart: unless-stopped
-    shm_size: 256mb
+    entrypoint: ['bash', '/sampforce/start.sh']
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/generate-secrets.sh}
-      # Read once, on the very first start, by postgres/init-sampforce.sh (roles and the dealflow database).
-      DEALFLOW_OWNER_PASSWORD: ${DEALFLOW_OWNER_PASSWORD:?run scripts/generate-secrets.sh}
-      DEALFLOW_APP_PASSWORD: ${DEALFLOW_APP_PASSWORD:?run scripts/generate-secrets.sh}
-      DEALFLOW_BACKUP_PASSWORD: ${DEALFLOW_BACKUP_PASSWORD:?run scripts/generate-secrets.sh}
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?run scripts/generate-secrets.sh}
+      # Read once, on the very first start, by mongo/init-sampforce.js (the three SampForce users).
+      SAMPFORCE_DB: ${SAMPFORCE_DB:-sampforce}
+      SAMPFORCE_APP_PASSWORD: ${SAMPFORCE_APP_PASSWORD:?run scripts/generate-secrets.sh}
+      SAMPFORCE_ADMIN_PASSWORD: ${SAMPFORCE_ADMIN_PASSWORD:?run scripts/generate-secrets.sh}
+      SAMPFORCE_BACKUP_PASSWORD: ${SAMPFORCE_BACKUP_PASSWORD:?run scripts/generate-secrets.sh}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ../scripts/db-setup.sh:/sampforce/db-setup.sh:ro
-      - ./postgres/init-sampforce.sh:/docker-entrypoint-initdb.d/10-sampforce.sh:ro
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
+      - ./mongo/start.sh:/sampforce/start.sh:ro
+      - ./mongo/healthcheck.sh:/sampforce/healthcheck.sh:ro
+      - ./mongo/keyfile:/sampforce/keyfile:ro
+      - ./mongo/init-sampforce.js:/docker-entrypoint-initdb.d/10-sampforce.js:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d dealflow']
+      test: ['CMD', 'bash', '/sampforce/healthcheck.sh']
       interval: 5s
-      timeout: 3s
-      retries: 20
+      timeout: 10s
+      retries: 30
+      start_period: 20s
     logging:
       driver: json-file
       options: { max-size: 10m, max-file: '5' }
 
-  # Applies pending schema migrations, then exits. The API and the worker wait for it to succeed.
+  # Creates collections and indexes and seeds the plan catalogue, then exits (idempotent). The API and the worker
+  # wait for it to succeed.
   migrate:
     <<: *hardened
     image: ${SAMPFORCE_MIGRATE_IMAGE:-sampforce-migrate:local}
@@ -69,10 +76,10 @@ services:
     restart: 'no'
     user: '1000:1000'
     environment:
-      DATABASE_URL: postgresql://dealflow_owner:${DEALFLOW_OWNER_PASSWORD}@postgres:5432/dealflow
-      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:${DEALFLOW_OWNER_PASSWORD}@postgres:5432/dealflow
+      NODE_ENV: production
+      DATABASE_URL: mongodb://sampforce_admin:${SAMPFORCE_ADMIN_PASSWORD}@mongo:27017/${SAMPFORCE_DB:-sampforce}?replicaSet=rs0&authSource=admin
     depends_on:
-      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
 
   api:
     <<: *hardened
@@ -145,25 +152,28 @@ services:
       driver: json-file
       options: { max-size: 10m, max-file: '5' }
 
-  # Not started by `up`. scripts/backup.sh and scripts/restore.sh run it on demand.
+  # Not started by `up`. scripts/backup.sh and scripts/restore.sh run it on demand (mongodump and mongorestore).
   backup:
-    image: postgres:16-bookworm
+    image: mongo:7.0
     profiles: [tools]
     restart: 'no'
     # Runs as the user who called scripts/backup.sh, so that user owns (and can copy off-site) the backup files.
     user: '${BACKUP_UID:-0}:${BACKUP_GID:-0}'
     environment:
-      BACKUP_DATABASE_URL: postgresql://dealflow_backup:${DEALFLOW_BACKUP_PASSWORD}@postgres:5432/dealflow
-      RESTORE_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      HOME: /tmp
+      SAMPFORCE_DB: ${SAMPFORCE_DB:-sampforce}
+      BACKUP_DATABASE_URL: mongodb://sampforce_backup:${SAMPFORCE_BACKUP_PASSWORD}@mongo:27017/?replicaSet=rs0&authSource=admin
+      RESTORE_ADMIN_URL: mongodb://root:${MONGO_ROOT_PASSWORD}@mongo:27017/?replicaSet=rs0&authSource=admin
     volumes:
       - ../scripts:/sampforce/scripts:ro
       - ${BACKUP_DIR:-./backups}:/backups
     # umask 077: backups contain every workspace's data, so only their owner may read them.
     entrypoint: ['bash', '-c', 'umask 077 && exec bash /sampforce/scripts/backup.sh /backups']
     depends_on:
-      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
 
 volumes:
-  pgdata:
+  mongodata:
+  mongoconfig:
   caddy_data:
   caddy_config:

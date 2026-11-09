@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
-import { type AppConnection, type AppProvider, Prisma, type TenantTx } from '@dealflow/database';
+import { type AppConnection, type AppProvider, Prisma, type TenantTx, transactionLock } from '@dealflow/database';
 import { APP_FEATURES, APP_KEYS, type AppEventRow, type AppKey, type AppStatus, type SlackChannel, type SlackSettings, type TeamsAddChannelInput, type TeamsChannel, type TeamsSettings } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -367,7 +367,7 @@ export class AppsService {
   /** Sets or clears one channel's error; the app shows Needs attention while any channel has one. */
   private async markTeamsChannel(tenantId: string, connectionId: string, channelId: string, error: string | null): Promise<void> {
     await this.prisma.run({ tenantId }, async (tx) => {
-      await tx.$executeRaw`SELECT 1 FROM app_connections WHERE id = ${connectionId}::uuid FOR UPDATE`;
+      await transactionLock(tx, `app_connection:${connectionId}`);
       const conn = await tx.appConnection.findUnique({ where: { id: connectionId } });
       if (!conn) return;
       const s = teamsSettings(conn);
@@ -426,7 +426,7 @@ export class AppsService {
           ok: e.ok,
           externalId: e.externalId,
           summary: e.summary.slice(0, 500),
-          detail: (e.detail ?? Prisma.DbNull) as Prisma.InputJsonValue,
+          detail: (e.detail ?? null) as Prisma.InputJsonValue,
           entityType: e.entityType ?? null,
           entityId: e.entityId ?? null,
           actorUserId: e.actorUserId,

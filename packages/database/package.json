@@ -10,8 +10,7 @@
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "echo 'database package is exercised by the API integration suite'",
-    "migrate:deploy": "prisma migrate deploy",
-    "migrate:status": "prisma migrate status"
+    "db:setup": "node dist/setup-cli.js"
   },
   "dependencies": {
     "@dealflow/types": "workspace:*",

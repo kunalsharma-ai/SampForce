@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
-import { Prisma, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, Prisma, type Sequence, type SequenceEnrollment, type TenantTx } from '@dealflow/database';
 import {
   ENROLLMENT_FINISHED,
   type EnrollInput,
@@ -235,12 +235,22 @@ export class SequencesService {
   stepStats(auth: AuthContext, id: string): Promise<SequenceStepStats[]> {
     return this.prisma.run(auth, async (tx) => {
       const s = await this.find(tx, auth.tenantId, id);
-      const rows = await tx.$queryRaw<{ step_id: string; variant: string; sent: bigint; replied: bigint; opened: bigint; clicked: bigint; bounced: bigint }[]>`
-        SELECT m.step_id, m.variant, count(*) AS sent, count(m.replied_at) AS replied, count(m.opened_at) AS opened,
-               count(m.clicked_at) AS clicked, count(m.bounced_at) AS bounced
-        FROM sequence_messages m JOIN sequence_enrollments e ON e.id = m.enrollment_id
-        WHERE e.sequence_id = ${s.id}::uuid AND m.tenant_id = ${auth.tenantId}::uuid
-        GROUP BY m.step_id, m.variant`;
+      const msgs = await tx.sequenceMessage.findMany({
+        where: { tenantId: auth.tenantId, enrollment: { sequenceId: s.id } },
+        select: { stepId: true, variant: true, repliedAt: true, openedAt: true, clickedAt: true, bouncedAt: true },
+      });
+      const grouped = new Map<string, { step_id: string; variant: string; sent: number; replied: number; opened: number; clicked: number; bounced: number }>();
+      for (const m of msgs) {
+        const k = `${m.stepId}:${m.variant}`;
+        let r = grouped.get(k);
+        if (!r) grouped.set(k, (r = { step_id: m.stepId, variant: m.variant, sent: 0, replied: 0, opened: 0, clicked: 0, bounced: 0 }));
+        r.sent++;
+        if (m.repliedAt) r.replied++;
+        if (m.openedAt) r.opened++;
+        if (m.clickedAt) r.clicked++;
+        if (m.bouncedAt) r.bounced++;
+      }
+      const rows = [...grouped.values()];
       const counts = (r?: (typeof rows)[number]): EmailCounts => ({ sent: Number(r?.sent ?? 0), replied: Number(r?.replied ?? 0), opened: Number(r?.opened ?? 0), clicked: Number(r?.clicked ?? 0), bounced: Number(r?.bounced ?? 0) });
       return seqSteps(s)
         .filter((st) => st.type === 'email')
@@ -270,7 +280,7 @@ export class SequencesService {
   addSuppressions(auth: AuthContext, emails: string[], meta: RequestMeta): Promise<{ added: number }> {
     return this.prisma.run(auth, async (tx) => {
       const unique = [...new Set(emails)];
-      const r = await tx.emailSuppression.createMany({ data: unique.map((email) => ({ tenantId: auth.tenantId, email, reason: 'MANUAL' as const, createdById: auth.userId })), skipDuplicates: true });
+      const r = await createManySkipDuplicates(tx.emailSuppression, 'EmailSuppression', unique.map((email) => ({ tenantId: auth.tenantId, email, reason: 'MANUAL' as const, createdById: auth.userId })));
       await tx.sequenceEnrollment.updateMany({
         where: { tenantId: auth.tenantId, email: { in: unique }, status: { in: ['ACTIVE', 'PAUSED'] } },
         data: { status: 'STOPPED', finishedAt: new Date(), nextRunAt: null, lastError: 'Added to the do-not-email list.' },
@@ -347,16 +357,39 @@ export class SequencesService {
     const names = await ownerRefs(tx, rows.map((r) => r.ownerId));
     const stats = new Map<string, SequenceStats>();
     if (ids.length) {
-      const counts = await tx.$queryRaw<{ sequence_id: string; active: bigint; finished: bigint }[]>`
-        SELECT sequence_id, count(*) FILTER (WHERE status IN ('ACTIVE','PAUSED')) AS active,
-               count(*) FILTER (WHERE status NOT IN ('ACTIVE','PAUSED')) AS finished
-        FROM sequence_enrollments WHERE tenant_id = ${tenantId}::uuid AND sequence_id = ANY(${ids}::uuid[]) GROUP BY sequence_id`;
-      const msgs = await tx.$queryRaw<{ sequence_id: string; sent: bigint; replied: bigint; opened: bigint; clicked: bigint; bounced: bigint; unsubscribed: bigint }[]>`
-        SELECT e.sequence_id, count(m.id) AS sent, count(m.replied_at) AS replied, count(m.opened_at) AS opened,
-               count(m.clicked_at) AS clicked, count(m.bounced_at) AS bounced,
-               count(DISTINCT e.id) FILTER (WHERE e.status = 'UNSUBSCRIBED') AS unsubscribed
-        FROM sequence_enrollments e JOIN sequence_messages m ON m.enrollment_id = e.id
-        WHERE e.tenant_id = ${tenantId}::uuid AND e.sequence_id = ANY(${ids}::uuid[]) GROUP BY e.sequence_id`;
+      const enrollments = await tx.sequenceEnrollment.findMany({
+        where: { tenantId, sequenceId: { in: ids } },
+        select: { id: true, sequenceId: true, status: true },
+      });
+      const counts: Array<{ sequence_id: string; active: number; finished: number }> = ids.map((id) => ({ sequence_id: id, active: 0, finished: 0 }));
+      const statusOf = new Map<string, { sequenceId: string; status: string }>();
+      for (const e of enrollments) {
+        statusOf.set(e.id, e);
+        const c = counts.find((x) => x.sequence_id === e.sequenceId)!;
+        if (e.status === 'ACTIVE' || e.status === 'PAUSED') c.active++;
+        else c.finished++;
+      }
+      const sentRows = enrollments.length
+        ? await tx.sequenceMessage.findMany({
+            where: { tenantId, enrollmentId: { in: enrollments.map((e) => e.id) } },
+            select: { enrollmentId: true, repliedAt: true, openedAt: true, clickedAt: true, bouncedAt: true },
+          })
+        : [];
+      const msgs = ids.map((id) => ({ sequence_id: id, sent: 0, replied: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0 }));
+      const unsubscribed = new Set<string>();
+      for (const m of sentRows) {
+        const e = statusOf.get(m.enrollmentId)!;
+        const r = msgs.find((x) => x.sequence_id === e.sequenceId)!;
+        r.sent++;
+        if (m.repliedAt) r.replied++;
+        if (m.openedAt) r.opened++;
+        if (m.clickedAt) r.clicked++;
+        if (m.bouncedAt) r.bounced++;
+        if (e.status === 'UNSUBSCRIBED' && !unsubscribed.has(m.enrollmentId)) {
+          unsubscribed.add(m.enrollmentId);
+          r.unsubscribed++;
+        }
+      }
       for (const id of ids) {
         const c = counts.find((r) => r.sequence_id === id);
         const m = msgs.find((r) => r.sequence_id === id);

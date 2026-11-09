@@ -63,7 +63,7 @@ export class TemplatesService {
     return this.prisma.run(auth, async (tx) => {
       const t = await this.visible(tx, auth, id);
       const copy = await tx.emailTemplate.create({
-        data: { tenantId: auth.tenantId, ownerId: auth.userId, name: `${t.name} (copy)`.slice(0, 120), subject: t.subject, body: t.body, design: t.design ?? Prisma.DbNull, category: t.category, campaignId: t.campaignId, shared: false },
+        data: { tenantId: auth.tenantId, ownerId: auth.userId, name: `${t.name} (copy)`.slice(0, 120), subject: t.subject, body: t.body, design: t.design ?? null, category: t.category, campaignId: t.campaignId, shared: false },
       });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'email_template.created', entityType: 'email_template', entityId: copy.id, metadata: { name: copy.name, copiedFrom: t.id }, meta });
       return (await this.rows(tx, auth.tenantId, [copy]))[0]!;
@@ -176,7 +176,7 @@ function stored(input: EmailTemplateInput) {
   return {
     ...input,
     body: input.design ? designedTemplateBody(input.design) : input.body,
-    design: input.design ? (input.design as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+    design: input.design ? (input.design as unknown as Prisma.InputJsonValue) : null,
   };
 }
 

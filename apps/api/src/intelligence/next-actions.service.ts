@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import type { TenantTx } from '@dealflow/database';
 import {
   type DealHealth,
   formatReference,
@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { percentileCont } from '../common/stats';
 import { localize, tr } from '../common/request-language';
 import { TasksService } from '../crm/tasks.service';
 
@@ -138,21 +139,44 @@ export class NextActionsService {
   private outcomes(auth: AuthContext, now: Date): Promise<NonNullable<NextActionList['outcomes']>> {
     return this.prisma.run(auth, async (tx) => {
       const since = new Date(now.getTime() - 30 * DAY);
-      const rows = await tx.$queryRaw<{ accepted: number; done: number; engaged: number; dismissed: number }[]>`
-        SELECT count(*) FILTER (WHERE d.decision = 'accepted')::int AS accepted,
-               count(*) FILTER (WHERE d.decision = 'accepted' AND t.status = 'DONE')::int AS done,
-               count(*) FILTER (WHERE d.decision = 'accepted' AND (
-                 EXISTS (SELECT 1 FROM activities a WHERE a.deleted_at IS NULL AND a.created_at > d.created_at
-                          AND ((d.record_type = 'deal' AND a.opportunity_id = d.record_id) OR (d.record_type = 'lead' AND a.lead_id = d.record_id)
-                            OR (d.record_type = 'contact' AND a.contact_id = d.record_id) OR (d.record_type = 'company' AND a.company_id = d.record_id)))
-                 OR EXISTS (SELECT 1 FROM email_messages m WHERE m.direction = 'INBOUND' AND m.sent_at > d.created_at
-                          AND ((d.record_type = 'lead' AND m.lead_id = d.record_id) OR (d.record_type = 'contact' AND m.contact_id = d.record_id)))
-                 OR EXISTS (SELECT 1 FROM deal_stage_events e WHERE d.record_type = 'deal' AND e.opportunity_id = d.record_id AND e.occurred_at > d.created_at)
-               ))::int AS engaged,
-               count(*) FILTER (WHERE d.decision <> 'accepted')::int AS dismissed
-          FROM next_action_decisions d LEFT JOIN tasks t ON t.id = d.task_id
-         WHERE d.tenant_id = ${auth.tenantId}::uuid AND d.user_id = ${auth.userId}::uuid AND d.created_at >= ${since}`;
-      const r = rows[0]!;
+      const decisions = await tx.nextActionDecision.findMany({
+        where: { tenantId: auth.tenantId, userId: auth.userId, createdAt: { gte: since } },
+        select: { decision: true, recordType: true, recordId: true, taskId: true, createdAt: true },
+      });
+      const accepted = decisions.filter((d) => d.decision === 'accepted');
+      const taskIds = accepted.flatMap((d) => (d.taskId ? [d.taskId] : []));
+      const ids = (type: string) => accepted.filter((d) => d.recordType === type).map((d) => d.recordId);
+      const activityField = { deal: 'opportunityId', lead: 'leadId', contact: 'contactId', company: 'companyId' } as const;
+      const [doneTasks, acts, mails, moves] = await Promise.all([
+        taskIds.length ? tx.task.findMany({ where: { tenantId: auth.tenantId, id: { in: taskIds }, status: 'DONE' }, select: { id: true } }) : [],
+        accepted.length
+          ? tx.activity.findMany({
+              where: { tenantId: auth.tenantId, deletedAt: null, createdAt: { gt: since }, OR: Object.entries(activityField).map(([type, field]) => ({ [field]: { in: ids(type) } })) },
+              select: { createdAt: true, opportunityId: true, leadId: true, contactId: true, companyId: true },
+            })
+          : [],
+        accepted.length
+          ? tx.emailMessage.findMany({
+              where: { tenantId: auth.tenantId, direction: 'INBOUND', sentAt: { gt: since }, OR: [{ leadId: { in: ids('lead') } }, { contactId: { in: ids('contact') } }] },
+              select: { sentAt: true, leadId: true, contactId: true },
+            })
+          : [],
+        accepted.length ? tx.dealStageEvent.findMany({ where: { tenantId: auth.tenantId, opportunityId: { in: ids('deal') }, occurredAt: { gt: since } }, select: { opportunityId: true, occurredAt: true } }) : [],
+      ]);
+      const done = new Set(doneTasks.map((t) => t.id));
+      const engagedAfter = (d: (typeof accepted)[number]): boolean => {
+        const field = activityField[d.recordType as keyof typeof activityField];
+        if (field && acts.some((a) => a[field] === d.recordId && a.createdAt > d.createdAt)) return true;
+        if (d.recordType === 'lead' && mails.some((m) => m.leadId === d.recordId && m.sentAt > d.createdAt)) return true;
+        if (d.recordType === 'contact' && mails.some((m) => m.contactId === d.recordId && m.sentAt > d.createdAt)) return true;
+        return d.recordType === 'deal' && moves.some((e) => e.opportunityId === d.recordId && e.occurredAt > d.createdAt);
+      };
+      const r = {
+        accepted: accepted.length,
+        done: accepted.filter((d) => d.taskId && done.has(d.taskId)).length,
+        engaged: accepted.filter(engagedAfter).length,
+        dismissed: decisions.length - accepted.length,
+      };
       return { accepted30: r.accepted, tasksDone: r.done, engaged: r.engaged, dismissed30: r.dismissed };
     });
   }
@@ -232,9 +256,12 @@ export class NextActionsService {
       const today = ymd(now);
       // Top quarter of open deal amounts, per currency, across the workspace.
       const bigByCurrency = new Map(
-        (await tx.$queryRaw<{ currency: string; p75: number }[]>`
-          SELECT currency, percentile_cont(0.75) WITHIN GROUP (ORDER BY amount)::float AS p75
-            FROM opportunities WHERE tenant_id = ${t}::uuid AND deleted_at IS NULL AND status = 'OPEN' GROUP BY currency HAVING count(*) >= 4`).map((r) => [r.currency, r.p75]),
+        await (async () => {
+          const open = await tx.opportunity.findMany({ where: { tenantId: t, deletedAt: null, status: 'OPEN' }, select: { currency: true, amount: true } });
+          const byCurrency = new Map<string, number[]>();
+          for (const o of open) byCurrency.set(o.currency, [...(byCurrency.get(o.currency) ?? []), Number(o.amount)]);
+          return [...byCurrency].filter(([, xs]) => xs.length >= 4).map(([c, xs]) => [c, percentileCont(xs.sort((x, y) => x - y), 0.75)!] as const);
+        })(),
       );
       for (const d of deals) {
         const rec = { type: 'deal' as const, id: d.id, name: d.name };
@@ -376,15 +403,28 @@ export class NextActionsService {
     }
     if (can('sequences:read')) {
       // Engaged without replying (scenario 6): 2+ emails opened or a link clicked in 14 days, and no reply.
-      const ref = f ? Prisma.sql`(e.lead_id = ANY(${f.leadIds}::uuid[]) OR e.contact_id = ANY(${f.contactIds}::uuid[]))` : Prisma.sql`e.sender_id = ${me}::uuid`;
-      const engaged = await tx.$queryRaw<{ lead_id: string | null; contact_id: string | null; opened: number; clicked: number; last_at: Date }[]>`
-        SELECT e.lead_id, e.contact_id, count(m.opened_at)::int AS opened, count(m.clicked_at)::int AS clicked, max(greatest(m.opened_at, m.clicked_at)) AS last_at
-          FROM sequence_messages m JOIN sequence_enrollments e ON e.id = m.enrollment_id
-         WHERE m.tenant_id = ${t}::uuid AND ${ref} AND m.sent_at > ${new Date(now.getTime() - 14 * DAY)}
-         GROUP BY e.lead_id, e.contact_id
-        HAVING count(m.replied_at) = 0 AND (count(m.opened_at) >= 2 OR count(m.clicked_at) >= 1)
-         ORDER BY max(greatest(m.opened_at, m.clicked_at)) DESC
-         LIMIT 50`;
+      const sent = await tx.sequenceMessage.findMany({
+        where: {
+          tenantId: t, sentAt: { gt: new Date(now.getTime() - 14 * DAY) },
+          enrollment: f ? { OR: [{ leadId: { in: f.leadIds } }, { contactId: { in: f.contactIds } }] } : { senderId: me },
+        },
+        select: { openedAt: true, clickedAt: true, repliedAt: true, enrollment: { select: { leadId: true, contactId: true } } },
+      });
+      const people = new Map<string, { lead_id: string | null; contact_id: string | null; opened: number; clicked: number; replied: number; last_at: Date | null }>();
+      for (const m of sent) {
+        const k = `${m.enrollment.leadId}|${m.enrollment.contactId}`;
+        let p = people.get(k);
+        if (!p) people.set(k, (p = { lead_id: m.enrollment.leadId, contact_id: m.enrollment.contactId, opened: 0, clicked: 0, replied: 0, last_at: null }));
+        if (m.openedAt) p.opened++;
+        if (m.clickedAt) p.clicked++;
+        if (m.repliedAt) p.replied++;
+        for (const d of [m.openedAt, m.clickedAt]) if (d && (!p.last_at || d > p.last_at)) p.last_at = d;
+      }
+      const engaged = [...people.values()]
+        .filter((p) => p.replied === 0 && (p.opened >= 2 || p.clicked >= 1))
+        .map((p) => ({ ...p, last_at: p.last_at! }))
+        .sort((a, b) => b.last_at.getTime() - a.last_at.getTime())
+        .slice(0, 50);
       const [cs, ls] = await Promise.all([
         tx.contact.findMany({ where: { tenantId: t, deletedAt: null, id: { in: engaged.flatMap((r) => (r.contact_id ? [r.contact_id] : [])) } }, select: { id: true, firstName: true, lastName: true } }),
         tx.lead.findMany({ where: { tenantId: t, deletedAt: null, id: { in: engaged.flatMap((r) => (r.contact_id ? [] : r.lead_id ? [r.lead_id] : [])) } }, select: { id: true, fullName: true } }),

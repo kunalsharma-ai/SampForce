@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Updates SampForce to the latest code: backup, pull, rebuild, migrate, restart.
+# Updates SampForce to the latest code: backup, pull, rebuild, set up the database, restart.
 #
 #   scripts/update.sh            # pulls the current branch with git
 #   scripts/update.sh --no-pull  # rebuild what is already on disk (for example after copying a new release zip)
 #
-# Migrations run before the new API starts; if one fails, the old containers keep serving.
+# Database set-up (collections, indexes) runs before the new API starts; if it fails, the old containers keep serving.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 

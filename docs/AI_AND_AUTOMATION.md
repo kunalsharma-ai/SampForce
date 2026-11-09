@@ -14,7 +14,7 @@ are the target design; the table below says what is built today and where it dif
 | Prompt versioning and evals | `prompts.ts` holds versioned prompts and JSON schemas; runs and recommendations store the version; `apps/api/evals` has four golden datasets with deterministic scorers |
 | Prompt-injection defence | Email and pasted notes are wrapped as `<untrusted_data>`; Copilot proposals made after reading external content are flagged to the person; every change needs the person's confirmation anyway |
 | Redaction | Optional per workspace: emails, phone and card-like numbers become placeholders before the call and are restored in the answer (card numbers are never restored) |
-| Rate limiting | Per user, counted in Postgres (`AI_USER_CALLS_PER_MINUTE`), not Redis |
+| Rate limiting | Per user, counted in the database (`AI_USER_CALLS_PER_MINUTE`), not Redis |
 | Agents | Copilot, Lead Qualification (manual or automatic on `lead.created` through the worker), Deal Intelligence, Meeting notes (pasted notes, no recording), Proposal draft, Workflow builder, Forecast explainer. Settings live in `ai_settings`; runs in `ai_runs`; results in `ai_recommendations` |
 | Action tiers | Tier 0 reads run immediately. Tier 1 drafts are stored as recommendations. Tier 2 writes (task, note, deal stage) are proposals the person confirms, re-checked against their permissions at confirm time. Tier 3 and tier 4 actions are not exposed as tools at all |
 | Copilot | Bounded tool loop (6 steps) over read tools filtered by the caller's role, with citations. Answers are not streamed yet |
@@ -52,7 +52,7 @@ flowchart LR
 | Model routing | Tasks declare a tier (`fast`, `balanced`, `deep`); tenant policy maps tiers to allowed models; automatic fallback to the next allowed provider on outage |
 | Token tracking and metering | Usage recorded per call (tenant, user, agent, model, tokens in/out, cost); converted to SampForce AI credits; budgets checked before the call |
 | Prompt versioning | Prompts are files with semantic versions and eval suites; every trace stores the version |
-| RAG | pgvector embeddings in tenant tables under RLS; retrieval filters by the caller's record-level access, not just tenant |
+| RAG | Embeddings (not stored yet; Atlas Vector Search or a separate index) scoped by workspace like every collection; retrieval filters by the caller's record-level access, not just tenant |
 | Prompt-injection defence | Retrieved content and emails are wrapped as untrusted data; tool calls derived from untrusted content always require approval; output schemas are validated |
 | Sensitive-data redaction | Configurable detectors (emails, phones, IDs, card-like numbers) applied before sending to providers when tenant policy requires |
 | Rate limiting | Per tenant, per user and per agent token buckets in Redis |
@@ -90,7 +90,7 @@ rows with every step, tool call, approval, token count, cost and outcome.
 | Data Quality | Nightly | find incomplete/duplicate/stale records (0), propose merges (1), merge (2 with undo window) |
 | Workflow Optimization | Weekly | analyse execution logs (0), propose workflow edits (1) |
 
-**Governance controls:** tenant isolation via RLS context on every tool; per-agent kill switch and a
+**Governance controls:** tenant isolation via the workspace guard's context on every tool; per-agent kill switch and a
 tenant-wide AI kill switch (checked before every step); retry with exponential backoff for transient errors
 only; per-run and monthly cost caps; human override (cancel, edit, re-run); evaluation metrics per agent
 (acceptance rate of recommendations, approval rejection rate, error rate, cost per accepted action).

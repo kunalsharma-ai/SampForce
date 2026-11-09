@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { withDbContext } from '@dealflow/database';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { type AiFixture, createAiFixture, text, toolUse } from './fixtures/ai-fixture';
-import { api, appClient, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
+import { api, appClient, asTenant, countCollection, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
 /** Acceptance test 6: AI actions respect authorization. */
 describe('AI actions respect authorization', () => {
@@ -131,23 +131,19 @@ describe('AI actions respect authorization', () => {
     const db = appClient();
     try {
       for (const t of ['ai_settings', 'ai_runs', 'ai_usage', 'ai_recommendations']) {
-        const mine = await withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${t}`));
-        const theirs = await withDbContext(db, { tenantId: other.tenantId }, (tx) => tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${t} WHERE tenant_id = $1::uuid`, owner.tenantId));
-        const none = await withDbContext(db, {}, (tx) => tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${t}`));
-        expect(Number(mine[0]!.n), t).toBeGreaterThan(0);
-        expect(Number(theirs[0]!.n), t).toBe(0);
-        expect(Number(none[0]!.n), t).toBe(0);
+        const mine = await withDbContext(db, { tenantId: owner.tenantId }, (tx) => countCollection(tx, t));
+        const theirs = await withDbContext(db, { tenantId: other.tenantId }, (tx) => countCollection(tx, t, { tenantId: owner.tenantId }));
+        const none = await withDbContext(db, {}, (tx) => countCollection(tx, t));
+        expect(mine, t).toBeGreaterThan(0);
+        expect(theirs, t).toBe(0);
+        expect(none, t).toBe(0);
       }
-      const scan = (t: string) =>
-        withDbContext(db, {}, async (tx) => {
-          await tx.$executeRawUnsafe("SELECT set_config('app.worker_scan', 'on', true)");
-          return Number((await tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${t}`))[0]!.n);
-        });
+      const scan = (t: string) => withDbContext(db, { workerScan: true }, (tx) => countCollection(tx, t));
       expect(await scan('ai_runs')).toBeGreaterThan(0);
       expect(await scan('ai_usage')).toBe(0);
       expect(await scan('ai_recommendations')).toBe(0);
-      await expect(withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.aiUsage.deleteMany({}))).rejects.toThrow(/permission denied/);
-      await expect(withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.aiUsage.updateMany({ data: { credits: 0 } }))).rejects.toThrow(/permission denied/);
+      await expect(withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.aiUsage.deleteMany({}))).rejects.toThrow(/cannot be deleted/);
+      await expect(withDbContext(db, { tenantId: owner.tenantId }, (tx) => tx.aiUsage.updateMany({ data: { credits: 0 } }))).rejects.toThrow(/append-only/);
       await expect(
         withDbContext(db, { tenantId: other.tenantId }, (tx) => tx.aiSettings.update({ where: { tenantId: owner.tenantId }, data: { enabled: false } })),
       ).rejects.toThrow();

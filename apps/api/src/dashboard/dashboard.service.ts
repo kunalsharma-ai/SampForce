@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import { type ActivityItem, type DashboardFilter, type DashboardSummary, type KpiValue, PERIOD_DAYS as DAYS } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -17,16 +16,16 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 interface MoneyRow {
-  pipeline_value: Prisma.Decimal | null;
-  weighted_value: Prisma.Decimal | null;
-  open_count: bigint;
-  won_value: Prisma.Decimal | null;
-  won_count: bigint;
-  won_prev_value: Prisma.Decimal | null;
-  lost_count: bigint;
+  pipeline_value: number;
+  weighted_value: number;
+  open_count: number;
+  won_value: number;
+  won_count: number;
+  won_prev_value: number;
+  lost_count: number;
   avg_cycle_days: number | null;
-  quarter_won: Prisma.Decimal | null;
-  quarter_weighted: Prisma.Decimal | null;
+  quarter_won: number;
+  quarter_weighted: number;
 }
 
 /**
@@ -41,8 +40,6 @@ export class DashboardService {
   async summary(auth: AuthContext, filter: DashboardFilter = { period: '30d' }, now = new Date()): Promise<DashboardSummary> {
     const PERIOD_DAYS = DAYS[filter.period];
     const owner = filter.ownerId === 'me' ? auth.userId : filter.ownerId;
-    const ownerSql = owner ? Prisma.sql`AND o.owner_id = ${owner}::uuid` : Prisma.empty;
-    const pipelineSql = filter.pipelineId ? Prisma.sql`AND o.pipeline_id = ${filter.pipelineId}::uuid` : Prisma.empty;
     const scope = owner ? ' Filtered by owner.' : '';
     const periodStart = new Date(now.getTime() - PERIOD_DAYS * DAY_MS);
     const prevStart = new Date(periodStart.getTime() - PERIOD_DAYS * DAY_MS);
@@ -74,28 +71,34 @@ export class DashboardService {
         tx.activity.count({ where: { tenantId: tid, deletedAt: null, ...activityOwner, occurredAt: { gte: periodStart, lte: now } } }),
       ]);
 
-      const [money] = await tx.$queryRaw<MoneyRow[]>`
-        SELECT
-          SUM(o.amount) FILTER (WHERE o.status = 'OPEN')                                        AS pipeline_value,
-          SUM(o.amount * COALESCE(o.probability, s.probability) / 100.0) FILTER (WHERE o.status = 'OPEN') AS weighted_value,
-          COUNT(*) FILTER (WHERE o.status = 'OPEN')                                             AS open_count,
-          SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart})        AS won_value,
-          COUNT(*) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart})             AS won_count,
-          SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${prevStart}
-                                 AND o.closed_at < ${periodStart})                              AS won_prev_value,
-          COUNT(*) FILTER (WHERE o.status = 'LOST' AND o.closed_at >= ${periodStart})            AS lost_count,
-          AVG(EXTRACT(EPOCH FROM (o.closed_at - o.created_at)) / 86400.0)
-            FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart})                    AS avg_cycle_days,
-          SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${quarter.start}
-                                 AND o.closed_at < ${quarter.end})                              AS quarter_won,
-          SUM(o.amount * COALESCE(o.probability, s.probability) / 100.0)
-            FILTER (WHERE o.status = 'OPEN' AND o.expected_close_date >= ${quarter.start}::date
-                    AND o.expected_close_date < ${quarter.end}::date)                            AS quarter_weighted
-        FROM opportunities o
-        JOIN pipeline_stages s ON s.id = o.stage_id
-        WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.currency = ${currency} ${ownerSql} ${pipelineSql}`;
+      // Money KPIs, computed from the open deals and the deals closed since the comparison period began.
+      const dealWhere = { tenantId: tid, deletedAt: null, currency, ...(owner ? { ownerId: owner } : {}), ...(filter.pipelineId ? { pipelineId: filter.pipelineId } : {}) };
+      const earliest = new Date(Math.min(prevStart.getTime(), quarter.start.getTime()));
+      const [openDeals, closedDeals] = await Promise.all([
+        tx.opportunity.findMany({ where: { ...dealWhere, status: 'OPEN' }, select: { amount: true, probability: true, stageId: true, expectedCloseDate: true } }),
+        tx.opportunity.findMany({ where: { ...dealWhere, status: { in: ['WON', 'LOST'] }, closedAt: { gte: earliest } }, select: { amount: true, status: true, closedAt: true, createdAt: true } }),
+      ]);
+      const stageProb = new Map(
+        (await tx.pipelineStage.findMany({ where: { tenantId: tid, id: { in: [...new Set(openDeals.map((d) => d.stageId))] } }, select: { id: true, probability: true } })).map((st) => [st.id, st.probability]),
+      );
+      const weightOf = (d: (typeof openDeals)[number]) => (d.amount * (d.probability ?? stageProb.get(d.stageId) ?? 0)) / 100;
+      const inQuarter = (d: Date | null) => !!d && d >= quarter.start && d < quarter.end;
+      const wonSince = closedDeals.filter((d) => d.status === 'WON' && d.closedAt! >= periodStart);
+      const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+      const money: MoneyRow = {
+        pipeline_value: sum(openDeals.map((d) => d.amount)),
+        weighted_value: sum(openDeals.map(weightOf)),
+        open_count: openDeals.length,
+        won_value: sum(wonSince.map((d) => d.amount)),
+        won_count: wonSince.length,
+        won_prev_value: sum(closedDeals.filter((d) => d.status === 'WON' && d.closedAt! >= prevStart && d.closedAt! < periodStart).map((d) => d.amount)),
+        lost_count: closedDeals.filter((d) => d.status === 'LOST' && d.closedAt! >= periodStart).length,
+        avg_cycle_days: wonSince.length ? sum(wonSince.map((d) => (d.closedAt!.getTime() - d.createdAt.getTime()) / DAY_MS)) / wonSince.length : null,
+        quarter_won: sum(closedDeals.filter((d) => d.status === 'WON' && inQuarter(d.closedAt)).map((d) => d.amount)),
+        quarter_weighted: sum(openDeals.filter((d) => inQuarter(d.expectedCloseDate)).map(weightOf)),
+      };
 
-      const n = (v: Prisma.Decimal | null | undefined) => (v ? Number(v) : 0);
+      const n = (v: number | null | undefined) => (v ? Number(v) : 0);
       const wonValue = n(money?.won_value);
       const wonCount = Number(money?.won_count ?? 0);
       const openCount = Number(money?.open_count ?? 0);

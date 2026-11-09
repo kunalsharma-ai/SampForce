@@ -1,3 +1,4 @@
+import { transactionLock } from '@dealflow/database';
 import type { SecretBox } from '../common/crypto';
 import type { PrismaService } from '../common/prisma.service';
 import { AppError } from './apps.service';
@@ -23,7 +24,7 @@ export async function refreshUnderLock<C extends RefreshableCreds>(
   staleAccessToken?: string,
 ): Promise<C> {
   const out = await prisma.run({ tenantId }, async (tx): Promise<C | { revoked: string }> => {
-    await tx.$executeRaw`SELECT 1 FROM app_connections WHERE id = ${connectionId}::uuid FOR UPDATE`;
+    await transactionLock(tx, `app_connection:${connectionId}`);
     const row = await tx.appConnection.findUniqueOrThrow({ where: { id: connectionId } });
     const current = JSON.parse(box.open(row.credentialsEncrypted)) as C;
     // Another request refreshed while this one waited for the lock.

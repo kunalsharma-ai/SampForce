@@ -1,37 +1,36 @@
-# Local stack. `docker compose up -d postgres redis` gives you the databases for `pnpm dev`;
+# Local stack. `docker compose up -d mongo redis` gives you the databases for `pnpm dev`;
 # `docker compose up --build` runs everything in containers.
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_PASSWORD: postgres
-    ports: ['5432:5432']
+  # MongoDB as a single-node replica set: SampForce uses multi-document transactions, which need one.
+  mongo:
+    image: mongo:7.0
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports: ['27017:27017']
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./scripts/db-setup.sh:/docker-entrypoint-initdb.d/10-dealflow.sh:ro
+      - mongodata:/data/db
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      # Initiates the replica set on first start (advertising the service name), then reports whether it is primary.
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }; db.hello().isWritablePrimary || quit(1)"]
       interval: 5s
-      retries: 10
+      retries: 20
 
   redis:
     image: redis:7-alpine
     ports: ['6379:6379']
 
+  # Collections, indexes and the plan catalogue (idempotent; runs before the API and worker start).
   migrate:
-    build: { context: ., dockerfile: apps/api/Dockerfile, target: build }
-    command: pnpm --filter @dealflow/database migrate:deploy
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrate }
     environment:
-      DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@postgres:5432/dealflow
-      MIGRATION_DATABASE_URL: postgresql://dealflow_owner:dealflow_owner_dev@postgres:5432/dealflow
+      DATABASE_URL: mongodb://mongo:27017/sampforce?replicaSet=rs0
     depends_on:
-      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
 
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@postgres:5432/dealflow
+      DATABASE_URL: mongodb://mongo:27017/sampforce?replicaSet=rs0
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
       # Local stack runs over http://localhost. Never set ALLOW_INSECURE_COOKIES in a real deployment.
@@ -53,7 +52,7 @@ services:
     command: ['node', 'dist/worker.js']
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://dealflow_app:dealflow_app_dev@postgres:5432/dealflow
+      DATABASE_URL: mongodb://mongo:27017/sampforce?replicaSet=rs0
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       COOKIE_SECURE: 'false'
@@ -74,4 +73,4 @@ services:
     depends_on: [api]
 
 volumes:
-  pgdata:
+  mongodata:

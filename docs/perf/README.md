@@ -1,7 +1,9 @@
 # Performance (Phase 8 load test)
 
 Measured on the build machine (4 vCPU, PostgreSQL 16 on the same host, one API process, no CDN), so absolute
-numbers will differ in production. What matters is relative cost and the regressions the test found.
+numbers will differ in production. SampForce moved to MongoDB afterwards (ADR 0058) and this load test has not been
+re-run on it: the PostgreSQL-specific fixes below (plan cache, statement timeouts, the backup role) no longer apply,
+and the numbers are a reference, not a measurement of the current build. What matters is relative cost and the regressions the test found.
 
 ## Method
 

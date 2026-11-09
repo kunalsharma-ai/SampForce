@@ -37,13 +37,17 @@ export class MfaService {
 
   /** Counts a failure; the tenth in a row pauses sign-in for LOCK_MINUTES. Atomic, so parallel guesses all count. */
   async recordFailure(userId: string, requestId?: string): Promise<void> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      UPDATE users SET
-        locked_until = CASE WHEN failed_login_count + 1 >= ${MAX_FAILED_ATTEMPTS}::int THEN now() + ${LOCK_MINUTES}::int * interval '1 minute' ELSE locked_until END,
-        failed_login_count = CASE WHEN failed_login_count + 1 >= ${MAX_FAILED_ATTEMPTS}::int THEN 0 ELSE failed_login_count + 1 END
-      WHERE id = ${userId}::uuid
-      RETURNING (locked_until > now()) AS locked`;
-    if (rows[0]?.locked) {
+    // The increment is atomic, so parallel guesses all count; the update that reaches the limit locks and resets.
+    const after = await this.prisma.user.update({ where: { id: userId }, data: { failedLoginCount: { increment: 1 } }, select: { failedLoginCount: true } });
+    let locked = false;
+    if (after.failedLoginCount >= MAX_FAILED_ATTEMPTS) {
+      const hit = await this.prisma.user.updateMany({
+        where: { id: userId, failedLoginCount: { gte: MAX_FAILED_ATTEMPTS } },
+        data: { failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) },
+      });
+      locked = hit.count > 0;
+    }
+    if (locked) {
       authEvents.inc({ event: 'lockout' });
       this.logger.warn({ userId, requestId }, 'Sign-in paused after repeated failures');
     }

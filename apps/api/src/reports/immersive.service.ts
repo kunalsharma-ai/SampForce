@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { TenantTx } from '@dealflow/database';
+import { aggregate, rawDate, type TenantTx } from '@dealflow/database';
 import { type GalaxyEdge, type GalaxyGraph, type GalaxyNode, type GlobeData, type Permission, type PipelineFlow, type PipelineReplay, toBase } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import { loadRates } from '../revenue/fx';
+import { percentileCont } from '../common/stats';
 
 const DAY = 86_400_000;
 export const GALAXY_MAX_COMPANIES = 150;
@@ -54,7 +55,7 @@ export class ImmersiveService {
       const openValue = new Map<string, number>();
       for (const d of deals) {
         if (d.status !== 'OPEN' || !d.companyId) continue;
-        openValue.set(d.companyId, (openValue.get(d.companyId) ?? 0) + (convert(d.amount.toNumber(), d.currency) ?? 0));
+        openValue.set(d.companyId, (openValue.get(d.companyId) ?? 0) + (convert(Number(d.amount), d.currency) ?? 0));
       }
       const companies = await tx.company.findMany({
         where: { tenantId: auth.tenantId, deletedAt: null },
@@ -85,7 +86,7 @@ export class ImmersiveService {
         const onCompany = d.companyId && ids.has(d.companyId);
         const onContact = d.contactId && contactIds.has(d.contactId);
         if (!onCompany && !onContact) continue;
-        nodes.push({ id: d.id, kind: 'deal', label: d.name, companyId: onCompany ? d.companyId : null, status: d.status, value: convert(d.amount.toNumber(), d.currency), href: `/app/deals/${d.id}` });
+        nodes.push({ id: d.id, kind: 'deal', label: d.name, companyId: onCompany ? d.companyId : null, status: d.status, value: convert(Number(d.amount), d.currency), href: `/app/deals/${d.id}` });
         if (onCompany) edges.push({ source: d.id, target: d.companyId!, kind: 'deal_of' });
         if (onContact) edges.push({ source: d.id, target: d.contactId!, kind: 'contact_on' });
       }
@@ -101,12 +102,21 @@ export class ImmersiveService {
       const since = new Date(Date.now() - 365 * DAY);
       // Summed in the database per country, status and currency; conversion is linear, so converting the sums
       // matches converting each deal (to the cent). Loading every deal into the API took ~250 ms at 20k deals.
-      const deals = await tx.$queryRaw<{ country: string | null; status: 'OPEN' | 'WON'; currency: string; n: number; total: number }[]>`
-        SELECT upper(c.country) AS country, o.status::text AS status, o.currency, count(*)::int AS n, sum(o.amount)::float8 AS total
-        FROM opportunities o LEFT JOIN companies c ON c.id = o.company_id AND c.deleted_at IS NULL
-        WHERE o.tenant_id = ${auth.tenantId}::uuid AND o.deleted_at IS NULL
-          AND (o.status = 'OPEN' OR (o.status = 'WON' AND o.closed_at >= ${since}))
-        GROUP BY 1, 2, 3`;
+      const deals = (
+        await aggregate<{ _id: { country: string | null; status: 'OPEN' | 'WON'; currency: string }; n: number; total: number }>(tx.opportunity, [
+          { $match: { tenant_id: auth.tenantId, deleted_at: null, $or: [{ status: 'OPEN' }, { status: 'WON', closed_at: { $gte: rawDate(since) } }] } },
+          {
+            $lookup: {
+              from: 'companies',
+              let: { ref: '$company_id' },
+              pipeline: [{ $match: { $expr: { $and: [{ $eq: ['$_id', '$$ref'] }, { $eq: ['$tenant_id', { $literal: auth.tenantId }] }] }, deleted_at: null } }, { $project: { country: 1 } }],
+              as: 'c',
+            },
+          },
+          { $project: { status: 1, currency: 1, amount: 1, country: { $first: '$c.country' } } },
+          { $group: { _id: { country: { $cond: [{ $in: [{ $ifNull: ['$country', null] }, [null]] }, null, { $toUpper: '$country' }] }, status: '$status', currency: '$currency' }, n: { $sum: 1 }, total: { $sum: '$amount' } } },
+        ])
+      ).map((g) => ({ ...g._id, n: g.n, total: g.total }));
       const by = new Map<string, { companies: number; openDeals: number; openValue: number; wonValue: number }>();
       const row = (c: string) => by.get(c) ?? by.set(c, { companies: 0, openDeals: 0, openValue: 0, wonValue: 0 }).get(c)!;
       let unplacedCompanies = 0;
@@ -159,21 +169,24 @@ export class ImmersiveService {
         where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null, status: 'OPEN' },
         select: { stageId: true, amount: true, currency: true },
       });
-      const transitions = await tx.$queryRaw<{ from: string; to: string; deals: number }[]>`
-        SELECT e.from_stage_id::text AS "from", e.to_stage_id::text AS "to", count(DISTINCT e.opportunity_id)::int AS deals
-        FROM deal_stage_events e JOIN opportunities o ON o.id = e.opportunity_id AND o.deleted_at IS NULL
-        WHERE e.tenant_id = ${auth.tenantId}::uuid AND e.pipeline_id = ${pipeline.id}::uuid AND e.from_stage_id IS NOT NULL AND e.occurred_at >= ${since}
-        GROUP BY 1, 2`;
+      const removed = (await tx.opportunity.findMany({ where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: { not: null } }, select: { id: true } })).map((d) => d.id);
+      const live = { tenant_id: auth.tenantId, pipeline_id: pipeline.id, opportunity_id: { $nin: removed } };
+      const transitions = (
+        await aggregate<{ _id: { from: string; to: string }; deals: string[] }>(tx.dealStageEvent, [
+          { $match: { ...live, from_stage_id: { $ne: null }, occurred_at: { $gte: rawDate(since) } } },
+          { $group: { _id: { from: '$from_stage_id', to: '$to_stage_id' }, deals: { $addToSet: '$opportunity_id' } } },
+        ])
+      ).map((t) => ({ from: t._id.from, to: t._id.to, deals: t.deals.length }));
       // Time in stage: from entering a stage to the next recorded move out of it, for moves out inside the window.
-      const durations = await tx.$queryRaw<{ stage: string; median: number | null }[]>`
-        WITH seq AS (
-          SELECT e.opportunity_id, e.to_stage_id, e.occurred_at,
-                 lead(e.occurred_at) OVER (PARTITION BY e.opportunity_id ORDER BY e.occurred_at, e.id) AS left_at
-          FROM deal_stage_events e JOIN opportunities o ON o.id = e.opportunity_id AND o.deleted_at IS NULL
-          WHERE e.tenant_id = ${auth.tenantId}::uuid AND e.pipeline_id = ${pipeline.id}::uuid
-        )
-        SELECT to_stage_id::text AS stage, percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM left_at - occurred_at) / 86400)::float8 AS median
-        FROM seq WHERE left_at IS NOT NULL AND left_at >= ${since} GROUP BY 1`;
+      const stays = await aggregate<{ stage: string; days: number }>(tx.dealStageEvent, [
+        { $match: live },
+        { $setWindowFields: { partitionBy: '$opportunity_id', sortBy: { occurred_at: 1, _id: 1 }, output: { left_at: { $shift: { output: '$occurred_at', by: 1, default: null } } } } },
+        { $match: { left_at: { $ne: null, $gte: rawDate(since) } } },
+        { $project: { _id: 0, stage: '$to_stage_id', days: { $divide: [{ $subtract: ['$left_at', '$occurred_at'] }, 86_400_000] } } },
+      ]);
+      const byStage = new Map<string, number[]>();
+      for (const x of stays) byStage.set(x.stage, [...(byStage.get(x.stage) ?? []), x.days]);
+      const durations = [...byStage].map(([stage, xs]) => ({ stage, median: percentileCont(xs.sort((p, q) => p - q), 0.5) }));
       const median = new Map(durations.map((d) => [d.stage, d.median]));
       return {
         pipelineId: pipeline.id,
@@ -185,7 +198,7 @@ export class ImmersiveService {
           const m = median.get(s.id);
           return {
             id: s.id, name: s.name, category: s.category, position: s.position, openDeals: here.length,
-            openValue: Math.round(here.reduce((sum, d) => sum + (convert(d.amount.toNumber(), d.currency) ?? 0), 0) * 100) / 100,
+            openValue: Math.round(here.reduce((sum, d) => sum + (convert(Number(d.amount), d.currency) ?? 0), 0) * 100) / 100,
             medianDays: m === undefined || m === null ? null : Math.round(m * 10) / 10,
           };
         }),
@@ -203,21 +216,31 @@ export class ImmersiveService {
       const from = new Date(to.getTime() - days * DAY);
       const openStages = pipeline.stages.filter((s) => s.category === 'OPEN').map((s) => s.id);
       // Deals in play during the window: moved inside it, or sitting in an open stage when it began.
-      const ids = await tx.$queryRaw<{ id: string; last: Date }[]>`
-        WITH before AS (
-          SELECT DISTINCT ON (e.opportunity_id) e.opportunity_id, e.to_stage_id, e.occurred_at
-          FROM deal_stage_events e WHERE e.tenant_id = ${auth.tenantId}::uuid AND e.pipeline_id = ${pipeline.id}::uuid AND e.occurred_at < ${from}
-          ORDER BY e.opportunity_id, e.occurred_at DESC, e.id DESC
-        ), inside AS (
-          SELECT e.opportunity_id, max(e.occurred_at) AS last FROM deal_stage_events e
-          WHERE e.tenant_id = ${auth.tenantId}::uuid AND e.pipeline_id = ${pipeline.id}::uuid AND e.occurred_at >= ${from}
-          GROUP BY 1
-        )
-        SELECT o.id::text AS id, COALESCE(i.last, b.occurred_at) AS last
-        FROM opportunities o LEFT JOIN inside i ON i.opportunity_id = o.id LEFT JOIN before b ON b.opportunity_id = o.id
-        WHERE o.tenant_id = ${auth.tenantId}::uuid AND o.pipeline_id = ${pipeline.id}::uuid AND o.deleted_at IS NULL
-          AND (i.opportunity_id IS NOT NULL OR b.to_stage_id = ANY(${openStages}::uuid[]))
-        ORDER BY last DESC LIMIT ${REPLAY_MAX_DEALS + 1}`;
+      const inPipeline = { tenant_id: auth.tenantId, pipeline_id: pipeline.id };
+      const [before, inside, live] = await Promise.all([
+        aggregate<{ _id: string; stage: string; at: Date | string }>(tx.dealStageEvent, [
+          { $match: { ...inPipeline, occurred_at: { $lt: rawDate(from) } } },
+          { $sort: { opportunity_id: 1, occurred_at: -1, _id: -1 } },
+          { $group: { _id: '$opportunity_id', stage: { $first: '$to_stage_id' }, at: { $first: '$occurred_at' } } },
+        ]),
+        aggregate<{ _id: string; last: Date | string }>(tx.dealStageEvent, [
+          { $match: { ...inPipeline, occurred_at: { $gte: rawDate(from) } } },
+          { $group: { _id: '$opportunity_id', last: { $max: '$occurred_at' } } },
+        ]),
+        tx.opportunity.findMany({ where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null }, select: { id: true } }),
+      ]);
+      const insideBy = new Map(inside.map((i) => [i._id, new Date(i.last)]));
+      const beforeBy = new Map(before.map((b) => [b._id, b]));
+      const ids = live
+        .flatMap((o) => {
+          const i = insideBy.get(o.id);
+          const b = beforeBy.get(o.id);
+          if (i) return [{ id: o.id, last: i }];
+          if (b && openStages.includes(b.stage)) return [{ id: o.id, last: new Date(b.at) }];
+          return [];
+        })
+        .sort((x, y) => y.last.getTime() - x.last.getTime())
+        .slice(0, REPLAY_MAX_DEALS + 1);
       const truncated = ids.length > REPLAY_MAX_DEALS;
       const dealIds = ids.slice(0, REPLAY_MAX_DEALS).map((r) => r.id);
       const [deals, events] = dealIds.length
@@ -240,7 +263,7 @@ export class ImmersiveService {
         pipelineId: pipeline.id,
         pipelineName: pipeline.name,
         stages: pipeline.stages.map((s) => ({ id: s.id, name: s.name, category: s.category, position: s.position })),
-        deals: deals.map((d) => ({ id: d.id, name: d.name, value: convert(d.amount.toNumber(), d.currency) })),
+        deals: deals.map((d) => ({ id: d.id, name: d.name, value: convert(Number(d.amount), d.currency) })),
         events: kept.map((e) => ({ dealId: e.opportunityId, at: e.occurredAt.toISOString(), fromStageId: e.fromStageId, toStageId: e.toStageId })),
         from: from.toISOString(),
         to: to.toISOString(),

@@ -59,8 +59,8 @@ export class AnalyticsService {
       const base = (await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true } })).defaultCurrency;
       const rates = await loadRates(tx, auth.tenantId);
       let noRate = 0;
-      const conv = (amount: { toNumber(): number }, currency: string) => {
-        const v = toBase(amount.toNumber(), currency, base, rates);
+      const conv = (amount: number, currency: string) => {
+        const v = toBase(amount, currency, base, rates);
         if (v === null) noRate++;
         return v;
       };
@@ -101,7 +101,7 @@ export class AnalyticsService {
       for (const d of lost) bucket(d.ownerId).lost++;
       for (const t of targets) if (t.userId) bucket(t.userId);
       const byOwner = [...byOwnerMap.entries()].map(([id, v]) => {
-        const target = targets.find((t) => (t.userId ?? '') === id && t.userId !== null)?.amount.toNumber() ?? null;
+        const target = targets.find((t) => (t.userId ?? '') === id && t.userId !== null)?.amount ?? null;
         return { owner: id ? (names.get(id) ?? null) : null, won: r2(v.won), deals: v.deals, lost: v.lost, winRate: winRate(v.deals, v.lost), target, attainment: target ? r2((v.won / target) * 100) : null };
       }).sort((a, b) => b.won - a.won);
 
@@ -126,11 +126,11 @@ export class AnalyticsService {
         if (seen.has(q.opportunityId)) continue;
         seen.add(q.opportunityId);
         for (const l of q.lines) {
-          const v = toBase(l.netTotal.toNumber(), q.currency, base, rates);
+          const v = toBase(Number(l.netTotal), q.currency, base, rates);
           if (v === null) continue;
           const pr = products.get(l.productId) ?? { name: l.name, revenue: 0, quantity: 0 };
           pr.revenue += v;
-          pr.quantity += l.quantity.toNumber();
+          pr.quantity += Number(l.quantity);
           products.set(l.productId, pr);
         }
       }
@@ -146,7 +146,7 @@ export class AnalyticsService {
 
       const open = await tx.opportunity.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN' }, select: { amount: true, currency: true, expectedCloseDate: true } });
       const openInPeriod = r2(open.filter((d) => d.expectedCloseDate && d.expectedCloseDate >= start && d.expectedCloseDate < end).reduce((a, d) => a + (conv(d.amount, d.currency) ?? 0), 0));
-      const target = targets.find((t) => t.userId === null)?.amount.toNumber() ?? null;
+      const target = targets.find((t) => t.userId === null)?.amount ?? null;
       const remaining = target !== null ? target - wonTotal : null;
 
       const leads = await tx.lead.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, createdAt: { gte: start, lt: end } }, select: { id: true, status: true } });
@@ -181,7 +181,7 @@ export class AnalyticsService {
       const snap = await tx.forecastSnapshot.findFirst({ where: { tenantId, periodStart: start, periodEnd: end, currency: base }, orderBy: { createdAt: 'asc' } });
       if (!snap) continue;
       const won = await tx.opportunity.findMany({ where: { tenantId, deletedAt: null, status: 'WON', closedAt: { gte: start, lt: end } }, select: { amount: true, currency: true } });
-      const actual = r2(won.reduce((a, d) => a + (toBase(d.amount.toNumber(), d.currency, base, rates) ?? 0), 0));
+      const actual = r2(won.reduce((a, d) => a + (toBase(Number(d.amount), d.currency, base, rates) ?? 0), 0));
       const predicted = (snap.totals as unknown as ForecastTotals).base;
       out.push({ period: q, predicted, snapshotAt: snap.createdAt.toISOString(), actual, errorPercent: predicted ? Math.round(((actual - predicted) / predicted) * 1000) / 10 : null });
     }
@@ -192,7 +192,7 @@ export class AnalyticsService {
     return this.prisma.run(auth, async (tx) => {
       const base = (await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true } })).defaultCurrency;
       const rows = await tx.exchangeRate.findMany({ where: { tenantId: auth.tenantId }, orderBy: [{ currency: 'asc' }, { effectiveDate: 'desc' }], take: 500 });
-      return { base, rates: rows.map((r) => ({ id: r.id, currency: r.currency, rate: r.rate.toNumber(), effectiveDate: r.effectiveDate.toISOString().slice(0, 10), source: r.source, createdAt: r.createdAt.toISOString() })) };
+      return { base, rates: rows.map((r) => ({ id: r.id, currency: r.currency, rate: Number(r.rate), effectiveDate: r.effectiveDate.toISOString().slice(0, 10), source: r.source, createdAt: r.createdAt.toISOString() })) };
     });
   }
 
@@ -216,7 +216,7 @@ export class AnalyticsService {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.salesTarget.findMany({ where: { tenantId: auth.tenantId, period: p.label } });
       const names = await ownerRefs(tx, rows.map((r) => r.userId));
-      return rows.map((r) => ({ id: r.id, period: r.period, user: r.userId ? (names.get(r.userId) ?? null) : null, amount: r.amount.toNumber() })).sort((a, b) => (a.user ? 1 : 0) - (b.user ? 1 : 0));
+      return rows.map((r) => ({ id: r.id, period: r.period, user: r.userId ? (names.get(r.userId) ?? null) : null, amount: Number(r.amount) })).sort((a, b) => (a.user ? 1 : 0) - (b.user ? 1 : 0));
     });
   }
 
@@ -228,7 +228,7 @@ export class AnalyticsService {
       const row = existing
         ? await tx.salesTarget.update({ where: { id: existing.id }, data: { amount: input.amount } })
         : await tx.salesTarget.create({ data: { tenantId: auth.tenantId, period: input.period, userId: input.userId, amount: input.amount } });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sales_target.set', entityType: 'sales_target', entityId: row.id, metadata: { ...input, from: existing?.amount.toNumber() ?? null }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sales_target.set', entityType: 'sales_target', entityId: row.id, metadata: { ...input, from: existing?.amount ??  null }, meta });
       return { id: row.id };
     });
   }

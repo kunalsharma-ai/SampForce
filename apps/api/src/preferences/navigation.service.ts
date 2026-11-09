@@ -29,7 +29,7 @@ function recentItems(v: Prisma.JsonValue): NavigationState['recent'] {
 }
 
 /**
- * Personal navigation in the current workspace. The row is protected by RLS on both the workspace and the person,
+ * Personal navigation in the current workspace. The document is held by the workspace guard to both the workspace and the person,
  * so one member can never read or change another's pins or history.
  */
 @Injectable()
@@ -80,7 +80,7 @@ export class NavigationService {
 
   /** Saves the layout; null returns to the default. */
   async saveDashboardLayout(auth: AuthContext, layout: DashboardLayout | null): Promise<{ layout: DashboardLayout | null }> {
-    const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+    const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : null;
     await this.prisma.run(auth, (tx) =>
       tx.workspaceNavigation.upsert({
         where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } },

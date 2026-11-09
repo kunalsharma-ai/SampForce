@@ -21,7 +21,7 @@ accessibility) and an updated status table. A feature is "Tested" only when its 
 | Feature | Status |
 |---|---|
 | pnpm monorepo, strict TypeScript, shared Zod schemas | Tested |
-| PostgreSQL schema (18 tables) and migrations | Tested (applied in CI) |
+| PostgreSQL schema (18 tables) and migrations (replaced by MongoDB, ADR 0058) | Tested (applied in CI) |
 | Row-level security on all tenant tables, non-bypass runtime role | Tested |
 | Registration → workspace provisioning (roles, pipeline, Free plan) | Tested |
 | Sign-in, refresh rotation with reuse detection, sign-out | Tested |

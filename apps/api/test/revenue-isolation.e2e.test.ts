@@ -1,15 +1,15 @@
 import type { INestApplication } from '@nestjs/common';
-import { withDbContext } from '@dealflow/database';
+import { type DbContext, withDbContext } from '@dealflow/database';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, appClient, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
+import { api, appClient, asTenant, countCollection, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
 const TABLES = [
   'commercial_settings', 'products', 'price_books', 'price_book_entries', 'tax_rates', 'quotes', 'quote_lines', 'contracts',
   'campaigns', 'segments', 'lead_forms', 'form_submissions', 'exchange_rates', 'sales_targets', 'escalations', 'company_health',
 ] as const;
 
-/** Row-level security for every Phase 5 table, checked with the runtime database role, plus role checks. */
+/** Workspace isolation (the database guard) for every Phase 5 table, checked through the guarded client, plus role checks. */
 describe('commercial, marketing and success tenant isolation', () => {
   let app: INestApplication;
   let a: TestUser;
@@ -49,12 +49,8 @@ describe('commercial, marketing and success tenant isolation', () => {
     await db.$disconnect();
   });
 
-  const count = (table: string, ctx: { tenantId?: string }, extra = '') =>
-    withDbContext(db, ctx, async (tx) => {
-      if (extra) await tx.$executeRawUnsafe(extra);
-      const r = await tx.$queryRawUnsafe<{ n: bigint }[]>(`SELECT count(*) AS n FROM ${table} WHERE tenant_id = $1::uuid`, a.tenantId);
-      return Number(r[0]!.n);
-    });
+  const count = (table: string, ctx: DbContext, extra: DbContext = {}) =>
+    withDbContext(db, { ...ctx, ...extra }, (tx) => countCollection(tx, table, { tenantId: a.tenantId }));
 
   it('tenant A has data in every new table; others and a missing context see none', async () => {
     for (const t of TABLES) {
@@ -65,7 +61,7 @@ describe('commercial, marketing and success tenant isolation', () => {
   });
 
   it('the worker scan flag opens only contracts among the new tables', async () => {
-    const scan = "SELECT set_config('app.worker_scan', 'on', true)";
+    const scan: DbContext = { workerScan: true };
     for (const t of TABLES) {
       const n = await count(t, {}, scan);
       if (t === 'contracts') expect(n, t).toBeGreaterThan(0);
@@ -74,10 +70,10 @@ describe('commercial, marketing and success tenant isolation', () => {
   });
 
   it('the form token opens exactly one form and nothing else', async () => {
-    const set = `SELECT set_config('app.form_token', '${token}', true)`;
+    const set: DbContext = { lookup: { LeadForm: { publicToken: token } } };
     expect(await count('lead_forms', {}, set)).toBe(1);
     expect(await count('form_submissions', {}, set)).toBe(0);
-    expect(await count('lead_forms', {}, "SELECT set_config('app.form_token', 'wrong-token-value', true)")).toBe(0);
+    expect(await count('lead_forms', {}, { lookup: { LeadForm: { publicToken: 'wrong-token-value' } } })).toBe(0);
   });
 
   it('refuses writes into another tenant', async () => {

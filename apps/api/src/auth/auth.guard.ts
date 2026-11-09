@@ -161,10 +161,7 @@ export class AuthGuard implements CanActivate {
   private async apiKeyAuth(key: string): Promise<AuthContext | undefined> {
     if (!/^dfk_[A-Za-z0-9_-]{30,80}$/.test(key)) return undefined;
     const hash = createHash('sha256').update(key).digest('hex');
-    const row = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.api_key_hash', ${hash}, true)`;
-      return tx.apiKey.findUnique({ where: { keyHash: hash } });
-    });
+    const row = await this.prisma.run({ lookup: { ApiKey: { keyHash: hash } } }, (tx) => tx.apiKey.findUnique({ where: { keyHash: hash } }));
     if (!row || row.revokedAt || (row.expiresAt && row.expiresAt <= new Date())) return undefined;
     const membership = await this.prisma.run({ tenantId: row.tenantId, userId: row.createdById }, (tx) =>
       tx.membership.findFirst({

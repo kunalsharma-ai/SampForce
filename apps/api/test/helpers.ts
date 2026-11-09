@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { PrismaClient } from '@dealflow/database';
+import { createPrismaClient, Prisma, PrismaClient } from '@dealflow/database';
 import type { PlanCode } from '@dealflow/types';
 import { createApp } from '../src/bootstrap';
 
@@ -13,14 +13,14 @@ export async function startApp(): Promise<INestApplication> {
   return app;
 }
 
-/** Schema-owner connection. RLS is FORCEd on tenant tables, so it still needs a tenant context. */
+/** Owner connection without the workspace guard, for arranging and inspecting test state. */
 export function ownerClient(): PrismaClient {
-  return new PrismaClient({ datasources: { db: { url: process.env.TEST_OWNER_DATABASE_URL! } } });
+  return new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL! } } });
 }
 
-/** Runtime role connection (no BYPASSRLS), exactly what the API uses. */
+/** The guarded client, exactly what the API uses (workspace rules in packages/database/src/scope.ts). */
 export function appClient(): PrismaClient {
-  return new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL! } } });
+  return createPrismaClient(process.env.DATABASE_URL!) as unknown as PrismaClient;
 }
 
 export interface TestUser {
@@ -79,7 +79,7 @@ export async function inviteMember(app: INestApplication, owner: TestUser, roleK
   return { agent, email, password, tenantId: owner.tenantId, userId: me.user.id };
 }
 
-/** Runs `fn` against the runtime role inside one tenant's RLS context (for arranging test state). */
+/** Runs `fn` through the guarded client inside one workspace's context (for arranging test state). */
 export async function asTenant<T>(tenantId: string, fn: (tx: import('@dealflow/database').TenantTx) => Promise<T>): Promise<T> {
   const { withDbContext } = await import('@dealflow/database');
   const db = appClient();
@@ -88,4 +88,12 @@ export async function asTenant<T>(tenantId: string, fn: (tx: import('@dealflow/d
   } finally {
     await db.$disconnect();
   }
+}
+
+/** Counts documents in a collection (by its MongoDB name) through the guarded transaction client. */
+export function countCollection(tx: import('@dealflow/database').TenantTx, collection: string, where: Record<string, unknown> = {}): Promise<number> {
+  const model = Prisma.dmmf.datamodel.models.find((m) => (m.dbName ?? m.name) === collection);
+  if (!model) throw new Error(`No model for collection ${collection}`);
+  const delegate = (tx as unknown as Record<string, { count(args: object): Promise<number> }>)[model.name.charAt(0).toLowerCase() + model.name.slice(1)]!;
+  return delegate.count({ where });
 }
