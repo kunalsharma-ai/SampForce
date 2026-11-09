@@ -94,7 +94,7 @@ export class ScimService {
     return `${this.env.PUBLIC_WEB_URL.replace(/\/$/, '')}/api/v1/scim/v2/Users/${id}`;
   }
 
-  /** Resolves the bearer token to its workspace (narrow RLS policy on the token hash), and checks the plan. */
+  /** Resolves the bearer token to its workspace (a lookup on the token hash only), and checks the plan. */
   async authenticate(header: string | undefined): Promise<{ tenantId: string; tokenId: string }> {
     const token = header?.match(/^Bearer\s+(\S+)$/i)?.[1];
     if (!token) throw new ScimError(401, 'Missing bearer token.');

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createManySkipDuplicates, type DomainEvent, Prisma, type TenantTx } from '@dealflow/database';
+import { createManySkipDuplicates, type DomainEvent, type TenantTx } from '@dealflow/database';
 import { TRIGGER_EVENTS } from '@dealflow/types';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';

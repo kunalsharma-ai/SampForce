@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AuthContext } from '../common/auth-context';
-import { Prisma } from '@dealflow/database';
 import { PrismaService } from '../common/prisma.service';
 import { toActivityRow } from '../crm/activities.service';
 import { CompaniesService } from '../crm/companies.service';

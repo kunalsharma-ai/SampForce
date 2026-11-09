@@ -40,8 +40,8 @@ const nameTaken = () => new ConflictException({ code: 'NAME_TAKEN', message: 'Yo
 const isUnique = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 
 /**
- * Saved table views (ADR 0042). RLS returns the person's own views and views shared in the workspace; only the
- * creator can change or delete one, which the database enforces as well.
+ * Saved table views (ADR 0042). The workspace guard returns the person's own views and views shared in the workspace; only the
+ * creator can change or delete one, which the database client enforces as well.
  */
 @Injectable()
 export class ViewsService {

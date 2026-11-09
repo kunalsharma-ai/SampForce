@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { Prisma } from '@dealflow/database';
 import { AppError, AppsService } from '../apps/apps.service';
 import { slackEscape } from '../apps/slack';
 import { teamsEscape } from '../apps/teams';

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import type { TenantTx } from '@dealflow/database';
 import {
   type DealHealth,
   formatReference,

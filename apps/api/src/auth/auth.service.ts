@@ -194,7 +194,7 @@ export class AuthService {
   async register(input: RegisterInput, meta: RequestMeta): Promise<IssuedTokens> {
     const passwordHash = await this.passwords.hash(input.password);
     const tenantId = randomUUID();
-    // Slugs carry a random suffix: tenants are invisible to each other under RLS, so we
+    // Slugs carry a random suffix: tenants are invisible to each other under the workspace guard, so we
     // cannot (and must not) probe whether another workspace already uses a name.
     const slug = `${slugify(input.organizationName)}-${randomBytes(3).toString('hex')}`;
 

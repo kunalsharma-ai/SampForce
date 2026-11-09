@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import { type ActivityItem, type DashboardFilter, type DashboardSummary, type KpiValue, PERIOD_DAYS as DAYS } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';

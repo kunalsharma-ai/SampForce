@@ -26,7 +26,7 @@ const off = (what: string) => new ForbiddenException({ code: 'PORTAL_FEATURE_OFF
 export const requestRef = (n: number) => `R-${String(n).padStart(4, '0')}`;
 
 /**
- * What a signed-in customer can see and do. Every query is scoped to the workspace (row-level security) and to the
+ * What a signed-in customer can see and do. Every query is scoped to the workspace (the workspace guard) and to the
  * customer's own company in the WHERE clause, and every section obeys the portal settings the workspace chose.
  */
 @Injectable()

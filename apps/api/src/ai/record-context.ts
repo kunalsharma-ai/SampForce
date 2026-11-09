@@ -29,7 +29,7 @@ const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 /**
  * Builds the read-only record snapshots that agents and Copilot tools send to the model. Reads run
- * under the caller's tenant context (RLS) and check the caller's read permission for each record type.
+ * under the caller's tenant context (the workspace guard) and check the caller's read permission for each record type.
  * Email content is wrapped as untrusted data.
  */
 @Injectable()

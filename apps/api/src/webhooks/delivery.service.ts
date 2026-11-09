@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { publicFetch } from '../common/net-guard';

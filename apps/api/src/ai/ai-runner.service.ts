@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import { PrismaService } from '../common/prisma.service';
 import { claimDue, errorMessage } from '../worker/queue';
 import { AgentsService, systemActor } from './agents.service';

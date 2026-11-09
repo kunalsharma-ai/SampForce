@@ -27,11 +27,12 @@ function build(url: string): PrismaServiceApi {
  * subclass, so the constructor returns that object; the interface below gives the class its type.
  */
 @Injectable()
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class PrismaService {
   constructor(@Inject(API_ENV) env: ApiEnv) {
     return build(env.DATABASE_URL) as unknown as PrismaService;
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging, @typescript-eslint/no-empty-object-type
 export interface PrismaService extends PrismaServiceApi {}

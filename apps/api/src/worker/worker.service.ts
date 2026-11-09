@@ -39,9 +39,9 @@ export interface WorkerTick {
 }
 
 /**
- * The background worker: one loop that drains the Postgres-backed queues (outbox, workflow runs,
+ * The background worker: one loop that drains the database-backed queues (outbox, workflow runs,
  * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health, trial expiry and dunning, sequence sends). Safe to run several copies; every claim uses
- * FOR UPDATE SKIP LOCKED with a lease.
+ * a conditional update that takes a lease (worker/queue.ts), so exactly one copy wins each item.
  */
 @Injectable()
 export class WorkerService implements OnApplicationBootstrap, OnApplicationShutdown {

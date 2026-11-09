@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
     await setupDatabase(prisma);
-    console.log('SampForce database set-up complete');
+    console.warn('SampForce database set-up complete');
   } finally {
     await prisma.$disconnect();
   }

@@ -38,7 +38,7 @@ export interface ProvisionTenantInput {
 
 /**
  * Creates a workspace with its system roles, owner membership, default sales pipeline and
- * a subscription. Must run inside `withDbContext` with `tenantId` set to `input.tenantId`
+ * so the workspace guard accepts the new documents.
  * so the row-level-security insert policies accept the rows.
  */
 export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput) {

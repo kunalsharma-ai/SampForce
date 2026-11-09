@@ -53,9 +53,9 @@ export interface RefCheck {
 }
 
 /**
- * Validates that referenced ids belong to the current tenant. Foreign keys alone are not enough:
- * referential checks bypass row-level security, so without this a request could link a record to
- * another tenant's row id. Lookups run under RLS, so foreign rows are simply "not found".
+ * Validates that referenced ids belong to the current tenant. MongoDB checks no references at all, so without this a
+ * request could link a record to another tenant's id (or to nothing). Lookups run under the workspace guard, so
+ * foreign records are simply "not found".
  */
 export async function assertRefs(tx: TenantTx, tenantId: string, refs: RefCheck, fieldPrefix = ''): Promise<void> {
   const checks: Promise<void>[] = [];

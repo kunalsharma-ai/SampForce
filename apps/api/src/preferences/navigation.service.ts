@@ -29,7 +29,7 @@ function recentItems(v: Prisma.JsonValue): NavigationState['recent'] {
 }
 
 /**
- * Personal navigation in the current workspace. The row is protected by RLS on both the workspace and the person,
+ * Personal navigation in the current workspace. The document is held by the workspace guard to both the workspace and the person,
  * so one member can never read or change another's pins or history.
  */
 @Injectable()

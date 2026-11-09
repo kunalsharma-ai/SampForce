@@ -50,7 +50,7 @@ export class SsoService {
     return `${this.env.JWT_ACCESS_SECRET}:sso-state`;
   }
 
-  /** Looks up an enabled connection by its public sign-in name, without a tenant context (narrow RLS policy). */
+  /** Looks up an enabled connection by its public sign-in name, without a tenant context (a lookup on the sign-in name only). */
   private async connectionBySlug(loginSlug: string) {
     return this.prisma.run({ lookup: { SsoConnection: { loginSlug } } }, (tx) => tx.ssoConnection.findFirst({ where: { loginSlug, enabled: true } }));
   }

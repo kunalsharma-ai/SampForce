@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@dealflow/database';
 import type { Citation, Permission, ProposedAction, SearchHit } from '@dealflow/types';
 import { randomUUID } from 'node:crypto';
 import type { AuthContext } from '../common/auth-context';

@@ -1,10 +1,13 @@
 // SampForce database schema.
 // Conventions:
-//   * Every tenant-owned table has a non-null tenant_id and is protected by PostgreSQL
-//     row-level security (see migrations/*/migration.sql and docs/SECURITY_MODEL.md).
-//   * Global tables (users, sessions, plans) are only touched by the auth and billing services.
+//   * MongoDB (a replica set, for transactions). Every workspace-owned collection has a non-null tenant_id, and the
+//     workspace guard in src/scope.ts holds every query to the current workspace (ADR 0058, docs/SECURITY_MODEL.md).
+//   * Indexes, including partial and case-insensitive ones, are created by src/setup.ts from this file
+//     (`pnpm db:setup`); there are no migrations.
+//   * Global collections (users, sessions, plans) are only touched by the auth and billing services.
 //   * Soft deletion uses deleted_at; hard deletion is reserved for data-deletion workflows.
-//   * Money is stored as NUMERIC(18,2) alongside an ISO-4217 currency code.
+//   * Money is a double rounded to its old NUMERIC scale on every write (src/money.ts), alongside an ISO-4217
+//     currency code.
 
 generator client {
   provider = "prisma-client-js"
@@ -119,7 +122,7 @@ model UserSavedTheme {
 }
 
 /// A person's own navigation in one workspace: pinned pages and records, recent visits, sidebar order and hidden
-/// modules. RLS limits rows to the current workspace AND the current user.
+/// modules. The workspace guard limits documents to the current workspace AND the current user.
 model WorkspaceNavigation {
   id              String   @id @default(uuid()) @map("_id")
   tenantId        String   @map("tenant_id")
@@ -140,7 +143,7 @@ model WorkspaceNavigation {
 }
 
 /// A saved data table view (columns, widths, sort, filters, density) for one list. Visible to its creator, and to the
-/// whole workspace when shared; only the creator can change or delete it (enforced by RLS).
+/// whole workspace when shared; only the creator can change or delete it (enforced by the workspace guard).
 model SavedView {
   id        String   @id @default(uuid()) @map("_id")
   tenantId  String   @map("tenant_id")
@@ -1247,7 +1250,7 @@ model EmailMessage {
   /// The Email Assistant's latest reading of a received email (EMAIL_INTENTS); a model's judgement, not a fact.
   aiIntent          String?        @map("ai_intent")
   aiAnalysedAt      DateTime?      @map("ai_analysed_at")
-  /// Set by a database trigger on insert; see email_messages_join_thread().
+  /// The inbox conversation, set when the email is stored (storeEmail in apps/api/src/integrations/threading.ts).
   conversationId    String?        @map("conversation_id")
   createdAt         DateTime       @default(now()) @map("created_at")
 
@@ -2439,7 +2442,7 @@ model NextActionDecision {
   @@map("next_action_decisions")
 }
 
-/// Inbox conversation (feature 8): stored messages grouped by provider thread. Rows are created by a trigger on email_messages.
+/// Inbox conversation (feature 8): stored messages grouped by provider thread. Created when the first email of the thread is stored.
 model EmailThread {
   id            String   @id @default(uuid()) @map("_id")
   tenantId      String   @map("tenant_id")
