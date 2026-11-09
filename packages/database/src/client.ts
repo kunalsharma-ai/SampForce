@@ -54,7 +54,7 @@ export async function withDbContext<T>(
   for (let attempt = 1; ; attempt++) {
     try {
       return await dbContextStorage.run({ ...ctx, [ROOT_CLIENT]: client } as DbContext, () =>
-        client.$transaction((tx) => fn(tx), { timeout: options?.timeoutMs ?? 10_000, maxWait: 10_000 }),
+        client.$transaction(async (tx) => await fn(tx), { timeout: options?.timeoutMs ?? 10_000, maxWait: 10_000 }),
       );
     } catch (err) {
       if (attempt >= MAX_ATTEMPTS || !isRetryable(err)) throw err;
@@ -67,7 +67,8 @@ export async function withDbContext<T>(
 
 /** Runs `fn` with the workspace context set but without a transaction (for long read-only scans). */
 export function withDbScope<T>(ctx: DbContext, fn: () => Promise<T>): Promise<T> {
-  return dbContextStorage.run({ ...ctx }, fn);
+  // Awaited inside run(): Prisma queries are lazy and would otherwise execute after the context has ended.
+  return dbContextStorage.run({ ...ctx }, async () => await fn());
 }
 
 async function ensureCounter(id: string): Promise<void> {
@@ -90,13 +91,25 @@ async function ensureCounter(id: string): Promise<void> {
  * after this one commits.
  */
 export async function transactionLock(tx: TenantTx, key: string): Promise<void> {
-  await ensureCounter(`lock:${key}`);
-  await tx.counter.update({ where: { id: `lock:${key}` }, data: { value: { increment: 1 } } });
+  await bumpCounter(tx, `lock:${key}`);
+}
+
+/**
+ * Increments a counter inside the transaction. A counter created just now (outside the transaction) is not in the
+ * transaction's snapshot, so the first use of a new counter restarts the transaction once.
+ */
+async function bumpCounter(tx: TenantTx, id: string): Promise<number> {
+  await ensureCounter(id);
+  try {
+    const row = await tx.counter.update({ where: { id }, data: { value: { increment: 1 } } });
+    return row.value;
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') throw new RetryableDuplicateError();
+    throw err;
+  }
 }
 
 /** The next value of a named sequence, inside the current transaction (was nextval). Starts at 1. */
 export async function nextSequenceValue(tx: TenantTx, name: string): Promise<number> {
-  await ensureCounter(`seq:${name}`);
-  const row = await tx.counter.update({ where: { id: `seq:${name}` }, data: { value: { increment: 1 } } });
-  return row.value;
+  return bumpCounter(tx, `seq:${name}`);
 }

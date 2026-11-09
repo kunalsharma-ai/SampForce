@@ -108,7 +108,7 @@ export class CatalogService {
       // Price changes are commercially sensitive, so the audit log keeps old and new values.
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'price.changed', entityType: 'price_book', entityId: priceBookId,
-        metadata: { productId, product: product.name, currency: book.currency, from: Number(before?.unitPrice) ?? null, to: unitPrice }, meta,
+        metadata: { productId, product: product.name, currency: book.currency, from: before?.unitPrice ??  null, to: unitPrice }, meta,
       });
     });
   }
@@ -163,7 +163,7 @@ export class CatalogService {
 export async function readSettings(tx: TenantTx, tenantId: string): Promise<CommercialSettingsRow> {
   const s = await tx.commercialSettings.findUnique({ where: { tenantId } });
   return {
-    discountApprovalThreshold: Number(s?.discountApprovalThreshold) ?? 10,
+    discountApprovalThreshold: s?.discountApprovalThreshold ??  10,
     quoteValidityDays: s?.quoteValidityDays ?? 30,
     quoteTerms: s?.quoteTerms ?? null,
     proposalHeader: s?.proposalHeader ?? null,

@@ -308,7 +308,7 @@ export class GamificationService {
         const w = windowOf(periodLabelOf(now, g));
         const t = await tx.salesTarget.findFirst({ where: { tenantId: auth.tenantId, period: w.label, userId: auth.userId }, select: { amount: true } });
         const won = r2((await this.score(tx, auth.tenantId, w)).stats.get(auth.userId)?.revenue ?? 0);
-        const target = Number(t?.amount) ?? null;
+        const target = t?.amount ??  null;
         targets.push({ period: w.label, granularity: g, target, won, attainment: target ? r1((won / target) * 100) : null });
       }
       const awards = await this.awardRows(tx, { tenantId: auth.tenantId, userId: auth.userId }, 50);

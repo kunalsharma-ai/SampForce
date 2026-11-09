@@ -26,13 +26,33 @@ export interface IndexSpec {
   unique: boolean;
   /** Fields that are optional in a unique index: the index only covers documents where they hold a value. */
   partialOn: string[];
+  /** An explicit partial filter (indexes that were partial on PostgreSQL). */
+  partialFilter?: Record<string, unknown>;
+  /** Case-insensitive uniqueness (was a unique index on lower(column)). */
+  collation?: { locale: string; strength: number };
 }
+
+/**
+ * Indexes the PostgreSQL migrations created in SQL because Prisma's schema could not express them. Each keeps its
+ * PostgreSQL name.
+ */
+export const EXTRA_INDEXES: IndexSpec[] = [
+  // At most one open offline invoice per workspace.
+  { collection: 'invoices', name: 'invoices_one_open_offline', key: { tenant_id: 1 }, unique: true, partialOn: [], partialFilter: { provider: 'OFFLINE', status: 'OPEN' } },
+  // A person can be in a running sequence once at a time.
+  { collection: 'sequence_enrollments', name: 'sequence_enrollments_live_key', key: { sequence_id: 1, email: 1 }, unique: true, partialOn: [], partialFilter: { status: { $in: ['ACTIVE', 'PAUSED'] } } },
+  { collection: 'portal_users', name: 'portal_users_invite_idx', key: { invite_token_hash: 1 }, unique: false, partialOn: [], partialFilter: { invite_token_hash: { $gte: '' } } },
+  { collection: 'portal_users', name: 'portal_users_reset_idx', key: { reset_token_hash: 1 }, unique: false, partialOn: [], partialFilter: { reset_token_hash: { $gte: '' } } },
+  // Territory names are unique per workspace regardless of case.
+  { collection: 'territories', name: 'territories_tenant_id_lower_name_key', key: { tenant_id: 1, name: 1 }, unique: true, partialOn: [], collation: { locale: 'en', strength: 2 } },
+];
 
 interface ParsedField {
   name: string;
   dbName: string;
   optional: boolean;
   unique: boolean;
+  type: string;
 }
 
 export function schemaPath(): string {
@@ -62,13 +82,18 @@ export function indexSpecs(schema = fs.readFileSync(schemaPath(), 'utf8')): Inde
       if (!scalar) continue;
       const isId = /@id\b/.test(rest!);
       const dbName = isId ? '_id' : (/@map\("([^"]+)"\)/.exec(rest!)?.[1] ?? name!);
-      fields.set(name!, { name: name!, dbName, optional: !!opt, unique: /@unique\b/.test(rest!) });
+      fields.set(name!, { name: name!, dbName, optional: !!opt, unique: /@unique\b/.test(rest!), type: type! });
     }
     const make = (names: string[], unique: boolean, map?: string, sorts?: Array<1 | -1>) => {
       const cols = names.map((n) => fields.get(n)?.dbName ?? n);
       const key: Record<string, 1 | -1> = {};
       cols.forEach((c, i) => (key[c] = sorts?.[i] ?? 1));
       const partialOn = unique ? names.filter((n) => fields.get(n)?.optional).map((n) => fields.get(n)!.dbName) : [];
+      for (const n of names) {
+        const f = fields.get(n);
+        // The partial filter below only covers strings; another optional type in a unique index needs its own rule.
+        if (unique && f?.optional && f.type !== 'String') throw new Error(`optional ${f.type} ${collection}.${n} in a unique index`);
+      }
       specs.push({ collection, name: map ?? `${collection}_${cols.join('_')}_${unique ? 'key' : 'idx'}`, key, unique, partialOn });
     };
     for (const f of fields.values()) if (f.unique) make([f.name], true);
@@ -82,7 +107,7 @@ export function indexSpecs(schema = fs.readFileSync(schemaPath(), 'utf8')): Inde
   return specs;
 }
 
-type ExistingIndex = { name: string; key: Record<string, number>; unique?: boolean; partialFilterExpression?: unknown };
+type ExistingIndex = { name: string; key: Record<string, number>; unique?: boolean; partialFilterExpression?: unknown; collation?: { locale?: string; strength?: number } };
 
 async function listIndexes(prisma: PrismaClient, collection: string): Promise<ExistingIndex[]> {
   try {
@@ -99,12 +124,13 @@ function sameIndex(a: ExistingIndex, spec: IndexSpec, partial: Record<string, un
   return (
     JSON.stringify(a.key) === JSON.stringify(spec.key) &&
     !!a.unique === spec.unique &&
-    JSON.stringify(a.partialFilterExpression ?? null) === JSON.stringify(partial ?? null)
+    JSON.stringify(a.partialFilterExpression ?? null) === JSON.stringify(partial ?? null) &&
+    (spec.collation ? a.collation?.locale === spec.collation.locale && a.collation?.strength === spec.collation.strength : !a.collation || a.collation.locale === 'simple')
   );
 }
 
 export async function syncIndexes(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
-  const specs = indexSpecs();
+  const specs = [...indexSpecs(), ...EXTRA_INDEXES];
   const byCollection = new Map<string, IndexSpec[]>(collectionNames().map((c) => [c, []]));
   for (const s of specs) byCollection.set(s.collection, [...(byCollection.get(s.collection) ?? []), s]);
   for (const [collection, wanted] of byCollection) {
@@ -118,9 +144,11 @@ export async function syncIndexes(prisma: PrismaClient, log: (line: string) => v
       }
     }
     for (const spec of wanted) {
-      const partial = spec.partialOn.length
-        ? Object.fromEntries(spec.partialOn.map((f) => [f, { $exists: true, $type: ['string', 'number', 'date', 'bool'] }]))
-        : undefined;
+      const partial =
+        spec.partialFilter ??
+        // `$gte: ''` matches exactly the string values (BSON compares within a type), so null and missing are left out.
+        // `$type` would read the same but Prisma's raw-command reader cannot parse it back from listIndexes.
+        (spec.partialOn.length ? Object.fromEntries(spec.partialOn.map((f) => [f, { $gte: '' }])) : undefined);
       const current = existing.find((e) => e.name === spec.name);
       if (current && sameIndex(current, spec, partial)) continue;
       if (current) await prisma.$runCommandRaw({ dropIndexes: collection, index: spec.name });
@@ -132,6 +160,7 @@ export async function syncIndexes(prisma: PrismaClient, log: (line: string) => v
             name: spec.name,
             ...(spec.unique ? { unique: true } : {}),
             ...(partial ? { partialFilterExpression: partial } : {}),
+            ...(spec.collation ? { collation: spec.collation } : {}),
           },
         ] as unknown as Prisma.InputJsonValue[],
       });

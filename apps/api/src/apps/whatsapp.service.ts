@@ -191,11 +191,7 @@ export class WhatsappService {
 
     for (const m of w.inbound) {
       const outcome = await this.prisma.run({ tenantId }, async (tx) => {
-        const matches = await tx.$queryRaw<{ id: string; owner_id: string | null; first_name: string | null; last_name: string | null }[]>`
-          SELECT id, owner_id, first_name, last_name FROM contacts
-          WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND phone ~ '^\\s*(\\+|00)'
-            AND regexp_replace(regexp_replace(btrim(phone), '^00', ''), '\\D', '', 'g') = ${m.from}
-          LIMIT 2`;
+        const matches = (await tx.contact.findMany({ where: { tenantId, deletedAt: null, phoneIntl: m.from }, select: { id: true, ownerId: true, firstName: true, lastName: true }, take: 2 })).map((c) => ({ id: c.id, owner_id: c.ownerId, first_name: c.firstName, last_name: c.lastName }));
         // Only an unambiguous match is linked; the panel shows the conversation on every contact with that number.
         const contact = matches.length === 1 ? matches[0]! : null;
         const created = await createManySkipDuplicates(tx.whatsappMessage, 'WhatsappMessage', [{ tenantId, connectionId: conn.id, contactId: contact?.id ?? null, direction: 'in', phone: m.from, waMessageId: m.waMessageId, kind: m.kind, body: m.body, status: 'received', source: 'webhook' }]);

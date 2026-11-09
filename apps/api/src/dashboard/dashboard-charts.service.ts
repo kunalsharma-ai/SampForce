@@ -6,7 +6,7 @@ import { PrismaService } from '../common/prisma.service';
 import { type BucketUnit, bucketStart, buckets, quarterBounds, ratio, round, stageFunnel } from './kpi-math';
 
 const DAY_MS = 86_400_000;
-const n = (v: Prisma.Decimal | number | bigint | null | undefined) => (v === null || v === undefined ? 0 : Number(v));
+const n = (v: number | bigint | null | undefined) => (v === null || v === undefined ? 0 : Number(v));
 
 /**
  * Data for the Command Center charts (design spec Part 4). Same scoping as the summary: the workspace's default
@@ -90,17 +90,15 @@ export class DashboardChartsService {
       };
 
       // Team performance.
-      const ownerSql = owner ? Prisma.sql`AND o.owner_id = ${owner}::uuid` : Prisma.empty;
-      const pipeSql = filter.pipelineId ? Prisma.sql`AND o.pipeline_id = ${filter.pipelineId}::uuid` : Prisma.empty;
-      const teamRows = await tx.$queryRaw<{ owner_id: string | null; won: Prisma.Decimal | null; won_count: bigint; open_value: Prisma.Decimal | null; open_count: bigint }[]>`
-        SELECT o.owner_id,
-          SUM(o.amount) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart} AND o.closed_at <= ${now}) AS won,
-          COUNT(*) FILTER (WHERE o.status = 'WON' AND o.closed_at >= ${periodStart} AND o.closed_at <= ${now}) AS won_count,
-          SUM(o.amount) FILTER (WHERE o.status = 'OPEN') AS open_value,
-          COUNT(*) FILTER (WHERE o.status = 'OPEN') AS open_count
-        FROM opportunities o
-        WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.currency = ${currency} ${ownerSql} ${pipeSql}
-        GROUP BY o.owner_id`;
+      const [wonByOwner, openByOwner] = await Promise.all([
+        tx.opportunity.groupBy({ by: ['ownerId'], where: { ...dealWhere, status: 'WON', closedAt: { gte: periodStart, lte: now } }, _sum: { amount: true }, _count: { _all: true } }),
+        tx.opportunity.groupBy({ by: ['ownerId'], where: { ...dealWhere, status: 'OPEN' }, _sum: { amount: true }, _count: { _all: true } }),
+      ]);
+      const teamRows = [...new Set([...wonByOwner, ...openByOwner].map((g) => g.ownerId))].map((ownerId) => {
+        const w = wonByOwner.find((g) => g.ownerId === ownerId);
+        const o = openByOwner.find((g) => g.ownerId === ownerId);
+        return { owner_id: ownerId, won: w?._sum.amount ?? null, won_count: w?._count._all ?? 0, open_value: o?._sum.amount ?? null, open_count: o?._count._all ?? 0 };
+      });
       const acts = await tx.activity.groupBy({
         by: ['ownerId'],
         where: { tenantId: tid, deletedAt: null, occurredAt: { gte: periodStart, lte: now }, ...(owner ? { ownerId: owner } : {}) },
@@ -126,11 +124,17 @@ export class DashboardChartsService {
         .sort((a, b) => b.won - a.won || b.openValue - a.openValue || a.name.localeCompare(b.name));
 
       // Risk distribution of open deals.
-      const riskRows = await tx.$queryRaw<{ risk: string; count: bigint; value: Prisma.Decimal | null }[]>`
-        SELECT COALESCE(h.risk, 'unscored') AS risk, COUNT(*) AS count, SUM(o.amount) AS value
-        FROM opportunities o LEFT JOIN deal_health_scores h ON h.deal_id = o.id
-        WHERE o.tenant_id = ${tid}::uuid AND o.deleted_at IS NULL AND o.status = 'OPEN' AND o.currency = ${currency} ${ownerSql} ${pipeSql}
-        GROUP BY 1`;
+      const openDeals = await tx.opportunity.findMany({ where: { ...dealWhere, status: 'OPEN' }, select: { id: true, amount: true } });
+      const scores = new Map(
+        (await tx.dealHealthScore.findMany({ where: { tenantId: tid, dealId: { in: openDeals.map((d) => d.id) } }, select: { dealId: true, risk: true } })).map((h) => [h.dealId, h.risk]),
+      );
+      const riskRows: { risk: string; count: number; value: number }[] = [];
+      for (const d of openDeals) {
+        const key = scores.get(d.id) ?? 'unscored';
+        const row = riskRows.find((x) => x.risk === key) ?? (riskRows.push({ risk: key, count: 0, value: 0 }), riskRows[riskRows.length - 1]!);
+        row.count++;
+        row.value += d.amount;
+      }
       const risk = (['high', 'medium', 'low', 'unscored'] as const).map((r) => {
         const row = riskRows.find((x) => x.risk === r);
         return { risk: r, count: n(row?.count), value: round(n(row?.value))! };

@@ -590,6 +590,10 @@ model Contact {
   lastName         String?          @map("last_name")
   email            String?
   phone            String?
+  /// Last ten digits of `phone`, kept by the database client (packages/database/src/derived.ts) for duplicate checks.
+  phoneDigits      String?          @map("phone_digits")
+  /// `phone` as international digits (no + or 00) when it was written in international form; WhatsApp and SMS match on it.
+  phoneIntl        String?          @map("phone_intl")
   jobTitle         String?          @map("job_title")
   country          String?
   timezone         String?
@@ -622,6 +626,8 @@ model Contact {
 
   @@index([tenantId, email])
   @@index([tenantId, lastName, firstName])
+  @@index([tenantId, phoneDigits])
+  @@index([tenantId, phoneIntl])
   @@map("contacts")
 }
 
@@ -642,6 +648,8 @@ model Lead {
   industry               String?
   email                  String?
   phone                  String?
+  /// Last ten digits of `phone`, kept by the database client (packages/database/src/derived.ts) for duplicate checks.
+  phoneDigits            String?          @map("phone_digits")
   country                String?
   city                   String?
   timezone               String?
@@ -658,6 +666,8 @@ model Lead {
   estimatedValue         Float?           @map("estimated_value")
   currency               String?
   status                 LeadStatus       @default(NEW)
+  /// Position of `status` in LeadStatus, kept by the database client so sorting follows the enum order.
+  statusRank             Int?             @map("status_rank")
   engagementScore        Int?             @map("engagement_score")
   aiScore                Int?             @map("ai_score")
   tags                   String[]
@@ -682,6 +692,7 @@ model Lead {
   @@index([tenantId, createdAt])
   @@index([tenantId, email])
   @@index([tenantId, ownerId])
+  @@index([tenantId, phoneDigits])
   @@map("leads")
 }
 
@@ -758,6 +769,10 @@ model Opportunity {
   lossReason        String?           @map("loss_reason")
   /// Set by people; null means not prioritised.
   priority          DealPriority?
+  /// Position of `status` / `priority` in their enum, kept by the database client so sorting follows the enum order
+  /// (as PostgreSQL enums sorted) rather than the alphabet (packages/database/src/derived.ts).
+  statusRank        Int?              @map("status_rank")
+  priorityRank      Int?              @map("priority_rank")
   ownerId           String?           @map("owner_id")
   companyId         String?           @map("company_id")
   contactId         String?           @map("contact_id")

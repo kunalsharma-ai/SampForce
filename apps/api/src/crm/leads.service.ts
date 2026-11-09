@@ -268,12 +268,8 @@ export class LeadsService {
     }
     const digits = phoneDigits(lead.phone);
     if (digits) {
-      const rows = await tx.$queryRaw<{ id: string; full_name: string }[]>`
-        SELECT id, full_name FROM leads
-        WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND id <> ${lead.id}::uuid
-          AND right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 10) = ${digits}
-        LIMIT 10`;
-      rows.forEach((r) => add({ id: r.id, entity: 'lead', label: r.full_name, reason: 'phone' }));
+      const rows = await tx.lead.findMany({ where: { ...base, id: { not: lead.id }, phoneDigits: digits }, select: { id: true, fullName: true }, take: 10 });
+      rows.forEach((r) => add({ id: r.id, entity: 'lead', label: r.fullName, reason: 'phone' }));
     }
     if (lead.companyName) {
       const rows = await tx.lead.findMany({

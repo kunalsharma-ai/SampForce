@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { rankOrderBy, withDerivedFields } from './derived';
 import { roundDecimals } from './money';
 
 /**
@@ -331,7 +332,7 @@ export function fillNulls(model: string, data: unknown, depth = 0): unknown {
   const meta = NULLABLE.get(model);
   const rels = META.get(model)?.relations;
   if (!meta || !rels) return data;
-  const out: Record<string, unknown> = { ...(roundDecimals(model, data) as Record<string, unknown>) };
+  const out: Record<string, unknown> = { ...(roundDecimals(model, withDerivedFields(model, data, true)) as Record<string, unknown>) };
   for (const { name } of meta.scalars) {
     if (name in out) continue;
     const rel = meta.fkRelation.get(name);
@@ -423,6 +424,31 @@ async function findManyWithNullOrdering(
   return [...first, ...rest];
 }
 
+/**
+ * Prisma's MongoDB connector turns `contains`, `startsWith`, `endsWith` and every `mode: 'insensitive'` comparison
+ * into a regular expression without escaping the value, so a search for "a.b" matched "axb" and a search for "("
+ * failed the query. PostgreSQL's LIKE/ILIKE matched literally. Every such value is escaped here before the query
+ * runs, wherever it sits in the filter tree.
+ */
+const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
+export const escapeRegex = (v: string): string => v.replace(REGEX_SPECIALS, '\\$&');
+
+export function escapeStringFilters(value: unknown, depth = 0): unknown {
+  if (!value || typeof value !== 'object' || depth > 20) return value;
+  if (Array.isArray(value)) return value.map((v) => escapeStringFilters(v, depth + 1));
+  if (value instanceof Date || Buffer.isBuffer(value)) return value;
+  const src = value as Record<string, unknown>;
+  const insensitive = src.mode === 'insensitive';
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(src)) {
+    if ((k === 'contains' || k === 'startsWith' || k === 'endsWith') && typeof v === 'string') out[k] = escapeRegex(v);
+    else if (insensitive && (k === 'equals' || k === 'not') && typeof v === 'string') out[k] = escapeRegex(v);
+    else if (insensitive && (k === 'in' || k === 'notIn') && Array.isArray(v)) out[k] = v.map((x) => (typeof x === 'string' ? escapeRegex(x) : x));
+    else out[k] = escapeStringFilters(v, depth + 1);
+  }
+  return out;
+}
+
 /** Field name in the stored document for `tenantId` (the schema maps it to `tenant_id`). */
 const RAW_TENANT_FIELD = 'tenant_id';
 
@@ -445,11 +471,15 @@ export function workspaceGuard(base: PrismaClient) {
         async $allOperations({ model, operation, args, query }) {
           const ctx = currentDbContext();
           const a = { ...(args as Record<string, unknown>) };
-          if (operation === 'create' || operation === 'createMany') a.data = roundDecimals(model, fillNulls(model, a.data));
+          if (a.where) a.where = escapeStringFilters(a.where);
+          if (a.orderBy) a.orderBy = rankOrderBy(model, a.orderBy);
+          if (a.include) a.include = escapeStringFilters(a.include);
+          if (a.select) a.select = escapeStringFilters(a.select);
+          if (operation === 'create' || operation === 'createMany') a.data = roundDecimals(model, fillNulls(model, withDerivedFields(model, a.data, true)));
           else if (operation === 'upsert') {
-            a.create = roundDecimals(model, fillNulls(model, a.create));
-            a.update = roundDecimals(model, a.update);
-          } else if (operation === 'update' || operation === 'updateMany') a.data = roundDecimals(model, fillNestedUpdates(model, a.data));
+            a.create = roundDecimals(model, fillNulls(model, withDerivedFields(model, a.create, true)));
+            a.update = roundDecimals(model, withDerivedFields(model, a.update));
+          } else if (operation === 'update' || operation === 'updateMany') a.data = roundDecimals(model, fillNestedUpdates(model, withDerivedFields(model, a.data)));
           if (ctx?.system || !isWorkspaceModel(model)) return READ_OPS.has(operation) ? readWithOrdering(operation, a, query) : query(a);
 
           if (operation === 'update' || operation === 'updateMany' || operation === 'upsert') {

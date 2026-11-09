@@ -167,11 +167,9 @@ export class TwilioService {
     const stop = optType === 'STOP' || SMS_STOP_WORDS.has(word);
     const start = !stop && (optType === 'START' || SMS_START_WORDS.has(word));
     const outcome = await this.prisma.run({ tenantId }, async (tx) => {
-      const matches = await tx.$queryRaw<{ id: string; owner_id: string | null; first_name: string | null; last_name: string | null }[]>`
-        SELECT id, owner_id, first_name, last_name FROM contacts
-        WHERE tenant_id = ${tenantId}::uuid AND deleted_at IS NULL AND phone ~ '^\\s*(\\+|00)'
-          AND '+' || regexp_replace(regexp_replace(btrim(phone), '^00', ''), '\\D', '', 'g') = ${from}
-        LIMIT 2`;
+      const matches = from.startsWith('+')
+        ? (await tx.contact.findMany({ where: { tenantId, deletedAt: null, phoneIntl: from.slice(1) }, select: { id: true, ownerId: true, firstName: true, lastName: true }, take: 2 })).map((c) => ({ id: c.id, owner_id: c.ownerId, first_name: c.firstName, last_name: c.lastName }))
+        : [];
       // Only an unambiguous match is linked; the panel shows the conversation on every contact with that number.
       const contact = matches.length === 1 ? matches[0]! : null;
       const created = await createManySkipDuplicates(tx.smsMessage, 'SmsMessage', [{ tenantId, connectionId: conn.id, contactId: contact?.id ?? null, direction: 'in', phone: from, twilioSid: sid, body, segments: Math.max(1, Number(params.NumSegments ?? 1) || 1), status: 'received', source: 'webhook' }]);

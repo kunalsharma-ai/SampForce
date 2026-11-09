@@ -9,7 +9,8 @@ import { currentDbContext, type DbContext, dbContextStorage } from './scope';
 type Client = Pick<SampforceClient, 'invitation' | 'leadForm' | 'subscription' | 'visitorSettings'>;
 
 function scoped<T>(ctx: DbContext, fn: () => Promise<T>): Promise<T> {
-  return dbContextStorage.run(ctx, fn);
+  // Awaited inside run(): Prisma queries are lazy and would otherwise execute after the context has ended.
+  return dbContextStorage.run(ctx, async () => await fn());
 }
 
 /** The workspace of an open, unexpired invitation (was app_invitation_tenant). */

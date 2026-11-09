@@ -101,7 +101,7 @@ export class AnalyticsService {
       for (const d of lost) bucket(d.ownerId).lost++;
       for (const t of targets) if (t.userId) bucket(t.userId);
       const byOwner = [...byOwnerMap.entries()].map(([id, v]) => {
-        const target = Number(targets.find((t) => (t.userId ?? '') === id && t.userId !== null)?.amount) ?? null;
+        const target = targets.find((t) => (t.userId ?? '') === id && t.userId !== null)?.amount ?? null;
         return { owner: id ? (names.get(id) ?? null) : null, won: r2(v.won), deals: v.deals, lost: v.lost, winRate: winRate(v.deals, v.lost), target, attainment: target ? r2((v.won / target) * 100) : null };
       }).sort((a, b) => b.won - a.won);
 
@@ -146,7 +146,7 @@ export class AnalyticsService {
 
       const open = await tx.opportunity.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN' }, select: { amount: true, currency: true, expectedCloseDate: true } });
       const openInPeriod = r2(open.filter((d) => d.expectedCloseDate && d.expectedCloseDate >= start && d.expectedCloseDate < end).reduce((a, d) => a + (conv(d.amount, d.currency) ?? 0), 0));
-      const target = Number(targets.find((t) => t.userId === null)?.amount) ?? null;
+      const target = targets.find((t) => t.userId === null)?.amount ?? null;
       const remaining = target !== null ? target - wonTotal : null;
 
       const leads = await tx.lead.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, createdAt: { gte: start, lt: end } }, select: { id: true, status: true } });
@@ -228,7 +228,7 @@ export class AnalyticsService {
       const row = existing
         ? await tx.salesTarget.update({ where: { id: existing.id }, data: { amount: input.amount } })
         : await tx.salesTarget.create({ data: { tenantId: auth.tenantId, period: input.period, userId: input.userId, amount: input.amount } });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sales_target.set', entityType: 'sales_target', entityId: row.id, metadata: { ...input, from: Number(existing?.amount) ?? null }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sales_target.set', entityType: 'sales_target', entityId: row.id, metadata: { ...input, from: existing?.amount ??  null }, meta });
       return { id: row.id };
     });
   }
