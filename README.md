@@ -34,7 +34,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 
 ## Quick start
 
-Requirements: Node 26 (LTS), pnpm 10, MongoDB 8 as a replica set (or Docker).
+Requirements: Node 26 (LTS), pnpm 10, MongoDB 7.0 or newer as a replica set (or Docker).
 
 ```bash
 pnpm install
@@ -42,7 +42,7 @@ cp .env.example .env                      # then set JWT_ACCESS_SECRET (openssl 
 
 # Databases: either use Docker (a one-member replica set; transactions need one)…
 docker compose up -d mongo redis
-# …or your own MongoDB 8 started with --replSet and initiated (rs.initiate()); set DATABASE_URL in .env.
+# …or your own MongoDB 7.0+ started with --replSet and initiated (rs.initiate()); set DATABASE_URL in .env.
 
 pnpm build                                # builds packages and generates the Prisma client
 pnpm db:setup                             # collections, indexes and plans (idempotent, no migrations)

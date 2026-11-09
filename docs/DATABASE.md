@@ -1,6 +1,15 @@
 # SampForce Database Design
 
-MongoDB 8, run as a replica set (transactions need one; a single member is enough). Prisma schema (MongoDB
+MongoDB 7.0 or newer, run as a replica set (transactions need one; a single member is enough).
+
+**Why 7.0 and not 8.** Current MongoDB 8 releases refuse to start on Linux kernels 6.19 to 7.0.13, because of a
+memory-allocator incompatibility (MongoDB tickets SERVER-121912 and SERVER-125742). GitHub's CI runners and new
+Ubuntu kernels are in that range, so CI, the Compose files and the self-host package use `mongo:7.0`, which starts on
+every kernel. SampForce uses nothing that needs 8, and the test suite passes on both. Move to 8 once MongoDB ships a
+release that starts on your kernel, or on a managed service such as Atlas, where the provider handles the kernel.
+MongoDB 7.0 is supported until August 2027.
+
+Prisma schema (MongoDB
 connector): [`packages/database/prisma/schema.prisma`](../packages/database/prisma/schema.prisma). Indexes and
 reference data: [`packages/database/src/setup.ts`](../packages/database/src/setup.ts) (`pnpm db:setup`). Workspace
 isolation: [`packages/database/src/scope.ts`](../packages/database/src/scope.ts). Why: [ADR 0058](adr/0058-mongodb.md).

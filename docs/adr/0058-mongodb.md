@@ -18,7 +18,7 @@ money, partial and expression indexes, `pg_trgm` similarity search and about a h
 ## Decision
 
 **Prisma stays, on its MongoDB connector.** The 125 models keep their names, fields and relations, so ~1,000 Prisma
-calls in the API did not change. MongoDB 8 runs as a replica set (one member is enough), because SampForce relies on
+calls in the API did not change. MongoDB (7.0 for now; see DATABASE.md) runs as a replica set (one member is enough), because SampForce relies on
 multi-document transactions.
 
 **Workspace isolation moves into the database client** (`packages/database/src/scope.ts`, the "workspace guard").

@@ -19,12 +19,12 @@ real cluster. Treat the first staging install as part of acceptance.
 | Web | `dealflow-web` | `node apps/web/server.js` | HPA on CPU (2–6) | Port 3000, `/healthz`; proxies `/api/*` to `API_INTERNAL_URL` |
 | Database set-up | `dealflow-migrate` | `node node_modules/@dealflow/database/dist/setup-cli.js` (collections, indexes, plans; idempotent) | Helm pre-install/pre-upgrade Job | Uses `MIGRATION_DATABASE_URL` |
 
-Dependencies you provide: MongoDB 8 as a replica set (managed, such as Atlas, or your own; transactions need a replica set), an ingress controller with TLS, a secret store, and optionally
+Dependencies you provide: MongoDB 7.0 or newer as a replica set (managed, such as Atlas, or your own; transactions need a replica set), an ingress controller with TLS, a secret store, and optionally
 Prometheus (Operator) and an OpenTelemetry collector. Redis is not required by the current code.
 
 ## 2. Database
 
-1. Use a MongoDB 8 **replica set** (three members in production; Atlas clusters are replica sets). SampForce uses
+1. Use a MongoDB 7.0 or newer **replica set** (see DATABASE.md before choosing 8) (three members in production; Atlas clusters are replica sets). SampForce uses
    multi-document transactions, which a standalone server does not support.
 2. Create three users on the SampForce database, with real passwords from your secret store
    (`deploy/mongo/init-sampforce.js` shows the exact roles):

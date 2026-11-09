@@ -21,7 +21,7 @@ Internet ──443/80──▶ Caddy (TLS, automatic Let's Encrypt certificate)
                        ├── /api/v1/*  ──▶ api     (NestJS, port 4000)
                        └── everything ──▶ web     (Next.js, port 3000)
                      worker  (background jobs: email, workflows, webhooks, AI runs)
-                     mongo 8 (one-member replica set, data in a Docker volume)
+                     mongo 7.0 (one-member replica set, data in a Docker volume)
                      migrate (creates collections and indexes on every start, then exits)
 ```
 
@@ -139,7 +139,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 The first build takes 10 to 20 minutes. On the first start:
 
-1. MongoDB starts as a one-member replica set (transactions need one) and creates three users on the `sampforce`
+1. MongoDB 7.0 starts as a one-member replica set (transactions need one) and creates three users on the `sampforce`
    database: `sampforce_app` (what the API and worker use: it can read and write documents but not drop or change indexes), `sampforce_admin` (creates
    indexes) and `sampforce_backup` (MongoDB's backup role).
 2. `migrate` creates the collections, the indexes and the plan catalogue, and exits. It runs again on every `up`;

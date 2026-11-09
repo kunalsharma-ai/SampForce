@@ -22,7 +22,7 @@ flowchart LR
   visitor[Prospects] --> marketing[apps/marketing<br/>Phase 6]
   web -->|/api/v1 same-origin proxy| api[apps/api<br/>NestJS]
   adminapp --> api
-  api --> pg[(MongoDB 8<br/>replica set)]
+  api --> pg[(MongoDB 7.0+<br/>replica set)]
   api --> redis[(Redis<br/>cache, rate limits, BullMQ)]
   api --> s3[(S3-compatible<br/>object storage)]
   worker[apps/worker<br/>Phase 3: BullMQ + Temporal] --> pg
@@ -94,7 +94,7 @@ Packages are introduced when their first real consumer ships, so the tree never 
 
 ## 6. Data layer
 
-- MongoDB 8 (a replica set, for transactions) with Prisma 6's MongoDB connector. Schema and ERD:
+- MongoDB 7.0 or newer (a replica set, for transactions) with Prisma 6's MongoDB connector. Schema and ERD:
   [DATABASE.md](DATABASE.md). Why MongoDB and what replaced each PostgreSQL feature: [ADR 0058](adr/0058-mongodb.md).
 - Three database users: `sampforce_admin` (index set-up), `sampforce_app` (runtime: documents only, in one database) and
   `sampforce_backup` (MongoDB's backup role).

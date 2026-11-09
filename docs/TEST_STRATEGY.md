@@ -157,7 +157,7 @@ shape. They prove the gateway, tool loop, permissions and safety rules. They say
 ## Running locally
 
 ```bash
-docker compose up -d mongo         # MongoDB 8, one-member replica set on localhost:27017
+docker compose up -d mongo         # MongoDB 7.0, one-member replica set on localhost:27017
 pnpm build && pnpm db:setup        # collections and indexes in the dev database (DATABASE_URL)
 pnpm lint && pnpm typecheck && pnpm test   # the API suite drops and rebuilds sampforce_test (TEST_DATABASE_URL)
 pnpm test:e2e                     # starts the built API and web app

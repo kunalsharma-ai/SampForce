@@ -37,9 +37,9 @@ x-app-env: &app-env
   METRICS_PORT: '9464'
 
 services:
-  # MongoDB 8, a one-member replica set with authentication (see mongo/start.sh and mongo/healthcheck.sh).
+  # MongoDB 7.0 (see docs/DATABASE.md for why not 8), a one-member replica set with authentication (see mongo/start.sh and mongo/healthcheck.sh).
   mongo:
-    image: mongo:8.0
+    image: mongo:7.0
     restart: unless-stopped
     entrypoint: ['bash', '/sampforce/start.sh']
     environment:
@@ -154,7 +154,7 @@ services:
 
   # Not started by `up`. scripts/backup.sh and scripts/restore.sh run it on demand (mongodump and mongorestore).
   backup:
-    image: mongo:8.0
+    image: mongo:7.0
     profiles: [tools]
     restart: 'no'
     # Runs as the user who called scripts/backup.sh, so that user owns (and can copy off-site) the backup files.

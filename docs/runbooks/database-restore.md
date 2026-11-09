@@ -1,6 +1,7 @@
 # Database backup and restore
 
-Status: **drilled** on the build machine (MongoDB 8.0, one-member replica set, local disk), 2026-11-09.
+Status: **drilled** on the build machine (one-member replica set, local disk), 2026-11-09: the load drill below on
+MongoDB 8.0, and a backup, restore and switch-over of the self-host package on MongoDB 7.0.
 
 | Drill | Documents | Data size | Archive size | Backup | Restore + verify |
 |---|---|---|---|---|---|
