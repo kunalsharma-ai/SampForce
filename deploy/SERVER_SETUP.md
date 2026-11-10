@@ -99,7 +99,7 @@ On Debian, replace `ubuntu` with `debian` in both URLs.
 
 ## 4. Get the code onto the server
 
-Either clone the repository (it is private, so use a GitHub deploy key or a personal access token with read access):
+Either clone the repository (if it has been made private, use a GitHub deploy key or a personal access token with read access):
 
 ```bash
 sudo mkdir -p /opt/sampforce && sudo chown "$USER" /opt/sampforce
@@ -282,19 +282,20 @@ Use letters and digits only (for example `openssl rand -hex 32`), because the pa
 
 ## 13. What has and has not been tested
 
-Tested in a sandbox with this exact compose file, on MongoDB:
+Tested in a sandbox with this exact compose file, on MongoDB 7.0 (last full run 10 November 2026, installed from
+`sampforce-selfhost.zip` by following steps 5 to 9 as a non-root user):
 
 - a fresh start from empty volumes, with every container healthy under the hardened settings;
 - HTTPS through Caddy (with a local certificate, because a sandbox cannot get a Let's Encrypt one) and the HTTP to
   HTTPS redirect;
 - sign-up, companies, contacts, leads, deals (create, move, edit, delete), tasks, activities, search, a report,
   the dashboard and the insights views;
-- operator creation and console sign-in;
+- operator creation and console sign-in, and saving a provider key in the console (it still opened after a restore);
 - a backup as a non-root user, and a restore with `--switch` (data and logins came back as of the backup; later
   data stayed in the old database);
 - the password change above, and that `sampforce_app` cannot drop indexes, collections or the database;
 - a full `down` / `up` keeping all data.
 
-Not tested: a real Let's Encrypt certificate, a real Ubuntu VM and the `apt-get` step inside the images (the
-sandbox cannot reach Debian mirrors). Treat your first install as the acceptance test and run
+Not tested: a real Let's Encrypt certificate, a real Ubuntu VM, the `apt-get` step inside the images (the
+sandbox cannot reach Debian mirrors, so the images were built there without it) and `scripts/update.sh` end to end. Treat your first install as the acceptance test and run
 `scripts/smoke-test.sh` and a restore drill on it.
