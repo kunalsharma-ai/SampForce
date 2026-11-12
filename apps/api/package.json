@@ -10,6 +10,7 @@
     "lint": "eslint src test scripts evals",
     "test": "vitest run",
     "operator:create": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/create-operator.ts",
+    "operator:manage": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/operators.ts",
     "seed:demo": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/seed-demo.ts",
     "seed:load": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/seed-load.ts",
     "secrets:reseal": "node --env-file-if-exists=../../.env -r @swc-node/register scripts/reseal-secrets.ts",

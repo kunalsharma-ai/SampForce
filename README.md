@@ -21,7 +21,7 @@ TypeScript. All eight roadmap phases are complete; the last was **Phase 8 (Enter
 - Segments with consent-aware export, hosted lead forms, campaign attribution, revenue analytics, customer health
 - Billing: plans enforced through one entitlement rule, free trial, usage meters, and payment by invoice (bank transfer recorded by an operator). Stripe and Razorpay checkout is built but switched off (`ONLINE_PAYMENTS_ENABLED`; tested against local fixtures only, see [docs/BILLING.md](docs/BILLING.md))
 - Custom roles (Professional and above), onboarding checklist, owner-granted support access
-- Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`, or `node dist/cli/create-operator.js` in the API image)
+- Operator console at `/operator` for platform staff (enable with `OPERATOR_JWT_SECRET`; create operators with `pnpm --filter @dealflow/api operator:create`, or `node dist/cli/create-operator.js` in the API image; manage them with `operator:manage` / `node dist/cli/operators.js`)
 - Public landing page and `/pricing`, labelled a launch preview until `PRICING_PUBLISHED=true` (set in the Helm chart: the rate card is approved)
 - Report builder (validated definitions, no raw SQL) with templates, CSV export (audited) and shared dashboards
 - Relationship Galaxy and Revenue Globe in 3D (lazy-loaded) with 2D and table equivalents; pipeline flow and replay from recorded stage history
