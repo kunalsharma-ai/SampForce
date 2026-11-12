@@ -37,7 +37,8 @@ Linux capabilities.
 | `sampforce.env.example` | Every optional application setting, with its default. Becomes `sampforce.env` |
 | `mongo/init-sampforce.js`, `mongo/start.sh`, `mongo/healthcheck.sh` | Create the database users on first start, start MongoDB as a replica set with a key file, and start the set |
 | `scripts/generate-secrets.sh` | Creates `.env` with random passwords and keys |
-| `scripts/create-operator.sh` | Creates your operator-console login |
+| `scripts/create-operator.sh` | Creates an operator-console (super admin) login, or resets its password |
+| `scripts/operators.sh` | Lists operator logins; disables, re-enables or changes the role of one |
 | `scripts/backup.sh`, `scripts/restore.sh` | Database backup, restore and switch-over |
 | `scripts/update.sh` | Backup, pull new code, rebuild, set up the database, restart |
 | `scripts/smoke-test.sh` | Checks the running install from the outside |
@@ -170,7 +171,11 @@ by SampForce's own database client, so there is no separate database check to ru
    scripts/create-operator.sh you@yourcompany.com "Your Name" ADMIN
    ```
 
-   Sign in at `https://crm.yourcompany.com/operator/login`.
+   Sign in at `https://crm.yourcompany.com/operator/login`. Add a second ADMIN the same way so you are never
+   locked out, and give read-only support staff the `SUPPORT` role. `scripts/operators.sh list` shows every
+   login; `scripts/operators.sh disable <email>` signs someone out at once, `enable` brings them back and
+   `role <email> ADMIN|SUPPORT` changes a role. The last active ADMIN cannot be disabled or demoted. To reset a
+   forgotten password, run `create-operator.sh` again with the same email and role.
 2. **Integrations.** In the console open **Providers**. Every integration is set up there: open **How to set up …**
    on a provider for the steps, a link to its console and the redirect or webhook URLs to copy into it, then
    **Add keys** and **Test connection**. Keys apply within 10 seconds, no restart. Add SMTP first so password-reset

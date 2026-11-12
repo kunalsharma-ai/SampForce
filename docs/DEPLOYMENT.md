@@ -99,7 +99,9 @@ discovery to private addresses unless `ALLOW_PRIVATE_NETWORK_TARGETS=true` (neve
 
 1. Create the first operator-console admin (there are no default credentials):
    `kubectl -n dealflow exec -it deploy/dealflow-api -- env OPERATOR_EMAIL=you@example.com OPERATOR_ROLE=ADMIN OPERATOR_PASSWORD='…' node dist/cli/create-operator.js`.
-   Then enter provider keys under Providers in the console.
+   Then enter provider keys under Providers in the console. List, disable, re-enable or change the role of
+   operators with `node dist/cli/operators.js list | disable <email> | enable <email> | role <email> ADMIN|SUPPORT`
+   in the same pod; the last active ADMIN cannot be disabled or demoted.
 2. Sign up, enable two-step verification, sign out and back in.
 3. Confirm `/metrics` is reachable from Prometheus and not from the internet.
 4. Take a backup with `scripts/backup.sh` and restore it into a scratch database with `scripts/restore.sh`
