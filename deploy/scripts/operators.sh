@@ -11,4 +11,5 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 [ $# -ge 1 ] || { echo "usage: scripts/operators.sh <list | disable <email> | enable <email> | role <email> ADMIN|SUPPORT>" >&2; exit 2; }
-compose run --rm -T --no-deps api node dist/cli/operators.js "$@" < /dev/null
+find_api
+api_cli operators.js "$@"
