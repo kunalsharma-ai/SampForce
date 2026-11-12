@@ -11,6 +11,7 @@ source "$(dirname "$0")/lib.sh"
 email="${1:?usage: scripts/create-operator.sh <email> [name] [ADMIN|SUPPORT]}"
 name="${2:-$email}"
 role="${3:-ADMIN}"
+require_database
 if [ -n "${OPERATOR_PASSWORD:-}" ]; then password="$OPERATOR_PASSWORD"; else
   read -r -s -p "Password for $email: " password; echo
   read -r -s -p "Repeat it: " again; echo
