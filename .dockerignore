@@ -5,7 +5,8 @@
 **/test-results
 **/playwright-report
 .git
-# Self-hosted deploy settings and backups (deploy/) must never end up in an image.
-deploy/dealflow.env
-deploy/sampforce.env
-deploy/backups
+# The self-host folder holds the server's secrets (.env, sampforce.env, mongo/keyfile) and backups; no image needs
+# any of it, so none of it is sent to the build (before, mongo/keyfile was copied into the build stage).
+deploy/
+# The product web page has its own Dockerfile and build (website/Dockerfile); the app images do not use it.
+website/
