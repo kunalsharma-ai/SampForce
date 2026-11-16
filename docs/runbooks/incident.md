@@ -17,7 +17,7 @@
 - **Leaked SCIM token:** the workspace owner revokes it under Workspace security; tokens are hashed, so a database
   read alone does not reveal working tokens.
 - **Leaked `JWT_ACCESS_SECRET`:** rotate it (`key-rotation.md`). Every access token becomes invalid at once.
-- **Leaked `ENCRYPTION_KEY`:** rotate it and re-seal, then rotate the underlying secrets it protected (SSO client
+- **Leaked `ENCRYPTION_KEY` (or a database backup, which contains it, ADR 0059):** rotate it (`rotate-encryption-key`), then rotate the underlying secrets it protected (SSO client
   secrets with each identity provider, webhook secrets, mailbox tokens by reconnecting).
 - **Cross-workspace data exposure:** SEV1. Run `apps/api/test/workspace-guard.e2e.test.ts` and the isolation suites
   against the deployed commit. Check that nothing reaches the database except through `createPrismaClient`: no other

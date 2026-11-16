@@ -193,7 +193,7 @@ describe('integrations set up entirely from the operator console', () => {
 
   it('lists the few settings that stay on the server, with why, and never their secret values', async () => {
     const list = (await support.get('/deployment').expect(200)).body as { name: string; set: boolean; value: string | null; why: string }[];
-    expect(list.map((d) => d.name)).toEqual(['DATABASE_URL', 'ENCRYPTION_KEY', 'JWT_ACCESS_SECRET', 'OPERATOR_JWT_SECRET', 'PUBLIC_WEB_URL', 'WEB_ORIGINS']);
+    expect(list.map((d) => d.name)).toEqual(['DATABASE_URL', 'PUBLIC_WEB_URL', 'WEB_ORIGINS']);
     expect(list.find((d) => d.name === 'DATABASE_URL')).toMatchObject({ set: true, value: null });
     expect(list.find((d) => d.name === 'PUBLIC_WEB_URL')).toMatchObject({ set: true, value: PUBLIC });
     expect(list.every((d) => d.why.length > 20)).toBe(true);

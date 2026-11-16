@@ -354,10 +354,12 @@ export interface OperatorProviderField {
   /** False for settings that are not credentials (a sender address, a URL); those are shown in full. */
   secret: boolean;
   /**
-   * console: saved in the operator console (wins); environment: from the deployment's secrets; default: nobody set it
-   * and the built-in default applies; missing: neither.
+   * console: saved in the database through the operator console; environment: from the server's environment (only
+   * outside production, ADR 0059); default: nobody set it and the built-in default applies; missing: neither.
    */
   source: 'console' | 'environment' | 'default' | 'missing';
+  /** The saved value was copied from the server's environment file at start-up (ADR 0059), not typed in the console. */
+  imported: boolean;
   /** How the console asks for it: a text box, a hidden secret box, or an on/off switch. */
   input: 'text' | 'secret' | 'switch';
   /** Last four characters of a secret (null when it is too short to show any), or the whole non-secret value. */

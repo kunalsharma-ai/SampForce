@@ -67,7 +67,7 @@ export const errorsAccess = {
   'The payment date cannot be in the future.': ['La fecha de pago no puede ser futura.', 'La date de paiement ne peut pas être dans le futur.', 'Das Zahlungsdatum darf nicht in der Zukunft liegen.', 'لا يمكن أن يكون تاريخ الدفع في المستقبل.'],
   'This workspace is scheduled for deletion.': ['Este espacio de trabajo está programado para eliminarse.', 'La suppression de cet espace de travail est programmée.', 'Dieser Arbeitsbereich ist zum Löschen vorgemerkt.', 'مساحة العمل هذه مجدولة للحذف.'],
   '{provider} does not use {setting}.': ['{provider} no usa {setting}.', '{provider} n’utilise pas {setting}.', '{provider} verwendet {setting} nicht.', 'لا يستخدم {provider} الإعداد {setting}.'],
-  "Add {settings} first, here or in the deployment's secrets.": ['Añade primero {settings}, aquí o en los secretos del despliegue.', 'Ajoutez d’abord {settings}, ici ou dans les secrets du déploiement.', 'Fügen Sie zuerst {settings} hinzu, hier oder in den Secrets der Bereitstellung.', 'أضف {settings} أولًا، هنا أو في أسرار النشر.'],
+  'Add {settings} first.': ['Añade primero {settings}.', 'Ajoutez d’abord {settings}.', 'Fügen Sie zuerst {settings} hinzu.', 'أضف {settings} أولًا.'],
 
   // Browser extension
   'Your workspace requires single sign-on. Sign in to SampForce with SSO, make a connection code under Settings, then paste it here.': [

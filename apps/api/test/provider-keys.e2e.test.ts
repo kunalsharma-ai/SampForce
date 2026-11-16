@@ -5,6 +5,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PasswordService } from '../src/auth/password.service';
+import { ProviderKeysService } from '../src/common/provider-keys';
 import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
 import { type BillingFixture, startBillingFixture } from './fixtures/billing-fixture';
 import { DOCUSIGN_APP, startDocusignFixture } from './fixtures/docusign-fixture';
@@ -36,7 +37,7 @@ async function closedPort(): Promise<number> {
 const clean = async () => {
   const db = appClient();
   await db.platformSecret.deleteMany({});
-  await db.platformSetting.deleteMany({ where: { key: { startsWith: 'provider_check:' } } });
+  await db.platformSetting.deleteMany({ where: { OR: [{ key: { startsWith: 'provider_check:' } }, { key: { startsWith: 'env_import:' } }] } });
   await db.$disconnect();
 };
 
@@ -246,7 +247,7 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     expect(await check('zapier', { ZAPIER_INVITE_URL: `${ai.url}/health` })).toMatchObject({ ok: true, message: 'The invite link opens (HTTP 200).' });
     expect(await check('zapier', { ZAPIER_INVITE_URL: `${ai.url}/missing-invite` })).toMatchObject({ ok: false });
     // A test with keys missing is refused before any call.
-    expect((await admin.post('/providers/hunter/check').expect(400)).body.error).toMatchObject({ code: 'NOT_CONFIGURED', message: "Add HUNTER_API_KEY first, here or in the deployment's secrets." });
+    expect((await admin.post('/providers/hunter/check').expect(400)).body.error).toMatchObject({ code: 'NOT_CONFIGURED', message: 'Add HUNTER_API_KEY first.' });
   });
 
   it('follows the key-rotation runbook: old-key values still open, reseal-secrets moves them to the new key', async () => {
@@ -268,5 +269,60 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     execFileSync('node', ['-r', '@swc-node/register', 'scripts/reseal-secrets.ts', '--only=platform_secrets'], { cwd: process.cwd(), env: { ...process.env, ENCRYPTION_KEY: newKey, ENCRYPTION_KEY_PREVIOUS: oldKey }, stdio: 'pipe' });
     const after = await boot({ ENCRYPTION_KEY: newKey });
     expect(field(await row(after.admin, 'hunter'), 'HUNTER_API_KEY')).toMatchObject({ source: 'console', hint: '1234' });
+  }, 60_000);
+  it('production: keys live only in the database; old environment values are copied in once and then ignored (ADR 0059)', async () => {
+    await clean();
+    const prodKey = randomBytes(32).toString('base64');
+    const production = { NODE_ENV: 'production', ALLOW_INSECURE_COOKIES: 'true', ENCRYPTION_KEY: prodKey, ALLOW_PRIVATE_NETWORK_TARGETS: undefined };
+    const oldServer = { ...production, SLACK_CLIENT_ID: 'env-slack-client-id', SLACK_CLIENT_SECRET: 'env-slack-client-secret-wxyz', PRICING_PUBLISHED: 'true', MICROSOFT_TENANT: 'common' };
+
+    // A server installed before ADR 0059 starts with keys in its settings file: they are copied into the database.
+    const first = await boot(oldServer);
+    const slackRow = await row(first.admin, 'slack');
+    expect(field(slackRow, 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'console', imported: true, set: true, hint: 'wxyz', updatedBy: null });
+    expect(field(slackRow, 'SLACK_CLIENT_ID')).toMatchObject({ source: 'console', imported: true });
+    expect(field(await row(first.admin, 'checkout'), 'PRICING_PUBLISHED')).toMatchObject({ source: 'console', imported: true, hint: 'true' });
+    // A value equal to the built-in default is not copied: the default applies anyway.
+    expect(field(await row(first.admin, 'microsoft'), 'MICROSOFT_TENANT')).toMatchObject({ source: 'default' });
+    const db = appClient();
+    const stored = await db.platformSecret.findUniqueOrThrow({ where: { name: 'SLACK_CLIENT_SECRET' } });
+    expect(stored.valueEnc).not.toContain('env-slack-client-secret'); // sealed with ENCRYPTION_KEY
+    expect(stored.updatedById).toBeNull();
+    const imports = await db.platformAuditLog.findMany({ where: { action: 'provider_key.imported' } });
+    expect(imports.map((l) => (l.metadata as { name: string }).name)).toEqual(expect.arrayContaining(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'PRICING_PUBLISHED']));
+    expect(JSON.stringify(imports)).not.toContain('env-slack-client-secret');
+    // The app really uses the database value: Slack is set up for workspaces.
+    const owner = await registerUser(first.app, 'Keys Prod Ltd');
+    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'slack')!.state).not.toBe('pending_configuration');
+
+    // Removing a key in the console removes it: the environment value is not a fallback in production.
+    const cleared = (await first.admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_SECRET: null } }).expect(200)).body as Row;
+    expect(field(cleared, 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
+    expect(((await api(owner).get('/apps').expect(200)).body as { key: string; state: string }[]).find((a) => a.key === 'slack')!.state).toBe('pending_configuration');
+
+    // A restart with the same settings file does not bring the removed key back.
+    const restarted = await boot(oldServer);
+    expect(field(await row(restarted.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
+    expect(field(await row(restarted.admin, 'slack'), 'SLACK_CLIENT_ID')).toMatchObject({ source: 'console', imported: true });
+
+    // A key typed into the console is not overwritten by a different value left in the file.
+    await restarted.admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_SECRET: 'console-slack-secret-1234' } }).expect(200);
+    const again = await boot({ ...oldServer, SLACK_CLIENT_SECRET: 'another-env-slack-secret-5678' });
+    expect(field(await row(again.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'console', imported: false, hint: '1234', updatedBy: adminEmail });
+
+    // A brand-new install has nothing in its settings file: everything is entered in the console, nothing comes from env.
+    await clean();
+    const fresh = await boot(production);
+    expect(field(await row(fresh.admin, 'slack'), 'SLACK_CLIENT_SECRET')).toMatchObject({ source: 'missing', set: false });
+    expect(field(await row(fresh.admin, 'checkout'), 'PRICING_PUBLISHED')).toMatchObject({ source: 'default' });
+
+    // The API and the worker start at the same moment: both import, exactly one row is written, neither fails.
+    await clean();
+    const keys = first.app.get(ProviderKeysService);
+    const [a, b] = await Promise.all([keys.importFromEnvironment(), keys.importFromEnvironment()]);
+    expect([...a, ...b].filter((n) => n === 'SLACK_CLIENT_SECRET')).toHaveLength(1);
+    expect(await db.platformSecret.count({ where: { name: 'SLACK_CLIENT_SECRET' } })).toBe(1);
+    await db.$disconnect();
+    await clean(); // the rest of the suite runs outside production with the development key
   }, 60_000);
 });
