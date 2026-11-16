@@ -39,6 +39,18 @@ except Docker.
    | Slack, Zoom, DocuSign, Zapier | Workspace apps |
    | Stripe, Razorpay | Online card payments (off by default: plans are paid by invoice) |
 
+## The install in one command
+
+```bash
+# After SERVER_SETUP.md steps 2 and 3 (Ubuntu, firewall, Docker) and unpacking this package into /opt/sampforce:
+cd /opt/sampforce/deploy
+scripts/install.sh crm.company.com admin@company.com "Admin Name"
+```
+
+It generates every secret (nothing to type into a file), builds and starts SampForce, runs the smoke test, and
+creates the first super admin. Then sign in at `https://crm.company.com/operator/login` and add the API keys under
+**Providers**. The same steps one by one:
+
 ## The install in eight commands
 
 Details, explanations and troubleshooting for each step are in [SERVER_SETUP.md](SERVER_SETUP.md).
@@ -50,7 +62,7 @@ sudo mkdir -p /opt/sampforce && sudo chown "$USER" /opt/sampforce
 cd /opt/sampforce && unzip -q /tmp/sampforce-selfhost.zip
 cd deploy
 
-# 5. Secrets and settings (writes .env, sampforce.env and mongo/keyfile). SAVE THE ENCRYPTION_KEY IT PRINTS.
+# 5. Secrets and settings (writes .env, sampforce.env and mongo/keyfile). Save .env in a password manager.
 scripts/generate-secrets.sh crm.company.com admin@company.com
 
 # 6. Build and start (10 to 20 minutes the first time)
@@ -70,12 +82,15 @@ scripts/create-operator.sh admin@company.com "Admin Name" ADMIN
 
 | File | Created by | What is in it |
 |---|---|---|
-| `.env` | `scripts/generate-secrets.sh` from `.env.example` | Domain, Let's Encrypt email, database passwords, `JWT_ACCESS_SECRET`, `ENCRYPTION_KEY`, `OPERATOR_JWT_SECRET`, backup folder and retention. Keep it `chmod 600` and a copy in a password manager |
-| `sampforce.env` | `scripts/generate-secrets.sh` from `sampforce.env.example` | Optional application settings, all with production defaults. Comment a line out rather than leaving `KEY=` empty |
+| `.env` | `scripts/generate-secrets.sh` from `.env.example` | Domain, Let's Encrypt email, database passwords, backup folder and retention. The passwords are generated. Keep it `chmod 600` and a copy in a password manager |
+| `sampforce.env` | `scripts/generate-secrets.sh` from `sampforce.env.example` | Optional limits and tuning, all with production defaults. **No API keys**. Comment a line out rather than leaving `KEY=` empty |
+| The database | The API, first start, and the operator console | Every API key and integration setting (encrypted), `ENCRYPTION_KEY` and the session signing secrets (ADR 0059) |
 | `mongo/keyfile` | `scripts/generate-secrets.sh`, once | The MongoDB replica-set key. Back it up with `.env` |
 
-`ENCRYPTION_KEY` seals two-step verification secrets, SSO secrets, mailbox tokens and the provider keys typed
-into the console. **A backup cannot be fully restored without it.**
+`ENCRYPTION_KEY` seals the API keys typed into the console, the session signing secrets, two-step verification
+secrets, SSO secrets and mailbox tokens. It is created by the API and kept in the database (Kunal's choice, ADR 0059),
+so `.env` holds only database settings. **A database backup therefore opens every stored API key: keep backups
+private and encrypted.** Rotate it with `scripts/rotate-encryption-key.sh`.
 
 ## Day-two tasks
 
@@ -83,6 +98,8 @@ into the console. **A backup cannot be fully restored without it.**
 |---|---|
 | Backup now | `scripts/backup.sh` (nightly cron line in SERVER_SETUP.md step 9; copy backups off the server) |
 | Restore drill | `scripts/restore.sh backups/<file>.archive.gz` (add `--switch` to make it live) |
+| Rotate the encryption key | `scripts/rotate-encryption-key.sh` (nobody is signed out) |
+| Rotate the session signing secrets | `scripts/rotate-signing-secrets.sh` (everyone refreshes once; operators sign in again) |
 | Update to a new version | `scripts/update.sh` (git checkout) or unpack the new zip and run `scripts/update.sh --no-pull` |
 | Logs | `docker compose -f docker-compose.prod.yml logs -f --tail=100 api worker` |
 | Never | `docker compose down -v` (deletes the database volume) |

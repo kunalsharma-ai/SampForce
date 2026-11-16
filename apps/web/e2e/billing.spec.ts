@@ -262,7 +262,7 @@ test('operator console: setup guides with URLs to paste, checkout switches, and 
   // What stays on the server, and why; secrets are never shown.
   const server = ops.getByRole('region', { name: 'Set once on the server' });
   await expect(server.getByRole('list', { name: 'Server settings' })).toContainText('PUBLIC_WEB_URLSet · http://localhost:3000');
-  await expect(server).toContainText('Encrypts the keys saved in this console');
+  await expect(server).toContainText('every API key and the encryption key included, is saved in that database');
   await expect(ops.locator('body')).not.toContainText('dealflow_app_dev');
   await expectNoA11yViolations(ops);
 

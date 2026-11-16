@@ -4,8 +4,11 @@
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
 # Two settings files sit next to this one (both created by scripts/generate-secrets.sh):
-#   .env          secrets and server settings that compose fills into this file (DOMAIN, passwords, keys)
-#   sampforce.env optional application settings, passed as-is to the API and the worker
+#   .env          the database passwords and DOMAIN, generated or filled in by the script
+#   sampforce.env optional limits and tuning, passed as-is to the API and the worker
+# Every API key (AI, email, payments, Google, Microsoft, Slack, ...) is entered in the operator console under
+# Providers and stored in the database, encrypted with a key that is also kept in the database (ADR 0059).
+# No file holds API keys.
 #
 # Only Caddy publishes ports (80 and 443). MongoDB, the API, the worker and the web server are reachable only
 # on the internal network. Caddy obtains and renews the TLS certificate for DOMAIN from Let's Encrypt.
@@ -28,9 +31,12 @@ x-hardened: &hardened
 x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: mongodb://sampforce_app:${SAMPFORCE_APP_PASSWORD:?run scripts/generate-secrets.sh}@mongo:27017/${SAMPFORCE_DB:-sampforce}?replicaSet=rs0&authSource=admin&maxPoolSize=${DB_CONNECTION_LIMIT:-10}
-  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run scripts/generate-secrets.sh}
-  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run scripts/generate-secrets.sh}
-  OPERATOR_JWT_SECRET: ${OPERATOR_JWT_SECRET:?run scripts/generate-secrets.sh}
+  # ENCRYPTION_KEY and the session signing secrets live in the database (ADR 0059): the API creates them on its first
+  # start. These three lines only pass on values from a .env made before that, so that server keeps its key and
+  # sessions (they are copied into the database once); new .env files have none.
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+  OPERATOR_JWT_SECRET: ${OPERATOR_JWT_SECRET:-}
   COOKIE_SECURE: 'true'
   PUBLIC_WEB_URL: https://${DOMAIN:?set DOMAIN in .env}
   WEB_ORIGINS: ${WEB_ORIGINS:-https://${DOMAIN}}

@@ -6,7 +6,7 @@ import { API_ENV, type ApiEnv } from './env';
 import { PrismaService } from './prisma.service';
 
 /**
- * Deployment-wide provider keys an operator may enter in the console instead of the deployment's secrets (ADR 0051).
+ * Deployment-wide provider keys an operator enters in the console (ADR 0051); in production the database is their only home (ADR 0059).
  * `secret: false` marks settings that are not credentials (a sender address, a tenant name, a URL), which the console
  * shows in full; everything else is shown only as its last four characters.
  *
@@ -95,8 +95,13 @@ export function parseManagedValue(name: ManagedKeyName, raw: string): { ok: true
 }
 
 export interface ManagedKeyState {
-  /** `default`: nobody set it, and the built-in default applies (a switch that is off, Microsoft's "common" tenant). */
+  /**
+   * `default`: nobody set it, and the built-in default applies (a switch that is off, Microsoft's "common" tenant).
+   * `environment` only outside production: in production the database is the only source (ADR 0059).
+   */
   source: 'console' | 'environment' | 'default' | 'missing';
+  /** The console value was copied from the server's environment file at start-up, not typed into the console. */
+  imported: boolean;
   hint: string | null;
   updatedAt: string | null;
   updatedById: string | null;
@@ -108,10 +113,19 @@ interface Override {
   hint: string | null;
   updatedAt: Date;
   updatedById: string | null;
+  imported: boolean;
 }
 
+/** platform_settings key recording that an environment value was copied into the database once (by fingerprint). */
+export const ENV_IMPORT_PREFIX = 'env_import:';
+
 /**
- * Makes console-entered provider keys take effect without a restart.
+ * Makes console-entered provider keys take effect without a restart, and makes the database their only home.
+ *
+ * In production (NODE_ENV=production) the database is the only source of every managed key (ADR 0059): a value
+ * still found in the environment at start-up is copied into `platform_secrets` once, sealed, and from then on the
+ * environment is ignored, so removing a key in the console really removes it. Outside production the environment
+ * stays a fallback, because local development and the test suite point providers at local stand-ins that way.
  *
  * Services read keys from the injected ApiEnv at the moment they call a provider (`this.env.SLACK_CLIENT_SECRET`).
  * This service turns each managed name on that object into a getter: the value saved in `platform_secrets`, if any,
@@ -127,6 +141,8 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
   private timer: NodeJS.Timeout | null = null;
   private loaded = false;
   readonly refreshMs: number;
+  /** True in production: environment values are imported once and otherwise ignored. */
+  readonly databaseOnly: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -134,6 +150,7 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {
     this.refreshMs = (env.PROVIDER_KEYS_REFRESH_SECONDS ?? 10) * 1000;
+    this.databaseOnly = env.NODE_ENV === 'production';
     this.install();
   }
 
@@ -147,7 +164,7 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
       Object.defineProperty(target, name, {
         configurable: true,
         enumerable: true,
-        get: () => this.overrides.get(name)?.value ?? this.fromEnvironment.get(name),
+        get: () => this.overrides.get(name)?.value ?? (this.databaseOnly ? defaultOf(name) : this.fromEnvironment.get(name)),
         // Assigning replaces the environment value (the fallback); a console value still wins.
         set: (v: unknown) => {
           this.fromEnvironment.set(name, v);
@@ -157,6 +174,7 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
   }
 
   async onModuleInit(): Promise<void> {
+    if (this.databaseOnly) await this.importFromEnvironment();
     await this.refresh();
     this.timer = setInterval(() => void this.refresh(), this.refreshMs);
     this.timer.unref();
@@ -165,6 +183,54 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
   onApplicationShutdown(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+  }
+
+  /**
+   * Production only: copies each managed key still set in the environment into the database, sealed, so a server
+   * installed before ADR 0059 keeps working after the environment stops being read. A key is copied only when the
+   * console has no value for it and this exact value (by fingerprint) was not copied before, so a key an operator
+   * removed in the console does not come back on the next restart. The API and the worker may both run this at once:
+   * the create is conditional, and the loser of the race simply finds the row already there.
+   */
+  async importFromEnvironment(): Promise<ManagedKeyName[]> {
+    const imported: ManagedKeyName[] = [];
+    for (const name of MANAGED_KEY_NAMES) {
+      const raw = this.fromEnvironment.get(name);
+      if (raw === undefined || raw === null || raw === '') continue;
+      if (raw === defaultOf(name)) continue; // the built-in default applies anyway
+      const parsed = parseManagedValue(name, String(raw));
+      if (!parsed.ok) {
+        this.log.error({ name }, 'A provider setting in the environment is not valid and was not copied into the database');
+        continue;
+      }
+      const fingerprint = fingerprintOf(parsed.value);
+      const markerKey = `${ENV_IMPORT_PREFIX}${name}`;
+      const marker = await this.prisma.platformSetting.findUnique({ where: { key: markerKey } });
+      if (marker?.value === fingerprint) continue;
+      const existing = await this.prisma.platformSecret.findUnique({ where: { name }, select: { name: true } });
+      if (!existing) {
+        try {
+          const hint = hintFor(name, parsed.value);
+          await this.prisma.platformSecret.create({ data: { name, valueEnc: this.box.seal(parsed.value), hint, fingerprint, updatedById: null } });
+          imported.push(name);
+          // The operator log shows where the value came from; like a console save it holds the fingerprint, never the value.
+          await this.prisma.platformAuditLog.create({
+            data: { operatorId: null, action: 'provider_key.imported', metadata: { name, fingerprint, source: 'environment', ...(MANAGED_KEYS[name].secret ? { last4: hint } : { value: hint }) } },
+          });
+        } catch (err) {
+          // Another process (the worker, a second replica) imported it at the same moment.
+          if ((err as { code?: string }).code !== 'P2002') throw err;
+        }
+      }
+      await this.prisma.platformSetting.upsert({ where: { key: markerKey }, create: { key: markerKey, value: fingerprint }, update: { value: fingerprint } });
+    }
+    if (imported.length) {
+      this.log.warn(
+        { names: imported },
+        'Provider keys found in the environment were copied into the database. The environment is no longer read for them: delete them from sampforce.env (or the Kubernetes Secret) and manage them in the operator console under Providers.',
+      );
+    }
+    return imported;
   }
 
   /** Reloads console values. A value that cannot be opened (wrong ENCRYPTION_KEY) is skipped and logged, never used. */
@@ -177,12 +243,12 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
         try {
           const value = typedValue(r.name, this.box.open(r.valueEnc));
           if (value === undefined) {
-            this.log.error({ name: r.name }, 'A provider setting saved in the console is no longer valid; using the environment value');
+            this.log.error({ name: r.name }, 'A provider setting saved in the console is no longer valid; ignoring it');
             continue;
           }
-          next.set(r.name, { value, hint: r.hint, updatedAt: r.updatedAt, updatedById: r.updatedById });
+          next.set(r.name, { value, hint: r.hint, updatedAt: r.updatedAt, updatedById: r.updatedById, imported: r.updatedById === null });
         } catch {
-          this.log.error({ name: r.name }, 'A provider key saved in the console cannot be decrypted with ENCRYPTION_KEY; using the environment value');
+          this.log.error({ name: r.name }, 'A provider key saved in the console cannot be decrypted with ENCRYPTION_KEY; ignoring it');
         }
       }
       this.overrides = next;
@@ -196,11 +262,11 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
 
   state(name: ManagedKeyName): ManagedKeyState {
     const o = this.overrides.get(name);
-    if (o) return { source: 'console', hint: o.hint, updatedAt: o.updatedAt.toISOString(), updatedById: o.updatedById };
-    const v = this.fromEnvironment.get(name);
-    if (v === undefined || v === null || v === '') return { source: 'missing', hint: null, updatedAt: null, updatedById: null };
+    if (o) return { source: 'console', hint: o.hint, updatedAt: o.updatedAt.toISOString(), updatedById: o.updatedById, imported: o.imported };
+    const v = this.databaseOnly ? defaultOf(name) : this.fromEnvironment.get(name);
+    if (v === undefined || v === null || v === '') return { source: 'missing', hint: null, updatedAt: null, updatedById: null, imported: false };
     const hint = hintFor(name, v as string | boolean | number);
-    return { source: v === defaultOf(name) ? 'default' : 'environment', hint, updatedAt: null, updatedById: null };
+    return { source: v === defaultOf(name) ? 'default' : 'environment', hint, updatedAt: null, updatedById: null, imported: false };
   }
 
   /** Saves (string) or removes (null) console values in one transaction, then applies them in this process at once. */

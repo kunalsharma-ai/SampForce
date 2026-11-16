@@ -28,7 +28,12 @@ function FieldStatus({ f }: { f: OperatorProviderField }) {
     return (
       <span className="text-success">
         Saved here{value ? ` · ${value}` : ''}
-        {f.updatedAt && <span className="text-muted-foreground"> · {when(f.updatedAt)}{f.updatedBy ? ` by ${f.updatedBy}` : ''}</span>}
+        {f.updatedAt && (
+          <span className="text-muted-foreground">
+            {' · '}
+            {f.imported ? `copied from the server's settings file on ${when(f.updatedAt)}` : `${when(f.updatedAt)}${f.updatedBy ? ` by ${f.updatedBy}` : ''}`}
+          </span>
+        )}
       </span>
     );
   }
@@ -290,7 +295,7 @@ function DeploymentCard() {
       <CardHeader>
         <CardTitle id="deployment-settings">Set once on the server</CardTitle>
         <CardDescription>
-          Every integration above is set up on this page. These few settings stay in the server&apos;s environment file, because the console itself depends on them. They are set once when the server is installed.
+          Every API key and integration above is stored in the database, and so are the encryption key and the sign-in secrets. Only the database connection and the server&apos;s address stay in its settings file, because they are needed before the database can be read. The install script fills them in, so nobody has to type them.
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm">
@@ -327,7 +332,7 @@ export default function OperatorProvidersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Providers"
-        description="Set up every integration here: open a provider's setup guide, create the keys in its console, paste them below and test the connection. Keys saved here are encrypted, take effect within seconds without a restart, and override the server's environment; remove one to fall back. Secrets are never shown again, only their last four characters. Every change and test is recorded in the operator log."
+        description="Set up every integration here: open a provider's setup guide, create the keys in its console, paste them below and test the connection. Keys are stored only in the database, encrypted, and take effect within seconds without a restart: no settings file or environment variable is needed. Secrets are never shown again, only their last four characters. Every change and test is recorded in the operator log."
       />
       <p className="text-sm" role="status">
         {missing === 0 ? 'Every provider has its keys set.' : `${missing} of ${keyed.length} providers are missing keys.`}

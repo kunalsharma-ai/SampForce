@@ -292,7 +292,7 @@ export class OperatorService {
     return rows.map((r) => ({ id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId, metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString() }));
   }
 
-  // ───── Provider setup: keys entered here or in the deployment's secrets, and a no-cost connection test for each ─────
+  // ───── Provider setup: keys entered here (stored in the database), and a no-cost connection test for each ─────
 
   private fingerprint(p: CatalogueProvider): string | null {
     const values = p.tested.map((n) => this.env[n] as string | undefined);
@@ -331,6 +331,7 @@ export class OperatorService {
           input: f.switch ? ('switch' as const) : MANAGED_KEYS[f.name].secret ? ('secret' as const) : ('text' as const),
           set: value !== undefined && value !== null && value !== '',
           source: st.source,
+          imported: st.imported,
           hint: st.hint,
           updatedAt: st.updatedAt, updatedBy: st.updatedById ? (editors.get(st.updatedById) ?? null) : null, help: f.help ?? null,
         };
@@ -403,7 +404,7 @@ export class OperatorService {
   async checkProvider(op: OperatorContext, key: ProviderCheckKey, ip: string | null): Promise<OperatorProviderRow> {
     const p = PROVIDER_CATALOGUE.find((x) => x.key === key)!;
     const missing = p.fields.filter((f) => f.required && !this.env[f.name]).map((f) => f.name);
-    if (missing.length) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: `Add ${missing.join(' and ')} first, here or in the deployment's secrets.` });
+    if (missing.length) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: `Add ${missing.join(' and ')} first.` });
     const run: Record<ProviderCheckKey, () => Promise<string>> = {
       apollo: () => this.apollo.check(), hunter: () => this.hunter.check(), deepgram: () => this.deepgram.check(),
       anthropic: () => this.tests.anthropic(), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),

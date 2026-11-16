@@ -18,8 +18,9 @@ command -v openssl >/dev/null || { echo "openssl is needed (sudo apt-get install
 umask 077
 cp .env.example .env
 # Hex only, so every value is safe inside a mongodb:// URL and in YAML.
-for key in MONGO_ROOT_PASSWORD SAMPFORCE_ADMIN_PASSWORD SAMPFORCE_APP_PASSWORD SAMPFORCE_BACKUP_PASSWORD \
-           JWT_ACCESS_SECRET ENCRYPTION_KEY OPERATOR_JWT_SECRET; do
+# Only the database passwords: ENCRYPTION_KEY and the session signing secrets are created by the API in the database
+# on its first start (ADR 0059).
+for key in MONGO_ROOT_PASSWORD SAMPFORCE_ADMIN_PASSWORD SAMPFORCE_APP_PASSWORD SAMPFORCE_BACKUP_PASSWORD; do
   sed -i "s/^${key}=$/${key}=$(openssl rand -hex 32)/" .env
 done
 [ -n "$DOMAIN" ] && sed -i "s/^DOMAIN=.*/DOMAIN=${DOMAIN}/" .env
@@ -30,8 +31,9 @@ if [ ! -e mongo/keyfile ]; then openssl rand -base64 756 > mongo/keyfile; chmod 
 
 if [ ! -e sampforce.env ]; then cp sampforce.env.example sampforce.env; chmod 600 sampforce.env; fi
 
-echo "Created deploy/.env (secrets) and deploy/sampforce.env (application settings)."
+echo "Created deploy/.env (database passwords) and deploy/sampforce.env (optional limits)."
+echo "API keys are not put in any file: enter them in the operator console under Providers after the install."
 echo "DOMAIN=$(env_value DOMAIN)  ACME_EMAIL=$(env_value ACME_EMAIL)"
 echo
-echo "IMPORTANT: copy ENCRYPTION_KEY to your password manager now. Backups are useless without it:"
-echo "  $(env_value ENCRYPTION_KEY)"
+echo "IMPORTANT: copy deploy/.env and deploy/mongo/keyfile to your password manager. Database backups now hold"
+echo "the encryption key for every stored API key, so keep backup files as private as the keys themselves."

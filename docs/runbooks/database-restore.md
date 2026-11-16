@@ -34,8 +34,9 @@ number here.
   encrypt it at rest.
 - Use your provider's continuous backups (Atlas, Ops Manager) as well. They give point-in-time recovery, which this
   repository does not configure or test.
-- Store `ENCRYPTION_KEY` separately. Without it, restored MFA secrets, SSO client secrets, webhook secrets and
-  mailbox tokens cannot be read.
+- In production `ENCRYPTION_KEY` is stored in the database (ADR 0059), so the backup carries it: a restored backup
+  opens its secrets on any server, and anyone holding a backup file can open every stored API key. Encrypt backups at
+  rest and restrict who can read them.
 
 ## Restore
 

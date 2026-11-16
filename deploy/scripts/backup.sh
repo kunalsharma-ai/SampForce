@@ -5,7 +5,8 @@
 #   scripts/backup.sh
 #
 # Schedule it daily with cron (see SERVER_SETUP.md) and copy BACKUP_DIR off the server.
-# The backup does not contain ENCRYPTION_KEY; keep that separately or the restored secrets cannot be opened.
+# The backup contains ENCRYPTION_KEY (it is stored in the database, ADR 0059), so it can open every stored API key:
+# keep backup files private and encrypted. In return a backup restores on any server without a separate key.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 

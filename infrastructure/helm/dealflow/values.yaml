@@ -16,8 +16,8 @@ publicUrl: https://app.example.com
 secrets:
   # Secret with keys: DATABASE_URL (MongoDB replica-set URL for a user with the sampforce_runtime role, see docs/DEPLOYMENT.md),
   # MIGRATION_DATABASE_URL (same database, a user with readWrite and dbAdmin, for index set-up),
-  # JWT_ACCESS_SECRET, ENCRYPTION_KEY, and optionally OPERATOR_JWT_SECRET, ANTHROPIC_API_KEY,
-  # STRIPE_*, RAZORPAY_*, GOOGLE_*, MICROSOFT_*, SMTP_URL (see .env.example).
+  # and nothing else. Every API key is entered in the operator console under Providers and stored in the database;
+  # ENCRYPTION_KEY and the session signing secrets are created in the database on the first start (ADR 0059).
   existingSecret: dealflow-secrets
 
 # Non-secret settings passed to the API and worker as environment variables.
@@ -27,14 +27,8 @@ config:
   ACCESS_TOKEN_TTL_SECONDS: "900"
   REFRESH_TOKEN_TTL_DAYS: "30"
   AUTH_RATE_LIMIT_PER_MINUTE: "10"
-  # The rate card was approved on 2026-10-31; local and test setups keep the preview labels.
-  PRICING_PUBLISHED: "true"
-  # Offline payments only for now: workspaces request an invoice and an operator records the payment.
-  ONLINE_PAYMENTS_ENABLED: "false"
-  # Fallback bank details for offline invoices. Normally entered in the operator console under Settings instead.
-  OFFLINE_PAYMENT_INSTRUCTIONS: ""
-  # Sender for account email such as password reset links; needs SMTP_URL in the Secret. Example: "SampForce <no-reply@your-domain>".
-  MAIL_FROM: ""
+  # Plan, checkout and email settings (PRICING_PUBLISHED, ONLINE_PAYMENTS_ENABLED, MAIL_FROM, ...) are not set here:
+  # they live in the database and are changed in the operator console (ADR 0059).
 
 api:
   replicas: 2

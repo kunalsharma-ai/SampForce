@@ -49,9 +49,9 @@ before any compliance statement is made.
 |---|---|
 | In transit | TLS 1.2+ everywhere; HSTS; `COOKIE_SECURE=true` enforced in production at boot |
 | At rest | MongoDB storage encryption (your provider's, or encrypted disks on a self-hosted server) and object storage encryption; integration credentials envelope-encrypted with per-tenant keys (Phase 3) |
-| Secrets | Environment / secret manager only; `.env.example` holds placeholders; JWT secret ≥ 32 chars enforced |
+| Secrets | Production (ADR 0059): only the database connection is in the environment. Every API key is entered in the operator console and sealed (AES-256-GCM) in `platform_secrets`; `ENCRYPTION_KEY` and the JWT secrets are generated on first start and stored in the database (the JWT secrets sealed). Accepted trade-off: a database copy or backup carries the key to every stored secret, so backups must be encrypted and access-restricted |
 | Backups | `scripts/backup.sh` (mongodump) as a user with only MongoDB's backup role; restores into a new database with verification (docs/runbooks/database-restore.md). Scheduling, off-site storage, encryption and PITR are the operator's and provider's job and are not tested here |
-| Key rotation | `ENCRYPTION_KEY_PREVIOUS` plus a re-seal script; drilled (docs/runbooks/key-rotation.md) |
+| Key rotation | `rotate-encryption-key` (new key, previous kept, re-seal, then forget) and `rotate-signing-secrets`; the manual `ENCRYPTION_KEY_PREVIOUS` + re-seal path is drilled (docs/runbooks/key-rotation.md) |
 | Export controls | Exports require `data:export`, are audited, and are rate-limited; AI agents cannot export. Report CSV exports follow the same rule (Phase 7) |
 | Report builder | Definitions are validated against a fixed field catalogue and compiled to an aggregation pipeline in which user values are only ever literals (`$literal`), never operators or field paths; runs need the entity's read permission, stay inside the workspace guard with an explicit tenant filter (joins match the workspace too), and time out after 10 s (ADR 0011, ADR 0058) |
 

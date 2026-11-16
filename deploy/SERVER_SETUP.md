@@ -118,19 +118,32 @@ Everything below runs in `/opt/sampforce/deploy`.
 
 ## 5. Configure
 
+**Shortcut:** `scripts/install.sh crm.yourcompany.com you@yourcompany.com "Your Name"` does steps 5 to 8 in one go
+(generates the secrets, builds, starts, runs the smoke test and creates your super admin login). The steps below
+are what it runs, for when you want to do them one by one.
+
 ```bash
 cd /opt/sampforce/deploy
 scripts/generate-secrets.sh crm.yourcompany.com you@yourcompany.com
 ```
 
-This writes `.env` (domain, database passwords, `JWT_ACCESS_SECRET`, `ENCRYPTION_KEY`, `OPERATOR_JWT_SECRET`, all
-random) and `sampforce.env` (application settings, all defaults). It prints `ENCRYPTION_KEY`:
-**save it in your password manager now.** Without it, a restored backup cannot open MFA secrets, SSO secrets,
-webhook secrets, mailbox tokens or the provider keys you enter in the console.
+This writes `.env` with the domain and the database passwords, all random, and `sampforce.env` (optional limits,
+all defaults). Nobody types a secret. Save `.env` and `mongo/keyfile` in your password manager.
 
-Then look through `sampforce.env`. The defaults suit production: final prices shown, offline payments only.
-You do not need to put provider keys (Anthropic, Apollo, Hunter, Deepgram, Google, Microsoft, Slack, Zoom,
-DocuSign, Zapier, SMTP, Stripe, Razorpay) in any file: you enter them in the operator console in step 8.
+**What lives where (ADR 0059):**
+
+| Where | What | Why |
+|---|---|---|
+| `.env` | Database passwords, `DOMAIN`, `ACME_EMAIL` | The database passwords are needed to reach the database at all. Caddy needs `DOMAIN` for the certificate before the app starts |
+| The database | Every API key and integration setting (Anthropic, SMTP, Stripe, Razorpay, Google, Microsoft, Slack, Zoom, DocuSign, Apollo, Hunter, Deepgram, Zapier), plan and checkout settings, `ENCRYPTION_KEY` and the session signing secrets | API keys are entered in the operator console in step 8 and encrypted with `ENCRYPTION_KEY`. The API creates `ENCRYPTION_KEY` and the signing secrets on its first start |
+
+Because the encryption key is kept in the database next to what it encrypts, **a database backup can open every
+stored API key**. Keep backup files as private as the keys themselves (encrypted storage, limited access). In
+return, a backup restores on any server without a separate key.
+
+Do not put API keys in any file. A production server ignores them there: on an older install, a key still found in
+`sampforce.env` is copied into the database once at start-up, then ignored, and the console shows it as copied
+from the server's settings file. You can then delete it from the file.
 
 ## 6. Build and start
 
@@ -208,7 +221,8 @@ another machine with rsync, or to S3/Backblaze/Google Drive with [rclone](https:
 45 2 * * * rsync -a /opt/sampforce/deploy/backups/ backup-user@backup-host:/srv/sampforce-backups/
 ```
 
-Keep `.env` (or at least `ENCRYPTION_KEY`) in your password manager, separately from the backups.
+Keep `.env` and `mongo/keyfile` in your password manager. The backups themselves contain the encryption key for every
+stored API key (ADR 0059), so copy them only to storage that is private and encrypted.
 
 **Restore.** Test this once after installing, and record the time it takes:
 
@@ -254,11 +268,10 @@ Database set-up runs before the new API starts. If it fails, `up` stops and the 
 
 Logs are capped at 50 MB per container. Never run `docker compose down -v`: `-v` deletes the database volume.
 
-**Rotating `ENCRYPTION_KEY`**: follow [docs/runbooks/key-rotation.md](../docs/runbooks/key-rotation.md). Here the
-steps are: put the old key in `sampforce.env` as `ENCRYPTION_KEY_PREVIOUS`, put the new one in `.env`,
-`docker compose -f docker-compose.prod.yml up -d`, then
-`docker compose -f docker-compose.prod.yml run --rm api node dist/cli/reseal-secrets.js --dry-run` and again
-without `--dry-run`, then remove `ENCRYPTION_KEY_PREVIOUS` and run `up -d` again.
+**Rotating `ENCRYPTION_KEY`**: `scripts/rotate-encryption-key.sh`. It stores a new key in the database, re-seals
+every stored secret with it, restarts the API and the worker, and forgets the old key. Nobody is signed out.
+**Rotating the session signing secrets**: `scripts/rotate-signing-secrets.sh` (everyone's session refreshes once;
+operators sign in again).
 
 **Changing a database password**: the users are created once, from `.env` on the first start, so editing `.env`
 alone breaks the connection. Change both:
