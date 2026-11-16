@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /*
- * Revenue attribution (ADR 0061). Every won deal (or won RFQ that never became a deal) has exactly one revenue record,
+ * Revenue attribution (ADR 0063). Every won deal (or won RFQ that never became a deal) has exactly one revenue record,
  * and its credits split the record between people in shares that always sum to 100%. Individual totals add up each
  * person's share; team and organisation totals add up shares too, so the same revenue is never counted twice, however
  * many people helped win it.

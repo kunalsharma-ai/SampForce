@@ -18,6 +18,12 @@ export const FEATURE_KEYS = [
   // Sales
   'territories',
   'rfqs',
+  'lead_transfers',
+  'revenue_attribution',
+  'manager_dashboard',
+  'senior_dashboard',
+  'instructions',
+  'client_concerns',
   'quotes',
   'proposals',
   'contracts',
@@ -53,6 +59,7 @@ export const FEATURE_KEYS = [
   'card_payments',
   'whatsapp',
   'sms',
+  'sampbidx',
   'api_access',
   'webhooks',
   // Administration
@@ -79,6 +86,12 @@ export interface FeatureDef {
 
 export const FEATURES: FeatureDef[] = [
   { key: 'rfqs', group: 'Sales', label: 'RFQs', description: 'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.', defaultFrom: 'free', paths: ['/app/rfqs'] },
+  { key: 'lead_transfers', group: 'Sales', label: 'Lead transfers', description: 'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.', defaultFrom: 'free', paths: [] },
+  { key: 'revenue_attribution', group: 'Sales', label: 'Revenue attribution', description: 'Revenue records for won deals, split between the people who won them without counting anything twice.', defaultFrom: 'free', paths: [] },
+  { key: 'manager_dashboard', group: 'Sales', label: 'Manager dashboard', description: 'The team Command Center: team KPIs, the employee performance table, comparisons and follow-up monitoring.', defaultFrom: 'free', paths: [] },
+  { key: 'senior_dashboard', group: 'Sales', label: 'Senior management dashboard', description: 'The organisation Command Center: department performance, rankings, revenue analytics and business insights.', defaultFrom: 'free', paths: [] },
+  { key: 'instructions', group: 'Sales', label: 'Manager instructions', description: 'Instructions from managers to their team, acknowledged and completed by the people who receive them.', defaultFrom: 'free', paths: [] },
+  { key: 'client_concerns', group: 'Sales', label: 'Client concerns', description: 'Client concerns and rejections with severity, deadlines and escalation to senior management.', defaultFrom: 'free', paths: [] },
   { key: 'territories', group: 'Sales', label: 'Sales territories', description: 'Territories with rules that route leads and deals to their owners.', defaultFrom: 'growth', paths: ['/app/settings/territories'] },
   { key: 'quotes', group: 'Sales', label: 'Quotes and catalogue', description: 'Products, price books, quotes with approvals and PDFs, and the Quick Bid Studio.', defaultFrom: 'launch', paths: ['/app/quotes'] },
   { key: 'proposals', group: 'Sales', label: 'Proposals', description: 'Proposals built from quotes, shared by link and accepted online.', defaultFrom: 'growth', paths: [] },
@@ -115,6 +128,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'card_payments', group: 'Apps', label: 'Card payments', description: 'Take card payments on proposals.', defaultFrom: 'professional', paths: [] },
   { key: 'whatsapp', group: 'Apps', label: 'WhatsApp', description: 'WhatsApp Business messages from CRM records.', defaultFrom: 'professional', paths: [] },
   { key: 'sms', group: 'Apps', label: 'SMS', description: 'SMS through your Twilio account.', defaultFrom: 'professional', paths: [] },
+  { key: 'sampbidx', group: 'Apps', label: 'SampBidx', description: 'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.', defaultFrom: 'free', paths: [] },
   { key: 'api_access', group: 'Apps', label: 'API and Zapier', description: 'Workspace API keys and the Zapier app.', defaultFrom: 'growth', paths: [] },
   { key: 'webhooks', group: 'Apps', label: 'Webhooks', description: 'Signed webhooks to your own systems.', defaultFrom: 'growth', paths: [] },
 
@@ -125,7 +139,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
-export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms' } as const satisfies Record<string, FeatureKey>;
+export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
 
 export const FEATURE_BY_KEY: Record<FeatureKey, FeatureDef> = Object.fromEntries(FEATURES.map((f) => [f.key, f])) as Record<FeatureKey, FeatureDef>;
 

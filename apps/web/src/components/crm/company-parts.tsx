@@ -10,9 +10,9 @@ import {
   PORTAL_DOCUMENT_MAX_BYTES,
   PORTAL_DOCUMENT_TYPES,
 } from '@dealflow/types';
-import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Skeleton } from '@dealflow/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Download, FileText, Pencil, Plus, Trash2, UserRoundCog } from 'lucide-react';
+import { ArrowRightLeft, Building2, Download, FileText, Pencil, Plus, Trash2, UserRoundCog } from 'lucide-react';
 import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
@@ -22,6 +22,10 @@ import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { useHasFeature } from '@/lib/features';
+import { useLeadTransfers } from '@/lib/command-center';
+import { RequestTransferDialog } from '@/components/command-center/transfers';
+import { TRANSFER_STATUS_LABEL, TRANSFER_STATUS_TONE } from '@/components/command-center/cc-labels';
 import { BranchFields, branchPayload, type BranchValue, emptyBranch, emptyEmployee, EmployeeFields, employeePayload, type EmployeeValue, type Errors, PersonSelect } from './lead-fields';
 import { focusSection, useCompanyAction } from './company-actions';
 import { DetailList } from './record-detail';
@@ -300,6 +304,10 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
   const [note, setNote] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   useCompanyAction('transfer', canWrite ? () => start() : null);
+  const transfersOn = useHasFeature('lead_transfers');
+  const [asking, setAsking] = React.useState(false);
+  const transfers = useLeadTransfers('all', { companyId: c.id }, transfersOn && canWrite);
+  useCompanyAction('requestTransfer', transfersOn && canWrite ? () => setAsking(true) : null);
   const start = () => {
     setOwnerId('');
     setReason('REASSIGNED');
@@ -328,9 +336,16 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
           <InfoTip topic="crm.ownership" />
         </CardTitle>
         {canWrite && (
-          <Button size="sm" variant="outline" onClick={start}>
-            <UserRoundCog aria-hidden /> {t('Change owner')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {transfersOn && (
+              <Button size="sm" variant="outline" onClick={() => setAsking(true)}>
+                <ArrowRightLeft aria-hidden /> {t('Request transfer')}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={start}>
+              <UserRoundCog aria-hidden /> {t('Change owner')}
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
@@ -344,6 +359,22 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
             ['Assigned team', c.team?.name],
           ]}
         />
+        {!!transfers.data?.length && (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">{t('Transfer requests')}</h3>
+            <ul className="space-y-2 text-sm" data-testid="company-transfers">
+              {transfers.data.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {t(REASON_LABELS[r.reason as LeadTransferReason] ?? 'Other')}
+                    <span className="text-xs text-muted-foreground"> · {[r.requestedBy?.name, formatDate(r.createdAt)].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <Badge tone={TRANSFER_STATUS_TONE[r.status]}>{t(TRANSFER_STATUS_LABEL[r.status])}</Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div>
           <h3 className="mb-2 text-sm font-semibold">{t('Ownership history')}</h3>
           {history.isPending ? (
@@ -369,6 +400,7 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
           )}
         </div>
       </CardContent>
+      {transfersOn && canWrite && <RequestTransferDialog company={c} open={asking} onClose={() => setAsking(false)} />}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg p-6">
           <DialogTitle className="text-lg font-semibold">{t('Change lead owner')}</DialogTitle>

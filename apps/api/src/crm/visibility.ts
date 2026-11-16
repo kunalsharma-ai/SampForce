@@ -66,6 +66,23 @@ export function contactScope(v: Visibility): Prisma.ContactWhereInput {
   };
 }
 
+/**
+ * Deals (ADR 0063): those the people in scope own, manage or helped win, and the deals of companies they can see.
+ * Unowned deals without a company stay visible to everyone, like unassigned leads.
+ */
+export function dealScope(v: Visibility): Prisma.OpportunityWhereInput {
+  if (v.all) return {};
+  return {
+    OR: [
+      { ownerId: { in: v.userIds } },
+      { managerId: { in: v.userIds } },
+      { supportingUserIds: { hasSome: v.userIds } },
+      { company: { is: companyScope(v) } },
+      { AND: [{ OR: unset('ownerId') }, { OR: unset('companyId') }] },
+    ],
+  };
+}
+
 export function leadScope(v: Visibility): Prisma.LeadWhereInput {
   if (v.all) return {};
   return { OR: [{ ownerId: { in: v.userIds } }, ...unset('ownerId')] };

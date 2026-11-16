@@ -37,6 +37,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsService } from './deals.service';
+import { RevenueRecordsService } from './revenue-records.service';
 import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
@@ -64,6 +65,7 @@ export class CompanyWorkService {
     private readonly deals: DealsService,
     private readonly fields: CustomFieldsService,
     private readonly admin: CrmAdminService,
+    private readonly revenue: RevenueRecordsService,
   ) {}
 
   // ─── Company dashboard ───
@@ -262,6 +264,7 @@ export class CompanyWorkService {
           sender: a.sender,
           recipient: a.recipient,
           outcome: a.outcome,
+          sentiment: (a.sentiment ?? null) as InteractionRow['sentiment'],
           remarks: a.body,
           nextAction: a.nextAction,
           followUpAt: a.followUpAt?.toISOString() ?? null,
@@ -281,6 +284,7 @@ export class CompanyWorkService {
           sender: e.fromAddress,
           recipient: e.toAddresses.join(', ') || null,
           outcome: null,
+          sentiment: null,
           remarks: e.snippet,
           nextAction: null,
           followUpAt: null,
@@ -344,6 +348,7 @@ export class CompanyWorkService {
         sender: input.sender ?? null,
         recipient: input.recipient ?? null,
         outcome: input.outcome ?? null,
+        sentiment: input.sentiment ?? null,
         nextAction: input.nextAction ?? null,
         followUpAt: input.followUpAt ? new Date(input.followUpAt) : null,
         fileId: input.fileId ?? null,
@@ -364,7 +369,7 @@ export class CompanyWorkService {
       return {
         id: a.id, source: 'LOGGED', kind: (a.interaction ?? legacyKind(a.type)) as InteractionKind, subject: a.subject, occurredAt: a.occurredAt.toISOString(),
         companyId: a.companyId, contact: c ? { id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(' ') } : null,
-        sender: a.sender, recipient: a.recipient, outcome: a.outcome, remarks: a.body, nextAction: a.nextAction, followUpAt: a.followUpAt?.toISOString() ?? null,
+        sender: a.sender, recipient: a.recipient, outcome: a.outcome, sentiment: (a.sentiment ?? null) as InteractionRow['sentiment'], remarks: a.body, nextAction: a.nextAction, followUpAt: a.followUpAt?.toISOString() ?? null,
         file: files.find((f) => f.id === a.fileId) ?? null, rfq: rfqs.find((r) => r.id === a.rfqId) ?? null,
         createdBy: a.ownerId ? (people.get(a.ownerId) ?? null) : null, aiAssisted: a.aiAssisted,
       };
@@ -435,6 +440,7 @@ export class CompanyWorkService {
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
           ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
           ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+          ...(input.assigneeId && input.assigneeId !== before.assigneeId ? { reassignedFromId: before.assigneeId, reassignedAt: new Date() } : {}),
           ...(input.managerId !== undefined ? { managerId: input.managerId } : {}),
           ...(input.summary !== undefined ? { summary: input.summary } : {}),
           ...(input.nextAction !== undefined ? { nextAction: input.nextAction } : {}),
@@ -677,6 +683,7 @@ export class CompanyWorkService {
         await this.notifications.send(tx, auth.tenantId, [row.ownerId], { type: 'rfq.assigned', title: `RFQ assigned to you: ${`${row.number} ${row.projectName}`}`, body: null, link: `/app/rfqs?open=${row.id}` });
       }
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'rfq.created', entityType: 'rfq', entityId: row.id, metadata: { number: row.number, companyId: row.companyId }, meta });
+      await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [row.id] });
       return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
@@ -714,6 +721,7 @@ export class CompanyWorkService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: statusChanged ? 'rfq.status_changed' : 'rfq.updated', entityType: 'rfq', entityId: id,
         metadata: statusChanged ? { from: before.status, to: input.status } : { fields: Object.keys(input) }, meta,
       });
+      await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [id] });
       return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
@@ -724,6 +732,7 @@ export class CompanyWorkService {
       await this.editableCompany(tx, auth, r.companyId);
       await tx.rfq.update({ where: { id }, data: { deletedAt: new Date() } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'rfq.deleted', entityType: 'rfq', entityId: id, metadata: { number: r.number }, meta });
+      await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [id] });
     });
   }
 
@@ -752,6 +761,8 @@ export class CompanyWorkService {
     return this.prisma.run(auth, async (tx) => {
       const row = await tx.rfq.update({ where: { id }, data: { opportunityId: deal.id, updatedById: auth.userId } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'rfq.converted', entityType: 'rfq', entityId: id, metadata: { dealId: deal.id }, meta });
+      // The RFQ's own revenue record (if it was won) gives way to the deal's.
+      await this.revenue.reconcile(tx, auth.tenantId, { rfqIds: [id], opportunityIds: [deal.id] });
       return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
@@ -827,6 +838,23 @@ export class CompanyWorkService {
         customFields: {},
         createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
       };
+    });
+  }
+
+  /** The RFQ for someone who may change it; sending it to SampBidx counts as a change (ADR 0061). */
+  editableRfq(auth: AuthContext, id: string): Promise<RfqRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const r = await this.visibleRfq(tx, auth, id);
+      await this.editableCompany(tx, auth, r.companyId);
+      return (await this.rfqRowsFor(tx, auth, [r]))[0]!;
+    });
+  }
+
+  /** Refuses unless the person may change this company (and, if given, the RFQ belongs to it). */
+  async assertEditable(auth: AuthContext, companyId: string, rfqId?: string | null): Promise<void> {
+    await this.prisma.run(auth, async (tx) => {
+      await this.editableCompany(tx, auth, companyId);
+      await this.assertCompanyChildren(tx, auth.tenantId, companyId, { rfqId });
     });
   }
 

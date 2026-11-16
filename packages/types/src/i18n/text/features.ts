@@ -43,6 +43,7 @@ export const features = {
   'Custom roles': ['Roles personalizados', 'Rôles personnalisés', 'Eigene Rollen', 'أدوار مخصصة'],
   'Webhooks': ['Webhooks', 'Webhooks', 'Webhooks', 'خطافات الويب'],
   'SMS': ['SMS', 'SMS', 'SMS', 'الرسائل النصية'],
+  'SampBidx': ['SampBidx', 'SampBidx', 'SampBidx', 'SampBidx'],
   'Slack': ['Slack', 'Slack', 'Slack', 'Slack'],
   'Microsoft Teams': ['Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams'],
   'Zoom': ['Zoom', 'Zoom', 'Zoom', 'Zoom'],
@@ -250,6 +251,12 @@ export const features = {
     'WhatsApp-Business-Nachrichten aus CRM-Datensätzen.',
     'رسائل WhatsApp Business من سجلات CRM.',
   ],
+  'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.': [
+    'Envía RFQ y correos de RFQ a SampBidx para cotizar, y sigue su estado.',
+    'Envoyez des RFQ et des e-mails de RFQ à SampBidx pour chiffrage, et suivez leur statut.',
+    'Senden Sie RFQs und RFQ-E-Mails zur Kalkulation an SampBidx und verfolgen Sie ihren Status.',
+    'أرسل طلبات عروض الأسعار ورسائلها إلى SampBidx للتسعير، وتابع حالتها.',
+  ],
   'SMS through your Twilio account.': ['SMS a través de tu cuenta de Twilio.', 'SMS via votre compte Twilio.', 'SMS über Ihr Twilio-Konto.', 'رسائل SMS عبر حسابك في Twilio.'],
   'Workspace API keys and the Zapier app.': [
     'Claves de API del espacio de trabajo y la app de Zapier.',
@@ -282,4 +289,17 @@ export const features = {
     'Exportieren Sie Unternehmen, Mitarbeiter, Leads, Deals und RFQs als Excel-Arbeitsmappen.',
     'صدّر الشركات والموظفين والعملاء المحتملين والصفقات وطلبات عروض الأسعار كمصنفات Excel.',
   ],
+  // Command Center (ADR 0063)
+  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übergaben', 'نقل العملاء المحتملين'],
+  'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.': ['Solicitudes para pasar un lead a un gerente o a una persona sénior, que lo aprueba, rechaza o reasigna.', 'Demandes de transfert d’un prospect à un manager ou à un cadre, qui l’approuve, le refuse ou le réattribue.', 'Anfragen, einen Lead an eine Führungskraft zu übergeben, die sie genehmigt, ablehnt oder neu zuweist.', 'طلبات نقل عميل محتمل إلى مدير أو شخص أعلى، يوافق عليها أو يرفضها أو يعيد إسنادها.'],
+  'Revenue attribution': ['Atribución de ingresos', 'Attribution des revenus', 'Umsatzzuordnung', 'نسب الإيرادات'],
+  'Revenue records for won deals, split between the people who won them without counting anything twice.': ['Registros de ingresos de las oportunidades ganadas, repartidos entre quienes las ganaron sin contar nada dos veces.', 'Des enregistrements de revenus pour les opportunités gagnées, répartis entre les personnes qui les ont gagnées sans rien compter deux fois.', 'Umsatzdatensätze für gewonnene Verkaufschancen, aufgeteilt auf die Personen, die sie gewonnen haben, ohne etwas doppelt zu zählen.', 'سجلات إيرادات للصفقات المربوحة، موزعة على من ربحوها دون احتساب أي شيء مرتين.'],
+  'Manager dashboard': ['Panel de gerente', 'Tableau de bord manager', 'Manager-Dashboard', 'لوحة المدير'],
+  'The team Command Center: team KPIs, the employee performance table, comparisons and follow-up monitoring.': ['El Command Center del equipo: KPI del equipo, tabla de rendimiento, comparaciones y control de seguimientos.', 'Le Command Center de l’équipe : KPI de l’équipe, tableau des performances, comparaisons et suivi des relances.', 'Das Command Center des Teams: Team-KPIs, Leistungstabelle, Vergleiche und Überwachung der Nachverfolgungen.', 'مركز قيادة الفريق: مؤشرات الفريق وجدول أداء الموظفين والمقارنات ومراقبة المتابعات.'],
+  'Senior management dashboard': ['Panel de la alta dirección', 'Tableau de bord de la direction', 'Dashboard der Geschäftsleitung', 'لوحة الإدارة العليا'],
+  'The organisation Command Center: department performance, rankings, revenue analytics and business insights.': ['El Command Center de la organización: rendimiento por departamento, clasificaciones, análisis de ingresos y conclusiones de negocio.', 'Le Command Center de l’organisation : performances par service, classements, analyse des revenus et enseignements.', 'Das Command Center der Organisation: Abteilungsleistung, Ranglisten, Umsatzanalysen und Geschäftseinblicke.', 'مركز قيادة المؤسسة: أداء الأقسام والتصنيفات وتحليلات الإيرادات ورؤى الأعمال.'],
+  'Manager instructions': ['Instrucciones del gerente', 'Consignes du manager', 'Anweisungen der Führungskraft', 'تعليمات المدير'],
+  'Instructions from managers to their team, acknowledged and completed by the people who receive them.': ['Instrucciones de los gerentes a su equipo, que quienes las reciben confirman y completan.', 'Des consignes des managers à leur équipe, accusées et réalisées par les personnes qui les reçoivent.', 'Anweisungen von Führungskräften an ihr Team, die von den Empfängern bestätigt und erledigt werden.', 'تعليمات من المديرين إلى فرقهم، يقرّ بها مستلموها وينجزونها.'],
+  'Client concerns': ['Inquietudes de clientes', 'Préoccupations des clients', 'Kundenanliegen', 'مخاوف العملاء'],
+  'Client concerns and rejections with severity, deadlines and escalation to senior management.': ['Inquietudes y rechazos de clientes con gravedad, plazos y escalado a la alta dirección.', 'Préoccupations et refus des clients avec gravité, échéances et remontée à la direction.', 'Kundenanliegen und Absagen mit Schweregrad, Fristen und Eskalation an die Geschäftsleitung.', 'مخاوف العملاء ورفضهم مع الخطورة والمواعيد النهائية والتصعيد إلى الإدارة العليا.'],
 } satisfies TextTable;

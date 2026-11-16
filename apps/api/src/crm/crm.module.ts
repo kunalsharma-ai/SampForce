@@ -16,6 +16,9 @@ import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsController, PipelinesController, TerritoriesController } from './deals.controller';
 import { DealsService } from './deals.service';
+import { LeadTransfersController, RevenueRecordsController } from './command-center.controller';
+import { LeadTransfersService } from './lead-transfers.service';
+import { RevenueRecordsService } from './revenue-records.service';
 import { ImportExportService } from './import-export.service';
 import { LeadsService } from './leads.service';
 import { PipelinesService } from './pipelines.service';
@@ -55,6 +58,8 @@ import {
     CompanyLeadPartsController,
     CompanyFilesController,
     EmployeeStatsController,
+    RevenueRecordsController,
+    LeadTransfersController,
   ],
   providers: [
     CustomFieldsService,
@@ -74,7 +79,9 @@ import {
     CompanyLeadsService,
     CompanyWorkService,
     NotificationsService,
+    RevenueRecordsService,
+    LeadTransfersService,
   ],
-  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
+  exports: [RevenueRecordsService, LeadTransfersService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

@@ -32,11 +32,6 @@ export interface FieldViewer {
   admin: boolean;
 }
 
-const SELECT = {
-  id: true, entity: true, key: true, label: true, description: true, type: true, options: true, required: true, defaultValue: true, currency: true,
-  viewDesignationIds: true, editDesignationIds: true, showInForms: true, searchable: true, active: true, position: true,
-} as const;
-
 /** A raw MongoDB field path for a custom field value. */
 export const cfPath = (key: string) => `custom_fields.${key}`;
 

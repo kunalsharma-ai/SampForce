@@ -1,0 +1,51 @@
+'use client';
+
+import type { AppStatus, SampbidxMailboxEmail, SampbidxRfqReadiness, SampbidxSendMailboxEmailInput, SampbidxSendRfqInput, SampbidxTransferRow } from '@dealflow/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from './api';
+
+/** SampBidx (ADR 0061): sending RFQs and RFQ emails, and what happened to them. */
+
+export function useSampbidxApp(enabled = true) {
+  return useQuery({ enabled, queryKey: ['apps'], queryFn: () => api<AppStatus[]>('/apps'), select: (apps) => apps.find((a) => a.key === 'sampbidx') ?? null });
+}
+
+export function useSampbidxReadiness(rfqId: string | null) {
+  return useQuery({ enabled: !!rfqId, queryKey: ['sampbidx', 'rfq', rfqId], queryFn: () => api<SampbidxRfqReadiness>(`/apps/sampbidx/rfqs/${rfqId}`) });
+}
+
+export function useSampbidxTransfers(f: { rfqId?: string; companyId?: string } = {}, enabled = true) {
+  const qs = new URLSearchParams({ limit: '100' });
+  for (const [k, v] of Object.entries(f)) if (v) qs.set(k, v);
+  return useQuery({ enabled, queryKey: ['sampbidx', 'transfers', f], queryFn: () => api<SampbidxTransferRow[]>(`/apps/sampbidx/transfers?${qs}`) });
+}
+
+export function useSampbidxMailbox(q: string, enabled = true) {
+  return useQuery({ enabled, queryKey: ['sampbidx', 'mailbox', q], queryFn: () => api<SampbidxMailboxEmail[]>(`/apps/sampbidx/mailbox?limit=30${q ? `&q=${encodeURIComponent(q)}` : ''}`) });
+}
+
+export function useSampbidxSend() {
+  const qc = useQueryClient();
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['sampbidx'] }), qc.invalidateQueries({ queryKey: ['apps'] })]);
+  return {
+    rfq: useMutation({ mutationFn: (input: SampbidxSendRfqInput) => api<SampbidxTransferRow>('/apps/sampbidx/transfers/rfq', { method: 'POST', json: input }), onSettled: refresh }),
+    mailbox: useMutation({ mutationFn: (input: SampbidxSendMailboxEmailInput) => api<SampbidxTransferRow>('/apps/sampbidx/transfers/mailbox-email', { method: 'POST', json: input }), onSettled: refresh }),
+    file: useMutation({
+      mutationFn: ({ file, companyId, rfqId, note }: { file: File; companyId?: string | null; rfqId?: string | null; note?: string }) => {
+        const qs = new URLSearchParams({ name: file.name });
+        if (companyId) qs.set('companyId', companyId);
+        if (rfqId) qs.set('rfqId', rfqId);
+        if (note?.trim()) qs.set('note', note.trim());
+        return api<SampbidxTransferRow>(`/apps/sampbidx/transfers/email-file?${qs}`, { method: 'POST', body: file, headers: { 'content-type': emailFileType(file) } });
+      },
+      onSettled: refresh,
+    }),
+    retry: useMutation({ mutationFn: (id: string) => api<SampbidxTransferRow>(`/apps/sampbidx/transfers/${id}/retry`, { method: 'POST', json: {} }), onSettled: refresh }),
+  };
+}
+
+/** Browsers often leave .eml and .msg files without a type. */
+export function emailFileType(file: File): string {
+  if (file.type) return file.type;
+  return file.name.toLowerCase().endsWith('.msg') ? 'application/vnd.ms-outlook' : 'message/rfc822';
+}

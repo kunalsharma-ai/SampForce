@@ -178,7 +178,8 @@ test('invites a teammate who joins with the link', async ({ page, browser }) => 
   await invitee.getByLabel('Choose a password').fill('a-long-password-1');
   await invitee.getByRole('button', { name: 'Join Team Flow' }).click();
   await expect(invitee).toHaveURL(/\/app/);
-  await expect(invitee.getByRole('heading', { name: 'Welcome, New' })).toBeVisible();
+  // A new member is an executive (ADR 0063), so they open on their own executive dashboard.
+  await expect(invitee.getByRole('heading', { name: 'Executive dashboard', level: 1 })).toBeVisible();
   await other.close();
 
   await page.reload();

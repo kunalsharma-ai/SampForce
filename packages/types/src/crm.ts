@@ -564,6 +564,9 @@ export const dealInputSchema = z.object({
   ownerId: uuidRef,
   priority: z.enum(DEAL_PRIORITIES).nullable().optional(),
   customFields: customFieldValuesSchema,
+  /** Revenue attribution (ADR 0063): the assigned manager and the people who helped win the deal. */
+  managerId: uuidRef,
+  supportingUserIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export const dealUpdateSchema = dealInputSchema.partial();
 export type DealInput = z.infer<typeof dealInputSchema>;
@@ -597,6 +600,11 @@ export interface DealRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  /** DEAL-0001; null for deals numbered on the next set-up run. */
+  dealNumber: string | null;
+  managerId: string | null;
+  leadCreatorId: string | null;
+  supportingUserIds: string[];
 }
 
 /** One open deal in the priority view, with the reasons it ranks where it does. */

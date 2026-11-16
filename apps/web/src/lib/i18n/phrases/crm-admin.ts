@@ -6,7 +6,6 @@ export const crmAdmin = {
   'Statuses and categories': ['Estados y categorías', 'Statuts et catégories', 'Status und Kategorien', 'الحالات والفئات'],
   'RFQ statuses': ['Estados de RFQ', 'Statuts des RFQ', 'RFQ-Status', 'حالات طلبات عروض الأسعار'],
   'Deal statuses': ['Estados de oportunidad', 'Statuts des affaires', 'Deal-Status', 'حالات الصفقات'],
-  'Revenue attribution': ['Atribución de ingresos', 'Attribution du chiffre d’affaires', 'Umsatzzuordnung', 'نسب الإيرادات'],
   'Add fields to companies, employees, leads, deals, follow-ups and RFQs.': [
     'Añade campos a empresas, empleados, leads, oportunidades, seguimientos y RFQs.',
     'Ajoutez des champs aux entreprises, employés, prospects, affaires, relances et RFQ.',
@@ -16,9 +15,6 @@ export const crmAdmin = {
 
   // Statuses and categories
   'Added by you': ['Añadida por ti', 'Ajoutée par vous', 'Von Ihnen hinzugefügt', 'أضفتها أنت'],
-  Hidden: ['Oculto', 'Masqué', 'Ausgeblendet', 'مخفي'],
-  'Hide {name}': ['Ocultar {name}', 'Masquer {name}', '{name} ausblenden', 'إخفاء {name}'],
-  'Show {name}': ['Mostrar {name}', 'Afficher {name}', '{name} einblenden', 'إظهار {name}'],
   'Records use this option. Switch it off instead; they keep it.': [
     'Hay registros que usan esta opción. Desactívala en su lugar; la conservan.',
     'Des enregistrements utilisent cette option. Désactivez-la plutôt ; ils la conservent.',
@@ -39,7 +35,6 @@ export const crmAdmin = {
   ],
   'Add a follow-up category': ['Añadir una categoría de seguimiento', 'Ajouter une catégorie de relance', 'Nachverfolgungskategorie hinzufügen', 'إضافة فئة متابعة'],
   'For example: Site visit': ['Por ejemplo: Visita a las instalaciones', 'Par exemple : Visite sur site', 'Zum Beispiel: Besuch vor Ort', 'مثال: زيارة ميدانية'],
-  'Add category': ['Añadir categoría', 'Ajouter la catégorie', 'Kategorie hinzufügen', 'إضافة الفئة'],
 
   // Notifications and reminders
   Reminders: ['Recordatorios', 'Rappels', 'Erinnerungen', 'التذكيرات'],
@@ -64,13 +59,12 @@ export const crmAdmin = {
   'Follow-up overdue': ['Seguimiento vencido', 'Relance en retard', 'Nachverfolgung überfällig', 'متابعة متأخرة'],
   'Manager remarks': ['Comentarios del responsable', 'Remarques du manager', 'Anmerkungen der Führungskraft', 'ملاحظات المدير'],
   'Senior management instructions': ['Instrucciones de la dirección', 'Consignes de la direction', 'Anweisungen der Geschäftsleitung', 'تعليمات الإدارة العليا'],
-  'Lead transfer requests and decisions': ['Solicitudes y decisiones de traspaso de leads', 'Demandes et décisions de transfert de prospects', 'Anfragen und Entscheidungen zu Lead-Übertragungen', 'طلبات نقل العملاء المحتملين وقراراتها'],
+  'Lead transfer requests and decisions': ['Solicitudes y decisiones de traspaso de leads', 'Demandes et décisions de transfert de prospects', 'Anfragen und Entscheidungen zu Lead-Übergaben', 'طلبات نقل العملاء المحتملين وقراراتها'],
   'RFQ assigned': ['RFQ asignada', 'RFQ attribuée', 'RFQ zugewiesen', 'تعيين طلب عرض سعر'],
   'RFQ deadline reminder': ['Recordatorio de plazo de RFQ', 'Rappel de date limite de RFQ', 'Erinnerung an RFQ-Frist', 'تذكير بموعد طلب عرض السعر'],
   'Client concern escalation': ['Escalado de incidencias de clientes', 'Escalade des préoccupations client', 'Eskalation von Kundenanliegen', 'تصعيد مخاوف العملاء'],
   'Deal lost': ['Oportunidad perdida', 'Affaire perdue', 'Deal verloren', 'صفقة خاسرة'],
   'Deal health and churn risk': ['Salud de oportunidades y riesgo de baja', 'Santé des affaires et risque d’attrition', 'Deal-Zustand und Abwanderungsrisiko', 'صحة الصفقات وخطر فقدان العملاء'],
-  'Target achievement': ['Logro de objetivos', 'Atteinte des objectifs', 'Zielerreichung', 'تحقيق الأهداف'],
   'Important announcements': ['Anuncios importantes', 'Annonces importantes', 'Wichtige Ankündigungen', 'إعلانات مهمة'],
   'Quotes and approvals': ['Presupuestos y aprobaciones', 'Devis et validations', 'Angebote und Freigaben', 'عروض الأسعار والموافقات'],
   'Contract renewals': ['Renovaciones de contratos', 'Renouvellements de contrats', 'Vertragsverlängerungen', 'تجديد العقود'],
@@ -139,17 +133,14 @@ export const crmAdmin = {
 
   // Dashboards
   'My numbers': ['Mis cifras', 'Mes chiffres', 'Meine Zahlen', 'أرقامي'],
-  'My work': ['Mi trabajo', 'Mon travail', 'Meine Arbeit', 'عملي'],
-  'My pipeline': ['Mi embudo', 'Mon pipeline', 'Meine Pipeline', 'مسار مبيعاتي'],
   'My revenue': ['Mis ingresos', 'Mon chiffre d’affaires', 'Mein Umsatz', 'إيراداتي'],
-  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übertragungen', 'نقل العملاء المحتملين'],
+  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übergaben', 'نقل العملاء المحتملين'],
   'Team numbers': ['Cifras del equipo', 'Chiffres de l’équipe', 'Teamzahlen', 'أرقام الفريق'],
   'Team members': ['Miembros del equipo', 'Membres de l’équipe', 'Teammitglieder', 'أعضاء الفريق'],
   'Team comparison': ['Comparativa del equipo', 'Comparaison de l’équipe', 'Teamvergleich', 'مقارنة الفريق'],
   'Team pipeline': ['Embudo del equipo', 'Pipeline de l’équipe', 'Team-Pipeline', 'مسار مبيعات الفريق'],
   'Follow-up monitor': ['Control de seguimientos', 'Suivi des relances', 'Nachverfolgungsmonitor', 'مراقبة المتابعات'],
   Instructions: ['Instrucciones', 'Consignes', 'Anweisungen', 'التعليمات'],
-  'Client concerns': ['Incidencias de clientes', 'Préoccupations des clients', 'Kundenanliegen', 'مخاوف العملاء'],
   'Team revenue': ['Ingresos del equipo', 'Chiffre d’affaires de l’équipe', 'Teamumsatz', 'إيرادات الفريق'],
   'Organisation numbers': ['Cifras de la organización', 'Chiffres de l’organisation', 'Organisationszahlen', 'أرقام المؤسسة'],
   Rankings: ['Clasificaciones', 'Classements', 'Ranglisten', 'الترتيب'],

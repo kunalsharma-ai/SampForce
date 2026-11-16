@@ -9,7 +9,8 @@ import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
 import { personLabel, uploadCompanyFile } from '@/lib/company-leads';
-import { formatMoneyList, fromLocalInput, toLocalInput, useRfqMutations, useRfqs } from '@/lib/company-work';
+import { formatMoneyList, fromLocalInput, toLocalInput, useRfq, useRfqMutations, useRfqs } from '@/lib/company-work';
+import { SendRfqToSampbidx } from '@/components/sampbidx/sampbidx';
 import { formatDate } from '@/lib/crm';
 import { useHasFeature } from '@/lib/features';
 import { useT } from '@/lib/i18n';
@@ -181,11 +182,15 @@ export function RfqDialog({
   const qc = useQueryClient();
   const m = useRfqMutations();
   const canDeal = useCan('deals:write');
+  // "Save and add attachments" keeps the dialog open on the new RFQ, so files and SampBidx come next.
+  const [saved, setSaved] = React.useState<RfqRow | null>(null);
+  const live = useRfq(open ? (rfq?.id ?? saved?.id ?? null) : null);
+  const current = live.data ?? rfq ?? saved;
   const statusName = useRfqStatusName();
   const statuses = useOptions('RFQ_STATUS');
   const statusChoices = statuses.data ? statuses.data.filter((o) => o.active).map((o) => o.value as RfqStatus) : [...RFQ_STATUSES];
   const fields = useFieldDefs('RFQ');
-  const formFields = (fields.data ?? []).filter((d) => rfq || d.showInForms);
+  const formFields = (fields.data ?? []).filter((d) => current || d.showInForms);
   const [custom, setCustom] = React.useState<Record<string, unknown>>({});
   const [v, setV] = React.useState<RfqForm>(() => formOf(rfq, { ownerId: company.ownerId }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -195,13 +200,17 @@ export function RfqDialog({
     if (open) {
       setV(formOf(rfq, { ownerId: company.ownerId }));
       setCustom({ ...(rfq?.customFields ?? {}) });
+      setSaved(null);
       setErrors({});
       setFormError(null);
     }
   }, [open, rfq, company.ownerId]);
+  // The form is "dirty" while it differs from the RFQ as saved; SampBidx gets only what is saved.
+  const savedForm = React.useMemo(() => (current ? JSON.stringify(formOf(current, { ownerId: company.ownerId })) : null), [current, company.ownerId]);
+  const dirty = !!savedForm && JSON.stringify(v) !== savedForm;
   const set = (p: Partial<RfqForm>) => setV((x) => ({ ...x, ...p }));
   const computed = v.sampleSize && v.cpi ? Math.round(Number(v.sampleSize) * Number(v.cpi) * 100) / 100 : null;
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent, stay = false) => {
     e.preventDefault();
     const body = {
       companyId: company.id,
@@ -232,7 +241,7 @@ export function RfqDialog({
         formFields
           .filter((d) => d.access.edit)
           .map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const)
-          .filter(([, x]) => x !== '' || rfq)
+          .filter(([, x]) => x !== '' || current)
           .map(([k, x]) => [k, x === '' ? null : x]),
       ),
     };
@@ -247,19 +256,24 @@ export function RfqDialog({
     const { companyId: _c, ...update } = parsed.data;
     // Unchanged fields of an existing RFQ are sent as they are; a cleared total becomes the computed one again.
     try {
-      await m.save.mutateAsync({ id: rfq?.id ?? null, input: rfq ? update : parsed.data });
-      onOpenChange(false);
+      const row = await m.save.mutateAsync({ id: current?.id ?? null, input: current ? update : parsed.data });
+      if (stay) {
+        setSaved(row);
+        setV(formOf(row, { ownerId: company.ownerId }));
+        setCustom({ ...row.customFields });
+        requestAnimationFrame(() => document.getElementById('rfq-attachments')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+      } else onOpenChange(false);
     } catch (err) {
       if (err instanceof ApiError && err.details?.length) setErrors(Object.fromEntries(err.details.map((d) => [d.path, d.message])));
       setFormError(err instanceof Error ? err.message : t('Could not save.'));
     }
   };
   const upload = async (file: File) => {
-    if (!rfq) return;
+    if (!current) return;
     setUploading(true);
     try {
-      await uploadCompanyFile(company.id, file, rfq.id);
-      await Promise.all([qc.invalidateQueries({ queryKey: ['rfqs'] }), qc.invalidateQueries({ queryKey: ['company-files', company.id] })]);
+      await uploadCompanyFile(company.id, file, current.id);
+      await Promise.all([qc.invalidateQueries({ queryKey: ['rfqs'] }), qc.invalidateQueries({ queryKey: ['company-files', company.id] }), qc.invalidateQueries({ queryKey: ['sampbidx'] })]);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t('Could not upload.'));
     } finally {
@@ -274,9 +288,9 @@ export function RfqDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[3%] max-h-[94vh] max-w-3xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{rfq ? t('{number}: {project}', { number: rfq.number, project: rfq.projectName }) : t('Add RFQ')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{current ? t('{number}: {project}', { number: current.number, project: current.projectName }) : t('Add RFQ')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
-          {rfq ? t('From {company}. Received {date}.', { company: company.name, date: formatDate(rfq.receivedAt) }) : t('From {company}. It gets the next RFQ number and is logged as an interaction.', { company: company.name })}
+          {current ? t('From {company}. Received {date}.', { company: company.name, date: formatDate(current.receivedAt) }) : t('From {company}. It gets the next RFQ number and is logged as an interaction.', { company: company.name })}
         </DialogDescription>
         <form onSubmit={submit} noValidate className="space-y-5">
           <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -358,19 +372,19 @@ export function RfqDialog({
                   def={d}
                   entity="RFQ"
                   id={`rfq-cf-${d.key}`}
-                  value={custom[d.key] === undefined && !rfq ? fieldDefault(d) : fieldFormValue(d, custom[d.key])}
+                  value={custom[d.key] === undefined && !current ? fieldDefault(d) : fieldFormValue(d, custom[d.key])}
                   onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
                   error={errors[`customFields.${d.key}`]}
                 />
               ))}
             </fieldset>
           )}
-          {rfq && (
-            <div className="space-y-2">
+          {current && (
+            <div id="rfq-attachments" className="scroll-mt-4 space-y-2">
               <h3 className="text-sm font-semibold">{t('Attachments')}</h3>
-              {rfq.files.length > 0 && (
+              {current.files.length > 0 && (
                 <ul className="space-y-1 text-sm">
-                  {rfq.files.map((f) => (
+                  {current.files.map((f) => (
                     <li key={f.id} className="flex items-center gap-2">
                       <FileText aria-hidden className="size-4 text-muted-foreground" />
                       <a className="inline-flex min-h-6 items-center text-primary hover:underline" href={`/api/v1/company-files/${f.id}/download`}>
@@ -384,35 +398,36 @@ export function RfqDialog({
               <UploadZone label={t('Add a file to this RFQ')} accept={[...PORTAL_DOCUMENT_TYPES]} maxBytes={PORTAL_DOCUMENT_MAX_BYTES} busy={uploading} onFile={(f) => void upload(f)} />
             </div>
           )}
+          {current && <SendRfqToSampbidx rfq={current} dirty={dirty} />}
           {formError && (
             <p role="alert" className="text-sm text-critical">
               {formError}
             </p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            {rfq && (
+            {current && (
               <Button
                 type="button"
                 variant="ghost"
                 className="me-auto text-critical"
                 disabled={m.remove.isPending}
                 onClick={async () => {
-                  if (!window.confirm(t('Delete {number}?', { number: rfq.number }))) return;
-                  await m.remove.mutateAsync(rfq.id);
+                  if (!window.confirm(t('Delete {number}?', { number: current.number }))) return;
+                  await m.remove.mutateAsync(current.id);
                   onOpenChange(false);
                 }}
               >
                 <Trash2 aria-hidden /> {t('Delete')}
               </Button>
             )}
-            {rfq && canDeal && !rfq.deal && !['LOST', 'CANCELLED'].includes(rfq.status) && (
+            {current && canDeal && !current.deal && !['LOST', 'CANCELLED'].includes(current.status) && (
               <Button
                 type="button"
                 variant="outline"
                 disabled={m.convert.isPending}
                 onClick={async () => {
                   try {
-                    await m.convert.mutateAsync(rfq.id);
+                    await m.convert.mutateAsync(current.id);
                     onOpenChange(false);
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : t('Could not save.'));
@@ -425,6 +440,11 @@ export function RfqDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('Cancel')}
             </Button>
+            {!current && (
+              <Button type="button" variant="outline" disabled={m.save.isPending} onClick={(e) => void submit(e, true)}>
+                {t('Save and add attachments')}
+              </Button>
+            )}
             <Button type="submit" disabled={m.save.isPending}>
               {m.save.isPending ? t('Saving…') : t('Save RFQ')}
             </Button>

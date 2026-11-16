@@ -194,4 +194,18 @@ export const notifications = {
   // Company work (ADR 0060, Phase 3)
   'Follow-up assigned to you: {title}': ['Seguimiento asignado a ti: {title}', 'Relance qui vous est attribuée : {title}', 'Ihnen zugewiesene Nachverfolgung: {title}', 'متابعة أُسندت إليك: {title}'],
   'RFQ assigned to you: {rfq}': ['RFQ asignada a ti: {rfq}', 'RFQ qui vous est attribuée : {rfq}', 'Ihnen zugewiesene RFQ: {rfq}', 'طلب عرض سعر أُسند إليك: {rfq}'],
+  // Lead transfers (ADR 0063, Phase 4)
+  'Lead transfer request: {lead}': ['Solicitud de traspaso de lead: {lead}', 'Demande de transfert de prospect : {lead}', 'Anfrage zur Lead-Übergabe: {lead}', 'طلب نقل عميل محتمل: {lead}'],
+  'Requested by {name}.': ['Solicitado por {name}.', 'Demandé par {name}.', 'Angefragt von {name}.', 'طلبه {name}.'],
+  'Lead transfer approved: {lead}': ['Traspaso de lead aprobado: {lead}', 'Transfert de prospect approuvé : {lead}', 'Lead-Übergabe genehmigt: {lead}', 'تمت الموافقة على نقل العميل المحتمل: {lead}'],
+  'Lead transfer rejected: {lead}': ['Traspaso de lead rechazado: {lead}', 'Transfert de prospect refusé : {lead}', 'Lead-Übergabe abgelehnt: {lead}', 'رُفض نقل العميل المحتمل: {lead}'],
+  'Decided by {name}.': ['Decidido por {name}.', 'Décidé par {name}.', 'Entschieden von {name}.', 'قرّره {name}.'],
+  'SampBidx received {title}': ['SampBidx recibió {title}', 'SampBidx a reçu {title}', 'SampBidx hat {title} erhalten', 'استلم SampBidx \u200f{title}'],
+  'SampBidx is reviewing {title}': ['SampBidx está revisando {title}', 'SampBidx examine {title}', 'SampBidx prüft {title}', 'يراجع SampBidx \u200f{title}'],
+  'SampBidx is bidding on {title}': ['SampBidx está cotizando {title}', 'SampBidx chiffre {title}', 'SampBidx kalkuliert {title}', 'يسعّر SampBidx \u200f{title}'],
+  'SampBidx quoted {title}': ['SampBidx cotizó {title}', 'SampBidx a chiffré {title}', 'SampBidx hat {title} angeboten', 'قدّم SampBidx عرض سعر لـ {title}'],
+  '{title} was won in SampBidx': ['{title} se ganó en SampBidx', '{title} a été gagné dans SampBidx', '{title} wurde in SampBidx gewonnen', 'فاز {title} في SampBidx'],
+  '{title} was lost in SampBidx': ['{title} se perdió en SampBidx', '{title} a été perdu dans SampBidx', '{title} wurde in SampBidx verloren', 'خُسر {title} في SampBidx'],
+  'SampBidx rejected {title}': ['SampBidx rechazó {title}', 'SampBidx a refusé {title}', 'SampBidx hat {title} abgelehnt', 'رفض SampBidx \u200f{title}'],
+  '{title} was cancelled in SampBidx': ['{title} se canceló en SampBidx', '{title} a été annulé dans SampBidx', '{title} wurde in SampBidx storniert', 'أُلغي {title} في SampBidx'],
 } satisfies TextTable;

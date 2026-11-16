@@ -7,6 +7,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "email_sync",
         "ai_assistant",
         "automation",
@@ -28,6 +29,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "quotes",
         "email_sync",
         "email_templates",
@@ -55,6 +57,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "territories",
         "quotes",
         "proposals",
@@ -97,6 +100,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "territories",
         "quotes",
         "proposals",
@@ -149,6 +153,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "territories",
         "quotes",
         "proposals",
@@ -201,6 +206,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "territories",
         "quotes",
         "proposals",
@@ -253,6 +259,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "sampbidx",
         "territories",
         "quotes",
         "proposals",

@@ -56,6 +56,8 @@ export const interactionInputSchema = z.object({
   sender: optionalText(200),
   recipient: optionalText(200),
   outcome: optionalText(500),
+  /** How the client responded (positive responses on the Command Center, ADR 0063). */
+  sentiment: z.enum(['POSITIVE', 'NEUTRAL', 'NEGATIVE']).nullable().optional(),
   remarks: optionalText(10_000),
   nextAction: optionalText(500),
   /** When set, a follow-up is also scheduled for that time. */
@@ -83,6 +85,7 @@ export interface InteractionRow {
   sender: string | null;
   recipient: string | null;
   outcome: string | null;
+  sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | null;
   remarks: string | null;
   nextAction: string | null;
   followUpAt: string | null;

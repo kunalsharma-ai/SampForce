@@ -296,4 +296,16 @@ export const validation = {
   'is not an employee of this company': ['no es empleado de esta empresa', 'n’est pas employé de cette entreprise', 'ist kein Mitarbeiter dieses Unternehmens', 'ليس موظفًا في هذه الشركة'],
   'Enter what the follow-up is about': ['Indica de qué trata el seguimiento', 'Indiquez l’objet de la relance', 'Geben Sie an, worum es bei der Nachverfolgung geht', 'أدخل موضوع المتابعة'],
   'Enter the project name': ['Indica el nombre del proyecto', 'Saisissez le nom du projet', 'Geben Sie den Projektnamen ein', 'أدخل اسم المشروع'],
+  // Command Center (ADR 0063, Phase 4)
+  'contains people who are not in this workspace': ['incluye personas que no están en este espacio de trabajo', 'contient des personnes qui ne sont pas dans cet espace de travail', 'enthält Personen, die nicht in diesem Arbeitsbereich sind', 'يتضمن أشخاصًا ليسوا في مساحة العمل هذه'],
+  'already owns this lead': ['ya es responsable de este lead', 'est déjà responsable de ce prospect', 'ist bereits für diesen Lead verantwortlich', 'هو مالك هذا العميل المحتمل بالفعل'],
+  'more than the won value': ['más que el valor ganado', 'plus que la valeur gagnée', 'mehr als der gewonnene Wert', 'أكثر من القيمة المربوحة'],
+  'not a member': ['no es miembro', 'n’est pas membre', 'ist kein Mitglied', 'ليس عضوًا'],
+  'The shares must add up to 100%': ['Las partes deben sumar 100 %', 'Les parts doivent totaliser 100 %', 'Die Anteile müssen zusammen 100 % ergeben', 'يجب أن يكون مجموع الحصص 100%'],
+  'Each person can appear once': ['Cada persona puede aparecer una vez', 'Chaque personne ne peut apparaître qu’une fois', 'Jede Person darf nur einmal vorkommen', 'يمكن أن يظهر كل شخص مرة واحدة'],
+  'Choose a start and end date, start first': ['Elige una fecha de inicio y de fin, primero el inicio', 'Choisissez une date de début et de fin, le début d’abord', 'Wählen Sie ein Start- und ein Enddatum, den Start zuerst', 'اختر تاريخ بداية ونهاية، والبداية أولًا'],
+  'Choose who takes the lead': ['Elige quién se queda con el lead', 'Choisissez qui reprend le prospect', 'Wählen Sie, wer den Lead übernimmt', 'اختر من يتولى العميل المحتمل'],
+  'is required': ['es obligatorio', 'est obligatoire', 'ist erforderlich', 'مطلوب'],
+  'Enter the SampBidx API address, for example https://sampbidx.example.com/api': ['Indica la dirección de la API de SampBidx, por ejemplo https://sampbidx.example.com/api', 'Saisissez l’adresse de l’API SampBidx, par exemple https://sampbidx.example.com/api', 'Geben Sie die API-Adresse von SampBidx ein, zum Beispiel https://sampbidx.example.com/api', 'أدخل عنوان واجهة API لـ SampBidx، مثل https://sampbidx.example.com/api'],
+  'Paste the API key from SampBidx': ['Pega la clave de API de SampBidx', 'Collez la clé d’API de SampBidx', 'Fügen Sie den API-Schlüssel aus SampBidx ein', 'الصق مفتاح API من SampBidx'],
 } as const satisfies TextTable;
