@@ -296,4 +296,7 @@ export const validation = {
   'is not an employee of this company': ['no es empleado de esta empresa', 'n’est pas employé de cette entreprise', 'ist kein Mitarbeiter dieses Unternehmens', 'ليس موظفًا في هذه الشركة'],
   'Enter what the follow-up is about': ['Indica de qué trata el seguimiento', 'Indiquez l’objet de la relance', 'Geben Sie an, worum es bei der Nachverfolgung geht', 'أدخل موضوع المتابعة'],
   'Enter the project name': ['Indica el nombre del proyecto', 'Saisissez le nom du projet', 'Geben Sie den Projektnamen ein', 'أدخل اسم المشروع'],
+  'is required': ['es obligatorio', 'est obligatoire', 'ist erforderlich', 'مطلوب'],
+  'Enter the SampBidx API address, for example https://sampbidx.example.com/api': ['Indica la dirección de la API de SampBidx, por ejemplo https://sampbidx.example.com/api', 'Saisissez l’adresse de l’API SampBidx, par exemple https://sampbidx.example.com/api', 'Geben Sie die API-Adresse von SampBidx ein, zum Beispiel https://sampbidx.example.com/api', 'أدخل عنوان واجهة API لـ SampBidx، مثل https://sampbidx.example.com/api'],
+  'Paste the API key from SampBidx': ['Pega la clave de API de SampBidx', 'Collez la clé d’API de SampBidx', 'Fügen Sie den API-Schlüssel aus SampBidx ein', 'الصق مفتاح API من SampBidx'],
 } as const satisfies TextTable;

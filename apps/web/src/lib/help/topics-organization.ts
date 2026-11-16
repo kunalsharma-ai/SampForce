@@ -1468,6 +1468,30 @@ export const organizationHelp = {
       'يُسجَّل استلام الطلب وتقديمه تفاعلين. ويمكن أن يصبح الطلب الرابح صفقة.',
     ],
   },
+  'crm.sampbidx': {
+    title: 'Send to SampBidx',
+    what: [
+      'Sends this RFQ to your SampBidx bidding tool: its saved details and the files you tick, in one request.',
+      'Envía esta RFQ a tu herramienta de cotización SampBidx: sus datos guardados y los archivos que marques, en una sola solicitud.',
+      'Envoie cette RFQ à votre outil de chiffrage SampBidx : ses informations enregistrées et les fichiers cochés, en une seule requête.',
+      'Sendet diese RFQ an Ihr Kalkulationstool SampBidx: die gespeicherten Angaben und die angehakten Dateien in einer Anfrage.',
+      'يرسل هذا الطلب إلى أداة التسعير SampBidx: بياناته المحفوظة والملفات التي تحددها، في طلب واحد.',
+    ],
+    how: [
+      'Fill in the details it asks for and save, tick the attachments, then press Send. A failed send can be tried again.',
+      'Completa los datos que pide y guarda, marca los adjuntos y pulsa Enviar. Un envío fallido se puede reintentar.',
+      'Renseignez les informations demandées et enregistrez, cochez les pièces jointes, puis cliquez sur Envoyer. Un envoi échoué peut être relancé.',
+      'Füllen Sie die verlangten Angaben aus und speichern Sie, haken Sie die Anhänge an und klicken Sie auf Senden. Fehlgeschlagenes lässt sich wiederholen.',
+      'أدخل البيانات المطلوبة واحفظ، وحدد المرفقات، ثم اضغط إرسال. يمكن إعادة محاولة الإرسال الفاشل.',
+    ],
+    where: [
+      'SampBidx reports back (quoted, won, lost) on the RFQ and under RFQs, Sent to SampBidx. Or transfer the RFQ email itself.',
+      'SampBidx informa (cotizada, ganada, perdida) en la RFQ y en RFQs, Enviadas a SampBidx. O transfiere el propio correo.',
+      'SampBidx fait son retour (chiffrée, gagnée, perdue) sur la RFQ et dans RFQ, Envoyées à SampBidx. Ou transférez l’e-mail lui-même.',
+      'SampBidx meldet zurück (angeboten, gewonnen, verloren) an der RFQ und unter RFQs, An SampBidx gesendet. Oder die E-Mail selbst übertragen.',
+      'يُبلغ SampBidx بالنتيجة (مسعّر، فائز، خاسر) في الطلب وفي صفحة الطلبات، المرسلة إلى SampBidx. أو انقل بريد الطلب نفسه.',
+    ],
+  },
   'crm.ownership': {
     title: 'Lead ownership',
     what: [

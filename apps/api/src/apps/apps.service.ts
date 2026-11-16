@@ -59,6 +59,7 @@ const META: Record<AppKey, { name: string; description: string; provider: AppPro
   zoom: { name: 'Zoom', description: 'Schedule Zoom meetings from leads, contacts and deals, and bring recorded meetings’ transcripts into meeting notes.', provider: 'ZOOM' },
   whatsapp: { name: 'WhatsApp Business', description: 'Message contacts on WhatsApp from their record and from approved workflow steps, through your own WhatsApp Business number.', provider: 'WHATSAPP' },
   twilio: { name: 'SMS (Twilio)', description: 'Text contacts from their record and from approved workflow steps, through your own Twilio number. Replies and STOP opt-outs come back to the contact.', provider: 'TWILIO' },
+  sampbidx: { name: 'SampBidx', description: 'Send RFQs with their attachments, or the RFQ emails themselves, to your SampBidx bidding tool and follow their status here.', provider: 'SAMPBIDX' },
   teams: { name: 'Microsoft Teams', description: 'Post deal, lead and task updates to Teams channels from workflows, through the Teams Workflows app.', provider: 'TEAMS' },
 };
 
@@ -90,7 +91,7 @@ export class AppsService {
   }
 
   private missingConfig(app: AppKey): string[] {
-    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig(), payments: () => [], whatsapp: () => [], twilio: () => [] }[app]();
+    return { slack: () => this.slack.missingConfig(), teams: () => [], zoom: () => this.zoom.missingConfig(), docusign: () => this.docusign.missingConfig(), payments: () => [], whatsapp: () => [], twilio: () => [], sampbidx: () => [] }[app]();
   }
 
   redirectUri(app: AppKey): string {
@@ -124,7 +125,9 @@ export class AppsService {
                     ? ['Replies and delivery status are Pending Configuration until Meta sends the first signed webhook. Add the callback URL and verify token below in your Meta app.']
                     : key === 'twilio' && c && !(c.settings as { lastWebhookAt?: string | null }).lastWebhookAt
                       ? ['Replies and delivery status are Pending Configuration until Twilio sends the first signed request. Set the inbound URL below as your number’s “A message comes in” webhook.']
-                      : [],
+                      : key === 'sampbidx' && c && !(c.settings as { lastCallbackAt?: string | null }).lastCallbackAt
+                        ? ['Status updates from SampBidx are Pending Configuration until SampBidx sends the first signed callback. Give SampBidx the callback URL and signing secret below.']
+                        : [],
           connection: c
             ? {
                 accountName: c.accountName,
@@ -142,8 +145,8 @@ export class AppsService {
   }
 
   connectUrl(auth: AuthContext, app: AppKey): { url: string } {
-    if (app === 'teams' || app === 'payments' || app === 'whatsapp' || app === 'twilio') {
-      throw new BadRequestException({ code: 'NOT_OAUTH', message: app === 'teams' ? 'Microsoft Teams is connected by adding a channel with its Workflows URL.' : app === 'payments' ? 'Card payments are connected by saving your Stripe or Razorpay keys.' : app === 'twilio' ? 'SMS is connected by saving your Twilio Account SID, Auth Token and number.' : 'WhatsApp Business is connected by saving your Cloud API number id, business account id, access token and App Secret.' });
+    if (app === 'teams' || app === 'payments' || app === 'whatsapp' || app === 'twilio' || app === 'sampbidx') {
+      throw new BadRequestException({ code: 'NOT_OAUTH', message: app === 'teams' ? 'Microsoft Teams is connected by adding a channel with its Workflows URL.' : app === 'payments' ? 'Card payments are connected by saving your Stripe or Razorpay keys.' : app === 'twilio' ? 'SMS is connected by saving your Twilio Account SID, Auth Token and number.' : app === 'sampbidx' ? 'SampBidx is connected by saving its API address and key.' : 'WhatsApp Business is connected by saving your Cloud API number id, business account id, access token and App Secret.' });
     }
     const missing = this.missingConfig(app);
     if (missing.length) {

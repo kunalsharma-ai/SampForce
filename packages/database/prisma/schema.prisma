@@ -400,6 +400,7 @@ model Tenant {
   leadOwnerChanges       LeadOwnerChange[]
   companyFiles           CompanyFile[]
   leadDrafts             LeadDraft[]
+  sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
 
   @@map("tenants")
@@ -800,6 +801,52 @@ model CompanyFile {
 
 /// A request for quotation from a company lead (ADR 0060, Phase 3). Numbered RFQ-0001.. per workspace. Receiving an
 /// RFQ is not won business: only RFQs marked won, or the deals they turn into, count as revenue.
+/// An RFQ, or an RFQ email, sent to the workspace's SampBidx (ADR 0061). One row per send; a retry reuses the row so
+/// SampBidx sees the same Idempotency-Key. Email files are kept so a failed send can be retried.
+model SampbidxTransfer {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  /// RFQ, MAILBOX_EMAIL or EMAIL_FILE.
+  kind            String
+  title           String
+  rfqId           String?   @map("rfq_id")
+  companyId       String?   @map("company_id")
+  emailMessageId  String?   @map("email_message_id")
+  emailFrom       String?   @map("email_from")
+  emailDate       DateTime? @map("email_date")
+  /// The uploaded .eml/.msg file (EMAIL_FILE only).
+  emailFileName   String?   @map("email_file_name")
+  emailFileType   String?   @map("email_file_type")
+  emailFileData   Bytes?    @map("email_file_data")
+  /// Company files sent with an RFQ.
+  fileIds         String[]  @map("file_ids")
+  /// Names and sizes of everything sent, for the history list.
+  files           Json      @default("[]")
+  note            String?
+  /// SENDING, SENT or FAILED.
+  delivery        String    @default("SENDING")
+  attempts        Int       @default(0)
+  lastError       String?   @map("last_error")
+  remoteId        String?   @map("remote_id")
+  remoteUrl       String?   @map("remote_url")
+  remoteStatus    String?   @map("remote_status")
+  remoteNote      String?   @map("remote_note")
+  remoteUpdatedAt DateTime? @map("remote_updated_at")
+  createdById     String    @map("created_by_id")
+  sentAt          DateTime? @map("sent_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, rfqId])
+  @@index([tenantId, companyId])
+  @@index([tenantId, emailMessageId])
+  @@index([tenantId, remoteId])
+  @@map("sampbidx_transfers")
+}
+
 model Rfq {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
@@ -1165,36 +1212,36 @@ enum TaskPriority {
 }
 
 model Task {
-  id            String       @id @default(uuid()) @map("_id")
-  tenantId      String       @map("tenant_id")
-  title         String
-  description   String?
-  status        TaskStatus   @default(OPEN)
-  priority      TaskPriority @default(NORMAL)
-  dueAt         DateTime?    @map("due_at")
-  completedAt   DateTime?    @map("completed_at")
+  id              String       @id @default(uuid()) @map("_id")
+  tenantId        String       @map("tenant_id")
+  title           String
+  description     String?
+  status          TaskStatus   @default(OPEN)
+  priority        TaskPriority @default(NORMAL)
+  dueAt           DateTime?    @map("due_at")
+  completedAt     DateTime?    @map("completed_at")
   /// Shown to the customer in the client portal as a milestone.
-  portalVisible Boolean      @default(false) @map("portal_visible")
-  assigneeId    String?      @map("assignee_id")
-  leadId        String?      @map("lead_id")
-  contactId     String?      @map("contact_id")
-  opportunityId String?      @map("opportunity_id")
+  portalVisible   Boolean      @default(false) @map("portal_visible")
+  assigneeId      String?      @map("assignee_id")
+  leadId          String?      @map("lead_id")
+  contactId       String?      @map("contact_id")
+  opportunityId   String?      @map("opportunity_id")
   /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
-  companyId       String?   @map("company_id")
-  followUpType    String?   @map("follow_up_type")
-  managerId       String?   @map("manager_id")
+  companyId       String?      @map("company_id")
+  followUpType    String?      @map("follow_up_type")
+  managerId       String?      @map("manager_id")
   /// The previous discussion, the action needed next, and remarks.
   summary         String?
-  nextAction      String?   @map("next_action")
+  nextAction      String?      @map("next_action")
   remarks         String?
-  rescheduleCount Int       @default(0) @map("reschedule_count")
-  rescheduledAt   DateTime? @map("rescheduled_at")
+  rescheduleCount Int          @default(0) @map("reschedule_count")
+  rescheduledAt   DateTime?    @map("rescheduled_at")
   outcome         String?
-  rfqId           String?   @map("rfq_id")
-  createdById     String?   @map("created_by_id")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  deletedAt     DateTime?    @map("deleted_at")
+  rfqId           String?      @map("rfq_id")
+  createdById     String?      @map("created_by_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -3364,6 +3411,8 @@ enum AppProvider {
   WHATSAPP
   /// The workspace's own Twilio account and SMS number.
   TWILIO
+  /// The workspace's own SampBidx bidding tool (ADR 0061): an API address and key, plus a callback signing secret.
+  SAMPBIDX
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the

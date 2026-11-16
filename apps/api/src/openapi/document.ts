@@ -212,6 +212,12 @@ import {
   smsConsentSchema,
   smsSendSchema,
   twilioConnectSchema,
+  sampbidxConnectSchema,
+  sampbidxSendRfqSchema,
+  sampbidxSendMailboxEmailSchema,
+  sampbidxEmailFileQuerySchema,
+  sampbidxTransferListQuerySchema,
+  sampbidxMailboxQuerySchema,
   appearanceSchema,
   regionalSchema,
   savedThemeInputSchema,
@@ -517,6 +523,22 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ hookId: z.string() }) }, responses: { 200: { description: 'Empty TwiML' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
   r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/status', tags: ['Workspace apps'], summary: "Twilio's status callback for texts SampForce sent (signed); status only moves forward",
     request: { params: z.object({ hookId: z.string() }) }, responses: { 204: { description: 'Recorded' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
+  // SampBidx (ADR 0061); the wire format SampBidx must accept is in docs/integrations/sampbidx-api.md.
+  action('post', '/apps/sampbidx/keys', 'Workspace apps', 'Save the SampBidx API address and key after GET /v1/ping accepts them; sends no RFQ (integrations:manage; plan feature sampbidx)', sampbidxConnectSchema);
+  action('get', '/apps/sampbidx/callback-secret', 'Workspace apps', 'The callback URL and signing secret to give SampBidx (integrations:manage)');
+  action('post', '/apps/sampbidx/callback-secret/rotate', 'Workspace apps', 'Replace the callback signing secret; callbacks signed with the old one are refused at once (integrations:manage)');
+  r.registerPath({ method: 'get', path: '/apps/sampbidx/rfqs/{rfqId}', tags: ['Workspace apps'], summary: "Send to SampBidx, steps 1 and 2: the RFQ's missing required details, its files and earlier sends (companies:read)", security: secured,
+    request: { params: z.object({ rfqId: z.string().uuid() }) }, responses: { 200: ok('Readiness'), ...notFound, ...errors } });
+  action('post', '/apps/sampbidx/transfers/rfq', 'Workspace apps', 'Send a filled-in RFQ and the chosen attachments to SampBidx; refused while required details are missing, or when already sent unless resend is true (companies:write)', sampbidxSendRfqSchema);
+  action('get', '/apps/sampbidx/mailbox', 'Workspace apps', "Emails from the caller's own connected mailboxes, to pick an RFQ email (activities:read)", undefined, { query: sampbidxMailboxQuerySchema });
+  action('post', '/apps/sampbidx/transfers/mailbox-email', 'Workspace apps', "Send one email from the caller's own synced mailbox to SampBidx (activities:read)", sampbidxSendMailboxEmailSchema);
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/email-file', tags: ['Workspace apps'], summary: 'Send an .eml or Outlook .msg file (the raw request body, up to 10 MB, attachments included) to SampBidx (activities:read)', security: secured,
+    request: { query: sampbidxEmailFileQuerySchema }, responses: { 200: ok('Transfer'), ...errors } });
+  action('get', '/apps/sampbidx/transfers', 'Workspace apps', 'What was sent to SampBidx, newest first, with its delivery and SampBidx status (companies:read)', undefined, { query: sampbidxTransferListQuerySchema });
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/{id}/retry', tags: ['Workspace apps'], summary: 'Send a failed transfer again with the same Idempotency-Key (activities:read)', security: secured,
+    request: { params: z.object({ id: z.string().uuid() }) }, responses: { 200: ok('Transfer'), ...notFound, ...errors } });
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/callbacks/{hookId}', tags: ['Workspace apps'], summary: "SampBidx's status updates: JSON {transferId or sampbidxId, status, note?, url?}, signed X-SampBidx-Signature: sha256=HMAC(secret, timestamp.body) with X-SampBidx-Timestamp within 5 minutes",
+    request: { params: z.object({ hookId: z.string() }) }, responses: { 200: ok('Recorded'), 400: { description: 'Body not valid' }, 401: { description: 'Signature check failed' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);

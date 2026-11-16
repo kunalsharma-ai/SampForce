@@ -790,6 +790,23 @@ export class CompanyWorkService {
     });
   }
 
+  /** The RFQ for someone who may change it; sending it to SampBidx counts as a change (ADR 0061). */
+  editableRfq(auth: AuthContext, id: string): Promise<RfqRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const r = await this.visibleRfq(tx, auth, id);
+      await this.editableCompany(tx, auth, r.companyId);
+      return (await this.rfqRows(tx, auth.tenantId, [r]))[0]!;
+    });
+  }
+
+  /** Refuses unless the person may change this company (and, if given, the RFQ belongs to it). */
+  async assertEditable(auth: AuthContext, companyId: string, rfqId?: string | null): Promise<void> {
+    await this.prisma.run(auth, async (tx) => {
+      await this.editableCompany(tx, auth, companyId);
+      await this.assertCompanyChildren(tx, auth.tenantId, companyId, { rfqId });
+    });
+  }
+
   // ─── Access ───
 
   private async visibleCompany(tx: TenantTx, auth: AuthContext, companyId: string): Promise<Visibility> {
