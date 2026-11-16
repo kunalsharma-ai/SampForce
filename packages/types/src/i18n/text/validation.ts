@@ -305,4 +305,7 @@ export const validation = {
   'Each person can appear once': ['Cada persona puede aparecer una vez', 'Chaque personne ne peut apparaître qu’une fois', 'Jede Person darf nur einmal vorkommen', 'يمكن أن يظهر كل شخص مرة واحدة'],
   'Choose a start and end date, start first': ['Elige una fecha de inicio y de fin, primero el inicio', 'Choisissez une date de début et de fin, le début d’abord', 'Wählen Sie ein Start- und ein Enddatum, den Start zuerst', 'اختر تاريخ بداية ونهاية، والبداية أولًا'],
   'Choose who takes the lead': ['Elige quién se queda con el lead', 'Choisissez qui reprend le prospect', 'Wählen Sie, wer den Lead übernimmt', 'اختر من يتولى العميل المحتمل'],
+  'is required': ['es obligatorio', 'est obligatoire', 'ist erforderlich', 'مطلوب'],
+  'Enter the SampBidx API address, for example https://sampbidx.example.com/api': ['Indica la dirección de la API de SampBidx, por ejemplo https://sampbidx.example.com/api', 'Saisissez l’adresse de l’API SampBidx, par exemple https://sampbidx.example.com/api', 'Geben Sie die API-Adresse von SampBidx ein, zum Beispiel https://sampbidx.example.com/api', 'أدخل عنوان واجهة API لـ SampBidx، مثل https://sampbidx.example.com/api'],
+  'Paste the API key from SampBidx': ['Pega la clave de API de SampBidx', 'Collez la clé d’API de SampBidx', 'Fügen Sie den API-Schlüssel aus SampBidx ein', 'الصق مفتاح API من SampBidx'],
 } as const satisfies TextTable;

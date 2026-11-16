@@ -43,6 +43,7 @@ export const features = {
   'Custom roles': ['Roles personalizados', 'Rôles personnalisés', 'Eigene Rollen', 'أدوار مخصصة'],
   'Webhooks': ['Webhooks', 'Webhooks', 'Webhooks', 'خطافات الويب'],
   'SMS': ['SMS', 'SMS', 'SMS', 'الرسائل النصية'],
+  'SampBidx': ['SampBidx', 'SampBidx', 'SampBidx', 'SampBidx'],
   'Slack': ['Slack', 'Slack', 'Slack', 'Slack'],
   'Microsoft Teams': ['Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams'],
   'Zoom': ['Zoom', 'Zoom', 'Zoom', 'Zoom'],
@@ -247,6 +248,12 @@ export const features = {
     'Messages WhatsApp Business depuis les fiches du CRM.',
     'WhatsApp-Business-Nachrichten aus CRM-Datensätzen.',
     'رسائل WhatsApp Business من سجلات CRM.',
+  ],
+  'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.': [
+    'Envía RFQ y correos de RFQ a SampBidx para cotizar, y sigue su estado.',
+    'Envoyez des RFQ et des e-mails de RFQ à SampBidx pour chiffrage, et suivez leur statut.',
+    'Senden Sie RFQs und RFQ-E-Mails zur Kalkulation an SampBidx und verfolgen Sie ihren Status.',
+    'أرسل طلبات عروض الأسعار ورسائلها إلى SampBidx للتسعير، وتابع حالتها.',
   ],
   'SMS through your Twilio account.': ['SMS a través de tu cuenta de Twilio.', 'SMS via votre compte Twilio.', 'SMS über Ihr Twilio-Konto.', 'رسائل SMS عبر حسابك في Twilio.'],
   'Workspace API keys and the Zapier app.': [

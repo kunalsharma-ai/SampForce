@@ -96,6 +96,14 @@ export default defineConfig({
       env: { TWILIO_FIXTURE_PORT: '4960' },
     },
     {
+      // Local stand-in for SampBidx's inbound API (docs/integrations/sampbidx-api.md), under /api.
+      command: 'npx tsx test/fixtures/sampbidx-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4970/health',
+      reuseExistingServer: !process.env.CI,
+      env: { SAMPBIDX_FIXTURE_PORT: '4970' },
+    },
+    {
       // Local stand-in for an email service: catches password-reset emails so tests can read the link.
       command: 'npx tsx test/fixtures/smtp-fixture.ts',
       cwd: '../api',

@@ -43,3 +43,4 @@ export * from './company-crm';
 export * from './company-work';
 export * from './attribution';
 export * from './command-center';
+export * from './sampbidx';

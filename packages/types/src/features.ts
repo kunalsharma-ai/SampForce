@@ -59,6 +59,7 @@ export const FEATURE_KEYS = [
   'card_payments',
   'whatsapp',
   'sms',
+  'sampbidx',
   'api_access',
   'webhooks',
   // Administration
@@ -124,6 +125,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'card_payments', group: 'Apps', label: 'Card payments', description: 'Take card payments on proposals.', defaultFrom: 'professional', paths: [] },
   { key: 'whatsapp', group: 'Apps', label: 'WhatsApp', description: 'WhatsApp Business messages from CRM records.', defaultFrom: 'professional', paths: [] },
   { key: 'sms', group: 'Apps', label: 'SMS', description: 'SMS through your Twilio account.', defaultFrom: 'professional', paths: [] },
+  { key: 'sampbidx', group: 'Apps', label: 'SampBidx', description: 'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.', defaultFrom: 'free', paths: [] },
   { key: 'api_access', group: 'Apps', label: 'API and Zapier', description: 'Workspace API keys and the Zapier app.', defaultFrom: 'growth', paths: [] },
   { key: 'webhooks', group: 'Apps', label: 'Webhooks', description: 'Signed webhooks to your own systems.', defaultFrom: 'growth', paths: [] },
 
@@ -132,7 +134,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
-export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms' } as const satisfies Record<string, FeatureKey>;
+export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
 
 export const FEATURE_BY_KEY: Record<FeatureKey, FeatureDef> = Object.fromEntries(FEATURES.map((f) => [f.key, f])) as Record<FeatureKey, FeatureDef>;
 

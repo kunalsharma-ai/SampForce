@@ -183,6 +183,8 @@ export const SHIPPED_FEATURES: { key: string; plans: string[] }[] = [
     key,
     plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'],
   })),
+  // ADR 0061: sending RFQs to SampBidx goes with RFQs; an operator can take it off a plan in the console.
+  { key: 'sampbidx', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
 ];
 
 export async function seedReferenceData(prisma: PrismaClient): Promise<void> {
