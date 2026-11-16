@@ -14,6 +14,10 @@ import {
   leadUpdateSchema,
   type ListQuery,
   listQuerySchema,
+  type CompanyDuplicateCheck,
+  companyDuplicateCheckSchema,
+  type ContactDuplicateCheck,
+  contactDuplicateCheckSchema,
   z,
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
@@ -24,6 +28,14 @@ import { LeadsService } from './leads.service';
 
 const uuid = new ParseUUIDPipe();
 const mergeSchema = z.object({ duplicateId: z.string().uuid() });
+const companyFiltersSchema = z.object({
+  statusId: z.string().uuid().optional(),
+  createdById: z.string().uuid().optional(),
+  managerId: z.string().uuid().optional(),
+  country: z.string().regex(/^[A-Za-z]{2}$/).optional(),
+  industry: z.string().trim().max(120).optional(),
+});
+const contactFiltersSchema = z.object({ statusId: z.string().uuid().optional() });
 
 @Controller('leads')
 @ApiKeyAccess()
@@ -97,8 +109,16 @@ export class ContactsController {
 
   @Get()
   @RequirePermissions('contacts:read')
-  list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery) {
-    return this.contacts.list(auth, q);
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery, @Query(new ZodPipe(contactFiltersSchema)) f: z.infer<typeof contactFiltersSchema>) {
+    return this.contacts.list(auth, q, f);
+  }
+
+  /** Employees with the same email, phone or LinkedIn profile, anywhere in the workspace (names only). */
+  @Post('check-duplicates')
+  @HttpCode(200)
+  @RequirePermissions('contacts:read')
+  checkDuplicates(@Auth() auth: AuthContext, @Body(new ZodPipe(contactDuplicateCheckSchema)) body: ContactDuplicateCheck) {
+    return this.contacts.duplicates(auth, body);
   }
 
   @Post()
@@ -134,8 +154,16 @@ export class CompaniesController {
 
   @Get()
   @RequirePermissions('companies:read')
-  list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery) {
-    return this.companies.list(auth, q);
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery, @Query(new ZodPipe(companyFiltersSchema)) f: z.infer<typeof companyFiltersSchema>) {
+    return this.companies.list(auth, q, f);
+  }
+
+  /** Companies with the same name, domain, email, phone or LinkedIn page, anywhere in the workspace (names only). */
+  @Post('check-duplicates')
+  @HttpCode(200)
+  @RequirePermissions('companies:read')
+  checkDuplicates(@Auth() auth: AuthContext, @Body(new ZodPipe(companyDuplicateCheckSchema)) body: CompanyDuplicateCheck) {
+    return this.companies.duplicates(auth, body);
   }
 
   @Post()

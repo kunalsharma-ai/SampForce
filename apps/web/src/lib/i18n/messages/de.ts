@@ -203,6 +203,8 @@ export const de: Messages = {
   'count.awardedTimes_other': '{count}-mal vergeben',
   'count.members_one': '{count} Mitglied',
   'count.members_other': '{count} Mitglieder',
+  'count.records_one': '{count} Datensatz',
+  'count.records_other': '{count} Datensätze',
   'count.permissions_one': '{count} Berechtigung',
   'count.permissions_other': '{count} Berechtigungen',
   'count.membersWithoutMfa_one': '{count} aktives Mitglied hat sie noch nicht aktiviert.',

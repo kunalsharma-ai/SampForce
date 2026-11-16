@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
+import { assignLeadNumbers } from '@dealflow/database';
 import {
   companyInputSchema,
   contactInputSchema,
@@ -15,6 +16,8 @@ import { localize, tr } from '../common/request-language';
 import { ownerRefs } from './crm-helpers';
 import { parseCsv, toCsv } from './csv';
 import { CustomFieldsService } from './custom-fields.service';
+import { defaultStatusId, statusRefs } from './companies.service';
+import { canSeeDetails, companyScope, contactScope, leadScope, visibility } from './visibility';
 import { phoneDigits } from './leads.service';
 
 export const MAX_IMPORT_ROWS = 5_000;
@@ -126,18 +129,20 @@ export class ImportExportService {
         result.created = toCreate.length;
         if (req.dryRun || toCreate.length === 0) return result;
 
-        const base = { tenantId: auth.tenantId, ownerId: auth.userId };
+        const base = { tenantId: auth.tenantId, ownerId: auth.userId, ...(req.entity === 'leads' ? {} : { createdById: auth.userId, updatedById: auth.userId, statusChangedAt: new Date() }) };
+        const statusId = req.entity === 'leads' ? null : await defaultStatusId(tx, auth.tenantId, req.entity === 'companies' ? 'COMPANY' : 'EMPLOYEE');
         if (req.entity === 'leads') {
           await chunks(toCreate, (batch) =>
             tx.lead.createMany({ data: batch.map((p) => ({ ...base, ...(p.data as object), tags: (p.data.tags as string[]) ?? [] }) as Prisma.LeadCreateManyInput) }),
           );
         } else if (req.entity === 'companies') {
-          await chunks(toCreate, (batch) => tx.company.createMany({ data: batch.map((p) => ({ ...base, ...(p.data as object) }) as Prisma.CompanyCreateManyInput) }));
+          await chunks(toCreate, (batch) => tx.company.createMany({ data: batch.map((p) => ({ ...base, statusId, ...(p.data as object) }) as Prisma.CompanyCreateManyInput) }));
+          while ((await assignLeadNumbers(tx, auth.tenantId)) > 0);
         } else {
           const companyIds = await this.resolveCompanies(tx, auth, toCreate.map((p) => p.companyName).filter((n): n is string => !!n));
           await chunks(toCreate, (batch) =>
             tx.contact.createMany({
-              data: batch.map((p) => ({ ...base, ...(p.data as object), companyId: p.companyName ? (companyIds.get(p.companyName.toLowerCase()) ?? null) : null }) as Prisma.ContactCreateManyInput),
+              data: batch.map((p) => ({ ...base, statusId, ...(p.data as object), companyId: p.companyName ? (companyIds.get(p.companyName.toLowerCase()) ?? null) : null }) as Prisma.ContactCreateManyInput),
             }),
           );
         }
@@ -161,12 +166,14 @@ export class ImportExportService {
         const cfHeaders = defs.map((d) => `customFields.${d.key}`);
         const cf = (v: unknown) => defs.map((d) => ((v ?? {}) as Record<string, unknown>)[d.key]);
         const where = { tenantId: auth.tenantId, deletedAt: null };
+        // Exports follow record visibility; details of records the role may not see are left blank.
+        const v = await visibility(tx, auth);
         const take = MAX_EXPORT_ROWS;
         let headers: string[];
         let body: unknown[][];
 
         if (entity === 'leads') {
-          const rows = await tx.lead.findMany({ where, orderBy: { createdAt: 'asc' }, take });
+          const rows = await tx.lead.findMany({ where: { ...where, ...leadScope(v) }, orderBy: { createdAt: 'asc' }, take });
           const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
           headers = ['id', ...IMPORT_FIELDS.leads, 'owner', 'createdAt', ...cfHeaders];
           body = rows.map((r) => [
@@ -175,18 +182,32 @@ export class ImportExportService {
             r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, ...cf(r.customFields),
           ]);
         } else if (entity === 'contacts') {
-          const rows = await tx.contact.findMany({ where, include: { company: { select: { name: true } } }, orderBy: { createdAt: 'asc' }, take });
+          const rows = await tx.contact.findMany({ where: { ...where, ...contactScope(v) }, include: { company: { select: { name: true } } }, orderBy: { createdAt: 'asc' }, take });
           const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-          headers = ['id', ...IMPORT_FIELDS.contacts, 'owner', 'createdAt', ...cfHeaders];
-          body = rows.map((r) => [
-            r.id, r.firstName, r.lastName, r.email, r.phone, r.jobTitle, r.country, r.timezone, r.company?.name,
-            r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, ...cf(r.customFields),
-          ]);
+          const statuses = await statusRefs(tx, auth.tenantId, rows.map((r) => r.statusId));
+          headers = ['id', ...IMPORT_FIELDS.contacts, 'owner', 'createdAt', 'status', 'department', 'linkedinUrl', 'nextFollowUpAt', ...cfHeaders];
+          body = rows.map((r) => {
+            const show = canSeeDetails(v, r.ownerId);
+            return [
+              r.id, r.firstName, r.lastName, show ? r.email : null, show ? r.phone : null, r.jobTitle, r.country, r.timezone, r.company?.name,
+              r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, r.statusId ? statuses.get(r.statusId)?.name : null, r.department,
+              show ? r.linkedinUrl : null, r.nextFollowUpAt, ...(show ? cf(r.customFields) : cf({})),
+            ];
+          });
         } else if (entity === 'companies') {
-          const rows = await tx.company.findMany({ where, orderBy: { createdAt: 'asc' }, take });
-          const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-          headers = ['id', ...IMPORT_FIELDS.companies, 'owner', 'createdAt', ...cfHeaders];
-          body = rows.map((r) => [r.id, r.name, r.domain, r.industry, r.country, r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, ...cf(r.customFields)]);
+          const rows = await tx.company.findMany({ where: { ...where, ...companyScope(v) }, orderBy: { createdAt: 'asc' }, take });
+          const owners = await ownerRefs(tx, rows.flatMap((r) => [r.ownerId, r.createdById, r.managerId]));
+          const statuses = await statusRefs(tx, auth.tenantId, rows.map((r) => r.statusId));
+          const name = (id: string | null) => (id ? owners.get(id)?.name : null);
+          headers = ['id', ...IMPORT_FIELDS.companies, 'owner', 'createdAt', 'leadNumber', 'status', 'createdBy', 'manager', 'website', 'linkedinUrl', 'primaryEmail', 'primaryPhone', 'state', 'city', 'companySize', 'companyType', ...cfHeaders];
+          body = rows.map((r) => {
+            const show = canSeeDetails(v, r.ownerId);
+            return [
+              r.id, r.name, show ? r.domain : null, r.industry, r.country, name(r.ownerId), r.createdAt, r.leadNumber, r.statusId ? statuses.get(r.statusId)?.name : null,
+              name(r.createdById), name(r.managerId), show ? r.website : null, show ? r.linkedinUrl : null, show ? r.primaryEmail : null, show ? r.primaryPhone : null,
+              r.state, r.city, r.companySize, r.companyType, ...(show ? cf(r.customFields) : cf({})),
+            ];
+          });
         } else {
           const rows = await tx.opportunity.findMany({
             where,
@@ -264,9 +285,13 @@ export class ImportExportService {
     rows.forEach((r) => map.has(r.name.toLowerCase()) || map.set(r.name.toLowerCase(), r.id));
     for (const [key, name] of unique) {
       if (map.has(key)) continue;
-      const c = await tx.company.create({ data: { tenantId: auth.tenantId, ownerId: auth.userId, name: name.slice(0, 200) }, select: { id: true } });
+      const c = await tx.company.create({
+        data: { tenantId: auth.tenantId, ownerId: auth.userId, createdById: auth.userId, updatedById: auth.userId, name: name.slice(0, 200), statusId: await defaultStatusId(tx, auth.tenantId, 'COMPANY'), statusChangedAt: new Date() },
+        select: { id: true },
+      });
       map.set(key, c.id);
     }
+    while ((await assignLeadNumbers(tx, auth.tenantId)) > 0);
     return map;
   }
 }

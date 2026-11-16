@@ -285,4 +285,8 @@ export const validation = {
   'Give the meeting a title': ['Ponle un título a la reunión', 'Donnez un titre à la réunion', 'Geben Sie dem Meeting einen Titel', 'أعطِ الاجتماع عنوانًا'],
   'Use two-letter country codes such as DE or IN': ['Usa códigos de país de dos letras, como DE o IN', 'Utilisez des codes pays à deux lettres, comme DE ou IN', 'Verwenden Sie zweistellige Ländercodes wie DE oder IN', 'استخدم رموز الدول المكونة من حرفين مثل DE أو IN'],
   'Each country can be listed once': ['Cada país solo puede aparecer una vez', 'Chaque pays ne peut figurer qu’une fois', 'Jedes Land darf nur einmal vorkommen', 'يمكن إدراج كل دولة مرة واحدة فقط'],
+  'Use a colour like #1a2b3c': ['Usa un color como #1a2b3c', 'Utilisez une couleur comme #1a2b3c', 'Verwenden Sie eine Farbe wie #1a2b3c', 'استخدم لونًا مثل #1a2b3c'],
+  'Use 1 to 10 letters, digits or dashes': ['Usa de 1 a 10 letras, dígitos o guiones', 'Utilisez 1 à 10 lettres, chiffres ou tirets', 'Verwenden Sie 1 bis 10 Buchstaben, Ziffern oder Bindestriche', 'استخدم من 1 إلى 10 أحرف أو أرقام أو شرطات'],
+  'Use an http or https address': ['Usa una dirección http o https', 'Utilisez une adresse http ou https', 'Verwenden Sie eine http- oder https-Adresse', 'استخدم عنوان http أو https'],
+  'Enter a valid web address': ['Introduce una dirección web válida', 'Saisissez une adresse web valide', 'Geben Sie eine gültige Webadresse ein', 'أدخل عنوان ويب صالحًا'],
 } as const satisfies TextTable;

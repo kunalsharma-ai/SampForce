@@ -1,4 +1,5 @@
-import { SYSTEM_ROLE_DEFINITIONS, SYSTEM_ROLES } from '@dealflow/types';
+import { SYSTEM_ROLE_DEFINITIONS, SYSTEM_ROLE_VISIBILITY, SYSTEM_ROLES } from '@dealflow/types';
+import { ensureCompanyCrmDefaults } from './company-crm';
 import type { TenantTx } from './client';
 
 export const DEFAULT_PIPELINE_STAGES = [
@@ -58,6 +59,8 @@ export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput)
         description: def.description,
         permissions: def.permissions,
         isSystem: true,
+        recordScope: SYSTEM_ROLE_VISIBILITY[key]!.recordScope,
+        viewOthersDetails: SYSTEM_ROLE_VISIBILITY[key]!.viewOthersDetails,
       },
     });
     roles.set(key, role.id);
@@ -80,6 +83,10 @@ export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput)
       position,
     })),
   });
+
+  await ensureCompanyCrmDefaults(tx, tenant.id, say);
+  // A new workspace has nothing to upgrade.
+  await tx.counter.create({ data: { id: `upgrade:company-crm-1:${tenant.id}`, value: 1 } });
 
   await tx.subscription.create({
     data: { tenantId: tenant.id, planCode: input.planCode ?? 'free', status: 'ACTIVE', seats: 1 },

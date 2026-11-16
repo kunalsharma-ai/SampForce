@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { SearchHit } from '@dealflow/types';
+import { matchKeys, type SearchHit } from '@dealflow/types';
+import { canSeeDetails, companyScope, contactScope, leadScope, visibility } from './visibility';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 
@@ -75,9 +76,12 @@ export class SearchService {
     return this.prisma.run(auth, async (tx) => {
       const base = { tenantId: auth.tenantId, deletedAt: null };
       const hits: Hit[] = [];
+      // Record visibility applies; emails, phones, websites and LinkedIn links also match exactly through match keys.
+      const v = await visibility(tx, auth);
+      const keys = matchKeys({ emails: [term], phones: [term], websites: [term], linkedin: [term] });
       if (entities.includes('lead')) {
         const rows = await tx.lead.findMany({
-          where: { ...base, ...wordsWhere(term, ['fullName', 'email', 'companyName']) },
+          where: { ...base, AND: [leadScope(v), wordsWhere(term, ['fullName', 'email', 'companyName'])] },
           select: { id: true, fullName: true, email: true, companyName: true },
           orderBy: { updatedAt: 'desc' },
           take,
@@ -86,21 +90,24 @@ export class SearchService {
       }
       if (entities.includes('contact')) {
         const rows = await tx.contact.findMany({
-          where: { ...base, ...wordsWhere(term, ['firstName', 'lastName', 'email']) },
-          select: { id: true, firstName: true, lastName: true, email: true },
+          where: { ...base, AND: [contactScope(v), { OR: [wordsWhere(term, ['firstName', 'lastName', 'email']), ...(keys.length ? [{ matchKeys: { hasSome: keys } }] : [])] }] },
+          select: { id: true, firstName: true, lastName: true, email: true, ownerId: true },
           orderBy: { updatedAt: 'desc' },
           take,
         });
-        hits.push(...rank(rows.map((r) => ({ entity: 'contact' as const, id: r.id, title: `${r.firstName} ${r.lastName ?? ''}`.trim(), subtitle: r.email, text: [r.firstName, r.lastName, r.email] })), term, per));
+        hits.push(...rank(rows.map((r) => ({ entity: 'contact' as const, id: r.id, title: `${r.firstName} ${r.lastName ?? ''}`.trim(), subtitle: canSeeDetails(v, r.ownerId) ? r.email : null, text: [r.firstName, r.lastName, r.email] })), term, per));
       }
       if (entities.includes('company')) {
         const rows = await tx.company.findMany({
-          where: { ...base, ...wordsWhere(term, ['name', 'domain']) },
-          select: { id: true, name: true, domain: true },
+          where: {
+            ...base,
+            AND: [companyScope(v), { OR: [wordsWhere(term, ['name', 'domain']), { leadNumber: term.toUpperCase() }, ...(keys.length ? [{ matchKeys: { hasSome: keys } }] : [])] }],
+          },
+          select: { id: true, name: true, domain: true, leadNumber: true, ownerId: true },
           orderBy: { updatedAt: 'desc' },
           take,
         });
-        hits.push(...rank(rows.map((r) => ({ entity: 'company' as const, id: r.id, title: r.name, subtitle: r.domain, text: [r.name, r.domain] })), term, per));
+        hits.push(...rank(rows.map((r) => ({ entity: 'company' as const, id: r.id, title: r.name, subtitle: [r.leadNumber, canSeeDetails(v, r.ownerId) ? r.domain : null].filter(Boolean).join(' · ') || null, text: [r.name, r.domain, r.leadNumber] })), term, per));
       }
       if (entities.includes('deal')) {
         const rows = await tx.opportunity.findMany({

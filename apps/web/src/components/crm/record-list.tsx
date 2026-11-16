@@ -15,6 +15,7 @@ import { type TableColumn, useTableView } from '@/components/data-table/use-tabl
 import { type MessageKey, Tr, useT } from '@/lib/i18n';
 
 import { RecordFormDialog } from './record-form';
+import { CountryFlag, StatusChip } from './status-chip';
 import { Select } from './select';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 
@@ -40,6 +41,7 @@ const COLUMNS = {
     { id: 'name', header: h('Name'), sortKey: 'firstName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
     { id: 'title', header: h('Job title'), sortKey: 'jobTitle', cell: (r) => r.jobTitle ?? '—', text: (r) => r.jobTitle, size: 180 },
     { id: 'company', header: h('Company'), cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
+    { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
     { id: 'email', header: h('Email'), sortKey: 'email', cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
     { id: 'phone', header: h('Phone'), cell: (r) => r.phone ?? '—', text: (r) => r.phone, size: 150 },
     owner<ContactRow>(),
@@ -47,12 +49,23 @@ const COLUMNS = {
     updated<ContactRow>(),
   ] satisfies TableColumn<ContactRow>[],
   companies: [
+    { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
     { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
+    { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
+    {
+      id: 'location',
+      header: h('Location'),
+      sortKey: 'country',
+      cell: (r) => (r.country ? <span className="inline-flex items-center gap-1.5"><CountryFlag code={r.country} />{[r.city, r.country].filter(Boolean).join(', ')}</span> : '—'),
+      size: 160,
+    },
     { id: 'domain', header: h('Domain'), sortKey: 'domain', cell: (r) => r.domain ?? '—', text: (r) => r.domain, size: 170 },
     { id: 'industry', header: h('Industry'), sortKey: 'industry', cell: (r) => r.industry ?? '—', text: (r) => r.industry, size: 160 },
     { id: 'contacts', header: h('Contacts'), cell: (r) => r.contactCount, align: 'right', size: 110 },
     { id: 'deals', header: h('Open deals'), cell: (r) => r.openDealCount, align: 'right', size: 110 },
     owner<CompanyRow>(),
+    { id: 'createdBy', header: h('Created by'), cell: (r) => r.createdBy?.name ?? '—', text: (r) => r.createdBy?.name ?? null, size: 150 },
+    { id: 'manager', header: h('Manager'), cell: (r) => r.manager?.name ?? '—', text: (r) => r.manager?.name ?? null, size: 150, defaultHidden: true },
     created<CompanyRow>(),
     updated<CompanyRow>(),
   ] satisfies TableColumn<CompanyRow>[],

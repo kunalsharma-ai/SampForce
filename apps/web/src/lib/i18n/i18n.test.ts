@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   ACTIVITY_TYPES,
+  DEFAULT_DEPARTMENTS,
+  DEFAULT_DESIGNATIONS,
+  DEFAULT_STATUSES,
   BID_TEMPLATES,
   CHURN_RISK,
   DATE_BUCKETS,
@@ -138,6 +141,10 @@ describe('page phrases', () => {
     ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: tr\('([^']+)'\)/g)].map((m) => m[1]!)],
     ['deal health signals', [...source('../../../../api/src/ai/scoring.ts').matchAll(/risk\('\w+', '([^']+)'/g)].map((m) => m[1]!)],
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
+    // Company-centric CRM (ADR 0060): the starter statuses, designations and departments a workspace gets, shown with
+    // t.maybe() until someone renames them, and the CRM configuration checks.
+    ['company CRM defaults', [...DEFAULT_STATUSES.COMPANY, ...DEFAULT_STATUSES.EMPLOYEE].map((s) => s.name).concat(DEFAULT_DESIGNATIONS.map((d) => d.name), DEFAULT_DEPARTMENTS)],
+    ['CRM configuration validation messages', [...source('../../../../../packages/types/src/company-crm.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
     // Sign-in errors and the validation messages of the shared auth schemas, shown through t.maybe() on the auth pages.
     ['single sign-on errors', Object.values(SSO_ERRORS)],
     // Theme descriptions and the readability check labels come from the shared appearance module.

@@ -213,6 +213,8 @@ export const en = {
   'count.awardedTimes_other': 'Awarded {count} times',
   'count.members_one': '{count} member',
   'count.members_other': '{count} members',
+  'count.records_one': '{count} record',
+  'count.records_other': '{count} records',
   'count.permissions_one': '{count} permission',
   'count.permissions_other': '{count} permissions',
   'count.membersWithoutMfa_one': '{count} active member has not turned it on yet.',

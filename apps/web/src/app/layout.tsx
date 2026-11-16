@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Providers } from '@/components/providers';
+import 'flag-icons/css/flag-icons.min.css';
 import './globals.css';
 
 export const metadata: Metadata = {

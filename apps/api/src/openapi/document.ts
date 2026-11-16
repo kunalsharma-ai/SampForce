@@ -41,6 +41,16 @@ import {
   forecastQuerySchema,
   territoryInputSchema,
   territoryUpdateSchema,
+  companyDuplicateCheckSchema,
+  contactDuplicateCheckSchema,
+  crmStatusInputSchema,
+  crmStatusUpdateSchema,
+  statusReorderSchema,
+  departmentInputSchema,
+  designationInputSchema,
+  leadNumberingSchema,
+  memberOrgSchema,
+  roleVisibilitySchema,
   forecastSettingsSchema,
   campaignInputSchema,
   changePlanSchema,
@@ -290,6 +300,29 @@ export function buildOpenApiDocument(): object {
     r.registerPath({ method, path, tags: [tag], summary, security: secured,
       request: { ...(path.includes('{id}') ? { params: idParam } : {}), ...(schema ? body(schema) : {}), ...extra },
       responses: { 200: ok('OK'), ...notFound, ...errors } });
+  // Company-centric CRM (ADR 0060)
+  action('post', '/companies/check-duplicates', 'Companies', 'Companies with the same name, domain, email, phone or LinkedIn page across the workspace; names only for ones you cannot open (companies:read)', companyDuplicateCheckSchema);
+  action('post', '/contacts/check-duplicates', 'Contacts', 'Employees with the same email, phone, LinkedIn or name at the company; names only for ones you cannot open (contacts:read)', contactDuplicateCheckSchema);
+  action('get', '/crm-config/statuses', 'CRM configuration', 'Company or employee statuses in order, with how many records use each', undefined, { query: z.object({ kind: z.enum(['COMPANY', 'EMPLOYEE']) }) });
+  action('post', '/crm-config/statuses', 'CRM configuration', 'Add a status (crm:configure)', crmStatusInputSchema);
+  action('put', '/crm-config/statuses/order', 'CRM configuration', 'Reorder statuses; list every status of the kind once (crm:configure)', statusReorderSchema);
+  action('put', '/crm-config/statuses/{id}', 'CRM configuration', 'Rename, recolour, set the default, or deactivate a status (crm:configure)', crmStatusUpdateSchema);
+  action('delete', '/crm-config/statuses/{id}', 'CRM configuration', 'Delete an unused status that is not the default (crm:configure)');
+  action('get', '/crm-config/departments', 'CRM configuration', 'Departments with member counts');
+  action('post', '/crm-config/departments', 'CRM configuration', 'Add a department (crm:configure)', departmentInputSchema);
+  action('put', '/crm-config/departments/{id}', 'CRM configuration', 'Rename, describe or deactivate a department (crm:configure)', departmentInputSchema);
+  action('delete', '/crm-config/departments/{id}', 'CRM configuration', 'Delete a department nobody uses (crm:configure)');
+  action('get', '/crm-config/designations', 'CRM configuration', 'Designations with their dashboard level and member counts');
+  action('post', '/crm-config/designations', 'CRM configuration', 'Add a designation (crm:configure)', designationInputSchema);
+  action('put', '/crm-config/designations/{id}', 'CRM configuration', 'Rename, change the level, or deactivate a designation (crm:configure)', designationInputSchema);
+  action('delete', '/crm-config/designations/{id}', 'CRM configuration', 'Delete a designation nobody uses (crm:configure)');
+  action('get', '/crm-config/lead-numbering', 'CRM configuration', 'Lead number prefix and digits, the next number and how many were issued');
+  action('put', '/crm-config/lead-numbering', 'CRM configuration', 'Change the prefix or digits for new leads, or rewrite existing numbers too (crm:configure)', leadNumberingSchema);
+  r.registerPath({ method: 'get', path: '/geo/countries', tags: ['Locations'], summary: 'Countries with dialling code, currency and time zones', security: secured, responses: { 200: ok('Countries'), ...errors } });
+  r.registerPath({ method: 'get', path: '/geo/countries/{code}/regions', tags: ['Locations'], summary: 'States, provinces and regions of a country', security: secured, request: { params: z.object({ code: z.string().length(2) }) }, responses: { 200: ok('Regions'), ...notFound, ...errors } });
+  r.registerPath({ method: 'get', path: '/geo/countries/{code}/cities', tags: ['Locations'], summary: 'Cities of a country, largest first; filter by region and name', security: secured, request: { params: z.object({ code: z.string().length(2) }), query: z.object({ region: z.string().optional(), q: z.string().optional(), limit: z.number().int().optional() }) }, responses: { 200: ok('Cities'), ...notFound, ...errors } });
+  r.registerPath({ method: 'patch', path: '/tenants/current/members/{membershipId}/org', tags: ['Tenants'], summary: 'Set a member’s designation, department and reporting manager; loops are refused (members:manage)', security: secured, request: { params: z.object({ membershipId: z.string().uuid() }), ...body(memberOrgSchema) }, responses: { 200: ok('Member'), ...notFound, ...errors } });
+  action('put', '/tenants/current/roles/{id}/visibility', 'Tenants', 'Which records a role sees (own, team, all) and whether it sees details of records others own; the owner role is fixed (members:manage)', roleVisibilitySchema);
   action('post', '/leads/{id}/assign', 'Leads', 'Assign an owner (leads:write)', assignSchema);
   action('get', '/leads/{id}/duplicates', 'Leads', 'Possible duplicates by email, phone or name and company (leads:read)');
   action('post', '/leads/{id}/merge', 'Leads', 'Merge a duplicate into this lead (leads:write)', z.object({ duplicateId: z.string().uuid() }));

@@ -8,3 +8,4 @@ export * from './lookups';
 export * from './money';
 export * from './duplicates';
 export * from './derived';
+export * from './company-crm';

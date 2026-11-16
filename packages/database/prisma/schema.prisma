@@ -284,6 +284,9 @@ model Tenant {
   ssoEnforced           Boolean           @default(false) @map("sso_enforced")
   /// Workspace default appearance (theme engine settings) for members who have not picked their own.
   defaultAppearance     Json?             @map("default_appearance")
+  /// Company lead numbers (FRFS01...): the prefix and the minimum digits. Null prefix = the workspace initials.
+  leadNumberPrefix      String?           @map("lead_number_prefix")
+  leadNumberDigits      Int               @default(2) @map("lead_number_digits")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
@@ -390,6 +393,10 @@ model Tenant {
   whatsappConsents       WhatsappConsent[]
   smsMessages            SmsMessage[]
   smsConsents            SmsConsent[]
+  departments            Department[]
+  designations           Designation[]
+  crmStatuses            CrmStatus[]
+  companyBranches        CompanyBranch[]
 
   @@map("tenants")
 }
@@ -447,15 +454,20 @@ model Subscription {
 }
 
 model Role {
-  id          String   @id @default(uuid()) @map("_id")
-  tenantId    String   @map("tenant_id")
-  key         String
-  name        String
-  description String?
-  permissions String[]
-  isSystem    Boolean  @default(false) @map("is_system")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @map("tenant_id")
+  key               String
+  name              String
+  description       String?
+  permissions       String[]
+  isSystem          Boolean  @default(false) @map("is_system")
+  /// Which company leads, employees and inbound leads people with this role see: OWN (their own and unassigned),
+  /// TEAM (also everyone reporting to them, directly or not) or ALL.
+  recordScope       String   @default("ALL") @map("record_scope")
+  /// Whether they see contact details (emails, phones, links, notes) of visible records someone else owns.
+  viewOthersDetails Boolean  @default(true) @map("view_others_details")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   memberships Membership[]
@@ -471,15 +483,20 @@ enum MembershipStatus {
 }
 
 model Membership {
-  id         String           @id @default(uuid()) @map("_id")
-  tenantId   String           @map("tenant_id")
-  userId     String           @map("user_id")
-  roleId     String           @map("role_id")
-  status     MembershipStatus @default(ACTIVE)
+  id                 String           @id @default(uuid()) @map("_id")
+  tenantId           String           @map("tenant_id")
+  userId             String           @map("user_id")
+  roleId             String           @map("role_id")
+  status             MembershipStatus @default(ACTIVE)
   /// SCIM externalId from the workspace's identity provider, when provisioned through SCIM.
-  externalId String?          @map("external_id")
-  createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @updatedAt @map("updated_at")
+  externalId         String?          @map("external_id")
+  /// Organisation structure (company-centric CRM): job title from the workspace's designations, department and the
+  /// person they report to (a user id).
+  designationId      String?          @map("designation_id")
+  departmentId       String?          @map("department_id")
+  reportingManagerId String?          @map("reporting_manager_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -553,18 +570,59 @@ model AuditLog {
 // ───────────────────────────── Core CRM ─────────────────────────────
 
 model Company {
-  id              String    @id @default(uuid()) @map("_id")
-  tenantId        String    @map("tenant_id")
-  name            String
-  domain          String?
-  industry        String?
-  country         String?
-  ownerId         String?   @map("owner_id")
-  parentCompanyId String?   @map("parent_company_id")
-  customFields    Json      @default("{}") @map("custom_fields")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  name              String
+  domain            String?
+  industry          String?
+  country           String?
+  ownerId           String?   @map("owner_id")
+  parentCompanyId   String?   @map("parent_company_id")
+  customFields      Json      @default("{}") @map("custom_fields")
+  /// Company lead number (prefix + sequence, e.g. FRFS07). Assigned once, never reused, never edited by people.
+  leadNumber        String?   @map("lead_number")
+  leadSeq           Int?      @map("lead_seq")
+  statusId          String?   @map("status_id")
+  statusChangedAt   DateTime? @map("status_changed_at")
+  statusChangedById String?   @map("status_changed_by_id")
+  /// Who generated the lead; kept when ownership moves. ownerId is the current lead owner.
+  createdById       String?   @map("created_by_id")
+  updatedById       String?   @map("updated_by_id")
+  managerId         String?   @map("manager_id")
+  departmentId      String?   @map("department_id")
+  teamId            String?   @map("team_id")
+  linkedinUrl       String?   @map("linkedin_url")
+  website           String?
+  primaryEmail      String?   @map("primary_email")
+  primaryPhone      String?   @map("primary_phone")
+  overview          String?
+  foundedYear       Int?      @map("founded_year")
+  branchCount       Int?      @map("branch_count")
+  companySize       String?   @map("company_size")
+  companyType       String?   @map("company_type")
+  headquarters      String?
+  specialties       String?
+  businessCategory  String?   @map("business_category")
+  state             String?
+  city              String?
+  address           String?
+  postalCode        String?   @map("postal_code")
+  timezone          String?
+  notes             String?
+  /// Further addresses and links: [{ value, label?, primary }]. Primary entries are mirrored in the fields above.
+  emails            Json      @default("[]")
+  phones            Json      @default("[]")
+  websites          Json      @default("[]")
+  linkedinUrls      Json      @default("[]") @map("linkedin_urls")
+  /// Further office addresses: [{ label?, country?, state?, city?, address?, postalCode? }].
+  addresses         Json      @default("[]")
+  /// Normalised keys for duplicate checks, kept by the API: lower-case name without legal suffixes, domains,
+  /// lower-case emails, last ten phone digits, LinkedIn paths.
+  nameKey           String?   @map("name_key")
+  matchKeys         String[]  @map("match_keys")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
 
   tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   parent        Company?             @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -580,38 +638,63 @@ model Company {
   portalUsers    PortalUser[]
   portalRequests PortalRequest[]
 
+  branches CompanyBranch[]
+
+  @@unique([tenantId, leadNumber])
   @@index([tenantId, name])
   @@index([tenantId, domain])
+  @@index([tenantId, nameKey])
+  @@index([tenantId, matchKeys])
+  @@index([tenantId, statusId])
+  @@index([tenantId, ownerId])
+  @@index([tenantId, createdById])
+  @@index([tenantId, leadSeq])
   @@map("companies")
 }
 
 model Contact {
-  id               String           @id @default(uuid()) @map("_id")
-  tenantId         String           @map("tenant_id")
-  companyId        String?          @map("company_id")
-  firstName        String           @map("first_name")
-  lastName         String?          @map("last_name")
-  email            String?
-  phone            String?
+  id                String           @id @default(uuid()) @map("_id")
+  tenantId          String           @map("tenant_id")
+  companyId         String?          @map("company_id")
+  firstName         String           @map("first_name")
+  lastName          String?          @map("last_name")
+  email             String?
+  phone             String?
   /// Last ten digits of `phone`, kept by the database client (packages/database/src/derived.ts) for duplicate checks.
-  phoneDigits      String?          @map("phone_digits")
+  phoneDigits       String?          @map("phone_digits")
   /// `phone` as international digits (no + or 00) when it was written in international form; WhatsApp and SMS match on it.
-  phoneIntl        String?          @map("phone_intl")
-  jobTitle         String?          @map("job_title")
-  country          String?
-  timezone         String?
-  ownerId          String?          @map("owner_id")
-  marketingConsent MarketingConsent @default(UNKNOWN) @map("marketing_consent")
+  phoneIntl         String?          @map("phone_intl")
+  jobTitle          String?          @map("job_title")
+  country           String?
+  timezone          String?
+  ownerId           String?          @map("owner_id")
+  marketingConsent  MarketingConsent @default(UNKNOWN) @map("marketing_consent")
   /// valid, risky, catch_all, invalid, unknown, bounced, needs_verification; null = never checked.
-  emailStatus      String?          @map("email_status")
+  emailStatus       String?          @map("email_status")
   /// 0-100, raised by email engagement rules in Automation Studio; null = never scored.
-  engagementScore  Int?             @map("engagement_score")
-  consentSource    String?          @map("consent_source")
-  consentUpdatedAt DateTime?        @map("consent_updated_at")
-  customFields     Json             @default("{}") @map("custom_fields")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  deletedAt        DateTime?        @map("deleted_at")
+  engagementScore   Int?             @map("engagement_score")
+  consentSource     String?          @map("consent_source")
+  consentUpdatedAt  DateTime?        @map("consent_updated_at")
+  customFields      Json             @default("{}") @map("custom_fields")
+  /// Employee / POC fields (company-centric CRM). jobTitle is the designation; ownerId the assigned executive.
+  statusId          String?          @map("status_id")
+  statusChangedAt   DateTime?        @map("status_changed_at")
+  statusChangedById String?          @map("status_changed_by_id")
+  department        String?
+  linkedinUrl       String?          @map("linkedin_url")
+  state             String?
+  city              String?
+  remarks           String?
+  nextFollowUpAt    DateTime?        @map("next_follow_up_at")
+  createdById       String?          @map("created_by_id")
+  updatedById       String?          @map("updated_by_id")
+  /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
+  emails            Json             @default("[]")
+  phones            Json             @default("[]")
+  matchKeys         String[]         @map("match_keys")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  deletedAt         DateTime?        @map("deleted_at")
 
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company       Company?      @relation(fields: [companyId], references: [id], onUpdate: NoAction)
@@ -631,7 +714,97 @@ model Contact {
   @@index([tenantId, lastName, firstName])
   @@index([tenantId, phoneDigits])
   @@index([tenantId, phoneIntl])
+  @@index([tenantId, companyId])
+  @@index([tenantId, matchKeys])
+  @@index([tenantId, statusId])
   @@map("contacts")
+}
+
+/// One office of a company lead. Always belongs to its parent company.
+model CompanyBranch {
+  id            String   @id @default(uuid()) @map("_id")
+  tenantId      String   @map("tenant_id")
+  companyId     String   @map("company_id")
+  name          String
+  country       String?
+  state         String?
+  city          String?
+  address       String?
+  postalCode    String?  @map("postal_code")
+  email         String?
+  phone         String?
+  contactPerson String?  @map("contact_person")
+  website       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId])
+  @@map("company_branches")
+}
+
+model Department {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  name        String
+  description String?
+  position    Int       @default(0)
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, name])
+  @@map("departments")
+}
+
+/// A job title such as "Business Development Manager". The tier picks the Command Center layout; what a person may
+/// do still comes from their role.
+model Designation {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  name        String
+  /// EXECUTIVE, MANAGER or SENIOR.
+  tier        String    @default("EXECUTIVE")
+  description String?
+  position    Int       @default(0)
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, name])
+  @@map("designations")
+}
+
+/// Workspace-defined statuses with colours. kind: COMPANY or EMPLOYEE (more kinds follow with RFQs and deals).
+model CrmStatus {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  kind        String
+  name        String
+  description String?
+  /// #rrggbb
+  color       String
+  position    Int       @default(0)
+  /// The status new records start in (one per kind).
+  isDefault   Boolean   @default(false) @map("is_default")
+  /// What the status means to reports: NEW, ACTIVE, CLIENT, CONCERN, ON_HOLD, LOST (null = ACTIVE).
+  meaning     String?
+  /// Deactivated statuses stay on the records that have them but cannot be picked.
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, kind, name])
+  @@index([tenantId, kind, position])
+  @@map("crm_statuses")
 }
 
 enum LeadStatus {

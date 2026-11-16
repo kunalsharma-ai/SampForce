@@ -19,6 +19,7 @@ export function phoneIntlKey(phone: string | null | undefined): string | null {
 }
 
 import { Prisma } from '@prisma/client';
+import { companyNameKey, matchKeys } from '@dealflow/types';
 
 /**
  * Enum fields people sort by. PostgreSQL sorted an enum by its declaration order (LOW, MEDIUM, HIGH); MongoDB stores
@@ -86,14 +87,42 @@ function phoneValue(v: unknown): { present: boolean; value: string | null } {
   return { present: false, value: null };
 }
 
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.map((p) => (p && typeof p === 'object' ? (p as { value?: unknown }).value : null)).filter((x): x is string => typeof x === 'string') : []);
+const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+
+/**
+ * Duplicate keys of companies and employees created anywhere (lead conversion, imports, the extension, prospects),
+ * so the duplicate check finds them. The company and contact services keep them current on every later change.
+ */
+function addMatchKeys(model: string, row: Record<string, unknown>): void {
+  if (model === 'Company') {
+    if (row.nameKey === undefined) row.nameKey = companyNameKey(str(row.name));
+    if (row.matchKeys === undefined)
+      row.matchKeys = matchKeys({
+        websites: [str(row.website), str(row.domain), ...list(row.websites)],
+        emails: [str(row.primaryEmail), ...list(row.emails)],
+        phones: [str(row.primaryPhone), ...list(row.phones)],
+        linkedin: [str(row.linkedinUrl), ...list(row.linkedinUrls)],
+        emailDomains: true,
+      });
+  }
+  if (model === 'Contact') {
+    if (row.emails === undefined && str(row.email)) row.emails = [{ value: str(row.email), label: null, primary: true }];
+    if (row.phones === undefined && str(row.phone)) row.phones = [{ value: str(row.phone), label: null, primary: true }];
+    if (row.matchKeys === undefined)
+      row.matchKeys = matchKeys({ emails: [str(row.email), ...list(row.emails)], phones: [str(row.phone), ...list(row.phones)], linkedin: [str(row.linkedinUrl)] });
+  }
+}
+
 /** Adds the derived fields to a create or update `data` (one row or a list). */
 export function withDerivedFields(model: string, data: unknown, isCreate = false): unknown {
   const derive = DERIVED[model];
-  if ((!derive && !RANKED_ENUMS[model]) || !data || typeof data !== 'object') return data;
+  if ((!derive && !RANKED_ENUMS[model] && model !== 'Company') || !data || typeof data !== 'object') return data;
   if (Array.isArray(data)) return data.map((d) => withDerivedFields(model, d, isCreate));
   const row = { ...(data as Record<string, unknown>) };
   const p = phoneValue(row.phone);
   if (derive && p.present) derive(row, p.value);
   addRanks(model, row, isCreate);
+  if (isCreate) addMatchKeys(model, row);
   return row;
 }

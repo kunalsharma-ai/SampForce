@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { CompanyRow } from '@dealflow/types';
 import Link from 'next/link';
+import { CompanyLeadCard } from '@/components/crm/company-lead-card';
+import { CountryFlag } from '@/components/crm/status-chip';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RelatedContacts, RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -25,7 +27,7 @@ export function CompanyDetail({ id }: { id: string }) {
         entity="companies"
         id={id}
         title={c.name}
-        subtitle={[c.industry, c.domain].filter(Boolean).join(' · ') || undefined}
+        subtitle={[c.leadNumber, c.industry, c.domain].filter(Boolean).join(' · ') || undefined}
         row={c as unknown as Record<string, unknown>}
       />
       <div className="grid gap-4 lg:grid-cols-3">
@@ -38,6 +40,7 @@ export function CompanyDetail({ id }: { id: string }) {
           <ActivityTimeline related={{ companyId: id }} timeline={{ entity: 'company', id }} />
         </div>
         <div className="space-y-4">
+          <CompanyLeadCard company={c} />
           <RecordIntelligencePanel entity="company" id={id} name={c.name} />
           <Card>
             <CardHeader>
@@ -48,7 +51,7 @@ export function CompanyDetail({ id }: { id: string }) {
                 items={[
                   ['Domain', c.domain && <a className="text-primary hover:underline" href={`https://${c.domain}`} target="_blank" rel="noopener noreferrer">{c.domain}</a>],
                   ['Industry', c.industry],
-                  ['Country', c.country],
+                  ['Country', c.country && <CountryFlag code={c.country} withName />],
                   ['Parent company', c.parentCompany && <Link className="text-primary hover:underline" href={`/app/companies/${c.parentCompany.id}`}>{c.parentCompany.name}</Link>],
                   ['Owner', c.owner?.name],
                   ['Created', formatDate(c.createdAt)],

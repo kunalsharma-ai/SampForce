@@ -77,6 +77,46 @@ export interface OwnerRef {
 
 // ───────────── Companies ─────────────
 
+const optionalUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .transform((v) => (v === '' ? null : /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`))
+  .pipe(z.string().url('Enter a valid web address').refine((v) => /^https?:\/\//i.test(v), 'Use an http or https address').nullable())
+  .nullable()
+  .optional();
+
+/** One of several emails, phones or links of a company or employee. */
+const contactPoint = <T extends z.ZodTypeAny>(value: T) =>
+  z.object({ value, label: z.string().trim().max(60).nullable().optional(), primary: z.boolean().optional() });
+const pointList = <T extends z.ZodTypeAny>(value: T) => z.array(contactPoint(value)).max(20).optional();
+const requiredEmail = z.string().trim().toLowerCase().max(254).email('Enter a valid email');
+const requiredPhone = z.string().trim().max(40).regex(/^\+?[0-9 ().-]{6,}$/, 'Enter a valid phone number');
+const requiredUrl = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .transform((v) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`))
+  .pipe(z.string().url('Enter a valid web address').refine((v) => /^https?:\/\//i.test(v), 'Use an http or https address'));
+
+export const companyAddressSchema = z.object({
+  label: z.string().trim().max(60).nullable().optional(),
+  country: countryCode,
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+});
+export type CompanyAddress = z.infer<typeof companyAddressSchema>;
+export interface ContactPoint {
+  value: string;
+  label?: string | null;
+  primary?: boolean;
+}
+
+export const COMPANY_TYPES = ['Private company', 'Public company', 'Partnership', 'Government agency', 'Non-profit', 'Educational institution', 'Self-employed', 'Other'] as const;
+
 export const companyInputSchema = z.object({
   name: z.string().trim().min(1, 'Enter a company name').max(200),
   domain: optionalText(253),
@@ -85,6 +125,34 @@ export const companyInputSchema = z.object({
   ownerId: uuidRef,
   parentCompanyId: uuidRef,
   customFields: customFieldValuesSchema,
+  // Company-centric CRM (lead creation). The lead number, creator and timestamps are never accepted from input.
+  statusId: uuidRef,
+  managerId: uuidRef,
+  departmentId: uuidRef,
+  teamId: uuidRef,
+  website: optionalUrl,
+  linkedinUrl: optionalUrl,
+  primaryEmail: optionalEmail,
+  primaryPhone: optionalPhone,
+  overview: optionalText(5000),
+  foundedYear: z.coerce.number().int().min(1600).max(2100).nullable().optional(),
+  branchCount: z.coerce.number().int().min(0).max(100000).nullable().optional(),
+  companySize: optionalText(40),
+  companyType: optionalText(60),
+  headquarters: optionalText(200),
+  specialties: optionalText(1000),
+  businessCategory: optionalText(120),
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+  timezone: optionalText(64),
+  notes: optionalText(5000),
+  emails: pointList(requiredEmail),
+  phones: pointList(requiredPhone),
+  websites: pointList(requiredUrl),
+  linkedinUrls: pointList(requiredUrl),
+  addresses: z.array(companyAddressSchema).max(50).optional(),
 });
 export const companyUpdateSchema = companyInputSchema.partial();
 export type CompanyInput = z.infer<typeof companyInputSchema>;
@@ -102,6 +170,58 @@ export interface CompanyRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  leadNumber: string | null;
+  status: CrmStatusRef | null;
+  statusChangedAt: string | null;
+  createdBy: PersonRef | null;
+  updatedBy: PersonRef | null;
+  manager: PersonRef | null;
+  /** The owner with their designation (owner above keeps its old shape). */
+  ownerPerson: PersonRef | null;
+  department: { id: string; name: string } | null;
+  team: { id: string; name: string } | null;
+  website: string | null;
+  linkedinUrl: string | null;
+  primaryEmail: string | null;
+  primaryPhone: string | null;
+  overview: string | null;
+  foundedYear: number | null;
+  branchCount: number | null;
+  companySize: string | null;
+  companyType: string | null;
+  headquarters: string | null;
+  specialties: string | null;
+  businessCategory: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  postalCode: string | null;
+  timezone: string | null;
+  notes: string | null;
+  emails: ContactPoint[];
+  phones: ContactPoint[];
+  websites: ContactPoint[];
+  linkedinUrls: ContactPoint[];
+  addresses: CompanyAddress[];
+  /**
+   * True when the record belongs to someone else and the caller's role may not see its details: contact details,
+   * notes, overview and custom fields are left out.
+   */
+  restricted: boolean;
+}
+
+/** A CRM user shown with their designation ("Kunal Sharma – Business Development Manager"). */
+export interface PersonRef {
+  id: string;
+  name: string;
+  designation: string | null;
+}
+
+export interface CrmStatusRef {
+  id: string;
+  name: string;
+  color: string;
+  meaning: string | null;
 }
 
 // ───────────── Contacts ─────────────
@@ -118,6 +238,16 @@ export const contactInputSchema = z.object({
   ownerId: uuidRef,
   marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
   customFields: customFieldValuesSchema,
+  // Employee / POC fields (company-centric CRM). jobTitle is the designation, ownerId the assigned executive.
+  statusId: uuidRef,
+  department: optionalText(120),
+  linkedinUrl: optionalUrl,
+  state: optionalText(120),
+  city: optionalText(120),
+  remarks: optionalText(5000),
+  nextFollowUpAt: z.string().datetime({ offset: true }).nullable().optional(),
+  emails: pointList(requiredEmail),
+  phones: pointList(requiredPhone),
 });
 export const contactUpdateSchema = contactInputSchema.partial();
 export type ContactInput = z.infer<typeof contactInputSchema>;
@@ -144,6 +274,21 @@ export interface ContactRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  status: CrmStatusRef | null;
+  statusChangedAt: string | null;
+  statusChangedBy: PersonRef | null;
+  department: string | null;
+  linkedinUrl: string | null;
+  state: string | null;
+  city: string | null;
+  remarks: string | null;
+  nextFollowUpAt: string | null;
+  emails: ContactPoint[];
+  phones: ContactPoint[];
+  ownerPerson: PersonRef | null;
+  createdBy: PersonRef | null;
+  /** See CompanyRow.restricted. */
+  restricted: boolean;
 }
 
 // ───────────── Leads ─────────────
@@ -557,3 +702,6 @@ export interface InvitationPreview {
   roleName: string;
   hasAccount: boolean;
 }
+
+/** Shared field builders, for the company-centric CRM schemas (company-crm.ts). */
+export const fieldSchemas = { optionalText, optionalEmail, optionalPhone, countryCode, uuidRef };

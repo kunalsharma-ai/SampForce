@@ -43,4 +43,7 @@ export interface MemberRow {
   mfaEnabled: boolean;
   /** Managed by the workspace's identity provider through SCIM. */
   provisioned: boolean;
+  designation: { id: string; name: string; tier: 'EXECUTIVE' | 'MANAGER' | 'SENIOR' } | null;
+  department: { id: string; name: string } | null;
+  reportingManager: { id: string; name: string } | null;
 }

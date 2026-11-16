@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import plans from './seed/plans.json';
+import { upgradeCompanyCrm } from './company-crm';
 
 /**
  * Database set-up, run on every deploy (`pnpm --filter @dealflow/database db:setup`) and before the test suites.
@@ -179,4 +180,5 @@ export async function seedReferenceData(prisma: PrismaClient): Promise<void> {
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
   await seedReferenceData(prisma);
+  await upgradeCompanyCrm(prisma, log);
 }

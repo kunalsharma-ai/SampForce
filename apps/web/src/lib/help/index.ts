@@ -73,6 +73,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/billing': 'page.billing',
   '/app/settings': 'page.settings',
   '/app/settings/appearance': 'page.themeStudio',
+  '/app/settings/crm': 'page.crmConfiguration',
   '/app/settings/custom-fields': 'page.customFields',
   '/app/settings/import': 'page.import',
   '/app/settings/territories': 'page.territories',
