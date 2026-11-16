@@ -4,7 +4,7 @@ import type { PersonRef } from './crm';
 import { LEAD_TRANSFER_REASONS } from './crm';
 
 /*
- * Role-based Command Center (ADR 0061). Each person sees the dashboard of their designation's tier: an Executive
+ * Role-based Command Center (ADR 0063). Each person sees the dashboard of their designation's tier: an Executive
  * dashboard of their own work, a Manager dashboard of the people reporting to them, and a Senior Management dashboard
  * of the organisation. What a dashboard covers never goes beyond the person's record visibility (ADR 0060): a manager
  * whose role only shows their own records sees only their own numbers on the team dashboard.
@@ -307,8 +307,6 @@ export interface KpiCard {
   key: DrillMetric;
   value: number;
   format: 'number' | 'currency' | 'percent';
-  /** How the number is counted, shown in the card's tooltip. */
-  definition: string;
 }
 
 export interface WorkItem {

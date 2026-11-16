@@ -287,7 +287,7 @@ model Tenant {
   /// Company lead numbers (FRFS01...): the prefix and the minimum digits. Null prefix = the workspace initials.
   leadNumberPrefix      String?           @map("lead_number_prefix")
   leadNumberDigits      Int               @default(2) @map("lead_number_digits")
-  /// Revenue attribution rule (ADR 0061, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
+  /// Revenue attribution rule (ADR 0063, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
   revenueAttribution    Json?             @map("revenue_attribution")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
@@ -1077,7 +1077,7 @@ model Opportunity {
   companyId         String?           @map("company_id")
   contactId         String?           @map("contact_id")
   sourceLeadId      String?           @map("source_lead_id")
-  /// Deal number (DEAL-0001), from the workspace counter; assigned once (ADR 0061).
+  /// Deal number (DEAL-0001), from the workspace counter; assigned once (ADR 0063).
   dealNumber        String?           @map("deal_number")
   dealSeq           Int?              @map("deal_seq")
   /// The assigned manager, the lead creator (copied from the company when the deal is created) and the people who
@@ -3686,7 +3686,7 @@ model TenantFeatureOverride {
   @@map("tenant_feature_overrides")
 }
 
-/// One per won deal, or per won RFQ that never became a deal (ADR 0061). Voided when the deal is reopened, lost or
+/// One per won deal, or per won RFQ that never became a deal (ADR 0063). Voided when the deal is reopened, lost or
 /// deleted, so revenue always matches the won records.
 model RevenueRecord {
   id               String    @id @default(uuid()) @map("_id")

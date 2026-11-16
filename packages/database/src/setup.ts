@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import plans from './seed/plans.json';
 import { upgradeCompanyCrm } from './company-crm';
+import { upgradeCommandCenter } from './command-center';
 
 /**
  * Database set-up, run on every deploy (`pnpm --filter @dealflow/database db:setup`) and before the test suites.
@@ -177,6 +178,11 @@ export async function syncIndexes(prisma: PrismaClient, log: (line: string) => v
 export const SHIPPED_FEATURES: { key: string; plans: string[] }[] = [
   // ADR 0060, Phase 3: RFQs are part of the core sales work, so every plan has them unless an operator says otherwise.
   { key: 'rfqs', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
+  // ADR 0063: the role-based Command Center modules, on every plan; the operator console can take any of them away.
+  ...['revenue_attribution', 'lead_transfers', 'manager_dashboard', 'senior_dashboard', 'instructions', 'client_concerns'].map((key) => ({
+    key,
+    plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'],
+  })),
 ];
 
 export async function seedReferenceData(prisma: PrismaClient): Promise<void> {
@@ -201,4 +207,5 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await syncIndexes(prisma, log);
   await seedReferenceData(prisma);
   await upgradeCompanyCrm(prisma, log);
+  await upgradeCommandCenter(prisma, log);
 }
