@@ -401,6 +401,11 @@ model Tenant {
   companyFiles           CompanyFile[]
   leadDrafts             LeadDraft[]
   rfqs                   Rfq[]
+  chatConversations      ChatConversation[]
+  chatMembers            ChatMember[]
+  chatMessages           ChatMessage[]
+  chatAttachments        ChatAttachment[]
+  chatSignals            ChatSignal[]
 
   @@map("tenants")
 }
@@ -1165,36 +1170,36 @@ enum TaskPriority {
 }
 
 model Task {
-  id            String       @id @default(uuid()) @map("_id")
-  tenantId      String       @map("tenant_id")
-  title         String
-  description   String?
-  status        TaskStatus   @default(OPEN)
-  priority      TaskPriority @default(NORMAL)
-  dueAt         DateTime?    @map("due_at")
-  completedAt   DateTime?    @map("completed_at")
+  id              String       @id @default(uuid()) @map("_id")
+  tenantId        String       @map("tenant_id")
+  title           String
+  description     String?
+  status          TaskStatus   @default(OPEN)
+  priority        TaskPriority @default(NORMAL)
+  dueAt           DateTime?    @map("due_at")
+  completedAt     DateTime?    @map("completed_at")
   /// Shown to the customer in the client portal as a milestone.
-  portalVisible Boolean      @default(false) @map("portal_visible")
-  assigneeId    String?      @map("assignee_id")
-  leadId        String?      @map("lead_id")
-  contactId     String?      @map("contact_id")
-  opportunityId String?      @map("opportunity_id")
+  portalVisible   Boolean      @default(false) @map("portal_visible")
+  assigneeId      String?      @map("assignee_id")
+  leadId          String?      @map("lead_id")
+  contactId       String?      @map("contact_id")
+  opportunityId   String?      @map("opportunity_id")
   /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
-  companyId       String?   @map("company_id")
-  followUpType    String?   @map("follow_up_type")
-  managerId       String?   @map("manager_id")
+  companyId       String?      @map("company_id")
+  followUpType    String?      @map("follow_up_type")
+  managerId       String?      @map("manager_id")
   /// The previous discussion, the action needed next, and remarks.
   summary         String?
-  nextAction      String?   @map("next_action")
+  nextAction      String?      @map("next_action")
   remarks         String?
-  rescheduleCount Int       @default(0) @map("reschedule_count")
-  rescheduledAt   DateTime? @map("rescheduled_at")
+  rescheduleCount Int          @default(0) @map("reschedule_count")
+  rescheduledAt   DateTime?    @map("rescheduled_at")
   outcome         String?
-  rfqId           String?   @map("rfq_id")
-  createdById     String?   @map("created_by_id")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  deletedAt     DateTime?    @map("deleted_at")
+  rfqId           String?      @map("rfq_id")
+  createdById     String?      @map("created_by_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -3668,4 +3673,142 @@ model TenantFeatureOverride {
 
   @@unique([tenantId, feature])
   @@map("tenant_feature_overrides")
+}
+
+// ───────────── Team chat (ADR 0061) ─────────────
+
+enum ChatKind {
+  DIRECT
+  CHANNEL
+  SUPPORT
+}
+
+enum ChatMemberRole {
+  OWNER
+  MEMBER
+}
+
+enum ChatLinkType {
+  COMPANY
+  RFQ
+  DEAL
+}
+
+/// A direct message between two people, a group channel, or the workspace's support line to super admins.
+model ChatConversation {
+  id                 String        @id @default(uuid()) @map("_id")
+  tenantId           String        @map("tenant_id")
+  kind               ChatKind
+  name               String?
+  topic              String?
+  /// Direct messages only: the two user ids, sorted and joined, so a pair has one conversation. "support" for the
+  /// support line, of which a workspace has one.
+  directKey          String?       @map("direct_key")
+  createdById        String?       @map("created_by_id")
+  linkType           ChatLinkType? @map("link_type")
+  linkId             String?       @map("link_id")
+  linkLabel          String?       @map("link_label")
+  archivedAt         DateTime?     @map("archived_at")
+  lastMessageAt      DateTime?     @map("last_message_at")
+  lastMessagePreview String?       @map("last_message_preview")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  members  ChatMember[]
+  messages ChatMessage[]
+
+  @@unique([tenantId, directKey])
+  @@index([tenantId, lastMessageAt(sort: Desc)])
+  @@map("chat_conversations")
+}
+
+/// One person in a conversation: a workspace user, or (support line) a super admin from the operator console.
+model ChatMember {
+  id             String         @id @default(uuid()) @map("_id")
+  tenantId       String         @map("tenant_id")
+  conversationId String         @map("conversation_id")
+  userId         String?        @map("user_id")
+  operatorId     String?        @map("operator_id")
+  role           ChatMemberRole @default(MEMBER)
+  /// Everything up to this time has been read (read receipts and unread counts).
+  lastReadAt     DateTime?      @map("last_read_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, operatorId])
+  @@index([tenantId, userId])
+  @@index([operatorId])
+  @@map("chat_members")
+}
+
+model ChatMessage {
+  id               String        @id @default(uuid()) @map("_id")
+  tenantId         String        @map("tenant_id")
+  conversationId   String        @map("conversation_id")
+  authorUserId     String?       @map("author_user_id")
+  authorOperatorId String?       @map("author_operator_id")
+  /// Chosen by the sender's browser; a message sent twice from an outbox is stored once.
+  clientId         String        @map("client_id")
+  body             String
+  /// When it was written, if it waited in the browser's outbox before reaching the server.
+  writtenAt        DateTime?     @map("written_at")
+  linkType         ChatLinkType? @map("link_type")
+  linkId           String?       @map("link_id")
+  linkLabel        String?       @map("link_label")
+  editedAt         DateTime?     @map("edited_at")
+  deletedAt        DateTime?     @map("deleted_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([conversationId, clientId])
+  @@index([tenantId, conversationId, createdAt(sort: Desc)])
+  @@map("chat_messages")
+}
+
+/// A file sent in a chat. Uploaded first, then attached to the message that sends it.
+model ChatAttachment {
+  id                   String   @id @default(uuid()) @map("_id")
+  tenantId             String   @map("tenant_id")
+  conversationId       String   @map("conversation_id")
+  messageId            String?  @map("message_id")
+  uploadedByUserId     String?  @map("uploaded_by_user_id")
+  uploadedByOperatorId String?  @map("uploaded_by_operator_id")
+  name                 String
+  contentType          String   @map("content_type")
+  sizeBytes            Int      @map("size_bytes")
+  data                 Bytes
+  sha256               String
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, messageId])
+  @@index([tenantId, conversationId, createdAt(sort: Desc)])
+  @@map("chat_attachments")
+}
+
+/// Live chat events, so every API server delivers them to the people connected to it. Kept for a few minutes.
+model ChatSignal {
+  id             String   @id @default(uuid()) @map("_id")
+  tenantId       String   @map("tenant_id")
+  conversationId String   @map("conversation_id")
+  /// The API server that wrote it (that server has already delivered it).
+  instance       String
+  event          Json
+  /// Workspace users to tell, and whether the deployment's super admins are told too.
+  userIds        String[] @map("user_ids")
+  operators      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([createdAt])
+  @@map("chat_signals")
 }

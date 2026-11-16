@@ -41,6 +41,7 @@ export const de: Messages = {
   'module.accounts': 'Kundenkonten',
   'module.follow-ups': 'Nachverfolgungen',
   'module.rfqs': 'RFQs',
+  'module.chat': 'Team-Chat',
   'module.activities': 'Vertriebsaktivitäten',
   'module.communication': 'E-Mail & Kommunikation',
   'module.sequences': 'E-Mail-Sequenzen',

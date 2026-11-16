@@ -47,6 +47,7 @@ export const en = {
   'module.accounts': 'Accounts',
   'module.follow-ups': 'Follow-ups',
   'module.rfqs': 'RFQs',
+  'module.chat': 'Team chat',
   'module.activities': 'Sales Activities',
   'module.communication': 'Email & Communication',
   'module.sequences': 'Email Sequences',

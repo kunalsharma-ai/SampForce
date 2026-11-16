@@ -1036,6 +1036,30 @@ export const organizationHelp = {
       'استخدمه في مراجعات أمان الأشخاص الذين يشغّلون SampForce.',
     ],
   },
+  'page.operatorChat': {
+    title: 'Support chat',
+    what: [
+      'The support line of every workspace: its admins write from Team chat, and every super admin can read and answer here.',
+      'La línea de soporte de cada espacio de trabajo: sus administradores escriben desde el chat del equipo y cualquier superadministrador lee y responde aquí.',
+      'La ligne d’assistance de chaque espace de travail : ses administrateurs écrivent depuis la discussion d’équipe, et chaque super-administrateur lit et répond ici.',
+      'Die Support-Leitung jedes Arbeitsbereichs: Seine Administratoren schreiben im Team-Chat, jeder Super-Admin liest und antwortet hier.',
+      'خط الدعم لكل مساحة عمل: يكتب مسؤولوها من دردشة الفريق، ويقرأ كل مسؤول أعلى ويرد هنا.',
+    ],
+    how: [
+      'Pick a conversation, or choose a workspace in Write to a workspace to start one. Unread lines come first.',
+      'Elige una conversación, o un espacio de trabajo en Escribir a un espacio de trabajo para empezar una. Las no leídas van primero.',
+      'Choisissez une conversation, ou un espace de travail dans Écrire à un espace de travail pour en lancer une. Les non lues d’abord.',
+      'Wählen Sie eine Unterhaltung oder unter An einen Arbeitsbereich schreiben einen Arbeitsbereich. Ungelesene stehen oben.',
+      'اختر محادثة، أو اختر مساحة عمل في «الكتابة إلى مساحة عمل» لبدء واحدة. غير المقروءة أولًا.',
+    ],
+    where: [
+      'You only see support lines, never a workspace’s own conversations. Workspaces whose plan leaves out team chat are not listed.',
+      'Solo ves las líneas de soporte, nunca las conversaciones propias de un espacio de trabajo. No aparecen los que no tienen chat en su plan.',
+      'Vous ne voyez que les lignes d’assistance, jamais les conversations internes. Les espaces dont l’offre exclut la discussion n’y figurent pas.',
+      'Sie sehen nur Support-Leitungen, nie die eigenen Unterhaltungen eines Arbeitsbereichs. Ohne Team-Chat im Tarif erscheint er nicht.',
+      'ترى خطوط الدعم فقط، ولا ترى محادثات مساحة العمل الخاصة. لا تظهر المساحات التي لا تشمل خطتها دردشة الفريق.',
+    ],
+  },
   'page.operatorSettings': {
     title: 'Settings',
     what: [

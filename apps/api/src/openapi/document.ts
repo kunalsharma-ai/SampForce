@@ -1,5 +1,14 @@
 import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  chatConversationInputSchema,
+  chatConversationUpdateSchema,
+  chatLinkQuerySchema,
+  chatMembersInputSchema,
+  chatMessageEditSchema,
+  chatMessageInputSchema,
+  chatMessagesQuerySchema,
+  chatReadSchema,
+  chatSearchQuerySchema,
   VOICE_RECORD_TYPES,
   PLAN_CODES,
   customerFollowUpsSchema,
@@ -370,6 +379,27 @@ export function buildOpenApiDocument(): object {
   action('patch', '/rfqs/{id}', 'RFQs', 'Change an RFQ or its status (companies:write; plan feature rfqs)', rfqUpdateSchema);
   action('delete', '/rfqs/{id}', 'RFQs', 'Delete an RFQ (companies:write; plan feature rfqs)');
   action('post', '/rfqs/{id}/convert', 'RFQs', 'Create the deal for an RFQ and link the two (companies:write, deals:write; plan feature rfqs)', rfqConvertSchema);
+  // Team chat (ADR 0061). Signed-in sessions only (no API keys); plan feature team_chat.
+  const chatTag = 'Team chat';
+  const convParams = { params: idParam };
+  r.registerPath({ method: 'get', path: '/chat/stream', tags: [chatTag], summary: 'Live events as Server-Sent Events (text/event-stream): message, message_changed, read and conversation, naming what to re-read', security: secured, responses: { 200: ok('Event stream'), ...errors } });
+  action('get', '/chat/unread', chatTag, 'Unread messages across your conversations');
+  action('get', '/chat/people', chatTag, 'People of the workspace to message');
+  r.registerPath({ method: 'get', path: '/chat/link-options', tags: [chatTag], summary: 'Companies, RFQs and deals you can see, to link a message or channel to', security: secured, request: { query: chatLinkQuerySchema }, responses: { 200: ok('Options'), ...errors } });
+  r.registerPath({ method: 'get', path: '/chat/search', tags: [chatTag], summary: 'Search the messages of conversations you are in', security: secured, request: { query: chatSearchQuerySchema }, responses: { 200: ok('Hits'), ...errors } });
+  r.registerPath({ method: 'get', path: '/chat/conversations', tags: [chatTag], summary: 'Your direct messages, channels and (admins) the support line, unread first', security: secured, request: { query: z.object({ archived: z.enum(['true', 'false']).optional() }) }, responses: { 200: ok('Conversations'), ...errors } });
+  action('post', '/chat/conversations', chatTag, 'Start a direct message (one per pair) or create a channel', chatConversationInputSchema);
+  action('get', '/chat/conversations/{id}', chatTag, 'One conversation with its members and their read receipts');
+  action('patch', '/chat/conversations/{id}', chatTag, 'Rename, describe, link or archive a channel (channel owner or workspace admin)', chatConversationUpdateSchema);
+  action('post', '/chat/conversations/{id}/members', chatTag, 'Add people to a channel or the support line (channel owner or workspace admin)', chatMembersInputSchema);
+  r.registerPath({ method: 'delete', path: '/chat/conversations/{id}/members/{userId}', tags: [chatTag], summary: 'Remove someone, or leave yourself', security: secured, request: { params: z.object({ id: z.string().uuid(), userId: z.string().uuid() }) }, responses: { 204: ok('Removed'), ...notFound, ...errors } });
+  r.registerPath({ method: 'get', path: '/chat/conversations/{id}/messages', tags: [chatTag], summary: 'Messages, oldest first: the latest page, older than `before`, or newer than `after`', security: secured, request: { ...convParams, query: chatMessagesQuerySchema }, responses: { 200: ok('Messages'), ...notFound, ...errors } });
+  action('post', '/chat/conversations/{id}/messages', chatTag, 'Send a message; sending the same clientId again returns the stored message', chatMessageInputSchema);
+  action('post', '/chat/conversations/{id}/read', chatTag, 'Mark the conversation read up to a message or the latest one', chatReadSchema);
+  r.registerPath({ method: 'post', path: '/chat/conversations/{id}/attachments', tags: [chatTag], summary: 'Upload a file as the raw request body, up to 10 MB, then send it in a message', security: secured, request: { ...convParams, query: z.object({ name: z.string() }) }, responses: { 201: ok('Attachment'), ...notFound, ...errors } });
+  action('get', '/chat/attachments/{id}/download', chatTag, 'Download a file sent in a conversation you are in');
+  action('patch', '/chat/messages/{id}', chatTag, 'Edit your message', chatMessageEditSchema);
+  action('delete', '/chat/messages/{id}', chatTag, 'Delete your message (channel owners and admins can delete any)');
   action('get', '/contacts/{id}/stats', 'Contacts', 'An employee’s emails sent, responses, calls, meetings, pending follow-ups and last interaction (contacts:read)');
   r.registerPath({ method: 'get', path: '/geo/countries', tags: ['Locations'], summary: 'Countries with dialling code, currency and time zones', security: secured, responses: { 200: ok('Countries'), ...errors } });
   r.registerPath({ method: 'get', path: '/geo/countries/{code}/regions', tags: ['Locations'], summary: 'States, provinces and regions of a country', security: secured, request: { params: z.object({ code: z.string().length(2) }) }, responses: { 200: ok('Regions'), ...notFound, ...errors } });

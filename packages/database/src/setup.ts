@@ -177,6 +177,8 @@ export async function syncIndexes(prisma: PrismaClient, log: (line: string) => v
 export const SHIPPED_FEATURES: { key: string; plans: string[] }[] = [
   // ADR 0060, Phase 3: RFQs are part of the core sales work, so every plan has them unless an operator says otherwise.
   { key: 'rfqs', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
+  // ADR 0061: team chat and the support line to super admins come with every plan unless an operator says otherwise.
+  { key: 'team_chat', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
 ];
 
 export async function seedReferenceData(prisma: PrismaClient): Promise<void> {

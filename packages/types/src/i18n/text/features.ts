@@ -75,7 +75,15 @@ export const features = {
   'API and Zapier': ['API y Zapier', 'API et Zapier', 'API und Zapier', 'واجهة API وZapier'],
   'Single sign-on and SCIM': ['Inicio de sesión único y SCIM', 'Authentification unique et SCIM', 'Single Sign-on und SCIM', 'تسجيل الدخول الموحد وSCIM'],
 
+  'Team chat': ['Chat del equipo', 'Discussion d’équipe', 'Team-Chat', 'دردشة الفريق'],
+
   // Descriptions
+  'Direct messages, group channels and a support line to super admins, served by your own SampForce server so it also works on an office network without internet.': [
+    'Mensajes directos, canales de grupo y una línea de soporte con los superadministradores, servidos por tu propio servidor de SampForce para que también funcione en una red de oficina sin internet.',
+    'Messages directs, canaux de groupe et ligne d’assistance avec les super-administrateurs, servis par votre propre serveur SampForce pour fonctionner aussi sur un réseau de bureau sans internet.',
+    'Direktnachrichten, Gruppenkanäle und eine Support-Leitung zu Super-Admins, bereitgestellt von Ihrem eigenen SampForce-Server, damit es auch im Büronetz ohne Internet funktioniert.',
+    'رسائل مباشرة وقنوات جماعية وخط دعم مع المسؤولين الأعلى، يقدّمها خادم SampForce الخاص بك لتعمل أيضًا على شبكة المكتب دون إنترنت.',
+  ],
   'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.': [
     'Solicitudes de cotización con precios por LOI, IR y CPI, plazos, informes y conversión en tratos.',
     'Demandes de devis avec tarification LOI, IR et CPI, échéances, rapports et transformation en affaires.',

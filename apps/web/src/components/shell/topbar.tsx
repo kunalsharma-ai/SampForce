@@ -47,6 +47,7 @@ import { CommandPalette } from './command-palette';
 import { FavouriteButton } from './favourite-button';
 import { CopilotPanel } from './copilot-panel';
 import { VoiceNoteButton } from '../voice/voice-note';
+import { ChatButton } from './chat-button';
 import { NotificationsMenu } from './notifications-menu';
 import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
@@ -159,6 +160,7 @@ export function Topbar() {
           <VoiceNoteButton record={null} variant="ghost" iconOnly label={t('top.voiceNote')} />
         </span>
 
+        <ChatButton />
         <NotificationsMenu />
         <span data-secondary="" className="contents">
           <ThemeSwitcher />

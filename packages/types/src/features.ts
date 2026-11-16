@@ -24,6 +24,7 @@ export const FEATURE_KEYS = [
   // Engage
   'email_sync',
   'team_inbox',
+  'team_chat',
   'email_templates',
   'sequences',
   'email_finder',
@@ -83,6 +84,7 @@ export const FEATURES: FeatureDef[] = [
 
   { key: 'email_sync', group: 'Engage', label: 'Mailbox and calendar sync', description: 'Gmail and Microsoft 365 email and calendar sync, and sending from your own mailbox.', defaultFrom: 'free', paths: [] },
   { key: 'team_inbox', group: 'Engage', label: 'Team inbox', description: 'Shared conversation threads with status, owners and internal notes.', defaultFrom: 'growth', paths: ['/app/communication'] },
+  { key: 'team_chat', group: 'Engage', label: 'Team chat', description: 'Direct messages, group channels and a support line to super admins, served by your own SampForce server so it also works on an office network without internet.', defaultFrom: 'free', paths: ['/app/chat'] },
   { key: 'email_templates', group: 'Engage', label: 'Email templates', description: 'Email templates, the block designer and workspace merge fields.', defaultFrom: 'launch', paths: [] },
   { key: 'sequences', group: 'Engage', label: 'Email sequences', description: 'Multi-step email sequences with send windows, tracking and reply detection.', defaultFrom: 'launch', paths: ['/app/sequences'] },
   { key: 'email_finder', group: 'Engage', label: 'Email finder', description: 'Find and verify work email addresses.', defaultFrom: 'growth', paths: ['/app/finder'] },

@@ -15,6 +15,7 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { ViewsModule } from './views/views.module';
 import { CommonModule } from './common/common.module';
+import { ChatModule } from './chat/chat.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
@@ -65,6 +66,7 @@ import { redactUrl } from './observability/redact';
     TenantsModule,
     DashboardModule,
     CrmModule,
+    ChatModule,
     AutomationModule,
     AiModule,
     CommercialModule,
