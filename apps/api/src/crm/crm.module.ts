@@ -5,6 +5,9 @@ import { CrmConfigController } from './crm-config.controller';
 import { CrmConfigService } from './crm-config.service';
 import { ActivitiesService } from './activities.service';
 import { CompaniesService } from './companies.service';
+import { CompanyFilesController, CompanyLeadPartsController, CompanyLeadsController, EmployeeStatsController } from './company-leads.controller';
+import { CompanyLeadsService } from './company-leads.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsController, PipelinesController, TerritoriesController } from './deals.controller';
@@ -39,6 +42,10 @@ import {
     ImportExportController,
     CrmConfigController,
     GeoController,
+    CompanyLeadsController,
+    CompanyLeadPartsController,
+    CompanyFilesController,
+    EmployeeStatsController,
   ],
   providers: [
     CustomFieldsService,
@@ -54,6 +61,8 @@ import {
     TerritoriesService,
     CrmConfigService,
     GeoService,
+    CompanyLeadsService,
+    NotificationsService,
   ],
   exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService],
 })

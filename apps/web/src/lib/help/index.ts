@@ -27,6 +27,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/contacts/[id]': 'page.contactRecord',
   '/app/companies': 'page.companies',
   '/app/companies/[id]': 'page.companyRecord',
+  '/app/companies/new': 'page.newCompanyLead',
   '/app/accounts': 'page.accounts',
   '/app/deals': 'page.deals',
   '/app/deals/health': 'page.dealHealth',

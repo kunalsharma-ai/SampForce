@@ -289,4 +289,7 @@ export const validation = {
   'Use 1 to 10 letters, digits or dashes': ['Usa de 1 a 10 letras, dígitos o guiones', 'Utilisez 1 à 10 lettres, chiffres ou tirets', 'Verwenden Sie 1 bis 10 Buchstaben, Ziffern oder Bindestriche', 'استخدم من 1 إلى 10 أحرف أو أرقام أو شرطات'],
   'Use an http or https address': ['Usa una dirección http o https', 'Utilisez une adresse http ou https', 'Verwenden Sie eine http- oder https-Adresse', 'استخدم عنوان http أو https'],
   'Enter a valid web address': ['Introduce una dirección web válida', 'Saisissez une adresse web valide', 'Geben Sie eine gültige Webadresse ein', 'أدخل عنوان ويب صالحًا'],
+  'not allowed': ['no permitido', 'non autorisé', 'nicht erlaubt', 'غير مسموح'],
+  'Enter a branch name': ['Escribe el nombre de la sucursal', 'Saisissez le nom de l’agence', 'Geben Sie einen Namen für die Niederlassung ein', 'أدخل اسم الفرع'],
+  'This draft is too large to save.': ['Este borrador es demasiado grande para guardarlo.', 'Ce brouillon est trop volumineux pour être enregistré.', 'Dieser Entwurf ist zu groß zum Speichern.', 'هذه المسودة أكبر من أن تُحفظ.'],
 } as const satisfies TextTable;

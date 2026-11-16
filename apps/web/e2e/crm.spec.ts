@@ -14,7 +14,12 @@ test('creates a company and a linked contact', async ({ page }) => {
   await signUp(page, 'CRM Flow');
   await page.goto('/app/companies');
   await expect(page.getByText('No companies yet.')).toBeVisible();
-  await createViaDialog(page, 'New company', { 'Company name *': 'Initech', Domain: 'initech.test' });
+  // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
+  await page.getByRole('main').getByRole('link', { name: 'Create new lead' }).click();
+  await page.getByLabel('Company name *').fill('Initech');
+  await page.getByLabel('Official website URL 1', { exact: true }).fill('initech.test');
+  await page.getByRole('button', { name: /Review & save/ }).click();
+  await page.getByRole('button', { name: 'Save lead' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Initech' })).toBeVisible();
 
   await page.goto('/app/contacts');
@@ -27,7 +32,9 @@ test('creates a company and a linked contact', async ({ page }) => {
   await expect(dialog.getByText('Enter a valid email')).toBeVisible();
   await dialog.getByLabel('Email').fill('peter@initech.test');
   await dialog.getByRole('combobox', { name: 'Company' }).fill('Init');
-  await dialog.getByRole('option', { name: /Initech/ }).click();
+  // Picked with the keyboard: under load the popup re-renders while results arrive, so a mouse click can miss.
+  await expect(dialog.getByRole('option', { name: /Initech/ })).toBeVisible();
+  await dialog.getByRole('combobox', { name: 'Company' }).press('Enter');
   await dialog.getByRole('button', { name: 'Create contact' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Peter Gibbons' })).toBeVisible();
   await page.waitForLoadState('networkidle');

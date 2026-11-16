@@ -12,7 +12,7 @@ import { useCan } from '@/lib/session';
 import { DetailList } from './record-detail';
 import { CountryFlag, StatusChip } from './status-chip';
 
-/** The lead side of a company: its number, status (changed here), and the people around it (ADR 0060). */
+/** The lead side of a company: its number, status (changed here), place and last change. The people are on the ownership card. */
 export function CompanyLeadCard({ company: c }: { company: CompanyRow }) {
   const t = useT();
   const qc = useQueryClient();
@@ -72,9 +72,6 @@ export function CompanyLeadCard({ company: c }: { company: CompanyRow }) {
         </div>
         <DetailList
           items={[
-            ['Created by', person(c.createdBy)],
-            ['Lead owner', person(c.ownerPerson) ?? c.owner?.name],
-            ['Manager', person(c.manager)],
             ['Location', c.country ? <span className="inline-flex flex-wrap items-center gap-1.5"><CountryFlag code={c.country} withName />{(c.city || c.state) && <span className="text-muted-foreground">· {[c.city, c.state].filter(Boolean).join(', ')}</span>}</span> : null],
             ['Last updated by', person(c.updatedBy)],
             ['Updated', formatDate(c.updatedAt)],

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -33,7 +33,7 @@ import { PrismaService } from '../common/prisma.service';
 import { ZodPipe } from '../common/zod.pipe';
 import { type CompanyPortal, PortalAdminService } from './portal-admin.service';
 import { PORTAL_COOKIE, PORTAL_COOKIE_PATH, PortalAuthService, type PortalContext } from './portal-auth.service';
-import { contentDisposition, DocumentLinks, readUpload } from './portal-documents';
+import { DocumentLinks, fileFrom, readUpload, sendFile } from './portal-documents';
 import { PortalService } from './portal.service';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
@@ -44,19 +44,6 @@ function slugOf(raw: string): string {
   const slug = String(raw).toLowerCase();
   if (!PORTAL_SLUG_PATTERN.test(slug)) throw new NotFoundException({ code: 'NOT_FOUND', message: 'This portal does not exist or is switched off.' });
   return slug;
-}
-
-function fileFrom(req: Request, name: string | undefined, data: Buffer) {
-  if (!name) throw new BadRequestException({ code: 'INVALID_NAME', message: 'Give the file a name.' });
-  return { name: String(name).trim(), contentType: String(req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase(), data };
-}
-
-function sendFile(res: Response, file: { name: string; contentType: string; data: Buffer }) {
-  res.setHeader('Content-Type', file.contentType);
-  res.setHeader('Content-Disposition', contentDisposition(file.name));
-  res.setHeader('Cache-Control', 'private, no-store');
-  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-  res.send(file.data);
 }
 
 // ─────────────── Customers ───────────────

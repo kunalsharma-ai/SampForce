@@ -128,6 +128,7 @@ export const companyInputSchema = z.object({
   // Company-centric CRM (lead creation). The lead number, creator and timestamps are never accepted from input.
   statusId: uuidRef,
   managerId: uuidRef,
+  pocUserId: uuidRef,
   departmentId: uuidRef,
   teamId: uuidRef,
   website: optionalUrl,
@@ -176,6 +177,8 @@ export interface CompanyRow {
   createdBy: PersonRef | null;
   updatedBy: PersonRef | null;
   manager: PersonRef | null;
+  /** The internal point of contact (a workspace user), separate from the creator and the owner. */
+  poc: PersonRef | null;
   /** The owner with their designation (owner above keeps its old shape). */
   ownerPerson: PersonRef | null;
   department: { id: string; name: string } | null;
@@ -289,6 +292,124 @@ export interface ContactRow {
   createdBy: PersonRef | null;
   /** See CompanyRow.restricted. */
   restricted: boolean;
+}
+
+// ───────────── Company leads: branches, the lead form, drafts, ownership, files (ADR 0060) ─────────────
+
+export const branchInputSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a branch name').max(160),
+  country: countryCode,
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+  email: optionalEmail,
+  phone: optionalPhone,
+  contactPerson: optionalText(160),
+  website: optionalUrl,
+});
+export type BranchInput = z.infer<typeof branchInputSchema>;
+
+export interface BranchRow {
+  id: string;
+  companyId: string;
+  name: string;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  postalCode: string | null;
+  email: string | null;
+  phone: string | null;
+  contactPerson: string | null;
+  website: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** An employee written in the lead form: the company is the lead being created. */
+export const leadEmployeeSchema = contactInputSchema.omit({ companyId: true });
+export type LeadEmployeeInput = z.infer<typeof leadEmployeeSchema>;
+
+/** "+ Create new lead": the company, its branches and its employees, saved together in one transaction. */
+export const companyLeadSchema = z.object({
+  company: companyInputSchema,
+  branches: z.array(branchInputSchema).max(50).default([]),
+  employees: z.array(leadEmployeeSchema).max(50).default([]),
+  /** The draft this lead was written in; it is deleted once the lead is saved. */
+  draftId: z.string().uuid().optional(),
+});
+export type CompanyLeadInput = z.input<typeof companyLeadSchema>;
+
+export interface CompanyLeadResult {
+  company: CompanyRow;
+  branchIds: string[];
+  employeeIds: string[];
+}
+
+/** The steps of the lead form, in order. */
+export const LEAD_FORM_STEPS = ['company', 'location', 'business', 'employees', 'ownership', 'status', 'remarks', 'review'] as const;
+export type LeadFormStep = (typeof LEAD_FORM_STEPS)[number];
+
+export const leadDraftSchema = z.object({
+  step: z.number().int().min(0).max(LEAD_FORM_STEPS.length - 1).default(0),
+  /** What was typed so far, as the form keeps it. Not validated until the lead is saved. */
+  data: z
+    .record(z.string(), z.unknown())
+    .refine((d) => JSON.stringify(d).length <= 200_000, 'This draft is too large to save.'),
+});
+export type LeadDraftInput = z.input<typeof leadDraftSchema>;
+
+export interface LeadDraftRow {
+  id: string;
+  /** The company name typed so far. */
+  title: string | null;
+  step: number;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Why a lead moved to someone else (section 16 of the specification), plus routine reassignment. */
+export const LEAD_TRANSFER_REASONS = ['REASSIGNED', 'SENIOR_DISCUSSION', 'HIGH_VALUE', 'NEGOTIATION', 'CLIENT_CONCERN', 'TECHNICAL', 'MANAGEMENT', 'OTHER'] as const;
+export type LeadTransferReason = (typeof LEAD_TRANSFER_REASONS)[number];
+
+export const ownerChangeSchema = z.object({
+  ownerId: z.string().uuid(),
+  reason: z.enum(LEAD_TRANSFER_REASONS).nullable().optional(),
+  note: optionalText(1000),
+});
+export type OwnerChangeInput = z.infer<typeof ownerChangeSchema>;
+
+export interface OwnerChangeRow {
+  id: string;
+  from: PersonRef | null;
+  to: PersonRef | null;
+  by: PersonRef | null;
+  reason: LeadTransferReason | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface CompanyFileRow {
+  id: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: PersonRef | null;
+  createdAt: string;
+}
+
+/** An employee's relationship with the team, from activities, synced emails and tasks. */
+export interface EmployeeStats {
+  emailsSent: number;
+  responsesReceived: number;
+  calls: number;
+  meetings: number;
+  followUpsPending: number;
+  lastInteractionAt: string | null;
+  latestUpdate: { type: 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE'; subject: string; at: string } | null;
+  nextFollowUpAt: string | null;
 }
 
 // ───────────── Leads ─────────────

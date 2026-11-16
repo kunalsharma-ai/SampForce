@@ -188,4 +188,7 @@ export const notifications = {
   '{email} clicked a link': ['{email} hizo clic en un enlace', '{email} a cliqué sur un lien', '{email} hat auf einen Link geklickt', 'نقر {email} رابطًا'],
   '{email} bounced': ['{email} rebotó', '{email} a été rejeté', '{email} ist unzustellbar', 'ارتدّ {email}'],
   '{email} unsubscribed': ['{email} se dio de baja', '{email} s’est désabonné', '{email} hat sich abgemeldet', 'ألغى {email} الاشتراك'],
+  // Company leads (ADR 0060)
+  'Lead assigned to you: {lead}': ['Lead asignado a ti: {lead}', 'Prospect qui vous est attribué : {lead}', 'Ihnen zugewiesener Lead: {lead}', 'عميل محتمل أُسند إليك: {lead}'],
+  'Assigned by {name}.': ['Asignado por {name}.', 'Attribué par {name}.', 'Zugewiesen von {name}.', 'أسنده {name}.'],
 } satisfies TextTable;

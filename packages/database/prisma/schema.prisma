@@ -397,6 +397,9 @@ model Tenant {
   designations           Designation[]
   crmStatuses            CrmStatus[]
   companyBranches        CompanyBranch[]
+  leadOwnerChanges       LeadOwnerChange[]
+  companyFiles           CompanyFile[]
+  leadDrafts             LeadDraft[]
 
   @@map("tenants")
 }
@@ -589,6 +592,8 @@ model Company {
   createdById       String?   @map("created_by_id")
   updatedById       String?   @map("updated_by_id")
   managerId         String?   @map("manager_id")
+  /// The internal point of contact for this lead (a workspace user), kept apart from the creator and the owner.
+  pocUserId         String?   @map("poc_user_id")
   departmentId      String?   @map("department_id")
   teamId            String?   @map("team_id")
   linkedinUrl       String?   @map("linkedin_url")
@@ -638,7 +643,9 @@ model Company {
   portalUsers    PortalUser[]
   portalRequests PortalRequest[]
 
-  branches CompanyBranch[]
+  branches     CompanyBranch[]
+  ownerChanges LeadOwnerChange[]
+  files        CompanyFile[]
 
   @@unique([tenantId, leadNumber])
   @@index([tenantId, name])
@@ -743,6 +750,64 @@ model CompanyBranch {
 
   @@index([tenantId, companyId])
   @@map("company_branches")
+}
+
+/// Each change of a company lead's owner: who had it, who has it now, who made the change and why.
+model LeadOwnerChange {
+  id         String   @id @default(uuid()) @map("_id")
+  tenantId   String   @map("tenant_id")
+  companyId  String   @map("company_id")
+  fromUserId String?  @map("from_user_id")
+  toUserId   String?  @map("to_user_id")
+  byUserId   String?  @map("by_user_id")
+  /// LEAD_TRANSFER_REASONS, or null for the first assignment.
+  reason     String?
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId, createdAt(sort: Desc)])
+  @@index([tenantId, toUserId, createdAt(sort: Desc)])
+  @@map("lead_owner_changes")
+}
+
+/// A file kept with a company lead for the team (not shared with the client portal).
+model CompanyFile {
+  id           String   @id @default(uuid()) @map("_id")
+  tenantId     String   @map("tenant_id")
+  companyId    String   @map("company_id")
+  name         String
+  contentType  String   @map("content_type")
+  sizeBytes    Int      @map("size_bytes")
+  data         Bytes
+  sha256       String
+  uploadedById String?  @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId, createdAt(sort: Desc)])
+  @@map("company_files")
+}
+
+/// A company lead being written in the "Create new lead" form, saved part-way. Private to the person writing it.
+model LeadDraft {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  title     String?
+  step      Int      @default(0)
+  data      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, userId, updatedAt(sort: Desc)])
+  @@map("lead_drafts")
 }
 
 model Department {

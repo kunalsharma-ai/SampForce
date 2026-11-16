@@ -155,4 +155,8 @@ export const errorsRecords = {
   'Members or records use this. Deactivate it instead, or move them first.': ['Hay miembros o registros que lo usan. Desactívalo o muévelos primero.', 'Des membres ou des fiches l’utilisent. Désactivez-le plutôt, ou déplacez-les d’abord.', 'Mitglieder oder Datensätze verwenden dies. Deaktivieren Sie es stattdessen oder verschieben Sie sie zuerst.', 'يستخدم أعضاء أو سجلات هذا العنصر. عطّله بدلاً من ذلك، أو انقلهم أولاً.'],
   'Unknown country.': ['País desconocido.', 'Pays inconnu.', 'Unbekanntes Land.', 'بلد غير معروف.'],
   'Owners always see every record and its details.': ['Los propietarios siempre ven todos los registros y sus detalles.', 'Les propriétaires voient toujours toutes les fiches et leurs détails.', 'Inhaber sehen immer alle Datensätze und ihre Details.', 'يرى المالكون دائمًا كل السجلات وتفاصيلها.'],
+  'You can give leads only to yourself or to people who report to you.': ['Solo puedes asignar leads a ti o a las personas que dependen de ti.', 'Vous ne pouvez attribuer des prospects qu’à vous-même ou aux personnes qui vous sont rattachées.', 'Sie können Leads nur sich selbst oder Personen zuweisen, die Ihnen unterstellt sind.', 'يمكنك إسناد العملاء المحتملين إلى نفسك أو إلى من يتبعونك فقط.'],
+  'Draft not found.': ['No se encontró el borrador.', 'Brouillon introuvable.', 'Entwurf nicht gefunden.', 'لم يُعثر على المسودة.'],
+  'Branch not found.': ['No se encontró la sucursal.', 'Agence introuvable.', 'Niederlassung nicht gefunden.', 'لم يُعثر على الفرع.'],
+  'File not found.': ['No se encontró el archivo.', 'Fichier introuvable.', 'Datei nicht gefunden.', 'لم يُعثر على الملف.'],
 } as const satisfies TextTable;

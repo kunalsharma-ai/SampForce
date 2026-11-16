@@ -1,6 +1,6 @@
 # ADR 0060: Company-centric sales CRM
 
-- Status: Accepted (foundations, PR 2a); later phases extend it
+- Status: Accepted (foundations, PR 2a; lead form, branches, employees and ownership, PR 2b); later phases extend it
 - Date: 2026-11-16
 
 ## Context
@@ -62,6 +62,30 @@ every screen.
   roles, gives companies a status (Existing Client when they have a won deal, otherwise New Lead), a creator (from the
   audit log, else the owner) and duplicate keys, gives contacts a status and their email and phone as list entries,
   and numbers the companies.
+
+## Phase 2b: the lead form, branches, employees and ownership
+
+- **"+ Create new lead"** (`/app/companies/new`) replaces the quick company dialog on the Companies page. Eight steps
+  (company, location, business details and branches, employees, ownership, status, remarks and attachments, review)
+  post once to `POST /company-leads`, which creates the company, its branches and employees in one transaction, so a
+  bad employee leaves nothing behind (errors name `employees.N.field`). Attachments upload after the save; if one
+  fails, the company page says which.
+- **Drafts** (`lead_drafts`) keep the form as typed, per person, with the step; nobody else can read them. Saving the
+  lead deletes its draft. Files are not kept in drafts.
+- **Ownership.** `Company.pocUserId` is the internal point of contact, kept apart from the creator and the owner.
+  The assigned manager defaults to the owner's reporting manager and follows the owner when it changes, unless the
+  change names one. Who may be made owner follows record scope: ALL anyone, TEAM themselves and their reporting tree,
+  OWN only themselves (a rep moving a lead elsewhere is the transfer request of Phase 4). Every owner change, the
+  first assignment included, is a `lead_owner_changes` row (from, to, by, reason, note), and the new owner gets a
+  notification. `POST /companies/:id/owner` takes a reason from the transfer reasons of section 16.
+- **Branches** (`/companies/:id/branches`) and **files** (`company_files`, same types and 10 MB limit as portal
+  documents but never shown in the portal) follow the company's visibility; roles without details see branch names
+  and places only, and no files.
+- **Employee relationship** (`GET /contacts/:id/stats`): emails sent (logged email activities plus synced sent
+  mail), responses (synced received mail), calls, meetings, open tasks, last interaction, latest activity and the
+  next follow-up (the earlier of the follow-up date and the next open task).
+- Location pickers suggest states and cities from the dataset and always accept typed places; the GeoNames and
+  OpenStreetMap credit is shown under them.
 
 ## Consequences
 

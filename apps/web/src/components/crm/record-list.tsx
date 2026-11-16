@@ -13,6 +13,7 @@ import { useCan } from '@/lib/session';
 import { DataTable } from '@/components/data-table/data-table';
 import { type TableColumn, useTableView } from '@/components/data-table/use-table-view';
 import { type MessageKey, Tr, useT } from '@/lib/i18n';
+import { useLeadDrafts } from '@/lib/company-leads';
 
 import { RecordFormDialog } from './record-form';
 import { CountryFlag, StatusChip } from './status-chip';
@@ -49,8 +50,9 @@ const COLUMNS = {
     updated<ContactRow>(),
   ] satisfies TableColumn<ContactRow>[],
   companies: [
-    { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
+    // The first column links to the record, so the name comes first.
     { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
+    { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
     { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
     {
       id: 'location',
@@ -151,10 +153,20 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                 <Download aria-hidden /> {exporting ? t('Exporting…') : t('Export CSV')}
               </Button>
             )}
-            {canWrite && (
-              <Button size="sm" onClick={() => setCreating(true)}>
-                <Plus aria-hidden /> {t.maybe(`New ${label.one.toLowerCase()}`)}
+            {canWrite && entity === 'companies' && <LeadDraftsLink />}
+            {canWrite && entity === 'companies' ? (
+              // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
+              <Button asChild size="sm">
+                <Link href="/app/companies/new">
+                  <Plus aria-hidden /> {t('Create new lead')}
+                </Link>
               </Button>
+            ) : (
+              canWrite && (
+                <Button size="sm" onClick={() => setCreating(true)}>
+                  <Plus aria-hidden /> {t.maybe(`New ${label.one.toLowerCase()}`)}
+                </Button>
+              )
             )}
           </div>
         }
@@ -213,11 +225,16 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
             ) : (
               <span>
                 {t.maybe(`No ${label.many.toLowerCase()} yet.`)}{' '}
-                {canWrite && (
-                  <button type="button" className="text-primary underline underline-offset-4" onClick={() => setCreating(true)}>
-                    {t('Create the first one')}
-                  </button>
-                )}
+                {canWrite &&
+                  (entity === 'companies' ? (
+                    <Link href="/app/companies/new" className="text-primary underline underline-offset-4">
+                      {t('Create the first one')}
+                    </Link>
+                  ) : (
+                    <button type="button" className="text-primary underline underline-offset-4" onClick={() => setCreating(true)}>
+                      {t('Create the first one')}
+                    </button>
+                  ))}
               </span>
             )
           }
@@ -225,5 +242,17 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
       )}
       <RecordFormDialog entity={entity} open={creating} onOpenChange={setCreating} onSaved={(row) => router.push(`/app/${entity}/${row.id}`)} />
     </div>
+  );
+}
+
+/** "Drafts (2)": lead drafts the signed-in person saved part-way. */
+function LeadDraftsLink() {
+  const t = useT();
+  const drafts = useLeadDrafts();
+  if (!drafts.data?.length) return null;
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/app/companies/new">{t('Drafts ({count})', { count: drafts.data.length })}</Link>
+    </Button>
   );
 }

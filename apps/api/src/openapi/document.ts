@@ -42,6 +42,10 @@ import {
   territoryInputSchema,
   territoryUpdateSchema,
   companyDuplicateCheckSchema,
+  branchInputSchema,
+  companyLeadSchema,
+  leadDraftSchema,
+  ownerChangeSchema,
   contactDuplicateCheckSchema,
   crmStatusInputSchema,
   crmStatusUpdateSchema,
@@ -318,6 +322,24 @@ export function buildOpenApiDocument(): object {
   action('delete', '/crm-config/designations/{id}', 'CRM configuration', 'Delete a designation nobody uses (crm:configure)');
   action('get', '/crm-config/lead-numbering', 'CRM configuration', 'Lead number prefix and digits, the next number and how many were issued');
   action('put', '/crm-config/lead-numbering', 'CRM configuration', 'Change the prefix or digits for new leads, or rewrite existing numbers too (crm:configure)', leadNumberingSchema);
+  action('post', '/company-leads', 'Company leads', 'Create a company lead with its branches and employees in one transaction; deletes the draft it came from (companies:write, contacts:write)', companyLeadSchema);
+  action('get', '/company-leads/people', 'Company leads', 'Workspace people with designations, marking whom you may make a lead owner (companies:read)');
+  action('get', '/company-leads/drafts', 'Company leads', 'Your saved lead drafts (companies:write)');
+  action('post', '/company-leads/drafts', 'Company leads', 'Save a lead draft (companies:write)', leadDraftSchema);
+  action('get', '/company-leads/drafts/{id}', 'Company leads', 'One of your lead drafts (companies:write)');
+  action('put', '/company-leads/drafts/{id}', 'Company leads', 'Update one of your lead drafts (companies:write)', leadDraftSchema);
+  action('delete', '/company-leads/drafts/{id}', 'Company leads', 'Delete one of your lead drafts (companies:write)');
+  action('get', '/companies/{id}/branches', 'Company leads', 'Branches of a company (companies:read)');
+  action('post', '/companies/{id}/branches', 'Company leads', 'Add a branch (companies:write)', branchInputSchema);
+  action('put', '/companies/{id}/branches/{branchId}', 'Company leads', 'Change a branch (companies:write)', branchInputSchema);
+  action('delete', '/companies/{id}/branches/{branchId}', 'Company leads', 'Remove a branch (companies:write)');
+  action('get', '/companies/{id}/owner-history', 'Company leads', 'Every change of the lead owner, newest first (companies:read)');
+  action('post', '/companies/{id}/owner', 'Company leads', 'Give the lead to someone else with a reason; the new owner is notified (companies:write)', ownerChangeSchema);
+  action('get', '/companies/{id}/files', 'Company leads', 'Files kept with the company for the team (companies:read)');
+  r.registerPath({ method: 'post', path: '/companies/{id}/files', tags: ['Company leads'], summary: 'Upload a file as the raw request body, up to 10 MB (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: z.object({ name: z.string() }) }, responses: { 201: ok('File'), ...notFound, ...errors } });
+  action('get', '/company-files/{id}/download', 'Company leads', 'Download a company file (companies:read)');
+  action('delete', '/company-files/{id}', 'Company leads', 'Delete a company file (companies:write)');
+  action('get', '/contacts/{id}/stats', 'Contacts', 'An employee’s emails sent, responses, calls, meetings, pending follow-ups and last interaction (contacts:read)');
   r.registerPath({ method: 'get', path: '/geo/countries', tags: ['Locations'], summary: 'Countries with dialling code, currency and time zones', security: secured, responses: { 200: ok('Countries'), ...errors } });
   r.registerPath({ method: 'get', path: '/geo/countries/{code}/regions', tags: ['Locations'], summary: 'States, provinces and regions of a country', security: secured, request: { params: z.object({ code: z.string().length(2) }) }, responses: { 200: ok('Regions'), ...notFound, ...errors } });
   r.registerPath({ method: 'get', path: '/geo/countries/{code}/cities', tags: ['Locations'], summary: 'Cities of a country, largest first; filter by region and name', security: secured, request: { params: z.object({ code: z.string().length(2) }), query: z.object({ region: z.string().optional(), q: z.string().optional(), limit: z.number().int().optional() }) }, responses: { 200: ok('Cities'), ...notFound, ...errors } });

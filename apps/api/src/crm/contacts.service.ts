@@ -67,32 +67,38 @@ export class ContactsService {
 
   create(auth: AuthContext, input: ContactInput, meta: RequestMeta): Promise<ContactRow> {
     return this.prisma.run(auth, async (tx) => {
-      const ownerId = input.ownerId ?? auth.userId;
-      await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId });
-      await assertStatus(tx, auth.tenantId, 'EMPLOYEE', input.statusId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'CONTACT', input.customFields);
-      const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE'));
-      const row = await tx.contact.create({
-        data: {
-          ...(normaliseContact(input) as Prisma.ContactUncheckedCreateInput),
-          ...consentFields(input.marketingConsent, 'manual'),
-          ownerId,
-          statusId,
-          statusChangedAt: new Date(),
-          statusChangedById: auth.userId,
-          createdById: auth.userId,
-          updatedById: auth.userId,
-          tenantId: auth.tenantId,
-          customFields: (customFields ?? {}) as Prisma.InputJsonValue,
-        },
-        include,
-      });
-      await this.audit.record(tx, {
-        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.created', entityType: 'contact', entityId: row.id, meta,
-      });
+      const row = await this.createIn(tx, auth, input, meta);
       const ctx = await contactContext(tx, auth.tenantId, [row], await visibility(tx, auth));
       return toContactRow(row, ctx.owners, ctx);
     });
+  }
+
+  /** Creates an employee inside the caller's transaction (also used by the lead form). */
+  async createIn(tx: TenantTx, auth: AuthContext, input: ContactInput, meta: RequestMeta, fieldPrefix = '') {
+    const ownerId = input.ownerId ?? auth.userId;
+    await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId }, fieldPrefix);
+    await assertStatus(tx, auth.tenantId, 'EMPLOYEE', input.statusId, `${fieldPrefix}statusId`);
+    const customFields = await this.fields.validate(tx, auth.tenantId, 'CONTACT', input.customFields);
+    const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE'));
+    const row = await tx.contact.create({
+      data: {
+        ...(normaliseContact(input) as Prisma.ContactUncheckedCreateInput),
+        ...consentFields(input.marketingConsent, 'manual'),
+        ownerId,
+        statusId,
+        statusChangedAt: new Date(),
+        statusChangedById: auth.userId,
+        createdById: auth.userId,
+        updatedById: auth.userId,
+        tenantId: auth.tenantId,
+        customFields: (customFields ?? {}) as Prisma.InputJsonValue,
+      },
+      include,
+    });
+    await this.audit.record(tx, {
+      tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.created', entityType: 'contact', entityId: row.id, meta,
+    });
+    return row;
   }
 
   update(auth: AuthContext, id: string, input: Partial<ContactInput>, meta: RequestMeta): Promise<ContactRow> {

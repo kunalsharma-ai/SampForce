@@ -1,12 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
 import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, notFound, orderBy, paging } from './crm-helpers';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CustomFieldsService } from './custom-fields.service';
-import { canSeeDetails, companyScope, personRefs, visibility, type Visibility } from './visibility';
+import { canSeeDetails, companyScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
 const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country', 'leadSeq', 'statusChangedAt'] as const;
 const include = {
@@ -38,6 +39,7 @@ export class CompaniesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   list(auth: AuthContext, q: ListQuery, f: CompanyFilters = {}): Promise<Page<CompanyRow>> {
@@ -91,36 +93,79 @@ export class CompaniesService {
 
   create(auth: AuthContext, input: CompanyInput, meta: RequestMeta): Promise<CompanyRow> {
     return this.prisma.run(auth, async (tx) => {
-      const ownerId = input.ownerId ?? auth.userId;
-      await assertRefs(tx, auth.tenantId, { ownerId, parentCompanyId: input.parentCompanyId });
-      await assertCompanyRefs(tx, auth.tenantId, input);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'COMPANY', input.customFields);
-      const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'COMPANY'));
-      const data = normalise(input);
-      const row = await tx.company.create({
-        data: {
-          ...data,
-          ownerId,
-          statusId,
-          statusChangedAt: new Date(),
-          statusChangedById: auth.userId,
-          createdById: auth.userId,
-          updatedById: auth.userId,
-          tenantId: auth.tenantId,
-          customFields: (customFields ?? {}) as Prisma.InputJsonValue,
-        },
-      });
-      await assignLeadNumbers(tx, auth.tenantId);
-      const numbered = await tx.company.findUniqueOrThrow({ where: { id: row.id }, include });
-      await this.audit.record(tx, {
-        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.created', entityType: 'company', entityId: row.id,
-        metadata: { name: row.name, leadNumber: numbered.leadNumber }, meta,
-      });
-      return toRow(numbered, await rowContext(tx, auth.tenantId, [numbered], await visibility(tx, auth)));
+      const id = await this.createIn(tx, auth, input, meta);
+      return this.rowIn(tx, auth, id);
     });
   }
 
-  update(auth: AuthContext, id: string, input: Partial<CompanyInput>, meta: RequestMeta): Promise<CompanyRow> {
+  /** Creates a company lead inside the caller's transaction (also used by the lead form). Returns its id. */
+  async createIn(tx: TenantTx, auth: AuthContext, input: CompanyInput, meta: RequestMeta): Promise<string> {
+    const ownerId = input.ownerId ?? auth.userId;
+    await assertRefs(tx, auth.tenantId, { ownerId, parentCompanyId: input.parentCompanyId });
+    await assertCompanyRefs(tx, auth.tenantId, input);
+    await assertAssignable(tx, auth, ownerId);
+    const customFields = await this.fields.validate(tx, auth.tenantId, 'COMPANY', input.customFields);
+    const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'COMPANY'));
+    const managerId = input.managerId !== undefined ? input.managerId : await reportingManagerOf(tx, auth.tenantId, ownerId);
+    const data = normalise(input);
+    const row = await tx.company.create({
+      data: {
+        ...data,
+        ownerId,
+        managerId,
+        statusId,
+        statusChangedAt: new Date(),
+        statusChangedById: auth.userId,
+        createdById: auth.userId,
+        updatedById: auth.userId,
+        tenantId: auth.tenantId,
+        customFields: (customFields ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+    await assignLeadNumbers(tx, auth.tenantId);
+    const numbered = await tx.company.findUniqueOrThrow({ where: { id: row.id }, select: { leadNumber: true } });
+    await this.audit.record(tx, {
+      tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.created', entityType: 'company', entityId: row.id,
+      metadata: { name: row.name, leadNumber: numbered.leadNumber }, meta,
+    });
+    await this.recordOwnerChange(tx, auth, { id: row.id, name: row.name, leadNumber: numbered.leadNumber }, null, ownerId, null, null);
+    return row.id;
+  }
+
+  /** The company as the caller sees it, inside their transaction. */
+  async rowIn(tx: TenantTx, auth: AuthContext, id: string): Promise<CompanyRow> {
+    const row = await tx.company.findUniqueOrThrow({ where: { id }, include });
+    return toRow(row, await rowContext(tx, auth.tenantId, [row], await visibility(tx, auth)));
+  }
+
+  /**
+   * Keeps the ownership history and tells the new owner. The first assignment is recorded too (from nobody), so the
+   * history always starts with the creator's choice.
+   */
+  async recordOwnerChange(
+    tx: TenantTx,
+    auth: AuthContext,
+    company: { id: string; name: string; leadNumber: string | null },
+    fromUserId: string | null,
+    toUserId: string | null,
+    reason: string | null,
+    note: string | null,
+  ): Promise<void> {
+    await tx.leadOwnerChange.create({ data: { tenantId: auth.tenantId, companyId: company.id, fromUserId, toUserId, byUserId: auth.userId, reason, note } });
+    if (toUserId && toUserId !== auth.userId) {
+      const by = (await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true } }))?.name ?? '';
+      const label = company.leadNumber ? `${company.leadNumber} ${company.name}` : company.name;
+      await this.notifications.send(tx, auth.tenantId, [toUserId], {
+        type: 'company.assigned',
+        title: `Lead assigned to you: ${label}`,
+        body: note ? `${by}: ${note}` : `Assigned by ${by}.`,
+        link: `/app/companies/${company.id}`,
+      });
+    }
+  }
+
+  /** `extra` carries the reason and note of an owner change (POST /companies/:id/owner). */
+  update(auth: AuthContext, id: string, input: Partial<CompanyInput>, meta: RequestMeta, extra?: { reason?: string | null; note?: string | null }): Promise<CompanyRow> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
       const before = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) } });
@@ -136,9 +181,13 @@ export class CompaniesService {
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId, parentCompanyId: input.parentCompanyId });
       await assertCompanyRefs(tx, auth.tenantId, input);
+      const ownerChanged = input.ownerId !== undefined && input.ownerId !== before.ownerId;
+      if (ownerChanged && input.ownerId) await assertAssignable(tx, auth, input.ownerId);
       const customFields = await this.fields.validate(tx, auth.tenantId, 'COMPANY', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const data = normalise(rest, before);
+      // The assigned manager follows the new owner unless the change names one.
+      if (ownerChanged && input.managerId === undefined) data.managerId = input.ownerId ? await reportingManagerOf(tx, auth.tenantId, input.ownerId) : null;
       const statusChanged = input.statusId !== undefined && input.statusId !== before.statusId;
       const row = await tx.company.update({
         where: { id },
@@ -161,11 +210,12 @@ export class CompaniesService {
           metadata: { from: before.statusId, to: input.statusId }, meta,
         });
       }
-      if (input.ownerId !== undefined && input.ownerId !== before.ownerId) {
+      if (ownerChanged) {
         await this.audit.record(tx, {
           tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.owner_changed', entityType: 'company', entityId: id,
-          metadata: { from: before.ownerId, to: input.ownerId }, meta,
+          metadata: { from: before.ownerId, to: input.ownerId, reason: extra?.reason ?? null }, meta,
         });
+        await this.recordOwnerChange(tx, auth, row, before.ownerId, input.ownerId ?? null, extra?.reason ?? 'REASSIGNED', extra?.note ?? null);
       }
       return toRow(row, await rowContext(tx, auth.tenantId, [row], v));
     });
@@ -277,9 +327,36 @@ export async function assertStatus(tx: TenantTx, tenantId: string, kind: 'COMPAN
   if (s.archivedAt) throw badRef(field, 'this status is deactivated');
 }
 
+/** The reporting manager of a workspace member, who becomes the lead's assigned manager. */
+export async function reportingManagerOf(tx: TenantTx, tenantId: string, userId: string | null | undefined): Promise<string | null> {
+  if (!userId) return null;
+  const m = await tx.membership.findFirst({ where: { tenantId, userId, status: 'ACTIVE' }, select: { reportingManagerId: true } });
+  return m?.reportingManagerId ?? null;
+}
+
+/**
+ * Who the caller may give a lead to: anyone (record scope ALL), themselves and the people reporting to them (TEAM),
+ * or only themselves (OWN). Moving a lead elsewhere from OWN is a transfer request (Phase 4).
+ */
+export async function assignableUserIds(tx: TenantTx, auth: AuthContext): Promise<string[] | 'all'> {
+  const scope = scopeOf(auth);
+  if (scope === 'ALL') return 'all';
+  if (scope === 'TEAM') return [auth.userId, ...(await reportingTree(tx, auth.tenantId, auth.userId))];
+  return [auth.userId];
+}
+
+export async function assertAssignable(tx: TenantTx, auth: AuthContext, ownerId: string): Promise<void> {
+  if (ownerId === auth.userId) return;
+  const allowed = await assignableUserIds(tx, auth);
+  if (allowed !== 'all' && !allowed.includes(ownerId)) {
+    throw new ForbiddenException({ code: 'OWNER_NOT_ALLOWED', message: 'You can give leads only to yourself or to people who report to you.', details: [{ path: 'ownerId', message: 'not allowed' }] });
+  }
+}
+
 async function assertCompanyRefs(tx: TenantTx, tenantId: string, input: Partial<CompanyInput>): Promise<void> {
   await assertStatus(tx, tenantId, 'COMPANY', input.statusId);
   if (input.managerId && !(await tx.membership.findFirst({ where: { tenantId, userId: input.managerId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('managerId');
+  if (input.pocUserId && !(await tx.membership.findFirst({ where: { tenantId, userId: input.pocUserId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('pocUserId');
   if (input.departmentId && !(await tx.department.findFirst({ where: { tenantId, id: input.departmentId }, select: { id: true } }))) throw badRef('departmentId');
   if (input.teamId && !(await tx.team.findFirst({ where: { tenantId, id: input.teamId }, select: { id: true } }))) throw badRef('teamId');
 }
@@ -295,7 +372,7 @@ async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGe
   const depIds = [...new Set(rows.map((r) => r.departmentId).filter((d): d is string => !!d))];
   const teamIds = [...new Set(rows.map((r) => r.teamId).filter((d): d is string => !!d))];
   const [people, statuses, departments, teams] = await Promise.all([
-    personRefs(tx, tenantId, rows.flatMap((r) => [r.ownerId, r.createdById, r.updatedById, r.managerId])),
+    personRefs(tx, tenantId, rows.flatMap((r) => [r.ownerId, r.createdById, r.updatedById, r.managerId, r.pocUserId])),
     statusRefs(tx, tenantId, rows.map((r) => r.statusId)),
     depIds.length ? tx.department.findMany({ where: { tenantId, id: { in: depIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
     teamIds.length ? tx.team.findMany({ where: { tenantId, id: { in: teamIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
@@ -328,6 +405,7 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     createdBy: person(r.createdById),
     updatedBy: person(r.updatedById),
     manager: person(r.managerId),
+    poc: person(r.pocUserId),
     department: r.departmentId && ctx.departments.has(r.departmentId) ? { id: r.departmentId, name: ctx.departments.get(r.departmentId)! } : null,
     team: r.teamId && ctx.teams.has(r.teamId) ? { id: r.teamId, name: ctx.teams.get(r.teamId)! } : null,
     website: hide(r.website, null),
