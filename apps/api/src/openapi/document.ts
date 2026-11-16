@@ -45,6 +45,18 @@ import {
   branchInputSchema,
   companyLeadSchema,
   leadDraftSchema,
+  followUpCompleteSchema,
+  followUpInputSchema,
+  followUpListQuerySchema,
+  followUpRescheduleSchema,
+  followUpUpdateSchema,
+  interactionInputSchema,
+  interactionListQuerySchema,
+  rfqConvertSchema,
+  rfqInputSchema,
+  rfqListQuerySchema,
+  rfqReportQuerySchema,
+  rfqUpdateSchema,
   ownerChangeSchema,
   contactDuplicateCheckSchema,
   crmStatusInputSchema,
@@ -336,9 +348,28 @@ export function buildOpenApiDocument(): object {
   action('get', '/companies/{id}/owner-history', 'Company leads', 'Every change of the lead owner, newest first (companies:read)');
   action('post', '/companies/{id}/owner', 'Company leads', 'Give the lead to someone else with a reason; the new owner is notified (companies:write)', ownerChangeSchema);
   action('get', '/companies/{id}/files', 'Company leads', 'Files kept with the company for the team (companies:read)');
-  r.registerPath({ method: 'post', path: '/companies/{id}/files', tags: ['Company leads'], summary: 'Upload a file as the raw request body, up to 10 MB (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: z.object({ name: z.string() }) }, responses: { 201: ok('File'), ...notFound, ...errors } });
+  r.registerPath({ method: 'post', path: '/companies/{id}/files', tags: ['Company leads'], summary: 'Upload a file as the raw request body, up to 10 MB (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: z.object({ name: z.string(), rfqId: z.string().uuid().optional() }) }, responses: { 201: ok('File'), ...notFound, ...errors } });
   action('get', '/company-files/{id}/download', 'Company leads', 'Download a company file (companies:read)');
   action('delete', '/company-files/{id}', 'Company leads', 'Delete a company file (companies:write)');
+  action('get', '/companies/{id}/dashboard', 'Company dashboard', 'Key numbers counted from CRM records: employees, emails, calls, meetings, follow-ups, RFQs and business, by currency (companies:read)');
+  action('get', '/companies/{id}/employees', 'Company dashboard', 'The employee directory with emails sent, responses, last update and next follow-up (companies:read, contacts:read)');
+  r.registerPath({ method: 'get', path: '/companies/{id}/interactions', tags: ['Company dashboard'], summary: 'Logged interactions and synced emails, newest first, marked LOGGED or SYNCED (companies:read, activities:read)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: interactionListQuerySchema }, responses: { 200: ok('Interactions'), ...notFound, ...errors } });
+  action('post', '/interactions', 'Company dashboard', 'Log an interaction with a company and, if a follow-up date is given, schedule the follow-up (activities:write)', interactionInputSchema);
+  action('delete', '/interactions/{id}', 'Company dashboard', 'Delete a logged interaction (activities:write)');
+  r.registerPath({ method: 'get', path: '/follow-ups', tags: ['Follow-ups'], summary: 'Follow-ups by bucket (today, upcoming, overdue, completed, rescheduled, cancelled) for me, my team or everyone (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Follow-ups'), ...errors } });
+  r.registerPath({ method: 'get', path: '/follow-ups/counts', tags: ['Follow-ups'], summary: 'How many follow-ups are in each bucket (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Counts'), ...errors } });
+  action('post', '/follow-ups', 'Follow-ups', 'Schedule a follow-up with a company; the assignee is notified (activities:write)', followUpInputSchema);
+  action('patch', '/follow-ups/{id}', 'Follow-ups', 'Change a follow-up (activities:write)', followUpUpdateSchema);
+  action('post', '/follow-ups/{id}/complete', 'Follow-ups', 'Mark a follow-up done with its outcome (activities:write)', followUpCompleteSchema);
+  action('post', '/follow-ups/{id}/reschedule', 'Follow-ups', 'Move a follow-up to a new date and time (activities:write)', followUpRescheduleSchema);
+  action('post', '/follow-ups/{id}/cancel', 'Follow-ups', 'Cancel a follow-up (activities:write)');
+  r.registerPath({ method: 'get', path: '/rfqs', tags: ['RFQs'], summary: 'Requests for quotation you can see, newest first (companies:read; plan feature rfqs)', security: secured, request: { query: rfqListQuerySchema }, responses: { 200: ok('RFQs'), ...errors } });
+  r.registerPath({ method: 'get', path: '/rfqs/report', tags: ['RFQs'], summary: 'RFQ counts and values by company, client employee or owner (companies:read; plan feature rfqs)', security: secured, request: { query: rfqReportQuerySchema }, responses: { 200: ok('Report'), ...errors } });
+  action('get', '/rfqs/{id}', 'RFQs', 'One RFQ (companies:read; plan feature rfqs)');
+  action('post', '/rfqs', 'RFQs', 'Record an RFQ; it gets the next RFQ number and is logged as an interaction (companies:write; plan feature rfqs)', rfqInputSchema);
+  action('patch', '/rfqs/{id}', 'RFQs', 'Change an RFQ or its status (companies:write; plan feature rfqs)', rfqUpdateSchema);
+  action('delete', '/rfqs/{id}', 'RFQs', 'Delete an RFQ (companies:write; plan feature rfqs)');
+  action('post', '/rfqs/{id}/convert', 'RFQs', 'Create the deal for an RFQ and link the two (companies:write, deals:write; plan feature rfqs)', rfqConvertSchema);
   action('get', '/contacts/{id}/stats', 'Contacts', 'An employee’s emails sent, responses, calls, meetings, pending follow-ups and last interaction (contacts:read)');
   r.registerPath({ method: 'get', path: '/geo/countries', tags: ['Locations'], summary: 'Countries with dialling code, currency and time zones', security: secured, responses: { 200: ok('Countries'), ...errors } });
   r.registerPath({ method: 'get', path: '/geo/countries/{code}/regions', tags: ['Locations'], summary: 'States, provinces and regions of a country', security: secured, request: { params: z.object({ code: z.string().length(2) }) }, responses: { 200: ok('Regions'), ...notFound, ...errors } });

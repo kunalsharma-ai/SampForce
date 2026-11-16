@@ -7,6 +7,8 @@ import { ActivitiesService } from './activities.service';
 import { CompaniesService } from './companies.service';
 import { CompanyFilesController, CompanyLeadPartsController, CompanyLeadsController, EmployeeStatsController } from './company-leads.controller';
 import { CompanyLeadsService } from './company-leads.service';
+import { CompanyDashboardController, FollowUpsController, InteractionsController, RfqsController } from './company-work.controller';
+import { CompanyWorkService } from './company-work.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -43,6 +45,10 @@ import {
     CrmConfigController,
     GeoController,
     CompanyLeadsController,
+    CompanyDashboardController,
+    InteractionsController,
+    FollowUpsController,
+    RfqsController,
     CompanyLeadPartsController,
     CompanyFilesController,
     EmployeeStatsController,
@@ -62,6 +68,7 @@ import {
     CrmConfigService,
     GeoService,
     CompanyLeadsService,
+    CompanyWorkService,
     NotificationsService,
   ],
   exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService],

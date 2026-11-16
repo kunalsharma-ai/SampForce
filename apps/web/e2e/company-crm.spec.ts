@@ -90,7 +90,7 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   await page.goto(`/app/companies/${acme.id}`);
   await expect(main.getByLabel('Lead number')).toHaveText('FRFS01');
   await main.getByLabel('Change status').selectOption({ label: 'Discussion Phase' });
-  await expect(main.getByText(/^Since /)).toBeVisible();
+  await expect(main.locator('#company-lead').getByText(/^Since /)).toBeVisible();
   await expect(main.getByLabel('Change status')).toHaveValue(/.+/);
   await expect.poll(async () => (await (await page.request.get(`/api/v1/companies/${acme.id}`)).json()).status.name).toBe('Discussion Phase');
   await shot(page, '05-company-lead-card');
@@ -233,7 +233,7 @@ test('a company lead is created step by step with branches, employees and owners
   // The company page: lead number, profile, employees, branches, ownership and files.
   await expect(page).toHaveURL(/\/app\/companies\/[0-9a-f-]{36}$/);
   await expect(main.getByLabel('Lead number')).toHaveText('FRFS01');
-  await expect(main.getByRole('list', { name: 'Employees / POCs' })).toContainText('Priya Nair');
+  await expect(main.getByRole('table', { name: 'Employees / POCs' })).toContainText('Priya Nair');
   await expect(main.getByRole('list', { name: 'Branches' })).toContainText('Berlin office');
   await expect(main.getByRole('list', { name: 'Attachments' })).toContainText('acme-brief.pdf');
   await expect(main.getByRole('list', { name: 'Ownership history' })).toContainText('First assigned to Rahul Verma');
@@ -261,11 +261,12 @@ test('a company lead is created step by step with branches, employees and owners
   await axe(page);
   await shot(page, '20-add-employee-dialog');
   await dialog.getByRole('button', { name: 'Add employee' }).click();
-  await expect(main.getByRole('list', { name: 'Employees / POCs' })).toContainText('Arjun Mehta');
+  await expect(main.getByRole('table', { name: 'Employees / POCs' })).toContainText('Arjun Mehta');
   await shot(page, '21-company-page-after-changes');
 
   // The employee profile with relationship numbers.
   await main.getByRole('link', { name: 'Priya Nair' }).click();
+  await page.waitForURL(/\/app\/contacts\//);
   await expect(main.getByText('Emails sent')).toBeVisible();
   await expect(main.getByText('Procurement Lead').first()).toBeVisible();
   await axe(page);
@@ -281,4 +282,158 @@ test('a company lead is created step by step with branches, employees and owners
   await main.getByRole('link', { name: 'Drafts (1)' }).click();
   await expect(main.getByRole('list', { name: 'Your drafts' })).toContainText('Half Done Research');
   await shot(page, '23-lead-drafts');
+});
+
+test('the company page is a dashboard: interactions, follow-ups and RFQs counted from real records', async ({ page }) => {
+  test.setTimeout(150_000);
+  page.on('dialog', (d) => void d.accept());
+  await signUp(page, 'Frequent Research Fieldwork Solutions');
+  const main = page.getByRole('main');
+  const dialog = page.getByRole('dialog');
+  const lead = await post(page, '/company-leads', {
+    company: {
+      name: 'Acme Panels Pvt Ltd', country: 'IN', city: 'Pune', state: 'MH', industry: 'Market research', companySize: '201-500', foundedYear: 2009, headquarters: 'Pune, India',
+      website: 'https://acmepanels.example', linkedinUrls: [{ value: 'https://www.linkedin.com/company/acme-panels', primary: true }],
+      emails: [{ value: 'info@acmepanels.example', primary: true }], phones: [{ value: '+91 20 4567 8900', primary: true }],
+    },
+    employees: [
+      { firstName: 'Priya', lastName: 'Nair', jobTitle: 'Procurement Lead', emails: [{ value: 'priya@acmepanels.example' }], phones: [{ value: '+91 98200 11223' }], linkedinUrl: 'https://www.linkedin.com/in/priya-nair' },
+      { firstName: 'Ravi', lastName: 'Kumar', jobTitle: 'Research Director', emails: [{ value: 'ravi@acmepanels.example' }] },
+    ],
+  });
+  const id = lead.company.id as string;
+  const [priya] = lead.employeeIds as string[];
+  // Some history to count: an email each way and a call, logged through the API.
+  await post(page, '/interactions', { companyId: id, contactId: priya, kind: 'EMAIL_SENT', subject: 'Capabilities deck and panel book' });
+  await post(page, '/interactions', { companyId: id, contactId: priya, kind: 'EMAIL_RECEIVED', subject: 'Re: Capabilities deck', outcome: 'Interested in India B2B' });
+  await post(page, '/interactions', { companyId: id, contactId: priya, kind: 'CALL_OUTGOING', subject: 'Intro call' });
+
+  await page.goto(`/app/companies/${id}`);
+  await expect(main.getByRole('heading', { name: 'Acme Panels Pvt Ltd', level: 1 })).toBeVisible();
+  const kpis = main.getByRole('region', { name: /^Company performance/ });
+  await expect(kpis.getByRole('link', { name: 'Emails sent: 1' })).toBeVisible();
+  await expect(kpis.getByRole('link', { name: 'Email responses: 1' })).toBeVisible();
+  await expect(kpis.getByRole('link', { name: 'Calls made: 1' })).toBeVisible();
+  await expect(kpis.getByRole('link', { name: 'Employees contacted: 1' })).toBeVisible();
+  const toolbar = main.getByRole('toolbar', { name: 'Quick actions' });
+  await expect(toolbar.getByRole('button', { name: 'Add RFQ' })).toBeVisible();
+  await axe(page);
+  await shot(page, '24-company-dashboard');
+
+  // Log a meeting from the header and schedule its follow-up in the same step.
+  await toolbar.getByRole('button', { name: 'Log interaction' }).click();
+  await dialog.getByLabel('Interaction type').selectOption('MEETING');
+  await dialog.getByLabel('Employee').selectOption({ label: 'Priya Nair' });
+  await dialog.getByLabel('Subject *').fill('Capabilities meeting at their Pune office');
+  await dialog.getByLabel('Outcome', { exact: true }).fill('Wants a quote for 400 IT decision makers');
+  await dialog.getByLabel('Next action').fill('Send feasibility and CPI');
+  await dialog.getByLabel('Follow-up date').fill('2031-03-10T11:00');
+  await axe(page);
+  await shot(page, '25-log-interaction-dialog');
+  await dialog.getByRole('button', { name: 'Log interaction' }).click();
+  const log = main.getByRole('list', { name: 'Interactions' });
+  await expect(log).toContainText('Capabilities meeting at their Pune office');
+  await expect(log.getByText('Logged by hand').first()).toBeVisible();
+  await expect(kpis.getByRole('link', { name: 'Meetings: 1' })).toBeVisible();
+  await expect(main.getByRole('list', { name: 'Follow-ups' })).toContainText('Send feasibility and CPI');
+
+  // Schedule a call that is already overdue, to see the indicator.
+  await toolbar.getByRole('button', { name: 'Schedule call' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Schedule a call' })).toBeVisible();
+  await dialog.getByLabel('What is it about?').fill('Chase the signed NDA');
+  await dialog.getByLabel('Follow-up date and time').fill('2024-01-15T10:00');
+  await dialog.getByLabel('Priority').selectOption('HIGH');
+  await dialog.getByLabel('Previous discussion summary').fill('They asked for our NDA template on the intro call.');
+  await shot(page, '26-schedule-call-dialog');
+  await dialog.getByRole('button', { name: 'Save follow-up' }).click();
+  const ups = main.getByRole('list', { name: 'Follow-ups' });
+  await expect(ups.getByRole('listitem').filter({ hasText: 'Chase the signed NDA' })).toContainText('Overdue');
+  await expect(kpis.getByRole('link', { name: 'Follow-ups pending: 2' })).toBeVisible();
+
+  // Add an RFQ with LOI, IR and CPI; the total is worked out.
+  await toolbar.getByRole('button', { name: 'Add RFQ' }).click();
+  await dialog.getByLabel('Project name *').fill('India B2B IT decision makers');
+  await dialog.getByLabel('POC / employee').selectOption({ label: 'Priya Nair' });
+  await dialog.getByLabel('Research methodology').fill('Online survey');
+  await dialog.getByLabel('Target audience').fill('IT decision makers, 500+ employees');
+  await dialog.getByLabel('Sample size').fill('400');
+  await dialog.getByLabel('LOI (minutes)').fill('15');
+  await dialog.getByLabel('IR (%)').fill('20');
+  await dialog.getByLabel('CPI', { exact: true }).fill('12.5');
+  await expect(dialog.getByText('Left empty: sample × CPI = $5,000')).toBeVisible();
+  await dialog.getByLabel('Submission deadline').fill('2031-03-12T18:00');
+  await axe(page);
+  await shot(page, '27-add-rfq-dialog');
+  await dialog.getByRole('button', { name: 'Save RFQ' }).click();
+  const rfqs = main.getByRole('list', { name: 'RFQs' });
+  await expect(rfqs).toContainText('RFQ-0001');
+  await expect(rfqs).toContainText('$5,000');
+  await expect(kpis.getByRole('link', { name: 'RFQs received: 1' })).toBeVisible();
+  await expect(log).toContainText('RFQ-0001: India B2B IT decision makers');
+
+  // Submit the quotation, then win it and turn it into a deal.
+  await rfqs.getByRole('button', { name: 'Open RFQ-0001' }).click();
+  await dialog.getByLabel('Project status').selectOption('QUOTATION_SUBMITTED');
+  await dialog.getByRole('button', { name: 'Save RFQ' }).click();
+  await expect(rfqs).toContainText('Quotation submitted');
+  await expect(kpis.getByRole('link', { name: 'RFQs submitted: 1' })).toBeVisible();
+  await rfqs.getByRole('button', { name: 'Open RFQ-0001' }).click();
+  await dialog.getByLabel('Project status').selectOption('WON');
+  await dialog.getByLabel('Actual revenue').fill('5400');
+  await dialog.getByLabel('Won / lost reason').fill('Best feasibility in India B2B');
+  await dialog.getByRole('button', { name: 'Save RFQ' }).click();
+  await expect(rfqs).toContainText('Won');
+  await expect(kpis.getByRole('link', { name: 'RFQs won: 1' })).toBeVisible();
+  await expect(kpis).toContainText('$5,400');
+  await rfqs.getByRole('button', { name: 'Open RFQ-0001' }).click();
+  await dialog.getByRole('button', { name: 'Convert to deal' }).click();
+  await expect(rfqs.getByRole('link', { name: 'RFQ-0001 India B2B IT decision makers' })).toBeVisible();
+  await expect(main.getByText('Outstanding deal value')).toBeVisible();
+  await page.mouse.move(0, 0);
+  await axe(page);
+  await shot(page, '28-company-dashboard-after-work');
+
+  // Filter the interactions to calls.
+  await main.getByRole('combobox', { name: 'Interaction type' }).selectOption('CALL_OUTGOING');
+  await expect(log.getByRole('listitem')).toHaveCount(1);
+  await main.getByRole('combobox', { name: 'Interaction type' }).selectOption('');
+
+  // The employee directory sorts by emails sent.
+  const directory = main.getByRole('table', { name: 'Employees / POCs' });
+  await directory.getByRole('button', { name: 'Emails sent' }).click();
+  await expect(directory.getByRole('row').nth(1)).toContainText('Priya Nair');
+  await expect(directory.getByRole('row').nth(1)).toContainText('1');
+
+  // Follow-ups page: categories with counts, and quick complete.
+  await page.goto('/app/follow-ups');
+  await expect(main.getByRole('heading', { name: 'Follow-ups', level: 1 })).toBeVisible();
+  await main.getByRole('tab', { name: /Overdue follow-ups/ }).click();
+  await expect(main.getByRole('tab', { name: /Overdue follow-ups/ })).toContainText('1');
+  await expect(main.getByRole('tabpanel')).toContainText('Chase the signed NDA');
+  await axe(page);
+  await shot(page, '29-follow-ups-overdue');
+  await main.getByRole('button', { name: 'Complete “Chase the signed NDA”' }).click();
+  await dialog.getByLabel('Outcome').fill('NDA signed and returned');
+  await dialog.getByRole('button', { name: 'Mark done' }).click();
+  await main.getByRole('tab', { name: /Completed follow-ups/ }).click();
+  await expect(main.getByRole('tabpanel')).toContainText('NDA signed and returned');
+  await main.getByRole('tab', { name: /Upcoming follow-ups/ }).click();
+  await expect(main.getByRole('tabpanel')).toContainText('Send feasibility and CPI');
+  await shot(page, '30-follow-ups-upcoming');
+
+  // RFQs page and the report by executive.
+  await page.goto('/app/rfqs');
+  await expect(main.getByRole('heading', { name: 'RFQs', level: 1 })).toBeVisible();
+  await expect(main).toContainText('RFQ-0001');
+  await axe(page);
+  await shot(page, '31-rfqs-register');
+  await main.getByRole('tab', { name: 'By executive' }).click();
+  await expect(main.getByRole('row', { name: /Test Person/ })).toContainText('$5,400');
+  await shot(page, '32-rfqs-report-by-executive');
+
+  // No Recent activity widget on the Command Center any more.
+  await page.goto('/app');
+  await expect(main.getByRole('heading', { level: 1 }).first()).toBeVisible();
+  await expect(page.getByText('Recent activity')).toHaveCount(0);
+  await shot(page, '33-command-center-without-recent-activity');
 });

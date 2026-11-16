@@ -39,6 +39,8 @@ export const fr: Messages = {
   'module.deals': 'Opportunités',
   'module.pipelines': 'Pipelines',
   'module.accounts': 'Comptes',
+  'module.follow-ups': 'Relances',
+  'module.rfqs': 'RFQ',
   'module.activities': 'Activités commerciales',
   'module.communication': 'E-mail et communication',
   'module.sequences': 'Séquences d’e-mails',

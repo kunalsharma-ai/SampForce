@@ -183,14 +183,16 @@ export class CompanyLeadsService {
     });
   }
 
-  upload(auth: AuthContext, companyId: string, file: { name: string; contentType: string; data: Buffer }, meta: RequestMeta): Promise<CompanyFileRow> {
+  /** `rfqId` files the upload under one RFQ of the company. */
+  upload(auth: AuthContext, companyId: string, file: { name: string; contentType: string; data: Buffer }, meta: RequestMeta, rfqId?: string): Promise<CompanyFileRow> {
     checkFile(file);
     return this.prisma.run(auth, async (tx) => {
       await this.editableCompany(tx, auth, companyId);
+      if (rfqId && !(await tx.rfq.findFirst({ where: { tenantId: auth.tenantId, id: rfqId, companyId, deletedAt: null }, select: { id: true } }))) throw notFound('RFQ');
       const doc = await tx.companyFile.create({
         data: {
           tenantId: auth.tenantId, companyId, name: file.name, contentType: file.contentType, sizeBytes: file.data.length,
-          data: new Uint8Array(file.data), sha256: createHash('sha256').update(file.data).digest('hex'), uploadedById: auth.userId,
+          data: new Uint8Array(file.data), sha256: createHash('sha256').update(file.data).digest('hex'), uploadedById: auth.userId, rfqId: rfqId ?? null,
         },
       });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.file_added', entityType: 'company', entityId: companyId, metadata: { fileId: doc.id, name: file.name, size: file.data.length }, meta });
@@ -226,8 +228,9 @@ export class CompanyLeadsService {
       const c = await tx.contact.findFirst({ where: { id: contactId, tenantId: auth.tenantId, deletedAt: null, ...contactScope(v) }, select: { id: true, nextFollowUpAt: true } });
       if (!c) throw notFound('Contact');
       const base = { tenantId: auth.tenantId, contactId, deletedAt: null };
-      const [emailActs, calls, meetings, sent, received, followUps, lastAct, lastEmail, nextTask] = await Promise.all([
-        tx.activity.count({ where: { ...base, type: 'EMAIL' } }),
+      const [emailActs, loggedReplies, calls, meetings, sent, received, followUps, lastAct, lastEmail, nextTask] = await Promise.all([
+        tx.activity.count({ where: { ...base, type: 'EMAIL', NOT: { interaction: 'EMAIL_RECEIVED' } } }),
+        tx.activity.count({ where: { ...base, interaction: 'EMAIL_RECEIVED' } }),
         tx.activity.count({ where: { ...base, type: 'CALL' } }),
         tx.activity.count({ where: { ...base, type: 'MEETING' } }),
         tx.emailMessage.count({ where: { tenantId: auth.tenantId, contactId, direction: 'OUTBOUND' } }),
@@ -242,7 +245,7 @@ export class CompanyLeadsService {
       return {
         // Logged email activities and synced sent emails are separate records of different emails.
         emailsSent: emailActs + sent,
-        responsesReceived: received,
+        responsesReceived: received + loggedReplies,
         calls,
         meetings,
         followUpsPending: followUps,

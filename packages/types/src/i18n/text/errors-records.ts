@@ -159,4 +159,10 @@ export const errorsRecords = {
   'Draft not found.': ['No se encontró el borrador.', 'Brouillon introuvable.', 'Entwurf nicht gefunden.', 'لم يُعثر على المسودة.'],
   'Branch not found.': ['No se encontró la sucursal.', 'Agence introuvable.', 'Niederlassung nicht gefunden.', 'لم يُعثر على الفرع.'],
   'File not found.': ['No se encontró el archivo.', 'Fichier introuvable.', 'Datei nicht gefunden.', 'لم يُعثر على الملف.'],
+  // Company work (ADR 0060, Phase 3)
+  'RFQ not found.': ['RFQ no encontrada.', 'RFQ introuvable.', 'RFQ nicht gefunden.', 'طلب عرض السعر غير موجود.'],
+  'Follow-up not found.': ['Seguimiento no encontrado.', 'Relance introuvable.', 'Nachverfolgung nicht gefunden.', 'المتابعة غير موجودة.'],
+  'This RFQ already has a deal.': ['Esta RFQ ya tiene un trato.', 'Cette RFQ a déjà une affaire.', 'Diese RFQ hat bereits einen Deal.', 'لهذا الطلب صفقة بالفعل.'],
+  'A lost or cancelled RFQ cannot become a deal.': ['Una RFQ perdida o cancelada no puede convertirse en trato.', 'Une RFQ perdue ou annulée ne peut pas devenir une affaire.', 'Eine verlorene oder abgesagte RFQ kann kein Deal werden.', 'لا يمكن أن يصبح طلب خاسر أو ملغى صفقة.'],
+  'This follow-up is already completed or cancelled.': ['Este seguimiento ya está completado o cancelado.', 'Cette relance est déjà terminée ou annulée.', 'Diese Nachverfolgung ist bereits erledigt oder abgesagt.', 'هذه المتابعة مكتملة أو ملغاة بالفعل.'],
 } as const satisfies TextTable;

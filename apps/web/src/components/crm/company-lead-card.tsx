@@ -9,6 +9,7 @@ import { useCrmStatuses } from '@/lib/company-crm';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { focusSection, useCompanyAction } from './company-actions';
 import { DetailList } from './record-detail';
 import { CountryFlag, StatusChip } from './status-chip';
 
@@ -30,9 +31,10 @@ export function CompanyLeadCard({ company: c }: { company: CompanyRow }) {
       </span>
     ) : null;
   const choices = statuses.data?.filter((s) => !s.archived || s.id === c.status?.id) ?? [];
+  useCompanyAction('changeStatus', canWrite ? () => focusSection('company-lead', 'select') : null);
 
   return (
-    <Card>
+    <Card id="company-lead">
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
           {t('Lead')}

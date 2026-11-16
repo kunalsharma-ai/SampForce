@@ -94,8 +94,8 @@ export function useCompanyFiles(companyId: string) {
 }
 
 /** Sends the file as the raw request body, as the portal documents do. */
-export function uploadCompanyFile(companyId: string, file: File): Promise<CompanyFileRow> {
-  return api<CompanyFileRow>(`/companies/${companyId}/files?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } });
+export function uploadCompanyFile(companyId: string, file: File, rfqId?: string): Promise<CompanyFileRow> {
+  return api<CompanyFileRow>(`/companies/${companyId}/files?name=${encodeURIComponent(file.name)}${rfqId ? `&rfqId=${rfqId}` : ''}`, { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } });
 }
 
 export function useCompanyFileMutations(companyId: string) {

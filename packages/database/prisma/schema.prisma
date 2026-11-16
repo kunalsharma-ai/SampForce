@@ -400,6 +400,7 @@ model Tenant {
   leadOwnerChanges       LeadOwnerChange[]
   companyFiles           CompanyFile[]
   leadDrafts             LeadDraft[]
+  rfqs                   Rfq[]
 
   @@map("tenants")
 }
@@ -646,6 +647,8 @@ model Company {
   branches     CompanyBranch[]
   ownerChanges LeadOwnerChange[]
   files        CompanyFile[]
+  tasks        Task[]
+  rfqs         Rfq[]
 
   @@unique([tenantId, leadNumber])
   @@index([tenantId, name])
@@ -784,6 +787,8 @@ model CompanyFile {
   data         Bytes
   sha256       String
   uploadedById String?  @map("uploaded_by_id")
+  /// Set when the file belongs to one RFQ of the company.
+  rfqId        String?  @map("rfq_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -791,6 +796,58 @@ model CompanyFile {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
   @@map("company_files")
+}
+
+/// A request for quotation from a company lead (ADR 0060, Phase 3). Numbered RFQ-0001.. per workspace. Receiving an
+/// RFQ is not won business: only RFQs marked won, or the deals they turn into, count as revenue.
+model Rfq {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  number          String
+  seq             Int
+  companyId       String    @map("company_id")
+  contactId       String?   @map("contact_id")
+  projectName     String    @map("project_name")
+  description     String?
+  methodology     String?
+  /// ISO country code of the market, or free text such as "Multi-country".
+  market          String?
+  industry        String?
+  targetAudience  String?   @map("target_audience")
+  sampleSize      Int?      @map("sample_size")
+  /// Length of interview in minutes, incidence rate in percent, cost per interview in `currency`.
+  loi             Float?
+  ir              Float?
+  cpi             Float?
+  totalQuotation  Float?    @map("total_quotation")
+  currency        String    @default("USD")
+  receivedAt      DateTime  @map("received_at")
+  submittedAt     DateTime? @map("submitted_at")
+  deadlineAt      DateTime? @map("deadline_at")
+  /// RFQ_STATUSES in packages/types/src/company-work.ts.
+  status          String    @default("RECEIVED")
+  statusChangedAt DateTime? @map("status_changed_at")
+  ownerId         String?   @map("owner_id")
+  managerId       String?   @map("manager_id")
+  expectedRevenue Float?    @map("expected_revenue")
+  actualRevenue   Float?    @map("actual_revenue")
+  outcomeReason   String?   @map("outcome_reason")
+  /// The deal this RFQ turned into.
+  opportunityId   String?   @map("opportunity_id")
+  createdById     String?   @map("created_by_id")
+  updatedById     String?   @map("updated_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, companyId, receivedAt(sort: Desc)])
+  @@index([tenantId, status, deadlineAt])
+  @@index([tenantId, ownerId])
+  @@map("rfqs")
 }
 
 /// A company lead being written in the "Create new lead" form, saved part-way. Private to the person writing it.
@@ -1066,6 +1123,17 @@ model Activity {
   contactId     String?      @map("contact_id")
   companyId     String?      @map("company_id")
   opportunityId String?      @map("opportunity_id")
+  /// What kind of interaction was logged (INTERACTION_KINDS in packages/types/src/company-work.ts); null for activities
+  /// logged before the company CRM. Logged by a person, never synced: synced emails live in email_messages.
+  interaction   String?
+  sender        String?
+  recipient     String?
+  outcome       String?
+  nextAction    String?      @map("next_action")
+  followUpAt    DateTime?    @map("follow_up_at")
+  /// An attachment in company_files, and the RFQ the interaction is about.
+  fileId        String?      @map("file_id")
+  rfqId         String?      @map("rfq_id")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
   deletedAt     DateTime?    @map("deleted_at")
@@ -1111,6 +1179,19 @@ model Task {
   leadId        String?      @map("lead_id")
   contactId     String?      @map("contact_id")
   opportunityId String?      @map("opportunity_id")
+  /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
+  companyId       String?   @map("company_id")
+  followUpType    String?   @map("follow_up_type")
+  managerId       String?   @map("manager_id")
+  /// The previous discussion, the action needed next, and remarks.
+  summary         String?
+  nextAction      String?   @map("next_action")
+  remarks         String?
+  rescheduleCount Int       @default(0) @map("reschedule_count")
+  rescheduledAt   DateTime? @map("rescheduled_at")
+  outcome         String?
+  rfqId           String?   @map("rfq_id")
+  createdById     String?   @map("created_by_id")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
   deletedAt     DateTime?    @map("deleted_at")
@@ -1119,9 +1200,12 @@ model Task {
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  company     Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([tenantId, status, dueAt])
   @@index([tenantId, assigneeId])
+  @@index([tenantId, companyId, status])
+  @@index([tenantId, followUpType, status, dueAt])
   @@map("tasks")
 }
 

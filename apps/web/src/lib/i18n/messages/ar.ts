@@ -40,6 +40,8 @@ export const ar: Messages = {
   'module.deals': 'الصفقات',
   'module.pipelines': 'مسارات المبيعات',
   'module.accounts': 'الحسابات',
+  'module.follow-ups': 'المتابعات',
+  'module.rfqs': 'طلبات عروض الأسعار',
   'module.activities': 'أنشطة المبيعات',
   'module.communication': 'البريد والتواصل',
   'module.sequences': 'تسلسلات البريد',

@@ -40,3 +40,4 @@ export * from './territories';
 export * from './email-design';
 export * from './i18n';
 export * from './company-crm';
+export * from './company-work';

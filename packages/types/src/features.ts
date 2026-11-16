@@ -17,6 +17,7 @@ export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 export const FEATURE_KEYS = [
   // Sales
   'territories',
+  'rfqs',
   'quotes',
   'proposals',
   'contracts',
@@ -74,6 +75,7 @@ export interface FeatureDef {
 }
 
 export const FEATURES: FeatureDef[] = [
+  { key: 'rfqs', group: 'Sales', label: 'RFQs', description: 'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.', defaultFrom: 'free', paths: ['/app/rfqs'] },
   { key: 'territories', group: 'Sales', label: 'Sales territories', description: 'Territories with rules that route leads and deals to their owners.', defaultFrom: 'growth', paths: ['/app/settings/territories'] },
   { key: 'quotes', group: 'Sales', label: 'Quotes and catalogue', description: 'Products, price books, quotes with approvals and PDFs, and the Quick Bid Studio.', defaultFrom: 'launch', paths: ['/app/quotes'] },
   { key: 'proposals', group: 'Sales', label: 'Proposals', description: 'Proposals built from quotes, shared by link and accepted online.', defaultFrom: 'growth', paths: [] },

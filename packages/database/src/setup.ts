@@ -170,9 +170,29 @@ export async function syncIndexes(prisma: PrismaClient, log: (line: string) => v
   }
 }
 
+/**
+ * Plan features shipped after a workspace's plans were stored, with the plans that include them by default. Each is
+ * added to those stored plans once (a counter marks it done), so an operator who later removes it keeps it removed.
+ */
+export const SHIPPED_FEATURES: { key: string; plans: string[] }[] = [
+  // ADR 0060, Phase 3: RFQs are part of the core sales work, so every plan has them unless an operator says otherwise.
+  { key: 'rfqs', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
+];
+
 export async function seedReferenceData(prisma: PrismaClient): Promise<void> {
   for (const plan of plans as Array<Prisma.PlanCreateInput>) {
     await prisma.plan.upsert({ where: { code: plan.code }, create: plan, update: {} });
+  }
+  for (const f of SHIPPED_FEATURES) {
+    const marker = `feature-shipped:${f.key}`;
+    if (await prisma.counter.findUnique({ where: { id: marker } })) continue;
+    for (const row of await prisma.plan.findMany({ where: { code: { in: f.plans } } })) {
+      const ent = (row.entitlements ?? {}) as { features?: unknown };
+      const list = Array.isArray(ent.features) ? (ent.features as string[]) : null;
+      // A plan without a stored list uses the shipped defaults, which already include the feature.
+      if (list && !list.includes(f.key)) await prisma.plan.update({ where: { code: row.code }, data: { entitlements: { ...ent, features: [...list, f.key] } as Prisma.InputJsonValue } });
+    }
+    await prisma.counter.create({ data: { id: marker, value: 1 } });
   }
 }
 

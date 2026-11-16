@@ -6,6 +6,7 @@
     "annualMonthlyPriceCents": 0,
     "entitlements": {
       "features": [
+        "rfqs",
         "email_sync",
         "ai_assistant",
         "automation",
@@ -26,6 +27,7 @@
     "annualMonthlyPriceCents": 600,
     "entitlements": {
       "features": [
+        "rfqs",
         "quotes",
         "email_sync",
         "email_templates",
@@ -52,6 +54,7 @@
     "annualMonthlyPriceCents": 1200,
     "entitlements": {
       "features": [
+        "rfqs",
         "territories",
         "quotes",
         "proposals",
@@ -93,6 +96,7 @@
     "annualMonthlyPriceCents": 2300,
     "entitlements": {
       "features": [
+        "rfqs",
         "territories",
         "quotes",
         "proposals",
@@ -144,6 +148,7 @@
     "annualMonthlyPriceCents": 3900,
     "entitlements": {
       "features": [
+        "rfqs",
         "territories",
         "quotes",
         "proposals",
@@ -195,6 +200,7 @@
     "annualMonthlyPriceCents": 6500,
     "entitlements": {
       "features": [
+        "rfqs",
         "territories",
         "quotes",
         "proposals",
@@ -246,6 +252,7 @@
     "annualMonthlyPriceCents": null,
     "entitlements": {
       "features": [
+        "rfqs",
         "territories",
         "quotes",
         "proposals",

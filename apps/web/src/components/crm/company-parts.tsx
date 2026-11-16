@@ -4,7 +4,6 @@ import {
   branchInputSchema,
   type BranchRow,
   type CompanyRow,
-  type ContactRow,
   contactInputSchema,
   LEAD_TRANSFER_REASONS,
   type LeadTransferReason,
@@ -14,20 +13,20 @@ import {
 import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { Building2, Download, FileText, Pencil, Plus, Trash2, UserRoundCog } from 'lucide-react';
-import Link from 'next/link';
 import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
 import { api, ApiError } from '@/lib/api';
 import { personLabel, useBranches, useBranchMutations, useChangeOwner, useCompanyFileMutations, useCompanyFiles, useOwnerHistory } from '@/lib/company-leads';
-import { formatDate, useRecordList } from '@/lib/crm';
+import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { BranchFields, branchPayload, type BranchValue, emptyBranch, emptyEmployee, EmployeeFields, employeePayload, type EmployeeValue, type Errors, PersonSelect } from './lead-fields';
+import { focusSection, useCompanyAction } from './company-actions';
 import { DetailList } from './record-detail';
 import { Select, Textarea } from './select';
-import { CountryFlag, StatusChip } from './status-chip';
+import { CountryFlag } from './status-chip';
 
 export const REASON_LABELS = {
   REASSIGNED: 'Routine reassignment',
@@ -86,13 +85,10 @@ export function CompanyProfileCard({ company: c }: { company: CompanyRow }) {
             ['LinkedIn', points(c.linkedinUrls, 'web')],
             ['Email', points(c.emails, 'mailto')],
             ['Phone', points(c.phones, 'tel')],
-            ['Industry', c.industry],
             ['Business category', c.businessCategory],
             ['Company size', c.companySize && t('{range} employees', { range: c.companySize })],
             ['Company type', c.companyType && t.maybe(c.companyType)],
-            ['Founded year', c.foundedYear],
             ['Number of branches', c.branchCount],
-            ['Headquarters', c.headquarters],
             ['Address', [c.address, c.city, c.state, c.postalCode].filter(Boolean).join(', ') || null],
             ['Country', c.country && <CountryFlag code={c.country} withName />],
             ['Time zone', c.timezone],
@@ -107,56 +103,7 @@ export function CompanyProfileCard({ company: c }: { company: CompanyRow }) {
 
 // ─── Employees ───
 
-/** The company's employees and POCs, with their statuses, and "+ Add employee / POC". */
-export function CompanyEmployees({ company }: { company: CompanyRow }) {
-  const t = useT();
-  const canWrite = useCan('contacts:write');
-  const [adding, setAdding] = React.useState(false);
-  const contacts = useRecordList<ContactRow>('contacts', { companyId: company.id, pageSize: 100, sort: 'firstName', order: 'asc' });
-  return (
-    <Card>
-      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          {t('Employees / POCs')} {contacts.data ? <span className="text-muted-foreground">({contacts.data.total})</span> : null}
-          <InfoTip topic="crm.employees" />
-        </CardTitle>
-        {canWrite && !company.restricted && (
-          <Button size="sm" onClick={() => setAdding(true)}>
-            <Plus aria-hidden /> {t('Add employee / POC')}
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        {contacts.isPending ? (
-          <Skeleton className="h-12" />
-        ) : contacts.data?.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
-        ) : (
-          <ul className="divide-y divide-border" aria-label={t('Employees / POCs')}>
-            {contacts.data?.items.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
-                <div className="min-w-0">
-                  <Link href={`/app/contacts/${c.id}`} className="font-medium text-primary hover:underline">
-                    {c.fullName}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">{[c.jobTitle, c.department].filter(Boolean).join(' · ')}</p>
-                </div>
-                <StatusChip status={c.status} />
-                <span className="ms-auto text-end text-xs text-muted-foreground">
-                  {c.email && <span className="block">{c.email}</span>}
-                  {c.nextFollowUpAt && <span className="block">{t('Next follow-up {date}', { date: formatDate(c.nextFollowUpAt) })}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-      <AddEmployeeDialog company={company} open={adding} onOpenChange={setAdding} />
-    </Card>
-  );
-}
-
-function AddEmployeeDialog({ company, open, onOpenChange }: { company: CompanyRow; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function AddEmployeeDialog({ company, open, onOpenChange }: { company: CompanyRow; open: boolean; onOpenChange: (o: boolean) => void }) {
   const t = useT();
   const qc = useQueryClient();
   const [value, setValue] = React.useState<EmployeeValue>(emptyEmployee);
@@ -183,7 +130,7 @@ function AddEmployeeDialog({ company, open, onOpenChange }: { company: CompanyRo
     setFormError(null);
     try {
       await api('/contacts', { method: 'POST', json: body });
-      await qc.invalidateQueries({ queryKey: ['contacts'] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-employees'] }), qc.invalidateQueries({ queryKey: ['company-dashboard'] })]);
       onOpenChange(false);
     } catch (err) {
       setErrors(apiErrors(err, t.maybe));
@@ -228,6 +175,7 @@ export function CompanyBranches({ company }: { company: CompanyRow }) {
   const [editing, setEditing] = React.useState<BranchValue | null>(null);
   const [editId, setEditId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Errors>({});
+  useCompanyAction('addBranch', canWrite ? () => open(null) : null);
   const open = (row: BranchRow | null) => {
     setErrors({});
     setEditId(row?.id ?? null);
@@ -351,6 +299,7 @@ export function CompanyOwnership({ company: c }: { company: CompanyRow }) {
   const [reason, setReason] = React.useState<LeadTransferReason>('REASSIGNED');
   const [note, setNote] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  useCompanyAction('transfer', canWrite ? () => start() : null);
   const start = () => {
     setOwnerId('');
     setReason('REASSIGNED');
@@ -462,9 +411,10 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
   const canWrite = useCan('companies:write') && !company.restricted;
   const files = useCompanyFiles(company.id);
   const { upload, remove } = useCompanyFileMutations(company.id);
+  useCompanyAction('upload', canWrite ? () => focusSection('company-files', 'input[type="file"], button') : null);
   if (company.restricted) return null;
   return (
-    <Card>
+    <Card id="company-files">
       <CardHeader>
         <CardTitle className="text-base">
           {t('Attachments')} {files.data ? <span className="text-muted-foreground">({files.data.length})</span> : null}

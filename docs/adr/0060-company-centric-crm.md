@@ -87,6 +87,29 @@ every screen.
 - Location pickers suggest states and cities from the dataset and always accept typed places; the GeoNames and
   OpenStreetMap credit is shown under them.
 
+## Phase 3: the company dashboard, interactions, follow-ups and RFQs
+
+- **The company page is a dashboard** (`GET /companies/:id/dashboard`): a profile header with quick actions (edit,
+  add employee, branch, follow-up, log interaction, schedule call, add RFQ, upload, change status, transfer, send
+  email), twelve performance tiles, a business overview (opportunities, RFQs, quoted and won value per currency, the
+  latest update and the next action) and an employee directory (`GET /companies/:id/employees`). Every number is
+  counted from stored records; nothing is typed in. Business generated is won deals plus won RFQs that never became
+  a deal, so a converted RFQ is not counted twice.
+- **There is no "recent history".** The Command Center activity widget is removed and saved layouts that still list
+  it are cleaned when read. Interactions are their own log instead.
+- **Interactions** are activities with an `interaction` kind (11 kinds), sender, recipient, outcome and next action.
+  The log merges hand-logged items with mail synced from a connected mailbox, each badged by source. A logged
+  interaction with a follow-up date also creates a follow-up for the company owner.
+- **Follow-ups** are tasks with a company, type, manager, summary, next action and remarks. Buckets are worked out in
+  the viewer's time zone: overdue (due before now), today, upcoming (tomorrow on, or no date), completed,
+  rescheduled and cancelled. Rescheduling needs a reason, counts, and appends the reason to the remarks. Team scope is
+  the person, their reporting tree, and follow-ups they manage.
+- **RFQs** (`rfqs`, plan feature `rfqs`, on every plan) are numbered RFQ-0001 per workspace, with LOI, IR, CPI,
+  sample size and a quotation total kept as sample size times CPI unless typed. Receiving and submitting log
+  activities; the owner is notified. A won RFQ converts to a deal through the normal deal service, once; lost or
+  cancelled RFQs cannot. Reports group by company, employee and owner. Files can be attached to an RFQ.
+- Everything above follows company visibility, and roles without record details cannot log or change work.
+
 ## Consequences
 
 - Reps in new workspaces see fewer records than before by default; tests that check permissions rather than

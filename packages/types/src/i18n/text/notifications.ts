@@ -191,4 +191,7 @@ export const notifications = {
   // Company leads (ADR 0060)
   'Lead assigned to you: {lead}': ['Lead asignado a ti: {lead}', 'Prospect qui vous est attribué : {lead}', 'Ihnen zugewiesener Lead: {lead}', 'عميل محتمل أُسند إليك: {lead}'],
   'Assigned by {name}.': ['Asignado por {name}.', 'Attribué par {name}.', 'Zugewiesen von {name}.', 'أسنده {name}.'],
+  // Company work (ADR 0060, Phase 3)
+  'Follow-up assigned to you: {title}': ['Seguimiento asignado a ti: {title}', 'Relance qui vous est attribuée : {title}', 'Ihnen zugewiesene Nachverfolgung: {title}', 'متابعة أُسندت إليك: {title}'],
+  'RFQ assigned to you: {rfq}': ['RFQ asignada a ti: {rfq}', 'RFQ qui vous est attribuée : {rfq}', 'Ihnen zugewiesene RFQ: {rfq}', 'طلب عرض سعر أُسند إليك: {rfq}'],
 } satisfies TextTable;

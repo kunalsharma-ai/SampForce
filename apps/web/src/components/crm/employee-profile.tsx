@@ -23,7 +23,7 @@ export function EmployeeRelationship({ contact: c }: { contact: ContactRow }) {
   const statuses = useCrmStatuses('EMPLOYEE');
   const change = useMutation({
     mutationFn: (statusId: string) => api<ContactRow>(`/contacts/${c.id}`, { method: 'PATCH', json: { statusId } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contacts'] }),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-employees'] })]),
   });
   const tiles: [MessageKey, number | undefined][] = [
     ['Emails sent', stats.data?.emailsSent],

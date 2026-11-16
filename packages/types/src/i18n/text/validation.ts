@@ -292,4 +292,8 @@ export const validation = {
   'not allowed': ['no permitido', 'non autorisé', 'nicht erlaubt', 'غير مسموح'],
   'Enter a branch name': ['Escribe el nombre de la sucursal', 'Saisissez le nom de l’agence', 'Geben Sie einen Namen für die Niederlassung ein', 'أدخل اسم الفرع'],
   'This draft is too large to save.': ['Este borrador es demasiado grande para guardarlo.', 'Ce brouillon est trop volumineux pour être enregistré.', 'Dieser Entwurf ist zu groß zum Speichern.', 'هذه المسودة أكبر من أن تُحفظ.'],
+  // Company work (ADR 0060, Phase 3)
+  'is not an employee of this company': ['no es empleado de esta empresa', 'n’est pas employé de cette entreprise', 'ist kein Mitarbeiter dieses Unternehmens', 'ليس موظفًا في هذه الشركة'],
+  'Enter what the follow-up is about': ['Indica de qué trata el seguimiento', 'Indiquez l’objet de la relance', 'Geben Sie an, worum es bei der Nachverfolgung geht', 'أدخل موضوع المتابعة'],
+  'Enter the project name': ['Indica el nombre del proyecto', 'Saisissez le nom du projet', 'Geben Sie den Projektnamen ein', 'أدخل اسم المشروع'],
 } as const satisfies TextTable;

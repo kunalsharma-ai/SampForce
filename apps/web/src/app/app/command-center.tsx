@@ -4,7 +4,6 @@ import { Button, Card, cn, Skeleton } from '@dealflow/ui';
 import { completeLayout, DASHBOARD_PERIODS, DASHBOARD_PRESETS, type DashboardFilter, type DashboardLayout, type DashboardWidget } from '@dealflow/types';
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, LayoutGrid, Maximize2, Minimize2, RefreshCw, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
-import { ActivityStream } from '@/components/command-center/activity-stream';
 import { GoalCard, RevenueTrendChart, RiskChart, StageConversionChart, TeamChart, WinLossChart } from '@/components/command-center/charts';
 import { SalesInsights } from '@/components/command-center/insights';
 import { KpiGrid } from '@/components/command-center/kpi-grid';
@@ -28,10 +27,9 @@ const WIDGET_LABEL: Record<DashboardWidget, MessageKey> = {
   team: 'Team performance',
   risk: 'Deal risk',
   goal: 'Goal attainment',
-  activity: 'Recent activity',
 };
 const CHART_WIDGETS: DashboardWidget[] = ['revenueTrend', 'stageConversion', 'winLoss', 'team', 'risk', 'goal'];
-const SUMMARY_WIDGETS: DashboardWidget[] = ['kpis', 'pipeline', 'activity'];
+const SUMMARY_WIDGETS: DashboardWidget[] = ['kpis', 'pipeline'];
 const PERIOD_LABEL: Record<(typeof DASHBOARD_PERIODS)[number], MessageKey> = { '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last 90 days', '365d': 'Last 12 months' };
 const PRESET_LABEL: Record<'executive' | 'salesperson' | 'custom', MessageKey> = { executive: 'Executive', salesperson: 'Salesperson', custom: 'Custom' };
 
@@ -132,8 +130,6 @@ export function CommandCenter() {
         return <SalesInsights />;
       case 'pipeline':
         return summaryBlock((d) => (d.pipeline ? <PipelineChart pipeline={d.pipeline} currency={d.currency} /> : <Card className="p-5 text-sm text-muted-foreground">{t('No pipeline configured.')}</Card>), 'h-72');
-      case 'activity':
-        return summaryBlock((d) => <ActivityStream items={d.recentActivity} />);
       case 'revenueTrend':
         return chartBlock((d) => <RevenueTrendChart data={d} />);
       case 'stageConversion':

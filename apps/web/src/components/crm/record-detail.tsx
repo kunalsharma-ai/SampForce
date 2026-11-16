@@ -11,6 +11,7 @@ import { type CrmEntity, ENTITY_LABEL, useCustomFields } from '@/lib/crm';
 import { toFormValues } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { useCompanyAction } from './company-actions';
 import { RecordFormDialog } from './record-form';
 import { InfoTip } from '@/components/info-tip';
 import { PageHelp } from '@/components/page-help';
@@ -64,6 +65,7 @@ export function RecordHeader({
   badges,
   actions,
   editable = true,
+  bare = false,
 }: {
   entity: CrmEntity;
   id: string;
@@ -73,6 +75,8 @@ export function RecordHeader({
   badges?: React.ReactNode;
   actions?: React.ReactNode;
   editable?: boolean;
+  /** Only the Edit and Delete buttons (and their dialogs), for pages with their own header. */
+  bare?: boolean;
 }) {
   const canWrite = useCan(`${entity}:write` as 'leads:write');
   const t = useT();
@@ -82,6 +86,7 @@ export function RecordHeader({
   const router = useRouter();
   const qc = useQueryClient();
   const label = ENTITY_LABEL[entity];
+  useCompanyAction('edit', canWrite && editable && row ? () => setEditing(true) : null);
 
   async function remove() {
     try {
@@ -93,24 +98,8 @@ export function RecordHeader({
     }
   }
 
-  return (
-    <div className="mb-6 space-y-3">
-      <Link href={`/app/${entity}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t.maybe(label.many)}
-      </Link>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-1.5">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-              <span className="truncate">{title}</span>
-              {badges}
-            </h1>
-            <PageHelp />
-          </div>
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {actions}
+  const buttons = (
+    <>
           {canWrite && editable && row && (
             <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
               <Pencil aria-hidden /> {t('Edit')}
@@ -121,8 +110,10 @@ export function RecordHeader({
               <Trash2 aria-hidden />
             </Button>
           )}
-        </div>
-      </div>
+    </>
+  );
+  const dialogs = (
+    <>
       {row && (
         <RecordFormDialog
           entity={entity}
@@ -154,6 +145,39 @@ export function RecordHeader({
           </div>
         </DialogContent>
       </Dialog>
+    </>
+  );
+  if (bare)
+    return (
+      <div className="flex flex-wrap gap-2">
+        {actions}
+        {buttons}
+        {dialogs}
+      </div>
+    );
+
+  return (
+    <div className="mb-6 space-y-3">
+      <Link href={`/app/${entity}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="rtl:-scale-x-100 size-4" aria-hidden /> {t.maybe(label.many)}
+      </Link>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
+              <span className="truncate">{title}</span>
+              {badges}
+            </h1>
+            <PageHelp />
+          </div>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {actions}
+          {buttons}
+        </div>
+      </div>
+      {dialogs}
     </div>
   );
 }

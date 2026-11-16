@@ -76,6 +76,12 @@ export const features = {
   'Single sign-on and SCIM': ['Inicio de sesión único y SCIM', 'Authentification unique et SCIM', 'Single Sign-on und SCIM', 'تسجيل الدخول الموحد وSCIM'],
 
   // Descriptions
+  'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.': [
+    'Solicitudes de cotización con precios por LOI, IR y CPI, plazos, informes y conversión en tratos.',
+    'Demandes de devis avec tarification LOI, IR et CPI, échéances, rapports et transformation en affaires.',
+    'Angebotsanfragen mit LOI-, IR- und CPI-Preisen, Fristen, Berichten und Umwandlung in Deals.',
+    'طلبات عروض الأسعار مع تسعير LOI وIR وCPI والمواعيد النهائية والتقارير والتحويل إلى صفقات.',
+  ],
   'Territories with rules that route leads and deals to their owners.': [
     'Territorios con reglas que asignan leads y oportunidades a sus responsables.',
     'Des territoires avec des règles qui attribuent prospects et affaires à leurs responsables.',

@@ -133,17 +133,20 @@ export const DASHBOARD_WIDGETS = [
   'team',
   'risk',
   'goal',
-  'activity',
 ] as const;
 export type DashboardWidget = (typeof DASHBOARD_WIDGETS)[number];
 
 export const dashboardLayoutSchema = z
   .object({
     preset: z.enum(['executive', 'salesperson', 'custom']).default('custom'),
-    widgets: z
+    // 'activity' (Recent activity) was removed in ADR 0060; layouts saved before then still list it.
+    widgets: z.preprocess(
+      (v) => (Array.isArray(v) ? v.filter((w) => !(w && typeof w === 'object' && (w as { id?: unknown }).id === 'activity')) : v),
+      z
       .array(z.object({ id: z.enum(DASHBOARD_WIDGETS), size: z.enum(['half', 'full']), hidden: z.boolean().default(false) }).strict())
       .max(DASHBOARD_WIDGETS.length)
       .refine((w) => new Set(w.map((x) => x.id)).size === w.length, 'Each widget can appear once'),
+    ),
     filters: dashboardFilterSchema.default({ period: '30d' }),
   })
   .strict();
@@ -164,8 +167,7 @@ export const DASHBOARD_PRESETS: Record<'executive' | 'salesperson', DashboardLay
       W('team', 'half'),
       W('risk', 'half'),
       W('pipeline', 'full'),
-      W('insights', 'half'),
-      W('activity', 'half'),
+      W('insights', 'full'),
       W('nextActions', 'full', true),
     ],
     filters: { period: '90d' },
@@ -180,7 +182,6 @@ export const DASHBOARD_PRESETS: Record<'executive' | 'salesperson', DashboardLay
       W('risk', 'half'),
       W('goal', 'half'),
       W('revenueTrend', 'half'),
-      W('activity', 'full'),
       W('stageConversion', 'half', true),
       W('winLoss', 'half', true),
       W('team', 'half', true),

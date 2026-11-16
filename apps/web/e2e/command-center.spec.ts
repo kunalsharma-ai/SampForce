@@ -82,6 +82,9 @@ test('customize mode reorders, resizes, hides and restores widgets, and saves pe
   await expect(widget(page, 'nextActions')).toBeVisible();
   const start = await order(page);
   expect(start.slice(0, 3)).toEqual(['nextActions', 'insights', 'kpis']);
+  // There is no Recent activity (history) widget any more (ADR 0060).
+  expect(start).not.toContain('activity');
+  await expect(page.getByText('Recent activity')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Customize layout' }).click();
   const panel = page.getByRole('region', { name: 'Customize dashboard' });
@@ -93,9 +96,9 @@ test('customize mode reorders, resizes, hides and restores widgets, and saves pe
   expect((await order(page)).slice(0, 3)).toEqual(['kpis', 'nextActions', 'insights']);
 
   await page.getByRole('button', { name: 'Make Next best actions full width' }).click();
-  await page.getByRole('button', { name: 'Hide Recent activity' }).click();
-  await expect(widget(page, 'activity')).toHaveCount(0);
-  await expect(panel.getByRole('button', { name: 'Show Recent activity' })).toBeVisible();
+  await page.getByRole('button', { name: 'Hide Goal attainment' }).click();
+  await expect(widget(page, 'goal')).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Show Goal attainment' })).toBeVisible();
   await panel.getByRole('button', { name: 'Show Team performance' }).click();
   await expect(widget(page, 'team')).toBeVisible();
 
@@ -114,7 +117,7 @@ test('customize mode reorders, resizes, hides and restores widgets, and saves pe
 
   // Do it again and keep it.
   await page.getByRole('button', { name: 'Customize layout' }).click();
-  await page.getByRole('button', { name: 'Hide Recent activity' }).click();
+  await page.getByRole('button', { name: 'Hide Goal attainment' }).click();
   await page.getByRole('button', { name: 'Move Key metrics up' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(panel).toBeHidden();
@@ -122,11 +125,11 @@ test('customize mode reorders, resizes, hides and restores widgets, and saves pe
   await page.reload();
   await expect(widget(page, 'kpis')).toBeVisible();
   expect((await order(page)).slice(0, 2)).toEqual(['nextActions', 'kpis']);
-  await expect(widget(page, 'activity')).toHaveCount(0);
+  await expect(widget(page, 'goal')).toHaveCount(0);
 
   // Reset goes back to the default.
   await page.getByRole('button', { name: 'Customize layout' }).click();
   await page.getByRole('button', { name: 'Reset to default' }).click();
-  await expect(widget(page, 'activity')).toBeVisible();
+  await expect(widget(page, 'goal')).toBeVisible();
   expect(await order(page)).toEqual(start);
 });

@@ -115,8 +115,9 @@ export class CompanyLeadPartsController {
 
   @Post('files')
   @RequirePermissions('companies:write')
-  async upload(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Req() req: Request, @Meta() meta: RequestMeta) {
-    return this.leads.upload(auth, id, fileFrom(req, name, await readUpload(req)), meta);
+  async upload(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Query('rfqId') rfqId: string | undefined, @Req() req: Request, @Meta() meta: RequestMeta) {
+    if (rfqId) await uuid.transform(rfqId, { type: 'query' });
+    return this.leads.upload(auth, id, fileFrom(req, name, await readUpload(req)), meta, rfqId || undefined);
   }
 }
 
