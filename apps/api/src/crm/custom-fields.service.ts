@@ -70,6 +70,8 @@ export class CustomFieldsService {
   }
 
   async viewer(tx: TenantTx, auth: AuthContext): Promise<FieldViewer> {
+    // Workflows and other system readers load records without a membership: they see every field.
+    if (!auth.membershipId || !Array.isArray(auth.permissions)) return { designationId: null, admin: true };
     const m = await tx.membership.findFirst({ where: { id: auth.membershipId, tenantId: auth.tenantId }, select: { designationId: true } });
     return { designationId: m?.designationId ?? null, admin: auth.permissions.includes('crm:configure') };
   }

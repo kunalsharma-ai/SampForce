@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
   type ActivityInput,
@@ -209,13 +209,14 @@ export class ImportExportController {
     @Query(new ZodPipe(exportQuery)) q: z.infer<typeof exportQuery>,
     @Meta() meta: RequestMeta,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<string | Buffer> {
+  ): Promise<string | StreamableFile> {
     requirePermission(auth, ENTITY_PERMISSION[entity].read);
     const { data, rows, contentType, extension } = await this.io.export(auth, entity, meta, q.format);
     res.setHeader('content-type', contentType);
     res.setHeader('content-disposition', `attachment; filename="sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.${extension}"`);
     res.setHeader('x-row-count', String(rows));
     res.setHeader('cache-control', 'no-store');
-    return data;
+    // A Buffer would be sent as JSON; a StreamableFile is sent as the bytes.
+    return typeof data === 'string' ? data : new StreamableFile(data);
   }
 }
