@@ -4,8 +4,7 @@ import { RFQ_STATUSES, type RfqRow, type RfqStatus } from '@dealflow/types';
 import { Card, CardContent, cn, Input, Skeleton } from '@dealflow/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as React from 'react';
-import { RfqDialog, RfqItem } from '@/components/crm/rfqs';
-import { RFQ_STATUS_LABEL } from '@/components/crm/work-labels';
+import { RfqDialog, RfqItem, useRfqStatusName } from '@/components/crm/rfqs';
 import { formatMoneyList, useRfq, useRfqReport, useRfqs } from '@/lib/company-work';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
@@ -19,6 +18,7 @@ const REPORTS: { by: 'company' | 'employee' | 'owner'; label: MessageKey }[] = [
 /** The RFQ register with filters, and RFQ reports by company, client employee and executive. */
 export function RfqsWorkspace() {
   const t = useT();
+  const statusName = useRfqStatusName();
   const router = useRouter();
   const params = useSearchParams();
   const canWrite = useCan('companies:write');
@@ -65,7 +65,7 @@ export function RfqsWorkspace() {
               <option value="">{t('All statuses')}</option>
               {RFQ_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {t(RFQ_STATUS_LABEL[s])}
+                  {statusName(s)}
                 </option>
               ))}
             </select>

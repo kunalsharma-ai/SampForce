@@ -16,7 +16,7 @@ import {
 } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { ArrowDown, ArrowUp, Pencil, Star, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { StatusChip } from '@/components/crm/status-chip';
 import { Segmented } from '@/components/forms/segmented';
@@ -25,8 +25,27 @@ import { ApiError } from '@/lib/api';
 import { useCrmStatuses, useDepartments, useDesignations, useLeadNumbering, useOrgListMutations, useSaveLeadNumbering, useStatusMutations } from '@/lib/company-crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { AttributionSection, CurrencySection, DashboardsSection, ExportSection, NotificationsSection, OptionsSection } from './admin-sections';
+import { CustomFieldsSection } from './custom-fields-section';
 
-type Tab = 'numbering' | 'company' | 'employee' | 'departments' | 'designations';
+type Tab =
+  | 'numbering'
+  | 'company'
+  | 'employee'
+  | 'departments'
+  | 'designations'
+  | 'fields'
+  | 'rfq-statuses'
+  | 'deal-statuses'
+  | 'follow-up-types'
+  | 'notifications'
+  | 'currency'
+  | 'exports'
+  | 'dashboards'
+  | 'attribution';
+const TABS: Tab[] = ['numbering', 'company', 'employee', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
+/** Sections only administrators can open (their settings are not readable by everyone). */
+const ADMIN_ONLY: Tab[] = ['notifications', 'exports', 'dashboards', 'attribution'];
 
 export const MEANING_LABELS = {
   NEW: 'New',
@@ -43,7 +62,18 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 export function CrmConfiguration() {
   const t = useT();
   const canManage = useCan('crm:configure');
-  const [tab, setTab] = useState<Tab>('numbering');
+  const [tab, setTabState] = useState<Tab>('numbering');
+  // A link can open a section directly: /app/settings/crm?section=fields (read after mount, so the server render matches).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('section');
+    if (TABS.includes(q as Tab)) setTabState(q as Tab);
+  }, []);
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set('section', next);
+    window.history.replaceState(null, '', url);
+  };
   return (
     <div className="space-y-4">
       {!canManage && <p className="text-sm text-muted-foreground">{t('Only owners and administrators can change the CRM configuration.')}</p>}
@@ -58,6 +88,19 @@ export function CrmConfiguration() {
           { value: 'employee', label: t('Employee statuses') },
           { value: 'departments', label: t('Departments') },
           { value: 'designations', label: t('Designations') },
+          { value: 'fields', label: t('Custom fields') },
+          { value: 'rfq-statuses', label: t('RFQ statuses') },
+          { value: 'deal-statuses', label: t('Deal statuses') },
+          { value: 'follow-up-types', label: t('Follow-up categories') },
+          { value: 'currency', label: t('Currency') },
+          ...(canManage
+            ? ([
+                { value: 'notifications', label: t('Notifications') },
+                { value: 'exports', label: t('Export permissions') },
+                { value: 'dashboards', label: t('Dashboards') },
+                { value: 'attribution', label: t('Revenue attribution') },
+              ] as const)
+            : []),
         ]}
       />
       {tab === 'numbering' && <LeadNumbering canManage={canManage} />}
@@ -65,6 +108,16 @@ export function CrmConfiguration() {
       {tab === 'employee' && <Statuses kind="EMPLOYEE" canManage={canManage} />}
       {tab === 'departments' && <OrgList kind="departments" canManage={canManage} />}
       {tab === 'designations' && <OrgList kind="designations" canManage={canManage} />}
+      {tab === 'fields' && <CustomFieldsSection canManage={canManage} />}
+      {tab === 'rfq-statuses' && <OptionsSection kind="RFQ_STATUS" canManage={canManage} />}
+      {tab === 'deal-statuses' && <OptionsSection kind="DEAL_STATUS" canManage={canManage} />}
+      {tab === 'follow-up-types' && <OptionsSection kind="FOLLOW_UP_TYPE" canManage={canManage} />}
+      {tab === 'currency' && <CurrencySection canManage={canManage} />}
+      {canManage && tab === 'notifications' && <NotificationsSection />}
+      {canManage && tab === 'exports' && <ExportSection />}
+      {canManage && tab === 'dashboards' && <DashboardsSection canManage={canManage} />}
+      {canManage && tab === 'attribution' && <AttributionSection canManage={canManage} />}
+      {!canManage && ADMIN_ONLY.includes(tab) && <p className="text-sm text-muted-foreground">{t('Only owners and administrators can change the CRM configuration.')}</p>}
     </div>
   );
 }

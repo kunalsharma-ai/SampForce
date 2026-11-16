@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { type CrmEntity, ENTITY_LABEL, useCustomFields } from '@/lib/crm';
+import { CustomFieldValue } from './custom-field-input';
 import { toFormValues } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
@@ -45,10 +46,7 @@ export function CustomFieldList({ entity, values }: { entity: CrmEntity; values:
       </CardHeader>
       <CardContent>
         <DetailList
-          items={defs.data.map((d) => {
-            const v = values[d.key];
-            return [{ text: d.label }, typeof v === 'boolean' ? (v ? t('Yes') : t('No')) : (v as React.ReactNode)];
-          })}
+          items={defs.data.map((d) => [{ text: d.label }, <CustomFieldValue key={d.id} def={d} value={values[d.key]} empty="—" />])}
         />
       </CardContent>
     </Card>
