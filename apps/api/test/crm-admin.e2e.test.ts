@@ -153,6 +153,32 @@ describe('custom fields and CRM administration', () => {
     expect(hits).toContainEqual(expect.objectContaining({ entity: 'company', title: 'Globex Research', subtitle: 'vendor code: VC-7781' }));
   });
 
+  it('reports on custom fields: group, sum and filter, only with fields the person can see', async () => {
+    const run = (definition: object, who = http) => who.post('/reports/run', { definition });
+    const byTier = (await run({ entity: 'companies', metric: { fn: 'count' }, groupBy: { field: 'cf.tier' }, chart: 'bar' }).expect(200)).body;
+    expect(byTier.groupLabel).toBe('Account tier');
+    expect(byTier.rows).toEqual([{ key: 'Silver', label: 'Silver', value: 3 }]);
+    const panels = (await run({ entity: 'companies', metric: { fn: 'sum', field: 'cf.panel_size' }, filters: [{ field: 'cf.markets', op: 'eq', value: 'UK' }] }).expect(200)).body;
+    expect(panels.total).toBe(1200);
+    const none = (await run({ entity: 'companies', metric: { fn: 'count' }, filters: [{ field: 'cf.markets', op: 'in', value: ['UAE'] }] }).expect(200)).body;
+    expect(none.total).toBe(0);
+    const signed = (await run({ entity: 'companies', metric: { fn: 'count' }, groupBy: { field: 'cf.signed_on', bucket: 'month' }, chart: 'line', sort: 'label_asc' }).expect(200)).body;
+    expect(signed.rows.find((r: { key: string | null }) => r.key === '2026-11-01')).toMatchObject({ value: 1 });
+    const flagged = (await run({ entity: 'companies', metric: { fn: 'count' }, filters: [{ field: 'cf.nda', op: 'eq', value: true }, { field: 'cf.kickoff_at', op: 'gte', value: '2026-11-15' }] }).expect(200)).body;
+    expect(flagged.total).toBe(1);
+
+    // Unknown fields, wrong operators and fields the person cannot see are refused, also when saving.
+    expect((await run({ entity: 'companies', metric: { fn: 'count' }, groupBy: { field: 'cf.nope' } }).expect(400)).body.error.details[0].path).toBe('definition.groupBy.field');
+    await run({ entity: 'companies', metric: { fn: 'sum', field: 'cf.tier' } }).expect(400);
+    await run({ entity: 'companies', metric: { fn: 'count' }, filters: [{ field: 'cf.nda', op: 'contains', value: 'x' }] }).expect(400);
+    await run({ entity: 'companies', metric: { fn: 'count' }, groupBy: { field: 'cf.contract_pdf' } }).expect(400);
+    await run({ entity: 'companies', metric: { fn: 'avg', field: 'cf.margin_pct' } }).expect(200);
+    await run({ entity: 'companies', metric: { fn: 'avg', field: 'cf.margin_pct' } }, api(rep)).expect(400);
+    await api(rep).post('/reports', { name: 'Margins', visibility: 'PRIVATE', definition: { entity: 'companies', metric: { fn: 'avg', field: 'cf.margin_pct' } } }).expect(400);
+    const saved = (await http.post('/reports', { name: 'Companies by tier', visibility: 'WORKSPACE', definition: { entity: 'companies', metric: { fn: 'count' }, groupBy: { field: 'cf.tier' }, chart: 'pie' } }).expect(201)).body;
+    expect((await api(rep).get(`/reports/${saved.id}/result`).expect(200)).body.total).toBe(3);
+  });
+
   it('keeps files in FILE fields with the record, and downloads them only for people who can see it', async () => {
     const up = await owner.agent.post('/api/v1/custom-fields/files?entity=COMPANY&key=contract_pdf&name=msa.pdf').set('origin', ORIGIN).set('content-type', 'application/pdf').send(Buffer.from('%PDF-1.4 test')).expect(201);
     const file = up.body as { id: string; name: string; size: number };
