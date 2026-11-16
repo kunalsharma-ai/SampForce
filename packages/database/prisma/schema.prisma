@@ -848,7 +848,7 @@ model Rfq {
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  /// Custom field values (ADR 0061).
+  /// Custom field values (ADR 0062).
   customFields        Json      @default("{}") @map("custom_fields")
   /// Set when the deadline reminder went out, for the deadline it was sent for.
   deadlineReminderFor DateTime? @map("deadline_reminder_for")
@@ -1216,9 +1216,9 @@ model Task {
   /// Who it was assigned to before the last reassignment, and when (My Work: "reassigned to me").
   reassignedFromId  String?      @map("reassigned_from_id")
   reassignedAt      DateTime?    @map("reassigned_at")
-  /// Custom field values (ADR 0061) for follow-ups.
+  /// Custom field values (ADR 0062) for follow-ups.
   customFields      Json         @default("{}") @map("custom_fields")
-  /// Reminder bookkeeping (ADR 0061) so each reminder goes out once per due date.
+  /// Reminder bookkeeping (ADR 0062) so each reminder goes out once per due date.
   reminderSentAt    DateTime?    @map("reminder_sent_at")
   overdueNotifiedAt DateTime?    @map("overdue_notified_at")
   createdAt         DateTime     @default(now()) @map("created_at")
@@ -1277,7 +1277,7 @@ model CustomField {
   options            String[]
   required           Boolean           @default(false)
   position           Int               @default(0)
-  /// ADR 0061: description, default value, currency for CURRENCY, designation rules, form and search flags.
+  /// ADR 0062: description, default value, currency for CURRENCY, designation rules, form and search flags.
   description        String?
   defaultValue       Json?             @map("default_value")
   currency           String?
@@ -3816,7 +3816,7 @@ model CommandCenterLayout {
   @@map("command_center_layouts")
 }
 
-// ───────────── ADR 0061: custom fields and CRM administration ─────────────
+// ───────────── ADR 0062: custom fields and CRM administration ─────────────
 
 /// A file uploaded into a FILE custom field. Kept until the record that holds it is deleted or the value is cleared.
 model CustomFieldFile {

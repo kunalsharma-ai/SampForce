@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /*
- * Custom fields (ADR 0061). An administrator adds typed fields to companies, employees, inbound leads, deals,
+ * Custom fields (ADR 0062). An administrator adds typed fields to companies, employees, inbound leads, deals,
  * follow-ups and RFQs in Settings → CRM configuration → Custom fields. Values live in the record's `custom_fields`
  * document under the field's key. A field can be required, have a default, be shown to and edited by some
  * designations only, be switched off without losing its values, and be searched, filtered, reported and exported.
@@ -28,7 +28,7 @@ export const CUSTOM_FIELD_TYPES = [
 ] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
 
-/** Everything a workspace had before ADR 0061. The rest needs the `custom_fields_advanced` plan feature. */
+/** Everything a workspace had before ADR 0062. The rest needs the `custom_fields_advanced` plan feature. */
 export const BASIC_CUSTOM_FIELD_TYPES: readonly CustomFieldType[] = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT'];
 export const BASIC_CUSTOM_FIELD_ENTITIES: readonly CustomFieldEntity[] = ['COMPANY', 'CONTACT', 'LEAD', 'OPPORTUNITY'];
 

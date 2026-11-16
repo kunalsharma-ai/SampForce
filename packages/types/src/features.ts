@@ -58,7 +58,7 @@ export const FEATURE_KEYS = [
   // Administration
   'custom_roles',
   'sso_scim',
-  // ADR 0061
+  // ADR 0062
   'custom_fields_advanced',
   'excel_export',
 ] as const;

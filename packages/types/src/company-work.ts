@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { customFieldFiltersParam } from './custom-fields';
 import type { PersonRef } from './crm';
 
 /*
@@ -94,7 +95,10 @@ export interface InteractionRow {
 // ───────────── Follow-ups ─────────────
 
 export const FOLLOW_UP_TYPES = ['CALL', 'EMAIL', 'MEETING', 'LINKEDIN', 'WHATSAPP', 'RFQ', 'VISIT', 'OTHER'] as const;
-export type FollowUpType = (typeof FOLLOW_UP_TYPES)[number];
+/** A built-in category, or one an administrator added in CRM configuration (`C_<slug>`, ADR 0062). */
+export type FollowUpType = (typeof FOLLOW_UP_TYPES)[number] | `C_${string}`;
+const followUpType = z.union([z.enum(FOLLOW_UP_TYPES), z.string().regex(/^C_[A-Z0-9_]{1,40}$/).transform((v) => v as `C_${string}`)]);
+const customFieldValues = z.record(z.string(), z.unknown()).optional();
 export const FOLLOW_UP_PRIORITIES = ['LOW', 'NORMAL', 'HIGH'] as const;
 export const FOLLOW_UP_BUCKETS = ['today', 'upcoming', 'overdue', 'completed', 'rescheduled', 'cancelled'] as const;
 export type FollowUpBucket = (typeof FOLLOW_UP_BUCKETS)[number];
@@ -104,7 +108,7 @@ export type FollowUpDue = 'OVERDUE' | 'TODAY' | 'TOMORROW' | 'UPCOMING' | 'NO_DA
 export const followUpInputSchema = z.object({
   companyId: z.string().uuid(),
   contactId: uuidRef,
-  type: z.enum(FOLLOW_UP_TYPES),
+  type: followUpType,
   title: z.string().trim().min(1, 'Enter what the follow-up is about').max(200),
   dueAt: isoDateTime,
   priority: z.enum(FOLLOW_UP_PRIORITIES).default('NORMAL'),
@@ -114,6 +118,7 @@ export const followUpInputSchema = z.object({
   nextAction: optionalText(500),
   remarks: optionalText(5_000),
   rfqId: uuidRef,
+  customFields: customFieldValues,
 });
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
 export const followUpUpdateSchema = followUpInputSchema.omit({ companyId: true }).partial();
@@ -158,6 +163,7 @@ export interface FollowUpRow {
   nextAction: string | null;
   remarks: string | null;
   outcome: string | null;
+  customFields: Record<string, unknown>;
   rescheduleCount: number;
   completedAt: string | null;
   createdAt: string;
@@ -211,6 +217,7 @@ export const rfqInputSchema = z.object({
   expectedRevenue: optionalNumber(0, 1e13),
   actualRevenue: optionalNumber(0, 1e13),
   outcomeReason: optionalText(1_000),
+  customFields: customFieldValues,
 });
 export type RfqInput = z.infer<typeof rfqInputSchema>;
 export const rfqUpdateSchema = rfqInputSchema.omit({ companyId: true }).partial();
@@ -222,6 +229,8 @@ export const rfqListQuerySchema = z.object({
   status: z.enum(RFQ_STATUSES).optional(),
   open: z.enum(['true', 'false']).optional(),
   q: z.string().trim().max(200).optional(),
+  /** Custom field filters (ADR 0062), a JSON list. */
+  cf: customFieldFiltersParam,
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
 });
@@ -256,6 +265,7 @@ export interface RfqRow {
   outcomeReason: string | null;
   deal: { id: string; name: string } | null;
   files: { id: string; name: string; sizeBytes: number }[];
+  customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

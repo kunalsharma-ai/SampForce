@@ -74,6 +74,8 @@ export const features = {
   'Card payments': ['Pagos con tarjeta', 'Paiements par carte', 'Kartenzahlungen', 'المدفوعات بالبطاقة'],
   'API and Zapier': ['API y Zapier', 'API et Zapier', 'API und Zapier', 'واجهة API وZapier'],
   'Single sign-on and SCIM': ['Inicio de sesión único y SCIM', 'Authentification unique et SCIM', 'Single Sign-on und SCIM', 'تسجيل الدخول الموحد وSCIM'],
+  'Advanced custom fields': ['Campos personalizados avanzados', 'Champs personnalisés avancés', 'Erweiterte benutzerdefinierte Felder', 'حقول مخصصة متقدمة'],
+  'Excel export': ['Exportación a Excel', 'Export Excel', 'Excel-Export', 'التصدير إلى Excel'],
 
   // Descriptions
   'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.': [
@@ -267,5 +269,17 @@ export const features = {
     'Connexion OpenID Connect et provisionnement SCIM.',
     'Anmeldung mit OpenID Connect und SCIM-Bereitstellung.',
     'تسجيل الدخول عبر OpenID Connect والتزويد عبر SCIM.',
+  ],
+  'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.': [
+    'Los 14 tipos de campo personalizado, campos en seguimientos y RFQs, y campos que solo ven o editan algunos cargos.',
+    'Les 14 types de champs personnalisés, des champs sur les relances et les RFQ, et des champs visibles ou modifiables par certains postes seulement.',
+    'Alle 14 Typen benutzerdefinierter Felder, Felder an Nachverfolgungen und RFQs sowie Felder, die nur bestimmte Positionen sehen oder bearbeiten.',
+    'كل أنواع الحقول المخصصة الأربعة عشر، وحقول في المتابعات وطلبات عروض الأسعار، وحقول لا يراها أو يعدّلها إلا بعض المسميات الوظيفية.',
+  ],
+  'Export companies, employees, leads, deals and RFQs as Excel workbooks.': [
+    'Exporta empresas, empleados, leads, oportunidades y RFQs como libros de Excel.',
+    'Exportez entreprises, employés, prospects, affaires et RFQ sous forme de classeurs Excel.',
+    'Exportieren Sie Unternehmen, Mitarbeiter, Leads, Deals und RFQs als Excel-Arbeitsmappen.',
+    'صدّر الشركات والموظفين والعملاء المحتملين والصفقات وطلبات عروض الأسعار كمصنفات Excel.',
   ],
 } satisfies TextTable;

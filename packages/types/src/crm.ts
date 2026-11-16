@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { customFieldFiltersParam } from './custom-fields';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -60,6 +61,8 @@ export const listQuerySchema = z.object({
   /** Deals only: expected close date on or after / on or before (YYYY-MM-DD). */
   closeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
   closeTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  /** Custom field filters (ADR 0062): a JSON list of {key, op, value}. */
+  cf: customFieldFiltersParam,
 });
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
@@ -721,12 +724,12 @@ export interface TaskRow {
   createdAt: string;
 }
 
-// Custom fields live in custom-fields.ts (ADR 0061).
+// Custom fields live in custom-fields.ts (ADR 0062).
 
 // ───────────── Search ─────────────
 
 export interface SearchHit {
-  entity: 'lead' | 'contact' | 'company' | 'deal';
+  entity: 'lead' | 'contact' | 'company' | 'deal' | 'rfq';
   id: string;
   title: string;
   subtitle: string | null;

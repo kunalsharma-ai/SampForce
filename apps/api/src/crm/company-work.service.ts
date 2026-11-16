@@ -34,6 +34,8 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CrmAdminService } from './crm-admin.service';
+import { CustomFieldsService } from './custom-fields.service';
 import { DealsService } from './deals.service';
 import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
@@ -60,6 +62,8 @@ export class CompanyWorkService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly deals: DealsService,
+    private readonly fields: CustomFieldsService,
+    private readonly admin: CrmAdminService,
   ) {}
 
   // ─── Company dashboard ───
@@ -382,7 +386,7 @@ export class CompanyWorkService {
         orderBy: bucket === 'completed' || bucket === 'cancelled' ? [{ completedAt: nullsLast('desc') }, { updatedAt: 'desc' }] : [{ dueAt: nullsLast('asc') }, { createdAt: 'asc' }],
         take: 300,
       });
-      return this.followUpRows(tx, auth.tenantId, rows, now, q.tz);
+      return this.followUpRowsFor(tx, auth, rows, now, q.tz);
     });
   }
 
@@ -401,9 +405,12 @@ export class CompanyWorkService {
     return this.prisma.run(auth, async (tx) => {
       const company = await this.editableCompany(tx, auth, input.companyId);
       await this.assertCompanyChildren(tx, auth.tenantId, input.companyId, { contactId: input.contactId, rfqId: input.rfqId });
-      const row = await this.createFollowUpIn(tx, auth, { ...input, assigneeId: input.assigneeId ?? company.ownerId ?? auth.userId });
+      await this.admin.assertOption(tx, auth.tenantId, 'FOLLOW_UP_TYPE', input.type, 'type');
+      const customFields = await this.fields.validateFor(tx, auth, 'FOLLOW_UP', input.customFields);
+      const row = await this.createFollowUpIn(tx, auth, { ...input, customFields, assigneeId: input.assigneeId ?? company.ownerId ?? auth.userId });
+      await this.fields.claimFiles(tx, auth.tenantId, 'FOLLOW_UP', row.id, customFields);
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.created', entityType: 'task', entityId: row.id, metadata: { followUp: input.type, assigneeId: row.assigneeId }, meta });
-      return (await this.followUpRows(tx, auth.tenantId, [row], new Date(), 'UTC'))[0]!;
+      return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
   }
 
@@ -413,12 +420,18 @@ export class CompanyWorkService {
       await this.assertCompanyChildren(tx, auth.tenantId, before.companyId!, { contactId: input.contactId, rfqId: input.rfqId });
       if (input.assigneeId) await assertMember(tx, auth.tenantId, input.assigneeId, 'assigneeId');
       if (input.managerId) await assertMember(tx, auth.tenantId, input.managerId, 'managerId');
+      if (input.type !== undefined) await this.admin.assertOption(tx, auth.tenantId, 'FOLLOW_UP_TYPE', input.type, 'type', before.followUpType);
+      const customFields = await this.fields.validateFor(tx, auth, 'FOLLOW_UP', input.customFields, before.customFields as Record<string, unknown>);
+      const dueChanged = input.dueAt !== undefined && new Date(input.dueAt).getTime() !== before.dueAt?.getTime();
       const row = await tx.task.update({
         where: { id },
         data: {
           ...(input.type !== undefined ? { followUpType: input.type } : {}),
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.dueAt !== undefined ? { dueAt: new Date(input.dueAt) } : {}),
+          // A new due date gets its own reminders.
+          ...(dueChanged ? { reminderSentAt: null, overdueNotifiedAt: null } : {}),
+          ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}),
           ...(input.priority !== undefined ? { priority: input.priority } : {}),
           ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
           ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
@@ -429,9 +442,10 @@ export class CompanyWorkService {
           ...(input.rfqId !== undefined ? { rfqId: input.rfqId } : {}),
         },
       });
+      if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'FOLLOW_UP', id, customFields);
       if (input.assigneeId && input.assigneeId !== before.assigneeId) await this.notifyAssignee(tx, auth, row);
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.updated', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
-      return (await this.followUpRows(tx, auth.tenantId, [row], new Date(), 'UTC'))[0]!;
+      return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
   }
 
@@ -441,7 +455,7 @@ export class CompanyWorkService {
       if (before.status !== 'OPEN') throw notOpen();
       const row = await tx.task.update({ where: { id }, data: { status: 'DONE', completedAt: new Date(), outcome: outcome ?? null } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.completed', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
-      return (await this.followUpRows(tx, auth.tenantId, [row], new Date(), 'UTC'))[0]!;
+      return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
   }
 
@@ -450,9 +464,9 @@ export class CompanyWorkService {
       const before = await this.editableFollowUp(tx, auth, id);
       if (before.status !== 'OPEN') throw notOpen();
       const note = reason ? `${before.remarks ? `${before.remarks}\n` : ''}Rescheduled: ${reason}` : before.remarks;
-      const row = await tx.task.update({ where: { id }, data: { dueAt: new Date(dueAt), rescheduleCount: { increment: 1 }, rescheduledAt: new Date(), remarks: note } });
+      const row = await tx.task.update({ where: { id }, data: { dueAt: new Date(dueAt), rescheduleCount: { increment: 1 }, rescheduledAt: new Date(), remarks: note, reminderSentAt: null, overdueNotifiedAt: null } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.updated', entityType: 'task', entityId: id, metadata: { followUp: true, rescheduled: { from: before.dueAt?.toISOString() ?? null, to: dueAt } }, meta });
-      return (await this.followUpRows(tx, auth.tenantId, [row], new Date(), 'UTC'))[0]!;
+      return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
   }
 
@@ -462,7 +476,7 @@ export class CompanyWorkService {
       if (before.status !== 'OPEN') throw notOpen();
       const row = await tx.task.update({ where: { id }, data: { status: 'CANCELED', completedAt: new Date() } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.updated', entityType: 'task', entityId: id, metadata: { followUp: true, cancelled: true }, meta });
-      return (await this.followUpRows(tx, auth.tenantId, [row], new Date(), 'UTC'))[0]!;
+      return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
   }
 
@@ -487,6 +501,7 @@ export class CompanyWorkService {
         remarks: input.remarks ?? null,
         rfqId: input.rfqId ?? null,
         createdById: auth.userId,
+        customFields: (input.customFields ?? {}) as Prisma.InputJsonValue,
       },
     });
     await this.notifyAssignee(tx, auth, row);
@@ -532,6 +547,19 @@ export class CompanyWorkService {
     return t;
   }
 
+  /** Rows with the custom field values the caller may see (ADR 0062). */
+  private async followUpRowsFor(tx: TenantTx, auth: AuthContext, rows: TaskModel[], now: Date, tz: string): Promise<FollowUpRow[]> {
+    const [out, cf] = await Promise.all([this.followUpRows(tx, auth.tenantId, rows, now, tz), this.fields.reader(tx, auth, 'FOLLOW_UP')]);
+    const values = new Map(rows.map((r) => [r.id, r.customFields]));
+    return out.map((o) => ({ ...o, customFields: cf(values.get(o.id)) }));
+  }
+
+  private async rfqRowsFor(tx: TenantTx, auth: AuthContext, rows: RfqModel[]): Promise<RfqRow[]> {
+    const [out, cf] = await Promise.all([this.rfqRows(tx, auth.tenantId, rows), this.fields.reader(tx, auth, 'RFQ')]);
+    const values = new Map(rows.map((r) => [r.id, r.customFields]));
+    return out.map((o) => ({ ...o, customFields: cf(values.get(o.id)) }));
+  }
+
   private async followUpRows(tx: TenantTx, tenantId: string, rows: TaskModel[], now: Date, tz: string): Promise<FollowUpRow[]> {
     const [people, companies, contacts] = await Promise.all([
       personRefs(tx, tenantId, rows.flatMap((r) => [r.assigneeId, r.managerId])),
@@ -557,6 +585,7 @@ export class CompanyWorkService {
       nextAction: r.nextAction,
       remarks: r.remarks,
       outcome: r.outcome,
+      customFields: {},
       rescheduleCount: r.rescheduleCount,
       completedAt: r.completedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString(),
@@ -569,9 +598,12 @@ export class CompanyWorkService {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
       if (q.companyId) await this.visibleCompany(tx, auth, q.companyId);
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'RFQ', q.cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.rfq, cfFilter) : null;
       const where: Prisma.RfqWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
+        ...(cfIds ? { id: { in: cfIds } } : {}),
         ...(q.companyId ? { companyId: q.companyId } : v.all ? {} : { companyId: { in: await visibleCompanyIds(tx, auth.tenantId, v) } }),
         ...(q.contactId ? { contactId: q.contactId } : {}),
         ...(q.ownerId ? { ownerId: q.ownerId } : {}),
@@ -582,14 +614,14 @@ export class CompanyWorkService {
         tx.rfq.findMany({ where, orderBy: [{ receivedAt: 'desc' }, { seq: 'desc' }], skip: (q.page - 1) * q.pageSize, take: q.pageSize }),
         tx.rfq.count({ where }),
       ]);
-      return { items: await this.rfqRows(tx, auth.tenantId, rows), total, page: q.page, pageSize: q.pageSize };
+      return { items: await this.rfqRowsFor(tx, auth, rows), total, page: q.page, pageSize: q.pageSize };
     });
   }
 
   getRfq(auth: AuthContext, id: string): Promise<RfqRow> {
     return this.prisma.run(auth, async (tx) => {
       const r = await this.visibleRfq(tx, auth, id);
-      return (await this.rfqRows(tx, auth.tenantId, [r]))[0]!;
+      return (await this.rfqRowsFor(tx, auth, [r]))[0]!;
     });
   }
 
@@ -600,6 +632,8 @@ export class CompanyWorkService {
       const ownerId = input.ownerId ?? company.ownerId ?? auth.userId;
       await assertMember(tx, auth.tenantId, ownerId, 'ownerId');
       if (input.managerId) await assertMember(tx, auth.tenantId, input.managerId, 'managerId');
+      await this.admin.assertOption(tx, auth.tenantId, 'RFQ_STATUS', input.status, 'status');
+      const customFields = await this.fields.validateFor(tx, auth, 'RFQ', input.customFields);
       const seq = await nextSequenceValue(tx, `rfq:${auth.tenantId}`);
       const receivedAt = input.receivedAt ? new Date(input.receivedAt) : new Date();
       const row = await tx.rfq.create({
@@ -633,15 +667,17 @@ export class CompanyWorkService {
           outcomeReason: input.outcomeReason ?? null,
           createdById: auth.userId,
           updatedById: auth.userId,
+          customFields: (customFields ?? {}) as Prisma.InputJsonValue,
         },
       });
+      await this.fields.claimFiles(tx, auth.tenantId, 'RFQ', row.id, customFields);
       // Receiving the RFQ is an interaction with the company in its own right.
       await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_RECEIVED', subject: `${row.number}: ${row.projectName}`, occurredAt: receivedAt.toISOString(), rfqId: row.id });
       if (row.ownerId && row.ownerId !== auth.userId) {
         await this.notifications.send(tx, auth.tenantId, [row.ownerId], { type: 'rfq.assigned', title: `RFQ assigned to you: ${`${row.number} ${row.projectName}`}`, body: null, link: `/app/rfqs?open=${row.id}` });
       }
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'rfq.created', entityType: 'rfq', entityId: row.id, metadata: { number: row.number, companyId: row.companyId }, meta });
-      return (await this.rfqRows(tx, auth.tenantId, [row]))[0]!;
+      return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
 
@@ -653,7 +689,9 @@ export class CompanyWorkService {
       if (input.ownerId) await assertMember(tx, auth.tenantId, input.ownerId, 'ownerId');
       if (input.managerId) await assertMember(tx, auth.tenantId, input.managerId, 'managerId');
       const statusChanged = input.status !== undefined && input.status !== before.status;
-      const data: Prisma.RfqUncheckedUpdateInput = { updatedById: auth.userId };
+      if (statusChanged) await this.admin.assertOption(tx, auth.tenantId, 'RFQ_STATUS', input.status!, 'status', before.status);
+      const customFields = await this.fields.validateFor(tx, auth, 'RFQ', input.customFields, before.customFields as Record<string, unknown>);
+      const data: Prisma.RfqUncheckedUpdateInput = { updatedById: auth.userId, ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}) };
       const keys = ['contactId', 'projectName', 'description', 'methodology', 'market', 'industry', 'targetAudience', 'sampleSize', 'loi', 'ir', 'cpi', 'totalQuotation', 'currency', 'ownerId', 'managerId', 'expectedRevenue', 'actualRevenue', 'outcomeReason'] as const;
       for (const k of keys) if (input[k] !== undefined) (data as Record<string, unknown>)[k] = input[k];
       if (input.receivedAt) data.receivedAt = new Date(input.receivedAt);
@@ -668,6 +706,7 @@ export class CompanyWorkService {
         if (RFQ_SUBMITTED_STATUSES.includes(input.status!) && !before.submittedAt && input.submittedAt === undefined) data.submittedAt = new Date();
       }
       const row = await tx.rfq.update({ where: { id }, data });
+      if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'RFQ', id, customFields);
       if (statusChanged && input.status === 'QUOTATION_SUBMITTED') {
         await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_SUBMITTED', subject: `${row.number}: quotation submitted`, rfqId: row.id });
       }
@@ -675,7 +714,7 @@ export class CompanyWorkService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: statusChanged ? 'rfq.status_changed' : 'rfq.updated', entityType: 'rfq', entityId: id,
         metadata: statusChanged ? { from: before.status, to: input.status } : { fields: Object.keys(input) }, meta,
       });
-      return (await this.rfqRows(tx, auth.tenantId, [row]))[0]!;
+      return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
 
@@ -713,7 +752,7 @@ export class CompanyWorkService {
     return this.prisma.run(auth, async (tx) => {
       const row = await tx.rfq.update({ where: { id }, data: { opportunityId: deal.id, updatedById: auth.userId } });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'rfq.converted', entityType: 'rfq', entityId: id, metadata: { dealId: deal.id }, meta });
-      return (await this.rfqRows(tx, auth.tenantId, [row]))[0]!;
+      return (await this.rfqRowsFor(tx, auth, [row]))[0]!;
     });
   }
 
@@ -785,6 +824,7 @@ export class CompanyWorkService {
         expectedRevenue: r.expectedRevenue, actualRevenue: r.actualRevenue, outcomeReason: r.outcomeReason,
         deal: deals.find((d) => d.id === r.opportunityId) ?? null,
         files: files.filter((f) => f.rfqId === r.id).map((f) => ({ id: f.id, name: f.name, sizeBytes: f.sizeBytes })),
+        customFields: {},
         createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
       };
     });

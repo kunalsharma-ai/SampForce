@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -23,6 +23,8 @@ export interface CompanyFilters {
   managerId?: string;
   country?: string;
   industry?: string;
+  /** Custom field filters (ADR 0062). */
+  cf?: CustomFieldFilter[];
 }
 
 interface RowContext {
@@ -31,6 +33,8 @@ interface RowContext {
   departments: Map<string, string>;
   teams: Map<string, string>;
   v: Visibility;
+  /** Custom field values the caller may see (ADR 0062). */
+  cf: (values: unknown) => Record<string, unknown>;
 }
 
 @Injectable()
@@ -46,11 +50,14 @@ export class CompaniesService {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
       const search = q.q?.trim();
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'COMPANY', f.cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.company, cfFilter) : null;
       const where: Prisma.CompanyWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
         AND: [
           companyScope(v),
+          ...(cfIds ? [{ id: { in: cfIds } }] : []),
           ...(search
             ? [
                 {
@@ -77,7 +84,7 @@ export class CompaniesService {
         tx.company.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.company.count({ where }),
       ]);
-      const ctx = await rowContext(tx, auth.tenantId, rows, v);
+      const ctx = await rowContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'COMPANY'));
       return { items: rows.map((r) => toRow(r, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
   }
@@ -87,7 +94,7 @@ export class CompaniesService {
       const v = await visibility(tx, auth);
       const row = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
       if (!row) throw notFound('Company');
-      return toRow(row, await rowContext(tx, auth.tenantId, [row], v));
+      return toRow(row, await rowContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'COMPANY')));
     });
   }
 
@@ -104,7 +111,7 @@ export class CompaniesService {
     await assertRefs(tx, auth.tenantId, { ownerId, parentCompanyId: input.parentCompanyId });
     await assertCompanyRefs(tx, auth.tenantId, input);
     await assertAssignable(tx, auth, ownerId);
-    const customFields = await this.fields.validate(tx, auth.tenantId, 'COMPANY', input.customFields);
+    const customFields = await this.fields.validateFor(tx, auth, 'COMPANY', input.customFields);
     const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'COMPANY'));
     const managerId = input.managerId !== undefined ? input.managerId : await reportingManagerOf(tx, auth.tenantId, ownerId);
     const data = normalise(input);
@@ -122,6 +129,7 @@ export class CompaniesService {
         customFields: (customFields ?? {}) as Prisma.InputJsonValue,
       },
     });
+    await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', row.id, customFields);
     await assignLeadNumbers(tx, auth.tenantId);
     const numbered = await tx.company.findUniqueOrThrow({ where: { id: row.id }, select: { leadNumber: true } });
     await this.audit.record(tx, {
@@ -135,7 +143,7 @@ export class CompaniesService {
   /** The company as the caller sees it, inside their transaction. */
   async rowIn(tx: TenantTx, auth: AuthContext, id: string): Promise<CompanyRow> {
     const row = await tx.company.findUniqueOrThrow({ where: { id }, include });
-    return toRow(row, await rowContext(tx, auth.tenantId, [row], await visibility(tx, auth)));
+    return toRow(row, await rowContext(tx, auth.tenantId, [row], await visibility(tx, auth), await this.fields.reader(tx, auth, 'COMPANY')));
   }
 
   /**
@@ -183,7 +191,7 @@ export class CompaniesService {
       await assertCompanyRefs(tx, auth.tenantId, input);
       const ownerChanged = input.ownerId !== undefined && input.ownerId !== before.ownerId;
       if (ownerChanged && input.ownerId) await assertAssignable(tx, auth, input.ownerId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'COMPANY', input.customFields, before.customFields as Record<string, unknown>);
+      const customFields = await this.fields.validateFor(tx, auth, 'COMPANY', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const data = normalise(rest, before);
       // The assigned manager follows the new owner unless the change names one.
@@ -199,6 +207,7 @@ export class CompaniesService {
         },
         include,
       });
+      if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', id, customFields);
       const changes = diff(before, input);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.updated', entityType: 'company', entityId: id,
@@ -217,7 +226,7 @@ export class CompaniesService {
         });
         await this.recordOwnerChange(tx, auth, row, before.ownerId, input.ownerId ?? null, extra?.reason ?? 'REASSIGNED', extra?.note ?? null);
       }
-      return toRow(row, await rowContext(tx, auth.tenantId, [row], v));
+      return toRow(row, await rowContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'COMPANY')));
     });
   }
 
@@ -368,7 +377,7 @@ export async function statusRefs(tx: TenantTx, tenantId: string, ids: (string | 
   return new Map(rows.map((r) => [r.id, r]));
 }
 
-async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGetPayload<object>[], v: Visibility): Promise<RowContext> {
+async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGetPayload<object>[], v: Visibility, cf: RowContext['cf']): Promise<RowContext> {
   const depIds = [...new Set(rows.map((r) => r.departmentId).filter((d): d is string => !!d))];
   const teamIds = [...new Set(rows.map((r) => r.teamId).filter((d): d is string => !!d))];
   const [people, statuses, departments, teams] = await Promise.all([
@@ -377,7 +386,7 @@ async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGe
     depIds.length ? tx.department.findMany({ where: { tenantId, id: { in: depIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
     teamIds.length ? tx.team.findMany({ where: { tenantId, id: { in: teamIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
   ]);
-  return { people, statuses, departments: new Map(departments.map((d) => [d.id, d.name])), teams: new Map(teams.map((d) => [d.id, d.name])), v };
+  return { people, statuses, departments: new Map(departments.map((d) => [d.id, d.name])), teams: new Map(teams.map((d) => [d.id, d.name])), v, cf };
 }
 
 function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
@@ -396,7 +405,7 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     parentCompany: r.parent,
     contactCount: r._count.contacts,
     openDealCount: r._count.opportunities,
-    customFields: hide((r.customFields ?? {}) as Record<string, unknown>, {}),
+    customFields: hide(ctx.cf(r.customFields), {}),
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
     leadNumber: r.leadNumber,

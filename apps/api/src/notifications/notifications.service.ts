@@ -1,7 +1,7 @@
 import { createManySkipDuplicates } from '@dealflow/database';
 import { Injectable } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import type { NotificationRow } from '@dealflow/types';
+import { notificationCategoryOf, type NotificationRow } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localizeNotification } from '../common/request-language';
@@ -58,6 +58,13 @@ export class NotificationsService {
   async send(tx: TenantTx, tenantId: string, userIds: (string | null | undefined)[], n: NotificationDraft): Promise<void> {
     const users = [...new Set(userIds.filter((u): u is string => !!u))];
     if (users.length === 0) return;
+    // Workspace notification settings (ADR 0062): an administrator can switch categories off.
+    const category = notificationCategoryOf(n.type);
+    if (category) {
+      const settings = await tx.crmSettings.findUnique({ where: { tenantId }, select: { notifications: true } });
+      const disabled = (settings?.notifications as { disabled?: unknown } | null)?.disabled;
+      if (Array.isArray(disabled) && disabled.includes(category)) return;
+    }
     await createManySkipDuplicates(tx.notification, 'Notification', users.map((userId) => ({
         tenantId,
         userId,

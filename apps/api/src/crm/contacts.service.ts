@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { contactMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -21,14 +21,17 @@ export class ContactsService {
     private readonly fields: CustomFieldsService,
   ) {}
 
-  list(auth: AuthContext, q: ListQuery, f: { statusId?: string } = {}): Promise<Page<ContactRow>> {
+  list(auth: AuthContext, q: ListQuery, f: { statusId?: string; cf?: CustomFieldFilter[] } = {}): Promise<Page<ContactRow>> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'CONTACT', f.cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.contact, cfFilter) : null;
       const where: Prisma.ContactWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
         AND: [
           contactScope(v),
+          ...(cfIds ? [{ id: { in: cfIds } }] : []),
           ...(q.q
             ? [
                 {
@@ -50,7 +53,7 @@ export class ContactsService {
         tx.contact.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.contact.count({ where }),
       ]);
-      const ctx = await contactContext(tx, auth.tenantId, rows, v);
+      const ctx = await contactContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'CONTACT'));
       return { items: rows.map((r) => toContactRow(r, ctx.owners, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
   }
@@ -60,7 +63,7 @@ export class ContactsService {
       const v = await visibility(tx, auth);
       const row = await tx.contact.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...contactScope(v) }, include });
       if (!row) throw notFound('Contact');
-      const ctx = await contactContext(tx, auth.tenantId, [row], v);
+      const ctx = await contactContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'CONTACT'));
       return toContactRow(row, ctx.owners, ctx);
     });
   }
@@ -68,7 +71,7 @@ export class ContactsService {
   create(auth: AuthContext, input: ContactInput, meta: RequestMeta): Promise<ContactRow> {
     return this.prisma.run(auth, async (tx) => {
       const row = await this.createIn(tx, auth, input, meta);
-      const ctx = await contactContext(tx, auth.tenantId, [row], await visibility(tx, auth));
+      const ctx = await contactContext(tx, auth.tenantId, [row], await visibility(tx, auth), await this.fields.reader(tx, auth, 'CONTACT'));
       return toContactRow(row, ctx.owners, ctx);
     });
   }
@@ -78,7 +81,7 @@ export class ContactsService {
     const ownerId = input.ownerId ?? auth.userId;
     await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId }, fieldPrefix);
     await assertStatus(tx, auth.tenantId, 'EMPLOYEE', input.statusId, `${fieldPrefix}statusId`);
-    const customFields = await this.fields.validate(tx, auth.tenantId, 'CONTACT', input.customFields);
+    const customFields = await this.fields.validateFor(tx, auth, 'CONTACT', input.customFields);
     const statusId = input.statusId ?? (await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE'));
     const row = await tx.contact.create({
       data: {
@@ -95,6 +98,7 @@ export class ContactsService {
       },
       include,
     });
+    await this.fields.claimFiles(tx, auth.tenantId, 'CONTACT', row.id, customFields);
     await this.audit.record(tx, {
       tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.created', entityType: 'contact', entityId: row.id, meta,
     });
@@ -112,7 +116,7 @@ export class ContactsService {
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId, companyId: input.companyId });
       await assertStatus(tx, auth.tenantId, 'EMPLOYEE', input.statusId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'CONTACT', input.customFields, before.customFields as Record<string, unknown>);
+      const customFields = await this.fields.validateFor(tx, auth, 'CONTACT', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const statusChanged = input.statusId !== undefined && input.statusId !== before.statusId;
       const row = await tx.contact.update({
@@ -127,6 +131,7 @@ export class ContactsService {
         },
         include,
       });
+      if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'CONTACT', id, customFields);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.updated', entityType: 'contact', entityId: id,
         metadata: { changes: diff(before, input) }, meta,
@@ -137,7 +142,7 @@ export class ContactsService {
           metadata: { from: before.statusId, to: input.statusId }, meta,
         });
       }
-      const ctx = await contactContext(tx, auth.tenantId, [row], v);
+      const ctx = await contactContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'CONTACT'));
       return toContactRow(row, ctx.owners, ctx);
     });
   }
@@ -161,14 +166,16 @@ interface ContactContext {
   people: Map<string, PersonRef>;
   statuses: Map<string, CrmStatusRef>;
   v: Visibility | null;
+  /** Custom field values the caller may see (ADR 0062). */
+  cf?: (values: unknown) => Record<string, unknown>;
 }
 
-async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility): Promise<ContactContext> {
+async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility, cf: ContactContext['cf']): Promise<ContactContext> {
   const [people, statuses] = await Promise.all([
     personRefs(tx, tenantId, rows.flatMap((r) => [r.ownerId, r.createdById, r.statusChangedById])),
     statusRefs(tx, tenantId, rows.map((r) => r.statusId)),
   ]);
-  return { owners: new Map([...people].map(([k, p]) => [k, { id: p.id, name: p.name }])), people, statuses, v };
+  return { owners: new Map([...people].map(([k, p]) => [k, { id: p.id, name: p.name }])), people, statuses, v, cf };
 }
 
 /** Primary entries mirror email and phone (which sequences, WhatsApp and SMS matching read); keys follow. */
@@ -253,7 +260,7 @@ export function toContactRow(r: ContactWith, owners: Map<string, { id: string; n
     consentUpdatedAt: r.consentUpdatedAt?.toISOString() ?? null,
     emailStatus: (r.emailStatus as EmailStatus | null) ?? null,
     engagementScore: r.engagementScore,
-    customFields: hide((r.customFields ?? {}) as Record<string, unknown>, {}),
+    customFields: hide(ctx?.cf ? ctx.cf(r.customFields) : ((r.customFields ?? {}) as Record<string, unknown>), {}),
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };

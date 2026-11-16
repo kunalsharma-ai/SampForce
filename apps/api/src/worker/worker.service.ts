@@ -1,4 +1,5 @@
 import { ZoomService } from '../apps/zoom.service';
+import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
@@ -36,6 +37,8 @@ export interface WorkerTick {
   prospectImports: number;
   /** Zoom transcripts imported into meeting notes. */
   zoomTranscripts: number;
+  /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
+  reminders: number;
 }
 
 /**
@@ -67,6 +70,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly visitors: VisitorsService,
     private readonly prospects: ProspectsService,
     private readonly zoom: ZoomService,
+    private readonly reminders: CrmRemindersService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -120,7 +124,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const visitorRetention = await this.visitors.sweep();
     const prospectImports = await this.prospects.sweep();
     const zoomTranscripts = await this.zoom.importDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts };
+    const reminders = await this.reminders.sweep();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

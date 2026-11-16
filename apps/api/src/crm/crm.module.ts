@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GeoController } from '../geo/geo.controller';
 import { GeoService } from '../geo/geo.service';
+import { CrmAdminController } from './crm-admin.controller';
+import { CrmAdminService } from './crm-admin.service';
 import { CrmConfigController } from './crm-config.controller';
 import { CrmConfigService } from './crm-config.service';
 import { ActivitiesService } from './activities.service';
@@ -43,6 +45,7 @@ import {
     CustomFieldsController,
     ImportExportController,
     CrmConfigController,
+    CrmAdminController,
     GeoController,
     CompanyLeadsController,
     CompanyDashboardController,
@@ -55,6 +58,7 @@ import {
   ],
   providers: [
     CustomFieldsService,
+    CrmAdminService,
     CompaniesService,
     ContactsService,
     LeadsService,
@@ -71,6 +75,6 @@ import {
     CompanyWorkService,
     NotificationsService,
   ],
-  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService],
+  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

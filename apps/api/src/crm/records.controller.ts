@@ -45,7 +45,7 @@ export class LeadsController {
   @Get()
   @RequirePermissions('leads:read')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery) {
-    return this.leads.list(auth, q);
+    return this.leads.list(auth, q, q.cf);
   }
 
   @Post()
@@ -110,7 +110,7 @@ export class ContactsController {
   @Get()
   @RequirePermissions('contacts:read')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery, @Query(new ZodPipe(contactFiltersSchema)) f: z.infer<typeof contactFiltersSchema>) {
-    return this.contacts.list(auth, q, f);
+    return this.contacts.list(auth, q, { ...f, cf: q.cf });
   }
 
   /** Employees with the same email, phone or LinkedIn profile, anywhere in the workspace (names only). */
@@ -155,7 +155,7 @@ export class CompaniesController {
   @Get()
   @RequirePermissions('companies:read')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery, @Query(new ZodPipe(companyFiltersSchema)) f: z.infer<typeof companyFiltersSchema>) {
-    return this.companies.list(auth, q, f);
+    return this.companies.list(auth, q, { ...f, cf: q.cf });
   }
 
   /** Companies with the same name, domain, email, phone or LinkedIn page, anywhere in the workspace (names only). */

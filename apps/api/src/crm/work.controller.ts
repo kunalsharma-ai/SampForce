@@ -1,11 +1,15 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import {
   type ActivityInput,
   activityInputSchema,
   CUSTOM_FIELD_ENTITIES,
+  EXPORT_FORMATS,
   type CustomFieldDefInput,
   customFieldDefSchema,
+  customFieldReorderSchema,
+  type CustomFieldUpdate,
+  customFieldUpdateSchema,
   type ImportRequest,
   importRequestSchema,
   type Permission,
@@ -17,6 +21,7 @@ import {
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ActivitiesService } from './activities.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { EXPORT_ENTITIES, type ExportEntity, IMPORT_FIELDS, ImportExportService } from './import-export.service';
@@ -24,6 +29,8 @@ import { SearchService } from './search.service';
 import { TasksService } from './tasks.service';
 
 const uuid = new ParseUUIDPipe();
+const customFieldListQuery = z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES).optional(), includeInactive: z.enum(['true', 'false']).optional() });
+const fileUploadQuery = z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES), key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/), name: z.string().trim().min(1).max(200) });
 const activityQuerySchema = z.object({
   leadId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),
@@ -47,7 +54,9 @@ const ENTITY_PERMISSION: Record<ExportEntity, { read: Permission; write: Permiss
   contacts: { read: 'contacts:read', write: 'contacts:write' },
   companies: { read: 'companies:read', write: 'companies:write' },
   deals: { read: 'deals:read', write: 'deals:write' },
+  rfqs: { read: 'companies:read', write: 'companies:write' },
 };
+const exportQuery = z.object({ format: z.enum(EXPORT_FORMATS).default('csv') });
 
 function requirePermission(auth: AuthContext, permission: Permission) {
   if (!auth.permissions.includes(permission)) {
@@ -129,21 +138,47 @@ export class SearchController {
 export class CustomFieldsController {
   constructor(private readonly fields: CustomFieldsService) {}
 
+  /** The fields the caller may see; administrators can ask for switched-off fields too. */
   @Get()
   @RequirePermissions('tenant:read')
-  list(@Auth() auth: AuthContext, @Query(new ZodPipe(z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES).optional() }))) q: { entity?: (typeof CUSTOM_FIELD_ENTITIES)[number] }) {
-    return this.fields.list(auth, q.entity);
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(customFieldListQuery)) q: z.infer<typeof customFieldListQuery>) {
+    return this.fields.list(auth, q.entity, q.includeInactive === 'true');
   }
 
   @Post()
-  @RequirePermissions('tenant:manage')
+  @RequirePermissions('crm:configure')
   create(@Auth() auth: AuthContext, @Body(new ZodPipe(customFieldDefSchema)) body: CustomFieldDefInput, @Meta() meta: RequestMeta) {
     return this.fields.create(auth, body, meta);
   }
 
+  @Put('order')
+  @RequirePermissions('crm:configure')
+  reorder(@Auth() auth: AuthContext, @Body(new ZodPipe(customFieldReorderSchema)) body: z.infer<typeof customFieldReorderSchema>, @Meta() meta: RequestMeta) {
+    return this.fields.reorder(auth, body.entity, body.ids, meta);
+  }
+
+  /** Uploads a file for a FILE field (raw body, name in the query). The record's save attaches it. */
+  @Post('files')
+  @RequirePermissions('tenant:read')
+  async upload(@Auth() auth: AuthContext, @Query(new ZodPipe(fileUploadQuery)) q: z.infer<typeof fileUploadQuery>, @Req() req: Request) {
+    return this.fields.upload(auth, q.entity, q.key, fileFrom(req, q.name, await readUpload(req)));
+  }
+
+  @Get('files/:id')
+  @RequirePermissions('tenant:read')
+  async download(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Res() res: Response): Promise<void> {
+    sendFile(res, await this.fields.download(auth, id));
+  }
+
+  @Patch(':id')
+  @RequirePermissions('crm:configure')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(customFieldUpdateSchema)) body: CustomFieldUpdate, @Meta() meta: RequestMeta) {
+    return this.fields.update(auth, id, body, meta);
+  }
+
   @Delete(':id')
   @HttpCode(204)
-  @RequirePermissions('tenant:manage')
+  @RequirePermissions('crm:configure')
   archive(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
     return this.fields.archive(auth, id, meta);
   }
@@ -171,15 +206,16 @@ export class ImportExportController {
   async export(
     @Auth() auth: AuthContext,
     @Param('entity', new ZodPipe(z.enum(EXPORT_ENTITIES))) entity: ExportEntity,
+    @Query(new ZodPipe(exportQuery)) q: z.infer<typeof exportQuery>,
     @Meta() meta: RequestMeta,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<string> {
+  ): Promise<string | Buffer> {
     requirePermission(auth, ENTITY_PERMISSION[entity].read);
-    const { csv, rows } = await this.io.export(auth, entity, meta);
-    res.setHeader('content-type', 'text/csv; charset=utf-8');
-    res.setHeader('content-disposition', `attachment; filename="sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.csv"`);
+    const { data, rows, contentType, extension } = await this.io.export(auth, entity, meta, q.format);
+    res.setHeader('content-type', contentType);
+    res.setHeader('content-disposition', `attachment; filename="sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.${extension}"`);
     res.setHeader('x-row-count', String(rows));
     res.setHeader('cache-control', 'no-store');
-    return csv;
+    return data;
   }
 }

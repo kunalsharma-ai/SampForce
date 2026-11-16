@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { FOLLOW_UP_TYPES, RFQ_STATUSES } from './company-work';
 import { DESIGNATION_TIERS, type DesignationTier } from './company-crm';
 import { DASHBOARD_WIDGETS } from './dashboard';
+import { TIER_DASHBOARD_WIDGETS } from './command-center';
 
 /*
- * The rest of Settings → CRM configuration (ADR 0061): how RFQ and deal statuses and follow-up categories are
+ * The rest of Settings → CRM configuration (ADR 0062): how RFQ and deal statuses and follow-up categories are
  * labelled, which notifications the workspace sends and when reminders go out, the currencies it works in, who may
  * export what, and which dashboard widgets each designation tier gets.
  */
@@ -252,12 +253,11 @@ export type DashboardPolicyWidget = z.infer<typeof dashboardPolicyWidgetSchema>;
 export const DEFAULT_DASHBOARD_POLICY = (tier: DesignationTier): DashboardPolicy => ({ tier, allowedWidgets: null, defaultLayout: null, canCustomize: true });
 
 /**
- * The widgets a tier's Command Center can show. The role dashboards (Phases 4-6) add their own sections per tier;
- * until a tier has its own, it uses the Command Center widgets.
+ * The widgets a tier's people can have: the sections of their role dashboard (Phases 4-6) and the widgets of the
+ * analytics view of the Command Center. A policy's allowed list may name either.
  */
-export function dashboardWidgetCatalog(tier: DesignationTier, tierWidgets?: Partial<Record<DesignationTier, readonly string[]>>): string[] {
-  const own = tierWidgets?.[tier];
-  return [...(own && own.length ? own : DASHBOARD_WIDGETS)];
+export function dashboardWidgetCatalog(tier: DesignationTier): { sections: string[]; analytics: string[] } {
+  return { sections: [...TIER_DASHBOARD_WIDGETS[tier]], analytics: [...DASHBOARD_WIDGETS] };
 }
 
 /**
