@@ -41,6 +41,7 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   // Settings links to the CRM configuration, which opens on lead numbers.
   await page.goto('/app/settings');
   const main = page.getByRole('main');
+  await shot(page, '00-settings-crm-link');
   await main.getByRole('link', { name: /CRM configuration/ }).click();
   await expect(page).toHaveURL(/\/app\/settings\/crm$/);
   await expect(main.getByRole('heading', { name: 'CRM configuration', level: 1 })).toBeVisible();
@@ -66,6 +67,10 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
 
   await main.getByText('Employee statuses', { exact: true }).click();
   await expect(main.getByRole('list', { name: 'Employee statuses' }).getByRole('listitem')).toHaveCount(16);
+  await shot(page, '02b-employee-statuses');
+  await main.getByText('Departments', { exact: true }).click();
+  await expect(main.getByRole('list', { name: 'Departments' })).toContainText('Business Development');
+  await shot(page, '02c-departments');
   await main.getByText('Designations', { exact: true }).click();
   await expect(main.getByRole('list', { name: 'Designations' })).toContainText('Business Development Manager');
   await shot(page, '03-designations');
@@ -77,6 +82,9 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   await expect(row).toContainText('New Lead');
   await expect(row.getByRole('img', { name: 'India' })).toBeVisible();
   await shot(page, '04-companies-list');
+  await page.goto('/app/contacts');
+  await expect(main.getByRole('row').filter({ hasText: 'Priya Nair' })).toContainText('New Contact');
+  await shot(page, '04b-employees-list');
 
   // The company page shows the lead card; the status changes there and is recorded.
   await page.goto(`/app/companies/${acme.id}`);
@@ -104,6 +112,8 @@ test('company leads get numbers and coloured statuses, configured in CRM configu
   await main.getByText('New and existing leads').click();
   await main.getByRole('button', { name: 'Save lead numbers' }).click();
   await expect(main.getByRole('status')).toHaveText('Saved. The next lead will be SAMP04.');
+  await shot(page, '07-lead-prefix-changed');
   await page.goto('/app/companies');
   await expect(main.getByRole('row').filter({ hasText: 'Acme Panels' })).toContainText('SAMP01');
+  await shot(page, '08-companies-renumbered');
 });
