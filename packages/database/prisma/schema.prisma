@@ -287,6 +287,8 @@ model Tenant {
   /// Company lead numbers (FRFS01...): the prefix and the minimum digits. Null prefix = the workspace initials.
   leadNumberPrefix      String?           @map("lead_number_prefix")
   leadNumberDigits      Int               @default(2) @map("lead_number_digits")
+  /// Revenue attribution rule (ADR 0061, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
+  revenueAttribution    Json?             @map("revenue_attribution")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
@@ -1075,6 +1077,14 @@ model Opportunity {
   companyId         String?           @map("company_id")
   contactId         String?           @map("contact_id")
   sourceLeadId      String?           @map("source_lead_id")
+  /// Deal number (DEAL-0001), from the workspace counter; assigned once (ADR 0061).
+  dealNumber        String?           @map("deal_number")
+  dealSeq           Int?              @map("deal_seq")
+  /// The assigned manager, the lead creator (copied from the company when the deal is created) and the people who
+  /// helped win it. They decide revenue credits with the workspace's attribution rule.
+  managerId         String?           @map("manager_id")
+  leadCreatorId     String?           @map("lead_creator_id")
+  supportingUserIds String[]          @map("supporting_user_ids")
   customFields      Json              @default("{}") @map("custom_fields")
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -1095,6 +1105,7 @@ model Opportunity {
   emailThreads   EmailThread[]
   meetingRecords MeetingRecord[]
 
+  @@unique([tenantId, dealNumber])
   @@index([tenantId, status])
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
@@ -1131,6 +1142,8 @@ model Activity {
   outcome       String?
   nextAction    String?      @map("next_action")
   followUpAt    DateTime?    @map("follow_up_at")
+  /// How the client responded: POSITIVE, NEUTRAL or NEGATIVE (positive responses on the dashboards).
+  sentiment     String?
   /// An attachment in company_files, and the RFQ the interaction is about.
   fileId        String?      @map("file_id")
   rfqId         String?      @map("rfq_id")
@@ -1165,36 +1178,39 @@ enum TaskPriority {
 }
 
 model Task {
-  id            String       @id @default(uuid()) @map("_id")
-  tenantId      String       @map("tenant_id")
-  title         String
-  description   String?
-  status        TaskStatus   @default(OPEN)
-  priority      TaskPriority @default(NORMAL)
-  dueAt         DateTime?    @map("due_at")
-  completedAt   DateTime?    @map("completed_at")
+  id               String       @id @default(uuid()) @map("_id")
+  tenantId         String       @map("tenant_id")
+  title            String
+  description      String?
+  status           TaskStatus   @default(OPEN)
+  priority         TaskPriority @default(NORMAL)
+  dueAt            DateTime?    @map("due_at")
+  completedAt      DateTime?    @map("completed_at")
   /// Shown to the customer in the client portal as a milestone.
-  portalVisible Boolean      @default(false) @map("portal_visible")
-  assigneeId    String?      @map("assignee_id")
-  leadId        String?      @map("lead_id")
-  contactId     String?      @map("contact_id")
-  opportunityId String?      @map("opportunity_id")
+  portalVisible    Boolean      @default(false) @map("portal_visible")
+  assigneeId       String?      @map("assignee_id")
+  leadId           String?      @map("lead_id")
+  contactId        String?      @map("contact_id")
+  opportunityId    String?      @map("opportunity_id")
   /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
-  companyId       String?   @map("company_id")
-  followUpType    String?   @map("follow_up_type")
-  managerId       String?   @map("manager_id")
+  companyId        String?      @map("company_id")
+  followUpType     String?      @map("follow_up_type")
+  managerId        String?      @map("manager_id")
   /// The previous discussion, the action needed next, and remarks.
-  summary         String?
-  nextAction      String?   @map("next_action")
-  remarks         String?
-  rescheduleCount Int       @default(0) @map("reschedule_count")
-  rescheduledAt   DateTime? @map("rescheduled_at")
-  outcome         String?
-  rfqId           String?   @map("rfq_id")
-  createdById     String?   @map("created_by_id")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  deletedAt     DateTime?    @map("deleted_at")
+  summary          String?
+  nextAction       String?      @map("next_action")
+  remarks          String?
+  rescheduleCount  Int          @default(0) @map("reschedule_count")
+  rescheduledAt    DateTime?    @map("rescheduled_at")
+  outcome          String?
+  rfqId            String?      @map("rfq_id")
+  createdById      String?      @map("created_by_id")
+  /// Who it was assigned to before the last reassignment, and when (My Work: "reassigned to me").
+  reassignedFromId String?      @map("reassigned_from_id")
+  reassignedAt     DateTime?    @map("reassigned_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  deletedAt        DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -3668,4 +3684,101 @@ model TenantFeatureOverride {
 
   @@unique([tenantId, feature])
   @@map("tenant_feature_overrides")
+}
+
+/// One per won deal, or per won RFQ that never became a deal (ADR 0061). Voided when the deal is reopened, lost or
+/// deleted, so revenue always matches the won records.
+model RevenueRecord {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  /// DEAL or RFQ.
+  source           String
+  opportunityId    String?   @map("opportunity_id")
+  rfqId            String?   @map("rfq_id")
+  companyId        String?   @map("company_id")
+  project          String
+  amount           Float
+  currency         String
+  closedAt         DateTime  @map("closed_at")
+  closerId         String?   @map("closer_id")
+  leadCreatorId    String?   @map("lead_creator_id")
+  accountOwnerId   String?   @map("account_owner_id")
+  managerId        String?   @map("manager_id")
+  departmentId     String?   @map("department_id")
+  /// Credits entered by hand; a rule change leaves them alone.
+  manual           Boolean   @default(false)
+  recognisedAmount Float?    @map("recognised_amount")
+  collectedAmount  Float?    @map("collected_amount")
+  paymentStatus    String?   @map("payment_status")
+  voidedAt         DateTime? @map("voided_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, voidedAt, closedAt])
+  @@index([tenantId, opportunityId])
+  @@index([tenantId, rfqId])
+  @@index([tenantId, companyId])
+  @@map("revenue_records")
+}
+
+/// A person's share of a revenue record; the shares of a record sum to 100.
+model RevenueCredit {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  recordId  String   @map("record_id")
+  userId    String?  @map("user_id")
+  roles     String[]
+  percent   Float
+  /// Copied from the record so totals per person and period need one query.
+  closedAt  DateTime @map("closed_at")
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, recordId])
+  @@index([tenantId, userId, voided, closedAt])
+  @@map("revenue_credits")
+}
+
+/// A request to move a lead to a manager or senior person (section 16), decided by someone above the requester.
+model LeadTransfer {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  companyId        String    @map("company_id")
+  contactId        String?   @map("contact_id")
+  fromUserId       String?   @map("from_user_id")
+  toUserId         String?   @map("to_user_id")
+  requestedById    String    @map("requested_by_id")
+  reason           String
+  opportunityValue Float?    @map("opportunity_value")
+  currency         String?
+  remarks          String?
+  fileIds          String[]  @map("file_ids")
+  /// TRANSFER_STATUSES.
+  status           String    @default("PENDING")
+  decidedById      String?   @map("decided_by_id")
+  decidedAt        DateTime? @map("decided_at")
+  decisionNote     String?   @map("decision_note")
+  instructions     String?
+  newOwnerId       String?   @map("new_owner_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, requestedById, createdAt(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("lead_transfers")
+}
+
+/// A person's order and hidden sections of one tier dashboard, and their own My Work categories.
+model CommandCenterLayout {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  tier      String
+  layout    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId, tier])
+  @@map("command_center_layouts")
 }
