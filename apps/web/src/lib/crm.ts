@@ -25,6 +25,8 @@ export interface ListParams {
   companyId?: string;
   pipelineId?: string;
   stageId?: string;
+  /** Custom field filters as a JSON list (ADR 0062). */
+  cf?: string;
 }
 
 export function toQuery(params: Record<string, string | number | undefined | null>): string {

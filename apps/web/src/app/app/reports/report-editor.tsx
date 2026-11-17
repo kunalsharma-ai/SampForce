@@ -18,6 +18,9 @@ import {
   type ReportVisibility,
   reportDefinitionSchema,
   reportField,
+  CUSTOM_REPORT_ENTITY,
+  customReportFields,
+  type ReportField,
 } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Copy, Download, Save, Trash2, X } from 'lucide-react';
@@ -28,6 +31,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api, downloadFile } from '@/lib/api';
 import { useMembers } from '@/lib/crm';
+import { useFieldDefs } from '@/components/crm/custom-field-input';
 import { useReport, useReportResult } from '@/lib/reports';
 import { useCan } from '@/lib/session';
 import { inSentence, type PluralKey, useT } from '@/lib/i18n';
@@ -85,6 +89,13 @@ const MATCHES = {
 
 /** An enum value as a label: OPTED_IN becomes "Opted in". */
 const optionLabel = (o: string) => o.charAt(0) + o.slice(1).toLowerCase().replace(/_/g, ' ');
+
+/** The custom fields the person can see on this record type, as report fields (`cf.<key>`, ADR 0062). */
+function useCustomReportFields(entity: ReportEntity): ReportField[] {
+  const target = CUSTOM_REPORT_ENTITY[entity] ?? null;
+  const defs = useFieldDefs(target);
+  return useMemo(() => (target ? customReportFields(defs.data ?? []) : []), [target, defs.data]);
+}
 
 const blank = (entity: ReportEntity = 'deals'): ReportDefinition => ({
   entity,
@@ -162,10 +173,11 @@ function Editor({ report }: { report?: ReportRow }) {
     onError: (e: Error) => setSaveError(e),
   });
 
-  const entity = REPORT_CATALOG[def.entity];
-  const numeric = entity.fields.filter((f) => f.kind === 'number' || f.kind === 'money');
-  const groupable = entity.fields.filter((f) => f.groupable);
-  const groupField = def.groupBy ? reportField(def.entity, def.groupBy.field) : undefined;
+  const custom = useCustomReportFields(def.entity);
+  const allFields = [...REPORT_CATALOG[def.entity].fields, ...custom];
+  const numeric = allFields.filter((f) => f.kind === 'number' || f.kind === 'money');
+  const groupable = allFields.filter((f) => f.groupable);
+  const groupField = def.groupBy ? reportField(def.entity, def.groupBy.field, custom) : undefined;
   const issues = parsed.success ? [] : parsed.error.issues;
   const issueAt = (path: string) => {
     const message = issues.find((i) => i.path.join('.') === path)?.message;
@@ -193,7 +205,7 @@ function Editor({ report }: { report?: ReportRow }) {
         groupBy: null,
         chart: def.chart === 'number' || def.chart === 'table' ? def.chart : 'table',
       });
-    const f = reportField(def.entity, key)!;
+    const f = reportField(def.entity, key, custom)!;
     patch({
       groupBy:
         f.kind === 'date' ? { field: key, bucket: def.groupBy?.bucket ?? 'month' } : { field: key },
@@ -330,7 +342,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   </Field>
                 )}
               </div>
-              <Filters def={def} onChange={(filters) => patch({ filters })} issueAt={issueAt} />
+              <Filters def={def} custom={custom} onChange={(filters) => patch({ filters })} issueAt={issueAt} />
               <div className="grid grid-cols-2 gap-3">
                 <Field id="r-chart" label={t('Show as')} error={issueAt('chart')}>
                   <Select
@@ -496,20 +508,22 @@ function Editor({ report }: { report?: ReportRow }) {
 
 function Filters({
   def,
+  custom,
   onChange,
   issueAt,
 }: {
   def: ReportDefinition;
+  custom: ReportField[];
   onChange: (f: ReportFilter[]) => void;
   issueAt: (p: string) => string | undefined;
 }) {
   const t = useT();
-  const fields = REPORT_CATALOG[def.entity].fields;
+  const fields = [...REPORT_CATALOG[def.entity].fields, ...custom];
   const set = (i: number, f: ReportFilter) =>
     onChange(def.filters.map((x, j) => (j === i ? f : x)));
   const add = () => {
     const f = fields.find((x) => x.kind === 'enum') ?? fields[0]!;
-    onChange([...def.filters, defaultFilter(f.key, def.entity)]);
+    onChange([...def.filters, defaultFilter(f.key, def.entity, custom)]);
   };
   return (
     <fieldset className="space-y-2">
@@ -520,7 +534,9 @@ function Filters({
         </p>
       )}
       {def.filters.map((flt, i) => {
-        const field = reportField(def.entity, flt.field)!;
+        const field = reportField(def.entity, flt.field, custom);
+        // A custom field that was switched off or hidden since the report was saved.
+        if (!field) return <p key={i} className="text-xs text-critical">{t('This filter uses a field that is no longer available. Remove it to run the report.')} <Button variant="ghost" size="sm" onClick={() => onChange(def.filters.filter((_, j) => j !== i))}>{t('Remove')}</Button></p>;
         const ops = OPS_FOR_KIND[field.kind];
         const err = issueAt(`filters.${i}.value`) ?? issueAt(`filters.${i}.op`);
         return (
@@ -529,12 +545,12 @@ function Filters({
               <Select
                 aria-label={t('Filter {n} field', { n: i + 1 })}
                 value={flt.field}
-                onChange={(e) => set(i, defaultFilter(e.target.value, def.entity))}
+                onChange={(e) => set(i, defaultFilter(e.target.value, def.entity, custom))}
                 className="min-w-0 flex-1"
               >
                 {fields.map((f) => (
                   <option key={f.key} value={f.key}>
-                    {t.maybe(f.label)}
+                    {f.custom ? f.label : t.maybe(f.label)}
                   </option>
                 ))}
               </Select>
@@ -570,6 +586,7 @@ function Filters({
                 index={i}
                 filter={flt}
                 entity={def.entity}
+                custom={custom}
                 onChange={(value) => set(i, { ...flt, value })}
               />
             </div>
@@ -605,8 +622,8 @@ function defaultValue(
   return '';
 }
 
-function defaultFilter(key: string, entity: ReportEntity): ReportFilter {
-  const f = reportField(entity, key)!;
+function defaultFilter(key: string, entity: ReportEntity, custom: readonly ReportField[] = []): ReportFilter {
+  const f = reportField(entity, key, custom)!;
   const op = OPS_FOR_KIND[f.kind][0]!;
   return { field: key, op, value: defaultValue(f.kind, op, f.options) };
 }
@@ -615,16 +632,19 @@ function FilterValue({
   index,
   filter,
   entity,
+  custom,
   onChange,
 }: {
   index: number;
   filter: ReportFilter;
   entity: ReportEntity;
+  custom: readonly ReportField[];
   onChange: (v: ReportFilter['value']) => void;
 }) {
   const t = useT();
-  const field = reportField(entity, filter.field)!;
+  const field = reportField(entity, filter.field, custom)!;
   const members = useMembers();
+  const choiceLabel = (o: string) => (field.custom ? o : t.maybe(optionLabel(o)));
   const label = t('Filter {n} value', { n: index + 1 });
   const cls = 'min-w-0 flex-1';
   if (filter.op === 'is_empty' || filter.op === 'not_empty') return null;
@@ -652,7 +672,7 @@ function FilterValue({
       >
         {field.options!.map((o) => (
           <option key={o} value={o}>
-            {t.maybe(optionLabel(o))}
+            {choiceLabel(o)}
           </option>
         ))}
       </select>
@@ -688,7 +708,7 @@ function FilterValue({
         >
           {field.options!.map((o) => (
             <option key={o} value={o}>
-              {t.maybe(optionLabel(o))}
+              {choiceLabel(o)}
             </option>
           ))}
         </Select>

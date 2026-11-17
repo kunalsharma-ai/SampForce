@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { CustomFieldEntity, CustomFieldType } from './custom-fields';
 import type { Permission } from './permissions';
 
 /**
@@ -18,6 +19,8 @@ export interface ReportField {
   options?: readonly string[];
   /** Can rows be grouped by this field? (Free text such as names is filterable but not groupable.) */
   groupable?: boolean;
+  /** Set on a workspace custom field (key `cf.<field key>`, ADR 0062): the field's type decides how it is read. */
+  custom?: { type: CustomFieldType };
 }
 
 export interface ReportEntityDef {
@@ -142,8 +145,31 @@ export const REPORT_CATALOG: Record<ReportEntity, ReportEntityDef> = {
   },
 };
 
-export function reportField(entity: ReportEntity, key: string): ReportField | undefined {
-  return REPORT_CATALOG[entity].fields.find((f) => f.key === key);
+/** Report fields can also be the workspace's custom fields (ADR 0062), on the record types that have them. */
+export const CUSTOM_REPORT_ENTITY: Partial<Record<ReportEntity, CustomFieldEntity>> = { deals: 'OPPORTUNITY', leads: 'LEAD', contacts: 'CONTACT', companies: 'COMPANY' };
+export const CUSTOM_REPORT_PREFIX = 'cf.';
+const CUSTOM_REPORT_KEY = /^cf\.[a-z][a-z0-9_]{0,39}$/;
+
+/**
+ * Report fields for custom fields. Choice, yes/no, date and short text fields can be grouped; a multi-select's `eq`
+ * and `in` mean "includes" and "includes any". File fields are not reportable.
+ */
+export function customReportFields(defs: ReadonlyArray<{ key: string; label: string; type: CustomFieldType; options: readonly string[] }>): ReportField[] {
+  const kind: Partial<Record<CustomFieldType, [ReportFieldKind, boolean]>> = {
+    TEXT: ['text', true], TEXTAREA: ['text', false], URL: ['text', false], EMAIL: ['text', false], PHONE: ['text', false],
+    NUMBER: ['number', false], CURRENCY: ['money', false], DATE: ['date', true], DATETIME: ['date', true],
+    SELECT: ['enum', true], MULTISELECT: ['enum', false], CHECKBOX: ['boolean', true], BOOLEAN: ['boolean', true],
+  };
+  return defs.flatMap((d) => {
+    const k = kind[d.type];
+    if (!k) return [];
+    return [{ key: `${CUSTOM_REPORT_PREFIX}${d.key}`, label: d.label, kind: k[0], groupable: k[1], ...(k[0] === 'enum' ? { options: d.options } : {}), custom: { type: d.type } }];
+  });
+}
+
+/** A catalogue field, or one of `extra` (the caller's custom fields). */
+export function reportField(entity: ReportEntity, key: string, extra: readonly ReportField[] = []): ReportField | undefined {
+  return REPORT_CATALOG[entity].fields.find((f) => f.key === key) ?? (key.startsWith(CUSTOM_REPORT_PREFIX) ? extra.find((f) => f.key === key) : undefined);
 }
 
 export const REPORT_METRICS = ['count', 'sum', 'avg', 'min', 'max'] as const;
@@ -173,7 +199,7 @@ export const MAX_REPORT_ROWS = 100;
 
 const filterValue = z.union([z.string().max(200), z.number().finite(), z.boolean(), z.array(z.string().max(100)).max(50)]);
 
-export const reportFilterSchema = z.object({ field: z.string().max(40), op: z.enum(FILTER_OPS), value: filterValue.optional() });
+export const reportFilterSchema = z.object({ field: z.string().max(48), op: z.enum(FILTER_OPS), value: filterValue.optional() });
 export type ReportFilter = z.infer<typeof reportFilterSchema>;
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -181,71 +207,83 @@ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 export const reportDefinitionSchema = z
   .object({
     entity: z.enum(REPORT_ENTITIES),
-    metric: z.object({ fn: z.enum(REPORT_METRICS), field: z.string().max(40).optional() }),
-    groupBy: z.object({ field: z.string().max(40), bucket: z.enum(DATE_BUCKETS).optional() }).nullable().default(null),
+    metric: z.object({ fn: z.enum(REPORT_METRICS), field: z.string().max(48).optional() }),
+    groupBy: z.object({ field: z.string().max(48), bucket: z.enum(DATE_BUCKETS).optional() }).nullable().default(null),
     filters: z.array(reportFilterSchema).max(MAX_REPORT_FILTERS).default([]),
     chart: z.enum(REPORT_CHARTS).default('table'),
     sort: z.enum(REPORT_SORTS).default('value_desc'),
     limit: z.number().int().min(1).max(MAX_REPORT_ROWS).default(20),
   })
-  .superRefine((d, ctx) => {
-    const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
-    if (d.metric.fn === 'count') {
-      if (d.metric.field) issue(['metric', 'field'], 'a count does not take a field');
-    } else {
-      const f = d.metric.field ? reportField(d.entity, d.metric.field) : undefined;
-      if (!f) issue(['metric', 'field'], 'choose a number or money field');
-      else if (f.kind !== 'number' && f.kind !== 'money') issue(['metric', 'field'], `${f.label} is not a number`);
-    }
-    if (d.groupBy) {
-      const g = reportField(d.entity, d.groupBy.field);
-      if (!g?.groupable) issue(['groupBy', 'field'], 'cannot group by this field');
-      else if (g.kind === 'date' && !d.groupBy.bucket) issue(['groupBy', 'bucket'], 'choose day, week, month, quarter or year');
-      else if (g.kind !== 'date' && d.groupBy.bucket) issue(['groupBy', 'bucket'], 'only date fields take a bucket');
-    }
-    if (d.chart === 'number' && d.groupBy) issue(['chart'], 'a single number cannot be grouped');
-    if ((d.chart === 'bar' || d.chart === 'line' || d.chart === 'pie') && !d.groupBy) issue(['chart'], 'charts need a grouping');
-    if (d.chart === 'line' && d.groupBy && reportField(d.entity, d.groupBy.field)?.kind !== 'date') issue(['chart'], 'line charts need a date grouping');
-    d.filters.forEach((flt, i) => {
-      const f = reportField(d.entity, flt.field);
-      if (!f) return issue(['filters', i, 'field'], 'unknown field');
-      if (!OPS_FOR_KIND[f.kind].includes(flt.op)) return issue(['filters', i, 'op'], `not available for ${f.label}`);
-      const v = flt.value;
-      if (flt.op === 'is_empty' || flt.op === 'not_empty') return v === undefined ? undefined : issue(['filters', i, 'value'], 'takes no value');
-      if (v === undefined || v === '') return issue(['filters', i, 'value'], 'is required');
-      if (flt.op === 'in') {
-        if (!Array.isArray(v) || v.length === 0) return issue(['filters', i, 'value'], 'choose at least one value');
-        if (f.kind === 'enum' && v.some((x) => !f.options?.includes(x))) issue(['filters', i, 'value'], 'contains an unknown value');
-        return;
-      }
-      if (Array.isArray(v)) return issue(['filters', i, 'value'], 'takes one value');
-      if (flt.op === 'last_n_days') return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 3660 ? undefined : issue(['filters', i, 'value'], 'a whole number of days, 1 to 3660');
-      switch (f.kind) {
-        case 'number':
-        case 'money':
-          if (typeof v !== 'number') issue(['filters', i, 'value'], 'must be a number');
-          break;
-        case 'boolean':
-          if (typeof v !== 'boolean') issue(['filters', i, 'value'], 'must be true or false');
-          break;
-        case 'date':
-          if (typeof v !== 'string' || !isoDate.test(v)) issue(['filters', i, 'value'], 'must be a date (YYYY-MM-DD)');
-          break;
-        case 'enum':
-          if (typeof v !== 'string' || !f.options?.includes(v)) issue(['filters', i, 'value'], 'is not one of the options');
-          break;
-        case 'user':
-          if (typeof v !== 'string' || !/^[0-9a-f-]{36}$/i.test(v)) issue(['filters', i, 'value'], 'must be a member');
-          break;
-        case 'country':
-          if (typeof v !== 'string' || !/^[A-Za-z]{2}$/.test(v)) issue(['filters', i, 'value'], 'must be a two-letter country code');
-          break;
-        default:
-          if (typeof v !== 'string') issue(['filters', i, 'value'], 'must be text');
-      }
-    });
-  });
+  .superRefine((d, ctx) => checkReportDefinition(d, null, (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message })));
 export type ReportDefinition = z.infer<typeof reportDefinitionSchema>;
+
+type DefinitionShape = { entity: ReportEntity; metric: { fn: ReportMetric; field?: string }; groupBy: { field: string; bucket?: DateBucket } | null; filters: ReportFilter[]; chart: ReportChart };
+
+/**
+ * Checks a definition's field references. With `extra` null (the schema), custom field keys (`cf.…`) are only
+ * checked for shape, because the workspace's fields are not known here; the API checks them again with the
+ * caller's visible custom fields before running a report.
+ */
+export function checkReportDefinition(d: DefinitionShape, extra: readonly ReportField[] | null, issue: (path: (string | number)[], message: string) => void): void {
+  const deferred = (key: string | undefined) => extra === null && !!key && CUSTOM_REPORT_KEY.test(key);
+  const field = (key: string): ReportField | undefined => reportField(d.entity, key, extra ?? []);
+  if (d.metric.fn === 'count') {
+    if (d.metric.field) issue(['metric', 'field'], 'a count does not take a field');
+  } else if (!deferred(d.metric.field)) {
+    const f = d.metric.field ? field(d.metric.field) : undefined;
+    if (!f) issue(['metric', 'field'], 'choose a number or money field');
+    else if (f.kind !== 'number' && f.kind !== 'money') issue(['metric', 'field'], `${f.label} is not a number`);
+  }
+  if (d.groupBy && !deferred(d.groupBy.field)) {
+    const g = field(d.groupBy.field);
+    if (!g?.groupable) issue(['groupBy', 'field'], 'cannot group by this field');
+    else if (g.kind === 'date' && !d.groupBy.bucket) issue(['groupBy', 'bucket'], 'choose day, week, month, quarter or year');
+    else if (g.kind !== 'date' && d.groupBy.bucket) issue(['groupBy', 'bucket'], 'only date fields take a bucket');
+  }
+  if (d.chart === 'number' && d.groupBy) issue(['chart'], 'a single number cannot be grouped');
+  if ((d.chart === 'bar' || d.chart === 'line' || d.chart === 'pie') && !d.groupBy) issue(['chart'], 'charts need a grouping');
+  if (d.chart === 'line' && d.groupBy && !deferred(d.groupBy.field) && field(d.groupBy.field)?.kind !== 'date') issue(['chart'], 'line charts need a date grouping');
+  d.filters.forEach((flt, i) => {
+    if (deferred(flt.field)) return;
+    const f = field(flt.field);
+    if (!f) return issue(['filters', i, 'field'], 'unknown field');
+    if (!OPS_FOR_KIND[f.kind].includes(flt.op)) return issue(['filters', i, 'op'], `not available for ${f.label}`);
+    const v = flt.value;
+    if (flt.op === 'is_empty' || flt.op === 'not_empty') return v === undefined ? undefined : issue(['filters', i, 'value'], 'takes no value');
+    if (v === undefined || v === '') return issue(['filters', i, 'value'], 'is required');
+    if (flt.op === 'in') {
+      if (!Array.isArray(v) || v.length === 0) return issue(['filters', i, 'value'], 'choose at least one value');
+      if (f.kind === 'enum' && v.some((x) => !f.options?.includes(x))) issue(['filters', i, 'value'], 'contains an unknown value');
+      return;
+    }
+    if (Array.isArray(v)) return issue(['filters', i, 'value'], 'takes one value');
+    if (flt.op === 'last_n_days') return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 3660 ? undefined : issue(['filters', i, 'value'], 'a whole number of days, 1 to 3660');
+    switch (f.kind) {
+      case 'number':
+      case 'money':
+        if (typeof v !== 'number') issue(['filters', i, 'value'], 'must be a number');
+        break;
+      case 'boolean':
+        if (typeof v !== 'boolean') issue(['filters', i, 'value'], 'must be true or false');
+        break;
+      case 'date':
+        if (typeof v !== 'string' || !isoDate.test(v)) issue(['filters', i, 'value'], 'must be a date (YYYY-MM-DD)');
+        break;
+      case 'enum':
+        if (typeof v !== 'string' || !f.options?.includes(v)) issue(['filters', i, 'value'], 'is not one of the options');
+        break;
+      case 'user':
+        if (typeof v !== 'string' || !/^[0-9a-f-]{36}$/i.test(v)) issue(['filters', i, 'value'], 'must be a member');
+        break;
+      case 'country':
+        if (typeof v !== 'string' || !/^[A-Za-z]{2}$/.test(v)) issue(['filters', i, 'value'], 'must be a two-letter country code');
+        break;
+      default:
+        if (typeof v !== 'string') issue(['filters', i, 'value'], 'must be text');
+    }
+  });
+}
+
 
 export const REPORT_VISIBILITY = ['PRIVATE', 'WORKSPACE'] as const;
 export type ReportVisibility = (typeof REPORT_VISIBILITY)[number];

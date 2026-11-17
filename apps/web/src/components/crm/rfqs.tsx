@@ -19,11 +19,30 @@ import { useCompanyAction } from './company-actions';
 import { CountrySelect, CurrencySelect } from '@/components/forms/inputs';
 import { PersonSelect } from './lead-fields';
 import { Select, Textarea } from './select';
-import { RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
+import { useOptionLookup, useOptions } from '@/lib/crm-admin';
+import { ApiError } from '@/lib/api';
+import { CustomFieldInput, fieldDefault, fieldFormValue, fieldPayloadValue, useFieldDefs } from './custom-field-input';
+import { CustomFieldSummary } from './follow-ups';
+import { optionLabel, RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
 
+/** The workspace's name for an RFQ status (renamed in CRM configuration, or the built-in name). */
+export function useRfqStatusName() {
+  const t = useT();
+  const lookup = useOptionLookup('RFQ_STATUS');
+  return (status: string) => optionLabel(lookup(status), status, RFQ_STATUS_LABEL, t);
+}
+
+/** The status with the workspace's label and colour; the built-in tone until options load. */
 export function RfqStatusBadge({ status }: { status: RfqStatus }) {
   const t = useT();
-  return <Badge tone={RFQ_STATUS_TONE[status]}>{t(RFQ_STATUS_LABEL[status])}</Badge>;
+  const row = useOptionLookup('RFQ_STATUS')(status);
+  if (!row) return <Badge tone={RFQ_STATUS_TONE[status]}>{t(RFQ_STATUS_LABEL[status])}</Badge>;
+  return (
+    <Badge className="gap-1.5">
+      <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: row.color }} />
+      {t.maybe(row.label)}
+    </Badge>
+  );
 }
 
 const money = (amount: number | null, currency: string) => (amount == null ? '—' : formatMoneyList([{ currency, amount }]));
@@ -80,6 +99,7 @@ export function RfqItem({ r, showCompany = true, onEdit }: { r: RfqRow; showComp
             </p>
           )}
           {r.outcomeReason && <p className="text-xs text-muted-foreground">{t('Won / lost reason: {text}', { text: r.outcomeReason })}</p>}
+          <CustomFieldSummary entity="RFQ" values={r.customFields} />
         </div>
         {onEdit && (
           <Button size="sm" variant="outline" onClick={() => onEdit(r)} aria-label={t('Open {number}', { number: r.number })}>
@@ -166,6 +186,12 @@ export function RfqDialog({
   const [saved, setSaved] = React.useState<RfqRow | null>(null);
   const live = useRfq(open ? (rfq?.id ?? saved?.id ?? null) : null);
   const current = live.data ?? rfq ?? saved;
+  const statusName = useRfqStatusName();
+  const statuses = useOptions('RFQ_STATUS');
+  const statusChoices = statuses.data ? statuses.data.filter((o) => o.active).map((o) => o.value as RfqStatus) : [...RFQ_STATUSES];
+  const fields = useFieldDefs('RFQ');
+  const formFields = (fields.data ?? []).filter((d) => current || d.showInForms);
+  const [custom, setCustom] = React.useState<Record<string, unknown>>({});
   const [v, setV] = React.useState<RfqForm>(() => formOf(rfq, { ownerId: company.ownerId }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -173,6 +199,7 @@ export function RfqDialog({
   React.useEffect(() => {
     if (open) {
       setV(formOf(rfq, { ownerId: company.ownerId }));
+      setCustom({ ...(rfq?.customFields ?? {}) });
       setSaved(null);
       setErrors({});
       setFormError(null);
@@ -209,6 +236,14 @@ export function RfqDialog({
       expectedRevenue: v.expectedRevenue,
       actualRevenue: v.actualRevenue,
       outcomeReason: v.outcomeReason || null,
+      // Read-only fields are left out; an emptied field is sent as null so the API clears it.
+      customFields: Object.fromEntries(
+        formFields
+          .filter((d) => d.access.edit)
+          .map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const)
+          .filter(([, x]) => x !== '' || current)
+          .map(([k, x]) => [k, x === '' ? null : x]),
+      ),
     };
     const parsed = rfqInputSchema.safeParse(body);
     if (!parsed.success) {
@@ -225,9 +260,11 @@ export function RfqDialog({
       if (stay) {
         setSaved(row);
         setV(formOf(row, { ownerId: company.ownerId }));
+        setCustom({ ...row.customFields });
         requestAnimationFrame(() => document.getElementById('rfq-attachments')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
       } else onOpenChange(false);
     } catch (err) {
+      if (err instanceof ApiError && err.details?.length) setErrors(Object.fromEntries(err.details.map((d) => [d.path, d.message])));
       setFormError(err instanceof Error ? err.message : t('Could not save.'));
     }
   };
@@ -273,9 +310,9 @@ export function RfqDialog({
             )}
             <Field id="rfq-status" label={t('Project status')}>
               <Select value={v.status} onChange={(e) => set({ status: e.target.value as RfqStatus })}>
-                {RFQ_STATUSES.map((s) => (
+                {[...new Set([...statusChoices, v.status])].map((s) => (
                   <option key={s} value={s}>
-                    {t(RFQ_STATUS_LABEL[s])}
+                    {statusName(s)}
                   </option>
                 ))}
               </Select>
@@ -326,6 +363,22 @@ export function RfqDialog({
             </Field>
             <div className="sm:col-span-2">{text('outcomeReason', 'Won / lost reason')}</div>
           </fieldset>
+          {formFields.length > 0 && (
+            <fieldset className="grid gap-4 sm:grid-cols-2">
+              <legend className="mb-2 text-sm font-semibold">{t('Custom fields')}</legend>
+              {formFields.map((d) => (
+                <CustomFieldInput
+                  key={d.id}
+                  def={d}
+                  entity="RFQ"
+                  id={`rfq-cf-${d.key}`}
+                  value={custom[d.key] === undefined && !current ? fieldDefault(d) : fieldFormValue(d, custom[d.key])}
+                  onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
+                  error={errors[`customFields.${d.key}`]}
+                />
+              ))}
+            </fieldset>
+          )}
           {current && (
             <div id="rfq-attachments" className="scroll-mt-4 space-y-2">
               <h3 className="text-sm font-semibold">{t('Attachments')}</h3>

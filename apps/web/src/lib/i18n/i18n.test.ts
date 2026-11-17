@@ -150,7 +150,8 @@ describe('page phrases', () => {
     // Theme descriptions and the readability check labels come from the shared appearance module.
     ['theme descriptions', THEMES.map((th) => th.description)],
     ['contrast check labels', [...source('../../../../../packages/types/src/appearance.ts').matchAll(/\['([^']+)', '[\w-]+', '[\w-]+', [\d.]+\]/g)].map((m) => m[1]!)],
-    ['custom field validation messages', [...source('../../../../../packages/types/src/crm.ts').matchAll(/customFieldDefSchema[\s\S]*?CustomFieldDefInput/g)].flatMap((m) => [...m[0].matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!))],
+    ['custom field validation messages', [...source('../../../../../packages/types/src/custom-fields.ts').matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!)],
+    ['CRM administration validation messages', [...source('../../../../../packages/types/src/crm-admin.ts').matchAll(/(?:regex\([^,]+, |min\(1, |message: )'([^']+)'/g)].map((x) => x[1]!)],
     ['workspace settings validation messages', [...source('../../app/app/settings/workspace-settings.tsx').matchAll(/(?:min|regex|length)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
     ['territory validation messages', [...source('../../../../../packages/types/src/territories.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)|refine\([^,]+, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     // Email sequences: shared labels, sequence statuses, the template designer's checks, and AI availability reasons.

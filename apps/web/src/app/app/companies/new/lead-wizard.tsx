@@ -3,6 +3,7 @@
 import {
   COMPANY_TYPES,
   companyLeadSchema,
+  type CustomFieldDef,
   type DuplicateMatch,
   LEAD_FORM_STEPS,
   type LeadDraftRow,
@@ -34,6 +35,7 @@ import {
   StatusSelect,
   usePerson,
 } from '@/components/crm/lead-fields';
+import { CustomFieldInput, fieldDefault, fieldPayloadValue, useFieldDefs } from '@/components/crm/custom-field-input';
 import { Select, Textarea } from '@/components/crm/select';
 import { CountryFlag, StatusChip } from '@/components/crm/status-chip';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
@@ -66,7 +68,7 @@ const FIELD_STEP: Record<string, LeadFormStep> = {
   country: 'location', state: 'location', city: 'location', address: 'location', postalCode: 'location', timezone: 'location', headquarters: 'location',
   foundedYear: 'business', branchCount: 'business', industry: 'business', companySize: 'business', companyType: 'business', specialties: 'business', businessCategory: 'business',
   ownerId: 'ownership', managerId: 'ownership', pocUserId: 'ownership', departmentId: 'ownership', teamId: 'ownership',
-  statusId: 'status', notes: 'remarks',
+  statusId: 'status', notes: 'remarks', customFields: 'remarks',
 };
 
 interface CompanyValue {
@@ -97,6 +99,8 @@ interface CompanyValue {
   teamId: string;
   statusId: string;
   notes: string;
+  /** Custom company fields (ADR 0062), as the inputs hold them. */
+  customFields: Record<string, unknown>;
 }
 
 interface LeadForm {
@@ -109,7 +113,7 @@ const one = (): PointValue[] => [{ value: '', primary: true }];
 const emptyForm = (): LeadForm => ({
   company: {
     name: '', websites: one(), linkedinUrls: one(), emails: one(), phones: one(), overview: '', country: '', state: '', city: '', address: '', postalCode: '', timezone: '', headquarters: '',
-    foundedYear: '', branchCount: '', industry: '', companySize: '', companyType: '', specialties: '', businessCategory: '', ownerId: '', managerId: '', pocUserId: '', departmentId: '', teamId: '', statusId: '', notes: '',
+    foundedYear: '', branchCount: '', industry: '', companySize: '', companyType: '', specialties: '', businessCategory: '', ownerId: '', managerId: '', pocUserId: '', departmentId: '', teamId: '', statusId: '', notes: '', customFields: {},
   },
   branches: [],
   employees: [],
@@ -128,8 +132,12 @@ function fromDraft(d: LeadDraftRow): LeadForm {
 
 const num = (v: string) => (v.trim() === '' ? null : Number(v));
 
-function payload(form: LeadForm, draftId: string | null) {
+function payload(form: LeadForm, draftId: string | null, fields: CustomFieldDef[]) {
   const c = form.company;
+  // Only fields this person may edit are sent; empty ones are left out.
+  const customFields = Object.fromEntries(
+    fields.filter((d) => d.access.edit).map((d) => [d.key, fieldPayloadValue(d, c.customFields[d.key] ?? fieldDefault(d))] as const).filter(([, v]) => v !== ''),
+  );
   return {
     ...(draftId ? { draftId } : {}),
     company: {
@@ -161,6 +169,7 @@ function payload(form: LeadForm, draftId: string | null) {
       teamId: c.teamId || null,
       statusId: c.statusId || null,
       notes: c.notes,
+      customFields,
     },
     branches: form.branches.map(branchPayload),
     employees: form.employees.map(employeePayload),
@@ -201,6 +210,8 @@ export function LeadWizard() {
   const create = useCreateCompanyLead();
   const [saving, setSaving] = React.useState(false);
   const headingRef = React.useRef<HTMLHeadingElement>(null);
+  const customDefs = useFieldDefs('COMPANY');
+  const companyFields = (customDefs.data ?? []).filter((d) => d.showInForms);
 
   React.useEffect(() => {
     if (draft.data && !loaded) {
@@ -220,7 +231,7 @@ export function LeadWizard() {
   const setCompany = (patch: Partial<CompanyValue>) => setForm((f) => ({ ...f, company: { ...f.company, ...patch } }));
 
   const validate = (): Errors => {
-    const parsed = companyLeadSchema.safeParse(payload(form, draftId));
+    const parsed = companyLeadSchema.safeParse(payload(form, draftId, companyFields));
     if (parsed.success) return {};
     const out: Errors = {};
     for (const i of parsed.error.issues) {
@@ -266,7 +277,7 @@ export function LeadWizard() {
     }
     setSaving(true);
     try {
-      const res = await create.mutateAsync(payload(form, draftId));
+      const res = await create.mutateAsync(payload(form, draftId, companyFields));
       const failed: string[] = [];
       for (const f of files) await uploadCompanyFile(res.company.id, f).catch(() => failed.push(f.name));
       router.push(`/app/companies/${res.company.id}${failed.length ? `?uploadFailed=${encodeURIComponent(failed.join(', '))}` : ''}`);
@@ -479,6 +490,22 @@ export function LeadWizard() {
                 <Field id="lead-notes" label={t('Remarks')} error={ce.notes}>
                   <Textarea rows={5} value={c.notes} onChange={(e) => setCompany({ notes: e.target.value })} />
                 </Field>
+                {companyFields.length > 0 && (
+                  <fieldset className="space-y-4">
+                    <legend className="mb-2 text-sm font-semibold">{t('Custom fields')}</legend>
+                    {companyFields.map((d) => (
+                      <CustomFieldInput
+                        key={d.key}
+                        def={d}
+                        entity="COMPANY"
+                        id={`lead-cf-${d.key}`}
+                        value={c.customFields[d.key] ?? fieldDefault(d)}
+                        onChange={(v) => setCompany({ customFields: { ...c.customFields, [d.key]: v } })}
+                        error={ce[`customFields.${d.key}`]}
+                      />
+                    ))}
+                  </fieldset>
+                )}
                 <div className="space-y-2">
                   <UploadZone
                     label={t('Attachments')}

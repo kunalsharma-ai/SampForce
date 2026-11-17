@@ -65,6 +65,9 @@ export const FEATURE_KEYS = [
   // Administration
   'custom_roles',
   'sso_scim',
+  // ADR 0062
+  'custom_fields_advanced',
+  'excel_export',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -131,6 +134,8 @@ export const FEATURES: FeatureDef[] = [
 
   { key: 'custom_roles', group: 'Administration', label: 'Custom roles', description: 'Roles with your own permission sets beyond the five standard roles.', defaultFrom: 'professional', paths: [] },
   { key: 'sso_scim', group: 'Administration', label: 'Single sign-on and SCIM', description: 'OpenID Connect sign-in and SCIM provisioning.', defaultFrom: 'free', paths: [] },
+  { key: 'custom_fields_advanced', group: 'Administration', label: 'Advanced custom fields', description: 'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.', defaultFrom: 'growth', paths: [] },
+  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [] },
 ];
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */

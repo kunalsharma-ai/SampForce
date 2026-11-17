@@ -312,6 +312,9 @@ model Tenant {
   activities             Activity[]
   tasks                  Task[]
   customFields           CustomField[]
+  customFieldFiles       CustomFieldFile[]
+  crmOptions             CrmOption[]
+  crmSettings            CrmSettings?
   invitations            Invitation[]
   domainEvents           DomainEvent[]
   workflows              Workflow[]
@@ -892,6 +895,11 @@ model Rfq {
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  /// Custom field values (ADR 0062).
+  customFields        Json      @default("{}") @map("custom_fields")
+  /// Set when the deadline reminder went out, for the deadline it was sent for.
+  deadlineReminderFor DateTime? @map("deadline_reminder_for")
+
   @@unique([tenantId, number])
   @@index([tenantId, companyId, receivedAt(sort: Desc)])
   @@index([tenantId, status, deadlineAt])
@@ -1225,39 +1233,44 @@ enum TaskPriority {
 }
 
 model Task {
-  id               String       @id @default(uuid()) @map("_id")
-  tenantId         String       @map("tenant_id")
-  title            String
-  description      String?
-  status           TaskStatus   @default(OPEN)
-  priority         TaskPriority @default(NORMAL)
-  dueAt            DateTime?    @map("due_at")
-  completedAt      DateTime?    @map("completed_at")
+  id                String       @id @default(uuid()) @map("_id")
+  tenantId          String       @map("tenant_id")
+  title             String
+  description       String?
+  status            TaskStatus   @default(OPEN)
+  priority          TaskPriority @default(NORMAL)
+  dueAt             DateTime?    @map("due_at")
+  completedAt       DateTime?    @map("completed_at")
   /// Shown to the customer in the client portal as a milestone.
-  portalVisible    Boolean      @default(false) @map("portal_visible")
-  assigneeId       String?      @map("assignee_id")
-  leadId           String?      @map("lead_id")
-  contactId        String?      @map("contact_id")
-  opportunityId    String?      @map("opportunity_id")
+  portalVisible     Boolean      @default(false) @map("portal_visible")
+  assigneeId        String?      @map("assignee_id")
+  leadId            String?      @map("lead_id")
+  contactId         String?      @map("contact_id")
+  opportunityId     String?      @map("opportunity_id")
   /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
-  companyId        String?      @map("company_id")
-  followUpType     String?      @map("follow_up_type")
-  managerId        String?      @map("manager_id")
+  companyId         String?      @map("company_id")
+  followUpType      String?      @map("follow_up_type")
+  managerId         String?      @map("manager_id")
   /// The previous discussion, the action needed next, and remarks.
-  summary          String?
-  nextAction       String?      @map("next_action")
-  remarks          String?
-  rescheduleCount  Int          @default(0) @map("reschedule_count")
-  rescheduledAt    DateTime?    @map("rescheduled_at")
-  outcome          String?
-  rfqId            String?      @map("rfq_id")
-  createdById      String?      @map("created_by_id")
+  summary           String?
+  nextAction        String?      @map("next_action")
+  remarks           String?
+  rescheduleCount   Int          @default(0) @map("reschedule_count")
+  rescheduledAt     DateTime?    @map("rescheduled_at")
+  outcome           String?
+  rfqId             String?      @map("rfq_id")
+  createdById       String?      @map("created_by_id")
   /// Who it was assigned to before the last reassignment, and when (My Work: "reassigned to me").
-  reassignedFromId String?      @map("reassigned_from_id")
-  reassignedAt     DateTime?    @map("reassigned_at")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
-  deletedAt        DateTime?    @map("deleted_at")
+  reassignedFromId  String?      @map("reassigned_from_id")
+  reassignedAt      DateTime?    @map("reassigned_at")
+  /// Custom field values (ADR 0062) for follow-ups.
+  customFields      Json         @default("{}") @map("custom_fields")
+  /// Reminder bookkeeping (ADR 0062) so each reminder goes out once per due date.
+  reminderSentAt    DateTime?    @map("reminder_sent_at")
+  overdueNotifiedAt DateTime?    @map("overdue_notified_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  deletedAt         DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -1279,30 +1292,50 @@ enum CustomFieldEntity {
   CONTACT
   COMPANY
   OPPORTUNITY
+  FOLLOW_UP
+  RFQ
 }
 
 enum CustomFieldType {
   TEXT
+  TEXTAREA
   NUMBER
+  CURRENCY
   DATE
-  BOOLEAN
+  DATETIME
   SELECT
+  MULTISELECT
+  CHECKBOX
+  BOOLEAN
+  URL
+  EMAIL
+  PHONE
+  FILE
 }
 
 /// Typed definition for values stored in a record's custom_fields JSON under `key`.
 model CustomField {
-  id         String            @id @default(uuid()) @map("_id")
-  tenantId   String            @map("tenant_id")
-  entity     CustomFieldEntity
-  key        String
-  label      String
-  type       CustomFieldType
-  options    String[]
-  required   Boolean           @default(false)
-  position   Int               @default(0)
-  createdAt  DateTime          @default(now()) @map("created_at")
-  updatedAt  DateTime          @updatedAt @map("updated_at")
-  archivedAt DateTime?         @map("archived_at")
+  id                 String            @id @default(uuid()) @map("_id")
+  tenantId           String            @map("tenant_id")
+  entity             CustomFieldEntity
+  key                String
+  label              String
+  type               CustomFieldType
+  options            String[]
+  required           Boolean           @default(false)
+  position           Int               @default(0)
+  /// ADR 0062: description, default value, currency for CURRENCY, designation rules, form and search flags.
+  description        String?
+  defaultValue       Json?             @map("default_value")
+  currency           String?
+  viewDesignationIds String[]          @default([]) @map("view_designation_ids")
+  editDesignationIds String[]          @default([]) @map("edit_designation_ids")
+  showInForms        Boolean           @default(true) @map("show_in_forms")
+  searchable         Boolean           @default(false)
+  active             Boolean           @default(true)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  archivedAt         DateTime?         @map("archived_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -3881,4 +3914,67 @@ model CommandCenterLayout {
 
   @@unique([tenantId, userId, tier])
   @@map("command_center_layouts")
+}
+
+// ───────────── ADR 0062: custom fields and CRM administration ─────────────
+
+/// A file uploaded into a FILE custom field. Kept until the record that holds it is deleted or the value is cleared.
+model CustomFieldFile {
+  id           String            @id @default(uuid()) @map("_id")
+  tenantId     String            @map("tenant_id")
+  entity       CustomFieldEntity
+  fieldKey     String            @map("field_key")
+  /// The record holding it; null between upload and the record being saved.
+  recordId     String?           @map("record_id")
+  name         String
+  contentType  String            @map("content_type")
+  sizeBytes    Int               @map("size_bytes")
+  data         Bytes
+  sha256       String
+  uploadedById String            @map("uploaded_by_id")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, entity, recordId])
+  @@map("custom_field_files")
+}
+
+/// A label, colour, description, order and on/off switch for an RFQ status, deal status or follow-up category.
+/// Built-in values without a row use their defaults (BUILT_IN_OPTIONS in packages/types/src/crm-admin.ts).
+model CrmOption {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  kind        String
+  value       String
+  label       String
+  color       String
+  description String?
+  position    Int      @default(0)
+  active      Boolean  @default(true)
+  builtIn     Boolean  @default(true) @map("built_in")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, kind, value])
+  @@map("crm_options")
+}
+
+/// One per workspace: notification settings, export permissions, dashboard policies and enabled currencies.
+/// Null means the default (DEFAULT_NOTIFICATION_SETTINGS, no export limits, DEFAULT_DASHBOARD_POLICY).
+model CrmSettings {
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @unique @map("tenant_id")
+  notifications     Json?
+  exportPolicy      Json?    @map("export_policy")
+  dashboardPolicies Json?    @map("dashboard_policies")
+  enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  updatedById       String?  @map("updated_by_id")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("crm_settings")
 }
