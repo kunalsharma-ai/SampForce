@@ -365,30 +365,6 @@ export const workspaceHelp = {
       'استخدمه في مراجعات المسار وعند التخطيط لأين تقضي أسبوعك.',
     ],
   },
-  'commandCenter.activity': {
-    title: 'Activity stream',
-    what: [
-      'The latest things your team did: records created, deals moved, emails sent and tasks completed.',
-      'Lo último que ha hecho tu equipo: fichas creadas, oportunidades movidas, correos enviados y tareas completadas.',
-      'Les dernières actions de votre équipe : fiches créées, opportunités déplacées, e-mails envoyés et tâches terminées.',
-      'Die neuesten Aktionen Ihres Teams: angelegte Datensätze, verschobene Chancen, gesendete E-Mails und erledigte Aufgaben.',
-      'آخر ما فعله فريقك: سجلات أُنشئت وصفقات نُقلت ورسائل أُرسلت ومهام أُنجزت.',
-    ],
-    how: [
-      'Scan it to catch up, and open an entry to jump to the record it is about.',
-      'Recórrelo para ponerte al día y abre una entrada para ir a la ficha correspondiente.',
-      'Parcourez-le pour vous mettre à jour et ouvrez une entrée pour aller à la fiche concernée.',
-      'Überfliegen Sie ihn und öffnen Sie einen Eintrag, um zum zugehörigen Datensatz zu springen.',
-      'تصفّحه لتلحق بالمستجدات، وافتح أي إدخال للانتقال إلى السجل المعني.',
-    ],
-    where: [
-      'Use it after time away, or as a manager to see where the team is busy.',
-      'Úsalo tras una ausencia o, como responsable, para ver en qué está ocupado el equipo.',
-      'Utilisez-le après une absence ou, en tant que manager, pour voir où l’équipe est occupée.',
-      'Nutzen Sie ihn nach einer Abwesenheit oder als Führungskraft, um zu sehen, woran das Team arbeitet.',
-      'استخدمه بعد الغياب، أو كمدير لترى أين ينشغل الفريق.',
-    ],
-  },
   'commandCenter.goals': {
     title: 'Goal attainment',
     what: [

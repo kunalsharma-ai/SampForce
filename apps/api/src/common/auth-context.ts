@@ -9,6 +9,10 @@ export interface AuthContext {
   membershipId: string;
   roleKey: string;
   permissions: string[];
+  /** Record visibility of the caller's role (ADR 0060): OWN, TEAM or ALL. Missing means ALL. */
+  recordScope?: string;
+  /** Whether the role sees details of visible records someone else owns. Missing means yes. */
+  viewOthersDetails?: boolean;
   /** How this session signed in. */
   authMethod: 'password' | 'mfa' | 'sso';
   /** Set for single sign-on sessions, which can only act in this workspace. */

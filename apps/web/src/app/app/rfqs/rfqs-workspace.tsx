@@ -1,0 +1,175 @@
+'use client';
+
+import { RFQ_STATUSES, type RfqRow, type RfqStatus } from '@dealflow/types';
+import { Button, Card, CardContent, cn, Input, Skeleton } from '@dealflow/ui';
+import { Mail } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import * as React from 'react';
+import { RfqDialog, RfqItem, useRfqStatusName } from '@/components/crm/rfqs';
+import { formatMoneyList, useRfq, useRfqReport, useRfqs } from '@/lib/company-work';
+import { type MessageKey, useT } from '@/lib/i18n';
+import { useCan } from '@/lib/session';
+import { SampbidxTransferList, TransferEmailDialog, useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
+import { useSampbidxTransfers } from '@/lib/sampbidx';
+
+const REPORTS: { by: 'company' | 'employee' | 'owner'; label: MessageKey }[] = [
+  { by: 'company', label: 'By company' },
+  { by: 'employee', label: 'By client employee' },
+  { by: 'owner', label: 'By executive' },
+];
+
+/** The RFQ register with filters, and RFQ reports by company, client employee and executive. */
+export function RfqsWorkspace() {
+  const t = useT();
+  const statusName = useRfqStatusName();
+  const router = useRouter();
+  const params = useSearchParams();
+  const canWrite = useCan('companies:write');
+  const sampbidx = useSampbidxEnabled();
+  const [tab, setTab] = React.useState<'list' | 'company' | 'employee' | 'owner' | 'sampbidx'>(params.get('tab') === 'sampbidx' ? 'sampbidx' : 'list');
+  const [emailOpen, setEmailOpen] = React.useState(false);
+  const transfers = useSampbidxTransfers({}, sampbidx && tab === 'sampbidx');
+  const [status, setStatus] = React.useState<RfqStatus | ''>('');
+  const [open, setOpen] = React.useState<'' | 'true' | 'false'>('');
+  const [q, setQ] = React.useState('');
+  const list = useRfqs({ status, open, q: q.trim() || undefined }, tab === 'list');
+  const report = useRfqReport(tab === 'list' || tab === 'sampbidx' ? 'company' : tab, tab !== 'list' && tab !== 'sampbidx');
+  // ?open=<id> opens one RFQ, as links from interactions and notifications do.
+  const openId = params.get('open');
+  const linked = useRfq(openId);
+  const [editing, setEditing] = React.useState<RfqRow | null>(null);
+  // Opened once per link: a refetch after saving must not open the dialog again.
+  const opened = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (linked.data && opened.current !== linked.data.id) {
+      opened.current = linked.data.id;
+      setEditing(linked.data);
+    }
+  }, [linked.data]);
+  React.useEffect(() => {
+    if (!openId) opened.current = null;
+  }, [openId]);
+  const close = (o: boolean) => {
+    if (o) return;
+    setEditing(null);
+    if (openId) router.replace('/app/rfqs');
+  };
+  const tabs: { id: typeof tab; label: MessageKey }[] = [{ id: 'list', label: 'All RFQs' }, ...REPORTS.map((r) => ({ id: r.by, label: r.label })), ...(sampbidx ? [{ id: 'sampbidx' as const, label: 'Sent to SampBidx' as MessageKey }] : [])];
+  return (
+    <div className="space-y-4">
+      {sampbidx && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{t('Send RFQs to SampBidx')}</p>
+            <p className="text-xs text-muted-foreground">{t('Open an RFQ to send its details and attachments, or transfer the RFQ email as it is.')}</p>
+          </div>
+          <Button onClick={() => setEmailOpen(true)}>
+            <Mail aria-hidden /> {t('Transfer RFQ email to SampBidx')}
+          </Button>
+        </div>
+      )}
+      <TransferEmailDialog open={emailOpen} onOpenChange={setEmailOpen} />
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('RFQ views')}>
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === x.id}
+            onClick={() => setTab(x.id)}
+            className={cn('h-9 rounded-full border px-4 text-sm font-medium', tab === x.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-surface hover:bg-muted')}
+          >
+            {t(x.label)}
+          </button>
+        ))}
+      </div>
+      {tab === 'list' ? (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <Input aria-label={t('Search RFQs')} placeholder={t('Search by number or project')} className="h-9 w-64" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select aria-label={t('RFQ status')} className="h-9 rounded-md border border-input bg-surface px-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value as RfqStatus | '')}>
+              <option value="">{t('All statuses')}</option>
+              {RFQ_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusName(s)}
+                </option>
+              ))}
+            </select>
+            <select aria-label={t('Open or closed')} className="h-9 rounded-md border border-input bg-surface px-2 text-sm" value={open} onChange={(e) => setOpen(e.target.value as '' | 'true' | 'false')}>
+              <option value="">{t('Open and closed')}</option>
+              <option value="true">{t('Open only')}</option>
+              <option value="false">{t('Closed only')}</option>
+            </select>
+          </div>
+          {list.isPending ? (
+            <Skeleton className="h-40" />
+          ) : list.error ? (
+            <p role="alert" className="text-sm text-critical">
+              {list.error.message}
+            </p>
+          ) : !list.data?.items.length ? (
+            <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('No RFQs yet. Add one from a company page.')}</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">{t('{count} RFQs', { count: list.data.total })}</p>
+              <ul className="space-y-2">
+                {list.data.items.map((r) => (
+                  <RfqItem key={r.id} r={r} onEdit={canWrite ? setEditing : undefined} />
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      ) : tab === 'sampbidx' ? (
+        transfers.isPending ? (
+          <Skeleton className="h-40" />
+        ) : transfers.error ? (
+          <p role="alert" className="text-sm text-critical">
+            {transfers.error.message}
+          </p>
+        ) : !transfers.data?.length ? (
+          <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('Nothing sent to SampBidx yet.')}</p>
+        ) : (
+          <SampbidxTransferList items={transfers.data} label={t('Sent to SampBidx')} />
+        )
+      ) : (
+        <Card>
+          <CardContent className="overflow-x-auto p-0">
+            {report.isPending ? (
+              <Skeleton className="m-4 h-32" />
+            ) : !report.data?.length ? (
+              <p className="p-6 text-sm text-muted-foreground">{t('No RFQs yet. Add one from a company page.')}</p>
+            ) : (
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="border-b border-border text-xs text-muted-foreground">
+                  <tr>
+                    {(['Name', 'Received', 'Submitted', 'Won', 'Lost', 'Open', 'Quoted value', 'Won value'] as const).map((h, i) => (
+                      <th key={h} scope="col" className={cn('px-3 py-2 font-medium', i ? 'text-end' : 'text-start')}>
+                        {t(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {report.data.map((r) => (
+                    <tr key={r.key ?? 'none'}>
+                      <td className="px-3 py-2 font-medium">{r.label || t('Not set')}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{r.received}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{r.submitted}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-success">{r.won}</td>
+                      <td className="px-3 py-2 text-end tabular-nums text-critical">{r.lost}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{r.open}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{formatMoneyList(r.quoted, t.formatLocale)}</td>
+                      <td className="px-3 py-2 text-end tabular-nums">{formatMoneyList(r.wonValue, t.formatLocale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {editing && <RfqDialog company={{ id: editing.company.id, name: editing.company.name }} rfq={editing} open={!!editing} onOpenChange={close} />}
+    </div>
+  );
+}

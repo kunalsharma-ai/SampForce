@@ -1,9 +1,11 @@
 import { BadRequestException, type PipeTransform } from '@nestjs/common';
-import type { ZodSchema } from 'zod';
+import type { ZodType, ZodTypeDef } from 'zod';
 
 /** Validates and normalises a request body or query with a shared Zod schema. */
 export class ZodPipe<T> implements PipeTransform<unknown, T> {
-  constructor(private readonly schema: ZodSchema<T>) {}
+  // The input type is left open: schemas that transform (a JSON query parameter into a list) take a string in.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(private readonly schema: ZodType<T, ZodTypeDef, any>) {}
 
   transform(value: unknown): T {
     const result = this.schema.safeParse(value);

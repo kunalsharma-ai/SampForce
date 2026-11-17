@@ -1,20 +1,24 @@
 'use client';
 
 import { Badge, Button } from '@dealflow/ui';
-import type { CompanyRow, ContactRow, DealRow, LeadRow } from '@dealflow/types';
-import { Download, Plus, Upload } from 'lucide-react';
+import type { CompanyRow, ContactRow, CustomFieldFilter, DealRow, LeadRow } from '@dealflow/types';
+import { Download, FileSpreadsheet, Plus, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import { type CrmEntity, DEAL_STATUS_TONE, ENTITY_LABEL, formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, useMembers, useRecordList } from '@/lib/crm';
+import { CUSTOM_FIELD_ENTITY, type CrmEntity, DEAL_STATUS_TONE, ENTITY_LABEL, formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, useMembers, useRecordList } from '@/lib/crm';
 import { downloadFile } from '@/lib/api';
 import { useCan } from '@/lib/session';
 import { DataTable } from '@/components/data-table/data-table';
 import { type TableColumn, useTableView } from '@/components/data-table/use-table-view';
 import { type MessageKey, Tr, useT } from '@/lib/i18n';
+import { useLeadDrafts } from '@/lib/company-leads';
+import { useHasFeature } from '@/lib/features';
+import { CustomFieldFilters } from './custom-field-filter';
 
 import { RecordFormDialog } from './record-form';
+import { CountryFlag, StatusChip } from './status-chip';
 import { Select } from './select';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 
@@ -40,6 +44,7 @@ const COLUMNS = {
     { id: 'name', header: h('Name'), sortKey: 'firstName', cell: (r) => r.fullName, text: (r) => r.fullName, size: 200 },
     { id: 'title', header: h('Job title'), sortKey: 'jobTitle', cell: (r) => r.jobTitle ?? '—', text: (r) => r.jobTitle, size: 180 },
     { id: 'company', header: h('Company'), cell: (r) => r.company?.name ?? '—', text: (r) => r.company?.name ?? null, size: 180 },
+    { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
     { id: 'email', header: h('Email'), sortKey: 'email', cell: (r) => r.email ?? '—', text: (r) => r.email, size: 220 },
     { id: 'phone', header: h('Phone'), cell: (r) => r.phone ?? '—', text: (r) => r.phone, size: 150 },
     owner<ContactRow>(),
@@ -47,12 +52,24 @@ const COLUMNS = {
     updated<ContactRow>(),
   ] satisfies TableColumn<ContactRow>[],
   companies: [
+    // The first column links to the record, so the name comes first.
     { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
+    { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
+    { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
+    {
+      id: 'location',
+      header: h('Location'),
+      sortKey: 'country',
+      cell: (r) => (r.country ? <span className="inline-flex items-center gap-1.5"><CountryFlag code={r.country} />{[r.city, r.country].filter(Boolean).join(', ')}</span> : '—'),
+      size: 160,
+    },
     { id: 'domain', header: h('Domain'), sortKey: 'domain', cell: (r) => r.domain ?? '—', text: (r) => r.domain, size: 170 },
     { id: 'industry', header: h('Industry'), sortKey: 'industry', cell: (r) => r.industry ?? '—', text: (r) => r.industry, size: 160 },
     { id: 'contacts', header: h('Contacts'), cell: (r) => r.contactCount, align: 'right', size: 110 },
     { id: 'deals', header: h('Open deals'), cell: (r) => r.openDealCount, align: 'right', size: 110 },
     owner<CompanyRow>(),
+    { id: 'createdBy', header: h('Created by'), cell: (r) => r.createdBy?.name ?? '—', text: (r) => r.createdBy?.name ?? null, size: 150 },
+    { id: 'manager', header: h('Manager'), cell: (r) => r.manager?.name ?? '—', text: (r) => r.manager?.name ?? null, size: 150, defaultHidden: true },
     created<CompanyRow>(),
     updated<CompanyRow>(),
   ] satisfies TableColumn<CompanyRow>[],
@@ -98,11 +115,20 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
   const members = useMembers();
   const status = view.config.filters.status ?? '';
   const [creating, setCreating] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'csv' | 'xlsx' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [cf, setCf] = useState<CustomFieldFilter[]>([]);
   const canWrite = useCan(`${entity}:write` as 'leads:write');
   const canExport = useCan('data:export');
-  const list = useRecordList<{ id: string }>(entity, { ...view.params, status: fixedStatus ?? view.params.status }, !hideTable);
+  const excel = useHasFeature('excel_export');
+  const list = useRecordList<{ id: string }>(entity, { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined }, !hideTable);
+  const exportAs = (format: 'csv' | 'xlsx') => {
+    setExporting(format);
+    setExportError(null);
+    downloadFile(`/exports/${entity}?format=${format}`, `sampforce-${entity}.${format}`)
+      .catch((e: Error) => setExportError(e.message))
+      .finally(() => setExporting(null));
+  };
   const label = ENTITY_LABEL[entity];
   const filters = fixedStatus ? undefined : STATUS_FILTERS[entity];
   const importable = entity !== 'deals';
@@ -123,25 +149,29 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
               </Button>
             )}
             {canExport && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={exporting}
-                onClick={() => {
-                  setExporting(true);
-                  setExportError(null);
-                  downloadFile(`/exports/${entity}`, `sampforce-${entity}.csv`)
-                    .catch((e: Error) => setExportError(e.message))
-                    .finally(() => setExporting(false));
-                }}
-              >
-                <Download aria-hidden /> {exporting ? t('Exporting…') : t('Export CSV')}
+              <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('csv')}>
+                <Download aria-hidden /> {exporting === 'csv' ? t('Exporting…') : t('Export CSV')}
               </Button>
             )}
-            {canWrite && (
-              <Button size="sm" onClick={() => setCreating(true)}>
-                <Plus aria-hidden /> {t.maybe(`New ${label.one.toLowerCase()}`)}
+            {canExport && excel && (
+              <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('xlsx')}>
+                <FileSpreadsheet aria-hidden /> {exporting === 'xlsx' ? t('Exporting…') : t('Export Excel')}
               </Button>
+            )}
+            {canWrite && entity === 'companies' && <LeadDraftsLink />}
+            {canWrite && entity === 'companies' ? (
+              // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
+              <Button asChild size="sm">
+                <Link href="/app/companies/new">
+                  <Plus aria-hidden /> {t('Create new lead')}
+                </Link>
+              </Button>
+            ) : (
+              canWrite && (
+                <Button size="sm" onClick={() => setCreating(true)}>
+                  <Plus aria-hidden /> {t.maybe(`New ${label.one.toLowerCase()}`)}
+                </Button>
+              )
             )}
           </div>
         }
@@ -192,19 +222,25 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                     </option>
                   ))}
               </Select>
+              <CustomFieldFilters entity={CUSTOM_FIELD_ENTITY[entity]} value={cf} onChange={setCf} />
             </>
           }
           empty={
-            view.config.q || status || view.config.filters.ownerId ? (
+            view.config.q || status || view.config.filters.ownerId || cf.length ? (
               t('No records match these filters.')
             ) : (
               <span>
                 {t.maybe(`No ${label.many.toLowerCase()} yet.`)}{' '}
-                {canWrite && (
-                  <button type="button" className="text-primary underline underline-offset-4" onClick={() => setCreating(true)}>
-                    {t('Create the first one')}
-                  </button>
-                )}
+                {canWrite &&
+                  (entity === 'companies' ? (
+                    <Link href="/app/companies/new" className="text-primary underline underline-offset-4">
+                      {t('Create the first one')}
+                    </Link>
+                  ) : (
+                    <button type="button" className="text-primary underline underline-offset-4" onClick={() => setCreating(true)}>
+                      {t('Create the first one')}
+                    </button>
+                  ))}
               </span>
             )
           }
@@ -212,5 +248,17 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
       )}
       <RecordFormDialog entity={entity} open={creating} onOpenChange={setCreating} onSaved={(row) => router.push(`/app/${entity}/${row.id}`)} />
     </div>
+  );
+}
+
+/** "Drafts (2)": lead drafts the signed-in person saved part-way. */
+function LeadDraftsLink() {
+  const t = useT();
+  const drafts = useLeadDrafts();
+  if (!drafts.data?.length) return null;
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link href="/app/companies/new">{t('Drafts ({count})', { count: drafts.data.length })}</Link>
+    </Button>
   );
 }

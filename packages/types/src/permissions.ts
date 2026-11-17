@@ -53,6 +53,8 @@ export const PERMISSIONS = [
   'prospects:search',
   'prospects:export',
   'prospects:manage',
+  /** CRM Configuration: statuses, departments, designations, lead numbering. */
+  'crm:configure',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

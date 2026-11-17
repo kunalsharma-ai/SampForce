@@ -1,4 +1,5 @@
 import type { LanguageCode } from '@dealflow/types';
+import { commandCenterHelp } from './topics-command-center';
 import { engageHelp } from './topics-engage';
 import { intelligenceHelp } from './topics-intelligence';
 import { organizationHelp } from './topics-organization';
@@ -9,11 +10,11 @@ import { workspaceHelp } from './topics-workspace';
 export type { HelpText, HelpTopic } from './types';
 
 /** Every help topic, by id: `page.*` explains a whole screen, anything else a section or setting on one. */
-export const HELP_TOPICS = { ...workspaceHelp, ...engageHelp, ...revenueHelp, ...intelligenceHelp, ...organizationHelp } as const;
+export const HELP_TOPICS = { ...workspaceHelp, ...engageHelp, ...revenueHelp, ...intelligenceHelp, ...organizationHelp, ...commandCenterHelp } as const;
 export type HelpId = keyof typeof HELP_TOPICS;
 
 /** The help topic tables by area, so a test can check no id is defined twice. */
-export const HELP_TABLES = { workspaceHelp, engageHelp, revenueHelp, intelligenceHelp, organizationHelp } as const;
+export const HELP_TABLES = { workspaceHelp, engageHelp, revenueHelp, intelligenceHelp, organizationHelp, commandCenterHelp } as const;
 
 /**
  * Which page topic explains each route. Patterns use Next.js `[param]` segments; a static route wins over a
@@ -27,12 +28,15 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/contacts/[id]': 'page.contactRecord',
   '/app/companies': 'page.companies',
   '/app/companies/[id]': 'page.companyRecord',
+  '/app/companies/new': 'page.newCompanyLead',
   '/app/accounts': 'page.accounts',
   '/app/deals': 'page.deals',
   '/app/deals/health': 'page.dealHealth',
   '/app/deals/[id]': 'page.dealRecord',
   '/app/pipelines': 'page.pipelines',
   '/app/activities': 'page.activities',
+  '/app/follow-ups': 'page.followUps',
+  '/app/rfqs': 'page.rfqs',
   '/app/communication': 'page.communication',
   '/app/sequences': 'page.sequences',
   '/app/sequences/[id]': 'page.sequenceEditor',
@@ -73,6 +77,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/billing': 'page.billing',
   '/app/settings': 'page.settings',
   '/app/settings/appearance': 'page.themeStudio',
+  '/app/settings/crm': 'page.crmConfiguration',
   '/app/settings/custom-fields': 'page.customFields',
   '/app/settings/import': 'page.import',
   '/app/settings/territories': 'page.territories',

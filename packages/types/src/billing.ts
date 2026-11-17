@@ -122,6 +122,8 @@ export interface RoleRow {
   permissions: string[];
   isSystem: boolean;
   members: number;
+  recordScope: 'OWN' | 'TEAM' | 'ALL';
+  viewOthersDetails: boolean;
 }
 
 // ───────────── Billing overview ─────────────

@@ -1,14 +1,6 @@
-import type { Metadata } from 'next';
-import { PageHeader } from '@/components/page-header';
-import { CustomFieldsManager } from './custom-fields-manager';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Custom fields' };
-
+/** Custom fields moved into Settings → CRM configuration (ADR 0062); old links still work. */
 export default function CustomFieldsPage() {
-  return (
-    <div className="max-w-4xl">
-      <PageHeader title="Custom fields" description="Extra fields on leads, contacts, companies and deals. They appear in forms, record pages, imports and exports." />
-      <CustomFieldsManager />
-    </div>
-  );
+  redirect('/app/settings/crm?section=fields');
 }

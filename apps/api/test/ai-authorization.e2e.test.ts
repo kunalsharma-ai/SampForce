@@ -18,7 +18,8 @@ describe('AI actions respect authorization', () => {
   const setMemberRole = (permissions: (perms: string[]) => string[]) =>
     asTenant(owner.tenantId, async (tx) => {
       const role = await tx.role.findFirstOrThrow({ where: { tenantId: owner.tenantId, key: 'member' } });
-      await tx.role.update({ where: { id: role.id }, data: { permissions: permissions(role.permissions) } });
+      // Members see every record here, so only their permissions decide what the AI may do (record visibility has its own tests).
+      await tx.role.update({ where: { id: role.id }, data: { permissions: permissions(role.permissions), recordScope: 'ALL' } });
     });
   let memberPermissions: string[];
 

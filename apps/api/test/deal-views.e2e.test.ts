@@ -53,7 +53,7 @@ describe('Pipeline views and deal panel', () => {
     const cleared = (await api(owner).patch(`/deals/${ids['Next quarter']}`, { priority: null }).expect(200)).body as DealRow;
     expect(cleared.priority).toBeNull();
 
-    const history = (await api(rep).get(`/deals/${ids['Next quarter']}/history`).expect(200)).body as DealHistoryItem[];
+    const history = (await api(owner).get(`/deals/${ids['Next quarter']}/history`).expect(200)).body as DealHistoryItem[];
     expect(history.map((h) => h.action)).toEqual(['deal.updated', 'deal.updated', 'deal.created']);
     expect(history[0]!.changes).toEqual({ priority: { from: 'MEDIUM', to: null } });
     expect(history[0]!.actorName).toBeTruthy();

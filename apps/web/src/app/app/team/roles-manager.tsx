@@ -9,8 +9,9 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { useBilling, useRoles } from '@/lib/billing';
 import { useCan, useSession } from '@/lib/session';
-import { useT } from '@/lib/i18n';
+import { type MessageKey, useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
+import { useSetRoleVisibility } from '@/lib/company-crm';
 
 /** Permissions grouped by resource, for the role editor. */
 const GROUPS = PERMISSIONS.reduce<Record<string, string[]>>((acc, p) => {
@@ -64,6 +65,7 @@ export function RolesManager() {
                 <summary className="cursor-pointer">{t.plural('count.permissions', r.permissions.length)}</summary>
                 <p className="mt-1 leading-relaxed">{r.permissions.join(', ')}</p>
               </details>
+              <RoleVisibility role={r} canManage={canManage} />
               {canManage && !r.isSystem && (
                 <Button size="sm" variant="ghost" className="mt-2" onClick={() => setEditing(r)}>
                   {t('Edit')}<span className="sr-only"> {r.name}</span>
@@ -152,5 +154,56 @@ function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void
         )}
       </div>
     </form>
+  );
+}
+
+const SCOPE_LABELS = { OWN: 'Their own records', TEAM: 'Their team’s records', ALL: 'Every record' } as const satisfies Record<RoleRow['recordScope'], MessageKey>;
+
+/** Which company leads, employees and inbound leads people with this role see, and whether they see others' details (ADR 0060). */
+function RoleVisibility({ role, canManage }: { role: RoleRow; canManage: boolean }) {
+  const t = useT();
+  const save = useSetRoleVisibility();
+  const fixed = role.key === 'owner' || !canManage;
+  return (
+    <div className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {t('Record visibility')}
+        <InfoTip topic="team.recordVisibility" />
+      </div>
+      <label className="flex flex-wrap items-center gap-2">
+        <span className="min-w-24 text-xs text-muted-foreground">{t('Sees')}</span>
+        <select
+          aria-label={t('Records {role} sees', { role: role.name })}
+          value={role.recordScope}
+          disabled={fixed || save.isPending}
+          onChange={(e) => save.mutate({ roleId: role.id, input: { recordScope: e.target.value as RoleRow['recordScope'], viewOthersDetails: role.viewOthersDetails } })}
+          className="h-8 flex-1 rounded-md border border-input bg-surface px-2 text-sm"
+        >
+          {(['OWN', 'TEAM', 'ALL'] as const).map((s) => (
+            <option key={s} value={s}>
+              {t(SCOPE_LABELS[s])}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4 accent-[hsl(var(--primary))]"
+          checked={role.viewOthersDetails}
+          disabled={fixed || save.isPending}
+          onChange={(e) => save.mutate({ roleId: role.id, input: { recordScope: role.recordScope, viewOthersDetails: e.target.checked } })}
+        />
+        <span>
+          {t('Can see details of records others own')}
+          <span className="block text-xs text-muted-foreground">{t('Emails, phone numbers, links, notes and custom fields. Off shows only names and statuses.')}</span>
+        </span>
+      </label>
+      {save.error && (
+        <p role="alert" className="text-xs text-critical">
+          {save.error.message}
+        </p>
+      )}
+    </div>
   );
 }

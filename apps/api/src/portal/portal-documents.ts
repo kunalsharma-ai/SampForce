@@ -1,5 +1,5 @@
-import { Inject, Injectable, PayloadTooLargeException } from '@nestjs/common';
-import type { Request } from 'express';
+import { BadRequestException, Inject, Injectable, PayloadTooLargeException } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { PORTAL_DOCUMENT_MAX_BYTES } from '@dealflow/types';
 import { signToken, verifyToken } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -58,4 +58,17 @@ export async function readUpload(req: Request): Promise<Buffer> {
 export function contentDisposition(name: string): string {
   const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
+export function fileFrom(req: Request, name: string | undefined, data: Buffer) {
+  if (!name) throw new BadRequestException({ code: 'INVALID_NAME', message: 'Give the file a name.' });
+  return { name: String(name).trim(), contentType: String(req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase(), data };
+}
+
+export function sendFile(res: Response, file: { name: string; contentType: string; data: Buffer }) {
+  res.setHeader('Content-Type', file.contentType);
+  res.setHeader('Content-Disposition', contentDisposition(file.name));
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.send(file.data);
 }

@@ -108,6 +108,10 @@ test('saved views keep the layout, can be shared, and reopen next time', async (
   await p2.getByLabel('Choose a password').fill('a-long-password-1');
   await p2.getByRole('button', { name: 'Join Views Org' }).click();
   await expect(p2).toHaveURL(/\/app/);
+  // Members see only the leads they own (ADR 0060), so hand them the two qualified leads.
+  const mate = ((await (await page.request.get('/api/v1/tenants/current/members')).json()) as Array<{ userId: string; name: string }>).find((m) => m.name === 'Mate Person')!;
+  const qualified = (await (await page.request.get('/api/v1/leads?status=QUALIFIED')).json()).items as Array<{ id: string }>;
+  for (const l of qualified) expect((await page.request.patch(`/api/v1/leads/${l.id}`, { data: { ownerId: mate.userId }, headers: ORIGIN })).ok()).toBe(true);
   await p2.goto('/app/leads');
   await p2.getByRole('button', { name: /^View:/ }).click();
   await expect(p2.getByRole('menuitemradio', { name: /Qualified leads/ })).toBeVisible();

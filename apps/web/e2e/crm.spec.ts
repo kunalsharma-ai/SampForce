@@ -14,7 +14,12 @@ test('creates a company and a linked contact', async ({ page }) => {
   await signUp(page, 'CRM Flow');
   await page.goto('/app/companies');
   await expect(page.getByText('No companies yet.')).toBeVisible();
-  await createViaDialog(page, 'New company', { 'Company name *': 'Initech', Domain: 'initech.test' });
+  // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
+  await page.getByRole('main').getByRole('link', { name: 'Create new lead' }).click();
+  await page.getByLabel('Company name *').fill('Initech');
+  await page.getByLabel('Official website URL 1', { exact: true }).fill('initech.test');
+  await page.getByRole('button', { name: /Review & save/ }).click();
+  await page.getByRole('button', { name: 'Save lead' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Initech' })).toBeVisible();
 
   await page.goto('/app/contacts');
@@ -27,7 +32,9 @@ test('creates a company and a linked contact', async ({ page }) => {
   await expect(dialog.getByText('Enter a valid email')).toBeVisible();
   await dialog.getByLabel('Email').fill('peter@initech.test');
   await dialog.getByRole('combobox', { name: 'Company' }).fill('Init');
-  await dialog.getByRole('option', { name: /Initech/ }).click();
+  // Picked with the keyboard: under load the popup re-renders while results arrive, so a mouse click can miss.
+  await expect(dialog.getByRole('option', { name: /Initech/ })).toBeVisible();
+  await dialog.getByRole('combobox', { name: 'Company' }).press('Enter');
   await dialog.getByRole('button', { name: 'Create contact' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Peter Gibbons' })).toBeVisible();
   await page.waitForLoadState('networkidle');
@@ -139,12 +146,15 @@ test('imports leads from CSV after a check, and finds them in search', async ({ 
 
 test('adds a custom field that appears on the lead form', async ({ page }) => {
   await signUp(page, 'Fields');
+  // The old address leads to CRM configuration's custom fields.
   await page.goto('/app/settings/custom-fields');
-  await page.getByLabel('Label').fill('Region');
-  await page.getByLabel('Type', { exact: true }).selectOption('SELECT');
-  await page.getByLabel('Options').fill('EMEA, Americas, APAC');
-  await page.getByRole('button', { name: 'Add field' }).click();
-  await expect(page.getByText('region', { exact: true })).toBeVisible();
+  const main = page.getByRole('main');
+  await main.getByLabel('Record type').selectOption('LEAD');
+  await main.getByLabel('Name', { exact: true }).fill('Region');
+  await main.getByLabel('Type', { exact: true }).selectOption('SELECT');
+  await main.getByLabel('Dropdown values').fill('EMEA\nAmericas\nAPAC');
+  await main.getByRole('button', { name: 'Add field' }).click();
+  await expect(main.getByText('region', { exact: true })).toBeVisible();
   await page.goto('/app/leads');
   await page.getByRole('button', { name: 'New lead' }).click();
   const dialog = page.getByRole('dialog');
@@ -171,7 +181,8 @@ test('invites a teammate who joins with the link', async ({ page, browser }) => 
   await invitee.getByLabel('Choose a password').fill('a-long-password-1');
   await invitee.getByRole('button', { name: 'Join Team Flow' }).click();
   await expect(invitee).toHaveURL(/\/app/);
-  await expect(invitee.getByRole('heading', { name: 'Welcome, New' })).toBeVisible();
+  // A new member is an executive (ADR 0063), so they open on their own executive dashboard.
+  await expect(invitee.getByRole('heading', { name: 'Executive dashboard', level: 1 })).toBeVisible();
   await other.close();
 
   await page.reload();

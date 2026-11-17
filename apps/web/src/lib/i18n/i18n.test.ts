@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   ACTIVITY_TYPES,
+  DEFAULT_DEPARTMENTS,
+  DEFAULT_DESIGNATIONS,
+  DEFAULT_STATUSES,
   BID_TEMPLATES,
   CHURN_RISK,
   DATE_BUCKETS,
@@ -138,12 +141,17 @@ describe('page phrases', () => {
     ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: tr\('([^']+)'\)/g)].map((m) => m[1]!)],
     ['deal health signals', [...source('../../../../api/src/ai/scoring.ts').matchAll(/risk\('\w+', '([^']+)'/g)].map((m) => m[1]!)],
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
+    // Company-centric CRM (ADR 0060): the starter statuses, designations and departments a workspace gets, shown with
+    // t.maybe() until someone renames them, and the CRM configuration checks.
+    ['company CRM defaults', [...DEFAULT_STATUSES.COMPANY, ...DEFAULT_STATUSES.EMPLOYEE].map((s) => s.name).concat(DEFAULT_DESIGNATIONS.map((d) => d.name), DEFAULT_DEPARTMENTS)],
+    ['CRM configuration validation messages', [...source('../../../../../packages/types/src/company-crm.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
     // Sign-in errors and the validation messages of the shared auth schemas, shown through t.maybe() on the auth pages.
     ['single sign-on errors', Object.values(SSO_ERRORS)],
     // Theme descriptions and the readability check labels come from the shared appearance module.
     ['theme descriptions', THEMES.map((th) => th.description)],
     ['contrast check labels', [...source('../../../../../packages/types/src/appearance.ts').matchAll(/\['([^']+)', '[\w-]+', '[\w-]+', [\d.]+\]/g)].map((m) => m[1]!)],
-    ['custom field validation messages', [...source('../../../../../packages/types/src/crm.ts').matchAll(/customFieldDefSchema[\s\S]*?CustomFieldDefInput/g)].flatMap((m) => [...m[0].matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!))],
+    ['custom field validation messages', [...source('../../../../../packages/types/src/custom-fields.ts').matchAll(/(?:regex\([^,]+, |message: )'([^']+)'/g)].map((x) => x[1]!)],
+    ['CRM administration validation messages', [...source('../../../../../packages/types/src/crm-admin.ts').matchAll(/(?:regex\([^,]+, |min\(1, |message: )'([^']+)'/g)].map((x) => x[1]!)],
     ['workspace settings validation messages', [...source('../../app/app/settings/workspace-settings.tsx').matchAll(/(?:min|regex|length)\([^,]+, '([^']+)'\)/g)].map((m) => m[1]!)],
     ['territory validation messages', [...source('../../../../../packages/types/src/territories.ts').matchAll(/(?:min|regex)\([^,]+, '([^']+)'\)|refine\([^,]+, '([^']+)'\)/g)].map((m) => (m[1] ?? m[2])!)],
     // Email sequences: shared labels, sequence statuses, the template designer's checks, and AI availability reasons.

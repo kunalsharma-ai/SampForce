@@ -95,6 +95,8 @@ export class TasksService {
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
         ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+        // Kept for My Work's "reassigned to me" (ADR 0063).
+        ...(input.assigneeId !== undefined && input.assigneeId !== before.assigneeId ? { reassignedFromId: before.assigneeId, reassignedAt: new Date() } : {}),
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.leadId !== undefined ? { leadId: input.leadId } : {}),
         ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),

@@ -1,12 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { aggregate, type Prisma, type TenantTx } from '@dealflow/database';
 import {
+  checkReportDefinition,
+  CUSTOM_REPORT_ENTITY,
+  customReportFields,
   type DashboardInput,
   type DashboardRow,
   type Permission,
   REPORT_CATALOG,
   type ReportDefinition,
   reportDefinitionSchema,
+  type ReportField,
   reportField,
   type ReportInput,
   type ReportResult,
@@ -16,6 +20,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { notFound, ownerRefs } from '../crm/crm-helpers';
+import { CustomFieldsService } from '../crm/custom-fields.service';
 import { toCsv } from '../crm/csv';
 import { labelRows } from './report-labels';
 import { ENTITY_SPECS, groupedPipeline, isMoney, type QueryContext, totalsPipeline } from './report-pipeline';
@@ -40,7 +45,25 @@ export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly fields: CustomFieldsService,
   ) {}
+
+  /** The custom fields the caller can see on the report's record type, as report fields (ADR 0062). */
+  private async customFields(tx: TenantTx, auth: AuthContext, def: ReportDefinition): Promise<ReportField[]> {
+    const entity = CUSTOM_REPORT_ENTITY[def.entity];
+    if (!entity) return [];
+    const { defs } = await this.fields.accessFor(tx, auth, entity);
+    return customReportFields(defs.filter((d) => d.access.view));
+  }
+
+  /** Checks a definition's custom field references against the caller's fields; refuses one that names a field they cannot use. */
+  private async checkCustom(tx: TenantTx, auth: AuthContext, def: ReportDefinition): Promise<ReportField[]> {
+    const custom = await this.customFields(tx, auth, def);
+    const details: { path: string; message: string }[] = [];
+    checkReportDefinition(def, custom, (path, message) => details.push({ path: ['definition', ...path].join('.'), message }));
+    if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The request contains invalid fields.', details });
+    return custom;
+  }
 
   /** Records the viewer may see: their own, and everything shared with the workspace. */
   private visible(auth: AuthContext) {
@@ -95,6 +118,7 @@ export class ReportsService {
   create(auth: AuthContext, input: ReportInput, meta: RequestMeta): Promise<ReportRow> {
     this.assertEntity(auth, input.definition);
     return this.prisma.run(auth, async (tx) => {
+      await this.checkCustom(tx, auth, input.definition);
       const row = await tx.report.create({
         data: {
           tenantId: auth.tenantId, name: input.name, description: input.description ?? null, visibility: input.visibility,
@@ -115,6 +139,7 @@ export class ReportsService {
       if (before.createdById !== auth.userId && input.visibility === 'PRIVATE') {
         throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Only the author can make a shared report private.', details: [{ path: 'visibility', message: 'only the author can change this' }] });
       }
+      await this.checkCustom(tx, auth, input.definition);
       const row = await tx.report.update({
         where: { id },
         data: { name: input.name, description: input.description ?? null, visibility: input.visibility, definition: input.definition as unknown as Prisma.InputJsonValue },
@@ -160,17 +185,18 @@ export class ReportsService {
 
   private async execute(tx: TenantTx, auth: AuthContext, def: ReportDefinition): Promise<ReportResult> {
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true, defaultTimezone: true } });
-    const ctx: QueryContext = { tenantId: auth.tenantId, baseCurrency: tenant.defaultCurrency, timezone: tenant.defaultTimezone || 'UTC', rates: await loadRates(tx, auth.tenantId) };
+    const custom = await this.checkCustom(tx, auth, def);
+    const ctx: QueryContext = { tenantId: auth.tenantId, baseCurrency: tenant.defaultCurrency, timezone: tenant.defaultTimezone || 'UTC', rates: await loadRates(tx, auth.tenantId), custom };
     const delegate = tx[ENTITY_SPECS[def.entity].model] as unknown as { aggregateRaw(args: { pipeline: object[]; options?: object }): unknown };
     const limited = { aggregateRaw: (args: { pipeline: object[] }) => delegate.aggregateRaw({ ...args, options: { maxTimeMS: STATEMENT_TIMEOUT_MS } }) };
     const grouped = (await aggregate<{ _id: string | null; v: number | null }>(limited, groupedPipeline(def, ctx))).map((r) => ({ g: r._id, v: r.v }));
     const [totals] = await aggregate<{ v: number | null; n: number; ex: number; excur: Array<string | null> }>(limited, totalsPipeline(def, ctx));
     const truncated = grouped.length > def.limit;
     const shown = grouped.slice(0, def.limit);
-    const field = def.groupBy ? reportField(def.entity, def.groupBy.field) : undefined;
+    const field = def.groupBy ? reportField(def.entity, def.groupBy.field, custom) : undefined;
     const users = field?.kind === 'user' ? await ownerRefs(tx, shown.map((r) => r.g)) : new Map();
-    const money = isMoney(def);
-    const metricField = def.metric.field ? reportField(def.entity, def.metric.field) : undefined;
+    const money = isMoney(def, ctx);
+    const metricField = def.metric.field ? reportField(def.entity, def.metric.field, custom) : undefined;
     const noun = REPORT_CATALOG[def.entity].label.toLowerCase().replace(/ \(.*\)$/, '');
     const metricLabel = def.metric.fn === 'count' ? `Number of ${noun}` : `${{ sum: 'Total', avg: 'Average', min: 'Lowest', max: 'Highest' }[def.metric.fn]} ${metricField?.label.toLowerCase() ?? ''}`.trim();
     let groupLabel: string | null = field?.label ?? null;
@@ -179,7 +205,7 @@ export class ReportsService {
       entity: def.entity,
       metricLabel,
       groupLabel,
-      rows: def.groupBy ? labelRows(def, shown, users) : [{ key: null, label: 'All', value: Math.round((totals?.v ?? 0) * 100) / 100 }],
+      rows: def.groupBy ? labelRows(def, shown, users, custom) : [{ key: null, label: 'All', value: Math.round((totals?.v ?? 0) * 100) / 100 }],
       total: Math.round((totals?.v ?? 0) * 100) / 100,
       records: totals?.n ?? 0,
       currency: money ? ctx.baseCurrency : null,

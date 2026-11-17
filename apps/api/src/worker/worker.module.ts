@@ -10,12 +10,14 @@ import { VisitorsModule } from '../visitors/visitors.module';
 import { ProspectsModule } from '../prospects/prospects.module';
 import { AutomationModule } from '../automation/automation.module';
 import { SequencesModule } from '../sequences/sequences.module';
+import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
   imports: [AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule],
-  providers: [WorkerService],
+  providers: [WorkerService, CrmRemindersService, NotificationsService],
   exports: [WorkerService],
 })
 export class WorkerModule {}

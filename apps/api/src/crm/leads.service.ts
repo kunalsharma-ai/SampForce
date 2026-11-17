@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { assignLeadNumbers, Prisma, type TenantTx } from '@dealflow/database';
 import type {
   DuplicateCandidate,
   LeadConvertInput,
@@ -10,11 +10,14 @@ import type {
   Page,
   EmailStatus,
 } from '@dealflow/types';
+import { companyNameKey, type CustomFieldFilter } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, iso, notFound, num, orderBy, ownerRefs, paging, consentFields, assertCampaign, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
+import { defaultStatusId } from './companies.service';
+import { leadScope, visibility } from './visibility';
 
 const SORTABLE = ['fullName', 'companyName', 'status', 'createdAt', 'updatedAt', 'estimatedValue'] as const;
 type LeadModel = Prisma.LeadGetPayload<object>;
@@ -38,12 +41,16 @@ export class LeadsService {
     private readonly fields: CustomFieldsService,
   ) {}
 
-  list(auth: AuthContext, q: ListQuery): Promise<Page<LeadRow>> {
+  list(auth: AuthContext, q: ListQuery, cf?: CustomFieldFilter[]): Promise<Page<LeadRow>> {
     return this.prisma.run(auth, async (tx) => {
       const status = q.status && ['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'].includes(q.status) ? q.status : undefined;
+      const v = await visibility(tx, auth);
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'LEAD', cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.lead, cfFilter) : null;
       const where: Prisma.LeadWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
+        AND: [...(v.all ? [] : [leadScope(v)]), ...(cfIds ? [{ id: { in: cfIds } }] : [])],
         ...(status ? { status: status as LeadModel['status'] } : {}),
         ...(q.ownerId ? { ownerId: q.ownerId } : {}),
         ...(q.q
@@ -61,14 +68,15 @@ export class LeadsService {
         tx.lead.count({ where }),
       ]);
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-      return { items: rows.map((r) => toLeadRow(r, owners)), total, page: q.page, pageSize: q.pageSize };
+      const cfRead = await this.fields.reader(tx, auth, 'LEAD');
+      return { items: rows.map((r) => toLeadRow(r, owners, cfRead)), total, page: q.page, pageSize: q.pageSize };
     });
   }
 
   get(auth: AuthContext, id: string): Promise<LeadRow> {
     return this.prisma.run(auth, async (tx) => {
-      const row = await this.find(tx, auth.tenantId, id);
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      const row = await this.find(tx, auth.tenantId, id, 'Lead', auth);
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
@@ -77,7 +85,7 @@ export class LeadsService {
       const ownerId = input.ownerId ?? auth.userId;
       await assertRefs(tx, auth.tenantId, { ownerId });
       await assertCampaign(tx, auth.tenantId, input.campaignId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields);
+      const customFields = await this.fields.validateFor(tx, auth, 'LEAD', input.customFields);
       const row = await tx.lead.create({
         data: {
           ...input,
@@ -93,19 +101,19 @@ export class LeadsService {
         metadata: { source: row.source }, meta,
       });
       const duplicates = await this.findDuplicates(tx, auth.tenantId, row);
-      return { lead: toLeadRow(row, await ownerRefs(tx, [row.ownerId])), duplicates };
+      return { lead: toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD')), duplicates };
     });
   }
 
   update(auth: AuthContext, id: string, input: Partial<LeadInput>, meta: RequestMeta): Promise<LeadRow> {
     return this.prisma.run(auth, async (tx) => {
-      const before = await this.find(tx, auth.tenantId, id);
+      const before = await this.find(tx, auth.tenantId, id, 'Lead', auth);
       if (before.status === 'CONVERTED') {
         throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted leads are read-only. Edit the contact or deal instead.' });
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId });
       await assertCampaign(tx, auth.tenantId, input.campaignId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields, before.customFields as Record<string, unknown>);
+      const customFields = await this.fields.validateFor(tx, auth, 'LEAD', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const row = await tx.lead.update({
         where: { id },
@@ -123,12 +131,13 @@ export class LeadsService {
         action: changes.ownerId ? 'lead.assigned' : 'lead.updated', entityType: 'lead', entityId: id,
         metadata: { changes }, meta,
       });
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
     return this.prisma.run(auth, async (tx) => {
+      await this.find(tx, auth.tenantId, id, 'Lead', auth);
       const { count } = await tx.lead.updateMany({ where: { id, tenantId: auth.tenantId, deletedAt: null }, data: { deletedAt: new Date() } });
       if (count === 0) throw notFound('Lead');
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'lead.deleted', entityType: 'lead', entityId: id, meta });
@@ -136,14 +145,14 @@ export class LeadsService {
   }
 
   duplicates(auth: AuthContext, id: string): Promise<DuplicateCandidate[]> {
-    return this.prisma.run(auth, async (tx) => this.findDuplicates(tx, auth.tenantId, await this.find(tx, auth.tenantId, id)));
+    return this.prisma.run(auth, async (tx) => this.findDuplicates(tx, auth.tenantId, await this.find(tx, auth.tenantId, id, 'Lead', auth)));
   }
 
   /** Merges `duplicateId` into `id`: fills empty fields, unions tags, re-links activities and tasks. */
   merge(auth: AuthContext, id: string, duplicateId: string, meta: RequestMeta): Promise<LeadRow> {
     if (id === duplicateId) throw badRef('duplicateId', 'cannot merge a lead into itself');
     return this.prisma.run(auth, async (tx) => {
-      const [primary, dup] = await Promise.all([this.find(tx, auth.tenantId, id), this.find(tx, auth.tenantId, duplicateId, 'duplicateId')]);
+      const [primary, dup] = await Promise.all([this.find(tx, auth.tenantId, id, 'Lead', auth), this.find(tx, auth.tenantId, duplicateId, 'duplicateId', auth)]);
       if (primary.status === 'CONVERTED' || dup.status === 'CONVERTED') {
         throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted leads cannot be merged.' });
       }
@@ -160,13 +169,13 @@ export class LeadsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'lead.merged', entityType: 'lead', entityId: id,
         metadata: { mergedLeadId: duplicateId }, meta,
       });
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
   convert(auth: AuthContext, id: string, input: LeadConvertInput, meta: RequestMeta): Promise<LeadConvertResult> {
     return this.prisma.run(auth, async (tx) => {
-      const lead = await this.find(tx, auth.tenantId, id);
+      const lead = await this.find(tx, auth.tenantId, id, 'Lead', auth);
       if (lead.status === 'CONVERTED') {
         throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'This lead has already been converted.' });
       }
@@ -178,15 +187,25 @@ export class LeadsService {
 
       let companyId = input.companyId ?? null;
       if (!companyId && lead.companyName) {
+        // The same company under another legal suffix or spelling of case ("Acme Ltd" / "ACME") is reused.
         const existing = await tx.company.findFirst({
-          where: { tenantId: auth.tenantId, deletedAt: null, name: { equals: lead.companyName, mode: 'insensitive' } },
+          where: { tenantId: auth.tenantId, deletedAt: null, OR: [{ name: { equals: lead.companyName, mode: 'insensitive' } }, { nameKey: companyNameKey(lead.companyName) }] },
           select: { id: true },
         });
-        companyId =
-          existing?.id ??
-          (await tx.company.create({
-            data: { tenantId: auth.tenantId, name: lead.companyName, industry: lead.industry, country: lead.country, domain: lead.website, ownerId },
-          })).id;
+        if (existing) companyId = existing.id;
+        else {
+          companyId = (
+            await tx.company.create({
+              data: {
+                tenantId: auth.tenantId, name: lead.companyName, industry: lead.industry, country: lead.country, domain: lead.website,
+                website: lead.website ? (/^https?:\/\//i.test(lead.website) ? lead.website : `https://${lead.website}`) : null,
+                city: lead.city, ownerId, createdById: auth.userId, updatedById: auth.userId,
+                statusId: await defaultStatusId(tx, auth.tenantId, 'COMPANY'), statusChangedAt: new Date(), statusChangedById: auth.userId,
+              },
+            })
+          ).id;
+          await assignLeadNumbers(tx, auth.tenantId);
+        }
       }
 
       const contact = await tx.contact.create({
@@ -200,6 +219,11 @@ export class LeadsService {
           timezone: lead.timezone,
           companyId,
           ownerId,
+          createdById: auth.userId,
+          updatedById: auth.userId,
+          statusId: await defaultStatusId(tx, auth.tenantId, 'EMPLOYEE'),
+          statusChangedAt: new Date(),
+          city: lead.city,
           // Consent travels with the person; the original source and date are kept.
           marketingConsent: lead.marketingConsent,
           consentSource: lead.consentSource,
@@ -248,8 +272,10 @@ export class LeadsService {
     });
   }
 
-  private async find(tx: TenantTx, tenantId: string, id: string, field = 'Lead'): Promise<LeadModel> {
-    const row = await tx.lead.findFirst({ where: { id, tenantId, deletedAt: null } });
+  /** With `auth`, only inbound leads the caller may see (record visibility, ADR 0060). */
+  private async find(tx: TenantTx, tenantId: string, id: string, field = 'Lead', auth?: AuthContext): Promise<LeadModel> {
+    const scope = auth ? leadScope(await visibility(tx, auth)) : {};
+    const row = await tx.lead.findFirst({ where: { id, tenantId, deletedAt: null, ...scope } });
     if (!row) throw field === 'Lead' ? notFound('Lead') : badRef(field);
     return row;
   }
@@ -287,7 +313,7 @@ export class LeadsService {
   }
 }
 
-export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: string }>): LeadRow {
+export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: string }>, cf?: (values: unknown) => Record<string, unknown>): LeadRow {
   return {
     id: r.id,
     fullName: r.fullName,
@@ -311,7 +337,7 @@ export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: 
     status: r.status,
     tags: r.tags,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
-    customFields: (r.customFields ?? {}) as Record<string, unknown>,
+    customFields: cf ? cf(r.customFields) : ((r.customFields ?? {}) as Record<string, unknown>),
     convertedAt: iso(r.convertedAt),
     convertedContactId: r.convertedContactId,
     convertedOpportunityId: r.convertedOpportunityId,

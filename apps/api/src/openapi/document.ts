@@ -41,6 +41,32 @@ import {
   forecastQuerySchema,
   territoryInputSchema,
   territoryUpdateSchema,
+  companyDuplicateCheckSchema,
+  branchInputSchema,
+  companyLeadSchema,
+  leadDraftSchema,
+  followUpCompleteSchema,
+  followUpInputSchema,
+  followUpListQuerySchema,
+  followUpRescheduleSchema,
+  followUpUpdateSchema,
+  interactionInputSchema,
+  interactionListQuerySchema,
+  rfqConvertSchema,
+  rfqInputSchema,
+  rfqListQuerySchema,
+  rfqReportQuerySchema,
+  rfqUpdateSchema,
+  ownerChangeSchema,
+  contactDuplicateCheckSchema,
+  crmStatusInputSchema,
+  crmStatusUpdateSchema,
+  statusReorderSchema,
+  departmentInputSchema,
+  designationInputSchema,
+  leadNumberingSchema,
+  memberOrgSchema,
+  roleVisibilitySchema,
   forecastSettingsSchema,
   campaignInputSchema,
   changePlanSchema,
@@ -186,6 +212,12 @@ import {
   smsConsentSchema,
   smsSendSchema,
   twilioConnectSchema,
+  sampbidxConnectSchema,
+  sampbidxSendRfqSchema,
+  sampbidxSendMailboxEmailSchema,
+  sampbidxEmailFileQuerySchema,
+  sampbidxTransferListQuerySchema,
+  sampbidxMailboxQuerySchema,
   appearanceSchema,
   regionalSchema,
   savedThemeInputSchema,
@@ -290,6 +322,66 @@ export function buildOpenApiDocument(): object {
     r.registerPath({ method, path, tags: [tag], summary, security: secured,
       request: { ...(path.includes('{id}') ? { params: idParam } : {}), ...(schema ? body(schema) : {}), ...extra },
       responses: { 200: ok('OK'), ...notFound, ...errors } });
+  // Company-centric CRM (ADR 0060)
+  action('post', '/companies/check-duplicates', 'Companies', 'Companies with the same name, domain, email, phone or LinkedIn page across the workspace; names only for ones you cannot open (companies:read)', companyDuplicateCheckSchema);
+  action('post', '/contacts/check-duplicates', 'Contacts', 'Employees with the same email, phone, LinkedIn or name at the company; names only for ones you cannot open (contacts:read)', contactDuplicateCheckSchema);
+  action('get', '/crm-config/statuses', 'CRM configuration', 'Company or employee statuses in order, with how many records use each', undefined, { query: z.object({ kind: z.enum(['COMPANY', 'EMPLOYEE']) }) });
+  action('post', '/crm-config/statuses', 'CRM configuration', 'Add a status (crm:configure)', crmStatusInputSchema);
+  action('put', '/crm-config/statuses/order', 'CRM configuration', 'Reorder statuses; list every status of the kind once (crm:configure)', statusReorderSchema);
+  action('put', '/crm-config/statuses/{id}', 'CRM configuration', 'Rename, recolour, set the default, or deactivate a status (crm:configure)', crmStatusUpdateSchema);
+  action('delete', '/crm-config/statuses/{id}', 'CRM configuration', 'Delete an unused status that is not the default (crm:configure)');
+  action('get', '/crm-config/departments', 'CRM configuration', 'Departments with member counts');
+  action('post', '/crm-config/departments', 'CRM configuration', 'Add a department (crm:configure)', departmentInputSchema);
+  action('put', '/crm-config/departments/{id}', 'CRM configuration', 'Rename, describe or deactivate a department (crm:configure)', departmentInputSchema);
+  action('delete', '/crm-config/departments/{id}', 'CRM configuration', 'Delete a department nobody uses (crm:configure)');
+  action('get', '/crm-config/designations', 'CRM configuration', 'Designations with their dashboard level and member counts');
+  action('post', '/crm-config/designations', 'CRM configuration', 'Add a designation (crm:configure)', designationInputSchema);
+  action('put', '/crm-config/designations/{id}', 'CRM configuration', 'Rename, change the level, or deactivate a designation (crm:configure)', designationInputSchema);
+  action('delete', '/crm-config/designations/{id}', 'CRM configuration', 'Delete a designation nobody uses (crm:configure)');
+  action('get', '/crm-config/lead-numbering', 'CRM configuration', 'Lead number prefix and digits, the next number and how many were issued');
+  action('put', '/crm-config/lead-numbering', 'CRM configuration', 'Change the prefix or digits for new leads, or rewrite existing numbers too (crm:configure)', leadNumberingSchema);
+  action('post', '/company-leads', 'Company leads', 'Create a company lead with its branches and employees in one transaction; deletes the draft it came from (companies:write, contacts:write)', companyLeadSchema);
+  action('get', '/company-leads/people', 'Company leads', 'Workspace people with designations, marking whom you may make a lead owner (companies:read)');
+  action('get', '/company-leads/drafts', 'Company leads', 'Your saved lead drafts (companies:write)');
+  action('post', '/company-leads/drafts', 'Company leads', 'Save a lead draft (companies:write)', leadDraftSchema);
+  action('get', '/company-leads/drafts/{id}', 'Company leads', 'One of your lead drafts (companies:write)');
+  action('put', '/company-leads/drafts/{id}', 'Company leads', 'Update one of your lead drafts (companies:write)', leadDraftSchema);
+  action('delete', '/company-leads/drafts/{id}', 'Company leads', 'Delete one of your lead drafts (companies:write)');
+  action('get', '/companies/{id}/branches', 'Company leads', 'Branches of a company (companies:read)');
+  action('post', '/companies/{id}/branches', 'Company leads', 'Add a branch (companies:write)', branchInputSchema);
+  action('put', '/companies/{id}/branches/{branchId}', 'Company leads', 'Change a branch (companies:write)', branchInputSchema);
+  action('delete', '/companies/{id}/branches/{branchId}', 'Company leads', 'Remove a branch (companies:write)');
+  action('get', '/companies/{id}/owner-history', 'Company leads', 'Every change of the lead owner, newest first (companies:read)');
+  action('post', '/companies/{id}/owner', 'Company leads', 'Give the lead to someone else with a reason; the new owner is notified (companies:write)', ownerChangeSchema);
+  action('get', '/companies/{id}/files', 'Company leads', 'Files kept with the company for the team (companies:read)');
+  r.registerPath({ method: 'post', path: '/companies/{id}/files', tags: ['Company leads'], summary: 'Upload a file as the raw request body, up to 10 MB (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: z.object({ name: z.string(), rfqId: z.string().uuid().optional() }) }, responses: { 201: ok('File'), ...notFound, ...errors } });
+  action('get', '/company-files/{id}/download', 'Company leads', 'Download a company file (companies:read)');
+  action('delete', '/company-files/{id}', 'Company leads', 'Delete a company file (companies:write)');
+  action('get', '/companies/{id}/dashboard', 'Company dashboard', 'Key numbers counted from CRM records: employees, emails, calls, meetings, follow-ups, RFQs and business, by currency (companies:read)');
+  action('get', '/companies/{id}/employees', 'Company dashboard', 'The employee directory with emails sent, responses, last update and next follow-up (companies:read, contacts:read)');
+  r.registerPath({ method: 'get', path: '/companies/{id}/interactions', tags: ['Company dashboard'], summary: 'Logged interactions and synced emails, newest first, marked LOGGED or SYNCED (companies:read, activities:read)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: interactionListQuerySchema }, responses: { 200: ok('Interactions'), ...notFound, ...errors } });
+  action('post', '/interactions', 'Company dashboard', 'Log an interaction with a company and, if a follow-up date is given, schedule the follow-up (activities:write)', interactionInputSchema);
+  action('delete', '/interactions/{id}', 'Company dashboard', 'Delete a logged interaction (activities:write)');
+  r.registerPath({ method: 'get', path: '/follow-ups', tags: ['Follow-ups'], summary: 'Follow-ups by bucket (today, upcoming, overdue, completed, rescheduled, cancelled) for me, my team or everyone (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Follow-ups'), ...errors } });
+  r.registerPath({ method: 'get', path: '/follow-ups/counts', tags: ['Follow-ups'], summary: 'How many follow-ups are in each bucket (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Counts'), ...errors } });
+  action('post', '/follow-ups', 'Follow-ups', 'Schedule a follow-up with a company; the assignee is notified (activities:write)', followUpInputSchema);
+  action('patch', '/follow-ups/{id}', 'Follow-ups', 'Change a follow-up (activities:write)', followUpUpdateSchema);
+  action('post', '/follow-ups/{id}/complete', 'Follow-ups', 'Mark a follow-up done with its outcome (activities:write)', followUpCompleteSchema);
+  action('post', '/follow-ups/{id}/reschedule', 'Follow-ups', 'Move a follow-up to a new date and time (activities:write)', followUpRescheduleSchema);
+  action('post', '/follow-ups/{id}/cancel', 'Follow-ups', 'Cancel a follow-up (activities:write)');
+  r.registerPath({ method: 'get', path: '/rfqs', tags: ['RFQs'], summary: 'Requests for quotation you can see, newest first (companies:read; plan feature rfqs)', security: secured, request: { query: rfqListQuerySchema }, responses: { 200: ok('RFQs'), ...errors } });
+  r.registerPath({ method: 'get', path: '/rfqs/report', tags: ['RFQs'], summary: 'RFQ counts and values by company, client employee or owner (companies:read; plan feature rfqs)', security: secured, request: { query: rfqReportQuerySchema }, responses: { 200: ok('Report'), ...errors } });
+  action('get', '/rfqs/{id}', 'RFQs', 'One RFQ (companies:read; plan feature rfqs)');
+  action('post', '/rfqs', 'RFQs', 'Record an RFQ; it gets the next RFQ number and is logged as an interaction (companies:write; plan feature rfqs)', rfqInputSchema);
+  action('patch', '/rfqs/{id}', 'RFQs', 'Change an RFQ or its status (companies:write; plan feature rfqs)', rfqUpdateSchema);
+  action('delete', '/rfqs/{id}', 'RFQs', 'Delete an RFQ (companies:write; plan feature rfqs)');
+  action('post', '/rfqs/{id}/convert', 'RFQs', 'Create the deal for an RFQ and link the two (companies:write, deals:write; plan feature rfqs)', rfqConvertSchema);
+  action('get', '/contacts/{id}/stats', 'Contacts', 'An employee’s emails sent, responses, calls, meetings, pending follow-ups and last interaction (contacts:read)');
+  r.registerPath({ method: 'get', path: '/geo/countries', tags: ['Locations'], summary: 'Countries with dialling code, currency and time zones', security: secured, responses: { 200: ok('Countries'), ...errors } });
+  r.registerPath({ method: 'get', path: '/geo/countries/{code}/regions', tags: ['Locations'], summary: 'States, provinces and regions of a country', security: secured, request: { params: z.object({ code: z.string().length(2) }) }, responses: { 200: ok('Regions'), ...notFound, ...errors } });
+  r.registerPath({ method: 'get', path: '/geo/countries/{code}/cities', tags: ['Locations'], summary: 'Cities of a country, largest first; filter by region and name', security: secured, request: { params: z.object({ code: z.string().length(2) }), query: z.object({ region: z.string().optional(), q: z.string().optional(), limit: z.number().int().optional() }) }, responses: { 200: ok('Cities'), ...notFound, ...errors } });
+  r.registerPath({ method: 'patch', path: '/tenants/current/members/{membershipId}/org', tags: ['Tenants'], summary: 'Set a member’s designation, department and reporting manager; loops are refused (members:manage)', security: secured, request: { params: z.object({ membershipId: z.string().uuid() }), ...body(memberOrgSchema) }, responses: { 200: ok('Member'), ...notFound, ...errors } });
+  action('put', '/tenants/current/roles/{id}/visibility', 'Tenants', 'Which records a role sees (own, team, all) and whether it sees details of records others own; the owner role is fixed (members:manage)', roleVisibilitySchema);
   action('post', '/leads/{id}/assign', 'Leads', 'Assign an owner (leads:write)', assignSchema);
   action('get', '/leads/{id}/duplicates', 'Leads', 'Possible duplicates by email, phone or name and company (leads:read)');
   action('post', '/leads/{id}/merge', 'Leads', 'Merge a duplicate into this lead (leads:write)', z.object({ duplicateId: z.string().uuid() }));
@@ -431,6 +523,22 @@ export function buildOpenApiDocument(): object {
     request: { params: z.object({ hookId: z.string() }) }, responses: { 200: { description: 'Empty TwiML' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
   r.registerPath({ method: 'post', path: '/apps/twilio/webhooks/{hookId}/status', tags: ['Workspace apps'], summary: "Twilio's status callback for texts SampForce sent (signed); status only moves forward",
     request: { params: z.object({ hookId: z.string() }) }, responses: { 204: { description: 'Recorded' }, 401: { description: 'Signature check failed' }, 404: { description: 'Unknown endpoint' } } });
+  // SampBidx (ADR 0061); the wire format SampBidx must accept is in docs/integrations/sampbidx-api.md.
+  action('post', '/apps/sampbidx/keys', 'Workspace apps', 'Save the SampBidx API address and key after GET /v1/ping accepts them; sends no RFQ (integrations:manage; plan feature sampbidx)', sampbidxConnectSchema);
+  action('get', '/apps/sampbidx/callback-secret', 'Workspace apps', 'The callback URL and signing secret to give SampBidx (integrations:manage)');
+  action('post', '/apps/sampbidx/callback-secret/rotate', 'Workspace apps', 'Replace the callback signing secret; callbacks signed with the old one are refused at once (integrations:manage)');
+  r.registerPath({ method: 'get', path: '/apps/sampbidx/rfqs/{rfqId}', tags: ['Workspace apps'], summary: "Send to SampBidx, steps 1 and 2: the RFQ's missing required details, its files and earlier sends (companies:read)", security: secured,
+    request: { params: z.object({ rfqId: z.string().uuid() }) }, responses: { 200: ok('Readiness'), ...notFound, ...errors } });
+  action('post', '/apps/sampbidx/transfers/rfq', 'Workspace apps', 'Send a filled-in RFQ and the chosen attachments to SampBidx; refused while required details are missing, or when already sent unless resend is true (companies:write)', sampbidxSendRfqSchema);
+  action('get', '/apps/sampbidx/mailbox', 'Workspace apps', "Emails from the caller's own connected mailboxes, to pick an RFQ email (activities:read)", undefined, { query: sampbidxMailboxQuerySchema });
+  action('post', '/apps/sampbidx/transfers/mailbox-email', 'Workspace apps', "Send one email from the caller's own synced mailbox to SampBidx (activities:read)", sampbidxSendMailboxEmailSchema);
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/email-file', tags: ['Workspace apps'], summary: 'Send an .eml or Outlook .msg file (the raw request body, up to 10 MB, attachments included) to SampBidx (activities:read)', security: secured,
+    request: { query: sampbidxEmailFileQuerySchema }, responses: { 200: ok('Transfer'), ...errors } });
+  action('get', '/apps/sampbidx/transfers', 'Workspace apps', 'What was sent to SampBidx, newest first, with its delivery and SampBidx status (companies:read)', undefined, { query: sampbidxTransferListQuerySchema });
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/{id}/retry', tags: ['Workspace apps'], summary: 'Send a failed transfer again with the same Idempotency-Key (activities:read)', security: secured,
+    request: { params: z.object({ id: z.string().uuid() }) }, responses: { 200: ok('Transfer'), ...notFound, ...errors } });
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/callbacks/{hookId}', tags: ['Workspace apps'], summary: "SampBidx's status updates: JSON {transferId or sampbidxId, status, note?, url?}, signed X-SampBidx-Signature: sha256=HMAC(secret, timestamp.body) with X-SampBidx-Timestamp within 5 minutes",
+    request: { params: z.object({ hookId: z.string() }) }, responses: { 200: ok('Recorded'), 400: { description: 'Body not valid' }, 401: { description: 'Signature check failed' } } });
   action('get', '/emails', 'Communication', 'Synced and sent email linked to records (activities:read)', undefined, { query: z.object({ contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() }) });
   action('get', '/emails/{id}', 'Communication', 'One email with its body (activities:read)');
   action('post', '/emails/send', 'Communication', "Send one email from the caller's mailbox; daily cap applies; conversationId keeps a reply in an inbox conversation of your own mailbox (activities:write)", sendEmailSchema);

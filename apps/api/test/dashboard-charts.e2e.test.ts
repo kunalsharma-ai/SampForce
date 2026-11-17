@@ -120,7 +120,7 @@ describe('Command Center filters, charts and layout', () => {
   });
 
   it('saves a personal layout, fills in widgets it does not name, and resets', async () => {
-    expect((await api(owner).get('/me/dashboard-layout').expect(200)).body).toEqual({ layout: null });
+    expect((await api(owner).get('/me/dashboard-layout').expect(200)).body).toEqual({ layout: null, policy: null });
     const exec = DASHBOARD_PRESETS.executive;
     const partial = { ...exec, preset: 'custom', widgets: exec.widgets.slice(0, 3) };
     const saved = (await api(owner).put('/me/dashboard-layout', partial).expect(200)).body.layout;

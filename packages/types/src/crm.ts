@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { customFieldFiltersParam } from './custom-fields';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -60,6 +61,8 @@ export const listQuerySchema = z.object({
   /** Deals only: expected close date on or after / on or before (YYYY-MM-DD). */
   closeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
   closeTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  /** Custom field filters (ADR 0062): a JSON list of {key, op, value}. */
+  cf: customFieldFiltersParam,
 });
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
@@ -77,6 +80,46 @@ export interface OwnerRef {
 
 // ───────────── Companies ─────────────
 
+const optionalUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .transform((v) => (v === '' ? null : /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`))
+  .pipe(z.string().url('Enter a valid web address').refine((v) => /^https?:\/\//i.test(v), 'Use an http or https address').nullable())
+  .nullable()
+  .optional();
+
+/** One of several emails, phones or links of a company or employee. */
+const contactPoint = <T extends z.ZodTypeAny>(value: T) =>
+  z.object({ value, label: z.string().trim().max(60).nullable().optional(), primary: z.boolean().optional() });
+const pointList = <T extends z.ZodTypeAny>(value: T) => z.array(contactPoint(value)).max(20).optional();
+const requiredEmail = z.string().trim().toLowerCase().max(254).email('Enter a valid email');
+const requiredPhone = z.string().trim().max(40).regex(/^\+?[0-9 ().-]{6,}$/, 'Enter a valid phone number');
+const requiredUrl = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .transform((v) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`))
+  .pipe(z.string().url('Enter a valid web address').refine((v) => /^https?:\/\//i.test(v), 'Use an http or https address'));
+
+export const companyAddressSchema = z.object({
+  label: z.string().trim().max(60).nullable().optional(),
+  country: countryCode,
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+});
+export type CompanyAddress = z.infer<typeof companyAddressSchema>;
+export interface ContactPoint {
+  value: string;
+  label?: string | null;
+  primary?: boolean;
+}
+
+export const COMPANY_TYPES = ['Private company', 'Public company', 'Partnership', 'Government agency', 'Non-profit', 'Educational institution', 'Self-employed', 'Other'] as const;
+
 export const companyInputSchema = z.object({
   name: z.string().trim().min(1, 'Enter a company name').max(200),
   domain: optionalText(253),
@@ -85,6 +128,35 @@ export const companyInputSchema = z.object({
   ownerId: uuidRef,
   parentCompanyId: uuidRef,
   customFields: customFieldValuesSchema,
+  // Company-centric CRM (lead creation). The lead number, creator and timestamps are never accepted from input.
+  statusId: uuidRef,
+  managerId: uuidRef,
+  pocUserId: uuidRef,
+  departmentId: uuidRef,
+  teamId: uuidRef,
+  website: optionalUrl,
+  linkedinUrl: optionalUrl,
+  primaryEmail: optionalEmail,
+  primaryPhone: optionalPhone,
+  overview: optionalText(5000),
+  foundedYear: z.coerce.number().int().min(1600).max(2100).nullable().optional(),
+  branchCount: z.coerce.number().int().min(0).max(100000).nullable().optional(),
+  companySize: optionalText(40),
+  companyType: optionalText(60),
+  headquarters: optionalText(200),
+  specialties: optionalText(1000),
+  businessCategory: optionalText(120),
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+  timezone: optionalText(64),
+  notes: optionalText(5000),
+  emails: pointList(requiredEmail),
+  phones: pointList(requiredPhone),
+  websites: pointList(requiredUrl),
+  linkedinUrls: pointList(requiredUrl),
+  addresses: z.array(companyAddressSchema).max(50).optional(),
 });
 export const companyUpdateSchema = companyInputSchema.partial();
 export type CompanyInput = z.infer<typeof companyInputSchema>;
@@ -102,6 +174,60 @@ export interface CompanyRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  leadNumber: string | null;
+  status: CrmStatusRef | null;
+  statusChangedAt: string | null;
+  createdBy: PersonRef | null;
+  updatedBy: PersonRef | null;
+  manager: PersonRef | null;
+  /** The internal point of contact (a workspace user), separate from the creator and the owner. */
+  poc: PersonRef | null;
+  /** The owner with their designation (owner above keeps its old shape). */
+  ownerPerson: PersonRef | null;
+  department: { id: string; name: string } | null;
+  team: { id: string; name: string } | null;
+  website: string | null;
+  linkedinUrl: string | null;
+  primaryEmail: string | null;
+  primaryPhone: string | null;
+  overview: string | null;
+  foundedYear: number | null;
+  branchCount: number | null;
+  companySize: string | null;
+  companyType: string | null;
+  headquarters: string | null;
+  specialties: string | null;
+  businessCategory: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  postalCode: string | null;
+  timezone: string | null;
+  notes: string | null;
+  emails: ContactPoint[];
+  phones: ContactPoint[];
+  websites: ContactPoint[];
+  linkedinUrls: ContactPoint[];
+  addresses: CompanyAddress[];
+  /**
+   * True when the record belongs to someone else and the caller's role may not see its details: contact details,
+   * notes, overview and custom fields are left out.
+   */
+  restricted: boolean;
+}
+
+/** A CRM user shown with their designation ("Kunal Sharma – Business Development Manager"). */
+export interface PersonRef {
+  id: string;
+  name: string;
+  designation: string | null;
+}
+
+export interface CrmStatusRef {
+  id: string;
+  name: string;
+  color: string;
+  meaning: string | null;
 }
 
 // ───────────── Contacts ─────────────
@@ -118,6 +244,16 @@ export const contactInputSchema = z.object({
   ownerId: uuidRef,
   marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
   customFields: customFieldValuesSchema,
+  // Employee / POC fields (company-centric CRM). jobTitle is the designation, ownerId the assigned executive.
+  statusId: uuidRef,
+  department: optionalText(120),
+  linkedinUrl: optionalUrl,
+  state: optionalText(120),
+  city: optionalText(120),
+  remarks: optionalText(5000),
+  nextFollowUpAt: z.string().datetime({ offset: true }).nullable().optional(),
+  emails: pointList(requiredEmail),
+  phones: pointList(requiredPhone),
 });
 export const contactUpdateSchema = contactInputSchema.partial();
 export type ContactInput = z.infer<typeof contactInputSchema>;
@@ -144,6 +280,139 @@ export interface ContactRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  status: CrmStatusRef | null;
+  statusChangedAt: string | null;
+  statusChangedBy: PersonRef | null;
+  department: string | null;
+  linkedinUrl: string | null;
+  state: string | null;
+  city: string | null;
+  remarks: string | null;
+  nextFollowUpAt: string | null;
+  emails: ContactPoint[];
+  phones: ContactPoint[];
+  ownerPerson: PersonRef | null;
+  createdBy: PersonRef | null;
+  /** See CompanyRow.restricted. */
+  restricted: boolean;
+}
+
+// ───────────── Company leads: branches, the lead form, drafts, ownership, files (ADR 0060) ─────────────
+
+export const branchInputSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a branch name').max(160),
+  country: countryCode,
+  state: optionalText(120),
+  city: optionalText(120),
+  address: optionalText(500),
+  postalCode: optionalText(20),
+  email: optionalEmail,
+  phone: optionalPhone,
+  contactPerson: optionalText(160),
+  website: optionalUrl,
+});
+export type BranchInput = z.infer<typeof branchInputSchema>;
+
+export interface BranchRow {
+  id: string;
+  companyId: string;
+  name: string;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  postalCode: string | null;
+  email: string | null;
+  phone: string | null;
+  contactPerson: string | null;
+  website: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** An employee written in the lead form: the company is the lead being created. */
+export const leadEmployeeSchema = contactInputSchema.omit({ companyId: true });
+export type LeadEmployeeInput = z.infer<typeof leadEmployeeSchema>;
+
+/** "+ Create new lead": the company, its branches and its employees, saved together in one transaction. */
+export const companyLeadSchema = z.object({
+  company: companyInputSchema,
+  branches: z.array(branchInputSchema).max(50).default([]),
+  employees: z.array(leadEmployeeSchema).max(50).default([]),
+  /** The draft this lead was written in; it is deleted once the lead is saved. */
+  draftId: z.string().uuid().optional(),
+});
+export type CompanyLeadInput = z.input<typeof companyLeadSchema>;
+
+export interface CompanyLeadResult {
+  company: CompanyRow;
+  branchIds: string[];
+  employeeIds: string[];
+}
+
+/** The steps of the lead form, in order. */
+export const LEAD_FORM_STEPS = ['company', 'location', 'business', 'employees', 'ownership', 'status', 'remarks', 'review'] as const;
+export type LeadFormStep = (typeof LEAD_FORM_STEPS)[number];
+
+export const leadDraftSchema = z.object({
+  step: z.number().int().min(0).max(LEAD_FORM_STEPS.length - 1).default(0),
+  /** What was typed so far, as the form keeps it. Not validated until the lead is saved. */
+  data: z
+    .record(z.string(), z.unknown())
+    .refine((d) => JSON.stringify(d).length <= 200_000, 'This draft is too large to save.'),
+});
+export type LeadDraftInput = z.input<typeof leadDraftSchema>;
+
+export interface LeadDraftRow {
+  id: string;
+  /** The company name typed so far. */
+  title: string | null;
+  step: number;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Why a lead moved to someone else (section 16 of the specification), plus routine reassignment. */
+export const LEAD_TRANSFER_REASONS = ['REASSIGNED', 'SENIOR_DISCUSSION', 'HIGH_VALUE', 'NEGOTIATION', 'CLIENT_CONCERN', 'TECHNICAL', 'MANAGEMENT', 'OTHER'] as const;
+export type LeadTransferReason = (typeof LEAD_TRANSFER_REASONS)[number];
+
+export const ownerChangeSchema = z.object({
+  ownerId: z.string().uuid(),
+  reason: z.enum(LEAD_TRANSFER_REASONS).nullable().optional(),
+  note: optionalText(1000),
+});
+export type OwnerChangeInput = z.infer<typeof ownerChangeSchema>;
+
+export interface OwnerChangeRow {
+  id: string;
+  from: PersonRef | null;
+  to: PersonRef | null;
+  by: PersonRef | null;
+  reason: LeadTransferReason | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface CompanyFileRow {
+  id: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: PersonRef | null;
+  createdAt: string;
+}
+
+/** An employee's relationship with the team, from activities, synced emails and tasks. */
+export interface EmployeeStats {
+  emailsSent: number;
+  responsesReceived: number;
+  calls: number;
+  meetings: number;
+  followUpsPending: number;
+  lastInteractionAt: string | null;
+  latestUpdate: { type: 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE'; subject: string; at: string } | null;
+  nextFollowUpAt: string | null;
 }
 
 // ───────────── Leads ─────────────
@@ -295,6 +564,9 @@ export const dealInputSchema = z.object({
   ownerId: uuidRef,
   priority: z.enum(DEAL_PRIORITIES).nullable().optional(),
   customFields: customFieldValuesSchema,
+  /** Revenue attribution (ADR 0063): the assigned manager and the people who helped win the deal. */
+  managerId: uuidRef,
+  supportingUserIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export const dealUpdateSchema = dealInputSchema.partial();
 export type DealInput = z.infer<typeof dealInputSchema>;
@@ -328,6 +600,11 @@ export interface DealRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  /** DEAL-0001; null for deals numbered on the next set-up run. */
+  dealNumber: string | null;
+  managerId: string | null;
+  leadCreatorId: string | null;
+  supportingUserIds: string[];
 }
 
 /** One open deal in the priority view, with the reasons it ranks where it does. */
@@ -455,41 +732,12 @@ export interface TaskRow {
   createdAt: string;
 }
 
-// ───────────── Custom fields ─────────────
-
-export const CUSTOM_FIELD_ENTITIES = ['LEAD', 'CONTACT', 'COMPANY', 'OPPORTUNITY'] as const;
-export const CUSTOM_FIELD_TYPES = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT'] as const;
-
-export const customFieldDefSchema = z
-  .object({
-    entity: z.enum(CUSTOM_FIELD_ENTITIES),
-    key: z
-      .string()
-      .trim()
-      .regex(/^[a-z][a-z0-9_]{1,39}$/, 'Lowercase letters, digits and underscores, starting with a letter'),
-    label: z.string().trim().min(1).max(80),
-    type: z.enum(CUSTOM_FIELD_TYPES),
-    options: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
-    required: z.boolean().default(false),
-  })
-  .refine((d) => d.type !== 'SELECT' || d.options.length > 0, { message: 'Add at least one option', path: ['options'] });
-export type CustomFieldDefInput = z.infer<typeof customFieldDefSchema>;
-
-export interface CustomFieldDef {
-  id: string;
-  entity: (typeof CUSTOM_FIELD_ENTITIES)[number];
-  key: string;
-  label: string;
-  type: (typeof CUSTOM_FIELD_TYPES)[number];
-  options: string[];
-  required: boolean;
-  position: number;
-}
+// Custom fields live in custom-fields.ts (ADR 0062).
 
 // ───────────── Search ─────────────
 
 export interface SearchHit {
-  entity: 'lead' | 'contact' | 'company' | 'deal';
+  entity: 'lead' | 'contact' | 'company' | 'deal' | 'rfq';
   id: string;
   title: string;
   subtitle: string | null;
@@ -557,3 +805,6 @@ export interface InvitationPreview {
   roleName: string;
   hasAccount: boolean;
 }
+
+/** Shared field builders, for the company-centric CRM schemas (company-crm.ts). */
+export const fieldSchemas = { optionalText, optionalEmail, optionalPhone, countryCode, uuidRef };

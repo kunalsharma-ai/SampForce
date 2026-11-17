@@ -3,7 +3,6 @@
 import { consentLabel } from '@/lib/crm-fields';
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { ContactRow } from '@dealflow/types';
-import Link from 'next/link';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
@@ -14,6 +13,7 @@ import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
+import { EmployeeDetails, EmployeeRelationship } from '@/components/crm/employee-profile';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
@@ -37,18 +37,15 @@ export function ContactDetail({ id }: { id: string }) {
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          <EmployeeRelationship contact={c} />
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('Details')}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <EmployeeDetails contact={c} />
               <DetailList
                 items={[
-                  ['Email', c.email && <a className="text-primary hover:underline" href={`mailto:${c.email}`}>{c.email}</a>],
-                  ['Phone', c.phone && <a className="hover:underline" href={`tel:${c.phone}`}>{c.phone}</a>],
-                  ['Company', c.company && <Link className="text-primary hover:underline" href={`/app/companies/${c.company.id}`}>{c.company.name}</Link>],
-                  ['Job title', c.jobTitle],
-                  ['Country', c.country],
                   ['Time zone', c.timezone],
                   ['Marketing consent', consentLabel(c.marketingConsent, c.consentSource, t.maybe)],
                   ['Email status', c.emailStatus && <EmailStatusBadge status={c.emailStatus} />],

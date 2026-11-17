@@ -20,12 +20,15 @@ import { WhatsappService } from './whatsapp.service';
 import { TwilioClient } from './twilio';
 import { TwilioController } from './twilio.controller';
 import { TwilioService } from './twilio.service';
+import { SampbidxClient } from './sampbidx';
+import { SampbidxController } from './sampbidx.controller';
+import { SampbidxService } from './sampbidx.service';
 
-/** Workspace apps (Slack, Microsoft Teams, Zoom, DocuSign, card payments, WhatsApp, SMS through Twilio). Workflow steps reach them through AppsService. */
+/** Workspace apps (Slack, Microsoft Teams, Zoom, DocuSign, card payments, WhatsApp, SMS through Twilio, SampBidx). Workflow steps reach them through AppsService. */
 @Module({
   imports: [CrmModule],
-  controllers: [ZoomController, DocusignController, CardPaymentsController, WhatsappController, TwilioController, AppsController],
-  providers: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsClient, CardPaymentsService, WhatsappClient, WhatsappService, TwilioClient, TwilioService, NotificationsService],
-  exports: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsService, WhatsappService, TwilioService],
+  controllers: [ZoomController, DocusignController, CardPaymentsController, WhatsappController, TwilioController, SampbidxController, AppsController],
+  providers: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsClient, CardPaymentsService, WhatsappClient, WhatsappService, TwilioClient, TwilioService, SampbidxClient, SampbidxService, NotificationsService],
+  exports: [AppsService, SlackClient, TeamsClient, ZoomClient, ZoomService, DocusignClient, DocusignService, CardPaymentsService, WhatsappService, TwilioService, SampbidxService],
 })
 export class AppsModule {}

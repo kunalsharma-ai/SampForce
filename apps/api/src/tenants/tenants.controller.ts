@@ -10,6 +10,10 @@ import {
   updateMemberRoleSchema,
   type UpdateTenantInput,
   updateTenantSchema,
+  type MemberOrgInput,
+  memberOrgSchema,
+  type RoleVisibilityInput,
+  roleVisibilitySchema,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -90,6 +94,19 @@ export class TenantsController {
   @RequirePermissions('members:manage')
   updateRole(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(roleInputSchema)) body: RoleInput, @Meta() meta: RequestMeta) {
     return this.roleService.update(auth, id, body, meta);
+  }
+
+  @Put('roles/:id/visibility')
+  @RequirePermissions('members:manage')
+  setRoleVisibility(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(roleVisibilitySchema)) body: RoleVisibilityInput, @Meta() meta: RequestMeta) {
+    return this.roleService.setVisibility(auth, id, body, meta);
+  }
+
+  /** Designation, department and reporting manager (company-centric CRM). */
+  @Patch('members/:membershipId/org')
+  @RequirePermissions('members:manage')
+  setMemberOrg(@Auth() auth: AuthContext, @Param('membershipId', new ParseUUIDPipe()) membershipId: string, @Body(new ZodPipe(memberOrgSchema)) body: MemberOrgInput, @Meta() meta: RequestMeta) {
+    return this.tenants.setMemberOrg(auth, membershipId, body, meta);
   }
 
   @Delete('roles/:id')
