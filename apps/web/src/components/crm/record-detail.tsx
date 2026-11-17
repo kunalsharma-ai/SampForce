@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { type CrmEntity, ENTITY_LABEL, useCustomFields } from '@/lib/crm';
-import { CustomFieldValue } from './custom-field-input';
+import { CustomFieldValue, fieldLogic } from './custom-field-input';
 import { toFormValues } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
@@ -36,6 +36,8 @@ export function CustomFieldList({ entity, values }: { entity: CrmEntity; values:
   const defs = useCustomFields(entity);
   const t = useT();
   if (!defs.data?.length) return null;
+  // Fields whose condition fails for this record are left out (ADR 0062).
+  const logic = fieldLogic(defs.data, (k) => values[k]);
   return (
     <Card>
       <CardHeader>
@@ -46,7 +48,7 @@ export function CustomFieldList({ entity, values }: { entity: CrmEntity; values:
       </CardHeader>
       <CardContent>
         <DetailList
-          items={defs.data.map((d) => [{ text: d.label }, <CustomFieldValue key={d.id} def={d} value={values[d.key]} empty="—" />])}
+          items={defs.data.filter(logic.shows).map((d) => [{ text: d.label }, <CustomFieldValue key={d.id} def={d} value={values[d.key]} empty="—" />])}
         />
       </CardContent>
     </Card>

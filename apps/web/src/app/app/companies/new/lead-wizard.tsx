@@ -35,7 +35,7 @@ import {
   StatusSelect,
   usePerson,
 } from '@/components/crm/lead-fields';
-import { CustomFieldInput, fieldDefault, fieldPayloadValue, useFieldDefs } from '@/components/crm/custom-field-input';
+import { CustomFieldInput, fieldDefault, fieldLogic, fieldPayloadValue, useFieldDefs } from '@/components/crm/custom-field-input';
 import { Select, Textarea } from '@/components/crm/select';
 import { CountryFlag, StatusChip } from '@/components/crm/status-chip';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
@@ -135,8 +135,12 @@ const num = (v: string) => (v.trim() === '' ? null : Number(v));
 function payload(form: LeadForm, draftId: string | null, fields: CustomFieldDef[]) {
   const c = form.company;
   // Only fields this person may edit are sent; empty ones are left out.
+  const logic = fieldLogic(fields, (k) => {
+    const d = fields.find((x) => x.key === k);
+    return d ? (c.customFields[k] ?? fieldDefault(d)) : undefined;
+  });
   const customFields = Object.fromEntries(
-    fields.filter((d) => d.access.edit).map((d) => [d.key, fieldPayloadValue(d, c.customFields[d.key] ?? fieldDefault(d))] as const).filter(([, v]) => v !== ''),
+    fields.filter((d) => d.showInForms && d.access.edit && logic.shows(d)).map((d) => [d.key, fieldPayloadValue(d, c.customFields[d.key] ?? fieldDefault(d))] as const).filter(([, v]) => v !== ''),
   );
   return {
     ...(draftId ? { draftId } : {}),
@@ -212,6 +216,10 @@ export function LeadWizard() {
   const headingRef = React.useRef<HTMLHeadingElement>(null);
   const customDefs = useFieldDefs('COMPANY');
   const companyFields = (customDefs.data ?? []).filter((d) => d.showInForms);
+  const cfLogic = fieldLogic(customDefs.data ?? [], (k) => {
+    const d = customDefs.data?.find((x) => x.key === k);
+    return d ? (form.company.customFields[k] ?? fieldDefault(d)) : undefined;
+  });
 
   React.useEffect(() => {
     if (draft.data && !loaded) {
@@ -231,7 +239,7 @@ export function LeadWizard() {
   const setCompany = (patch: Partial<CompanyValue>) => setForm((f) => ({ ...f, company: { ...f.company, ...patch } }));
 
   const validate = (): Errors => {
-    const parsed = companyLeadSchema.safeParse(payload(form, draftId, companyFields));
+    const parsed = companyLeadSchema.safeParse(payload(form, draftId, customDefs.data ?? []));
     if (parsed.success) return {};
     const out: Errors = {};
     for (const i of parsed.error.issues) {
@@ -277,7 +285,7 @@ export function LeadWizard() {
     }
     setSaving(true);
     try {
-      const res = await create.mutateAsync(payload(form, draftId, companyFields));
+      const res = await create.mutateAsync(payload(form, draftId, customDefs.data ?? []));
       const failed: string[] = [];
       for (const f of files) await uploadCompanyFile(res.company.id, f).catch(() => failed.push(f.name));
       router.push(`/app/companies/${res.company.id}${failed.length ? `?uploadFailed=${encodeURIComponent(failed.join(', '))}` : ''}`);
@@ -493,13 +501,13 @@ export function LeadWizard() {
                 {companyFields.length > 0 && (
                   <fieldset className="space-y-4">
                     <legend className="mb-2 text-sm font-semibold">{t('Custom fields')}</legend>
-                    {companyFields.map((d) => (
+                    {companyFields.filter(cfLogic.shows).map((d) => (
                       <CustomFieldInput
                         key={d.key}
                         def={d}
                         entity="COMPANY"
                         id={`lead-cf-${d.key}`}
-                        value={c.customFields[d.key] ?? fieldDefault(d)}
+                        value={cfLogic.valueOf(d, c.customFields[d.key] ?? fieldDefault(d))}
                         onChange={(v) => setCompany({ customFields: { ...c.customFields, [d.key]: v } })}
                         error={ce[`customFields.${d.key}`]}
                       />

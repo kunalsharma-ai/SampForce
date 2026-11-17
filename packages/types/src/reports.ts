@@ -157,7 +157,7 @@ const CUSTOM_REPORT_KEY = /^cf\.[a-z][a-z0-9_]{0,39}$/;
 export function customReportFields(defs: ReadonlyArray<{ key: string; label: string; type: CustomFieldType; options: readonly string[] }>): ReportField[] {
   const kind: Partial<Record<CustomFieldType, [ReportFieldKind, boolean]>> = {
     TEXT: ['text', true], TEXTAREA: ['text', false], URL: ['text', false], EMAIL: ['text', false], PHONE: ['text', false],
-    NUMBER: ['number', false], CURRENCY: ['money', false], DATE: ['date', true], DATETIME: ['date', true],
+    NUMBER: ['number', false], FORMULA: ['number', false], CURRENCY: ['money', false], DATE: ['date', true], DATETIME: ['date', true],
     SELECT: ['enum', true], MULTISELECT: ['enum', false], CHECKBOX: ['boolean', true], BOOLEAN: ['boolean', true],
   };
   return defs.flatMap((d) => {

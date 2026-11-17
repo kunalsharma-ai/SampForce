@@ -180,7 +180,11 @@ export class ImportExportService {
         const { defs: all } = await this.fields.accessFor(tx, auth, cfEntity);
         const defs = all.filter((d) => d.access.view);
         const cfHeaders = defs.map((d) => `customFields.${d.key}`);
-        const cf = (v: unknown) => defs.map((d) => customFieldText(d.type, ((v ?? {}) as Record<string, unknown>)[d.key]) || null);
+        // Values of fields hidden by a failing condition are left out, as on the record page.
+        const cf = (v: unknown) => {
+          const shown = this.fields.visibleValues(all, v);
+          return defs.map((d) => customFieldText(d.type, shown[d.key]) || null);
+        };
         const where = { tenantId: auth.tenantId, deletedAt: null };
         // Exports follow record visibility; details of records the role may not see are left blank.
         const v = await visibility(tx, auth);

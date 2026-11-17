@@ -1,6 +1,6 @@
 'use client';
 
-import { PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_STATUSES, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_STATUSES, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, FileText, Handshake, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -21,7 +21,7 @@ import { PersonSelect } from './lead-fields';
 import { Select, Textarea } from './select';
 import { useOptionLookup, useOptions } from '@/lib/crm-admin';
 import { ApiError } from '@/lib/api';
-import { CustomFieldInput, fieldDefault, fieldFormValue, fieldPayloadValue, useFieldDefs } from './custom-field-input';
+import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue, useFieldDefs } from './custom-field-input';
 import { CustomFieldSummary } from './follow-ups';
 import { optionLabel, RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
 
@@ -192,6 +192,11 @@ export function RfqDialog({
   const fields = useFieldDefs('RFQ');
   const formFields = (fields.data ?? []).filter((d) => current || d.showInForms);
   const [custom, setCustom] = React.useState<Record<string, unknown>>({});
+  const cfRaw = (d: CustomFieldDef) => (custom[d.key] === undefined && !current ? fieldDefault(d) : fieldFormValue(d, custom[d.key]));
+  const logic = fieldLogic(fields.data ?? [], (k) => {
+    const d = fields.data?.find((x) => x.key === k);
+    return d ? cfRaw(d) : undefined;
+  });
   const [v, setV] = React.useState<RfqForm>(() => formOf(rfq, { ownerId: company.ownerId }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -239,7 +244,7 @@ export function RfqDialog({
       // Read-only fields are left out; an emptied field is sent as null so the API clears it.
       customFields: Object.fromEntries(
         formFields
-          .filter((d) => d.access.edit)
+          .filter((d) => d.access.edit && logic.shows(d))
           .map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const)
           .filter(([, x]) => x !== '' || current)
           .map(([k, x]) => [k, x === '' ? null : x]),
@@ -366,13 +371,13 @@ export function RfqDialog({
           {formFields.length > 0 && (
             <fieldset className="grid gap-4 sm:grid-cols-2">
               <legend className="mb-2 text-sm font-semibold">{t('Custom fields')}</legend>
-              {formFields.map((d) => (
+              {formFields.filter(logic.shows).map((d) => (
                 <CustomFieldInput
                   key={d.id}
                   def={d}
                   entity="RFQ"
                   id={`rfq-cf-${d.key}`}
-                  value={custom[d.key] === undefined && !current ? fieldDefault(d) : fieldFormValue(d, custom[d.key])}
+                  value={logic.valueOf(d, cfRaw(d))}
                   onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
                   error={errors[`customFields.${d.key}`]}
                 />

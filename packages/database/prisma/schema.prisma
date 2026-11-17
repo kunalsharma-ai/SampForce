@@ -1311,6 +1311,7 @@ enum CustomFieldType {
   EMAIL
   PHONE
   FILE
+  FORMULA
 }
 
 /// Typed definition for values stored in a record's custom_fields JSON under `key`.
@@ -1333,6 +1334,11 @@ model CustomField {
   showInForms        Boolean           @default(true) @map("show_in_forms")
   searchable         Boolean           @default(false)
   active             Boolean           @default(true)
+  /// Shown only while another field passes this test: {key, op, value} (ADR 0062).
+  showWhen           Json?             @map("show_when")
+  /// FORMULA: the expression and the decimals its result is rounded to.
+  formula            String?
+  decimals           Int?
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
   archivedAt         DateTime?         @map("archived_at")
