@@ -87,3 +87,22 @@ describe('funnel stages', () => {
     expect(funnelStageOf({ ...none, contacted: true, status: { name: 'Not Interested', meaning: 'LOST' } })).toBe('LOST');
   });
 });
+
+describe('manager dashboard helpers', () => {
+  it('rates performance against the pace the elapsed period asks for', async () => {
+    const { performanceStatus } = await import('./command-center');
+    expect(performanceStatus(120, 0.5, true)).toBe('ACHIEVED');
+    expect(performanceStatus(46, 0.5, true)).toBe('ON_TRACK');
+    expect(performanceStatus(35, 0.5, true)).toBe('AT_RISK');
+    expect(performanceStatus(10, 0.5, true)).toBe('BEHIND');
+    expect(performanceStatus(0, 0, true)).toBe('ON_TRACK');
+    expect(performanceStatus(null, 0.5, true)).toBe('NO_TARGET');
+    expect(performanceStatus(null, 0.5, false)).toBe('INACTIVE');
+  });
+
+  it('works out shares only when there is something to divide by', async () => {
+    const { ratio } = await import('./command-center');
+    expect(ratio(1, 3)).toBe(33.3);
+    expect(ratio(2, 0)).toBeNull();
+  });
+});

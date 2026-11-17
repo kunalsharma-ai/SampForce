@@ -221,7 +221,7 @@ describe('executive command center', () => {
     await api(rep).get('/lead-transfers').expect(403);
     await http.get('/revenue-records').expect(403);
     const d = (await api(rep).get(`/command-center/executive?${q()}`).expect(200)).body;
-    expect(d.features).toEqual({ revenueAttribution: false, leadTransfers: false });
+    expect(d.features).toEqual({ revenueAttribution: false, leadTransfers: false, instructions: true, clientConcerns: true });
     expect(d.revenue).toBeNull();
     expect(d.kpis.map((k: { key: string }) => k.key)).not.toContain('revenue');
     await asTenant(owner.tenantId, (tx) => tx.tenantFeatureOverride.deleteMany({ where: { tenantId: owner.tenantId } }));

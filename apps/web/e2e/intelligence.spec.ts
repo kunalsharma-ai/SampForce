@@ -33,7 +33,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await apiPost(page, '/deal-health/refresh', {});
 
   // Command Center: ranked list with reasons, and the week's numbers.
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   await expect(page.getByText('Your next best actions')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Send the security questionnaire' })).toBeVisible();
   await expect(page.getByText('Overdue by 2 days.')).toBeVisible();

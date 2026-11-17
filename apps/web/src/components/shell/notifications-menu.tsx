@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@dealflow/ui';
+import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@dealflow/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -61,7 +61,24 @@ export function NotificationsMenu() {
                 <span className={`flex-1 text-sm ${n.readAt ? 'text-muted-foreground' : 'font-medium'}`}>{n.title}</span>
               </span>
               {n.body && <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>}
-              <span className="text-[11px] text-muted-foreground">{relativeTime(n.createdAt)}</span>
+              {(n.actionRequired || n.priority === 'HIGH' || n.priority === 'URGENT') && (
+                <span className="flex flex-wrap gap-1">
+                  {(n.priority === 'HIGH' || n.priority === 'URGENT') && (
+                    <Badge tone={n.priority === 'URGENT' ? 'critical' : 'warning'}>{t(n.priority === 'URGENT' ? 'Urgent' : 'High')}</Badge>
+                  )}
+                  {n.actionRequired && <Badge tone="primary">{t('Action required')}</Badge>}
+                </span>
+              )}
+              <span className="text-[11px] text-muted-foreground">
+                {[
+                  n.sender && (n.sender.designation ? `${n.sender.name}, ${t.maybe(n.sender.designation)}` : n.sender.name),
+                  n.company?.name,
+                  n.contact?.name,
+                  relativeTime(n.createdAt),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
             </DropdownMenuItem>
           ))
         )}

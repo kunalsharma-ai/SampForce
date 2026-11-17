@@ -1,5 +1,12 @@
 import type {
+  ConcernCategory,
   CreditRole,
+  InsightKind,
+  InstructionStatus,
+  RankingCategory,
+  MessagePriority,
+  MonitorSection,
+  PerformanceStatus,
   DrillMetric,
   FunnelStage,
   ReportPeriod,
@@ -34,6 +41,9 @@ export const METRIC_LABEL = {
   companies: 'Companies',
   outstanding: 'Outstanding revenue',
   unassignedLeads: 'Unassigned leads',
+  pipelineValue: 'Revenue pipeline',
+  conversionRate: 'Overall conversion rate',
+  targetAchievement: 'Target achievement',
   'stage:NEW': 'New',
   'stage:CONTACTED': 'Contacted',
   'stage:DISCUSSION': 'Discussion',
@@ -65,6 +75,13 @@ export const METRIC_DEFINITION: Partial<Record<DrillMetric, MessageKey>> = {
     'Leads moved to a manager or senior person through an approved transfer in the period.',
   revenue:
     'Revenue credited in the period: each won deal split by attribution, so nothing is counted twice.',
+  companies: 'Companies in the CRM, whoever generated them.',
+  existingClients: 'Companies with a client status, or a won deal or RFQ on record.',
+  openOpportunities: 'Deals open now.',
+  pipelineValue: 'The value of the deals open now, in the workspace currency.',
+  outstanding: 'Won value not yet recorded as collected.',
+  conversionRate: 'Leads generated in the period that have since become clients, as a share of those leads.',
+  targetAchievement: 'Revenue in the period against the organisation target for it.',
 };
 
 export const FUNNEL_LABEL = {
@@ -109,11 +126,97 @@ export const WORK_LABEL = {
 export const SECTION_LABEL = {
   'exec.kpis': 'Key metrics',
   'exec.work': 'My work',
+  'exec.instructions': 'Instructions for you',
   'exec.pipeline': 'My pipeline',
   'exec.performance': 'Business performance',
   'exec.revenue': 'Revenue attribution',
   'exec.transfers': 'Lead transfer requests',
+  'team.kpis': 'Team metrics',
+  'team.table': 'Employee performance',
+  'team.compare': 'Performance comparison',
+  'team.pipeline': 'Team pipeline',
+  'team.monitor': 'Follow-up monitoring',
+  'team.instructions': 'Instructions sent',
+  'team.concerns': 'Unresolved client concerns',
+  'team.revenue': 'Business generation and revenue',
+  'org.kpis': 'Organisation metrics',
+  'org.departments': 'Department and team performance',
+  'org.rankings': 'Employee ranking',
+  'org.revenue': 'Revenue',
+  'org.insights': 'Business insights',
 } as const satisfies Record<string, MessageKey>;
+
+export const MONITOR_LABEL = {
+  teamToday: "Today's team follow-ups",
+  teamOverdue: 'Overdue team follow-ups',
+  teamMeetings: 'Upcoming meetings',
+  teamAwaiting: 'Pending client responses',
+  teamRfqDeadlines: 'RFQ deadlines',
+  teamConcerns: 'Client concerns',
+  unassigned: 'Unassigned leads',
+  intervention: 'Leads needing senior intervention',
+} as const satisfies Record<MonitorSection, MessageKey>;
+
+export const PERFORMANCE_STATUS_LABEL = {
+  ACHIEVED: 'Target achieved',
+  ON_TRACK: 'On track',
+  AT_RISK: 'At risk',
+  BEHIND: 'Behind',
+  NO_TARGET: 'No target set',
+  INACTIVE: 'No activity',
+} as const satisfies Record<PerformanceStatus, MessageKey>;
+
+export const PERFORMANCE_STATUS_TONE: Record<PerformanceStatus, 'success' | 'primary' | 'warning' | 'critical' | 'neutral'> = {
+  ACHIEVED: 'success',
+  ON_TRACK: 'primary',
+  AT_RISK: 'warning',
+  BEHIND: 'critical',
+  NO_TARGET: 'neutral',
+  INACTIVE: 'neutral',
+};
+
+export const MESSAGE_PRIORITY_LABEL = {
+  LOW: 'Low',
+  NORMAL: 'Normal',
+  HIGH: 'High',
+  URGENT: 'Urgent',
+} as const satisfies Record<MessagePriority, MessageKey>;
+
+export const INSTRUCTION_STATUS_LABEL = {
+  OPEN: 'Not acknowledged',
+  ACKNOWLEDGED: 'Acknowledged',
+  DONE: 'Done',
+  CANCELLED: 'Withdrawn',
+} as const satisfies Record<InstructionStatus, MessageKey>;
+
+export const INSTRUCTION_STATUS_TONE: Record<InstructionStatus, 'warning' | 'primary' | 'success' | 'neutral'> = {
+  OPEN: 'warning',
+  ACKNOWLEDGED: 'primary',
+  DONE: 'success',
+  CANCELLED: 'neutral',
+};
+
+export const CONCERN_CATEGORY_LABEL = {
+  GENERAL: 'Client raised a concern',
+  PRICING: 'Pricing concern',
+  QUALITY: 'Quality concern',
+  COMMUNICATION: 'Communication concern',
+  DELIVERY: 'Project delivery concern',
+  PAYMENT: 'Payment concern',
+  SERVICE: 'Service concern',
+  NOT_INTERESTED: 'Not interested',
+  REJECTED: 'Rejected',
+  LOST_OPPORTUNITY: 'Lost opportunity',
+} as const satisfies Record<ConcernCategory, MessageKey>;
+
+export const SEVERITY_LABEL = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical',
+} as const satisfies Record<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', MessageKey>;
+
+export const SEVERITY_TONE = { LOW: 'neutral', MEDIUM: 'primary', HIGH: 'warning', CRITICAL: 'critical' } as const;
 
 export const CREDIT_ROLE_LABEL = {
   LEAD_GENERATION: 'Lead generation',
@@ -149,3 +252,26 @@ export const PAYMENT_STATUS_LABEL = {
   PAID: 'Paid',
   OVERDUE: 'Payment overdue',
 } as const satisfies Record<'NOT_DUE' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE', MessageKey>;
+
+export const RANKING_LABEL = {
+  revenue: 'Highest revenue generator',
+  leads: 'Highest lead generator',
+  rfqs: 'Highest RFQ generator',
+  conversions: 'Highest client conversion',
+  responseRate: 'Best response rate',
+  followUpCompletion: 'Best follow-up completion',
+  targetAchievement: 'Highest target achievement',
+} as const satisfies Record<RankingCategory, MessageKey>;
+
+export const INSIGHT_LABEL = {
+  overdueFollowUps: 'Employees with too many overdue follow-ups',
+  lowConversion: 'Many leads, few conversions',
+  repeatRfqs: 'Companies sending repeated RFQs',
+  decliningEngagement: 'Companies with declining engagement',
+  stuckNegotiation: 'Opportunities stuck in negotiation',
+  rfqDeadlines: 'RFQs close to their deadline',
+  unresolvedConcerns: 'Clients with unresolved concerns',
+  teamsBehind: 'Teams behind their targets',
+  unassignedLeads: 'Leads without an owner',
+  revenueConcentration: 'Revenue concentrated in few clients',
+} as const satisfies Record<InsightKind, MessageKey>;
