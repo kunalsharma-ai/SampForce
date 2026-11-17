@@ -1,4 +1,5 @@
 import type { LanguageCode } from '@dealflow/types';
+import { commandCenterHelp } from './topics-command-center';
 import { engageHelp } from './topics-engage';
 import { intelligenceHelp } from './topics-intelligence';
 import { organizationHelp } from './topics-organization';
@@ -9,11 +10,11 @@ import { workspaceHelp } from './topics-workspace';
 export type { HelpText, HelpTopic } from './types';
 
 /** Every help topic, by id: `page.*` explains a whole screen, anything else a section or setting on one. */
-export const HELP_TOPICS = { ...workspaceHelp, ...engageHelp, ...revenueHelp, ...intelligenceHelp, ...organizationHelp } as const;
+export const HELP_TOPICS = { ...workspaceHelp, ...engageHelp, ...revenueHelp, ...intelligenceHelp, ...organizationHelp, ...commandCenterHelp } as const;
 export type HelpId = keyof typeof HELP_TOPICS;
 
 /** The help topic tables by area, so a test can check no id is defined twice. */
-export const HELP_TABLES = { workspaceHelp, engageHelp, revenueHelp, intelligenceHelp, organizationHelp } as const;
+export const HELP_TABLES = { workspaceHelp, engageHelp, revenueHelp, intelligenceHelp, organizationHelp, commandCenterHelp } as const;
 
 /**
  * Which page topic explains each route. Patterns use Next.js `[param]` segments; a static route wins over a

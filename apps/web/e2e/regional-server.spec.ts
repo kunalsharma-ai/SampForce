@@ -45,7 +45,7 @@ test('a conflict reported by the API appears in German in a German workspace', a
 
 test('sentences the API writes and the notifications menu switch language with the person', async ({ page }) => {
   await signUp(page, 'Frases SL');
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   // The insights feed always counts new deals; in English first.
   await expect(page.getByText('0 new deals worth', { exact: false })).toBeVisible();
 
@@ -55,7 +55,7 @@ test('sentences the API writes and the notifications menu switch language with t
   await card.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   // Written by the API in Spanish (ADR 0052), not translated by the page.
   await expect(page.getByText(/^0 oportunidades nuevas por /)).toBeVisible();
   await page.getByRole('button', { name: 'Notificaciones', exact: true }).click();

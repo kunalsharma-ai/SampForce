@@ -32,5 +32,14 @@ import type { PhraseTable } from './types';
 export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, chat } as const satisfies Record<string, PhraseTable>;
 
 export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...chat } as const;
+import { commandCenter } from './command-center';
+import { crmAdmin } from './crm-admin';
+import { sampbidx } from './sampbidx';
+import type { PhraseTable } from './types';
+
+/** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
+export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, crmAdmin } as const satisfies Record<string, PhraseTable>;
+
+export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...sampbidx, ...crmAdmin } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

@@ -1,6 +1,6 @@
 'use client';
 
-import { PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_STATUSES, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_STATUSES, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, FileText, Handshake, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -9,7 +9,8 @@ import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
 import { personLabel, uploadCompanyFile } from '@/lib/company-leads';
-import { formatMoneyList, fromLocalInput, toLocalInput, useRfqMutations, useRfqs } from '@/lib/company-work';
+import { formatMoneyList, fromLocalInput, toLocalInput, useRfq, useRfqMutations, useRfqs } from '@/lib/company-work';
+import { SendRfqToSampbidx } from '@/components/sampbidx/sampbidx';
 import { formatDate } from '@/lib/crm';
 import { useHasFeature } from '@/lib/features';
 import { useT } from '@/lib/i18n';
@@ -18,11 +19,30 @@ import { useCompanyAction } from './company-actions';
 import { CountrySelect, CurrencySelect } from '@/components/forms/inputs';
 import { PersonSelect } from './lead-fields';
 import { Select, Textarea } from './select';
-import { RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
+import { useOptionLookup, useOptions } from '@/lib/crm-admin';
+import { ApiError } from '@/lib/api';
+import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue, useFieldDefs } from './custom-field-input';
+import { CustomFieldSummary } from './follow-ups';
+import { optionLabel, RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
 
+/** The workspace's name for an RFQ status (renamed in CRM configuration, or the built-in name). */
+export function useRfqStatusName() {
+  const t = useT();
+  const lookup = useOptionLookup('RFQ_STATUS');
+  return (status: string) => optionLabel(lookup(status), status, RFQ_STATUS_LABEL, t);
+}
+
+/** The status with the workspace's label and colour; the built-in tone until options load. */
 export function RfqStatusBadge({ status }: { status: RfqStatus }) {
   const t = useT();
-  return <Badge tone={RFQ_STATUS_TONE[status]}>{t(RFQ_STATUS_LABEL[status])}</Badge>;
+  const row = useOptionLookup('RFQ_STATUS')(status);
+  if (!row) return <Badge tone={RFQ_STATUS_TONE[status]}>{t(RFQ_STATUS_LABEL[status])}</Badge>;
+  return (
+    <Badge className="gap-1.5">
+      <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: row.color }} />
+      {t.maybe(row.label)}
+    </Badge>
+  );
 }
 
 const money = (amount: number | null, currency: string) => (amount == null ? '—' : formatMoneyList([{ currency, amount }]));
@@ -79,6 +99,7 @@ export function RfqItem({ r, showCompany = true, onEdit }: { r: RfqRow; showComp
             </p>
           )}
           {r.outcomeReason && <p className="text-xs text-muted-foreground">{t('Won / lost reason: {text}', { text: r.outcomeReason })}</p>}
+          <CustomFieldSummary entity="RFQ" values={r.customFields} />
         </div>
         {onEdit && (
           <Button size="sm" variant="outline" onClick={() => onEdit(r)} aria-label={t('Open {number}', { number: r.number })}>
@@ -161,6 +182,21 @@ export function RfqDialog({
   const qc = useQueryClient();
   const m = useRfqMutations();
   const canDeal = useCan('deals:write');
+  // "Save and add attachments" keeps the dialog open on the new RFQ, so files and SampBidx come next.
+  const [saved, setSaved] = React.useState<RfqRow | null>(null);
+  const live = useRfq(open ? (rfq?.id ?? saved?.id ?? null) : null);
+  const current = live.data ?? rfq ?? saved;
+  const statusName = useRfqStatusName();
+  const statuses = useOptions('RFQ_STATUS');
+  const statusChoices = statuses.data ? statuses.data.filter((o) => o.active).map((o) => o.value as RfqStatus) : [...RFQ_STATUSES];
+  const fields = useFieldDefs('RFQ');
+  const formFields = (fields.data ?? []).filter((d) => current || d.showInForms);
+  const [custom, setCustom] = React.useState<Record<string, unknown>>({});
+  const cfRaw = (d: CustomFieldDef) => (custom[d.key] === undefined && !current ? fieldDefault(d) : fieldFormValue(d, custom[d.key]));
+  const logic = fieldLogic(fields.data ?? [], (k) => {
+    const d = fields.data?.find((x) => x.key === k);
+    return d ? cfRaw(d) : undefined;
+  });
   const [v, setV] = React.useState<RfqForm>(() => formOf(rfq, { ownerId: company.ownerId }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -168,13 +204,18 @@ export function RfqDialog({
   React.useEffect(() => {
     if (open) {
       setV(formOf(rfq, { ownerId: company.ownerId }));
+      setCustom({ ...(rfq?.customFields ?? {}) });
+      setSaved(null);
       setErrors({});
       setFormError(null);
     }
   }, [open, rfq, company.ownerId]);
+  // The form is "dirty" while it differs from the RFQ as saved; SampBidx gets only what is saved.
+  const savedForm = React.useMemo(() => (current ? JSON.stringify(formOf(current, { ownerId: company.ownerId })) : null), [current, company.ownerId]);
+  const dirty = !!savedForm && JSON.stringify(v) !== savedForm;
   const set = (p: Partial<RfqForm>) => setV((x) => ({ ...x, ...p }));
   const computed = v.sampleSize && v.cpi ? Math.round(Number(v.sampleSize) * Number(v.cpi) * 100) / 100 : null;
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent, stay = false) => {
     e.preventDefault();
     const body = {
       companyId: company.id,
@@ -200,6 +241,14 @@ export function RfqDialog({
       expectedRevenue: v.expectedRevenue,
       actualRevenue: v.actualRevenue,
       outcomeReason: v.outcomeReason || null,
+      // Read-only fields are left out; an emptied field is sent as null so the API clears it.
+      customFields: Object.fromEntries(
+        formFields
+          .filter((d) => d.access.edit && logic.shows(d))
+          .map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const)
+          .filter(([, x]) => x !== '' || current)
+          .map(([k, x]) => [k, x === '' ? null : x]),
+      ),
     };
     const parsed = rfqInputSchema.safeParse(body);
     if (!parsed.success) {
@@ -212,18 +261,24 @@ export function RfqDialog({
     const { companyId: _c, ...update } = parsed.data;
     // Unchanged fields of an existing RFQ are sent as they are; a cleared total becomes the computed one again.
     try {
-      await m.save.mutateAsync({ id: rfq?.id ?? null, input: rfq ? update : parsed.data });
-      onOpenChange(false);
+      const row = await m.save.mutateAsync({ id: current?.id ?? null, input: current ? update : parsed.data });
+      if (stay) {
+        setSaved(row);
+        setV(formOf(row, { ownerId: company.ownerId }));
+        setCustom({ ...row.customFields });
+        requestAnimationFrame(() => document.getElementById('rfq-attachments')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+      } else onOpenChange(false);
     } catch (err) {
+      if (err instanceof ApiError && err.details?.length) setErrors(Object.fromEntries(err.details.map((d) => [d.path, d.message])));
       setFormError(err instanceof Error ? err.message : t('Could not save.'));
     }
   };
   const upload = async (file: File) => {
-    if (!rfq) return;
+    if (!current) return;
     setUploading(true);
     try {
-      await uploadCompanyFile(company.id, file, rfq.id);
-      await Promise.all([qc.invalidateQueries({ queryKey: ['rfqs'] }), qc.invalidateQueries({ queryKey: ['company-files', company.id] })]);
+      await uploadCompanyFile(company.id, file, current.id);
+      await Promise.all([qc.invalidateQueries({ queryKey: ['rfqs'] }), qc.invalidateQueries({ queryKey: ['company-files', company.id] }), qc.invalidateQueries({ queryKey: ['sampbidx'] })]);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t('Could not upload.'));
     } finally {
@@ -238,9 +293,9 @@ export function RfqDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[3%] max-h-[94vh] max-w-3xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{rfq ? t('{number}: {project}', { number: rfq.number, project: rfq.projectName }) : t('Add RFQ')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{current ? t('{number}: {project}', { number: current.number, project: current.projectName }) : t('Add RFQ')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
-          {rfq ? t('From {company}. Received {date}.', { company: company.name, date: formatDate(rfq.receivedAt) }) : t('From {company}. It gets the next RFQ number and is logged as an interaction.', { company: company.name })}
+          {current ? t('From {company}. Received {date}.', { company: company.name, date: formatDate(current.receivedAt) }) : t('From {company}. It gets the next RFQ number and is logged as an interaction.', { company: company.name })}
         </DialogDescription>
         <form onSubmit={submit} noValidate className="space-y-5">
           <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -260,9 +315,9 @@ export function RfqDialog({
             )}
             <Field id="rfq-status" label={t('Project status')}>
               <Select value={v.status} onChange={(e) => set({ status: e.target.value as RfqStatus })}>
-                {RFQ_STATUSES.map((s) => (
+                {[...new Set([...statusChoices, v.status])].map((s) => (
                   <option key={s} value={s}>
-                    {t(RFQ_STATUS_LABEL[s])}
+                    {statusName(s)}
                   </option>
                 ))}
               </Select>
@@ -313,12 +368,28 @@ export function RfqDialog({
             </Field>
             <div className="sm:col-span-2">{text('outcomeReason', 'Won / lost reason')}</div>
           </fieldset>
-          {rfq && (
-            <div className="space-y-2">
+          {formFields.length > 0 && (
+            <fieldset className="grid gap-4 sm:grid-cols-2">
+              <legend className="mb-2 text-sm font-semibold">{t('Custom fields')}</legend>
+              {formFields.filter(logic.shows).map((d) => (
+                <CustomFieldInput
+                  key={d.id}
+                  def={d}
+                  entity="RFQ"
+                  id={`rfq-cf-${d.key}`}
+                  value={logic.valueOf(d, cfRaw(d))}
+                  onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
+                  error={errors[`customFields.${d.key}`]}
+                />
+              ))}
+            </fieldset>
+          )}
+          {current && (
+            <div id="rfq-attachments" className="scroll-mt-4 space-y-2">
               <h3 className="text-sm font-semibold">{t('Attachments')}</h3>
-              {rfq.files.length > 0 && (
+              {current.files.length > 0 && (
                 <ul className="space-y-1 text-sm">
-                  {rfq.files.map((f) => (
+                  {current.files.map((f) => (
                     <li key={f.id} className="flex items-center gap-2">
                       <FileText aria-hidden className="size-4 text-muted-foreground" />
                       <a className="inline-flex min-h-6 items-center text-primary hover:underline" href={`/api/v1/company-files/${f.id}/download`}>
@@ -332,35 +403,36 @@ export function RfqDialog({
               <UploadZone label={t('Add a file to this RFQ')} accept={[...PORTAL_DOCUMENT_TYPES]} maxBytes={PORTAL_DOCUMENT_MAX_BYTES} busy={uploading} onFile={(f) => void upload(f)} />
             </div>
           )}
+          {current && <SendRfqToSampbidx rfq={current} dirty={dirty} />}
           {formError && (
             <p role="alert" className="text-sm text-critical">
               {formError}
             </p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            {rfq && (
+            {current && (
               <Button
                 type="button"
                 variant="ghost"
                 className="me-auto text-critical"
                 disabled={m.remove.isPending}
                 onClick={async () => {
-                  if (!window.confirm(t('Delete {number}?', { number: rfq.number }))) return;
-                  await m.remove.mutateAsync(rfq.id);
+                  if (!window.confirm(t('Delete {number}?', { number: current.number }))) return;
+                  await m.remove.mutateAsync(current.id);
                   onOpenChange(false);
                 }}
               >
                 <Trash2 aria-hidden /> {t('Delete')}
               </Button>
             )}
-            {rfq && canDeal && !rfq.deal && !['LOST', 'CANCELLED'].includes(rfq.status) && (
+            {current && canDeal && !current.deal && !['LOST', 'CANCELLED'].includes(current.status) && (
               <Button
                 type="button"
                 variant="outline"
                 disabled={m.convert.isPending}
                 onClick={async () => {
                   try {
-                    await m.convert.mutateAsync(rfq.id);
+                    await m.convert.mutateAsync(current.id);
                     onOpenChange(false);
                   } catch (err) {
                     setFormError(err instanceof Error ? err.message : t('Could not save.'));
@@ -373,6 +445,11 @@ export function RfqDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('Cancel')}
             </Button>
+            {!current && (
+              <Button type="button" variant="outline" disabled={m.save.isPending} onClick={(e) => void submit(e, true)}>
+                {t('Save and add attachments')}
+              </Button>
+            )}
             <Button type="submit" disabled={m.save.isPending}>
               {m.save.isPending ? t('Saving…') : t('Save RFQ')}
             </Button>

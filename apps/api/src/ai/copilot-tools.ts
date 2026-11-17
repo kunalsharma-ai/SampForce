@@ -67,7 +67,8 @@ export class CopilotTools {
         run: async (auth, input, state) => {
           const wanted = ((input.types as RecordType[] | null) ?? [...RECORD_TYPES]).filter((t) => auth.permissions.includes(READ_PERMISSION[t]));
           if (wanted.length === 0) return { error: 'Your role cannot read any of those record types.' };
-          const hits: SearchHit[] = await this.search.search(auth, String(input.query ?? ''), wanted, 10);
+          // RFQ hits are not records the assistant can open; leave them out.
+          const hits = (await this.search.search(auth, String(input.query ?? ''), wanted, 10)).filter((h): h is SearchHit & { entity: Exclude<SearchHit['entity'], 'rfq'> } => h.entity !== 'rfq');
           for (const h of hits) state.citations.set(`${h.entity}:${h.id}`, { entity: h.entity, id: h.id, label: h.title });
           return { results: hits.map((h) => ({ type: h.entity, id: h.id, name: h.title, detail: h.subtitle })) };
         },

@@ -4,6 +4,7 @@ import { signUp } from './helpers';
 
 const SIDEBAR = [
   'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'RFQs', 'Team chat', 'Sales Activities',
+  'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'RFQs', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Client Portal', 'Customer Success',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
@@ -23,9 +24,13 @@ test('validates the sign-up form before calling the API', async ({ page }) => {
 
 test('signs up and shows Command Center KPIs from the API', async ({ page }) => {
   await signUp(page);
+  // The owner opens on the senior management dashboard; the analytics layout is one tab away.
+  await page.getByRole('tab', { name: 'Analytics' }).click();
   await expect(page.getByTestId('kpi-totalLeads')).toContainText('0');
   await expect(page.getByTestId('kpi-aiAssistedActivities')).toContainText('0');
   await expect(page.getByTestId('kpi-automationSuccessRate')).toContainText('Not enough data yet');
+  // There is no recent-history widget (ADR 0060).
+  await expect(page.getByText('created the workspace')).toHaveCount(0);
   // Accessible table alternative to the chart.
   await page.getByRole('button', { name: 'Pipeline by stage: show as table' }).click();
   await expect(page.getByRole('rowheader', { name: 'Closed Won' })).toBeVisible();

@@ -33,6 +33,8 @@ import {
   Users,
   UsersRound,
   Wallet,
+  ArrowRightLeft,
+  MessageSquareWarning,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
@@ -62,6 +64,8 @@ const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Pl
   { action: 'upload', label: 'Upload document', icon: Upload },
   { action: 'changeStatus', label: 'Change status', icon: BadgeCheck },
   { action: 'transfer', label: 'Transfer ownership', icon: UserRoundCog },
+  { action: 'requestTransfer', label: 'Request transfer', icon: ArrowRightLeft },
+  { action: 'raiseConcern', label: 'Raise concern', icon: MessageSquareWarning },
 ];
 
 /**

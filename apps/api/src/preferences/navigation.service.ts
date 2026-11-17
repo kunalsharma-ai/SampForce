@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   completeLayout,
+  DASHBOARD_WIDGETS,
+  type DashboardWidget,
   type DashboardLayout,
   dashboardLayoutSchema,
   type NavigationState,
@@ -12,6 +14,7 @@ import {
 import { Prisma } from '@dealflow/database';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { dashboardPolicyOfMember } from '../crm/crm-admin.service';
 
 const EMPTY: NavigationState = { pinned: [], recent: [], moduleOrder: [], hiddenModules: [] };
 
@@ -71,15 +74,27 @@ export class NavigationService {
     return this.get(auth);
   }
 
-  async getDashboardLayout(auth: AuthContext): Promise<{ layout: DashboardLayout | null }> {
-    const row = await this.prisma.run(auth, (tx) =>
-      tx.workspaceNavigation.findUnique({ where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } }, select: { dashboardLayout: true } }),
-    );
-    return { layout: readLayout(row?.dashboardLayout) };
+  /**
+   * The person's layout under their tier's dashboard policy (ADR 0062): widgets the tier may not have are left out,
+   * and when the tier may not customise, the saved layout is ignored. `policy` tells the page what applies.
+   */
+  async getDashboardLayout(auth: AuthContext): Promise<{ layout: DashboardLayout | null; policy: { tier: string; allowed: string[]; locked: boolean } | null }> {
+    return this.prisma.run(auth, async (tx) => {
+      const row = await tx.workspaceNavigation.findUnique({ where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } }, select: { dashboardLayout: true } });
+      const layout = readLayout(row?.dashboardLayout);
+      const { tier, policy } = await dashboardPolicyOfMember(tx, auth);
+      if (!tier || !policy) return { layout, policy: null };
+      const allowed = (policy.allowedWidgets ?? [...DASHBOARD_WIDGETS]).filter((id): id is DashboardWidget => (DASHBOARD_WIDGETS as readonly string[]).includes(id));
+      const ok = new Set<string>(allowed);
+      const base = !policy.canCustomize ? null : layout;
+      return { layout: base ? { ...base, widgets: base.widgets.filter((w) => ok.has(w.id)) } : null, policy: { tier, allowed, locked: !policy.canCustomize } };
+    });
   }
 
-  /** Saves the layout; null returns to the default. */
-  async saveDashboardLayout(auth: AuthContext, layout: DashboardLayout | null): Promise<{ layout: DashboardLayout | null }> {
+  /** Saves the layout; null returns to the default. Refused when the person's tier may not customise. */
+  async saveDashboardLayout(auth: AuthContext, layout: DashboardLayout | null): Promise<{ layout: DashboardLayout | null; policy: { tier: string; allowed: string[]; locked: boolean } | null }> {
+    const locked = await this.prisma.run(auth, async (tx) => (await dashboardPolicyOfMember(tx, auth)).policy?.canCustomize === false);
+    if (locked) throw new ForbiddenException({ code: 'LAYOUT_LOCKED', message: 'Your administrator has fixed the dashboard layout for your designation.' });
     const value = layout ? (completeLayout(layout) as unknown as Prisma.InputJsonValue) : null;
     await this.prisma.run(auth, (tx) =>
       tx.workspaceNavigation.upsert({

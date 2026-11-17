@@ -1,14 +1,16 @@
 'use client';
 
 import { RFQ_STATUSES, type RfqRow, type RfqStatus } from '@dealflow/types';
-import { Card, CardContent, cn, Input, Skeleton } from '@dealflow/ui';
+import { Button, Card, CardContent, cn, Input, Skeleton } from '@dealflow/ui';
+import { Mail } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as React from 'react';
-import { RfqDialog, RfqItem } from '@/components/crm/rfqs';
-import { RFQ_STATUS_LABEL } from '@/components/crm/work-labels';
+import { RfqDialog, RfqItem, useRfqStatusName } from '@/components/crm/rfqs';
 import { formatMoneyList, useRfq, useRfqReport, useRfqs } from '@/lib/company-work';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { SampbidxTransferList, TransferEmailDialog, useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
+import { useSampbidxTransfers } from '@/lib/sampbidx';
 
 const REPORTS: { by: 'company' | 'employee' | 'owner'; label: MessageKey }[] = [
   { by: 'company', label: 'By company' },
@@ -19,30 +21,54 @@ const REPORTS: { by: 'company' | 'employee' | 'owner'; label: MessageKey }[] = [
 /** The RFQ register with filters, and RFQ reports by company, client employee and executive. */
 export function RfqsWorkspace() {
   const t = useT();
+  const statusName = useRfqStatusName();
   const router = useRouter();
   const params = useSearchParams();
   const canWrite = useCan('companies:write');
-  const [tab, setTab] = React.useState<'list' | 'company' | 'employee' | 'owner'>('list');
+  const sampbidx = useSampbidxEnabled();
+  const [tab, setTab] = React.useState<'list' | 'company' | 'employee' | 'owner' | 'sampbidx'>(params.get('tab') === 'sampbidx' ? 'sampbidx' : 'list');
+  const [emailOpen, setEmailOpen] = React.useState(false);
+  const transfers = useSampbidxTransfers({}, sampbidx && tab === 'sampbidx');
   const [status, setStatus] = React.useState<RfqStatus | ''>('');
   const [open, setOpen] = React.useState<'' | 'true' | 'false'>('');
   const [q, setQ] = React.useState('');
   const list = useRfqs({ status, open, q: q.trim() || undefined }, tab === 'list');
-  const report = useRfqReport(tab === 'list' ? 'company' : tab, tab !== 'list');
+  const report = useRfqReport(tab === 'list' || tab === 'sampbidx' ? 'company' : tab, tab !== 'list' && tab !== 'sampbidx');
   // ?open=<id> opens one RFQ, as links from interactions and notifications do.
   const openId = params.get('open');
   const linked = useRfq(openId);
   const [editing, setEditing] = React.useState<RfqRow | null>(null);
+  // Opened once per link: a refetch after saving must not open the dialog again.
+  const opened = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (linked.data) setEditing(linked.data);
+    if (linked.data && opened.current !== linked.data.id) {
+      opened.current = linked.data.id;
+      setEditing(linked.data);
+    }
   }, [linked.data]);
+  React.useEffect(() => {
+    if (!openId) opened.current = null;
+  }, [openId]);
   const close = (o: boolean) => {
     if (o) return;
     setEditing(null);
     if (openId) router.replace('/app/rfqs');
   };
-  const tabs: { id: typeof tab; label: MessageKey }[] = [{ id: 'list', label: 'All RFQs' }, ...REPORTS.map((r) => ({ id: r.by, label: r.label }))];
+  const tabs: { id: typeof tab; label: MessageKey }[] = [{ id: 'list', label: 'All RFQs' }, ...REPORTS.map((r) => ({ id: r.by, label: r.label })), ...(sampbidx ? [{ id: 'sampbidx' as const, label: 'Sent to SampBidx' as MessageKey }] : [])];
   return (
     <div className="space-y-4">
+      {sampbidx && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{t('Send RFQs to SampBidx')}</p>
+            <p className="text-xs text-muted-foreground">{t('Open an RFQ to send its details and attachments, or transfer the RFQ email as it is.')}</p>
+          </div>
+          <Button onClick={() => setEmailOpen(true)}>
+            <Mail aria-hidden /> {t('Transfer RFQ email to SampBidx')}
+          </Button>
+        </div>
+      )}
+      <TransferEmailDialog open={emailOpen} onOpenChange={setEmailOpen} />
       <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('RFQ views')}>
         {tabs.map((x) => (
           <button
@@ -65,7 +91,7 @@ export function RfqsWorkspace() {
               <option value="">{t('All statuses')}</option>
               {RFQ_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {t(RFQ_STATUS_LABEL[s])}
+                  {statusName(s)}
                 </option>
               ))}
             </select>
@@ -94,6 +120,18 @@ export function RfqsWorkspace() {
             </>
           )}
         </>
+      ) : tab === 'sampbidx' ? (
+        transfers.isPending ? (
+          <Skeleton className="h-40" />
+        ) : transfers.error ? (
+          <p role="alert" className="text-sm text-critical">
+            {transfers.error.message}
+          </p>
+        ) : !transfers.data?.length ? (
+          <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t('Nothing sent to SampBidx yet.')}</p>
+        ) : (
+          <SampbidxTransferList items={transfers.data} label={t('Sent to SampBidx')} />
+        )
       ) : (
         <Card>
           <CardContent className="overflow-x-auto p-0">

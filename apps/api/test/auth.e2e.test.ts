@@ -25,6 +25,7 @@ describe('authentication', () => {
     expect(me.body.tenant).toMatchObject({ id: u.tenantId, name: 'Acme Research', plan: 'free', appliedPlan: 'free', isDemo: false });
     // A new workspace starts on Free, with Free's features only (ADR 0057).
     expect(me.body.tenant.features).toEqual(['rfqs', 'email_sync', 'team_chat', 'ai_assistant', 'automation', 'reports', 'sso_scim']);
+    expect(me.body.tenant.features).toEqual(['rfqs', 'lead_transfers', 'revenue_attribution', 'manager_dashboard', 'senior_dashboard', 'instructions', 'client_concerns', 'email_sync', 'ai_assistant', 'automation', 'reports', 'sampbidx', 'sso_scim']);
     expect(me.body.role).toBe('owner');
     expect(me.body.permissions).toContain('billing:manage');
     expect(me.body.memberships).toHaveLength(1);

@@ -10,7 +10,7 @@ import type {
   Page,
   EmailStatus,
 } from '@dealflow/types';
-import { companyNameKey } from '@dealflow/types';
+import { companyNameKey, type CustomFieldFilter } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -41,14 +41,16 @@ export class LeadsService {
     private readonly fields: CustomFieldsService,
   ) {}
 
-  list(auth: AuthContext, q: ListQuery): Promise<Page<LeadRow>> {
+  list(auth: AuthContext, q: ListQuery, cf?: CustomFieldFilter[]): Promise<Page<LeadRow>> {
     return this.prisma.run(auth, async (tx) => {
       const status = q.status && ['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'].includes(q.status) ? q.status : undefined;
       const v = await visibility(tx, auth);
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'LEAD', cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.lead, cfFilter) : null;
       const where: Prisma.LeadWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
-        ...(v.all ? {} : { AND: [leadScope(v)] }),
+        AND: [...(v.all ? [] : [leadScope(v)]), ...(cfIds ? [{ id: { in: cfIds } }] : [])],
         ...(status ? { status: status as LeadModel['status'] } : {}),
         ...(q.ownerId ? { ownerId: q.ownerId } : {}),
         ...(q.q
@@ -66,14 +68,15 @@ export class LeadsService {
         tx.lead.count({ where }),
       ]);
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-      return { items: rows.map((r) => toLeadRow(r, owners)), total, page: q.page, pageSize: q.pageSize };
+      const cfRead = await this.fields.reader(tx, auth, 'LEAD');
+      return { items: rows.map((r) => toLeadRow(r, owners, cfRead)), total, page: q.page, pageSize: q.pageSize };
     });
   }
 
   get(auth: AuthContext, id: string): Promise<LeadRow> {
     return this.prisma.run(auth, async (tx) => {
       const row = await this.find(tx, auth.tenantId, id, 'Lead', auth);
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
@@ -82,7 +85,7 @@ export class LeadsService {
       const ownerId = input.ownerId ?? auth.userId;
       await assertRefs(tx, auth.tenantId, { ownerId });
       await assertCampaign(tx, auth.tenantId, input.campaignId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields);
+      const customFields = await this.fields.validateFor(tx, auth, 'LEAD', input.customFields);
       const row = await tx.lead.create({
         data: {
           ...input,
@@ -98,7 +101,7 @@ export class LeadsService {
         metadata: { source: row.source }, meta,
       });
       const duplicates = await this.findDuplicates(tx, auth.tenantId, row);
-      return { lead: toLeadRow(row, await ownerRefs(tx, [row.ownerId])), duplicates };
+      return { lead: toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD')), duplicates };
     });
   }
 
@@ -110,7 +113,7 @@ export class LeadsService {
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId });
       await assertCampaign(tx, auth.tenantId, input.campaignId);
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'LEAD', input.customFields, before.customFields as Record<string, unknown>);
+      const customFields = await this.fields.validateFor(tx, auth, 'LEAD', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const row = await tx.lead.update({
         where: { id },
@@ -128,7 +131,7 @@ export class LeadsService {
         action: changes.ownerId ? 'lead.assigned' : 'lead.updated', entityType: 'lead', entityId: id,
         metadata: { changes }, meta,
       });
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
@@ -166,7 +169,7 @@ export class LeadsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'lead.merged', entityType: 'lead', entityId: id,
         metadata: { mergedLeadId: duplicateId }, meta,
       });
-      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toLeadRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'LEAD'));
     });
   }
 
@@ -310,7 +313,7 @@ export class LeadsService {
   }
 }
 
-export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: string }>): LeadRow {
+export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: string }>, cf?: (values: unknown) => Record<string, unknown>): LeadRow {
   return {
     id: r.id,
     fullName: r.fullName,
@@ -334,7 +337,7 @@ export function toLeadRow(r: LeadModel, owners: Map<string, { id: string; name: 
     status: r.status,
     tags: r.tags,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
-    customFields: (r.customFields ?? {}) as Record<string, unknown>,
+    customFields: cf ? cf(r.customFields) : ((r.customFields ?? {}) as Record<string, unknown>),
     convertedAt: iso(r.convertedAt),
     convertedContactId: r.convertedContactId,
     convertedOpportunityId: r.convertedOpportunityId,

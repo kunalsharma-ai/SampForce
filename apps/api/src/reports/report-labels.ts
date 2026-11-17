@@ -1,4 +1,4 @@
-import { type DateBucket, type ReportDefinition, type ReportResultRow, reportField } from '@dealflow/types';
+import { type DateBucket, type ReportDefinition, type ReportField, type ReportResultRow, reportField } from '@dealflow/types';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 let regionNames: Intl.DisplayNames | null | undefined;
@@ -41,8 +41,8 @@ export function bucketLabel(iso: string, bucket: DateBucket): string {
 }
 
 /** Human labels for grouped rows. User ids resolve through `users`; anything unknown keeps its key. */
-export function labelRows(def: ReportDefinition, rows: { g: string | null; v: number | null }[], users: Map<string, { name: string }>): ReportResultRow[] {
-  const field = def.groupBy ? reportField(def.entity, def.groupBy.field) : undefined;
+export function labelRows(def: ReportDefinition, rows: { g: string | null; v: number | null }[], users: Map<string, { name: string }>, custom: readonly ReportField[] = []): ReportResultRow[] {
+  const field = def.groupBy ? reportField(def.entity, def.groupBy.field, custom) : undefined;
   return rows.map(({ g, v }) => {
     const value = Math.round((v ?? 0) * 100) / 100;
     if (!def.groupBy || !field) return { key: null, label: 'All', value };
@@ -53,7 +53,8 @@ export function labelRows(def: ReportDefinition, rows: { g: string | null; v: nu
         label = bucketLabel(g, def.groupBy.bucket ?? 'day');
         break;
       case 'enum':
-        label = humanizeEnum(g);
+        // Custom field options are already written the way people want to read them.
+        label = field.custom ? g : humanizeEnum(g);
         break;
       case 'boolean':
         label = g === 'true' ? 'Yes' : 'No';

@@ -33,7 +33,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await apiPost(page, '/deal-health/refresh', {});
 
   // Command Center: ranked list with reasons, and the week's numbers.
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   await expect(page.getByText('Your next best actions')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Send the security questionnaire' })).toBeVisible();
   await expect(page.getByText('Overdue by 2 days.')).toBeVisible();
@@ -63,7 +63,7 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await expect(page.getByRole('link', { name: 'Northbeam rollout' })).toBeVisible();
   await expectNoA11yViolations(page);
 
-  // The deal shows its monitor score; the company shows one timeline with its contact's note and the deal.
+  // The deal shows its monitor score; the company shows its contact's note and the deal.
   await page.getByRole('link', { name: 'Northbeam rollout' }).click();
   await expect(page.getByText('Health monitor')).toBeVisible();
   await expect(page.getByText(/Close date has passed: Expected/)).toBeVisible();
@@ -72,12 +72,11 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   const intel = page.locator('div').filter({ has: page.getByText('Sales intelligence', { exact: true }) }).filter({ has: page.getByText('Account value') }).last();
   await expect(intel.getByText('Open pipeline')).toBeVisible();
   await expect(intel.getByText('Engagement, last 30 days')).toBeVisible();
-  const timeline = page.getByRole('list', { name: 'Timeline, newest first' });
-  await expect(timeline.getByText('Note: Intro from the expo')).toBeVisible();
-  await expect(timeline.getByRole('link', { name: 'Mira Stone' })).toBeVisible();
-  await expect(timeline.getByText(/^Started in /)).toBeVisible();
-  await page.getByRole('button', { name: 'Deal stage changes' }).click();
-  await expect(timeline.getByText('Note: Intro from the expo')).toHaveCount(0);
-  await expect(timeline.getByText(/^Started in /)).toBeVisible();
+  // The company page has no timeline (ADR 0060): the contact's note is one of its interactions, and the deal is listed.
+  const interactions = page.getByRole('list', { name: 'Interactions' });
+  await expect(interactions.getByText(/Intro from the expo/)).toBeVisible();
+  await expect(interactions.getByRole('link', { name: 'Mira Stone' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Deals (1)' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Northbeam rollout' })).toBeVisible();
   await expectNoA11yViolations(page);
 });

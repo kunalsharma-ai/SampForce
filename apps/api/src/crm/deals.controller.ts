@@ -46,7 +46,7 @@ export class DealsController {
   @Get()
   @RequirePermissions('deals:read')
   list(@Auth() auth: AuthContext, @Query(new ZodPipe(listQuerySchema)) q: ListQuery) {
-    return this.deals.list(auth, q);
+    return this.deals.list(auth, q, q.cf);
   }
 
   @Get('board')

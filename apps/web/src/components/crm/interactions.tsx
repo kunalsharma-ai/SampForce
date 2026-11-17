@@ -121,6 +121,7 @@ function InteractionItem({ i, canDelete, onDelete }: { i: InteractionRow; canDel
             {(i.sender || i.recipient) && <span>{[i.sender, i.recipient].filter(Boolean).join(' → ')}</span>}
           </p>
           {i.outcome && <p>{t('Outcome: {text}', { text: i.outcome })}</p>}
+          {i.sentiment && <p className="text-xs text-muted-foreground">{t('Client response: {value}', { value: t(i.sentiment === 'POSITIVE' ? 'Positive' : i.sentiment === 'NEGATIVE' ? 'Negative' : 'Neutral') })}</p>}
           {i.remarks && <p className="whitespace-pre-line text-muted-foreground">{i.remarks}</p>}
           {(i.nextAction || i.followUpAt) && (
             <p className="inline-flex items-center gap-1 text-xs">
@@ -158,7 +159,7 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
   const t = useT();
   const log = useLogInteraction();
   const files = useCompanyFiles(company.id);
-  const blank = () => ({ kind: 'EMAIL_SENT' as InteractionKind, contactId: '', subject: '', occurredAt: toLocalInput(new Date()), sender: '', recipient: '', outcome: '', remarks: '', nextAction: '', followUpAt: '', fileId: '' });
+  const blank = () => ({ kind: 'EMAIL_SENT' as InteractionKind, contactId: '', subject: '', occurredAt: toLocalInput(new Date()), sender: '', recipient: '', outcome: '', sentiment: '' as '' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE', remarks: '', nextAction: '', followUpAt: '', fileId: '' });
   const [v, setV] = React.useState(blank);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -181,6 +182,7 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
       sender: v.sender || null,
       recipient: v.recipient || null,
       outcome: v.outcome || null,
+      sentiment: v.sentiment || null,
       remarks: v.remarks || null,
       nextAction: v.nextAction || null,
       followUpAt: fromLocalInput(v.followUpAt),
@@ -235,6 +237,14 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
           </Field>
           <Field id="ix-outcome" label={t('Outcome')}>
             <Input value={v.outcome} onChange={(e) => set({ outcome: e.target.value })} maxLength={500} />
+          </Field>
+          <Field id="ix-sentiment" label={t('Client response')} hint={t('Positive responses count on the Command Center.')}>
+            <Select value={v.sentiment} onChange={(e) => set({ sentiment: e.target.value as typeof v.sentiment })}>
+              <option value="">{t('Not set')}</option>
+              <option value="POSITIVE">{t('Positive')}</option>
+              <option value="NEUTRAL">{t('Neutral')}</option>
+              <option value="NEGATIVE">{t('Negative')}</option>
+            </Select>
           </Field>
           <Field id="ix-sender" label={t('Sender')}>
             <Input value={v.sender} onChange={(e) => set({ sender: e.target.value })} maxLength={200} />

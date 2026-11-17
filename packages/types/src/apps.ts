@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Workspace apps: one connection per app per workspace, made by an admin. */
-export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp', 'twilio'] as const;
+export const APP_KEYS = ['slack', 'teams', 'zoom', 'docusign', 'payments', 'whatsapp', 'twilio', 'sampbidx'] as const;
 export type AppKey = (typeof APP_KEYS)[number];
 
 /**

@@ -25,6 +25,7 @@ import { PortalModule } from './portal/portal.module';
 import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CommandCenterModule } from './command-center/command-center.module';
 import { HealthController } from './health/health.controller';
 import { RevenueModule } from './revenue/revenue.module';
 import { SequencesModule } from './sequences/sequences.module';
@@ -65,6 +66,7 @@ import { redactUrl } from './observability/redact';
     AuthModule,
     TenantsModule,
     DashboardModule,
+    CommandCenterModule,
     CrmModule,
     ChatModule,
     AutomationModule,
