@@ -22,7 +22,6 @@ export const chat = {
   ],
   'Waiting for the connection. It will be sent automatically.': ['Esperando la conexión. Se enviará automáticamente.', 'En attente de connexion. Il sera envoyé automatiquement.', 'Wartet auf die Verbindung. Wird automatisch gesendet.', 'في انتظار الاتصال. ستُرسل تلقائيًا.'],
   'Not sent: {reason}': ['No enviado: {reason}', 'Non envoyé : {reason}', 'Nicht gesendet: {reason}', 'لم تُرسل: {reason}'],
-  'Try again': ['Intentar de nuevo', 'Réessayer', 'Erneut versuchen', 'حاول مرة أخرى'],
   'Written at {time} while offline': ['Escrito a las {time} sin conexión', 'Écrit à {time} hors ligne', 'Um {time} offline geschrieben', 'كُتبت في {time} دون اتصال'],
   // Conversation list
   Conversation: ['Conversación', 'Conversation', 'Unterhaltung', 'المحادثة'],
@@ -59,7 +58,6 @@ export const chat = {
   'This channel is archived.': ['Este canal está archivado.', 'Ce canal est archivé.', 'Dieser Kanal ist archiviert.', 'هذه القناة مؤرشفة.'],
   // Composer
   'Files can be up to 10 MB.': ['Los archivos pueden tener hasta 10 MB.', 'Les fichiers peuvent faire jusqu’à 10 Mo.', 'Dateien dürfen bis zu 10 MB groß sein.', 'يمكن أن يصل حجم الملف إلى 10 ميغابايت.'],
-  'Attach a file': ['Adjuntar un archivo', 'Joindre un fichier', 'Datei anhängen', 'إرفاق ملف'],
   'Remove link': ['Quitar vínculo', 'Retirer le lien', 'Verknüpfung entfernen', 'إزالة الرابط'],
   'Link a company, RFQ or deal': ['Vincular una empresa, RFQ u oportunidad', 'Lier une entreprise, une RFQ ou une affaire', 'Unternehmen, RFQ oder Deal verknüpfen', 'ربط شركة أو طلب عرض سعر أو صفقة'],
   'Everyone in the conversation sees its name; they open it only if they are allowed to.': [
