@@ -7,6 +7,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "email_sync",
         "ai_assistant",
@@ -29,6 +30,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "quotes",
         "email_sync",
@@ -57,6 +59,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "territories",
         "quotes",
@@ -100,6 +103,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "territories",
         "quotes",
@@ -153,6 +157,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "territories",
         "quotes",
@@ -206,6 +211,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "territories",
         "quotes",
@@ -259,6 +265,7 @@
     "entitlements": {
       "features": [
         "rfqs",
+        "team_chat",
         "sampbidx",
         "territories",
         "quotes",

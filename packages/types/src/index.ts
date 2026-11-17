@@ -41,6 +41,7 @@ export * from './email-design';
 export * from './i18n';
 export * from './company-crm';
 export * from './company-work';
+export * from './chat';
 export * from './attribution';
 export * from './command-center';
 export * from './custom-fields';

@@ -296,6 +296,10 @@ export const validation = {
   'is not an employee of this company': ['no es empleado de esta empresa', 'n’est pas employé de cette entreprise', 'ist kein Mitarbeiter dieses Unternehmens', 'ليس موظفًا في هذه الشركة'],
   'Enter what the follow-up is about': ['Indica de qué trata el seguimiento', 'Indiquez l’objet de la relance', 'Geben Sie an, worum es bei der Nachverfolgung geht', 'أدخل موضوع المتابعة'],
   'Enter the project name': ['Indica el nombre del proyecto', 'Saisissez le nom du projet', 'Geben Sie den Projektnamen ein', 'أدخل اسم المشروع'],
+  // Team chat (ADR 0061)
+  'Give the channel a name.': ['Ponle un nombre al canal.', 'Donnez un nom au canal.', 'Geben Sie dem Kanal einen Namen.', 'أعطِ القناة اسمًا.'],
+  'Write a message or attach a file.': ['Escribe un mensaje o adjunta un archivo.', 'Écrivez un message ou joignez un fichier.', 'Schreiben Sie eine Nachricht oder hängen Sie eine Datei an.', 'اكتب رسالة أو أرفق ملفًا.'],
+  'Type at least 2 characters.': ['Escribe al menos 2 caracteres.', 'Saisissez au moins 2 caractères.', 'Geben Sie mindestens 2 Zeichen ein.', 'اكتب حرفين على الأقل.'],
   // Command Center (ADR 0063, Phase 4)
   'contains people who are not in this workspace': ['incluye personas que no están en este espacio de trabajo', 'contient des personnes qui ne sont pas dans cet espace de travail', 'enthält Personen, die nicht in diesem Arbeitsbereich sind', 'يتضمن أشخاصًا ليسوا في مساحة العمل هذه'],
   'already owns this lead': ['ya es responsable de este lead', 'est déjà responsable de ce prospect', 'ist bereits für diesen Lead verantwortlich', 'هو مالك هذا العميل المحتمل بالفعل'],
