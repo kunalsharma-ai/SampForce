@@ -33,6 +33,11 @@ export interface DbContext {
   /** The operator console's read-only scan of workspaces and billing (was `app.operator_scan`). */
   operatorScan?: boolean;
   /**
+   * The team chat relay of each API server (ADR 0064): reads and prunes live chat events of every workspace so it
+   * can deliver them to the people connected to that server. Nothing else.
+   */
+  chatRelay?: boolean;
+  /**
    * Public-page lookups without a workspace (was `app.invitation_token_hash`, `app.form_token`...). Each entry makes
    * exactly the documents matching the given equality filter readable. Only the models in LOOKUP_FIELDS accept one.
    */
@@ -103,7 +108,19 @@ const WORKER_ALL = new Set([
 /** Collections the worker may only read across workspaces (`worker_scan` FOR SELECT). */
 const WORKER_READ = new Set(['Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'VisitorSettings', 'ZoomMeeting']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
-const OPERATOR_READ = new Set(['Tenant', 'Subscription', 'Membership', 'Invoice', 'SupportGrant', 'TenantFeatureOverride']);
+const OPERATOR_READ = new Set([
+  'Tenant',
+  'Subscription',
+  'Membership',
+  'Invoice',
+  'SupportGrant',
+  'TenantFeatureOverride',
+  // Team chat (ADR 0064): the console lists every workspace's support line with its unread count. Replying runs in
+  // the workspace's own context.
+  'ChatConversation',
+  'ChatMember',
+  'ChatMessage',
+]);
 
 /** Revoked grants: the application may not rewrite these records. */
 const NO_UPDATE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
@@ -156,6 +173,7 @@ async function filterFor(model: string, op: Op, ctx: DbContext | undefined, look
 
   if (ctx?.workerScan && (WORKER_ALL.has(model) || (read && WORKER_READ.has(model)))) return null;
   if (ctx?.operatorScan && read && OPERATOR_READ.has(model)) return null;
+  if (ctx?.chatRelay && model === 'ChatSignal' && (read || op === 'delete')) return null;
 
   const or: Where[] = [];
   if (model === 'Tenant') {

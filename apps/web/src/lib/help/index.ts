@@ -37,6 +37,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/activities': 'page.activities',
   '/app/follow-ups': 'page.followUps',
   '/app/rfqs': 'page.rfqs',
+  '/app/chat': 'page.chat',
   '/app/communication': 'page.communication',
   '/app/sequences': 'page.sequences',
   '/app/sequences/[id]': 'page.sequenceEditor',
@@ -91,6 +92,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/operator/plans': 'page.operatorPlans',
   '/operator/providers': 'page.operatorProviders',
   '/operator/audit': 'page.operatorAudit',
+  '/operator/chat': 'page.operatorChat',
   '/operator/settings': 'page.operatorSettings',
 };
 

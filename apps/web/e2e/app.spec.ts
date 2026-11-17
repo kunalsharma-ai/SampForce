@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'RFQs', 'Sales Activities',
+  'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'RFQs', 'Team chat', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Client Portal', 'Customer Success',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',

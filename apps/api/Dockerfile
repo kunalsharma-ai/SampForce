@@ -29,12 +29,16 @@ USER node
 CMD ["node", "node_modules/@dealflow/database/dist/setup-cli.js"]
 
 FROM base AS runtime
-ENV NODE_ENV=production
+# METRICS_PORT turns on the internal metrics/health listener (never published); the worker's health check needs it.
+ENV NODE_ENV=production METRICS_PORT=9464
 WORKDIR /app
 COPY --from=build /out .
 COPY --from=build /repo/packages/database/prisma ./prisma
 USER node
 EXPOSE 4000 9464
-HEALTHCHECK --interval=15s --timeout=3s CMD node -e "fetch('http://localhost:4000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# One image runs both the API (dist/main.js) and the worker (dist/worker.js). The check looks at what the container
+# runs: the API answers /api/v1/health/ready on 4000, the worker /healthz on 9464. Before, a worker started from a
+# compose file without its own healthcheck was always reported unhealthy, because nothing listens on 4000 there.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s CMD node -e "const w=require('fs').readFileSync('/proc/1/cmdline','utf8').includes('worker.js');fetch(w?'http://localhost:9464/healthz':'http://localhost:4000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/main.js"]
 
