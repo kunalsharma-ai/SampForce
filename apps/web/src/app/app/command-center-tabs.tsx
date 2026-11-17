@@ -4,6 +4,7 @@ import type { CommandCenterView } from '@dealflow/types';
 import { cn, Skeleton } from '@dealflow/ui';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ExecutiveDashboard } from '@/components/command-center/executive-dashboard';
+import { ManagerDashboard } from '@/components/command-center/manager-dashboard';
 import { PageHeader } from '@/components/page-header';
 import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
@@ -11,7 +12,7 @@ import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
 
 /** The dashboards built so far; the others join as they ship (ADR 0063). */
-const BUILT: CommandCenterView[] = ['executive', 'analytics'];
+const BUILT: CommandCenterView[] = ['manager', 'executive', 'analytics'];
 const VIEW_LABEL: Record<CommandCenterView, MessageKey> = {
   executive: 'Executive',
   manager: 'Manager',
@@ -43,6 +44,8 @@ export function CommandCenter() {
     const next = new URLSearchParams(params.toString());
     next.set('view', v);
     next.delete('transfer');
+    next.delete('person');
+    next.delete('instruction');
     router.replace(`${pathname}?${next}`, { scroll: false });
   };
 
@@ -76,13 +79,21 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
-      {view === 'executive' ? (
+      {view === 'manager' ? (
+        <div className="space-y-2">
+          <PageHeader
+            title="Manager dashboard"
+            description="Your team's leads, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
+          />
+          <ManagerDashboard context={ctx.data} />
+        </div>
+      ) : view === 'executive' ? (
         <div className="space-y-2">
           <PageHeader
             title="Executive dashboard"
             description="Your leads, work, pipeline and credited revenue for the period. Every number opens the records it counts."
           />
-          <ExecutiveDashboard context={ctx.data} />
+          <ExecutiveDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>
       ) : (
         <AnalyticsDashboard />

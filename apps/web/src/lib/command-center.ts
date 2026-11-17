@@ -1,15 +1,22 @@
 'use client';
 
 import type {
+  ClientConcernInput,
+  ClientConcernRow,
+  ClientConcernUpdate,
   CommandCenterContext,
   CommandCenterLayout,
   DashboardTier,
   DrillMetric,
   DrillResult,
   ExecutiveDashboard,
+  InstructionInput,
+  InstructionProgress,
+  InstructionRow,
   LeadTransferDecision,
   LeadTransferInput,
   LeadTransferRow,
+  ManagerDashboard,
   ReportPeriod,
   RevenueRecordRow,
   RevenueRecordUpdate,
@@ -54,6 +61,16 @@ export function useExecutiveDashboard(p: PeriodChoice, userId: string | undefine
     queryKey: ['command-center', 'executive', p, userId ?? ''],
     queryFn: () =>
       api<ExecutiveDashboard>(`/command-center/executive?${periodQuery(p, { userId })}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 120_000,
+  });
+}
+
+export function useManagerDashboard(p: PeriodChoice, userId: string | undefined, enabled = true) {
+  return useQuery({
+    enabled: enabled && (p.period !== 'custom' || (!!p.from && !!p.to)),
+    queryKey: ['command-center', 'manager', p, userId ?? ''],
+    queryFn: () => api<ManagerDashboard>(`/command-center/manager?${periodQuery(p, { userId })}`),
     placeholderData: keepPreviousData,
     refetchInterval: 120_000,
   });
@@ -196,6 +213,91 @@ export function useRevenueRecordMutations(id: string) {
     }),
     reset: useMutation({
       mutationFn: () => api(`/revenue-records/${id}/credits/reset`, { method: 'POST', json: {} }),
+      ...opts,
+    }),
+  };
+}
+
+// ─── Instructions ───
+
+export function useInstructions(box: 'received' | 'sent', status: 'open' | 'all' = 'open', enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ['instructions', box, status],
+    queryFn: () => api<InstructionRow[]>(`/instructions?box=${box}&status=${status}`),
+  });
+}
+
+export function useInstructionMutations() {
+  const qc = useQueryClient();
+  const opts = {
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ['instructions'] }),
+        qc.invalidateQueries({ queryKey: ['notifications'] }),
+      ]),
+  };
+  return {
+    send: useMutation({
+      mutationFn: (input: InstructionInput) => api<InstructionRow>('/instructions', { method: 'POST', json: input }),
+      ...opts,
+    }),
+    progress: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: InstructionProgress }) =>
+        api<InstructionRow>(`/instructions/${id}/progress`, { method: 'POST', json: input }),
+      ...opts,
+    }),
+    cancel: useMutation({
+      mutationFn: (id: string) => api<InstructionRow>(`/instructions/${id}/cancel`, { method: 'POST', json: {} }),
+      ...opts,
+    }),
+  };
+}
+
+// ─── Client concerns ───
+
+export function useClientConcerns(
+  box: 'mine' | 'team' | 'escalated',
+  filter: { status?: 'open' | 'resolved' | 'all'; companyId?: string } = {},
+  enabled = true,
+) {
+  const qs = new URLSearchParams({ box, status: filter.status ?? 'open' });
+  if (filter.companyId) qs.set('companyId', filter.companyId);
+  return useQuery({
+    enabled,
+    queryKey: ['client-concerns', box, filter],
+    queryFn: () => api<ClientConcernRow[]>(`/client-concerns?${qs}`),
+  });
+}
+
+export function useConcernMutations() {
+  const qc = useQueryClient();
+  const opts = {
+    onSuccess: () =>
+      Promise.all(
+        [['client-concerns'], ['command-center'], ['company'], ['notifications']].map((queryKey) =>
+          qc.invalidateQueries({ queryKey }),
+        ),
+      ),
+  };
+  return {
+    raise: useMutation({
+      mutationFn: (input: ClientConcernInput) => api<ClientConcernRow>('/client-concerns', { method: 'POST', json: input }),
+      ...opts,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: ClientConcernUpdate }) =>
+        api<ClientConcernRow>(`/client-concerns/${id}`, { method: 'PATCH', json: input }),
+      ...opts,
+    }),
+    escalate: useMutation({
+      mutationFn: ({ id, toUserId, note }: { id: string; toUserId?: string | null; note?: string | null }) =>
+        api<ClientConcernRow>(`/client-concerns/${id}/escalate`, { method: 'POST', json: { toUserId: toUserId ?? null, note: note ?? null } }),
+      ...opts,
+    }),
+    resolve: useMutation({
+      mutationFn: ({ id, resolution }: { id: string; resolution: string }) =>
+        api<ClientConcernRow>(`/client-concerns/${id}/resolve`, { method: 'POST', json: { resolution } }),
       ...opts,
     }),
   };

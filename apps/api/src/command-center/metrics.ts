@@ -272,7 +272,7 @@ export class Metrics {
    * Revenue in the workspace currency: the shares held by people in scope (or each record once, for the
    * organisation), plus the full value of those deals and what could not be converted.
    */
-  async revenue(start = this.s.start, end = this.s.end): Promise<{ amount: number; dealValue: number; deals: number; unconverted: Money[]; byUser: Map<string, number>; records: Prisma.RevenueRecordGetPayload<object>[] }> {
+  async revenue(start = this.s.start, end = this.s.end): Promise<{ amount: number; dealValue: number; deals: number; unconverted: Money[]; byUser: Map<string, number>; dealsByUser: Map<string, number>; records: Prisma.RevenueRecordGetPayload<object>[] }> {
     const recs = await this.creditedRecords(start, end);
     const credits = recs.length ? await this.tx.revenueCredit.findMany({ where: { tenantId: this.s.tenantId, recordId: { in: recs.map((r) => r.id) }, voided: false } }) : [];
     const mine = this.s.users ? new Set(this.s.users) : null;
@@ -280,7 +280,9 @@ export class Metrics {
     let dealValue = 0;
     const unconverted = new Map<string, number>();
     const byUser = new Map<string, number>();
+    const dealsByUser = new Map<string, number>();
     for (const r of recs) {
+      for (const c of credits) if (c.recordId === r.id && c.userId && c.percent > 0) dealsByUser.set(c.userId, (dealsByUser.get(c.userId) ?? 0) + 1);
       const v = this.money({ amount: r.amount, currency: r.currency });
       if (v === null) {
         unconverted.set(r.currency, (unconverted.get(r.currency) ?? 0) + r.amount);
@@ -293,7 +295,7 @@ export class Metrics {
       amount += (v * pct) / 100;
     }
     for (const [k, val] of byUser) byUser.set(k, r2(val));
-    return { amount: r2(amount), dealValue: r2(dealValue), deals: recs.length, unconverted: [...unconverted].map(([currency, amount]) => ({ currency, amount: r2(amount) })), byUser, records: recs };
+    return { amount: r2(amount), dealValue: r2(dealValue), deals: recs.length, unconverted: [...unconverted].map(([currency, amount]) => ({ currency, amount: r2(amount) })), byUser, dealsByUser, records: recs };
   }
 
   /** Won value not yet recorded as collected (every active record of the scope, whenever it closed). */

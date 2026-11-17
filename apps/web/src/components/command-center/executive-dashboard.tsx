@@ -29,6 +29,7 @@ import {
 } from '@dealflow/ui';
 import { CalendarClock, LayoutGrid, Plus, Target, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { Select } from '@/components/crm/select';
 import { FOLLOW_UP_TYPE_LABEL, PRIORITY_LABEL } from '@/components/crm/work-labels';
@@ -55,6 +56,7 @@ import {
   PeriodPicker,
   Progress,
 } from './tier-parts';
+import { ReceivedInstructions } from './instructions';
 import { TransferRequests } from './transfers';
 
 type ExecSection = (typeof TIER_DASHBOARD_WIDGETS.EXECUTIVE)[number];
@@ -83,7 +85,12 @@ function orderedSections(
 export function ExecutiveDashboard({ context }: { context: CommandCenterContext }) {
   const t = useT();
   const [period, setPeriod] = React.useState<PeriodChoice>({ period: 'this_month' });
-  const [userId, setUserId] = React.useState<string>('');
+  const params = useSearchParams();
+  // A manager opening someone's dashboard from their team table arrives with ?person=.
+  const [userId, setUserId] = React.useState<string>(() => {
+    const p = params.get('person');
+    return p && context.reports.some((r) => r.id === p) ? p : '';
+  });
   const [drill, setDrill] = React.useState<DrillTarget | null>(null);
   const [customising, setCustomising] = React.useState(false);
   const [targetOpen, setTargetOpen] = React.useState(false);
@@ -106,6 +113,8 @@ export function ExecutiveDashboard({ context }: { context: CommandCenterContext 
         );
       case 'exec.work':
         return <MyWork buckets={data.work} />;
+      case 'exec.instructions':
+        return data.features.instructions && !viewingOther ? <ReceivedInstructions /> : null;
       case 'exec.pipeline':
         return (
           <Funnel
@@ -276,6 +285,8 @@ function SectionTip({ id }: { id: ExecSection }) {
       return <InfoTip topic="cc.execKpis" />;
     case 'exec.work':
       return <InfoTip topic="cc.myWork" />;
+    case 'exec.instructions':
+      return <InfoTip topic="cc.instructionsReceived" />;
     case 'exec.pipeline':
       return <InfoTip topic="cc.funnel" />;
     case 'exec.performance':

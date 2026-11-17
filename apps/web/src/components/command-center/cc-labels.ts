@@ -1,5 +1,10 @@
 import type {
+  ConcernCategory,
   CreditRole,
+  InstructionStatus,
+  MessagePriority,
+  MonitorSection,
+  PerformanceStatus,
   DrillMetric,
   FunnelStage,
   ReportPeriod,
@@ -109,11 +114,92 @@ export const WORK_LABEL = {
 export const SECTION_LABEL = {
   'exec.kpis': 'Key metrics',
   'exec.work': 'My work',
+  'exec.instructions': 'Instructions for you',
   'exec.pipeline': 'My pipeline',
   'exec.performance': 'Business performance',
   'exec.revenue': 'Revenue attribution',
   'exec.transfers': 'Lead transfer requests',
+  'team.kpis': 'Team metrics',
+  'team.table': 'Employee performance',
+  'team.compare': 'Performance comparison',
+  'team.pipeline': 'Team pipeline',
+  'team.monitor': 'Follow-up monitoring',
+  'team.instructions': 'Instructions sent',
+  'team.concerns': 'Unresolved client concerns',
+  'team.revenue': 'Business generation and revenue',
 } as const satisfies Record<string, MessageKey>;
+
+export const MONITOR_LABEL = {
+  teamToday: "Today's team follow-ups",
+  teamOverdue: 'Overdue team follow-ups',
+  teamMeetings: 'Upcoming meetings',
+  teamAwaiting: 'Pending client responses',
+  teamRfqDeadlines: 'RFQ deadlines',
+  teamConcerns: 'Client concerns',
+  unassigned: 'Unassigned leads',
+  intervention: 'Leads needing senior intervention',
+} as const satisfies Record<MonitorSection, MessageKey>;
+
+export const PERFORMANCE_STATUS_LABEL = {
+  ACHIEVED: 'Target achieved',
+  ON_TRACK: 'On track',
+  AT_RISK: 'At risk',
+  BEHIND: 'Behind',
+  NO_TARGET: 'No target set',
+  INACTIVE: 'No activity',
+} as const satisfies Record<PerformanceStatus, MessageKey>;
+
+export const PERFORMANCE_STATUS_TONE: Record<PerformanceStatus, 'success' | 'primary' | 'warning' | 'critical' | 'neutral'> = {
+  ACHIEVED: 'success',
+  ON_TRACK: 'primary',
+  AT_RISK: 'warning',
+  BEHIND: 'critical',
+  NO_TARGET: 'neutral',
+  INACTIVE: 'neutral',
+};
+
+export const MESSAGE_PRIORITY_LABEL = {
+  LOW: 'Low',
+  NORMAL: 'Normal',
+  HIGH: 'High',
+  URGENT: 'Urgent',
+} as const satisfies Record<MessagePriority, MessageKey>;
+
+export const INSTRUCTION_STATUS_LABEL = {
+  OPEN: 'Not acknowledged',
+  ACKNOWLEDGED: 'Acknowledged',
+  DONE: 'Done',
+  CANCELLED: 'Withdrawn',
+} as const satisfies Record<InstructionStatus, MessageKey>;
+
+export const INSTRUCTION_STATUS_TONE: Record<InstructionStatus, 'warning' | 'primary' | 'success' | 'neutral'> = {
+  OPEN: 'warning',
+  ACKNOWLEDGED: 'primary',
+  DONE: 'success',
+  CANCELLED: 'neutral',
+};
+
+export const CONCERN_CATEGORY_LABEL = {
+  GENERAL: 'Client raised a concern',
+  PRICING: 'Pricing concern',
+  QUALITY: 'Quality concern',
+  COMMUNICATION: 'Communication concern',
+  DELIVERY: 'Project delivery concern',
+  PAYMENT: 'Payment concern',
+  SERVICE: 'Service concern',
+  NOT_INTERESTED: 'Not interested',
+  REJECTED: 'Rejected',
+  LOST_OPPORTUNITY: 'Lost opportunity',
+} as const satisfies Record<ConcernCategory, MessageKey>;
+
+export const SEVERITY_LABEL = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical',
+} as const satisfies Record<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', MessageKey>;
+
+export const SEVERITY_TONE = { LOW: 'neutral', MEDIUM: 'primary', HIGH: 'warning', CRITICAL: 'critical' } as const;
 
 export const CREDIT_ROLE_LABEL = {
   LEAD_GENERATION: 'Lead generation',

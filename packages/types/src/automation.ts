@@ -316,6 +316,12 @@ export interface NotificationRow {
   title: string;
   body: string | null;
   link: string | null;
+  /** The person who sent it, with their designation; null for system notices. */
+  sender: { id: string; name: string; designation: string | null } | null;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  company: { id: string; name: string } | null;
+  contact: { id: string; name: string } | null;
+  actionRequired: boolean;
   readAt: string | null;
   createdAt: string;
 }

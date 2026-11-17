@@ -1,7 +1,7 @@
 # ADR 0063: Command Center dashboards, revenue attribution and lead transfers
 
-- Status: Accepted (Phase 4: executive dashboard, revenue attribution, lead transfers, deal visibility); Phases 5
-  and 6 extend it with the manager and senior management dashboards
+- Status: Accepted (Phase 4: executive dashboard, revenue attribution, lead transfers, deal visibility; Phase 5:
+  manager dashboard, instructions, client concerns); Phase 6 extends it with the senior management dashboard
 - Date: 2026-11-16
 
 ## Context
@@ -53,6 +53,41 @@ with a decision recorded and the lead's creator kept.
   these.
 - **Drill-down.** `GET /command-center/drill` returns the records behind any number on the dashboards, with the same
   filters, so a card and its list always agree. It is capped at 200 rows and reports the full total.
+
+## Phase 5: the manager dashboard, instructions and client concerns
+
+- **A manager's team** is the manager and everyone below them in the reporting lines, limited to the people the
+  viewer's record visibility reaches (only the viewer for OWN scope). `GET /command-center/manager` returns the header
+  (team size, this month's team target as the sum of each member's target, and the team's revenue), the sixteen team
+  cards of section 12.2, one row per person with the columns of 12.3 plus the rates the comparison charts use (response
+  rate, RFQ conversion, follow-up completion, won deals, target achievement), the team funnel with the number of people
+  handling each stage, the monitoring sections of 12.6, and the employee- and manager-wise revenue of 12.7. A senior
+  person can open the dashboard of any manager they can see (`userId`).
+- **No double counting.** Each person's business is their own credited share. The team total is the sum of those
+  shares, which is each revenue record counted once at the team's combined share, so the rows always add up to it; a
+  manager's line in the manager-wise table is the same sum over their part of the team.
+- **Performance status** compares target achievement with how much of the period has gone: achieved at 100%, on track
+  within 90% of that pace, at risk within 60%, else behind; without a target a person is "no target" or, with no
+  activity in the period, "no activity".
+- **Monitoring and actions.** Today's and overdue team follow-ups, meetings in the next 14 days, clients whose latest
+  logged message from the team is an unanswered email, RFQ deadlines, open concerns, unassigned leads, and the items
+  needing senior intervention (transfer requests from the team and concerns escalated to the manager). From each item
+  the manager can reassign a follow-up or change its priority, assign a lead, add a follow-up, send an instruction,
+  escalate a concern, and decide transfers. The order and visibility of these sections are part of the person's
+  MANAGER layout.
+- **Instructions** (`instructions`, feature `instructions`) go from someone to a person below them in the reporting
+  lines (or from anyone who manages members and sees every record). The recipient is notified, acknowledges the
+  instruction and marks it done with a note; the sender is told each time and can withdraw it while it is open. A
+  remark is the same without the request to act.
+- **Client concerns** (feature `client_concerns`) are escalations with a category (pricing, quality, communication,
+  delivery, payment, service, not interested, rejected, lost opportunity), an employee, a manager (the owner's
+  reporting manager by default) and a resolution deadline. Escalating sends a concern to the person chosen, else its
+  manager, else the next person up; only the people working a concern and the managers above them can change it.
+  Customer-success escalations keep working as before, and the health score counts both.
+- **Notifications** now carry the sender (shown with their designation), a priority, the related company and employee,
+  and whether action is required.
+- Owners and admins without a designation are senior management; until the senior dashboard is built they keep the
+  analytics layout as their default and can open the manager dashboard from its tab.
 
 ## Consequences
 

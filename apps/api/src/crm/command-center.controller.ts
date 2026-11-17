@@ -1,6 +1,14 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import {
+  clientConcernEscalateSchema,
+  clientConcernInputSchema,
+  clientConcernListSchema,
+  clientConcernResolveSchema,
+  clientConcernUpdateSchema,
   creditSplitSchema,
+  instructionInputSchema,
+  instructionListSchema,
+  instructionProgressSchema,
   leadTransferDecisionSchema,
   leadTransferInputSchema,
   leadTransferListSchema,
@@ -9,6 +17,8 @@ import {
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { ClientConcernsService } from './client-concerns.service';
+import { InstructionsService } from './instructions.service';
 import { LeadTransfersService } from './lead-transfers.service';
 import { RevenueRecordsService } from './revenue-records.service';
 
@@ -97,5 +107,80 @@ export class LeadTransfersController {
   @RequirePermissions('companies:write')
   cancel(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
     return this.transfers.cancel(auth, id, meta);
+  }
+}
+
+/** Instructions and remarks from managers and senior people to the people below them (ADR 0063). */
+@Controller('instructions')
+@ApiKeyAccess()
+@RequireFeature('instructions')
+export class InstructionsController {
+  constructor(private readonly instructions: InstructionsService) {}
+
+  @Get()
+  @RequirePermissions('dashboard:read')
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(instructionListSchema)) q: z.output<typeof instructionListSchema>) {
+    return this.instructions.list(auth, q);
+  }
+
+  @Post()
+  @RequirePermissions('dashboard:read')
+  send(@Auth() auth: AuthContext, @Body(new ZodPipe(instructionInputSchema)) body: z.output<typeof instructionInputSchema>, @Meta() meta: RequestMeta) {
+    return this.instructions.send(auth, body, meta);
+  }
+
+  /** The recipient acknowledges, completes or reopens it. */
+  @Post(':id/progress')
+  @HttpCode(200)
+  @RequirePermissions('dashboard:read')
+  progress(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(instructionProgressSchema)) body: z.output<typeof instructionProgressSchema>, @Meta() meta: RequestMeta) {
+    return this.instructions.progress(auth, id, body, meta);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(200)
+  @RequirePermissions('dashboard:read')
+  cancel(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
+    return this.instructions.cancel(auth, id, meta);
+  }
+}
+
+/** Client concerns and rejections, with their resolution and escalation (ADR 0063). */
+@Controller('client-concerns')
+@ApiKeyAccess()
+@RequireFeature('client_concerns')
+export class ClientConcernsController {
+  constructor(private readonly concerns: ClientConcernsService) {}
+
+  @Get()
+  @RequirePermissions('companies:read')
+  list(@Auth() auth: AuthContext, @Query(new ZodPipe(clientConcernListSchema)) q: z.output<typeof clientConcernListSchema>) {
+    return this.concerns.list(auth, q);
+  }
+
+  @Post()
+  @RequirePermissions('companies:write')
+  raise(@Auth() auth: AuthContext, @Body(new ZodPipe(clientConcernInputSchema)) body: z.output<typeof clientConcernInputSchema>, @Meta() meta: RequestMeta) {
+    return this.concerns.raise(auth, body, meta);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('companies:write')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(clientConcernUpdateSchema)) body: z.output<typeof clientConcernUpdateSchema>, @Meta() meta: RequestMeta) {
+    return this.concerns.update(auth, id, body, meta);
+  }
+
+  @Post(':id/escalate')
+  @HttpCode(200)
+  @RequirePermissions('companies:write')
+  escalate(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(clientConcernEscalateSchema)) body: z.output<typeof clientConcernEscalateSchema>, @Meta() meta: RequestMeta) {
+    return this.concerns.escalate(auth, id, body, meta);
+  }
+
+  @Post(':id/resolve')
+  @HttpCode(200)
+  @RequirePermissions('companies:write')
+  resolve(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(clientConcernResolveSchema)) body: z.output<typeof clientConcernResolveSchema>, @Meta() meta: RequestMeta) {
+    return this.concerns.resolve(auth, id, body.resolution, meta);
   }
 }
