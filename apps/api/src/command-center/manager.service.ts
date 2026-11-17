@@ -213,7 +213,7 @@ export class ManagerDashboardService {
         };
       },
       teamRfqDeadlines: async () => {
-        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: { in: team }, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight } };
+        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: { in: team }, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight, not: null } };
         const [rows, total] = await Promise.all([tx.rfq.findMany({ where, orderBy: { deadlineAt: 'asc' }, take: TAKE, select: { id: true, number: true, projectName: true, deadlineAt: true, ownerId: true, companyId: true } }), tx.rfq.count({ where })]);
         const p = await refs(rows.map((r) => r.ownerId));
         return { id: 'teamRfqDeadlines', label: null, total, items: rows.map((r): WorkItem => ({ kind: 'rfq', id: r.id, title: `${r.number} ${r.projectName}`, subtitle: null, href: `/app/rfqs?open=${r.id}`, at: r.deadlineAt?.toISOString() ?? null, priority: null, overdue: !!r.deadlineAt && r.deadlineAt < c.now, from: null, assignee: who(p, r.ownerId), companyId: r.companyId })) };

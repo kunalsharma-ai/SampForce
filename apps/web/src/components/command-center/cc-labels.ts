@@ -1,7 +1,9 @@
 import type {
   ConcernCategory,
   CreditRole,
+  InsightKind,
   InstructionStatus,
+  RankingCategory,
   MessagePriority,
   MonitorSection,
   PerformanceStatus,
@@ -39,6 +41,9 @@ export const METRIC_LABEL = {
   companies: 'Companies',
   outstanding: 'Outstanding revenue',
   unassignedLeads: 'Unassigned leads',
+  pipelineValue: 'Revenue pipeline',
+  conversionRate: 'Overall conversion rate',
+  targetAchievement: 'Target achievement',
   'stage:NEW': 'New',
   'stage:CONTACTED': 'Contacted',
   'stage:DISCUSSION': 'Discussion',
@@ -70,6 +75,13 @@ export const METRIC_DEFINITION: Partial<Record<DrillMetric, MessageKey>> = {
     'Leads moved to a manager or senior person through an approved transfer in the period.',
   revenue:
     'Revenue credited in the period: each won deal split by attribution, so nothing is counted twice.',
+  companies: 'Companies in the CRM, whoever generated them.',
+  existingClients: 'Companies with a client status, or a won deal or RFQ on record.',
+  openOpportunities: 'Deals open now.',
+  pipelineValue: 'The value of the deals open now, in the workspace currency.',
+  outstanding: 'Won value not yet recorded as collected.',
+  conversionRate: 'Leads generated in the period that have since become clients, as a share of those leads.',
+  targetAchievement: 'Revenue in the period against the organisation target for it.',
 };
 
 export const FUNNEL_LABEL = {
@@ -127,6 +139,11 @@ export const SECTION_LABEL = {
   'team.instructions': 'Instructions sent',
   'team.concerns': 'Unresolved client concerns',
   'team.revenue': 'Business generation and revenue',
+  'org.kpis': 'Organisation metrics',
+  'org.departments': 'Department and team performance',
+  'org.rankings': 'Employee ranking',
+  'org.revenue': 'Revenue',
+  'org.insights': 'Business insights',
 } as const satisfies Record<string, MessageKey>;
 
 export const MONITOR_LABEL = {
@@ -235,3 +252,26 @@ export const PAYMENT_STATUS_LABEL = {
   PAID: 'Paid',
   OVERDUE: 'Payment overdue',
 } as const satisfies Record<'NOT_DUE' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE', MessageKey>;
+
+export const RANKING_LABEL = {
+  revenue: 'Highest revenue generator',
+  leads: 'Highest lead generator',
+  rfqs: 'Highest RFQ generator',
+  conversions: 'Highest client conversion',
+  responseRate: 'Best response rate',
+  followUpCompletion: 'Best follow-up completion',
+  targetAchievement: 'Highest target achievement',
+} as const satisfies Record<RankingCategory, MessageKey>;
+
+export const INSIGHT_LABEL = {
+  overdueFollowUps: 'Employees with too many overdue follow-ups',
+  lowConversion: 'Many leads, few conversions',
+  repeatRfqs: 'Companies sending repeated RFQs',
+  decliningEngagement: 'Companies with declining engagement',
+  stuckNegotiation: 'Opportunities stuck in negotiation',
+  rfqDeadlines: 'RFQs close to their deadline',
+  unresolvedConcerns: 'Clients with unresolved concerns',
+  teamsBehind: 'Teams behind their targets',
+  unassignedLeads: 'Leads without an owner',
+  revenueConcentration: 'Revenue concentrated in few clients',
+} as const satisfies Record<InsightKind, MessageKey>;

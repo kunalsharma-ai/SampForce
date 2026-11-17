@@ -303,7 +303,7 @@ export class CommandCenterService {
       fromManager: () => taskBucket('fromManager', { ...open, createdById: { in: chain.length ? chain : ['-'] } }, (x) => x.createdById),
       reassigned: () => taskBucket('reassigned', { ...open, reassignedFromId: { not: null }, NOT: { reassignedFromId: me } }, (x) => x.reassignedFromId),
       rfqDeadlines: async () => {
-        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: me, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight } };
+        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: me, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight, not: null } };
         const [rows, total] = await Promise.all([tx.rfq.findMany({ where, orderBy: { deadlineAt: 'asc' }, take: WORK_TAKE, select: { id: true, number: true, projectName: true, deadlineAt: true } }), tx.rfq.count({ where })]);
         return { id: 'rfqDeadlines', label: null, total, items: rows.map((r): WorkItem => ({ kind: 'rfq', id: r.id, title: `${r.number} ${r.projectName}`, subtitle: null, href: `/app/rfqs?open=${r.id}`, at: r.deadlineAt?.toISOString() ?? null, priority: null, overdue: !!r.deadlineAt && r.deadlineAt < c.now, from: null })) };
       },

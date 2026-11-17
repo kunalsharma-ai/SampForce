@@ -4,15 +4,17 @@ import type { CommandCenterView } from '@dealflow/types';
 import { cn, Skeleton } from '@dealflow/ui';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ExecutiveDashboard } from '@/components/command-center/executive-dashboard';
+import { OnboardingChecklist } from '@/components/command-center/onboarding';
 import { ManagerDashboard } from '@/components/command-center/manager-dashboard';
+import { SeniorDashboard } from '@/components/command-center/senior-dashboard';
 import { PageHeader } from '@/components/page-header';
 import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
 
-/** The dashboards built so far; the others join as they ship (ADR 0063). */
-const BUILT: CommandCenterView[] = ['manager', 'executive', 'analytics'];
+/** The dashboards (ADR 0063). */
+const BUILT: CommandCenterView[] = ['senior', 'manager', 'executive', 'analytics'];
 const VIEW_LABEL: Record<CommandCenterView, MessageKey> = {
   executive: 'Executive',
   manager: 'Manager',
@@ -79,13 +81,22 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
-      {view === 'manager' ? (
+      {view === 'senior' ? (
+        <div className="space-y-2">
+          <PageHeader
+            title="Senior management dashboard"
+            description="The organisation's numbers for the period, how each department and team is doing, who leads, where revenue comes from, and what needs attention. Every number opens the records it counts."
+          />
+          <OnboardingChecklist />
+          <SeniorDashboard context={ctx.data} />
+        </div>
+      ) : view === 'manager' ? (
         <div className="space-y-2">
           <PageHeader
             title="Manager dashboard"
             description="Your team's leads, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
           />
-          <ManagerDashboard context={ctx.data} />
+          <ManagerDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>
       ) : view === 'executive' ? (
         <div className="space-y-2">

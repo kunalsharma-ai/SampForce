@@ -119,6 +119,24 @@ export class Metrics {
     return owned.filter((c) => (c.statusId && client.includes(c.statusId)) || wonSet.has(c.id)).map((c) => c.id);
   }
 
+  /** Of these companies, the clients: a client status, or a won deal or RFQ on record. */
+  async clientsAmong(companyIds: string[]): Promise<string[]> {
+    if (!companyIds.length) return [];
+    const client = await this.statusIds(['CLIENT']);
+    const [rows, won] = await Promise.all([
+      this.tx.company.findMany({ where: { tenantId: this.s.tenantId, id: { in: companyIds } }, select: { id: true, statusId: true } }),
+      this.tx.revenueRecord.findMany({ where: { tenantId: this.s.tenantId, voidedAt: null, companyId: { in: companyIds } }, select: { companyId: true } }),
+    ]);
+    const wonSet = new Set(won.map((w) => w.companyId));
+    return rows.filter((c) => (c.statusId && client.includes(c.statusId)) || wonSet.has(c.id)).map((c) => c.id);
+  }
+
+  /** Leads generated in the period that have since become clients (the overall conversion rate's numerator). */
+  async leadsConverted(): Promise<{ leads: string[]; converted: string[] }> {
+    const leads = await this.leadsGenerated();
+    return { leads, converted: await this.clientsAmong(leads) };
+  }
+
   async unassignedLeads(): Promise<string[]> {
     const rows = await this.tx.company.findMany({ where: { ...this.companyBase(), OR: unset('ownerId') }, select: { id: true }, take: CAP });
     return rows.map((r) => r.id);
@@ -300,7 +318,7 @@ export class Metrics {
 
   /** Won value not yet recorded as collected (every active record of the scope, whenever it closed). */
   async outstanding(): Promise<{ amount: number; ids: string[] }> {
-    const recs = await this.creditedRecords(new Date(0), new Date(8.64e15));
+    const recs = await this.creditedRecords(new Date(0), new Date(Date.UTC(9999, 0, 1)));
     let amount = 0;
     const out: string[] = [];
     for (const r of recs) {
@@ -483,6 +501,9 @@ export class Metrics {
         const people = await personRefs(tx, t, recs.map((r) => r.closerId));
         return { total: o.ids.length, rows: recs.map((r): DrillRow => ({ kind: 'revenue', id: r.id, title: r.project, subtitle: r.paymentStatus, href: r.opportunityId ? `/app/deals/${r.opportunityId}` : null, at: r.closedAt.toISOString(), person: ref(people, r.closerId), status: null, amount: r2(r.amount - (r.collectedAmount ?? 0)), currency: r.currency })) };
       }
+      case 'conversionRate': return companyRows((await this.leadsConverted()).converted);
+      case 'targetAchievement': return this.rows('revenue');
+      case 'pipelineValue':
       case 'openOpportunities': {
         const deals = await this.openDeals();
         const list = await tx.opportunity.findMany({ where: { tenantId: t, id: { in: deals.slice(0, 200).map((d) => d.id) } }, select: { id: true, name: true, dealNumber: true, amount: true, currency: true, ownerId: true, expectedCloseDate: true, stage: { select: { name: true } } } });

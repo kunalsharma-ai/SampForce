@@ -18,6 +18,7 @@ import type {
   LeadTransferRow,
   ManagerDashboard,
   ReportPeriod,
+  SeniorDashboard,
   RevenueRecordRow,
   RevenueRecordUpdate,
 } from '@dealflow/types';
@@ -73,6 +74,16 @@ export function useManagerDashboard(p: PeriodChoice, userId: string | undefined,
     queryFn: () => api<ManagerDashboard>(`/command-center/manager?${periodQuery(p, { userId })}`),
     placeholderData: keepPreviousData,
     refetchInterval: 120_000,
+  });
+}
+
+export function useSeniorDashboard(p: PeriodChoice, departmentId: string | undefined, enabled = true) {
+  return useQuery({
+    enabled: enabled && (p.period !== 'custom' || (!!p.from && !!p.to)),
+    queryKey: ['command-center', 'senior', p, departmentId ?? ''],
+    queryFn: () => api<SeniorDashboard>(`/command-center/senior?${periodQuery(p, { departmentId })}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 300_000,
   });
 }
 

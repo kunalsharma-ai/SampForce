@@ -243,7 +243,7 @@ export const DRILL_METRICS = [
   'leadsGenerated', 'activeCompanies', 'employeesContacted', 'emailsSent', 'responses', 'positiveResponses',
   'followUpsToday', 'followUpsOverdue', 'followUpsPending', 'rfqsReceived', 'rfqsSubmitted', 'rfqsWon', 'rfqsLost',
   'clientsConverted', 'clientsRejected', 'clientConcerns', 'transfersToSenior', 'revenue', 'openOpportunities',
-  'existingClients', 'companies', 'outstanding', 'unassignedLeads',
+  'existingClients', 'companies', 'outstanding', 'unassignedLeads', 'pipelineValue', 'conversionRate', 'targetAchievement',
   'stage:NEW', 'stage:CONTACTED', 'stage:DISCUSSION', 'stage:INTERESTED', 'stage:RFQ_RECEIVED', 'stage:QUOTATION_SUBMITTED', 'stage:NEGOTIATION', 'stage:WON', 'stage:LOST',
 ] as const;
 export type DrillMetric = (typeof DRILL_METRICS)[number];
@@ -305,7 +305,8 @@ export interface CommandCenterContext {
 
 export interface KpiCard {
   key: DrillMetric;
-  value: number;
+  /** null when there is nothing to work it out from (a rate with nothing to divide by, a target not set). */
+  value: number | null;
   format: 'number' | 'currency' | 'percent';
 }
 
@@ -611,6 +612,166 @@ export interface ManagerDashboard {
   generatedAt: string;
 }
 
+
+// ─── Senior management dashboard (spec 13) ───
+
+/** One person's numbers for the period, the rows the rankings and the department and team totals are built from. */
+export interface OrgPersonRow {
+  person: PersonRef;
+  department: { id: string; name: string } | null;
+  manager: PersonRef | null;
+  leads: number;
+  /** Leads they generated in the period that have since become clients. */
+  leadsConverted: number;
+  emailsSent: number;
+  responses: number;
+  /** Logged outreach (emails, calls, meetings, messages) and synced emails sent: their client touches. */
+  touches: number;
+  followUpsDue: number;
+  followUpsDone: number;
+  followUpsOverdue: number;
+  rfqsReceived: number;
+  rfqsWon: number;
+  rfqsLost: number;
+  clientsConverted: number;
+  /** Their credited share of revenue in the period, in the workspace currency. */
+  business: number;
+  target: number | null;
+  achievement: number | null;
+  status: PerformanceStatus;
+  responseRate: number | null;
+  /** Leads converted ÷ leads generated. */
+  leadConversion: number | null;
+  rfqWinRate: number | null;
+  followUpCompletion: number | null;
+  /**
+   * The balanced ranking score (0-100): the average of their percentile among ranked people on revenue, target
+   * achievement, lead conversion, RFQ win rate, response rate, follow-up completion and lead volume, so volume alone
+   * never decides the order. Null when they did nothing to rank in the period.
+   */
+  score: number | null;
+}
+
+/** A group's totals: a department, a manager's team, or the organisation. Counts of companies are distinct. */
+export interface OrgGroupTotals {
+  people: number;
+  leads: number;
+  rfqsReceived: number;
+  rfqsWon: number;
+  clientsConverted: number;
+  /** The group's members' shares added up: never more than the deals are worth. */
+  business: number;
+  target: number | null;
+  achievement: number | null;
+  status: PerformanceStatus;
+  /** Client touches per person in the period. */
+  productivity: number | null;
+}
+
+export interface OrgManagerRow extends OrgGroupTotals {
+  person: PersonRef;
+  department: { id: string; name: string } | null;
+  /** Everyone reporting to them, directly or further down (within the dashboard's reach). */
+  reports: number;
+}
+
+export interface OrgDepartmentRow extends OrgGroupTotals {
+  /** null: people without a department. */
+  department: { id: string; name: string } | null;
+  managers: OrgManagerRow[];
+}
+
+export const RANKING_CATEGORIES = ['revenue', 'leads', 'rfqs', 'conversions', 'responseRate', 'followUpCompletion', 'targetAchievement'] as const;
+export type RankingCategory = (typeof RANKING_CATEGORIES)[number];
+
+/** Minimum volume before a rate can lead a ranking, so one lucky email does not top the board. */
+export const RANKING_MINIMUMS = { responseRate: 5, followUpCompletion: 3, leadConversion: 3, rfqWinRate: 2 } as const;
+
+export interface RankingLeader {
+  category: RankingCategory;
+  /** null when nobody qualifies in the period. */
+  person: PersonRef | null;
+  value: number | null;
+  /** A quality figure beside the volume one, such as the lead conversion of the top lead generator. */
+  detail: { label: 'leadConversion' | 'rfqWinRate' | 'emailsSent' | 'followUpsDue' | 'target' | 'business' | 'deals'; value: number | null } | null;
+}
+
+export interface RevenueSlice {
+  key: string;
+  label: string;
+  amount: number;
+  /** Share of the revenue shown, 0-100. */
+  share: number;
+  deals: number;
+  /** Drill-down: a person, a manager's team, a department, or a company. */
+  link: { kind: 'person' | 'team' | 'department' | 'company'; id: string } | null;
+}
+
+export interface RevenueTrendPoint {
+  month: string;
+  revenue: number;
+  target: number | null;
+}
+
+export const INSIGHT_KINDS = [
+  'overdueFollowUps', 'lowConversion', 'repeatRfqs', 'decliningEngagement', 'stuckNegotiation',
+  'rfqDeadlines', 'unresolvedConcerns', 'teamsBehind', 'unassignedLeads', 'revenueConcentration',
+] as const;
+export type InsightKind = (typeof INSIGHT_KINDS)[number];
+
+export interface OrgInsightItem {
+  id: string;
+  title: string;
+  /** A short figure that explains why it is listed, e.g. "7 overdue" (numbers only; the screen words it). */
+  value: number | null;
+  /** A second figure where one helps, e.g. the conversion rate beside the lead count. */
+  extra: number | null;
+  href: string | null;
+  person: PersonRef | null;
+}
+
+export interface OrgInsight {
+  kind: InsightKind;
+  /** How many records or people it covers; 0 means all clear. */
+  count: number;
+  items: OrgInsightItem[];
+}
+
+export interface SeniorDashboard {
+  range: PeriodRange;
+  currency: string;
+  /** Everyone the dashboard covers: the whole organisation, or the people the caller's visibility reaches. */
+  coverage: 'ORG' | 'VISIBLE';
+  departments: { id: string; name: string }[];
+  /** The department filter in use. */
+  departmentId: string | null;
+  people: number;
+  kpis: KpiCard[];
+  target: { target: number | null; achieved: number; percent: number | null };
+  departmentRows: OrgDepartmentRow[];
+  ranking: { people: OrgPersonRow[]; leaders: RankingLeader[] };
+  revenue: {
+    periods: { key: 'month' | 'quarter' | 'half' | 'year'; amount: number; target: number | null }[];
+    trend: RevenueTrendPoint[];
+    byEmployee: RevenueSlice[];
+    byManager: RevenueSlice[];
+    byDepartment: RevenueSlice[];
+    byClient: RevenueSlice[];
+    byCountry: RevenueSlice[];
+    byIndustry: RevenueSlice[];
+    byService: RevenueSlice[];
+    /** Revenue in the period, each deal once: the slices of each breakdown add up to it. */
+    total: number;
+    unconverted: { currency: string; amount: number }[];
+  } | null;
+  insights: OrgInsight[];
+  features: { revenueAttribution: boolean };
+  layout: CommandCenterLayout | null;
+  generatedAt: string;
+}
+
+export const seniorQuerySchema = z.intersection(commandCenterQuerySchema, z.object({ departmentId: z.string().uuid().optional() }));
+export type SeniorQuery = z.output<typeof seniorQuerySchema>;
 
 // ─── Instructions and remarks (spec 15.2) ───
 

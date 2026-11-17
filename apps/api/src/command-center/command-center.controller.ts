@@ -9,12 +9,15 @@ import {
   type DrillQuery,
   drillQuerySchema,
   salesTargetInputSchema,
+  type SeniorQuery,
+  seniorQuerySchema,
   z,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CommandCenterService } from './command-center.service';
 import { ManagerDashboardService } from './manager.service';
+import { SeniorDashboardService } from './senior.service';
 
 const tierPipe = new ParseEnumPipe(Object.fromEntries(DASHBOARD_TIERS.map((t) => [t, t])));
 const layoutBody = z.object({ layout: commandCenterLayoutSchema.nullable() });
@@ -25,6 +28,7 @@ export class CommandCenterController {
   constructor(
     private readonly cc: CommandCenterService,
     private readonly manager: ManagerDashboardService,
+    private readonly senior: SeniorDashboardService,
   ) {}
 
   /** The caller's tier, the dashboards they can open, and the people who report to them. */
@@ -46,6 +50,13 @@ export class CommandCenterController {
   @RequirePermissions('dashboard:read')
   managerDashboard(@Auth() auth: AuthContext, @Query(new ZodPipe(commandCenterQuerySchema)) q: CommandCenterQuery) {
     return this.manager.dashboard(auth, q);
+  }
+
+  /** The organisation (or the part the caller's visibility reaches, or one department) for senior management. */
+  @Get('senior')
+  @RequirePermissions('dashboard:read')
+  seniorDashboard(@Auth() auth: AuthContext, @Query(new ZodPipe(seniorQuerySchema)) q: SeniorQuery) {
+    return this.senior.dashboard(auth, q);
   }
 
   /** The records behind one number of a dashboard. */

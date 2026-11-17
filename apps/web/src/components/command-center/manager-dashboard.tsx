@@ -34,7 +34,7 @@ import {
 } from '@dealflow/ui';
 import { LayoutGrid, MoreHorizontal, Send } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { FollowUpDialog, type FollowUpPreset } from '@/components/crm/follow-ups';
@@ -81,7 +81,12 @@ export function ManagerDashboard({ context }: { context: CommandCenterContext })
   const t = useT();
   const router = useRouter();
   const [period, setPeriod] = React.useState<PeriodChoice>({ period: 'this_month' });
-  const [userId, setUserId] = React.useState('');
+  const params = useSearchParams();
+  // Opened from the senior dashboard (?person=): that manager's team, when the caller can see it.
+  const [userId, setUserId] = React.useState(() => {
+    const p = params.get('person');
+    return p && context.reports.some((r) => r.id === p) ? p : '';
+  });
   const [drill, setDrill] = React.useState<DrillTarget | null>(null);
   const [customising, setCustomising] = React.useState(false);
   const [instructing, setInstructing] = React.useState<{ toUserId?: string; company?: { id: string; name: string } | null } | null>(null);
