@@ -506,4 +506,28 @@ export const engageHelp = {
       'استخدمها لمقارنة تكلفة العميل المحتمل والعائد على الإنفاق بين الحملات.',
     ],
   },
+  'page.chat': {
+    title: 'Team chat',
+    what: [
+      'Chat with your colleagues in direct messages and channels such as Project updates. Workspace admins also have a support line to the SampForce super admins.',
+      'Chatea con tus compañeros en mensajes directos y canales como Novedades del proyecto. Los administradores del espacio de trabajo tienen además una línea de soporte con los superadministradores de SampForce.',
+      'Discutez avec vos collègues en messages directs et dans des canaux comme Actualités du projet. Les administrateurs de l’espace de travail ont aussi une ligne d’assistance avec les super-administrateurs SampForce.',
+      'Chatten Sie mit Kollegen in Direktnachrichten und Kanälen wie Projekt-Updates. Administratoren des Arbeitsbereichs haben außerdem eine Support-Leitung zu den SampForce-Super-Admins.',
+      'تحدّث مع زملائك في رسائل مباشرة وقنوات مثل «مستجدات المشروع». ولمسؤولي مساحة العمل أيضًا خط دعم مع المسؤولين الأعلى في SampForce.',
+    ],
+    how: [
+      'Use New message or New channel, then write and press Enter. The paperclip attaches files; the link button points the message at a company, RFQ or deal. Seen shows who has read your last message.',
+      'Usa Nuevo mensaje o Nuevo canal, escribe y pulsa Intro. El clip adjunta archivos; el botón de vínculo apunta el mensaje a una empresa, RFQ u oportunidad. Visto muestra quién leyó tu último mensaje.',
+      'Utilisez Nouveau message ou Nouveau canal, écrivez puis appuyez sur Entrée. Le trombone joint des fichiers ; le bouton de lien rattache le message à une entreprise, une RFQ ou une affaire. Vu indique qui a lu votre dernier message.',
+      'Neue Nachricht oder Neuer Kanal wählen, schreiben, Enter drücken. Die Büroklammer hängt Dateien an, der Link-Button verknüpft Unternehmen, RFQ oder Deal. Gesehen zeigt, wer Ihre letzte Nachricht las.',
+      'استخدم «رسالة جديدة» أو «قناة جديدة» ثم اكتب واضغط Enter. يرفق مشبك الورق الملفات، ويربط زر الرابط الرسالة بشركة أو طلب عرض سعر أو صفقة. تُظهر «شوهدت» من قرأ رسالتك الأخيرة.',
+    ],
+    where: [
+      'Chat runs on your own SampForce server, so it also works on an office network with no internet. If the connection drops, what you write waits on this device and is sent when it returns.',
+      'El chat funciona en tu propio servidor de SampForce, así que también sirve en una red de oficina sin internet. Si se corta la conexión, lo que escribas espera en este dispositivo y se envía cuando vuelva.',
+      'La discussion tourne sur votre propre serveur SampForce : elle fonctionne aussi sur un réseau de bureau sans internet. Si la connexion tombe, ce que vous écrivez attend sur cet appareil et part dès son retour.',
+      'Der Chat läuft auf Ihrem eigenen SampForce-Server und funktioniert daher auch im Büronetz ohne Internet. Fällt die Verbindung aus, wartet Geschriebenes auf diesem Gerät und wird gesendet, sobald sie zurück ist.',
+      'تعمل الدردشة على خادم SampForce الخاص بك، لذا تعمل أيضًا على شبكة المكتب دون إنترنت. إذا انقطع الاتصال، يبقى ما تكتبه على هذا الجهاز ويُرسل عند عودته.',
+    ],
+  },
 } as const satisfies HelpTable;

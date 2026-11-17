@@ -312,4 +312,8 @@ export const validation = {
   'is required': ['es obligatorio', 'est obligatoire', 'ist erforderlich', 'مطلوب'],
   'Enter the SampBidx API address, for example https://sampbidx.example.com/api': ['Indica la dirección de la API de SampBidx, por ejemplo https://sampbidx.example.com/api', 'Saisissez l’adresse de l’API SampBidx, par exemple https://sampbidx.example.com/api', 'Geben Sie die API-Adresse von SampBidx ein, zum Beispiel https://sampbidx.example.com/api', 'أدخل عنوان واجهة API لـ SampBidx، مثل https://sampbidx.example.com/api'],
   'Paste the API key from SampBidx': ['Pega la clave de API de SampBidx', 'Collez la clé d’API de SampBidx', 'Fügen Sie den API-Schlüssel aus SampBidx ein', 'الصق مفتاح API من SampBidx'],
+  // Team chat (ADR 0064)
+  'Give the channel a name.': ['Ponle un nombre al canal.', 'Donnez un nom au canal.', 'Geben Sie dem Kanal einen Namen.', 'أعطِ القناة اسمًا.'],
+  'Write a message or attach a file.': ['Escribe un mensaje o adjunta un archivo.', 'Écrivez un message ou joignez un fichier.', 'Schreiben Sie eine Nachricht oder hängen Sie eine Datei an.', 'اكتب رسالة أو أرفق ملفًا.'],
+  'Type at least 2 characters.': ['Escribe al menos 2 caracteres.', 'Saisissez au moins 2 caractères.', 'Geben Sie mindestens 2 Zeichen ein.', 'اكتب حرفين على الأقل.'],
 } as const satisfies TextTable;

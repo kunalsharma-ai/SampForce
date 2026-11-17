@@ -8,9 +8,25 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
+import { operatorRealm, useChatBackground, useChatUnread } from '@/lib/chat';
+import * as React from 'react';
 
 export function useOperator(enabled = true) {
   return useQuery({ enabled, queryKey: ['operator', 'me'], queryFn: () => api<OperatorMe>('/operator/me'), retry: false });
+}
+
+/** Support chat in the console menu, with its unread count; keeps the live connection open on every console page. */
+function OperatorChatLink({ active }: { active: boolean }) {
+  const me = useOperator();
+  const realm = React.useMemo(() => (me.data ? operatorRealm(me.data.id) : null), [me.data]);
+  useChatBackground(realm);
+  const unread = useChatUnread(realm).data?.total ?? 0;
+  return (
+    <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
+      Support chat
+      {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
+    </Link>
+  );
 }
 
 export function OperatorShell({ children }: { children: React.ReactNode }) {
@@ -45,6 +61,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Plans
               </Link>
+              <OperatorChatLink active={path === '/operator/chat'} />
               <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Operator log
               </Link>

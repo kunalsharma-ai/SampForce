@@ -26,7 +26,7 @@ let refreshing: Promise<boolean> | null = null;
 const NO_REFRESH = /^\/(operator\/|client-portal\/|auth\/(login|register|refresh|logout|invitations|mfa\/verify))/;
 
 /** Single-flight refresh so parallel 401s trigger one token rotation, not many. */
-function refreshSession(): Promise<boolean> {
+export function refreshSession(): Promise<boolean> {
   refreshing ??= fetch('/api/v1/auth/refresh', { method: 'POST', credentials: 'include' })
     .then((r) => r.ok)
     .catch(() => false)

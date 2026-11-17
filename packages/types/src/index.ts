@@ -47,3 +47,4 @@ export * from './custom-fields';
 export * from './custom-field-logic';
 export * from './crm-admin';
 export * from './sampbidx';
+export * from './chat';

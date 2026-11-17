@@ -41,6 +41,7 @@ export const es: Messages = {
   'module.accounts': 'Cuentas',
   'module.follow-ups': 'Seguimientos',
   'module.rfqs': 'RFQs',
+  'module.chat': 'Chat del equipo',
   'module.activities': 'Actividades comerciales',
   'module.communication': 'Correo y comunicación',
   'module.sequences': 'Secuencias de correo',
