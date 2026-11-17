@@ -8,7 +8,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 import { useFieldDefs } from './custom-field-input';
 import { Select } from './select';
 
-const OP_LABEL = {
+export const OP_LABEL = {
   eq: 'is',
   neq: 'is not',
   contains: 'contains',
@@ -19,6 +19,13 @@ const OP_LABEL = {
   unset: 'is empty',
 } as const satisfies Record<CustomFieldFilterOp, MessageKey>;
 
+/** "Tier is Gold": a filter or a field's condition, in words. */
+export function describeFieldTest(t: ReturnType<typeof useT>, defs: readonly CustomFieldDef[], f: CustomFieldFilter): string {
+  const d = defs.find((x) => x.key === f.key);
+  const shown = Array.isArray(f.value) ? f.value.join(', ') : typeof f.value === 'boolean' || f.value === 'true' || f.value === 'false' ? (f.value === true || f.value === 'true' ? t('Yes') : t('No')) : (f.value ?? '');
+  return `${d?.label ?? f.key} ${t(OP_LABEL[f.op])}${f.op === 'set' || f.op === 'unset' ? '' : ` ${shown}`}`;
+}
+
 /** Filters by custom fields (ADR 0062): pick a field, a test and a value; several filters all apply. */
 export function CustomFieldFilters({ entity, value, onChange }: { entity: CustomFieldEntity; value: CustomFieldFilter[]; onChange: (v: CustomFieldFilter[]) => void }) {
   const t = useT();
@@ -26,12 +33,7 @@ export function CustomFieldFilters({ entity, value, onChange }: { entity: Custom
   const usable = (defs.data ?? []).filter((d) => d.type !== 'FILE' && filterOpsFor(d.type).length > 0);
   const [open, setOpen] = useState(false);
   if (!usable.length) return null;
-  const byKey = new Map(usable.map((d) => [d.key, d]));
-  const describe = (f: CustomFieldFilter) => {
-    const d = byKey.get(f.key);
-    const shown = Array.isArray(f.value) ? f.value.join(', ') : typeof f.value === 'boolean' ? (f.value ? t('Yes') : t('No')) : (f.value ?? '');
-    return `${d?.label ?? f.key} ${t(OP_LABEL[f.op])}${f.op === 'set' || f.op === 'unset' ? '' : ` ${shown}`}`;
-  };
+  const describe = (f: CustomFieldFilter) => describeFieldTest(t, usable, f);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {value.map((f, i) => (

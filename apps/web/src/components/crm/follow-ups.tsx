@@ -1,6 +1,6 @@
 'use client';
 
-import { FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { CalendarClock, Check, Flag, Plus, Repeat, X } from 'lucide-react';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { fmtLocale } from '@/lib/i18n/locale';
 import { useCan } from '@/lib/session';
 import { useOptionLookup, useOptions } from '@/lib/crm-admin';
 import { useCompanyAction } from './company-actions';
-import { CustomFieldInput, CustomFieldValue, fieldDefault, fieldPayloadValue, useFieldDefs } from './custom-field-input';
+import { CustomFieldInput, CustomFieldValue, fieldDefault, fieldLogic, fieldPayloadValue, useFieldDefs } from './custom-field-input';
 import { PersonSelect } from './lead-fields';
 import { Select, Textarea } from './select';
 import { DUE_LABEL, DUE_TONE, FOLLOW_UP_TYPE_LABEL, optionLabel, PRIORITY_LABEL } from './work-labels';
@@ -197,6 +197,11 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
   const fields = useFieldDefs('FOLLOW_UP');
   const formFields = (fields.data ?? []).filter((d) => d.showInForms);
   const [custom, setCustom] = React.useState<Record<string, unknown>>({});
+  const cfRaw = (d: CustomFieldDef) => (custom[d.key] === undefined ? fieldDefault(d) : custom[d.key]);
+  const logic = fieldLogic(fields.data ?? [], (k) => {
+    const d = fields.data?.find((x) => x.key === k);
+    return d ? cfRaw(d) : undefined;
+  });
   const blank = React.useCallback(
     () => ({ type: preset.type ?? ('CALL' as FollowUpType), title: '', dueAt: toLocalInput(new Date(Date.now() + 86_400_000)), priority: 'NORMAL' as (typeof FOLLOW_UP_PRIORITIES)[number], contactId: preset.contactId ?? '', assigneeId: preset.ownerId ?? '', managerId: '', summary: '', nextAction: '', remarks: '' }),
     [preset.type, preset.contactId, preset.ownerId],
@@ -229,7 +234,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       remarks: v.remarks || null,
       rfqId: preset.rfqId ?? null,
       customFields: Object.fromEntries(
-        formFields.filter((d) => d.access.edit).map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const).filter(([, x]) => x !== ''),
+        formFields.filter((d) => d.access.edit && logic.shows(d)).map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const).filter(([, x]) => x !== ''),
       ),
     };
     const parsed = followUpInputSchema.safeParse(body);
@@ -308,13 +313,13 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
           <Field id="fu-remarks" label={t('Remarks')}>
             <Input value={v.remarks} onChange={(e) => set({ remarks: e.target.value })} />
           </Field>
-          {formFields.map((d) => (
+          {formFields.filter(logic.shows).map((d) => (
             <CustomFieldInput
               key={d.id}
               def={d}
               entity="FOLLOW_UP"
               id={`fu-cf-${d.key}`}
-              value={custom[d.key] === undefined ? fieldDefault(d) : custom[d.key]}
+              value={logic.valueOf(d, cfRaw(d))}
               onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
               error={errors[`customFields.${d.key}`]}
             />

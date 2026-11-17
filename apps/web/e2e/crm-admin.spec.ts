@@ -136,3 +136,70 @@ test('statuses, categories, currency, notifications, exports, dashboards and att
   await axe(page);
   await shot(page, '11-attribution');
 });
+
+test('conditional fields show only when another field has a value, and formula fields calculate as people type', async ({ page }) => {
+  page.on('dialog', (d) => void d.accept());
+  await signUp(page, 'Panel Partners');
+  await post(page, '/custom-fields', { entity: 'CONTACT', key: 'sample_size', label: 'Sample size', type: 'NUMBER' });
+  await post(page, '/custom-fields', { entity: 'CONTACT', key: 'cpi', label: 'CPI', type: 'CURRENCY', currency: 'USD', description: 'Cost per interview' });
+  await post(page, '/custom-fields', { entity: 'CONTACT', key: 'is_panelist', label: 'Panelist', type: 'BOOLEAN' });
+
+  await page.goto('/app/settings/crm?section=fields');
+  const main = page.getByRole('main');
+  await main.getByLabel('Record type').selectOption('CONTACT');
+  const fields = main.getByRole('list', { name: 'Fields on employees' });
+  await expect(fields.getByRole('listitem')).toHaveCount(3);
+
+  // A formula field: the editor checks the formula as it is typed.
+  await main.getByLabel('Name', { exact: true }).fill('Project value');
+  await main.getByLabel('Type', { exact: true }).selectOption('FORMULA');
+  await main.getByLabel('Formula').fill('{sample_size} * (');
+  await expect(main.getByText('The formula ends too early')).toBeVisible();
+  await main.getByLabel('Formula').fill('{sample_size} * ');
+  await main.getByRole('button', { name: 'CPI', exact: true }).click();
+  await expect(main.getByLabel('Formula')).toHaveValue('{sample_size} * {cpi}');
+  await main.getByLabel('Show as money in').fill('USD');
+  await expect(main.getByRole('option', { name: /USD/ }).first()).toBeVisible();
+  await main.getByLabel('Show as money in').press('Enter');
+  await shot(page, '12-formula-field-editor');
+  await main.getByRole('button', { name: 'Add field' }).click();
+  await expect(fields.getByRole('listitem')).toHaveCount(4);
+
+  // A conditional field: shown only for panelists, and required while it is shown.
+  await main.getByLabel('Name', { exact: true }).fill('Panel name');
+  await main.getByLabel('Type', { exact: true }).selectOption('TEXT');
+  await main.getByLabel('Field', { exact: true }).selectOption('is_panelist');
+  await main.getByLabel('Test', { exact: true }).selectOption('eq');
+  await main.getByLabel('Value', { exact: true }).selectOption('true');
+  await main.getByRole('checkbox', { name: 'Required while it is shown' }).check();
+  await main.getByRole('button', { name: 'Add field' }).click();
+  await expect(fields.getByRole('listitem')).toHaveCount(5);
+  await expect(fields.getByRole('listitem').last()).toContainText('Shown when Panelist is Yes');
+  await expect(fields.getByRole('listitem').nth(3)).toContainText('{sample_size} * {cpi}');
+  await axe(page);
+  await shot(page, '13-conditional-and-formula-fields');
+
+  // On a new employee the formula calculates as the numbers are typed, and Panel name appears for panelists only.
+  await page.goto('/app/contacts');
+  await page.getByRole('button', { name: 'New contact' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('First name *').fill('Asha');
+  await dialog.getByLabel('Last name').fill('Rao');
+  await expect(dialog.getByLabel(/^Panel name/)).toHaveCount(0);
+  await dialog.getByLabel('Sample size').fill('400');
+  await dialog.getByLabel('CPI').fill('2.5');
+  await expect(dialog.getByText('$1,000')).toBeVisible();
+  await dialog.getByLabel('Panelist').selectOption('true');
+  await expect(dialog.getByLabel('Panel name *')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Create contact' }).click();
+  await expect(dialog.getByText('Panel name is required').or(dialog.getByText('This field is required'))).toBeVisible();
+  await axe(page);
+  await shot(page, '14-new-employee-conditional-formula');
+  await dialog.getByLabel('Panel name *').fill('Urban India 2026');
+  await dialog.getByRole('button', { name: 'Create contact' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Asha Rao' })).toBeVisible();
+  await expect(main.getByText('$1,000').first()).toBeVisible();
+  await expect(main.getByText('Urban India 2026').first()).toBeVisible();
+  await expect(main.getByText('$2.50').first()).toBeVisible();
+  await shot(page, '15-employee-calculated-value');
+});

@@ -44,5 +44,6 @@ export * from './company-work';
 export * from './attribution';
 export * from './command-center';
 export * from './custom-fields';
+export * from './custom-field-logic';
 export * from './crm-admin';
 export * from './sampbidx';

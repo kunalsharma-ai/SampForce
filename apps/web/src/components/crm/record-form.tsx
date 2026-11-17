@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
-import type { TenantDetails } from '@dealflow/types';
+import type { CustomFieldDef, TenantDetails } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
@@ -14,7 +14,7 @@ import { Segmented } from '@/components/forms/segmented';
 import { useFormDraft } from '@/components/forms/use-form-draft';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
-import { CustomFieldInput, fieldDefault, fieldFormValue, fieldPayloadValue } from './custom-field-input';
+import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue } from './custom-field-input';
 import { type PickerValue, RecordPicker } from './record-picker';
 import { Select, Textarea } from './select';
 
@@ -55,11 +55,20 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
     Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
   );
 
+  // What each custom field holds now, with conditions and formulas worked out as the person types (ADR 0062).
+  const cfDefs = custom.data ?? [];
+  const cfRaw = (d: CustomFieldDef) => (values[`cf.${d.key}`] === undefined && mode === 'create' ? fieldDefault(d) : fieldFormValue(d, values[`cf.${d.key}`]));
+  const cfByKey = new Map(cfDefs.map((d) => [d.key, d]));
+  const logic = fieldLogic(cfDefs, (k) => {
+    const d = cfByKey.get(k);
+    return d ? cfRaw(d) : undefined;
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    // Read-only fields are not sent; the API keeps their values as they are.
-    const editable = (custom.data ?? []).filter((d) => d.access.edit);
+    // Read-only and hidden fields are not sent; the API keeps read-only values and clears hidden ones.
+    const editable = cfDefs.filter((d) => d.access.edit && logic.shows(d));
     const sendable = { ...values, ...Object.fromEntries(editable.map((d) => [`cf.${d.key}`, fieldPayloadValue(d, values[`cf.${d.key}`])])) };
     const payload = toPayload(entity, sendable, mode, editable.map((d) => d.key));
     const parsed = SCHEMAS[entity][mode === 'create' ? 'create' : 'update'].safeParse(payload);
@@ -124,13 +133,13 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
           {custom.data && custom.data.length > 0 && (
             <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
               <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
-              {custom.data.filter((d) => mode === 'edit' || d.showInForms).map((d) => (
+              {custom.data.filter((d) => (mode === 'edit' || d.showInForms) && logic.shows(d)).map((d) => (
                 <CustomFieldInput
                   key={d.id}
                   def={d}
                   entity={CUSTOM_FIELD_ENTITY[entity]}
                   id={`${formId}-cf-${d.key}`}
-                  value={values[`cf.${d.key}`] === undefined && mode === 'create' ? fieldDefault(d) : fieldFormValue(d, values[`cf.${d.key}`])}
+                  value={logic.valueOf(d, cfRaw(d))}
                   onChange={(v) => set(`cf.${d.key}`, v)}
                   error={errors[`cf.${d.key}`]}
                 />

@@ -29,6 +29,11 @@ export const crmAdmin = {
   'Use a colour such as #3b82f6': ['Usa un color como #3b82f6', 'Utilisez une couleur comme #3b82f6', 'Verwenden Sie eine Farbe wie #3b82f6', 'استخدم لونًا مثل ‎#3b82f6'],
   'Each option can appear once': ['Cada opción puede aparecer una vez', 'Chaque option ne peut apparaître qu’une fois', 'Jede Option darf nur einmal vorkommen', 'يمكن أن يظهر كل خيار مرة واحدة'],
   'Use a JSON list of {key, op, value} filters.': ['Usa una lista JSON de filtros {key, op, value}.', 'Utilisez une liste JSON de filtres {key, op, value}.', 'Verwenden Sie eine JSON-Liste von {key, op, value}-Filtern.', 'استخدم قائمة JSON من عوامل التصفية {key, op, value}.'],
+  'Other fields use this field: {fields}. Change them first.': ['Otros campos usan este campo: {fields}. Cámbialos primero.', 'D’autres champs utilisent ce champ : {fields}. Modifiez-les d’abord.', 'Andere Felder verwenden dieses Feld: {fields}. Ändern Sie diese zuerst.', 'تستخدم حقول أخرى هذا الحقل: {fields}. غيّرها أولًا.'],
+  '{{key}} is not a field of this record type': ['{{key}} no es un campo de este tipo de registro', '{{key}} n’est pas un champ de ce type d’enregistrement', '{{key}} ist kein Feld dieses Datensatztyps', '{{key}} ليس حقلًا في نوع السجل هذا'],
+  '{field} is not a number, currency or formula field': ['{field} no es un campo de número, moneda o fórmula', '{field} n’est pas un champ nombre, devise ou formule', '{field} ist kein Zahlen-, Währungs- oder Formelfeld', '{field} ليس حقل رقم أو عملة أو صيغة'],
+  '“{key}” is not a field key': ['«{key}» no es una clave de campo', '« {key} » n’est pas une clé de champ', '„{key}“ ist kein Feldschlüssel', '«{key}» ليس مفتاح حقل'],
+  'Unexpected “{text}”': ['«{text}» inesperado', '« {text} » inattendu', 'Unerwartetes „{text}“', '«{text}» غير متوقع'],
 } as const satisfies TextTable;
 
 /** Reminder notifications (ADR 0062), stored in English and shown in the reader's language. */
@@ -37,4 +42,17 @@ export const crmAdminNotifications = {
   'Follow-up due soon: {title}': ['Seguimiento próximo: {title}', 'Relance bientôt due : {title}', 'Nachverfolgung bald fällig: {title}', 'متابعة مستحقة قريبًا: {title}'],
   'RFQ deadline tomorrow: {rfq}': ['La RFQ vence mañana: {rfq}', 'Échéance de la RFQ demain : {rfq}', 'RFQ-Frist morgen: {rfq}', 'الموعد النهائي لطلب عرض السعر غدًا: {rfq}'],
   'RFQ deadline in {days} days: {rfq}': ['La RFQ vence en {days} días: {rfq}', 'Échéance de la RFQ dans {days} jours : {rfq}', 'RFQ-Frist in {days} Tagen: {rfq}', 'الموعد النهائي لطلب عرض السعر بعد {days} أيام: {rfq}'],
+  'Enter a formula': ['Escribe una fórmula', 'Saisissez une formule', 'Geben Sie eine Formel ein', 'أدخل صيغة'],
+  'The formula ends too early': ['La fórmula termina antes de tiempo', 'La formule se termine trop tôt', 'Die Formel endet zu früh', 'تنتهي الصيغة قبل اكتمالها'],
+  'Too many brackets': ['Demasiados paréntesis', 'Trop de parenthèses', 'Zu viele Klammern', 'أقواس كثيرة جدًا'],
+  'A bracket is not closed': ['Falta cerrar un paréntesis', 'Une parenthèse n’est pas fermée', 'Eine Klammer ist nicht geschlossen', 'هناك قوس غير مغلق'],
+  'A field name is not closed with }': ['Falta cerrar un nombre de campo con }', 'Un nom de champ n’est pas fermé par }', 'Ein Feldname ist nicht mit } geschlossen', 'اسم حقل غير مغلق بـ }'],
+  'A closing bracket has no opening one': ['Hay un paréntesis de cierre sin apertura', 'Une parenthèse fermante n’a pas d’ouvrante', 'Eine schließende Klammer hat keine öffnende', 'يوجد قوس إغلاق بلا قوس فتح'],
+  'Pick another field of this record type': ['Elige otro campo de este tipo de registro', 'Choisissez un autre champ de ce type d’enregistrement', 'Wählen Sie ein anderes Feld dieses Datensatztyps', 'اختر حقلًا آخر من نوع السجل هذا'],
+  'This test does not fit that field': ['Esta condición no encaja con ese campo', 'Ce test ne convient pas à ce champ', 'Diese Prüfung passt nicht zu diesem Feld', 'هذا الشرط لا يناسب ذلك الحقل'],
+  'Enter the value to test for': ['Indica el valor que se comprueba', 'Indiquez la valeur à tester', 'Geben Sie den zu prüfenden Wert ein', 'أدخل القيمة المطلوب اختبارها'],
+  'Pick values from the list': ['Elige valores de la lista', 'Choisissez des valeurs dans la liste', 'Wählen Sie Werte aus der Liste', 'اختر قيمًا من القائمة'],
+  'These conditions would depend on each other in a loop': ['Estas condiciones dependerían unas de otras en bucle', 'Ces conditions dépendraient les unes des autres en boucle', 'Diese Bedingungen würden sich gegenseitig im Kreis bedingen', 'ستعتمد هذه الشروط على بعضها في حلقة مغلقة'],
+  'This formula would use itself': ['Esta fórmula se usaría a sí misma', 'Cette formule s’utiliserait elle-même', 'Diese Formel würde sich selbst verwenden', 'ستستخدم هذه الصيغة نفسها'],
+  'must be a field, a test and a value': ['debe ser un campo, una condición y un valor', 'doit comporter un champ, un test et une valeur', 'muss ein Feld, eine Prüfung und einen Wert enthalten', 'يجب أن يتضمن حقلًا وشرطًا وقيمة'],
 } as const satisfies TextTable;

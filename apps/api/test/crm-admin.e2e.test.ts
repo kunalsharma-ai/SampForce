@@ -346,6 +346,56 @@ describe('custom fields and CRM administration', () => {
     await api(rep).get('/crm-config/attribution').expect(403);
   });
 
+  it('shows conditional fields only when their condition holds, and calculates formula fields', async () => {
+    const make = (body: object) => http.post('/custom-fields', { entity: 'CONTACT', ...body });
+    const ok = async (body: object) => (await make(body).expect(201)).body as Def & { showWhen: unknown; formula: string | null };
+    await ok({ key: 'is_panelist', label: 'Panelist', type: 'BOOLEAN' });
+    const panelName = await ok({ key: 'panel_name', label: 'Panel name', type: 'TEXT', required: true, showWhen: { key: 'is_panelist', op: 'eq', value: true } });
+    expect(panelName.showWhen).toEqual({ key: 'is_panelist', op: 'eq', value: true });
+    await ok({ key: 'sample_size', label: 'Sample size', type: 'NUMBER' });
+    await ok({ key: 'cpi', label: 'CPI', type: 'CURRENCY', currency: 'USD' });
+    const value = await ok({ key: 'project_value', label: 'Project value', type: 'FORMULA', formula: '{sample_size} * {cpi}', decimals: 2, currency: 'USD' });
+    expect(value).toMatchObject({ formula: '{sample_size} * {cpi}', access: { view: true, edit: false } });
+    const perComplete = await ok({ key: 'per_complete', label: 'Per complete', type: 'FORMULA', formula: '{project_value} / {sample_size}', decimals: 3, showWhen: { key: 'project_value', op: 'gte', value: 100 } });
+
+    // Formulas and conditions that cannot work are refused with the reason.
+    const detail = async (body: object) => ((await make(body).expect(400)).body.error.details[0] as { path: string; message: string });
+    expect(await detail({ key: 'broken', label: 'Broken', type: 'FORMULA', formula: '{sample_size} *' })).toEqual({ path: 'formula', message: 'The formula ends too early' });
+    expect((await detail({ key: 'broken', label: 'Broken', type: 'FORMULA', formula: '{nope} + 1' })).message).toBe('{nope} is not a field of this record type');
+    expect((await detail({ key: 'broken', label: 'Broken', type: 'FORMULA', formula: '{panel_name} + 1' })).message).toBe('Panel name is not a number, currency or formula field');
+    expect((await detail({ key: 'broken', label: 'Broken', type: 'TEXT', showWhen: { key: 'nope', op: 'set' } })).path).toBe('showWhen.key');
+    expect((await detail({ key: 'broken', label: 'Broken', type: 'TEXT', showWhen: { key: 'is_panelist', op: 'contains', value: 'x' } })).path).toBe('showWhen.op');
+    expect((await http.patch(`/custom-fields/${value.id}`, { formula: '{per_complete} * 2' }).expect(400)).body.error.details[0].message).toBe('This formula would use itself');
+    const panelist = (await http.get('/custom-fields?entity=CONTACT').expect(200)).body.find((d: Def) => d.key === 'is_panelist') as Def;
+    expect((await http.patch(`/custom-fields/${panelist.id}`, { showWhen: { key: 'panel_name', op: 'set' } }).expect(400)).body.error.details[0].message).toBe('These conditions would depend on each other in a loop');
+    // A field others depend on cannot be deleted while they do.
+    const size = (await http.get('/custom-fields?entity=CONTACT').expect(200)).body.find((d: Def) => d.key === 'sample_size') as Def;
+    expect((await http.del(`/custom-fields/${size.id}`).expect(409)).body.error.code).toBe('FIELD_IN_USE');
+
+    // A hidden field is not required; formula values are calculated, whatever the form sends.
+    const plain = (await http.post('/contacts', { firstName: 'Asha', lastName: 'Rao', companyId, customFields: { sample_size: 400, cpi: 2.5, project_value: 5 } }).expect(201)).body;
+    expect(plain.customFields).toEqual({ sample_size: 400, cpi: { amount: 2.5, currency: 'USD' }, project_value: 1000, per_complete: 2.5 });
+    expect((await http.post('/contacts', { firstName: 'Ben', lastName: 'Ng', companyId, customFields: { is_panelist: true } }).expect(400)).body.error.details).toEqual([{ path: 'customFields.panel_name', message: 'Panel name is required' }]);
+    const shown = (await http.post('/contacts', { firstName: 'Ben', lastName: 'Ng', companyId, customFields: { is_panelist: true, panel_name: 'B2B India', sample_size: 20, cpi: 3 } }).expect(201)).body;
+    expect(shown.customFields).toEqual({ is_panelist: true, panel_name: 'B2B India', sample_size: 20, cpi: { amount: 3, currency: 'USD' }, project_value: 60 });
+    // When the condition stops holding, the hidden value goes.
+    const patched = (await http.patch(`/contacts/${shown.id}`, { customFields: { is_panelist: false } }).expect(200)).body;
+    expect(patched.customFields).toEqual({ is_panelist: false, sample_size: 20, cpi: { amount: 3, currency: 'USD' }, project_value: 60 });
+
+    // Formula values are stored, so list filters and reports use them; changing a formula recalculates every record.
+    const names = async (filters: object[]) => ((await http.get(`/contacts?pageSize=100&${cfQuery(filters)}`).expect(200)).body.items as Array<{ firstName: string }>).map((c) => c.firstName);
+    expect(await names([{ key: 'project_value', op: 'gte', value: 500 }])).toEqual(['Asha']);
+    await http.patch(`/custom-fields/${value.id}`, { formula: '{sample_size} * {cpi} * 10' }).expect(200);
+    expect((await http.get(`/contacts/${plain.id}`).expect(200)).body.customFields).toMatchObject({ project_value: 10000, per_complete: 25 });
+    expect((await http.get(`/contacts/${shown.id}`).expect(200)).body.customFields).toMatchObject({ project_value: 600, per_complete: 30 });
+    const sum = (await http.post('/reports/run', { definition: { entity: 'contacts', metric: { fn: 'sum', field: 'cf.project_value' } } }).expect(200)).body;
+    expect(sum.total).toBe(10600);
+    // Formula fields cannot be typed into, and their condition still applies.
+    await http.patch(`/custom-fields/${perComplete.id}`, { showWhen: { key: 'project_value', op: 'gte', value: 1000 } }).expect(200);
+    expect((await http.get(`/contacts/${shown.id}`).expect(200)).body.customFields.per_complete).toBeUndefined();
+    expect((await http.get(`/contacts/${plain.id}`).expect(200)).body.customFields.per_complete).toBe(25);
+  });
+
   it('keeps basic fields on every plan and the rest behind advanced custom fields and Excel export', async () => {
     const free = await registerUser(app, 'Free Co', { plan: 'free' });
     const f = api(free);

@@ -38,6 +38,26 @@ per-designation rights, ordering, files, or use in filters, reports and exports.
   (`filterOpsFor`). **Search** looks through text-like fields marked searchable. **Reports** expose visible fields as
   `cf.<key>` columns for group by, sums and filters. **Exports** add a column per visible field, as CSV or Excel.
 
+### Conditional and formula fields
+
+- **Conditions**: any field may have `showWhen`, a test on another field of the same record type, in the same
+  `{key, op, value}` shape as list filters (`is`, `is not`, `is one of`, `has a value`, `is empty`, at least, at most).
+  A field whose test fails is hidden on forms and record pages, is not required, and its value is cleared when the
+  record is saved. A condition on a hidden field fails too, so chains hide everything below the first failing test.
+  Loops are refused when the field is saved.
+- **Formulas**: a new `FORMULA` type holds `formula` (numbers, `{field_key}`, `+ - * /` and brackets, at most 500
+  characters), `decimals` (0 to 6, default 2) and an optional currency for display. It may use number, currency and
+  other formula fields of the same record type; a formula that would use itself is refused. The result is empty when
+  a field it uses is empty or hidden, or when it divides by zero. Nobody types a formula value.
+- **One implementation**: parsing, evaluation and condition tests live in `packages/types`
+  (`custom-field-logic.ts`), so forms calculate and show or hide as people type, and the server applies exactly the
+  same rules when it stores a record.
+- **Stored results**: the server stores each formula's result in the record's `customFields`, so list filters,
+  reports (sums and averages) and exports work on them like on a number field. Changing a formula or a condition
+  recalculates every record of that type. Reads leave out the values of fields whose condition fails.
+- A field used by another field's condition or formula cannot be deleted until that field is changed
+  (`FIELD_IN_USE`). Conditions and formulas are part of `custom_fields_advanced`.
+
 ### Statuses and categories
 
 RFQ statuses, deal statuses and follow-up categories are `CrmOption` rows over built-in values
@@ -72,4 +92,5 @@ need `tenant:manage`.
 - Field labels and option labels are workspace data and are not translated; everything around them is, in all five
   languages.
 - Custom field filters on lists run as a separate MongoDB query for matching ids, capped at 10,000 matches.
-- Not built: conditional fields (show one field only when another has a value) and formula fields.
+- Formulas are arithmetic only (no functions, dates or text) and use fields of the same record; anything wider
+  belongs in reports.

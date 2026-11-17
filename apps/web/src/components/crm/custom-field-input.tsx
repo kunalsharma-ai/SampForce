@@ -1,6 +1,6 @@
 'use client';
 
-import { CUSTOM_FIELD_LIMITS, type CustomFieldDef, type CustomFieldEntity } from '@dealflow/types';
+import { CUSTOM_FIELD_LIMITS, type CustomFieldDef, type CustomFieldEntity, resolveFields } from '@dealflow/types';
 import { Badge, Button, Field, Input } from '@dealflow/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Paperclip, X } from 'lucide-react';
@@ -53,6 +53,8 @@ export function fieldPayloadValue(def: CustomFieldDef, v: unknown): unknown {
     }
     case 'FILE':
       return Array.isArray(v) ? (v as FieldFile[]).map((f) => f.id) : v;
+    case 'FORMULA':
+      return '';
     case 'MULTISELECT':
       return Array.isArray(v) && v.length === 0 ? '' : v;
     default:
@@ -65,7 +67,19 @@ export function fieldDefault(def: CustomFieldDef): unknown {
   return def.defaultValue === null || def.defaultValue === undefined ? '' : fieldFormValue(def, def.defaultValue);
 }
 
-/** One input for any of the 14 custom field types. Read-only fields show their value instead. */
+/**
+ * Conditions and formulas for a form or a record (ADR 0062), worked out as the person types: which fields show,
+ * and what each formula comes to. `get` reads a field's value by key, as the form holds it.
+ */
+export function fieldLogic(defs: readonly CustomFieldDef[], get: (key: string) => unknown) {
+  const { shown, computed } = resolveFields(defs, get);
+  return {
+    shows: (d: CustomFieldDef) => shown.has(d.key),
+    valueOf: (d: CustomFieldDef, v: unknown) => (d.type === 'FORMULA' ? (computed.get(d.key) ?? null) : v),
+  };
+}
+
+/** One input for any of the custom field types. Read-only and formula fields show their value instead. */
 export function CustomFieldInput({ def, id, value, onChange, error, entity }: { def: CustomFieldDef; id: string; value: unknown; onChange: (v: unknown) => void; error?: string; entity: CustomFieldEntity }) {
   const t = useT();
   const label = def.required && def.access.edit ? `${def.label} *` : def.label;
@@ -74,9 +88,9 @@ export function CustomFieldInput({ def, id, value, onChange, error, entity }: { 
   const wide = def.type === 'TEXTAREA' || def.type === 'MULTISELECT' || def.type === 'FILE';
   const wrap = (node: React.ReactNode) => <div className={wide ? 'sm:col-span-2' : undefined}>{node}</div>;
 
-  if (!def.access.edit) {
+  if (def.type === 'FORMULA' || !def.access.edit) {
     return wrap(
-      <Field id={id} label={label} hint={t('Only some designations can change this field.')}>
+      <Field id={id} label={label} hint={def.type === 'FORMULA' ? (hint ?? t('Calculated from other fields.')) : t('Only some designations can change this field.')}>
         <div id={id} className="min-h-9 rounded-md border border-dashed border-border px-3 py-2 text-sm">
           <CustomFieldValue def={def} value={value} empty="—" />
         </div>
@@ -236,10 +250,18 @@ export function CustomFieldValue({ def, value, empty = null }: { def: CustomFiel
       return <>{value === true ? t('Yes') : t('No')}</>;
     case 'CURRENCY': {
       const m = value as Money;
-      return <span className="tabular-nums">{formatMoney(Number(m.amount), m.currency)}</span>;
+      const amount = Number(m.amount);
+      // Small amounts such as a cost per interview keep their cents.
+      return <span className="tabular-nums">{amount % 1 ? amount.toLocaleString(t.formatLocale, { style: 'currency', currency: m.currency || 'USD', maximumFractionDigits: 2 }) : formatMoney(amount, m.currency)}</span>;
     }
     case 'NUMBER':
       return <span className="tabular-nums">{Number(value).toLocaleString(t.formatLocale)}</span>;
+    case 'FORMULA':
+      return (
+        <span className="tabular-nums">
+          {Number(value).toLocaleString(t.formatLocale, { maximumFractionDigits: def.decimals ?? 2, ...(def.currency ? { style: 'currency', currency: def.currency, minimumFractionDigits: 0 } : {}) })}
+        </span>
+      );
     case 'DATE':
       return <>{new Date(`${String(value)}T00:00:00`).toLocaleDateString(t.formatLocale, { dateStyle: 'medium' })}</>;
     case 'DATETIME':

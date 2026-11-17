@@ -25,6 +25,7 @@ export const CUSTOM_FIELD_TYPES = [
   'EMAIL',
   'PHONE',
   'FILE',
+  'FORMULA',
 ] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
 
@@ -36,6 +37,7 @@ export const CHOICE_FIELD_TYPES: readonly CustomFieldType[] = ['SELECT', 'MULTIS
 /** Types whose values are plain text that global search can look through. */
 export const SEARCHABLE_FIELD_TYPES: readonly CustomFieldType[] = ['TEXT', 'TEXTAREA', 'SELECT', 'MULTISELECT', 'URL', 'EMAIL', 'PHONE'];
 
+export const FORMULA_MAX_LENGTH = 500;
 export const CUSTOM_FIELD_LIMITS = { perEntity: 100, options: 100, text: 2_000, textarea: 10_000, files: 5, fileBytes: 10 * 1024 * 1024 } as const;
 
 const currencyCode = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a 3-letter ISO currency code');
@@ -59,6 +61,18 @@ export interface CurrencyValue {
   currency: string;
 }
 
+export const CUSTOM_FIELD_FILTER_OPS = ['eq', 'neq', 'contains', 'gte', 'lte', 'in', 'set', 'unset'] as const;
+export type CustomFieldFilterOp = (typeof CUSTOM_FIELD_FILTER_OPS)[number];
+
+export const customFieldFilterSchema = z
+  .object({
+    key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/),
+    op: z.enum(CUSTOM_FIELD_FILTER_OPS),
+    value: z.union([z.string().max(200), z.number(), z.boolean(), z.array(z.string().max(200)).max(50)]).optional(),
+  })
+  .strict();
+export type CustomFieldFilter = z.infer<typeof customFieldFilterSchema>;
+
 const definitionShape = {
   label: z.string().trim().min(1, 'Enter a name').max(80),
   description: optionalDescription,
@@ -77,9 +91,16 @@ const definitionShape = {
   /** Global search looks through the value (text-like types only). */
   searchable: z.boolean().default(false),
   active: z.boolean().default(true),
+  /** Shown (and required, and kept) only while another field of the record passes this test. Null: always. */
+  showWhen: customFieldFilterSchema.nullable().optional(),
+  /** FORMULA: arithmetic over number, currency and formula fields, such as `{sample_size} * {cpi}`. */
+  formula: z.string().trim().max(FORMULA_MAX_LENGTH).nullable().optional(),
+  /** FORMULA: decimal places the result is rounded to. */
+  decimals: z.number().int().min(0).max(6).nullable().optional(),
 };
 
-function checkChoices(d: { type?: CustomFieldType; options?: string[] }, ctx: z.RefinementCtx) {
+function checkChoices(d: { type?: CustomFieldType; options?: string[]; formula?: string | null }, ctx: z.RefinementCtx) {
+  if (d.type === 'FORMULA' && !d.formula) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a formula', path: ['formula'] });
   if (d.type && CHOICE_FIELD_TYPES.includes(d.type) && (d.options?.length ?? 0) === 0) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Add at least one option', path: ['options'] });
   }
@@ -115,6 +136,9 @@ export const customFieldUpdateSchema = z
     showInForms: z.boolean().optional(),
     searchable: z.boolean().optional(),
     active: z.boolean().optional(),
+    showWhen: definitionShape.showWhen,
+    formula: definitionShape.formula,
+    decimals: definitionShape.decimals,
   })
   .strict()
   .superRefine(checkChoices);
@@ -139,13 +163,19 @@ export interface CustomFieldDef {
   searchable: boolean;
   active: boolean;
   position: number;
+  /** Shown only while this test on another field passes (null: always shown). */
+  showWhen: CustomFieldFilter | null;
+  /** FORMULA fields: the expression and the decimals it is rounded to. */
+  formula: string | null;
+  decimals: number | null;
   /** What the caller may do with the field's values. */
   access: { view: boolean; edit: boolean };
 }
 
 /** True when the definition uses something outside the basic set (needs `custom_fields_advanced`). */
-export function isAdvancedField(d: { entity: CustomFieldEntity; type: CustomFieldType; viewDesignationIds?: string[]; editDesignationIds?: string[] }): boolean {
+export function isAdvancedField(d: { entity: CustomFieldEntity; type: CustomFieldType; viewDesignationIds?: string[]; editDesignationIds?: string[]; showWhen?: unknown }): boolean {
   return (
+    !!d.showWhen ||
     !BASIC_CUSTOM_FIELD_TYPES.includes(d.type) ||
     !BASIC_CUSTOM_FIELD_ENTITIES.includes(d.entity) ||
     (d.viewDesignationIds?.length ?? 0) > 0 ||
@@ -155,17 +185,6 @@ export function isAdvancedField(d: { entity: CustomFieldEntity; type: CustomFiel
 
 // ───────────── Filters ─────────────
 
-export const CUSTOM_FIELD_FILTER_OPS = ['eq', 'neq', 'contains', 'gte', 'lte', 'in', 'set', 'unset'] as const;
-export type CustomFieldFilterOp = (typeof CUSTOM_FIELD_FILTER_OPS)[number];
-
-export const customFieldFilterSchema = z
-  .object({
-    key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/),
-    op: z.enum(CUSTOM_FIELD_FILTER_OPS),
-    value: z.union([z.string().max(200), z.number(), z.boolean(), z.array(z.string().max(200)).max(50)]).optional(),
-  })
-  .strict();
-export type CustomFieldFilter = z.infer<typeof customFieldFilterSchema>;
 
 /** List endpoints take custom field filters as `cf`, a JSON array, so one query string carries several. */
 export const customFieldFiltersParam = z
@@ -188,6 +207,7 @@ export function filterOpsFor(type: CustomFieldType): readonly CustomFieldFilterO
   switch (type) {
     case 'NUMBER':
     case 'CURRENCY':
+    case 'FORMULA':
     case 'DATE':
     case 'DATETIME':
       return ['eq', 'gte', 'lte', 'set', 'unset'];

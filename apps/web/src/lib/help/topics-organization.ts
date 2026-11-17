@@ -1557,11 +1557,11 @@ export const organizationHelp = {
       'اختر نوع السجل، وأضف حقلًا باسمه ونوعه، وحدد من يراه ومن يغيّره. الأسهم تعيد الترتيب، والعين توقف الحقل دون فقدان قيمه.',
     ],
     where: [
-      'Fields appear in forms and record pages, and can be filtered in lists, searched, used in reports and exported.',
-      'Los campos aparecen en formularios y fichas, y se pueden filtrar en listas, buscar, usar en informes y exportar.',
-      'Les champs apparaissent dans les formulaires et les fiches, et servent aux filtres des listes, à la recherche, aux rapports et aux exports.',
-      'Felder erscheinen in Formularen und Datensatzseiten und lassen sich in Listen filtern, durchsuchen, in Berichten nutzen und exportieren.',
-      'تظهر الحقول في النماذج وصفحات السجلات، ويمكن تصفية القوائم بها والبحث فيها واستخدامها في التقارير وتصديرها.',
+      'Fields appear in forms and record pages, and can be filtered, searched, reported and exported. A field can show only when another has a value; a formula field works out a number from others.',
+      'Los campos aparecen en formularios y fichas, y se pueden filtrar, buscar, usar en informes y exportar. Un campo puede mostrarse solo si otro tiene valor; uno de fórmula calcula un número a partir de otros.',
+      'Les champs apparaissent dans les formulaires et les fiches, et servent aux filtres, à la recherche, aux rapports et aux exports. Un champ peut n’apparaître que si un autre a une valeur ; une formule calcule un nombre.',
+      'Felder erscheinen in Formularen und Datensatzseiten und lassen sich filtern, durchsuchen, auswerten und exportieren. Ein Feld kann nur bei Wert eines anderen erscheinen; ein Formelfeld berechnet eine Zahl.',
+      'تظهر الحقول في النماذج وصفحات السجلات، ويمكن تصفيتها والبحث فيها واستخدامها في التقارير وتصديرها. يمكن أن يظهر حقل فقط عندما يكون لآخر قيمة، ويحسب حقل الصيغة رقمًا من حقول أخرى.',
     ],
   },
   'crm.options': {
