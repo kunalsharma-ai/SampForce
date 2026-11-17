@@ -16,6 +16,7 @@ import { type MessageKey, Tr, useT } from '@/lib/i18n';
 import { useLeadDrafts } from '@/lib/company-leads';
 import { useHasFeature } from '@/lib/features';
 import { CustomFieldFilters } from './custom-field-filter';
+import { CompanyContactsCell } from './company-contacts-cell';
 
 import { RecordFormDialog } from './record-form';
 import { CountryFlag, StatusChip } from './status-chip';
@@ -65,7 +66,7 @@ const COLUMNS = {
     },
     { id: 'domain', header: h('Domain'), sortKey: 'domain', cell: (r) => r.domain ?? '—', text: (r) => r.domain, size: 170 },
     { id: 'industry', header: h('Industry'), sortKey: 'industry', cell: (r) => r.industry ?? '—', text: (r) => r.industry, size: 160 },
-    { id: 'contacts', header: h('Contacts'), cell: (r) => r.contactCount, align: 'right', size: 110 },
+    { id: 'contacts', header: h('Contacts'), cell: (r) => <CompanyContactsCell company={r} />, align: 'right', size: 110 },
     { id: 'deals', header: h('Open deals'), cell: (r) => r.openDealCount, align: 'right', size: 110 },
     owner<CompanyRow>(),
     { id: 'createdBy', header: h('Created by'), cell: (r) => r.createdBy?.name ?? '—', text: (r) => r.createdBy?.name ?? null, size: 150 },

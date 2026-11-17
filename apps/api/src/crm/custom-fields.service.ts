@@ -121,6 +121,39 @@ export class CustomFieldsService {
     });
   }
 
+  /** Every key a record type has used, deleted fields included, so a new field never takes an old field's values. */
+  async takenKeys(tx: TenantTx, tenantId: string, entity: Entity): Promise<Set<string>> {
+    const rows = await tx.customField.findMany({ where: { tenantId, entity }, select: { key: true } });
+    return new Set(rows.map((r) => r.key));
+  }
+
+  /**
+   * Fields an import adds for columns no existing field matched (ADR 0066): plain text or number fields, shown in
+   * forms, searchable when text, open to every designation. The caller has checked `crm:configure`.
+   */
+  async createForImport(tx: TenantTx, auth: AuthContext, fields: { entity: 'COMPANY' | 'CONTACT' | 'LEAD'; key: string; label: string; type: 'TEXT' | 'NUMBER' }[], meta: RequestMeta): Promise<void> {
+    for (const entity of new Set(fields.map((f) => f.entity))) {
+      const adding = fields.filter((f) => f.entity === entity);
+      let position = await tx.customField.count({ where: { tenantId: auth.tenantId, entity, archivedAt: null } });
+      if (position + adding.length > CUSTOM_FIELD_LIMITS.perEntity) {
+        throw new BadRequestException({ code: 'LIMIT_REACHED', message: 'A record type can have up to 100 custom fields.', details: adding.map((f) => ({ path: `mapping.${f.label}`, message: 'A record type can have up to 100 custom fields.' })) });
+      }
+      for (const f of adding) {
+        const def = await tx.customField.create({
+          data: {
+            tenantId: auth.tenantId, entity, key: f.key, label: f.label, description: null, type: f.type, options: [], required: false,
+            currency: null, viewDesignationIds: [], editDesignationIds: [], showInForms: true, searchable: f.type === 'TEXT', active: true, position: position++,
+            formula: null, decimals: null,
+          },
+        });
+        await this.audit.record(tx, {
+          tenantId: auth.tenantId, actorUserId: auth.userId, action: 'custom_field.created', entityType: 'custom_field', entityId: def.id,
+          metadata: { entity, key: f.key, type: f.type, source: 'import' }, meta,
+        });
+      }
+    }
+  }
+
   update(auth: AuthContext, id: string, input: CustomFieldUpdate, meta: RequestMeta): Promise<CustomFieldDef> {
     return this.prisma.run(auth, async (tx) => {
       const before = await tx.customField.findFirst({ where: { id, tenantId: auth.tenantId, archivedAt: null } });

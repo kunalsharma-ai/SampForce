@@ -1,7 +1,8 @@
 'use client';
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
-import type { CustomFieldDef, TenantDetails } from '@dealflow/types';
+import { Plus, Trash2 } from 'lucide-react';
+import { type CompanyLeadResult, contactInputSchema, type CustomFieldDef, type TenantDetails } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
@@ -39,12 +40,16 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const custom = useCustomFields(entity);
+  // A new company can be saved with its employees in one go (ADR 0066).
+  const withEmployees = entity === 'companies' && mode === 'create';
+  const [employees, setEmployees] = useState<QuickEmployee[]>([]);
 
   useEffect(() => {
     if (open) {
       setValues(initial ?? {});
       setErrors({});
       setFormError(null);
+      setEmployees([]);
     }
   }, [open, initial]);
 
@@ -79,6 +84,12 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       const p = f.type === 'tel' ? phoneProblem(values[f.name] as string) : null;
       if (p && !problems[f.name]) problems[f.name] = p;
     }
+    const people = withEmployees ? employees.filter((e) => e.name.trim() || e.email.trim() || e.phone.trim()) : [];
+    const team = people.map(quickEmployeePayload);
+    team.forEach((e, i) => {
+      const r = contactInputSchema.safeParse(e);
+      if (!r.success) for (const issue of r.error.issues) problems[`employees.${i}.${String(issue.path[0])}`] ??= t.maybe(issue.message);
+    });
     if (Object.keys(problems).length) {
       setErrors(problems);
       requestAnimationFrame(() => document.getElementById(`${formId}-${Object.keys(problems)[0]}`)?.focus());
@@ -87,10 +98,14 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
     setErrors({});
     setSaving(true);
     try {
-      const raw = await api<unknown>(mode === 'create' ? `/${entity}` : `/${entity}/${recordId}`, {
-        method: mode === 'create' ? 'POST' : 'PATCH',
-        json: payload,
-      });
+      // With employees, the company and its people are saved together: all of it or nothing.
+      const raw = team.length
+        ? (await api<CompanyLeadResult>('/company-leads', { method: 'POST', json: { company: payload, employees: team } })).company
+        : await api<unknown>(mode === 'create' ? `/${entity}` : `/${entity}/${recordId}`, {
+            method: mode === 'create' ? 'POST' : 'PATCH',
+            json: payload,
+          });
+      if (team.length) await qc.invalidateQueries({ queryKey: ['contacts'] });
       const row = (entity === 'leads' && mode === 'create' ? (raw as { lead: { id: string } }).lead : raw) as { id: string };
       draft.clear();
       await qc.invalidateQueries({ queryKey: [entity] });
@@ -99,7 +114,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
       onSaved?.(row, raw);
     } catch (err) {
       if (err instanceof ApiError && err.details?.length) {
-        setErrors(Object.fromEntries(err.details.map((d) => [d.path.startsWith('customFields.') ? `cf.${d.path.slice(13)}` : d.path, d.message])));
+        setErrors(Object.fromEntries(err.details.map((d) => [d.path.startsWith('customFields.') ? `cf.${d.path.slice(13)}` : d.path.replace(/^company\./, '').replace(/\.0\.value$|\.value$/, ''), d.message])));
       }
       setFormError(err instanceof Error ? err.message : t('Could not save.'));
     } finally {
@@ -146,6 +161,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
               ))}
             </fieldset>
           )}
+          {withEmployees && <QuickEmployees idPrefix={`${formId}-emp`} value={employees} onChange={setEmployees} errors={errors} />}
           {formError && (
             <p role="alert" className="text-sm text-critical sm:col-span-2">
               {formError}
@@ -327,5 +343,69 @@ function PipelineField({ id, values, set, error }: { id: string; values: Record<
         </Select>
       </Field>
     </div>
+  );
+}
+
+// ─── Employees typed with a new company ───
+
+interface QuickEmployee {
+  key: string;
+  name: string;
+  jobTitle: string;
+  email: string;
+  phone: string;
+}
+
+const emptyQuickEmployee = (): QuickEmployee => ({ key: crypto.randomUUID(), name: '', jobTitle: '', email: '', phone: '' });
+
+function quickEmployeePayload(e: QuickEmployee) {
+  const [first = '', ...rest] = e.name.trim().split(/\s+/);
+  return {
+    firstName: first,
+    lastName: rest.join(' '),
+    jobTitle: e.jobTitle,
+    emails: e.email.trim() ? [{ value: e.email.trim(), primary: true }] : [],
+    phones: e.phone.trim() ? [{ value: e.phone.trim(), primary: true }] : [],
+  };
+}
+
+/** Rows for the people at a company being created: name, designation, email and phone. More details later on the company page. */
+function QuickEmployees({ idPrefix, value, onChange, errors }: { idPrefix: string; value: QuickEmployee[]; onChange: (v: QuickEmployee[]) => void; errors: Record<string, string> }) {
+  const t = useT();
+  const patch = (key: string, p: Partial<QuickEmployee>) => onChange(value.map((e) => (e.key === key ? { ...e, ...p } : e)));
+  const err = (i: number, field: string) => errors[`employees.${i}.${field}`];
+  return (
+    <fieldset className="space-y-3 border-t border-border pt-4 sm:col-span-2">
+      <legend className="mb-1 text-sm font-medium text-muted-foreground">{t('Employees / POCs')}</legend>
+      <p className="text-xs text-muted-foreground">{t('Add the people you deal with at this company. They are saved with the company and listed under Contacts too.')}</p>
+      {value.map((e, i) => {
+        const id = (f: string) => `${idPrefix}-${i}-${f}`;
+        const label = e.name.trim() || t('Employee {n}', { n: i + 1 });
+        return (
+          <div key={e.key} className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+            <Field id={id('name')} label={t('Employee name *')} error={err(i, 'firstName') ?? err(i, 'lastName')}>
+              <Input value={e.name} autoComplete="off" onChange={(x) => patch(e.key, { name: x.target.value })} />
+            </Field>
+            <Field id={id('jobTitle')} label={t('Designation')} error={err(i, 'jobTitle')}>
+              <Input value={e.jobTitle} onChange={(x) => patch(e.key, { jobTitle: x.target.value })} />
+            </Field>
+            <Field id={id('email')} label={t('Email')} error={err(i, 'emails')}>
+              <Input type="email" value={e.email} onChange={(x) => patch(e.key, { email: x.target.value })} />
+            </Field>
+            <Field id={id('phone')} label={t('Phone')} error={err(i, 'phones')}>
+              <Input type="tel" value={e.phone} onChange={(x) => patch(e.key, { phone: x.target.value })} />
+            </Field>
+            <div className="flex items-end">
+              <Button type="button" variant="ghost" size="sm" aria-label={t('Remove {value}', { value: label })} onClick={() => onChange(value.filter((x) => x.key !== e.key))}>
+                <Trash2 aria-hidden />
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...value, emptyQuickEmployee()])}>
+        <Plus aria-hidden /> {t('Add employee / POC')}
+      </Button>
+    </fieldset>
   );
 }

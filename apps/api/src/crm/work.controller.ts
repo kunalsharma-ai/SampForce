@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
   type ActivityInput,
@@ -24,7 +24,8 @@ import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ActivitiesService } from './activities.service';
 import { CustomFieldsService } from './custom-fields.service';
-import { EXPORT_ENTITIES, type ExportEntity, IMPORT_FIELDS, ImportExportService } from './import-export.service';
+import { EXPORT_ENTITIES, type ExportEntity, ImportExportService, xlsxToCsv } from './import-export.service';
+import { IMPORT_FIELDS, ImportService } from './import.service';
 import { SearchService } from './search.service';
 import { TasksService } from './tasks.service';
 
@@ -186,7 +187,10 @@ export class CustomFieldsController {
 
 @Controller()
 export class ImportExportController {
-  constructor(private readonly io: ImportExportService) {}
+  constructor(
+    private readonly io: ImportExportService,
+    private readonly importer: ImportService,
+  ) {}
 
   @Get('imports/fields')
   fields() {
@@ -196,8 +200,22 @@ export class ImportExportController {
   @Post('imports')
   @HttpCode(200)
   run(@Auth() auth: AuthContext, @Body(new ZodPipe(importRequestSchema)) body: ImportRequest, @Meta() meta: RequestMeta) {
-    requirePermission(auth, ENTITY_PERMISSION[body.entity].write);
-    return this.io.import(auth, body, meta);
+    // A company-and-employee file writes both kinds of record.
+    if (body.entity === 'companies_contacts') {
+      requirePermission(auth, 'companies:write');
+      requirePermission(auth, 'contacts:write');
+    } else requirePermission(auth, ENTITY_PERMISSION[body.entity].write);
+    return this.importer.import(auth, body, meta);
+  }
+
+  /** An Excel workbook becomes CSV text here, and is then mapped and imported like a CSV file. Nothing is saved. */
+  @Post('imports/file')
+  @HttpCode(200)
+  async readFile(@Auth() auth: AuthContext, @Req() req: Request) {
+    if (!(['leads:write', 'contacts:write', 'companies:write'] as const).some((p) => auth.permissions.includes(p))) requirePermission(auth, 'contacts:write');
+    const data = await readUpload(req);
+    if (data.length > 2_000_000) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'This file is larger than 2 MB. Split it into smaller files.', details: [{ path: 'data', message: 'This file is larger than 2 MB. Split it into smaller files.' }] });
+    return xlsxToCsv(data);
   }
 
   /** Exports are bulk data egress: they need data:export on top of read access, and are audited. */
