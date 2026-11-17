@@ -35,6 +35,8 @@ import {
   Wallet,
   ArrowRightLeft,
   MessageSquareWarning,
+  Link2,
+  UserMinus,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
@@ -48,7 +50,9 @@ import { useHasFeature } from '@/lib/features';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { type CompanyAction, useCompanyAction, useCompanyActions } from './company-actions';
-import { AddEmployeeDialog } from './company-parts';
+import { AddEmployeeDialog, LinkContactDialog } from './company-parts';
+import { api } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatDateTime } from './follow-ups';
 import { StatusChip } from './status-chip';
 import { INTERACTION_LABEL } from './work-labels';
@@ -327,11 +331,30 @@ export function CompanyBusiness({ companyId }: { companyId: string }) {
 type SortKey = 'name' | 'status' | 'emailsSent' | 'responsesReceived' | 'lastUpdateAt' | 'nextFollowUpAt';
 
 /** The employee directory (section 7.3): every employee with their numbers, sortable and filterable. */
-export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
+/**
+ * The company's employees / POCs with everything to manage them in place (ADR 0066): add a new one, add an existing
+ * contact, edit, or take one off the company. Each is a contact record; nothing here deletes one.
+ */
+export function CompanyEmployeeDirectory({ company, compact = false }: { company: CompanyRow; compact?: boolean }) {
   const t = useT();
+  const qc = useQueryClient();
   const canWrite = useCan('contacts:write') && !company.restricted;
   const rows = useCompanyEmployees(company.id);
   const [adding, setAdding] = React.useState(false);
+  const [linking, setLinking] = React.useState(false);
+  const [editId, setEditId] = React.useState<string | null>(null);
+  const [removing, setRemoving] = React.useState<string | null>(null);
+  const [removeError, setRemoveError] = React.useState<string | null>(null);
+  const unlink = async (id: string) => {
+    setRemoveError(null);
+    try {
+      await api(`/contacts/${id}`, { method: 'PATCH', json: { companyId: null } });
+      setRemoving(null);
+      await Promise.all([qc.invalidateQueries({ queryKey: ['company-employees'] }), qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-dashboard'] }), qc.invalidateQueries({ queryKey: ['companies'] })]);
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : t('Could not save.'));
+    }
+  };
   const [q, setQ] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [sort, setSort] = React.useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false });
@@ -369,9 +392,14 @@ export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
           <InfoTip topic="crm.employees" />
         </CardTitle>
         {canWrite && (
-          <Button size="sm" onClick={() => setAdding(true)}>
-            <Plus aria-hidden /> {t('Add employee / POC')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setLinking(true)}>
+              <Link2 aria-hidden /> {t('Add an existing contact')}
+            </Button>
+            <Button size="sm" onClick={() => setAdding(true)}>
+              <Plus aria-hidden /> {t('Add employee / POC')}
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent className="space-y-3">
@@ -394,7 +422,7 @@ export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
           <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
         ) : (
           <div className="-mx-2 overflow-x-auto">
-            <table className="w-full min-w-[960px] text-sm" aria-label={t('Employees / POCs')}>
+            <table className={cn('w-full text-sm', compact ? 'min-w-[760px]' : 'min-w-[960px]')} aria-label={t('Employees / POCs')}>
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
                   {header('name', 'Employee')}
@@ -409,9 +437,16 @@ export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
                   <th scope="col" className="px-2 py-2 text-start font-medium">
                     {t('Assigned executive')}
                   </th>
-                  <th scope="col" className="px-2 py-2 text-start font-medium">
-                    {t('Remarks')}
-                  </th>
+                  {!compact && (
+                    <th scope="col" className="px-2 py-2 text-start font-medium">
+                      {t('Remarks')}
+                    </th>
+                  )}
+                  {canWrite && (
+                    <th scope="col" className="px-2 py-2 text-end font-medium">
+                      <span className="sr-only">{t('Actions')}</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -449,9 +484,34 @@ export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
                     <td className="px-2 py-2 text-xs">{formatDate(r.lastUpdateAt)}</td>
                     <td className={cn('px-2 py-2 text-xs', r.nextFollowUpAt && new Date(r.nextFollowUpAt).getTime() < Date.now() && 'font-semibold text-critical')}>{formatDate(r.nextFollowUpAt)}</td>
                     <td className="px-2 py-2 text-xs">{personLabel(r.owner) || '—'}</td>
-                    <td className="max-w-[14rem] px-2 py-2 text-xs text-muted-foreground">
-                      <span className="line-clamp-2">{r.remarks || '—'}</span>
-                    </td>
+                    {!compact && (
+                      <td className="max-w-[14rem] px-2 py-2 text-xs text-muted-foreground">
+                        <span className="line-clamp-2">{r.remarks || '—'}</span>
+                      </td>
+                    )}
+                    {canWrite && (
+                      <td className="whitespace-nowrap px-2 py-1 text-end">
+                        {removing === r.id ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Button size="sm" variant="outline" onClick={() => void unlink(r.id)}>
+                              {t('Remove from {company}', { company: company.name })}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setRemoving(null)}>
+                              {t('Cancel')}
+                            </Button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <Button size="sm" variant="ghost" disabled={!r.details} aria-label={t('Edit {name}', { name: r.name })} onClick={() => setEditId(r.id)}>
+                              <Pencil aria-hidden />
+                            </Button>
+                            <Button size="sm" variant="ghost" aria-label={t('Remove {name} from this company', { name: r.name })} onClick={() => setRemoving(r.id)}>
+                              <UserMinus aria-hidden />
+                            </Button>
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -460,7 +520,14 @@ export function CompanyEmployeeDirectory({ company }: { company: CompanyRow }) {
           </div>
         )}
       </CardContent>
+      {removeError && (
+        <p role="alert" className="px-6 pb-4 text-sm text-critical">
+          {removeError}
+        </p>
+      )}
       <AddEmployeeDialog company={company} open={adding} onOpenChange={setAdding} />
+      <AddEmployeeDialog company={company} open={!!editId} contactId={editId} onOpenChange={(o) => !o && setEditId(null)} />
+      <LinkContactDialog company={company} open={linking} onOpenChange={setLinking} />
     </Card>
   );
 }

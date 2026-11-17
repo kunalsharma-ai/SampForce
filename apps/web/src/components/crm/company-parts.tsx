@@ -5,6 +5,7 @@ import {
   type BranchRow,
   type CompanyRow,
   contactInputSchema,
+  type ContactRow,
   LEAD_TRANSFER_REASONS,
   type LeadTransferReason,
   PORTAL_DOCUMENT_MAX_BYTES,
@@ -29,6 +30,7 @@ import { TRANSFER_STATUS_LABEL, TRANSFER_STATUS_TONE } from '@/components/comman
 import { BranchFields, branchPayload, type BranchValue, emptyBranch, emptyEmployee, EmployeeFields, employeePayload, type EmployeeValue, type Errors, PersonSelect } from './lead-fields';
 import { focusSection, useCompanyAction } from './company-actions';
 import { DetailList } from './record-detail';
+import { type PickerValue, RecordPicker } from './record-picker';
 import { Select, Textarea } from './select';
 import { CountryFlag } from './status-chip';
 
@@ -107,20 +109,53 @@ export function CompanyProfileCard({ company: c }: { company: CompanyRow }) {
 
 // ─── Employees ───
 
-export function AddEmployeeDialog({ company, open, onOpenChange }: { company: CompanyRow; open: boolean; onOpenChange: (o: boolean) => void }) {
+/** "Priya Nair" with her saved addresses and numbers, as the employee form holds them. */
+export function employeeValueFrom(c: ContactRow): EmployeeValue {
+  const pts = (list: { value: string; primary?: boolean }[], single: string | null) => (list.length ? list.map((p) => ({ value: p.value, primary: !!p.primary })) : [{ value: single ?? '', primary: true }]);
+  return {
+    key: c.id, firstName: c.firstName, lastName: c.lastName ?? '', linkedinUrl: c.linkedinUrl ?? '', jobTitle: c.jobTitle ?? '', department: c.department ?? '',
+    emails: pts(c.emails, c.email), phones: pts(c.phones, c.phone), country: c.country ?? '', state: c.state ?? '', city: c.city ?? '', remarks: c.remarks ?? '',
+    statusId: c.status?.id ?? '', nextFollowUpAt: c.nextFollowUpAt ? toDateInput(c.nextFollowUpAt) : '', ownerId: c.ownerPerson?.id ?? c.owner?.id ?? '',
+  };
+}
+
+/** YYYY-MM-DD in the reader's own time zone. */
+const toDateInput = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * Adds an employee to the company, or edits one (`contactId`), without leaving the company page. The employee is a
+ * contact like any other: the same record shows under Contacts.
+ */
+export function AddEmployeeDialog({ company, open, onOpenChange, contactId }: { company: CompanyRow; open: boolean; onOpenChange: (o: boolean) => void; contactId?: string | null }) {
   const t = useT();
   const qc = useQueryClient();
+  const editing = !!contactId;
   const [value, setValue] = React.useState<EmployeeValue>(emptyEmployee);
   const [errors, setErrors] = React.useState<Errors>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   React.useEffect(() => {
-    if (open) {
+    if (!open) return;
+    setErrors({});
+    setFormError(null);
+    if (!contactId) {
       setValue({ ...emptyEmployee(), country: company.country ?? '' });
-      setErrors({});
-      setFormError(null);
+      return;
     }
-  }, [open, company.country]);
+    let live = true;
+    setLoading(true);
+    api<ContactRow>(`/contacts/${contactId}`)
+      .then((c) => live && setValue(employeeValueFrom(c)))
+      .catch((err: Error) => live && setFormError(err.message))
+      .finally(() => live && setLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [open, company.country, contactId]);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const body = { ...employeePayload(value), companyId: company.id, ownerId: value.ownerId || company.ownerPerson?.id || null };
@@ -133,8 +168,8 @@ export function AddEmployeeDialog({ company, open, onOpenChange }: { company: Co
     setSaving(true);
     setFormError(null);
     try {
-      await api('/contacts', { method: 'POST', json: body });
-      await Promise.all([qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-employees'] }), qc.invalidateQueries({ queryKey: ['company-dashboard'] })]);
+      await api(editing ? `/contacts/${contactId}` : '/contacts', { method: editing ? 'PATCH' : 'POST', json: body });
+      await Promise.all([qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-employees'] }), qc.invalidateQueries({ queryKey: ['company-dashboard'] }), qc.invalidateQueries({ queryKey: ['companies'] })]);
       onOpenChange(false);
     } catch (err) {
       setErrors(apiErrors(err, t.maybe));
@@ -146,21 +181,81 @@ export function AddEmployeeDialog({ company, open, onOpenChange }: { company: Co
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{t('Add employee / POC')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{editing ? t('Edit employee / POC') : t('Add employee / POC')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('At {company}. Fields marked * are required.', { company: company.name })}</DialogDescription>
-        <form onSubmit={submit} noValidate className="space-y-4">
-          <EmployeeFields idPrefix="add-employee" value={value} onChange={(p) => setValue((v) => ({ ...v, ...p }))} errors={errors} />
-          {formError && (
+        {loading ? (
+          <Skeleton className="h-64" />
+        ) : (
+          <form onSubmit={submit} noValidate className="space-y-4">
+            <EmployeeFields idPrefix={editing ? 'edit-employee' : 'add-employee'} value={value} onChange={(p) => setValue((v) => ({ ...v, ...p }))} errors={errors} />
+            {formError && (
+              <p role="alert" className="text-sm text-critical">
+                {formError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                {t('Cancel')}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? t('Saving…') : editing ? t('Save changes') : t('Add employee')}
+              </Button>
+            </div>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Moves a contact that is already in SampForce (with no company, or at another one) to this company. */
+export function LinkContactDialog({ company, open, onOpenChange }: { company: CompanyRow; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const [picked, setPicked] = React.useState<PickerValue | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  React.useEffect(() => {
+    if (open) {
+      setPicked(null);
+      setError(null);
+    }
+  }, [open]);
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!picked) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api(`/contacts/${picked.id}`, { method: 'PATCH', json: { companyId: company.id } });
+      await Promise.all([qc.invalidateQueries({ queryKey: ['contacts'] }), qc.invalidateQueries({ queryKey: ['company-employees'] }), qc.invalidateQueries({ queryKey: ['company-dashboard'] }), qc.invalidateQueries({ queryKey: ['companies'] })]);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('Could not save.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg p-6">
+        <DialogTitle className="text-lg font-semibold">{t('Add an existing contact')}</DialogTitle>
+        <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('The contact moves to {company} and shows in its employee list.', { company: company.name })}</DialogDescription>
+        <form onSubmit={save} className="space-y-4">
+          <Field id="link-contact" label={t('Contact')}>
+            <RecordPicker id="link-contact" entity="contacts" value={picked} onChange={setPicked} placeholder={t('Search contacts by name or email')} />
+          </Field>
+          {error && (
             <p role="alert" className="text-sm text-critical">
-              {formError}
+              {error}
             </p>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? t('Saving…') : t('Add employee')}
+            <Button type="submit" disabled={!picked || saving}>
+              {saving ? t('Saving…') : t('Add to company')}
             </Button>
           </div>
         </form>

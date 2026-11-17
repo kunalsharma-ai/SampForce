@@ -131,9 +131,9 @@ test('sign-in uses floating labels and the import upload zone checks the file', 
 
   await signUp(page, 'Upload Zone');
   await page.goto('/app/settings/import');
-  await page.getByLabel('Choose a CSV file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
-  await expect(page.getByText('notes.txt is not a supported file. Use CSV.')).toBeVisible();
-  await page.getByLabel('Choose a CSV file').setInputFiles({ name: 'leads.csv', mimeType: 'text/csv', buffer: Buffer.from('Full name,Email\nAda,ada@example.test\n') });
+  await page.getByLabel('Choose a CSV or Excel file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
+  await expect(page.getByText('notes.txt is not a supported file. Use CSV, XLSX.')).toBeVisible();
+  await page.getByLabel('Choose a CSV or Excel file').setInputFiles({ name: 'leads.csv', mimeType: 'text/csv', buffer: Buffer.from('Full name,Email\nAda,ada@example.test\n') });
   await expect(page.getByText('leads.csv', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '2. Match columns' })).toBeVisible();
   await axe(page);
