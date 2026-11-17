@@ -132,19 +132,8 @@ export const crmAdmin = {
   'Export Excel': ['Exportar Excel', 'Exporter en Excel', 'Excel exportieren', 'تصدير Excel'],
 
   // Dashboards
-  'My numbers': ['Mis cifras', 'Mes chiffres', 'Meine Zahlen', 'أرقامي'],
-  'My revenue': ['Mis ingresos', 'Mon chiffre d’affaires', 'Mein Umsatz', 'إيراداتي'],
-  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übergaben', 'نقل العملاء المحتملين'],
-  'Team numbers': ['Cifras del equipo', 'Chiffres de l’équipe', 'Teamzahlen', 'أرقام الفريق'],
-  'Team members': ['Miembros del equipo', 'Membres de l’équipe', 'Teammitglieder', 'أعضاء الفريق'],
-  'Team comparison': ['Comparativa del equipo', 'Comparaison de l’équipe', 'Teamvergleich', 'مقارنة الفريق'],
-  'Team pipeline': ['Embudo del equipo', 'Pipeline de l’équipe', 'Team-Pipeline', 'مسار مبيعات الفريق'],
-  'Follow-up monitor': ['Control de seguimientos', 'Suivi des relances', 'Nachverfolgungsmonitor', 'مراقبة المتابعات'],
   Instructions: ['Instrucciones', 'Consignes', 'Anweisungen', 'التعليمات'],
-  'Team revenue': ['Ingresos del equipo', 'Chiffre d’affaires de l’équipe', 'Teamumsatz', 'إيرادات الفريق'],
-  'Organisation numbers': ['Cifras de la organización', 'Chiffres de l’organisation', 'Organisationszahlen', 'أرقام المؤسسة'],
   Rankings: ['Clasificaciones', 'Classements', 'Ranglisten', 'الترتيب'],
-  'Organisation revenue': ['Ingresos de la organización', 'Chiffre d’affaires de l’organisation', 'Umsatz der Organisation', 'إيرادات المؤسسة'],
   Insights: ['Análisis', 'Analyses', 'Erkenntnisse', 'الرؤى'],
   'Set per designation level: executives, managers and senior management each get their own.': [
     'Se define por nivel de cargo: ejecutivos, responsables y dirección tienen cada uno el suyo.',

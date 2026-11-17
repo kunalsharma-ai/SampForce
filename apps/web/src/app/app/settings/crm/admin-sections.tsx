@@ -30,6 +30,7 @@ import { Select } from '@/components/crm/select';
 import { StatusChip } from '@/components/crm/status-chip';
 import { CurrencySelect } from '@/components/forms/inputs';
 import { InfoTip } from '@/components/info-tip';
+import { SECTION_LABEL } from '@/components/command-center/cc-labels';
 import { ApiError } from '@/lib/api';
 import { useAttributionRule, useCurrencySettings, useDashboardPolicies, useExportPolicy, useNotificationSettings, useOptionMutations, useOptions } from '@/lib/crm-admin';
 import { useHasFeature } from '@/lib/features';
@@ -584,25 +585,8 @@ export const WIDGET_NAME: Record<string, MessageKey> = {
   team: 'Team performance',
   risk: 'Deal risk',
   goal: 'Goal attainment',
-  'exec.kpis': 'My numbers',
-  'exec.work': 'My work',
-  'exec.pipeline': 'My pipeline',
-  'exec.performance': 'My performance',
-  'exec.revenue': 'My revenue',
-  'exec.transfers': 'Lead transfers',
-  'team.kpis': 'Team numbers',
-  'team.table': 'Team members',
-  'team.compare': 'Team comparison',
-  'team.pipeline': 'Team pipeline',
-  'team.monitor': 'Follow-up monitor',
-  'team.instructions': 'Instructions',
-  'team.concerns': 'Client concerns',
-  'team.revenue': 'Team revenue',
-  'org.kpis': 'Organisation numbers',
-  'org.departments': 'Departments',
-  'org.rankings': 'Rankings',
-  'org.revenue': 'Organisation revenue',
-  'org.insights': 'Insights',
+  // Role dashboard sections keep the names they have on the dashboards themselves.
+  ...SECTION_LABEL,
 };
 
 export function DashboardsSection({ canManage }: { canManage: boolean }) {
