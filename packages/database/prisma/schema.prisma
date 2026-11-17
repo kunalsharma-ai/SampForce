@@ -1530,17 +1530,25 @@ model ApprovalRequest {
 }
 
 model Notification {
-  id        String    @id @default(uuid()) @map("_id")
-  tenantId  String    @map("tenant_id")
-  userId    String    @map("user_id")
-  type      String
-  title     String
-  body      String?
-  link      String?
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  userId         String    @map("user_id")
+  type           String
+  title          String
+  body           String?
+  link           String?
   /// Source event, so a retried event never notifies twice.
-  eventId   String?   @map("event_id")
-  readAt    DateTime? @map("read_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+  eventId        String?   @map("event_id")
+  /// Who sent it, when a person did (manager instructions, remarks, escalations); null for system notices.
+  senderId       String?   @map("sender_id")
+  /// LOW, NORMAL, HIGH or URGENT (null = NORMAL).
+  priority       String?
+  companyId      String?   @map("company_id")
+  contactId      String?   @map("contact_id")
+  /// The recipient is asked to do something (acknowledge, decide, resolve).
+  actionRequired Boolean   @default(false) @map("action_required")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -2241,20 +2249,33 @@ enum EscalationStatus {
 }
 
 model Escalation {
-  id          String             @id @default(uuid()) @map("_id")
-  tenantId    String             @map("tenant_id")
-  companyId   String             @map("company_id")
-  contractId  String?            @map("contract_id")
-  title       String
-  description String?
-  severity    EscalationSeverity @default(MEDIUM)
-  status      EscalationStatus   @default(OPEN)
-  ownerId     String?            @map("owner_id")
-  openedById  String?            @map("opened_by_id")
-  resolution  String?
-  resolvedAt  DateTime?          @map("resolved_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(uuid()) @map("_id")
+  tenantId       String             @map("tenant_id")
+  companyId      String             @map("company_id")
+  contractId     String?            @map("contract_id")
+  title          String
+  description    String?
+  severity       EscalationSeverity @default(MEDIUM)
+  status         EscalationStatus   @default(OPEN)
+  ownerId        String?            @map("owner_id")
+  openedById     String?            @map("opened_by_id")
+  resolution     String?
+  resolvedAt     DateTime?          @map("resolved_at")
+  /// Client concerns (ADR 0063): CONCERN_CATEGORIES; null for customer-success escalations.
+  category       String?
+  contactId      String?            @map("contact_id")
+  /// The manager responsible for resolving it (the owner's reporting manager unless chosen).
+  managerId      String?            @map("manager_id")
+  /// Resolution deadline.
+  deadlineAt     DateTime?          @map("deadline_at")
+  /// Escalated to a senior person: who, when, by whom and why.
+  escalatedToId  String?            @map("escalated_to_id")
+  escalatedById  String?            @map("escalated_by_id")
+  escalatedAt    DateTime?          @map("escalated_at")
+  escalationNote String?            @map("escalation_note")
+  resolvedById   String?            @map("resolved_by_id")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2262,6 +2283,7 @@ model Escalation {
 
   @@index([tenantId, status, severity])
   @@index([tenantId, companyId])
+  @@index([tenantId, escalatedToId, status])
   @@map("escalations")
 }
 
@@ -3849,6 +3871,35 @@ model LeadTransfer {
   @@index([tenantId, requestedById, createdAt(sort: Desc)])
   @@index([tenantId, companyId])
   @@map("lead_transfers")
+}
+
+/// An instruction or remark a manager or senior person sends to someone below them (ADR 0063, spec 15.2). The
+/// recipient acknowledges it and marks it done.
+model Instruction {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  fromId         String    @map("from_id")
+  toId           String    @map("to_id")
+  /// INSTRUCTION or REMARK.
+  kind           String    @default("INSTRUCTION")
+  message        String
+  companyId      String?   @map("company_id")
+  contactId      String?   @map("contact_id")
+  /// LOW, NORMAL, HIGH or URGENT.
+  priority       String    @default("NORMAL")
+  dueAt          DateTime? @map("due_at")
+  /// OPEN, ACKNOWLEDGED, DONE or CANCELLED.
+  status         String    @default("OPEN")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  completedAt    DateTime? @map("completed_at")
+  completionNote String?   @map("completion_note")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, toId, status])
+  @@index([tenantId, fromId, createdAt(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("instructions")
 }
 
 /// A person's order and hidden sections of one tier dashboard, and their own My Work categories.

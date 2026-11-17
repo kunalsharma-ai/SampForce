@@ -85,7 +85,7 @@ test('Spanish translates the Command Center and the lead workflow end to end', a
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 
   // Command Center: chrome, KPI names from the API and the onboarding checklist.
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   const main = page.getByRole('main');
   await expect(main.getByRole('button', { name: 'Personalizar diseño' })).toBeVisible();
   await expect(main.getByText('Leads totales')).toBeVisible();
@@ -148,7 +148,7 @@ test('a language picked on the sign-up page carries over to the new account', as
   await page.getByLabel('Nombre de la organización').fill('Idioma SL');
   await page.getByRole('button', { name: 'Empieza gratis' }).click();
   await expect(page).toHaveURL(/\/app/);
-  await expect(page.getByRole('heading', { name: 'Hola, Test' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Panel de la alta dirección', level: 1 })).toBeVisible();
 
   // The choice was saved to the account, so settings show it and the translated settings page passes axe.
   await page.goto('/app/settings');

@@ -134,6 +134,17 @@ export class CommandCenterService {
     return reportingTree(tx, auth.tenantId, auth.userId);
   }
 
+  /**
+   * A manager's team: the manager and everyone reporting to them, directly or further down, limited to the people
+   * the caller's record visibility reaches (the caller alone when their role shows only their own records).
+   */
+  async teamOf(tx: TenantTx, auth: AuthContext, managerId: string): Promise<string[]> {
+    if (scopeOf(auth) === 'OWN') return managerId === auth.userId ? [auth.userId] : [managerId];
+    const v = await visibility(tx, auth);
+    const tree = await reportingTree(tx, auth.tenantId, managerId);
+    return [managerId, ...(v.all ? tree : tree.filter((u) => v.userIds.includes(u)))];
+  }
+
   /** The person whose Executive dashboard is asked for: the caller, or someone their visibility reaches. */
   async subject(tx: TenantTx, auth: AuthContext, userId: string | undefined): Promise<string> {
     if (!userId || userId === auth.userId) return auth.userId;
@@ -146,10 +157,7 @@ export class CommandCenterService {
   /** The people a scope covers: one person, the caller's team (reports), or the organisation (null = everyone). */
   async usersFor(tx: TenantTx, auth: AuthContext, scope: 'me' | 'team' | 'org', userId?: string, departmentId?: string): Promise<string[] | null> {
     if (scope === 'me') return [await this.subject(tx, auth, userId)];
-    if (scope === 'team') {
-      if (userId) return [await this.subject(tx, auth, userId)];
-      return this.reportsOf(tx, auth);
-    }
+    if (scope === 'team') return this.teamOf(tx, auth, await this.subject(tx, auth, userId));
     const v = await visibility(tx, auth);
     let users: string[] | null = v.all ? null : v.userIds;
     if (departmentId) {
@@ -232,7 +240,7 @@ export class CommandCenterService {
           averageDealValue: rev.deals ? r2(rev.dealValue / rev.deals) : null,
         },
         revenue,
-        features: { revenueAttribution: revenueOn, leadTransfers: transfersOn },
+        features: { revenueAttribution: revenueOn, leadTransfers: transfersOn, instructions: c.features.has('instructions'), clientConcerns: c.features.has('client_concerns') },
         layout,
         generatedAt: c.now.toISOString(),
       };
@@ -295,7 +303,7 @@ export class CommandCenterService {
       fromManager: () => taskBucket('fromManager', { ...open, createdById: { in: chain.length ? chain : ['-'] } }, (x) => x.createdById),
       reassigned: () => taskBucket('reassigned', { ...open, reassignedFromId: { not: null }, NOT: { reassignedFromId: me } }, (x) => x.reassignedFromId),
       rfqDeadlines: async () => {
-        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: me, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight } };
+        const where: Prisma.RfqWhereInput = { tenantId: t, deletedAt: null, ownerId: me, status: { in: ['RECEIVED', 'UNDER_EVALUATION', 'PRICING', 'ON_HOLD'] }, deadlineAt: { lt: fortnight, not: null } };
         const [rows, total] = await Promise.all([tx.rfq.findMany({ where, orderBy: { deadlineAt: 'asc' }, take: WORK_TAKE, select: { id: true, number: true, projectName: true, deadlineAt: true } }), tx.rfq.count({ where })]);
         return { id: 'rfqDeadlines', label: null, total, items: rows.map((r): WorkItem => ({ kind: 'rfq', id: r.id, title: `${r.number} ${r.projectName}`, subtitle: null, href: `/app/rfqs?open=${r.id}`, at: r.deadlineAt?.toISOString() ?? null, priority: null, overdue: !!r.deadlineAt && r.deadlineAt < c.now, from: null })) };
       },
@@ -349,7 +357,7 @@ export class CommandCenterService {
 
   drill(auth: AuthContext, q: DrillQuery): Promise<DrillResult> {
     return this.withCtx(auth, q, async (c) => {
-      if (q.scope === 'team' && !c.features.has('manager_dashboard') && !q.userId) throw new ForbiddenException({ code: 'FEATURE_NOT_IN_PLAN', message: 'Your plan does not include the manager dashboard.' });
+      if (q.scope === 'team' && !c.features.has('manager_dashboard')) throw new ForbiddenException({ code: 'FEATURE_NOT_IN_PLAN', message: 'Your plan does not include the manager dashboard.' });
       if (q.scope === 'org' && !c.features.has('senior_dashboard')) throw new ForbiddenException({ code: 'FEATURE_NOT_IN_PLAN', message: 'Your plan does not include the senior management dashboard.' });
       const users = await this.usersFor(c.tx, auth, q.scope, q.userId, q.departmentId);
       const r = await c.metrics(users).rows(q.metric);
@@ -359,7 +367,7 @@ export class CommandCenterService {
 
   // ─── Layouts and targets ───
 
-  private async layoutRow(tx: TenantTx, tenantId: string, userId: string, tier: DashboardTier): Promise<CommandCenterLayout | null> {
+  async layoutRow(tx: TenantTx, tenantId: string, userId: string, tier: DashboardTier): Promise<CommandCenterLayout | null> {
     const row = await tx.commandCenterLayout.findFirst({ where: { tenantId, userId, tier } });
     const parsed = row ? commandCenterLayoutSchema.safeParse(row.layout) : null;
     return parsed?.success ? parsed.data : null;
