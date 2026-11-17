@@ -287,6 +287,8 @@ model Tenant {
   /// Company lead numbers (FRFS01...): the prefix and the minimum digits. Null prefix = the workspace initials.
   leadNumberPrefix      String?           @map("lead_number_prefix")
   leadNumberDigits      Int               @default(2) @map("lead_number_digits")
+  /// Revenue attribution rule (ADR 0063, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
+  revenueAttribution    Json?             @map("revenue_attribution")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
@@ -310,6 +312,9 @@ model Tenant {
   activities             Activity[]
   tasks                  Task[]
   customFields           CustomField[]
+  customFieldFiles       CustomFieldFile[]
+  crmOptions             CrmOption[]
+  crmSettings            CrmSettings?
   invitations            Invitation[]
   domainEvents           DomainEvent[]
   workflows              Workflow[]
@@ -890,6 +895,11 @@ model Rfq {
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  /// Custom field values (ADR 0062).
+  customFields        Json      @default("{}") @map("custom_fields")
+  /// Set when the deadline reminder went out, for the deadline it was sent for.
+  deadlineReminderFor DateTime? @map("deadline_reminder_for")
+
   @@unique([tenantId, number])
   @@index([tenantId, companyId, receivedAt(sort: Desc)])
   @@index([tenantId, status, deadlineAt])
@@ -1122,6 +1132,14 @@ model Opportunity {
   companyId         String?           @map("company_id")
   contactId         String?           @map("contact_id")
   sourceLeadId      String?           @map("source_lead_id")
+  /// Deal number (DEAL-0001), from the workspace counter; assigned once (ADR 0063).
+  dealNumber        String?           @map("deal_number")
+  dealSeq           Int?              @map("deal_seq")
+  /// The assigned manager, the lead creator (copied from the company when the deal is created) and the people who
+  /// helped win it. They decide revenue credits with the workspace's attribution rule.
+  managerId         String?           @map("manager_id")
+  leadCreatorId     String?           @map("lead_creator_id")
+  supportingUserIds String[]          @map("supporting_user_ids")
   customFields      Json              @default("{}") @map("custom_fields")
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -1142,6 +1160,7 @@ model Opportunity {
   emailThreads   EmailThread[]
   meetingRecords MeetingRecord[]
 
+  @@unique([tenantId, dealNumber])
   @@index([tenantId, status])
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
@@ -1178,6 +1197,8 @@ model Activity {
   outcome       String?
   nextAction    String?      @map("next_action")
   followUpAt    DateTime?    @map("follow_up_at")
+  /// How the client responded: POSITIVE, NEUTRAL or NEGATIVE (positive responses on the dashboards).
+  sentiment     String?
   /// An attachment in company_files, and the RFQ the interaction is about.
   fileId        String?      @map("file_id")
   rfqId         String?      @map("rfq_id")
@@ -1212,36 +1233,44 @@ enum TaskPriority {
 }
 
 model Task {
-  id              String       @id @default(uuid()) @map("_id")
-  tenantId        String       @map("tenant_id")
-  title           String
-  description     String?
-  status          TaskStatus   @default(OPEN)
-  priority        TaskPriority @default(NORMAL)
-  dueAt           DateTime?    @map("due_at")
-  completedAt     DateTime?    @map("completed_at")
+  id                String       @id @default(uuid()) @map("_id")
+  tenantId          String       @map("tenant_id")
+  title             String
+  description       String?
+  status            TaskStatus   @default(OPEN)
+  priority          TaskPriority @default(NORMAL)
+  dueAt             DateTime?    @map("due_at")
+  completedAt       DateTime?    @map("completed_at")
   /// Shown to the customer in the client portal as a milestone.
-  portalVisible   Boolean      @default(false) @map("portal_visible")
-  assigneeId      String?      @map("assignee_id")
-  leadId          String?      @map("lead_id")
-  contactId       String?      @map("contact_id")
-  opportunityId   String?      @map("opportunity_id")
+  portalVisible     Boolean      @default(false) @map("portal_visible")
+  assigneeId        String?      @map("assignee_id")
+  leadId            String?      @map("lead_id")
+  contactId         String?      @map("contact_id")
+  opportunityId     String?      @map("opportunity_id")
   /// Follow-ups (ADR 0060, Phase 3) are tasks with a follow-up type, linked to a company lead.
-  companyId       String?      @map("company_id")
-  followUpType    String?      @map("follow_up_type")
-  managerId       String?      @map("manager_id")
+  companyId         String?      @map("company_id")
+  followUpType      String?      @map("follow_up_type")
+  managerId         String?      @map("manager_id")
   /// The previous discussion, the action needed next, and remarks.
-  summary         String?
-  nextAction      String?      @map("next_action")
-  remarks         String?
-  rescheduleCount Int          @default(0) @map("reschedule_count")
-  rescheduledAt   DateTime?    @map("rescheduled_at")
-  outcome         String?
-  rfqId           String?      @map("rfq_id")
-  createdById     String?      @map("created_by_id")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-  deletedAt       DateTime?    @map("deleted_at")
+  summary           String?
+  nextAction        String?      @map("next_action")
+  remarks           String?
+  rescheduleCount   Int          @default(0) @map("reschedule_count")
+  rescheduledAt     DateTime?    @map("rescheduled_at")
+  outcome           String?
+  rfqId             String?      @map("rfq_id")
+  createdById       String?      @map("created_by_id")
+  /// Who it was assigned to before the last reassignment, and when (My Work: "reassigned to me").
+  reassignedFromId  String?      @map("reassigned_from_id")
+  reassignedAt      DateTime?    @map("reassigned_at")
+  /// Custom field values (ADR 0062) for follow-ups.
+  customFields      Json         @default("{}") @map("custom_fields")
+  /// Reminder bookkeeping (ADR 0062) so each reminder goes out once per due date.
+  reminderSentAt    DateTime?    @map("reminder_sent_at")
+  overdueNotifiedAt DateTime?    @map("overdue_notified_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  deletedAt         DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -1263,30 +1292,56 @@ enum CustomFieldEntity {
   CONTACT
   COMPANY
   OPPORTUNITY
+  FOLLOW_UP
+  RFQ
 }
 
 enum CustomFieldType {
   TEXT
+  TEXTAREA
   NUMBER
+  CURRENCY
   DATE
-  BOOLEAN
+  DATETIME
   SELECT
+  MULTISELECT
+  CHECKBOX
+  BOOLEAN
+  URL
+  EMAIL
+  PHONE
+  FILE
+  FORMULA
 }
 
 /// Typed definition for values stored in a record's custom_fields JSON under `key`.
 model CustomField {
-  id         String            @id @default(uuid()) @map("_id")
-  tenantId   String            @map("tenant_id")
-  entity     CustomFieldEntity
-  key        String
-  label      String
-  type       CustomFieldType
-  options    String[]
-  required   Boolean           @default(false)
-  position   Int               @default(0)
-  createdAt  DateTime          @default(now()) @map("created_at")
-  updatedAt  DateTime          @updatedAt @map("updated_at")
-  archivedAt DateTime?         @map("archived_at")
+  id                 String            @id @default(uuid()) @map("_id")
+  tenantId           String            @map("tenant_id")
+  entity             CustomFieldEntity
+  key                String
+  label              String
+  type               CustomFieldType
+  options            String[]
+  required           Boolean           @default(false)
+  position           Int               @default(0)
+  /// ADR 0062: description, default value, currency for CURRENCY, designation rules, form and search flags.
+  description        String?
+  defaultValue       Json?             @map("default_value")
+  currency           String?
+  viewDesignationIds String[]          @default([]) @map("view_designation_ids")
+  editDesignationIds String[]          @default([]) @map("edit_designation_ids")
+  showInForms        Boolean           @default(true) @map("show_in_forms")
+  searchable         Boolean           @default(false)
+  active             Boolean           @default(true)
+  /// Shown only while another field passes this test: {key, op, value} (ADR 0062).
+  showWhen           Json?             @map("show_when")
+  /// FORMULA: the expression and the decimals its result is rounded to.
+  formula            String?
+  decimals           Int?
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  archivedAt         DateTime?         @map("archived_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -1481,17 +1536,25 @@ model ApprovalRequest {
 }
 
 model Notification {
-  id        String    @id @default(uuid()) @map("_id")
-  tenantId  String    @map("tenant_id")
-  userId    String    @map("user_id")
-  type      String
-  title     String
-  body      String?
-  link      String?
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  userId         String    @map("user_id")
+  type           String
+  title          String
+  body           String?
+  link           String?
   /// Source event, so a retried event never notifies twice.
-  eventId   String?   @map("event_id")
-  readAt    DateTime? @map("read_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+  eventId        String?   @map("event_id")
+  /// Who sent it, when a person did (manager instructions, remarks, escalations); null for system notices.
+  senderId       String?   @map("sender_id")
+  /// LOW, NORMAL, HIGH or URGENT (null = NORMAL).
+  priority       String?
+  companyId      String?   @map("company_id")
+  contactId      String?   @map("contact_id")
+  /// The recipient is asked to do something (acknowledge, decide, resolve).
+  actionRequired Boolean   @default(false) @map("action_required")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -2192,20 +2255,33 @@ enum EscalationStatus {
 }
 
 model Escalation {
-  id          String             @id @default(uuid()) @map("_id")
-  tenantId    String             @map("tenant_id")
-  companyId   String             @map("company_id")
-  contractId  String?            @map("contract_id")
-  title       String
-  description String?
-  severity    EscalationSeverity @default(MEDIUM)
-  status      EscalationStatus   @default(OPEN)
-  ownerId     String?            @map("owner_id")
-  openedById  String?            @map("opened_by_id")
-  resolution  String?
-  resolvedAt  DateTime?          @map("resolved_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(uuid()) @map("_id")
+  tenantId       String             @map("tenant_id")
+  companyId      String             @map("company_id")
+  contractId     String?            @map("contract_id")
+  title          String
+  description    String?
+  severity       EscalationSeverity @default(MEDIUM)
+  status         EscalationStatus   @default(OPEN)
+  ownerId        String?            @map("owner_id")
+  openedById     String?            @map("opened_by_id")
+  resolution     String?
+  resolvedAt     DateTime?          @map("resolved_at")
+  /// Client concerns (ADR 0063): CONCERN_CATEGORIES; null for customer-success escalations.
+  category       String?
+  contactId      String?            @map("contact_id")
+  /// The manager responsible for resolving it (the owner's reporting manager unless chosen).
+  managerId      String?            @map("manager_id")
+  /// Resolution deadline.
+  deadlineAt     DateTime?          @map("deadline_at")
+  /// Escalated to a senior person: who, when, by whom and why.
+  escalatedToId  String?            @map("escalated_to_id")
+  escalatedById  String?            @map("escalated_by_id")
+  escalatedAt    DateTime?          @map("escalated_at")
+  escalationNote String?            @map("escalation_note")
+  resolvedById   String?            @map("resolved_by_id")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -2213,6 +2289,7 @@ model Escalation {
 
   @@index([tenantId, status, severity])
   @@index([tenantId, companyId])
+  @@index([tenantId, escalatedToId, status])
   @@map("escalations")
 }
 
@@ -3717,4 +3794,193 @@ model TenantFeatureOverride {
 
   @@unique([tenantId, feature])
   @@map("tenant_feature_overrides")
+}
+
+/// One per won deal, or per won RFQ that never became a deal (ADR 0063). Voided when the deal is reopened, lost or
+/// deleted, so revenue always matches the won records.
+model RevenueRecord {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  /// DEAL or RFQ.
+  source           String
+  opportunityId    String?   @map("opportunity_id")
+  rfqId            String?   @map("rfq_id")
+  companyId        String?   @map("company_id")
+  project          String
+  amount           Float
+  currency         String
+  closedAt         DateTime  @map("closed_at")
+  closerId         String?   @map("closer_id")
+  leadCreatorId    String?   @map("lead_creator_id")
+  accountOwnerId   String?   @map("account_owner_id")
+  managerId        String?   @map("manager_id")
+  departmentId     String?   @map("department_id")
+  /// Credits entered by hand; a rule change leaves them alone.
+  manual           Boolean   @default(false)
+  recognisedAmount Float?    @map("recognised_amount")
+  collectedAmount  Float?    @map("collected_amount")
+  paymentStatus    String?   @map("payment_status")
+  voidedAt         DateTime? @map("voided_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, voidedAt, closedAt])
+  @@index([tenantId, opportunityId])
+  @@index([tenantId, rfqId])
+  @@index([tenantId, companyId])
+  @@map("revenue_records")
+}
+
+/// A person's share of a revenue record; the shares of a record sum to 100.
+model RevenueCredit {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  recordId  String   @map("record_id")
+  userId    String?  @map("user_id")
+  roles     String[]
+  percent   Float
+  /// Copied from the record so totals per person and period need one query.
+  closedAt  DateTime @map("closed_at")
+  voided    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, recordId])
+  @@index([tenantId, userId, voided, closedAt])
+  @@map("revenue_credits")
+}
+
+/// A request to move a lead to a manager or senior person (section 16), decided by someone above the requester.
+model LeadTransfer {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @map("tenant_id")
+  companyId        String    @map("company_id")
+  contactId        String?   @map("contact_id")
+  fromUserId       String?   @map("from_user_id")
+  toUserId         String?   @map("to_user_id")
+  requestedById    String    @map("requested_by_id")
+  reason           String
+  opportunityValue Float?    @map("opportunity_value")
+  currency         String?
+  remarks          String?
+  fileIds          String[]  @map("file_ids")
+  /// TRANSFER_STATUSES.
+  status           String    @default("PENDING")
+  decidedById      String?   @map("decided_by_id")
+  decidedAt        DateTime? @map("decided_at")
+  decisionNote     String?   @map("decision_note")
+  instructions     String?
+  newOwnerId       String?   @map("new_owner_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, requestedById, createdAt(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("lead_transfers")
+}
+
+/// An instruction or remark a manager or senior person sends to someone below them (ADR 0063, spec 15.2). The
+/// recipient acknowledges it and marks it done.
+model Instruction {
+  id             String    @id @default(uuid()) @map("_id")
+  tenantId       String    @map("tenant_id")
+  fromId         String    @map("from_id")
+  toId           String    @map("to_id")
+  /// INSTRUCTION or REMARK.
+  kind           String    @default("INSTRUCTION")
+  message        String
+  companyId      String?   @map("company_id")
+  contactId      String?   @map("contact_id")
+  /// LOW, NORMAL, HIGH or URGENT.
+  priority       String    @default("NORMAL")
+  dueAt          DateTime? @map("due_at")
+  /// OPEN, ACKNOWLEDGED, DONE or CANCELLED.
+  status         String    @default("OPEN")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  completedAt    DateTime? @map("completed_at")
+  completionNote String?   @map("completion_note")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, toId, status])
+  @@index([tenantId, fromId, createdAt(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("instructions")
+}
+
+/// A person's order and hidden sections of one tier dashboard, and their own My Work categories.
+model CommandCenterLayout {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  tier      String
+  layout    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId, tier])
+  @@map("command_center_layouts")
+}
+
+// ───────────── ADR 0062: custom fields and CRM administration ─────────────
+
+/// A file uploaded into a FILE custom field. Kept until the record that holds it is deleted or the value is cleared.
+model CustomFieldFile {
+  id           String            @id @default(uuid()) @map("_id")
+  tenantId     String            @map("tenant_id")
+  entity       CustomFieldEntity
+  fieldKey     String            @map("field_key")
+  /// The record holding it; null between upload and the record being saved.
+  recordId     String?           @map("record_id")
+  name         String
+  contentType  String            @map("content_type")
+  sizeBytes    Int               @map("size_bytes")
+  data         Bytes
+  sha256       String
+  uploadedById String            @map("uploaded_by_id")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, entity, recordId])
+  @@map("custom_field_files")
+}
+
+/// A label, colour, description, order and on/off switch for an RFQ status, deal status or follow-up category.
+/// Built-in values without a row use their defaults (BUILT_IN_OPTIONS in packages/types/src/crm-admin.ts).
+model CrmOption {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  kind        String
+  value       String
+  label       String
+  color       String
+  description String?
+  position    Int      @default(0)
+  active      Boolean  @default(true)
+  builtIn     Boolean  @default(true) @map("built_in")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, kind, value])
+  @@map("crm_options")
+}
+
+/// One per workspace: notification settings, export permissions, dashboard policies and enabled currencies.
+/// Null means the default (DEFAULT_NOTIFICATION_SETTINGS, no export limits, DEFAULT_DASHBOARD_POLICY).
+model CrmSettings {
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @unique @map("tenant_id")
+  notifications     Json?
+  exportPolicy      Json?    @map("export_policy")
+  dashboardPolicies Json?    @map("dashboard_policies")
+  enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  updatedById       String?  @map("updated_by_id")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("crm_settings")
 }

@@ -40,7 +40,7 @@ export function ImportWizard() {
   const fields = useQuery({ queryKey: ['import-fields'], queryFn: () => api<Record<ImportEntity, string[]>>('/imports/fields'), staleTime: Infinity });
   const custom = useCustomFields(entity);
   const targets = useMemo(
-    () => [...(fields.data?.[entity] ?? []).map((f) => ({ value: f, label: LABELS[f] ? t(LABELS[f]) : f })), ...(custom.data ?? []).map((d) => ({ value: `customFields.${d.key}`, label: t('{label} (custom)', { label: d.label }) }))],
+    () => [...(fields.data?.[entity] ?? []).map((f) => ({ value: f, label: LABELS[f] ? t(LABELS[f]) : f })), ...(custom.data ?? []).filter((d) => d.type !== 'FORMULA').map((d) => ({ value: `customFields.${d.key}`, label: t('{label} (custom)', { label: d.label }) }))],
     [fields.data, custom.data, entity, t],
   );
   const rows = useMemo(() => (csv ? parseCsv(csv) : []), [csv]);
@@ -48,7 +48,7 @@ export function ImportWizard() {
   const preview = rows.slice(1, 4);
 
   function autoMap(hs: string[], ent: ImportEntity) {
-    const available = new Set([...(fields.data?.[ent] ?? []), ...(custom.data ?? []).map((d) => `customFields.${d.key}`)]);
+    const available = new Set([...(fields.data?.[ent] ?? []), ...(custom.data ?? []).filter((d) => d.type !== 'FORMULA').map((d) => `customFields.${d.key}`)]);
     const next: Record<string, string> = {};
     for (const h of hs) {
       const n = norm(h);

@@ -1,11 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
-import type { DealForecast, DealHistoryItem, DealInput, DealMoveInput, DealRow, ListQuery, Page, PipelineRow, PriorityDeal } from '@dealflow/types';
+import { formatDealNumber, nextSequenceValue, Prisma, type TenantTx } from '@dealflow/database';
+import type { CustomFieldFilter, DealForecast, DealHistoryItem, DealInput, DealMoveInput, DealRow, ListQuery, Page, PipelineRow, PriorityDeal } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, recordStageEvent } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
+import { reportingManagerOf } from './companies.service';
+import { RevenueRecordsService } from './revenue-records.service';
+import { dealScope, visibility } from './visibility';
 
 const SORTABLE = ['name', 'amount', 'status', 'priority', 'expectedCloseDate', 'createdAt', 'updatedAt'] as const;
 export const dealInclude = {
@@ -31,14 +34,31 @@ export class DealsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly revenue: RevenueRecordsService,
   ) {}
 
-  list(auth: AuthContext, q: ListQuery): Promise<Page<DealRow>> {
+  /** The deals the caller's record visibility reaches (ADR 0063). */
+  private async scope(tx: TenantTx, auth: AuthContext): Promise<Prisma.OpportunityWhereInput> {
+    return dealScope(await visibility(tx, auth));
+  }
+
+  /** A deal the caller can see, or 404. */
+  private async visibleDeal(tx: TenantTx, auth: AuthContext, id: string) {
+    const row = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) } });
+    if (!row) throw notFound('Deal');
+    return row;
+  }
+
+  list(auth: AuthContext, q: ListQuery, cf?: CustomFieldFilter[]): Promise<Page<DealRow>> {
     return this.prisma.run(auth, async (tx) => {
       const status = q.status && ['OPEN', 'WON', 'LOST'].includes(q.status) ? (q.status as 'OPEN' | 'WON' | 'LOST') : undefined;
+      const cfFilter = await this.fields.rawFilter(tx, auth, 'OPPORTUNITY', cf);
+      const cfIds = cfFilter ? await this.fields.matchingIds(tx.opportunity, cfFilter) : null;
       const where: Prisma.OpportunityWhereInput = {
         tenantId: auth.tenantId,
         deletedAt: null,
+        ...(cfIds ? { id: { in: cfIds } } : {}),
+        ...(await this.scope(tx, auth)),
         ...(status ? { status } : {}),
         ...(q.pipelineId ? { pipelineId: q.pipelineId } : {}),
         ...(q.stageId ? { stageId: q.stageId } : {}),
@@ -55,7 +75,8 @@ export class DealsService {
         tx.opportunity.count({ where }),
       ]);
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
-      return { items: rows.map((r) => toDealRow(r, owners)), total, page: q.page, pageSize: q.pageSize };
+      const cfRead = await this.fields.reader(tx, auth, 'OPPORTUNITY');
+      return { items: rows.map((r) => toDealRow(r, owners, cfRead)), total, page: q.page, pageSize: q.pageSize };
     });
   }
 
@@ -68,12 +89,13 @@ export class DealsService {
         include: { stages: { orderBy: { position: 'asc' } } },
       });
       if (!pipeline) throw notFound('Pipeline');
+      const scope = await this.scope(tx, auth);
       const [deals, totals] = await Promise.all([
         // One query per stage so a crowded stage cannot starve the others (pipelines have at most 20 stages).
         Promise.all(
           pipeline.stages.map((s) =>
             tx.opportunity.findMany({
-              where: { tenantId: auth.tenantId, pipelineId: pipeline.id, stageId: s.id, deletedAt: null },
+              where: { tenantId: auth.tenantId, pipelineId: pipeline.id, stageId: s.id, deletedAt: null, ...scope },
               include,
               orderBy: { updatedAt: 'desc' },
               take: perStage,
@@ -82,18 +104,19 @@ export class DealsService {
         ).then((perStageRows) => perStageRows.flat()),
         tx.opportunity.groupBy({
           by: ['stageId'],
-          where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null },
+          where: { tenantId: auth.tenantId, pipelineId: pipeline.id, deletedAt: null, ...scope },
           _count: { _all: true },
           _sum: { amount: true },
         }),
       ]);
       const owners = await ownerRefs(tx, deals.map((d) => d.ownerId));
+      const cfRead = await this.fields.reader(tx, auth, 'OPPORTUNITY');
       const byStage = new Map(totals.map((t) => [t.stageId, t]));
       return {
         pipeline: { id: pipeline.id, name: pipeline.name },
         columns: pipeline.stages.map((s) => ({
           stage: { id: s.id, name: s.name, position: s.position, probability: s.probability, category: s.category },
-          deals: deals.filter((d) => d.stageId === s.id).map((d) => toDealRow(d, owners)),
+          deals: deals.filter((d) => d.stageId === s.id).map((d) => toDealRow(d, owners, cfRead)),
           total: byStage.get(s.id)?._count._all ?? 0,
           value: byStage.get(s.id)?._sum.amount?? 0,
         })),
@@ -108,16 +131,17 @@ export class DealsService {
   priority(auth: AuthContext, f: { pipelineId?: string; ownerId?: string; limit: number }, now = new Date()): Promise<PriorityDeal[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.opportunity.findMany({
-        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
+        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(await this.scope(tx, auth)), ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
         include,
         orderBy: { amount: 'desc' },
         take: 1000,
       });
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
+      const cfRead = await this.fields.reader(tx, auth, 'OPPORTUNITY');
       const max = Math.max(1, ...rows.map((r) => Number(r.amount)));
       const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
       const ranked = rows.map((r) => {
-        const deal = toDealRow(r, owners);
+        const deal = toDealRow(r, owners, cfRead);
         return { deal, ...priorityScore(deal, max, today) };
       });
       ranked.sort((a, b) => b.score - a.score || b.deal.amount - a.deal.amount || a.deal.id.localeCompare(b.deal.id));
@@ -129,12 +153,13 @@ export class DealsService {
   forecast(auth: AuthContext, f: { pipelineId?: string; ownerId?: string }, now = new Date()): Promise<DealForecast> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.opportunity.findMany({
-        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
+        where: { tenantId: auth.tenantId, deletedAt: null, status: 'OPEN', ...(await this.scope(tx, auth)), ...(f.pipelineId ? { pipelineId: f.pipelineId } : {}), ...(f.ownerId ? { ownerId: f.ownerId } : {}) },
         include,
         orderBy: [{ expectedCloseDate: 'asc' }, { amount: 'desc' }],
         take: 2000,
       });
       const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
+      const cfRead = await this.fields.reader(tx, auth, 'OPPORTUNITY');
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true } });
       const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
       const fmt = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -146,7 +171,7 @@ export class DealsService {
         [bucket('overdue', 'Overdue'), ...months.map((m) => bucket(monthKey(m), fmt.format(m))), bucket('later', 'Later'), bucket('undated', 'No close date')].map((b) => [b.key, b]),
       );
       for (const r of rows) {
-        const deal = toDealRow(r, owners);
+        const deal = toDealRow(r, owners, cfRead);
         const d = r.expectedCloseDate;
         const key = !d ? 'undated' : d < today ? 'overdue' : (buckets.has(monthKey(d)) ? monthKey(d) : 'later');
         const b = buckets.get(key)!;
@@ -165,8 +190,7 @@ export class DealsService {
   /** Audit history of one deal, newest first: who changed what and when. Visible to anyone who can read the deal. */
   history(auth: AuthContext, id: string, limit = 50): Promise<DealHistoryItem[]> {
     return this.prisma.run(auth, async (tx) => {
-      const deal = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, select: { id: true } });
-      if (!deal) throw notFound('Deal');
+      await this.visibleDeal(tx, auth, id);
       const rows = await tx.auditLog.findMany({
         where: { tenantId: auth.tenantId, entityType: 'deal', entityId: id },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -183,9 +207,9 @@ export class DealsService {
 
   get(auth: AuthContext, id: string): Promise<DealRow> {
     return this.prisma.run(auth, async (tx) => {
-      const row = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, include });
+      const row = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) }, include });
       if (!row) throw notFound('Deal');
-      return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
     });
   }
 
@@ -193,9 +217,12 @@ export class DealsService {
     return this.prisma.run(auth, async (tx) => {
       const ownerId = input.ownerId ?? auth.userId;
       await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId, contactId: input.contactId });
+      await this.assertPeople(tx, auth.tenantId, input);
       const { pipelineId, stage } = await this.resolveStage(tx, auth.tenantId, input.pipelineId, input.stageId);
+      const company = input.companyId ? await tx.company.findFirst({ where: { id: input.companyId, tenantId: auth.tenantId }, select: { createdById: true, managerId: true } }) : null;
+      const dealSeq = await nextSequenceValue(tx, `deal:${auth.tenantId}`);
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { defaultCurrency: true } });
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'OPPORTUNITY', input.customFields);
+      const customFields = await this.fields.validateFor(tx, auth, 'OPPORTUNITY', input.customFields);
       const row = await tx.opportunity.create({
         data: {
           tenantId: auth.tenantId,
@@ -213,42 +240,52 @@ export class DealsService {
           status: stage.category,
           closedAt: stage.category === 'OPEN' ? null : new Date(),
           customFields: (customFields ?? {}) as Prisma.InputJsonValue,
+          dealSeq,
+          dealNumber: formatDealNumber(dealSeq),
+          leadCreatorId: company?.createdById ?? null,
+          managerId: input.managerId ?? company?.managerId ?? (await reportingManagerOf(tx, auth.tenantId, ownerId)),
+          supportingUserIds: [...new Set(input.supportingUserIds ?? [])],
         },
         include,
       });
+      await this.fields.claimFiles(tx, auth.tenantId, 'OPPORTUNITY', row.id, customFields);
+      await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: [row.id] });
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.created', entityType: 'deal', entityId: row.id,
         metadata: { amount: input.amount, stage: stage.name }, meta,
       });
       await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: row.id, pipelineId, fromStageId: null, toStageId: stage.id, actorUserId: auth.userId });
-      return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
     });
   }
 
   update(auth: AuthContext, id: string, input: Partial<DealInput>, meta: RequestMeta): Promise<DealRow> {
     return this.prisma.run(auth, async (tx) => {
-      const before = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
-      if (!before) throw notFound('Deal');
+      const before = await this.visibleDeal(tx, auth, id);
       if (input.pipelineId || input.stageId) {
         throw badRef(input.stageId ? 'stageId' : 'pipelineId', 'use POST /deals/:id/move to change stage');
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId, companyId: input.companyId, contactId: input.contactId });
-      const customFields = await this.fields.validate(tx, auth.tenantId, 'OPPORTUNITY', input.customFields, before.customFields as Record<string, unknown>);
-      const { customFields: _cf, expectedCloseDate, ...rest } = input;
+      await this.assertPeople(tx, auth.tenantId, input);
+      const customFields = await this.fields.validateFor(tx, auth, 'OPPORTUNITY', input.customFields, before.customFields as Record<string, unknown>);
+      const { customFields: _cf, expectedCloseDate, supportingUserIds, ...rest } = input;
       const row = await tx.opportunity.update({
         where: { id },
         data: {
           ...rest,
+          ...(supportingUserIds !== undefined ? { supportingUserIds: [...new Set(supportingUserIds)] } : {}),
           ...(expectedCloseDate !== undefined ? { expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null } : {}),
           ...(customFields ? { customFields: customFields as Prisma.InputJsonValue } : {}),
         },
         include,
       });
+      if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'OPPORTUNITY', id, customFields);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.updated', entityType: 'deal', entityId: id,
         metadata: { changes: diff(before, input) }, meta,
       });
-      return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
+      await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: [id] });
+      return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
     });
   }
 
@@ -256,12 +293,12 @@ export class DealsService {
   move(auth: AuthContext, id: string, input: DealMoveInput, meta: RequestMeta): Promise<DealRow> {
     return this.prisma.run(auth, async (tx) => {
       const row = await this.moveInTx(tx, auth, id, input, meta);
-      return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
     });
   }
 
   private async moveInTx(tx: TenantTx, auth: AuthContext, id: string, input: DealMoveInput, meta: RequestMeta): Promise<DealWith> {
-    const before = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, include: { stage: true } });
+    const before = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) }, include: { stage: true } });
     if (!before) throw notFound('Deal');
     const stage = await tx.pipelineStage.findFirst({ where: { id: input.stageId, tenantId: auth.tenantId, pipelineId: before.pipelineId } });
     if (!stage) throw badRef('stageId', 'is not a stage of this deal’s pipeline');
@@ -288,6 +325,7 @@ export class DealsService {
       });
       await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: id, pipelineId: before.pipelineId, fromStageId: before.stageId, toStageId: stage.id, actorUserId: auth.userId });
     }
+    await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: [id] });
     return row;
   }
 
@@ -295,7 +333,7 @@ export class DealsService {
     return this.prisma.run(auth, async (tx) => {
       if (!input.ownerId && !input.stageId) throw badRef('ownerId', 'provide ownerId or stageId');
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId });
-      const found = await tx.opportunity.findMany({ where: { id: { in: input.ids }, tenantId: auth.tenantId, deletedAt: null }, select: { id: true } });
+      const found = await tx.opportunity.findMany({ where: { id: { in: input.ids }, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) }, select: { id: true } });
       if (found.length !== input.ids.length) throw badRef('ids', 'contains deals that do not exist');
       if (input.ownerId) {
         await tx.opportunity.updateMany({ where: { id: { in: input.ids }, tenantId: auth.tenantId }, data: { ownerId: input.ownerId } });
@@ -305,20 +343,21 @@ export class DealsService {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.bulk_updated', entityType: 'deal',
         metadata: { ids: input.ids, ownerId: input.ownerId, stageId: input.stageId }, meta,
       });
+      await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: input.ids });
       return { updated: input.ids.length };
     });
   }
 
   clone(auth: AuthContext, id: string, meta: RequestMeta): Promise<DealRow> {
     return this.prisma.run(auth, async (tx) => {
-      const src = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
-      if (!src) throw notFound('Deal');
+      const src = await this.visibleDeal(tx, auth, id);
       const first = await tx.pipelineStage.findFirstOrThrow({ where: { pipelineId: src.pipelineId, category: 'OPEN' }, orderBy: { position: 'asc' } });
       const row = await tx.opportunity.create({
         data: {
           tenantId: auth.tenantId, pipelineId: src.pipelineId, stageId: first.id, name: `${src.name} (copy)`, amount: src.amount,
           currency: src.currency, probability: src.probability, priority: src.priority, companyId: src.companyId, contactId: src.contactId,
           ownerId: auth.userId, customFields: src.customFields as Prisma.InputJsonValue,
+          ...(await this.number(tx, auth.tenantId)), leadCreatorId: src.leadCreatorId, managerId: src.managerId, supportingUserIds: src.supportingUserIds,
         },
         include,
       });
@@ -327,16 +366,31 @@ export class DealsService {
         metadata: { sourceId: id }, meta,
       });
       await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: row.id, pipelineId: src.pipelineId, fromStageId: null, toStageId: first.id, actorUserId: auth.userId });
-      return toDealRow(row, await ownerRefs(tx, [row.ownerId]));
+      return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
     });
   }
 
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
     return this.prisma.run(auth, async (tx) => {
-      const { count } = await tx.opportunity.updateMany({ where: { id, tenantId: auth.tenantId, deletedAt: null }, data: { deletedAt: new Date() } });
+      const { count } = await tx.opportunity.updateMany({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) }, data: { deletedAt: new Date() } });
       if (count === 0) throw notFound('Deal');
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deal.deleted', entityType: 'deal', entityId: id, meta });
+      await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: [id] });
     });
+  }
+
+  private async number(tx: TenantTx, tenantId: string): Promise<{ dealSeq: number; dealNumber: string }> {
+    const dealSeq = await nextSequenceValue(tx, `deal:${tenantId}`);
+    return { dealSeq, dealNumber: formatDealNumber(dealSeq) };
+  }
+
+  /** The manager and supporting people must be members of the workspace. */
+  private async assertPeople(tx: TenantTx, tenantId: string, input: Partial<DealInput>): Promise<void> {
+    if (input.managerId && !(await tx.membership.findFirst({ where: { tenantId, userId: input.managerId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('managerId');
+    const ids = [...new Set(input.supportingUserIds ?? [])];
+    if (!ids.length) return;
+    const found = await tx.membership.count({ where: { tenantId, userId: { in: ids } } });
+    if (found !== ids.length) throw badRef('supportingUserIds', 'contains people who are not in this workspace');
   }
 
   private async resolveStage(tx: TenantTx, tenantId: string, pipelineId?: string, stageId?: string) {
@@ -358,7 +412,7 @@ export class DealsService {
   }
 }
 
-export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: string }>): DealRow {
+export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: string }>, cf?: (values: unknown) => Record<string, unknown>): DealRow {
   return {
     id: r.id,
     name: r.name,
@@ -378,9 +432,13 @@ export function toDealRow(r: DealWith, owners: Map<string, { id: string; name: s
     contact: r.contact ? { id: r.contact.id, name: [r.contact.firstName, r.contact.lastName].filter(Boolean).join(' ') } : null,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
     sourceLeadId: r.sourceLeadId,
-    customFields: (r.customFields ?? {}) as Record<string, unknown>,
+    customFields: cf ? cf(r.customFields) : ((r.customFields ?? {}) as Record<string, unknown>),
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
+    dealNumber: r.dealNumber ?? null,
+    managerId: r.managerId ?? null,
+    leadCreatorId: r.leadCreatorId ?? null,
+    supportingUserIds: r.supportingUserIds ?? [],
   };
 }
 

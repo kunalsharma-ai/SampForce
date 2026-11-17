@@ -75,6 +75,8 @@ export const features = {
   'Card payments': ['Pagos con tarjeta', 'Paiements par carte', 'Kartenzahlungen', 'المدفوعات بالبطاقة'],
   'API and Zapier': ['API y Zapier', 'API et Zapier', 'API und Zapier', 'واجهة API وZapier'],
   'Single sign-on and SCIM': ['Inicio de sesión único y SCIM', 'Authentification unique et SCIM', 'Single Sign-on und SCIM', 'تسجيل الدخول الموحد وSCIM'],
+  'Advanced custom fields': ['Campos personalizados avanzados', 'Champs personnalisés avancés', 'Erweiterte benutzerdefinierte Felder', 'حقول مخصصة متقدمة'],
+  'Excel export': ['Exportación a Excel', 'Export Excel', 'Excel-Export', 'التصدير إلى Excel'],
 
   // Descriptions
   'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.': [
@@ -275,4 +277,29 @@ export const features = {
     'Anmeldung mit OpenID Connect und SCIM-Bereitstellung.',
     'تسجيل الدخول عبر OpenID Connect والتزويد عبر SCIM.',
   ],
+  'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.': [
+    'Los 14 tipos de campo personalizado, campos en seguimientos y RFQs, y campos que solo ven o editan algunos cargos.',
+    'Les 14 types de champs personnalisés, des champs sur les relances et les RFQ, et des champs visibles ou modifiables par certains postes seulement.',
+    'Alle 14 Typen benutzerdefinierter Felder, Felder an Nachverfolgungen und RFQs sowie Felder, die nur bestimmte Positionen sehen oder bearbeiten.',
+    'كل أنواع الحقول المخصصة الأربعة عشر، وحقول في المتابعات وطلبات عروض الأسعار، وحقول لا يراها أو يعدّلها إلا بعض المسميات الوظيفية.',
+  ],
+  'Export companies, employees, leads, deals and RFQs as Excel workbooks.': [
+    'Exporta empresas, empleados, leads, oportunidades y RFQs como libros de Excel.',
+    'Exportez entreprises, employés, prospects, affaires et RFQ sous forme de classeurs Excel.',
+    'Exportieren Sie Unternehmen, Mitarbeiter, Leads, Deals und RFQs als Excel-Arbeitsmappen.',
+    'صدّر الشركات والموظفين والعملاء المحتملين والصفقات وطلبات عروض الأسعار كمصنفات Excel.',
+  ],
+  // Command Center (ADR 0063)
+  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übergaben', 'نقل العملاء المحتملين'],
+  'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.': ['Solicitudes para pasar un lead a un gerente o a una persona sénior, que lo aprueba, rechaza o reasigna.', 'Demandes de transfert d’un prospect à un manager ou à un cadre, qui l’approuve, le refuse ou le réattribue.', 'Anfragen, einen Lead an eine Führungskraft zu übergeben, die sie genehmigt, ablehnt oder neu zuweist.', 'طلبات نقل عميل محتمل إلى مدير أو شخص أعلى، يوافق عليها أو يرفضها أو يعيد إسنادها.'],
+  'Revenue attribution': ['Atribución de ingresos', 'Attribution des revenus', 'Umsatzzuordnung', 'نسب الإيرادات'],
+  'Revenue records for won deals, split between the people who won them without counting anything twice.': ['Registros de ingresos de las oportunidades ganadas, repartidos entre quienes las ganaron sin contar nada dos veces.', 'Des enregistrements de revenus pour les opportunités gagnées, répartis entre les personnes qui les ont gagnées sans rien compter deux fois.', 'Umsatzdatensätze für gewonnene Verkaufschancen, aufgeteilt auf die Personen, die sie gewonnen haben, ohne etwas doppelt zu zählen.', 'سجلات إيرادات للصفقات المربوحة، موزعة على من ربحوها دون احتساب أي شيء مرتين.'],
+  'Manager dashboard': ['Panel de gerente', 'Tableau de bord manager', 'Manager-Dashboard', 'لوحة المدير'],
+  'The team Command Center: team KPIs, the employee performance table, comparisons and follow-up monitoring.': ['El Command Center del equipo: KPI del equipo, tabla de rendimiento, comparaciones y control de seguimientos.', 'Le Command Center de l’équipe : KPI de l’équipe, tableau des performances, comparaisons et suivi des relances.', 'Das Command Center des Teams: Team-KPIs, Leistungstabelle, Vergleiche und Überwachung der Nachverfolgungen.', 'مركز قيادة الفريق: مؤشرات الفريق وجدول أداء الموظفين والمقارنات ومراقبة المتابعات.'],
+  'Senior management dashboard': ['Panel de la alta dirección', 'Tableau de bord de la direction', 'Dashboard der Geschäftsleitung', 'لوحة الإدارة العليا'],
+  'The organisation Command Center: department performance, rankings, revenue analytics and business insights.': ['El Command Center de la organización: rendimiento por departamento, clasificaciones, análisis de ingresos y conclusiones de negocio.', 'Le Command Center de l’organisation : performances par service, classements, analyse des revenus et enseignements.', 'Das Command Center der Organisation: Abteilungsleistung, Ranglisten, Umsatzanalysen und Geschäftseinblicke.', 'مركز قيادة المؤسسة: أداء الأقسام والتصنيفات وتحليلات الإيرادات ورؤى الأعمال.'],
+  'Manager instructions': ['Instrucciones del gerente', 'Consignes du manager', 'Anweisungen der Führungskraft', 'تعليمات المدير'],
+  'Instructions from managers to their team, acknowledged and completed by the people who receive them.': ['Instrucciones de los gerentes a su equipo, que quienes las reciben confirman y completan.', 'Des consignes des managers à leur équipe, accusées et réalisées par les personnes qui les reçoivent.', 'Anweisungen von Führungskräften an ihr Team, die von den Empfängern bestätigt und erledigt werden.', 'تعليمات من المديرين إلى فرقهم، يقرّ بها مستلموها وينجزونها.'],
+  'Client concerns': ['Inquietudes de clientes', 'Préoccupations des clients', 'Kundenanliegen', 'مخاوف العملاء'],
+  'Client concerns and rejections with severity, deadlines and escalation to senior management.': ['Inquietudes y rechazos de clientes con gravedad, plazos y escalado a la alta dirección.', 'Préoccupations et refus des clients avec gravité, échéances et remontée à la direction.', 'Kundenanliegen und Absagen mit Schweregrad, Fristen und Eskalation an die Geschäftsleitung.', 'مخاوف العملاء ورفضهم مع الخطورة والمواعيد النهائية والتصعيد إلى الإدارة العليا.'],
 } satisfies TextTable;

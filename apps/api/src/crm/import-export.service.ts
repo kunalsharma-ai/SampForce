@@ -1,20 +1,26 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { Workbook } from 'exceljs';
 import { Prisma, type TenantTx } from '@dealflow/database';
 import { assignLeadNumbers } from '@dealflow/database';
 import {
+  allowsExport,
   companyInputSchema,
   contactInputSchema,
+  customFieldText,
+  type ExportFormat,
   type ImportEntity,
   type ImportRequest,
   type ImportResult,
   leadInputSchema,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
+import { featureNotIncluded, hasFeature } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localize, tr } from '../common/request-language';
 import { ownerRefs } from './crm-helpers';
 import { parseCsv, toCsv } from './csv';
+import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { defaultStatusId, statusRefs } from './companies.service';
 import { canSeeDetails, companyScope, contactScope, leadScope, visibility } from './visibility';
@@ -22,7 +28,7 @@ import { phoneDigits } from './leads.service';
 
 export const MAX_IMPORT_ROWS = 5_000;
 export const MAX_EXPORT_ROWS = 50_000;
-export const EXPORT_ENTITIES = ['leads', 'contacts', 'companies', 'deals'] as const;
+export const EXPORT_ENTITIES = ['leads', 'contacts', 'companies', 'deals', 'rfqs'] as const;
 export type ExportEntity = (typeof EXPORT_ENTITIES)[number];
 
 /** Built-in fields a CSV column can map to. Custom fields map as `customFields.<key>`. */
@@ -48,6 +54,7 @@ export class ImportExportService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly admin: CrmAdminService,
   ) {}
 
   /**
@@ -157,18 +164,32 @@ export class ImportExportService {
     );
   }
 
-  async export(auth: AuthContext, entity: ExportEntity, meta: RequestMeta): Promise<{ csv: string; rows: number }> {
+  async export(auth: AuthContext, entity: ExportEntity, meta: RequestMeta, format: ExportFormat = 'csv'): Promise<{ data: string | Buffer; rows: number; contentType: string; extension: string }> {
     return this.prisma.run(
       auth,
       async (tx) => {
-        const cfEntity = ({ leads: 'LEAD', contacts: 'CONTACT', companies: 'COMPANY', deals: 'OPPORTUNITY' } as const)[entity];
-        const defs = await this.fields.definitions(tx, auth.tenantId, cfEntity);
+        // Export permissions (ADR 0062): the role's record types and formats, and Excel needs the plan feature.
+        const policy = await this.admin.exportPolicyFor(tx, auth);
+        if (!allowsExport(policy, entity, format)) {
+          throw new ForbiddenException({ code: 'EXPORT_NOT_ALLOWED', message: 'Your role cannot export these records in this format.', details: [{ path: 'format', message: format }] });
+        }
+        if (format === 'xlsx' && !(await hasFeature(tx, auth.tenantId, 'excel_export'))) throw featureNotIncluded('excel_export');
+        const noContact = policy?.withoutContactDetails === true;
+        const cfEntity = ({ leads: 'LEAD', contacts: 'CONTACT', companies: 'COMPANY', deals: 'OPPORTUNITY', rfqs: 'RFQ' } as const)[entity];
+        // Only fields the person may see are exported.
+        const { defs: all } = await this.fields.accessFor(tx, auth, cfEntity);
+        const defs = all.filter((d) => d.access.view);
         const cfHeaders = defs.map((d) => `customFields.${d.key}`);
-        const cf = (v: unknown) => defs.map((d) => ((v ?? {}) as Record<string, unknown>)[d.key]);
+        // Values of fields hidden by a failing condition are left out, as on the record page.
+        const cf = (v: unknown) => {
+          const shown = this.fields.visibleValues(all, v);
+          return defs.map((d) => customFieldText(d.type, shown[d.key]) || null);
+        };
         const where = { tenantId: auth.tenantId, deletedAt: null };
         // Exports follow record visibility; details of records the role may not see are left blank.
         const v = await visibility(tx, auth);
         const take = MAX_EXPORT_ROWS;
+        const contact = <T>(value: T, show: boolean): T | null => (show && !noContact ? value : null);
         let headers: string[];
         let body: unknown[][];
 
@@ -176,11 +197,14 @@ export class ImportExportService {
           const rows = await tx.lead.findMany({ where: { ...where, ...leadScope(v) }, orderBy: { createdAt: 'asc' }, take });
           const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
           headers = ['id', ...IMPORT_FIELDS.leads, 'owner', 'createdAt', ...cfHeaders];
-          body = rows.map((r) => [
-            r.id, r.fullName, r.companyName, r.jobTitle, r.industry, r.email, r.phone, r.country, r.city, r.timezone, r.website,
-            r.source, r.campaignSource, r.estimatedValue?.toString(), r.currency, r.status, r.tags,
-            r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, ...cf(r.customFields),
-          ]);
+          body = rows.map((r) => {
+            const show = canSeeDetails(v, r.ownerId);
+            return [
+              r.id, r.fullName, r.companyName, r.jobTitle, r.industry, contact(r.email, show), contact(r.phone, show), r.country, r.city, r.timezone, r.website,
+              r.source, r.campaignSource, r.estimatedValue?.toString(), r.currency, r.status, r.tags,
+              r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, ...(show ? cf(r.customFields) : cf({})),
+            ];
+          });
         } else if (entity === 'contacts') {
           const rows = await tx.contact.findMany({ where: { ...where, ...contactScope(v) }, include: { company: { select: { name: true } } }, orderBy: { createdAt: 'asc' }, take });
           const owners = await ownerRefs(tx, rows.map((r) => r.ownerId));
@@ -189,9 +213,9 @@ export class ImportExportService {
           body = rows.map((r) => {
             const show = canSeeDetails(v, r.ownerId);
             return [
-              r.id, r.firstName, r.lastName, show ? r.email : null, show ? r.phone : null, r.jobTitle, r.country, r.timezone, r.company?.name,
+              r.id, r.firstName, r.lastName, contact(r.email, show), contact(r.phone, show), r.jobTitle, r.country, r.timezone, r.company?.name,
               r.ownerId ? owners.get(r.ownerId)?.name : null, r.createdAt, r.statusId ? statuses.get(r.statusId)?.name : null, r.department,
-              show ? r.linkedinUrl : null, r.nextFollowUpAt, ...(show ? cf(r.customFields) : cf({})),
+              contact(r.linkedinUrl, show), r.nextFollowUpAt, ...(show ? cf(r.customFields) : cf({})),
             ];
           });
         } else if (entity === 'companies') {
@@ -204,10 +228,21 @@ export class ImportExportService {
             const show = canSeeDetails(v, r.ownerId);
             return [
               r.id, r.name, show ? r.domain : null, r.industry, r.country, name(r.ownerId), r.createdAt, r.leadNumber, r.statusId ? statuses.get(r.statusId)?.name : null,
-              name(r.createdById), name(r.managerId), show ? r.website : null, show ? r.linkedinUrl : null, show ? r.primaryEmail : null, show ? r.primaryPhone : null,
+              name(r.createdById), name(r.managerId), show ? r.website : null, contact(r.linkedinUrl, show), contact(r.primaryEmail, show), contact(r.primaryPhone, show),
               r.state, r.city, r.companySize, r.companyType, ...(show ? cf(r.customFields) : cf({})),
             ];
           });
+        } else if (entity === 'rfqs') {
+          const companies = v.all ? null : (await tx.company.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, select: { id: true } })).map((c) => c.id);
+          const rows = await tx.rfq.findMany({ where: { ...where, ...(companies ? { companyId: { in: companies } } : {}) }, include: { company: { select: { name: true, leadNumber: true, ownerId: true } } }, orderBy: { seq: 'asc' }, take });
+          const owners = await ownerRefs(tx, rows.flatMap((r) => [r.ownerId, r.managerId]));
+          const name = (id: string | null) => (id ? owners.get(id)?.name : null);
+          headers = ['id', 'number', 'company', 'leadNumber', 'projectName', 'methodology', 'market', 'industry', 'targetAudience', 'sampleSize', 'loi', 'ir', 'cpi', 'totalQuotation', 'currency', 'status', 'receivedAt', 'submittedAt', 'deadlineAt', 'owner', 'manager', 'expectedRevenue', 'actualRevenue', 'outcomeReason', ...cfHeaders];
+          body = rows.map((r) => [
+            r.id, r.number, r.company.name, r.company.leadNumber, r.projectName, r.methodology, r.market, r.industry, r.targetAudience, r.sampleSize, r.loi, r.ir, r.cpi,
+            r.totalQuotation, r.currency, r.status, r.receivedAt, r.submittedAt, r.deadlineAt, name(r.ownerId), name(r.managerId), r.expectedRevenue, r.actualRevenue, r.outcomeReason,
+            ...(canSeeDetails(v, r.company.ownerId) ? cf(r.customFields) : cf({})),
+          ]);
         } else {
           const rows = await tx.opportunity.findMany({
             where,
@@ -225,9 +260,13 @@ export class ImportExportService {
         }
         await this.audit.record(tx, {
           tenantId: auth.tenantId, actorUserId: auth.userId, action: 'data.exported', entityType: entity,
-          metadata: { rows: body.length, truncated: body.length >= take }, meta,
+          metadata: { rows: body.length, truncated: body.length >= take, format }, meta,
         });
-        return { csv: toCsv(headers, body), rows: body.length };
+        if (format === 'xlsx') {
+          const labels = new Map(defs.map((d) => [`customFields.${d.key}`, d.label]));
+          return { data: await toXlsx(entity, headers.map((h) => labels.get(h) ?? h), body), rows: body.length, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', extension: 'xlsx' };
+        }
+        return { data: toCsv(headers, body), rows: body.length, contentType: 'text/csv; charset=utf-8', extension: 'csv' };
       },
       { timeoutMs: 60_000 },
     );
@@ -323,4 +362,31 @@ function describeValidation(err: unknown): string {
     return body.details?.map((d) => `${d.path}: ${localize(d.message)}`).join('; ') ?? (body.message ? localize(body.message) : tr('Invalid row'));
   }
   throw err;
+}
+
+/**
+ * An Excel workbook of the same rows as the CSV: one sheet, a bold frozen header, dates as dates. Cells that start
+ * with =, +, - or @ are written as text, so a spreadsheet never runs them as formulas.
+ */
+export async function toXlsx(sheet: string, headers: string[], rows: unknown[][]): Promise<Buffer> {
+  const wb = new Workbook();
+  wb.creator = 'SampForce';
+  const ws = wb.addWorksheet(sheet.slice(0, 31));
+  ws.addRow(headers);
+  ws.getRow(1).font = { bold: true };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  for (const r of rows) {
+    ws.addRow(
+      r.map((c) => {
+        if (c === null || c === undefined) return null;
+        if (c instanceof Date) return c;
+        if (Array.isArray(c)) return c.join(', ');
+        if (typeof c === 'number' || typeof c === 'boolean') return c;
+        const t = String(c);
+        return /^[=+\-@]/.test(t) ? `'${t}` : t;
+      }),
+    );
+  }
+  headers.forEach((h, i) => (ws.getColumn(i + 1).width = Math.min(40, Math.max(10, h.length + 2))));
+  return Buffer.from(await wb.xlsx.writeBuffer());
 }

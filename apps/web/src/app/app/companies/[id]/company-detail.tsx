@@ -8,6 +8,7 @@ import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } f
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { CompanyBranches, CompanyFiles, CompanyOwnership, CompanyProfileCard } from '@/components/crm/company-parts';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
+import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
 import { CustomFieldList, DetailError, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
@@ -61,6 +62,7 @@ export function CompanyDetail({ id }: { id: string }) {
             <CompanyLeadCard company={c} />
             <CompanyFollowUps company={ref} employees={people} />
             <CompanyOwnership company={c} />
+            <CompanyConcerns company={ref} employees={people} />
             <CompanyFiles company={c} />
             <RecordIntelligencePanel entity="company" id={id} name={c.name} />
             {c.parentCompany && (

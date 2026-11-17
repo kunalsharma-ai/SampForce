@@ -1,19 +1,21 @@
 'use client';
 
 import { Badge, Button } from '@dealflow/ui';
-import type { CompanyRow, ContactRow, DealRow, LeadRow } from '@dealflow/types';
-import { Download, Plus, Upload } from 'lucide-react';
+import type { CompanyRow, ContactRow, CustomFieldFilter, DealRow, LeadRow } from '@dealflow/types';
+import { Download, FileSpreadsheet, Plus, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
-import { type CrmEntity, DEAL_STATUS_TONE, ENTITY_LABEL, formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, useMembers, useRecordList } from '@/lib/crm';
+import { CUSTOM_FIELD_ENTITY, type CrmEntity, DEAL_STATUS_TONE, ENTITY_LABEL, formatDate, formatMoney, LEAD_STATUS_TONE, titleCase, useMembers, useRecordList } from '@/lib/crm';
 import { downloadFile } from '@/lib/api';
 import { useCan } from '@/lib/session';
 import { DataTable } from '@/components/data-table/data-table';
 import { type TableColumn, useTableView } from '@/components/data-table/use-table-view';
 import { type MessageKey, Tr, useT } from '@/lib/i18n';
 import { useLeadDrafts } from '@/lib/company-leads';
+import { useHasFeature } from '@/lib/features';
+import { CustomFieldFilters } from './custom-field-filter';
 
 import { RecordFormDialog } from './record-form';
 import { CountryFlag, StatusChip } from './status-chip';
@@ -113,11 +115,20 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
   const members = useMembers();
   const status = view.config.filters.status ?? '';
   const [creating, setCreating] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'csv' | 'xlsx' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [cf, setCf] = useState<CustomFieldFilter[]>([]);
   const canWrite = useCan(`${entity}:write` as 'leads:write');
   const canExport = useCan('data:export');
-  const list = useRecordList<{ id: string }>(entity, { ...view.params, status: fixedStatus ?? view.params.status }, !hideTable);
+  const excel = useHasFeature('excel_export');
+  const list = useRecordList<{ id: string }>(entity, { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined }, !hideTable);
+  const exportAs = (format: 'csv' | 'xlsx') => {
+    setExporting(format);
+    setExportError(null);
+    downloadFile(`/exports/${entity}?format=${format}`, `sampforce-${entity}.${format}`)
+      .catch((e: Error) => setExportError(e.message))
+      .finally(() => setExporting(null));
+  };
   const label = ENTITY_LABEL[entity];
   const filters = fixedStatus ? undefined : STATUS_FILTERS[entity];
   const importable = entity !== 'deals';
@@ -138,19 +149,13 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
               </Button>
             )}
             {canExport && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={exporting}
-                onClick={() => {
-                  setExporting(true);
-                  setExportError(null);
-                  downloadFile(`/exports/${entity}`, `sampforce-${entity}.csv`)
-                    .catch((e: Error) => setExportError(e.message))
-                    .finally(() => setExporting(false));
-                }}
-              >
-                <Download aria-hidden /> {exporting ? t('Exporting…') : t('Export CSV')}
+              <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('csv')}>
+                <Download aria-hidden /> {exporting === 'csv' ? t('Exporting…') : t('Export CSV')}
+              </Button>
+            )}
+            {canExport && excel && (
+              <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('xlsx')}>
+                <FileSpreadsheet aria-hidden /> {exporting === 'xlsx' ? t('Exporting…') : t('Export Excel')}
               </Button>
             )}
             {canWrite && entity === 'companies' && <LeadDraftsLink />}
@@ -217,10 +222,11 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                     </option>
                   ))}
               </Select>
+              <CustomFieldFilters entity={CUSTOM_FIELD_ENTITY[entity]} value={cf} onChange={setCf} />
             </>
           }
           empty={
-            view.config.q || status || view.config.filters.ownerId ? (
+            view.config.q || status || view.config.filters.ownerId || cf.length ? (
               t('No records match these filters.')
             ) : (
               <span>

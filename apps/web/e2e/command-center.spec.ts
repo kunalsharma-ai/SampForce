@@ -32,7 +32,7 @@ const order = (page: Page) => page.locator('[data-widget]').evaluateAll((els) =>
 test('charts show real numbers, switch to a table, and filter by period and owner', async ({ page }) => {
   await signUp(page, 'Charts Co');
   await seedDeals(page);
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
 
   // Salesperson preset: just my numbers, last 30 days.
   await expect(page.getByLabel('Owner')).toHaveValue('me');
@@ -78,7 +78,7 @@ test('charts show real numbers, switch to a table, and filter by period and owne
 
 test('customize mode reorders, resizes, hides and restores widgets, and saves per person', async ({ page }) => {
   await signUp(page, 'Layout Co');
-  await page.goto('/app');
+  await page.goto('/app?view=analytics');
   await expect(widget(page, 'nextActions')).toBeVisible();
   const start = await order(page);
   expect(start.slice(0, 3)).toEqual(['nextActions', 'insights', 'kpis']);

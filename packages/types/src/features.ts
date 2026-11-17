@@ -18,6 +18,12 @@ export const FEATURE_KEYS = [
   // Sales
   'territories',
   'rfqs',
+  'lead_transfers',
+  'revenue_attribution',
+  'manager_dashboard',
+  'senior_dashboard',
+  'instructions',
+  'client_concerns',
   'quotes',
   'proposals',
   'contracts',
@@ -59,6 +65,9 @@ export const FEATURE_KEYS = [
   // Administration
   'custom_roles',
   'sso_scim',
+  // ADR 0062
+  'custom_fields_advanced',
+  'excel_export',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -77,6 +86,12 @@ export interface FeatureDef {
 
 export const FEATURES: FeatureDef[] = [
   { key: 'rfqs', group: 'Sales', label: 'RFQs', description: 'Requests for quotation with LOI, IR and CPI pricing, deadlines, reports and conversion to deals.', defaultFrom: 'free', paths: ['/app/rfqs'] },
+  { key: 'lead_transfers', group: 'Sales', label: 'Lead transfers', description: 'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.', defaultFrom: 'free', paths: [] },
+  { key: 'revenue_attribution', group: 'Sales', label: 'Revenue attribution', description: 'Revenue records for won deals, split between the people who won them without counting anything twice.', defaultFrom: 'free', paths: [] },
+  { key: 'manager_dashboard', group: 'Sales', label: 'Manager dashboard', description: 'The team Command Center: team KPIs, the employee performance table, comparisons and follow-up monitoring.', defaultFrom: 'free', paths: [] },
+  { key: 'senior_dashboard', group: 'Sales', label: 'Senior management dashboard', description: 'The organisation Command Center: department performance, rankings, revenue analytics and business insights.', defaultFrom: 'free', paths: [] },
+  { key: 'instructions', group: 'Sales', label: 'Manager instructions', description: 'Instructions from managers to their team, acknowledged and completed by the people who receive them.', defaultFrom: 'free', paths: [] },
+  { key: 'client_concerns', group: 'Sales', label: 'Client concerns', description: 'Client concerns and rejections with severity, deadlines and escalation to senior management.', defaultFrom: 'free', paths: [] },
   { key: 'territories', group: 'Sales', label: 'Sales territories', description: 'Territories with rules that route leads and deals to their owners.', defaultFrom: 'growth', paths: ['/app/settings/territories'] },
   { key: 'quotes', group: 'Sales', label: 'Quotes and catalogue', description: 'Products, price books, quotes with approvals and PDFs, and the Quick Bid Studio.', defaultFrom: 'launch', paths: ['/app/quotes'] },
   { key: 'proposals', group: 'Sales', label: 'Proposals', description: 'Proposals built from quotes, shared by link and accepted online.', defaultFrom: 'growth', paths: [] },
@@ -119,6 +134,8 @@ export const FEATURES: FeatureDef[] = [
 
   { key: 'custom_roles', group: 'Administration', label: 'Custom roles', description: 'Roles with your own permission sets beyond the five standard roles.', defaultFrom: 'professional', paths: [] },
   { key: 'sso_scim', group: 'Administration', label: 'Single sign-on and SCIM', description: 'OpenID Connect sign-in and SCIM provisioning.', defaultFrom: 'free', paths: [] },
+  { key: 'custom_fields_advanced', group: 'Administration', label: 'Advanced custom fields', description: 'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.', defaultFrom: 'growth', paths: [] },
+  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [] },
 ];
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */

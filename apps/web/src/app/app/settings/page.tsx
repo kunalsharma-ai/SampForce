@@ -26,7 +26,7 @@ export default function SettingsPage() {
         <CardContent className="divide-y divide-border p-0">
           {[
             { href: '/app/settings/crm', icon: SlidersHorizontal, title: 'CRM configuration', text: 'Lead numbers, company and employee statuses, departments and designations.' },
-            { href: '/app/settings/custom-fields', icon: ListPlus, title: 'Custom fields', text: 'Add fields to leads, contacts, companies and deals.' },
+            { href: '/app/settings/crm?section=fields', icon: ListPlus, title: 'Custom fields', text: 'Add fields to companies, employees, leads, deals, follow-ups and RFQs.' },
             { href: '/app/settings/territories', icon: MapPinned, title: 'Territories', text: 'Sales territories by country.' },
             { href: '/app/settings/import', icon: Upload, title: 'Import data', text: 'Bring in records from a CSV file, with a check before anything is saved.' },
           ].map((l) => (

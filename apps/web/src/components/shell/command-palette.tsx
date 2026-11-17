@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@dealflow/ui';
 import type { Permission, SearchHit } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { Command } from 'cmdk';
-import { Bot, Building2, Clock, ContactRound, Handshake, Keyboard, Maximize2, Moon, Palette, Plus, SlidersHorizontal, Star, Sun, UserPlus } from 'lucide-react';
+import { Bot, Building2, Clock, ContactRound, FileSpreadsheet, Handshake, Keyboard, Maximize2, Moon, Palette, Plus, SlidersHorizontal, Star, Sun, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -25,6 +25,7 @@ const HIT_META = {
   contact: { icon: ContactRound, path: 'contacts', label: 'Contact' },
   company: { icon: Building2, path: 'companies', label: 'Company' },
   deal: { icon: Handshake, path: 'deals', label: 'Deal' },
+  rfq: { icon: FileSpreadsheet, path: 'rfqs', label: 'RFQ' },
 } as const;
 
 const CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[] = [
@@ -137,7 +138,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                       <Command.Item
                         key={`${h.entity}-${h.id}`}
                         value={`${h.entity}-${h.id}`}
-                        onSelect={() => go(`/app/${meta.path}/${h.id}`)}
+                        onSelect={() => go(h.entity === 'rfq' ? `/app/rfqs?open=${h.id}` : `/app/${meta.path}/${h.id}`)}
                         className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm aria-selected:bg-muted"
                       >
                         <meta.icon className="size-4 text-muted-foreground" aria-hidden />

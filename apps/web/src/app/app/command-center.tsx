@@ -35,7 +35,7 @@ const PRESET_LABEL: Record<'executive' | 'salesperson' | 'custom', MessageKey> =
 
 const selectClass = 'h-9 rounded-md border border-input bg-surface px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function CommandCenter() {
+export function AnalyticsDashboard() {
   const { data: session } = useSession();
   const t = useT();
   const w = (id: DashboardWidget) => t(WIDGET_LABEL[id]);

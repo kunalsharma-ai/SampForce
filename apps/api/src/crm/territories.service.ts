@@ -182,7 +182,7 @@ export class TerritoriesService {
           else uncovered.set(country, (uncovered.get(country) ?? 0) + 1);
         }
         const a = acc.get(key)!;
-        const row = toDealRow(d, people);
+        const row = toDealRow(d, people, () => ({}));
         a.openCount += 1;
         if (row.currency === tenant.defaultCurrency) {
           a.openValue += row.amount;

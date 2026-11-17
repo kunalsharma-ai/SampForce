@@ -82,3 +82,9 @@ export const RFQ_STATUS_TONE: Record<RfqStatus, 'primary' | 'accent' | 'warning'
   CANCELLED: 'neutral',
   ON_HOLD: 'neutral',
 };
+
+/** A follow-up category or RFQ status as the workspace configured it (ADR 0062): its label and colour, or the built-in label. */
+export function optionLabel(row: { label: string } | null | undefined, value: string, builtIn: Record<string, MessageKey>, t: { maybe: (s: string) => string; (k: MessageKey): string }): string {
+  if (row) return t.maybe(row.label);
+  return value in builtIn ? t(builtIn[value]!) : value;
+}

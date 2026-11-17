@@ -151,13 +151,15 @@ export function DealPanel({ id, headingAs: Heading = 'h2' }: { id: string; headi
   );
 }
 
-type Draft = { amount: string; expectedCloseDate: string; probability: string; priority: '' | DealPriority; ownerId: string };
+type Draft = { amount: string; expectedCloseDate: string; probability: string; priority: '' | DealPriority; ownerId: string; managerId: string; supporting: string };
 const toDraft = (d: DealRow): Draft => ({
   amount: String(d.amount),
   expectedCloseDate: d.expectedCloseDate ?? '',
   probability: d.probability === null ? '' : String(d.probability),
   priority: d.priority ?? '',
   ownerId: d.owner?.id ?? '',
+  managerId: d.managerId ?? '',
+  supporting: (d.supportingUserIds ?? []).join(','),
 });
 
 /** Invalidates every view that shows deals after an edit in the panel. */
@@ -204,6 +206,8 @@ function OverviewTab({ deal }: { deal: DealRow }) {
       if (changed.includes('probability')) body.probability = probability;
       if (changed.includes('priority')) body.priority = draft.priority || null;
       if (changed.includes('ownerId')) body.ownerId = draft.ownerId || null;
+      if (changed.includes('managerId')) body.managerId = draft.managerId || null;
+      if (changed.includes('supporting')) body.supportingUserIds = draft.supporting ? draft.supporting.split(',') : [];
       return api<DealRow>(`/deals/${deal.id}`, { method: 'PATCH', json: body });
     },
     onSuccess: (row) => {
@@ -257,6 +261,25 @@ function OverviewTab({ deal }: { deal: DealRow }) {
             ))}
           </Select>
         </Field>
+        <Field id={`manager-${deal.id}`} label={t('Deal manager')}>
+          <Select value={draft.managerId} onChange={set('managerId')}>
+            <option value="">{t('Not set')}</option>
+            {(members.data ?? []).map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <SupportingPeople
+          dealId={deal.id}
+          value={draft.supporting ? draft.supporting.split(',') : []}
+          options={(members.data ?? []).map((m) => ({ id: m.userId, name: m.name }))}
+          onChange={(ids) => {
+            setSavedAt(null);
+            setDraft({ ...draft, supporting: ids.join(',') });
+          }}
+        />
       </fieldset>
       {canWrite && (
         <div className="flex flex-wrap items-center gap-3">
@@ -281,6 +304,7 @@ function OverviewTab({ deal }: { deal: DealRow }) {
       <dl className="grid gap-x-4 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
         {(
           [
+            ['Deal number', deal.dealNumber],
             ['Weighted value', formatMoney((deal.amount * deal.effectiveProbability) / 100, deal.currency)],
             ['Primary contact', deal.contact?.name],
             ['Created', formatDate(deal.createdAt)],
@@ -308,6 +332,47 @@ const ACTION_LABEL: Record<string, MessageKey> = {
   'deal.assigned': 'Changed the owner',
   'deal.deleted': 'Deleted the deal',
 };
+/** People who helped win the deal; they can share its revenue under the workspace's attribution rule. */
+function SupportingPeople({ dealId, value, options, onChange }: { dealId: string; value: string[]; options: { id: string; name: string }[]; onChange: (ids: string[]) => void }) {
+  const t = useT();
+  const name = (id: string) => options.find((o) => o.id === id)?.name ?? id;
+  return (
+    <div className="space-y-2 sm:col-span-2">
+      <Field id={`support-${dealId}`} label={t('Supporting people')} hint={t('They see this deal and can share its revenue.')}>
+        <Select
+          value=""
+          onChange={(e) => {
+            if (e.target.value && !value.includes(e.target.value)) onChange([...value, e.target.value]);
+          }}
+        >
+          <option value="">{t('Add a person')}</option>
+          {options
+            .filter((o) => !value.includes(o.id))
+            .map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+        </Select>
+      </Field>
+      {value.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5" aria-label={t('Supporting people')}>
+          {value.map((id) => (
+            <li key={id}>
+              <Badge className="gap-1">
+                {name(id)}
+                <button type="button" className="rounded hover:text-foreground" onClick={() => onChange(value.filter((v) => v !== id))} aria-label={t('Remove {name}', { name: name(id) })}>
+                  ×
+                </button>
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const FIELD_LABEL: Record<string, MessageKey> = { amount: 'Amount', expectedCloseDate: 'Expected close', probability: 'Probability', priority: 'Priority', ownerId: 'Owner', name: 'Name', companyId: 'Company', contactId: 'Contact' };
 const show = (v: unknown, empty: string) => (v === null || v === undefined || v === '' ? empty : String(v));
 

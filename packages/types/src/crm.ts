@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { customFieldFiltersParam } from './custom-fields';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -60,6 +61,8 @@ export const listQuerySchema = z.object({
   /** Deals only: expected close date on or after / on or before (YYYY-MM-DD). */
   closeFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
   closeTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').optional(),
+  /** Custom field filters (ADR 0062): a JSON list of {key, op, value}. */
+  cf: customFieldFiltersParam,
 });
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
@@ -561,6 +564,9 @@ export const dealInputSchema = z.object({
   ownerId: uuidRef,
   priority: z.enum(DEAL_PRIORITIES).nullable().optional(),
   customFields: customFieldValuesSchema,
+  /** Revenue attribution (ADR 0063): the assigned manager and the people who helped win the deal. */
+  managerId: uuidRef,
+  supportingUserIds: z.array(z.string().uuid()).max(20).optional(),
 });
 export const dealUpdateSchema = dealInputSchema.partial();
 export type DealInput = z.infer<typeof dealInputSchema>;
@@ -594,6 +600,11 @@ export interface DealRow {
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  /** DEAL-0001; null for deals numbered on the next set-up run. */
+  dealNumber: string | null;
+  managerId: string | null;
+  leadCreatorId: string | null;
+  supportingUserIds: string[];
 }
 
 /** One open deal in the priority view, with the reasons it ranks where it does. */
@@ -721,41 +732,12 @@ export interface TaskRow {
   createdAt: string;
 }
 
-// ───────────── Custom fields ─────────────
-
-export const CUSTOM_FIELD_ENTITIES = ['LEAD', 'CONTACT', 'COMPANY', 'OPPORTUNITY'] as const;
-export const CUSTOM_FIELD_TYPES = ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT'] as const;
-
-export const customFieldDefSchema = z
-  .object({
-    entity: z.enum(CUSTOM_FIELD_ENTITIES),
-    key: z
-      .string()
-      .trim()
-      .regex(/^[a-z][a-z0-9_]{1,39}$/, 'Lowercase letters, digits and underscores, starting with a letter'),
-    label: z.string().trim().min(1).max(80),
-    type: z.enum(CUSTOM_FIELD_TYPES),
-    options: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
-    required: z.boolean().default(false),
-  })
-  .refine((d) => d.type !== 'SELECT' || d.options.length > 0, { message: 'Add at least one option', path: ['options'] });
-export type CustomFieldDefInput = z.infer<typeof customFieldDefSchema>;
-
-export interface CustomFieldDef {
-  id: string;
-  entity: (typeof CUSTOM_FIELD_ENTITIES)[number];
-  key: string;
-  label: string;
-  type: (typeof CUSTOM_FIELD_TYPES)[number];
-  options: string[];
-  required: boolean;
-  position: number;
-}
+// Custom fields live in custom-fields.ts (ADR 0062).
 
 // ───────────── Search ─────────────
 
 export interface SearchHit {
-  entity: 'lead' | 'contact' | 'company' | 'deal';
+  entity: 'lead' | 'contact' | 'company' | 'deal' | 'rfq';
   id: string;
   title: string;
   subtitle: string | null;

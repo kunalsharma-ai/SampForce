@@ -5,7 +5,7 @@ import type { CustomFieldDef, TenantDetails } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
-import { type CrmEntity, ENTITY_LABEL, useCustomFields, useMembers, usePipelines } from '@/lib/crm';
+import { CUSTOM_FIELD_ENTITY, type CrmEntity, ENTITY_LABEL, useCustomFields, useMembers, usePipelines } from '@/lib/crm';
 import { FIELDS, type FieldSpec, SCHEMAS, toPayload } from '@/lib/crm-fields';
 import { MultiCombobox } from '@/components/forms/combobox';
 import { CountrySelect, CurrencyInput, CurrencySelect, NumberStepper, PhoneInput, TimeZoneSelect } from '@/components/forms/inputs';
@@ -14,6 +14,7 @@ import { Segmented } from '@/components/forms/segmented';
 import { useFormDraft } from '@/components/forms/use-form-draft';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue } from './custom-field-input';
 import { type PickerValue, RecordPicker } from './record-picker';
 import { Select, Textarea } from './select';
 
@@ -54,10 +55,22 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
     Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
   );
 
+  // What each custom field holds now, with conditions and formulas worked out as the person types (ADR 0062).
+  const cfDefs = custom.data ?? [];
+  const cfRaw = (d: CustomFieldDef) => (values[`cf.${d.key}`] === undefined && mode === 'create' ? fieldDefault(d) : fieldFormValue(d, values[`cf.${d.key}`]));
+  const cfByKey = new Map(cfDefs.map((d) => [d.key, d]));
+  const logic = fieldLogic(cfDefs, (k) => {
+    const d = cfByKey.get(k);
+    return d ? cfRaw(d) : undefined;
+  });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    const payload = toPayload(entity, values, mode, custom.data?.map((d) => d.key));
+    // Read-only and hidden fields are not sent; the API keeps read-only values and clears hidden ones.
+    const editable = cfDefs.filter((d) => d.access.edit && logic.shows(d));
+    const sendable = { ...values, ...Object.fromEntries(editable.map((d) => [`cf.${d.key}`, fieldPayloadValue(d, values[`cf.${d.key}`])])) };
+    const payload = toPayload(entity, sendable, mode, editable.map((d) => d.key));
     const parsed = SCHEMAS[entity][mode === 'create' ? 'create' : 'update'].safeParse(payload);
     const problems: Record<string, string> = parsed.success
       ? {}
@@ -120,8 +133,16 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
           {custom.data && custom.data.length > 0 && (
             <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
               <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
-              {custom.data.map((d) => (
-                <CustomFieldControl key={d.id} def={d} id={`${formId}-cf-${d.key}`} value={values[`cf.${d.key}`]} onChange={(v) => set(`cf.${d.key}`, v)} error={errors[`cf.${d.key}`]} />
+              {custom.data.filter((d) => (mode === 'edit' || d.showInForms) && logic.shows(d)).map((d) => (
+                <CustomFieldInput
+                  key={d.id}
+                  def={d}
+                  entity={CUSTOM_FIELD_ENTITY[entity]}
+                  id={`${formId}-cf-${d.key}`}
+                  value={logic.valueOf(d, cfRaw(d))}
+                  onChange={(v) => set(`cf.${d.key}`, v)}
+                  error={errors[`cf.${d.key}`]}
+                />
               ))}
             </fieldset>
           )}
@@ -306,31 +327,5 @@ function PipelineField({ id, values, set, error }: { id: string; values: Record<
         </Select>
       </Field>
     </div>
-  );
-}
-
-function CustomFieldControl({ def, id, value, onChange, error }: { def: CustomFieldDef; id: string; value: unknown; onChange: (v: unknown) => void; error?: string }) {
-  const t = useT();
-  const label = def.required ? `${def.label} *` : def.label;
-  const str = value === null || value === undefined ? '' : String(value);
-  if (def.type === 'SELECT' || def.type === 'BOOLEAN') {
-    const options = def.type === 'BOOLEAN' ? [{ v: 'true', l: t('Yes') }, { v: 'false', l: t('No') }] : def.options.map((o) => ({ v: o, l: o }));
-    return (
-      <Field id={id} label={label} error={error}>
-        <Select value={str} onChange={(e) => onChange(e.target.value)}>
-          <option value="">—</option>
-          {options.map((o) => (
-            <option key={o.v} value={o.v}>
-              {o.l}
-            </option>
-          ))}
-        </Select>
-      </Field>
-    );
-  }
-  return (
-    <Field id={id} label={label} error={error}>
-      <Input type={def.type === 'NUMBER' ? 'number' : def.type === 'DATE' ? 'date' : 'text'} value={str} onChange={(e) => onChange(e.target.value)} />
-    </Field>
   );
 }

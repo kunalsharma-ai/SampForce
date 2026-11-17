@@ -16,7 +16,9 @@ export type CompanyAction =
   | 'addRfq'
   | 'upload'
   | 'changeStatus'
-  | 'transfer';
+  | 'transfer'
+  | 'requestTransfer'
+  | 'raiseConcern';
 
 type Registry = Map<CompanyAction, () => void>;
 const Ctx = React.createContext<{ registry: Registry; version: number; bump: () => void } | null>(null);

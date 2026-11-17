@@ -1,5 +1,5 @@
 import { escapeRegex, rawDate } from '@dealflow/database';
-import { type ReportDefinition, type ReportEntity, type ReportFilter, reportField } from '@dealflow/types';
+import { CUSTOM_REPORT_PREFIX, type ReportDefinition, type ReportEntity, type ReportField, type ReportFilter, reportField } from '@dealflow/types';
 
 /**
  * Turns a validated report definition into a MongoDB aggregation pipeline (ADR 0058; was report-sql.ts). Every field
@@ -101,14 +101,44 @@ export interface QueryContext {
   /** Latest exchange rate per currency (units of the workspace currency per unit). */
   rates: Map<string, number>;
   now?: Date;
+  /** The caller's visible custom fields as report fields (`cf.<key>`, ADR 0062). */
+  custom?: readonly ReportField[];
 }
 
-function column(entity: ReportEntity, key: string): Expr {
+const fieldOf = (entity: ReportEntity, key: string, ctx: QueryContext) => reportField(entity, key, ctx.custom);
+
+/**
+ * A custom field's value. Paths are built only from keys of the workspace's own field definitions (checked against
+ * `ctx.custom`), which are `[a-z][a-z0-9_]*`, so nothing typed into a report becomes a path.
+ */
+function customColumn(entity: ReportEntity, key: string, ctx: QueryContext, part: 'value' | 'currency' = 'value'): Expr {
+  const field = ctx.custom?.find((x) => x.key === key);
+  const name = key.slice(CUSTOM_REPORT_PREFIX.length);
+  if (!field?.custom || !/^[a-z][a-z0-9_]{0,39}$/.test(name)) throw new Error(`Unknown report field ${entity}.${key}`);
+  const path = `$custom_fields.${name}`;
+  switch (field.custom.type) {
+    case 'CURRENCY':
+      return part === 'currency' ? `${path}.currency` : `${path}.amount`;
+    case 'DATE':
+    case 'DATETIME':
+      return { $dateFromString: { dateString: path, onError: null, onNull: null } };
+    default:
+      return path;
+  }
+}
+
+function column(entity: ReportEntity, key: string, ctx: QueryContext): Expr {
+  if (key.startsWith(CUSTOM_REPORT_PREFIX)) return customColumn(entity, key, ctx);
   const col = ENTITY_SPECS[entity].columns[key];
   // The schema already rejects unknown keys; this guards the builder on its own.
   if (!col) throw new Error(`Unknown report field ${entity}.${key}`);
   return col;
 }
+
+const currencyOf = (entity: ReportEntity, key: string, ctx: QueryContext): Expr | undefined =>
+  key.startsWith(CUSTOM_REPORT_PREFIX) ? customColumn(entity, key, ctx, 'currency') : ENTITY_SPECS[entity].currency?.[key];
+const isDateOnly = (entity: ReportEntity, key: string, ctx: QueryContext) =>
+  key.startsWith(CUSTOM_REPORT_PREFIX) ? fieldOf(entity, key, ctx)?.custom?.type === 'DATE' : !!ENTITY_SPECS[entity].dateOnly?.includes(key);
 
 const lit = (v: unknown) => ({ $literal: v });
 const isNull = (e: Expr) => ({ $eq: [{ $ifNull: [e, null] }, null] });
@@ -116,8 +146,8 @@ const notNull = (e: Expr) => ({ $ne: [{ $ifNull: [e, null] }, null] });
 
 /** Value of a money field in the workspace currency, or null when no rate exists. */
 function moneyExpr(entity: ReportEntity, key: string, ctx: QueryContext): Expr {
-  const col = column(entity, key);
-  const cur = ENTITY_SPECS[entity].currency?.[key];
+  const col = column(entity, key, ctx);
+  const cur = currencyOf(entity, key, ctx);
   if (!cur) throw new Error(`No currency for ${entity}.${key}`);
   const currency = { $ifNull: [cur, lit(ctx.baseCurrency)] };
   const branches = [{ case: { $eq: [currency, lit(ctx.baseCurrency)] }, then: 1 }, ...[...ctx.rates].map(([c, r]) => ({ case: { $eq: [currency, lit(c)] }, then: lit(r) }))];
@@ -126,8 +156,8 @@ function moneyExpr(entity: ReportEntity, key: string, ctx: QueryContext): Expr {
 
 /** The field as a calendar date string (YYYY-MM-DD) in the workspace time zone, for comparisons. */
 function localDate(entity: ReportEntity, key: string, ctx: QueryContext): Expr {
-  const tz = ENTITY_SPECS[entity].dateOnly?.includes(key) ? 'UTC' : ctx.timezone;
-  return { $dateToString: { format: '%Y-%m-%d', date: column(entity, key), timezone: lit(tz) } };
+  const tz = isDateOnly(entity, key, ctx) ? 'UTC' : ctx.timezone;
+  return { $dateToString: { format: '%Y-%m-%d', date: column(entity, key, ctx), timezone: lit(tz) } };
 }
 
 /** Text of a value for "is empty" and grouping: null for missing, null and the empty string. */
@@ -143,9 +173,16 @@ function compare(left: Expr, op: ReportFilter['op'], right: unknown): Expr {
 }
 
 export function filterExpr(entity: ReportEntity, fl: ReportFilter, ctx: QueryContext): Expr {
-  const field = reportField(entity, fl.field);
+  const field = fieldOf(entity, fl.field, ctx);
   if (!field) throw new Error(`Unknown report field ${entity}.${fl.field}`);
-  const col = column(entity, fl.field);
+  const col = column(entity, fl.field, ctx);
+  // A multi-select holds a list: "is" means it includes the value, "is any of" that it includes one of them.
+  if (field.custom?.type === 'MULTISELECT' && (fl.op === 'eq' || fl.op === 'neq' || fl.op === 'in')) {
+    const list = { $cond: [{ $isArray: col }, col, []] };
+    if (fl.op === 'in') return { $gt: [{ $size: { $setIntersection: [list, lit(fl.value as string[])] } }, 0] };
+    const has = { $in: [lit(String(fl.value)), list] };
+    return fl.op === 'eq' ? has : { $not: [has] };
+  }
   const v = fl.value;
   if (fl.op === 'is_empty') return { $eq: [textOrNull(col), null] };
   if (fl.op === 'not_empty') return { $ne: [textOrNull(col), null] };
@@ -174,10 +211,10 @@ export function filterExpr(entity: ReportEntity, fl: ReportFilter, ctx: QueryCon
 
 function groupExpr(def: ReportDefinition, ctx: QueryContext): Expr {
   if (!def.groupBy) return null;
-  const field = reportField(def.entity, def.groupBy.field)!;
-  const col = column(def.entity, def.groupBy.field);
+  const field = fieldOf(def.entity, def.groupBy.field, ctx)!;
+  const col = column(def.entity, def.groupBy.field, ctx);
   if (field.kind === 'date') {
-    const tz = ENTITY_SPECS[def.entity].dateOnly?.includes(def.groupBy.field) ? 'UTC' : ctx.timezone;
+    const tz = isDateOnly(def.entity, def.groupBy.field, ctx) ? 'UTC' : ctx.timezone;
     const start = { $dateTrunc: { date: col, unit: def.groupBy.bucket!, timezone: lit(tz), startOfWeek: 'monday' } };
     return { $cond: [isNull(col), null, { $dateToString: { format: '%Y-%m-%d', date: start, timezone: lit(tz) } }] };
   }
@@ -189,17 +226,17 @@ function groupExpr(def: ReportDefinition, ctx: QueryContext): Expr {
 function baseStages(def: ReportDefinition, ctx: QueryContext): object[] {
   const spec = ENTITY_SPECS[def.entity];
   const fn = def.metric.fn;
-  const field = def.metric.field ? reportField(def.entity, def.metric.field) : undefined;
+  const field = def.metric.field ? fieldOf(def.entity, def.metric.field, ctx) : undefined;
   let m: Expr = 1;
   let amt: Expr = null;
   let cur: Expr = null;
   if (fn !== 'count' && field) {
     if (field.kind === 'money') {
       m = moneyExpr(def.entity, field.key, ctx);
-      amt = column(def.entity, field.key);
-      cur = spec.currency![field.key]!;
+      amt = column(def.entity, field.key, ctx);
+      cur = currencyOf(def.entity, field.key, ctx)!;
     } else {
-      m = column(def.entity, field.key);
+      m = column(def.entity, field.key, ctx);
     }
   }
   const lookups = Object.entries(spec.joins ?? {}).map(([as, [from, local]]) => ({
@@ -239,7 +276,7 @@ const ORDER: Record<ReportDefinition['sort'], Record<string, 1 | -1>> = {
 export function groupedPipeline(def: ReportDefinition, ctx: QueryContext): object[] {
   return [
     ...baseStages(def, ctx),
-    ...(isMoney(def) ? [{ $match: { m: { $ne: null } } }] : []),
+    ...(isMoney(def, ctx) ? [{ $match: { m: { $ne: null } } }] : []),
     { $group: { _id: '$g', ...accumulators(def.metric.fn) } },
     { $project: { v: value(def.metric.fn), vNull: { $cond: [{ $eq: [value(def.metric.fn), null] }, 1, 0] }, gNull: { $cond: [{ $eq: ['$_id', null] }, 1, 0] } } },
     { $sort: ORDER[def.sort] },
@@ -265,6 +302,6 @@ export function totalsPipeline(def: ReportDefinition, ctx: QueryContext): object
   ];
 }
 
-export function isMoney(def: ReportDefinition): boolean {
-  return def.metric.fn !== 'count' && !!def.metric.field && reportField(def.entity, def.metric.field)?.kind === 'money';
+export function isMoney(def: ReportDefinition, ctx?: Pick<QueryContext, 'custom'>): boolean {
+  return def.metric.fn !== 'count' && !!def.metric.field && reportField(def.entity, def.metric.field, ctx?.custom)?.kind === 'money';
 }

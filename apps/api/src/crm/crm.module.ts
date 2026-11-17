@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { GeoController } from '../geo/geo.controller';
 import { GeoService } from '../geo/geo.service';
+import { CrmAdminController } from './crm-admin.controller';
+import { CrmAdminService } from './crm-admin.service';
 import { CrmConfigController } from './crm-config.controller';
 import { CrmConfigService } from './crm-config.service';
 import { ActivitiesService } from './activities.service';
@@ -14,6 +16,11 @@ import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsController, PipelinesController, TerritoriesController } from './deals.controller';
 import { DealsService } from './deals.service';
+import { ClientConcernsController, InstructionsController, LeadTransfersController, RevenueRecordsController } from './command-center.controller';
+import { ClientConcernsService } from './client-concerns.service';
+import { InstructionsService } from './instructions.service';
+import { LeadTransfersService } from './lead-transfers.service';
+import { RevenueRecordsService } from './revenue-records.service';
 import { ImportExportService } from './import-export.service';
 import { LeadsService } from './leads.service';
 import { PipelinesService } from './pipelines.service';
@@ -43,6 +50,7 @@ import {
     CustomFieldsController,
     ImportExportController,
     CrmConfigController,
+    CrmAdminController,
     GeoController,
     CompanyLeadsController,
     CompanyDashboardController,
@@ -52,9 +60,14 @@ import {
     CompanyLeadPartsController,
     CompanyFilesController,
     EmployeeStatsController,
+    RevenueRecordsController,
+    LeadTransfersController,
+    InstructionsController,
+    ClientConcernsController,
   ],
   providers: [
     CustomFieldsService,
+    CrmAdminService,
     CompaniesService,
     ContactsService,
     LeadsService,
@@ -70,7 +83,11 @@ import {
     CompanyLeadsService,
     CompanyWorkService,
     NotificationsService,
+    RevenueRecordsService,
+    LeadTransfersService,
+    InstructionsService,
+    ClientConcernsService,
   ],
-  exports: [CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CompanyWorkService],
+  exports: [RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

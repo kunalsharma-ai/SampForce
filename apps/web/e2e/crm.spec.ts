@@ -146,12 +146,15 @@ test('imports leads from CSV after a check, and finds them in search', async ({ 
 
 test('adds a custom field that appears on the lead form', async ({ page }) => {
   await signUp(page, 'Fields');
+  // The old address leads to CRM configuration's custom fields.
   await page.goto('/app/settings/custom-fields');
-  await page.getByLabel('Label').fill('Region');
-  await page.getByLabel('Type', { exact: true }).selectOption('SELECT');
-  await page.getByLabel('Options').fill('EMEA, Americas, APAC');
-  await page.getByRole('button', { name: 'Add field' }).click();
-  await expect(page.getByText('region', { exact: true })).toBeVisible();
+  const main = page.getByRole('main');
+  await main.getByLabel('Record type').selectOption('LEAD');
+  await main.getByLabel('Name', { exact: true }).fill('Region');
+  await main.getByLabel('Type', { exact: true }).selectOption('SELECT');
+  await main.getByLabel('Dropdown values').fill('EMEA\nAmericas\nAPAC');
+  await main.getByRole('button', { name: 'Add field' }).click();
+  await expect(main.getByText('region', { exact: true })).toBeVisible();
   await page.goto('/app/leads');
   await page.getByRole('button', { name: 'New lead' }).click();
   const dialog = page.getByRole('dialog');
@@ -178,7 +181,8 @@ test('invites a teammate who joins with the link', async ({ page, browser }) => 
   await invitee.getByLabel('Choose a password').fill('a-long-password-1');
   await invitee.getByRole('button', { name: 'Join Team Flow' }).click();
   await expect(invitee).toHaveURL(/\/app/);
-  await expect(invitee.getByRole('heading', { name: 'Welcome, New' })).toBeVisible();
+  // A new member is an executive (ADR 0063), so they open on their own executive dashboard.
+  await expect(invitee.getByRole('heading', { name: 'Executive dashboard', level: 1 })).toBeVisible();
   await other.close();
 
   await page.reload();

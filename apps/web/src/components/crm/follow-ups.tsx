@@ -1,20 +1,49 @@
 'use client';
 
-import { FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { CalendarClock, Check, Flag, Plus, Repeat, X } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { InfoTip } from '@/components/info-tip';
+import { ApiError } from '@/lib/api';
 import { fromLocalInput, toLocalInput, useFollowUpMutations, useFollowUps } from '@/lib/company-work';
 import { personLabel } from '@/lib/company-leads';
 import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useCan } from '@/lib/session';
+import { useOptionLookup, useOptions } from '@/lib/crm-admin';
 import { useCompanyAction } from './company-actions';
+import { CustomFieldInput, CustomFieldValue, fieldDefault, fieldLogic, fieldPayloadValue, useFieldDefs } from './custom-field-input';
 import { PersonSelect } from './lead-fields';
 import { Select, Textarea } from './select';
-import { DUE_LABEL, DUE_TONE, FOLLOW_UP_TYPE_LABEL, PRIORITY_LABEL } from './work-labels';
+import { DUE_LABEL, DUE_TONE, FOLLOW_UP_TYPE_LABEL, optionLabel, PRIORITY_LABEL } from './work-labels';
+
+/** The workspace's name for a follow-up category (built-in or added in CRM configuration). */
+export function useFollowUpTypeName() {
+  const t = useT();
+  const lookup = useOptionLookup('FOLLOW_UP_TYPE');
+  return (type: string) => optionLabel(lookup(type), type, FOLLOW_UP_TYPE_LABEL, t);
+}
+
+/** Custom field values on a follow-up or RFQ, as a short line of "Label: value" pairs. */
+export function CustomFieldSummary({ entity, values }: { entity: 'FOLLOW_UP' | 'RFQ'; values: Record<string, unknown> | undefined }) {
+  const defs = useFieldDefs(entity);
+  const shown = (defs.data ?? []).filter((d) => values && values[d.key] !== undefined && values[d.key] !== null && values[d.key] !== '');
+  if (!shown.length) return null;
+  return (
+    <dl className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+      {shown.map((d) => (
+        <div key={d.id} className="flex items-center gap-1">
+          <dt className="text-muted-foreground">{d.label}:</dt>
+          <dd>
+            <CustomFieldValue def={d} value={values![d.key]} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -26,6 +55,7 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
   const t = useT();
   const canWrite = useCan('activities:write');
   const m = useFollowUpMutations();
+  const typeName = useFollowUpTypeName();
   const [mode, setMode] = React.useState<'complete' | 'reschedule' | null>(null);
   const open = f.status === 'OPEN';
   return (
@@ -50,7 +80,7 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
             <span className="inline-flex items-center gap-1">
               <CalendarClock aria-hidden className="size-3.5" /> {formatDateTime(f.dueAt)}
             </span>
-            <span>{t(FOLLOW_UP_TYPE_LABEL[f.type])}</span>
+            <span>{typeName(f.type)}</span>
             {showCompany && f.company && (
               <Link className="inline-flex min-h-6 items-center text-primary hover:underline" href={`/app/companies/${f.company.id}`}>
                 {[f.company.leadNumber, f.company.name].filter(Boolean).join(' ')}
@@ -66,6 +96,7 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
           {f.summary && <p className="text-xs">{t('Previous discussion: {text}', { text: f.summary })}</p>}
           {f.nextAction && <p className="text-xs">{t('Next action: {text}', { text: f.nextAction })}</p>}
           {f.outcome && <p className="text-xs text-success">{t('Outcome: {text}', { text: f.outcome })}</p>}
+          <CustomFieldSummary entity="FOLLOW_UP" values={f.customFields} />
         </div>
         {canWrite && open && (
           <div className="flex flex-wrap gap-1">
@@ -160,6 +191,17 @@ export interface FollowUpPreset {
 export function FollowUpDialog({ preset, open, onOpenChange, employees }: { preset: FollowUpPreset; open: boolean; onOpenChange: (o: boolean) => void; employees?: { id: string; name: string }[] }) {
   const t = useT();
   const m = useFollowUpMutations();
+  const typeName = useFollowUpTypeName();
+  const categories = useOptions('FOLLOW_UP_TYPE');
+  const typeChoices = categories.data ? categories.data.filter((o) => o.active).map((o) => o.value) : [...FOLLOW_UP_TYPES];
+  const fields = useFieldDefs('FOLLOW_UP');
+  const formFields = (fields.data ?? []).filter((d) => d.showInForms);
+  const [custom, setCustom] = React.useState<Record<string, unknown>>({});
+  const cfRaw = (d: CustomFieldDef) => (custom[d.key] === undefined ? fieldDefault(d) : custom[d.key]);
+  const logic = fieldLogic(fields.data ?? [], (k) => {
+    const d = fields.data?.find((x) => x.key === k);
+    return d ? cfRaw(d) : undefined;
+  });
   const blank = React.useCallback(
     () => ({ type: preset.type ?? ('CALL' as FollowUpType), title: '', dueAt: toLocalInput(new Date(Date.now() + 86_400_000)), priority: 'NORMAL' as (typeof FOLLOW_UP_PRIORITIES)[number], contactId: preset.contactId ?? '', assigneeId: preset.ownerId ?? '', managerId: '', summary: '', nextAction: '', remarks: '' }),
     [preset.type, preset.contactId, preset.ownerId],
@@ -170,6 +212,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
   React.useEffect(() => {
     if (open) {
       setV(blank());
+      setCustom({});
       setErrors({});
       setFormError(null);
     }
@@ -181,7 +224,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       companyId: preset.companyId,
       contactId: v.contactId || null,
       type: v.type,
-      title: v.title || `${t(FOLLOW_UP_TYPE_LABEL[v.type])}: ${preset.companyName}`,
+      title: v.title || `${typeName(v.type)}: ${preset.companyName}`,
       dueAt: fromLocalInput(v.dueAt) ?? '',
       priority: v.priority,
       assigneeId: v.assigneeId || null,
@@ -190,6 +233,9 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       nextAction: v.nextAction || null,
       remarks: v.remarks || null,
       rfqId: preset.rfqId ?? null,
+      customFields: Object.fromEntries(
+        formFields.filter((d) => d.access.edit && logic.shows(d)).map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const).filter(([, x]) => x !== ''),
+      ),
     };
     const parsed = followUpInputSchema.safeParse(body);
     if (!parsed.success) {
@@ -202,6 +248,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       await m.create.mutateAsync(parsed.data);
       onOpenChange(false);
     } catch (err) {
+      if (err instanceof ApiError && err.details?.length) setErrors(Object.fromEntries(err.details.map((d) => [d.path, d.message])));
       setFormError(err instanceof Error ? err.message : t('Could not save.'));
     }
   };
@@ -213,9 +260,9 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
         <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           <Field id="fu-type" label={t('Follow-up type')}>
             <Select value={v.type} onChange={(e) => set({ type: e.target.value as FollowUpType })}>
-              {FOLLOW_UP_TYPES.map((k) => (
+              {[...new Set([...typeChoices, v.type])].map((k) => (
                 <option key={k} value={k}>
-                  {t(FOLLOW_UP_TYPE_LABEL[k])}
+                  {typeName(k)}
                 </option>
               ))}
             </Select>
@@ -224,7 +271,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
             <Input type="datetime-local" value={v.dueAt} onChange={(e) => set({ dueAt: e.target.value })} />
           </Field>
           <div className="sm:col-span-2">
-            <Field id="fu-title" label={t('What is it about?')} error={errors.title} hint={t('Left empty: “{example}”', { example: `${t(FOLLOW_UP_TYPE_LABEL[v.type])}: ${preset.companyName}` })}>
+            <Field id="fu-title" label={t('What is it about?')} error={errors.title} hint={t('Left empty: “{example}”', { example: `${typeName(v.type)}: ${preset.companyName}` })}>
               <Input value={v.title} onChange={(e) => set({ title: e.target.value })} maxLength={200} />
             </Field>
           </div>
@@ -266,6 +313,17 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
           <Field id="fu-remarks" label={t('Remarks')}>
             <Input value={v.remarks} onChange={(e) => set({ remarks: e.target.value })} />
           </Field>
+          {formFields.filter(logic.shows).map((d) => (
+            <CustomFieldInput
+              key={d.id}
+              def={d}
+              entity="FOLLOW_UP"
+              id={`fu-cf-${d.key}`}
+              value={logic.valueOf(d, cfRaw(d))}
+              onChange={(x) => setCustom((c) => ({ ...c, [d.key]: x }))}
+              error={errors[`customFields.${d.key}`]}
+            />
+          ))}
           {formError && (
             <p role="alert" className="text-sm text-critical sm:col-span-2">
               {formError}
