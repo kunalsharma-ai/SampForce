@@ -316,4 +316,7 @@ export const validation = {
   'Give the channel a name.': ['Ponle un nombre al canal.', 'Donnez un nom au canal.', 'Geben Sie dem Kanal einen Namen.', 'أعطِ القناة اسمًا.'],
   'Write a message or attach a file.': ['Escribe un mensaje o adjunta un archivo.', 'Écrivez un message ou joignez un fichier.', 'Schreiben Sie eine Nachricht oder hängen Sie eine Datei an.', 'اكتب رسالة أو أرفق ملفًا.'],
   'Type at least 2 characters.': ['Escribe al menos 2 caracteres.', 'Saisissez au moins 2 caractères.', 'Geben Sie mindestens 2 Zeichen ein.', 'اكتب حرفين على الأقل.'],
+  // Edit everywhere (ADR 0065)
+  'set by the interaction kind': ['lo determina el tipo de interacción', 'défini par le type d’interaction', 'durch die Art der Interaktion festgelegt', 'يحدده نوع التفاعل'],
+  'Enter a file name': ['Introduce un nombre de archivo', 'Saisissez un nom de fichier', 'Geben Sie einen Dateinamen ein', 'أدخل اسم الملف'],
 } as const satisfies TextTable;

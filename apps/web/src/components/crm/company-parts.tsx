@@ -10,9 +10,9 @@ import {
   PORTAL_DOCUMENT_MAX_BYTES,
   PORTAL_DOCUMENT_TYPES,
 } from '@dealflow/types';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Skeleton } from '@dealflow/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRightLeft, Building2, Download, FileText, Pencil, Plus, Trash2, UserRoundCog } from 'lucide-react';
+import { ArrowRightLeft, Building2, Check, Download, FileText, Pencil, Plus, Trash2, UserRoundCog, X } from 'lucide-react';
 import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
@@ -442,7 +442,18 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
   const t = useT();
   const canWrite = useCan('companies:write') && !company.restricted;
   const files = useCompanyFiles(company.id);
-  const { upload, remove } = useCompanyFileMutations(company.id);
+  const { upload, remove, rename } = useCompanyFileMutations(company.id);
+  const [renaming, setRenaming] = React.useState<{ id: string; name: string } | null>(null);
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renaming?.name.trim()) return;
+    try {
+      await rename.mutateAsync({ id: renaming.id, name: renaming.name.trim() });
+      setRenaming(null);
+    } catch {
+      // Shown below from rename.error.
+    }
+  };
   useCompanyAction('upload', canWrite ? () => focusSection('company-files', 'input[type="file"], button') : null);
   if (company.restricted) return null;
   return (
@@ -458,19 +469,39 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
             {files.data.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
                 <FileText aria-hidden className="size-4 text-muted-foreground" />
-                <span className="min-w-0 flex-1">
-                  <a className="block truncate text-primary hover:underline" href={`/api/v1/company-files/${f.id}/download`}>
-                    {f.name}
-                  </a>
-                  <span className="block text-xs text-muted-foreground">
-                    {formatBytes(f.sizeBytes)} · {f.uploadedBy?.name} · {formatDate(f.createdAt)}
+                {renaming?.id === f.id ? (
+                  <form onSubmit={saveName} className="flex min-w-0 flex-1 items-center gap-1">
+                    <label htmlFor={`file-name-${f.id}`} className="sr-only">
+                      {t('File name')}
+                    </label>
+                    <Input id={`file-name-${f.id}`} autoFocus className="h-8" maxLength={200} value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} />
+                    <Button type="submit" size="sm" variant="ghost" disabled={!renaming.name.trim() || rename.isPending} aria-label={t('Save file name')}>
+                      <Check aria-hidden />
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(null)} aria-label={t('Cancel')}>
+                      <X aria-hidden />
+                    </Button>
+                  </form>
+                ) : (
+                  <span className="min-w-0 flex-1">
+                    <a className="block truncate text-primary hover:underline" href={`/api/v1/company-files/${f.id}/download`}>
+                      {f.name}
+                    </a>
+                    <span className="block text-xs text-muted-foreground">
+                      {formatBytes(f.sizeBytes)} · {f.uploadedBy?.name} · {formatDate(f.createdAt)}
+                    </span>
                   </span>
-                </span>
+                )}
                 <Button asChild size="sm" variant="ghost">
                   <a href={`/api/v1/company-files/${f.id}/download`} aria-label={t('Download {name}', { name: f.name })}>
                     <Download aria-hidden />
                   </a>
                 </Button>
+                {canWrite && renaming?.id !== f.id && (
+                  <Button size="sm" variant="ghost" onClick={() => setRenaming({ id: f.id, name: f.name })} aria-label={t('Rename {name}', { name: f.name })}>
+                    <Pencil aria-hidden />
+                  </Button>
+                )}
                 {canWrite && (
                   <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => window.confirm(t('Delete {name}?', { name: f.name })) && remove.mutate(f.id)} aria-label={t('Delete {name}', { name: f.name })}>
                     <Trash2 aria-hidden />
@@ -491,9 +522,9 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
             hint={t('Kept for your team; not shared in the client portal. Up to 10 MB.')}
           />
         )}
-        {upload.error && (
+        {(upload.error || rename.error) && (
           <p role="alert" className="text-sm text-critical">
-            {upload.error.message}
+            {(upload.error ?? rename.error)?.message}
           </p>
         )}
       </CardContent>

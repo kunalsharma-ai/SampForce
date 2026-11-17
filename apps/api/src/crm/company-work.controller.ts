@@ -6,6 +6,7 @@ import {
   followUpRescheduleSchema,
   followUpUpdateSchema,
   interactionInputSchema,
+  interactionUpdateSchema,
   interactionListQuerySchema,
   rfqConvertSchema,
   rfqInputSchema,
@@ -54,6 +55,12 @@ export class InteractionsController {
   @RequirePermissions('activities:write')
   create(@Auth() auth: AuthContext, @Body(new ZodPipe(interactionInputSchema)) body: z.output<typeof interactionInputSchema>, @Meta() meta: RequestMeta) {
     return this.work.logInteraction(auth, body, meta);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('activities:write')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(interactionUpdateSchema)) body: z.output<typeof interactionUpdateSchema>, @Meta() meta: RequestMeta) {
+    return this.work.updateInteraction(auth, id, body, meta);
   }
 
   @Delete(':id')

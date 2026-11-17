@@ -13,7 +13,7 @@ import {
   Input,
   Skeleton,
 } from '@dealflow/ui';
-import { Check, CheckCheck, Send } from 'lucide-react';
+import { Check, CheckCheck, Pencil, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
@@ -29,31 +29,51 @@ import { INSTRUCTION_STATUS_LABEL, INSTRUCTION_STATUS_TONE, MESSAGE_PRIORITY_LAB
  * acknowledges each instruction and marks it done, and the sender follows its progress.
  */
 
-/** Send an instruction or remark to someone reporting to the caller. */
+/** The `date` input value of a due date, in the browser's time zone. */
+function toDateInput(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Send an instruction or remark to someone reporting to the caller. With `editing`, the sender changes that open
+ * instruction instead (its recipient stays the same and is told it changed).
+ */
 export function InstructionDialog({
   people,
   toUserId,
   company,
+  editing,
   onClose,
 }: {
   people: PersonRef[];
   toUserId?: string;
   company?: { id: string; name: string } | null;
+  editing?: InstructionRow;
   onClose: () => void;
 }) {
   const t = useT();
-  const { send } = useInstructionMutations();
-  const [to, setTo] = React.useState(toUserId ?? '');
-  const [kind, setKind] = React.useState<(typeof INSTRUCTION_KINDS)[number]>('INSTRUCTION');
-  const [message, setMessage] = React.useState('');
-  const [priority, setPriority] = React.useState<(typeof MESSAGE_PRIORITIES)[number]>('NORMAL');
-  const [due, setDue] = React.useState('');
+  const { send, update } = useInstructionMutations();
+  const [to, setTo] = React.useState(editing?.to?.id ?? toUserId ?? '');
+  const [kind, setKind] = React.useState<(typeof INSTRUCTION_KINDS)[number]>(editing?.kind ?? 'INSTRUCTION');
+  const [message, setMessage] = React.useState(editing?.message ?? '');
+  const [priority, setPriority] = React.useState<(typeof MESSAGE_PRIORITIES)[number]>(editing?.priority ?? 'NORMAL');
+  const [due, setDue] = React.useState(toDateInput(editing?.dueAt ?? null));
+  const choices = editing?.to ? [editing.to] : people;
+  const pending = send.isPending || update.isPending;
   const [error, setError] = React.useState<string | null>(null);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!to) return setError(t('Choose who it is for.'));
     if (!message.trim()) return setError(t('Write the instruction.'));
     try {
+      if (editing) {
+        await update.mutateAsync({ id: editing.id, input: { kind, message: message.trim(), priority, dueAt: due ? new Date(`${due}T17:00:00`).toISOString() : null } });
+        onClose();
+        return;
+      }
       await send.mutateAsync({
         toUserId: to,
         kind,
@@ -70,18 +90,20 @@ export function InstructionDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg p-6">
-        <DialogTitle className="text-lg font-semibold">{t('Send an instruction')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{editing ? t('Edit instruction') : t('Send an instruction')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
-          {company?.name
+          {editing
+            ? t('They are told it changed and see the new wording.')
+            : company?.name
             ? t('About {company}. They are notified and can acknowledge it and mark it done.', { company: company.name })
             : t('They are notified and can acknowledge it and mark it done.')}
         </DialogDescription>
         <form onSubmit={submit} noValidate className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="ins-to" label={t('To')}>
-              <Select value={to} onChange={(e) => setTo(e.target.value)}>
-                <option value="">{t('Choose a person')}</option>
-                {people.map((p) => (
+              <Select value={to} disabled={!!editing} onChange={(e) => setTo(e.target.value)}>
+                {!editing && <option value="">{t('Choose a person')}</option>}
+                {choices.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -121,8 +143,14 @@ export function InstructionDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={send.isPending}>
-              <Send aria-hidden /> {send.isPending ? t('Sending…') : t('Send')}
+            <Button type="submit" disabled={pending}>
+              {editing ? (
+                pending ? t('Saving…') : t('Save changes')
+              ) : (
+                <>
+                  <Send aria-hidden /> {pending ? t('Sending…') : t('Send')}
+                </>
+              )}
             </Button>
           </div>
         </form>
@@ -140,6 +168,7 @@ function Meta({ r, sent }: { r: InstructionRow; sent: boolean }) {
         r.kind === 'REMARK' ? t('Remark') : null,
         r.dueAt && t('Due {date}', { date: formatDate(r.dueAt) }),
         relativeTime(r.createdAt),
+        r.editedAt && t('(edited)'),
       ]
         .filter(Boolean)
         .join(' · ')}
@@ -268,6 +297,7 @@ export function SentInstructions({ onSend }: { onSend: (() => void) | null }) {
   const [all, setAll] = React.useState(false);
   const q = useInstructions('sent', all ? 'all' : 'open');
   const { cancel } = useInstructionMutations();
+  const [editing, setEditing] = React.useState<InstructionRow | null>(null);
   return (
     <Card className="p-3">
       <div className="mb-2 flex flex-wrap justify-end gap-2">
@@ -300,6 +330,11 @@ export function SentInstructions({ onSend }: { onSend: (() => void) | null }) {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge tone={INSTRUCTION_STATUS_TONE[r.status]}>{t(INSTRUCTION_STATUS_LABEL[r.status])}</Badge>
+                {r.canEdit && (
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(r)} aria-label={t('Edit “{subject}”', { subject: r.message.slice(0, 60) })}>
+                    <Pencil aria-hidden />
+                  </Button>
+                )}
                 {r.canCancel && (
                   <Button size="sm" variant="ghost" onClick={() => cancel.mutate(r.id)} disabled={cancel.isPending}>
                     {t('Withdraw')}
@@ -310,6 +345,7 @@ export function SentInstructions({ onSend }: { onSend: (() => void) | null }) {
           ))}
         </ul>
       )}
+      {editing && <InstructionDialog people={[]} editing={editing} onClose={() => setEditing(null)} />}
     </Card>
   );
 }

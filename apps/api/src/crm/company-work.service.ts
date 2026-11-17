@@ -12,6 +12,7 @@ import {
   type FollowUpType,
   INTERACTION_ACTIVITY_TYPE,
   type InteractionInput,
+  type InteractionUpdate,
   type InteractionKind,
   type InteractionRow,
   type Page,
@@ -272,6 +273,7 @@ export class CompanyWorkService {
           rfq: a.rfqId ? (rfqById.get(a.rfqId) ?? null) : null,
           createdBy: a.ownerId ? (people.get(a.ownerId) ?? null) : null,
           aiAssisted: a.aiAssisted,
+          editedAt: a.editedAt?.toISOString() ?? null,
         })),
         ...emails.map((e) => ({
           id: e.id,
@@ -333,6 +335,37 @@ export class CompanyWorkService {
     });
   }
 
+  /** Edits a logged interaction. Synced emails come from the mailbox and are not edited here. */
+  updateInteraction(auth: AuthContext, id: string, input: InteractionUpdate, meta: RequestMeta): Promise<InteractionRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const before = await tx.activity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
+      if (!before?.companyId) throw notFound('Activity');
+      await this.editableCompany(tx, auth, before.companyId);
+      await this.assertCompanyChildren(tx, auth.tenantId, before.companyId, { contactId: input.contactId, fileId: input.fileId, rfqId: input.rfqId });
+      const set = <K extends keyof InteractionUpdate>(k: K) => input[k] !== undefined;
+      const data: Prisma.ActivityUncheckedUpdateInput = {
+        ...(input.kind !== undefined ? { interaction: input.kind, type: INTERACTION_ACTIVITY_TYPE[input.kind] } : {}),
+        ...(input.subject !== undefined ? { subject: input.subject } : {}),
+        ...(input.occurredAt !== undefined ? { occurredAt: new Date(input.occurredAt) } : {}),
+        ...(set('contactId') ? { contactId: input.contactId ?? null } : {}),
+        ...(set('sender') ? { sender: input.sender ?? null } : {}),
+        ...(set('recipient') ? { recipient: input.recipient ?? null } : {}),
+        ...(set('outcome') ? { outcome: input.outcome ?? null } : {}),
+        ...(set('sentiment') ? { sentiment: input.sentiment ?? null } : {}),
+        ...(set('remarks') ? { body: input.remarks ?? null } : {}),
+        ...(set('nextAction') ? { nextAction: input.nextAction ?? null } : {}),
+        ...(set('fileId') ? { fileId: input.fileId ?? null } : {}),
+        ...(set('rfqId') ? { rfqId: input.rfqId ?? null } : {}),
+      };
+      const fields = Object.keys(input).filter((k) => input[k as keyof InteractionUpdate] !== undefined);
+      if (fields.length) {
+        await tx.activity.update({ where: { id }, data: { ...data, editedAt: new Date() } });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'activity.updated', entityType: 'activity', entityId: id, metadata: { interaction: input.kind ?? before.interaction, fields }, meta });
+      }
+      return (await this.interactionsIn(tx, auth.tenantId, [id]))[0]!;
+    });
+  }
+
   private async logIn(tx: TenantTx, auth: AuthContext, input: InteractionInput & { occurredAt?: string }): Promise<string> {
     const row = await tx.activity.create({
       data: {
@@ -371,7 +404,7 @@ export class CompanyWorkService {
         companyId: a.companyId, contact: c ? { id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(' ') } : null,
         sender: a.sender, recipient: a.recipient, outcome: a.outcome, sentiment: (a.sentiment ?? null) as InteractionRow['sentiment'], remarks: a.body, nextAction: a.nextAction, followUpAt: a.followUpAt?.toISOString() ?? null,
         file: files.find((f) => f.id === a.fileId) ?? null, rfq: rfqs.find((r) => r.id === a.rfqId) ?? null,
-        createdBy: a.ownerId ? (people.get(a.ownerId) ?? null) : null, aiAssisted: a.aiAssisted,
+        createdBy: a.ownerId ? (people.get(a.ownerId) ?? null) : null, aiAssisted: a.aiAssisted, editedAt: a.editedAt?.toISOString() ?? null,
       };
     });
   }

@@ -60,6 +60,7 @@ import {
   followUpRescheduleSchema,
   followUpUpdateSchema,
   interactionInputSchema,
+  interactionUpdateSchema,
   interactionListQuerySchema,
   rfqConvertSchema,
   rfqInputSchema,
@@ -142,6 +143,8 @@ import {
   snapshotInputSchema,
   workflowDraftRequestSchema,
   activityInputSchema,
+  activityUpdateSchema,
+  companyFileRenameSchema,
   approvalDecisionSchema,
   inboxNoteSchema,
   meetingRecordCreateSchema,
@@ -365,11 +368,13 @@ export function buildOpenApiDocument(): object {
   action('get', '/companies/{id}/files', 'Company leads', 'Files kept with the company for the team (companies:read)');
   r.registerPath({ method: 'post', path: '/companies/{id}/files', tags: ['Company leads'], summary: 'Upload a file as the raw request body, up to 10 MB (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: z.object({ name: z.string(), rfqId: z.string().uuid().optional() }) }, responses: { 201: ok('File'), ...notFound, ...errors } });
   action('get', '/company-files/{id}/download', 'Company leads', 'Download a company file (companies:read)');
+  action('patch', '/company-files/{id}', 'Company leads', 'Rename a company file (companies:write)', companyFileRenameSchema);
   action('delete', '/company-files/{id}', 'Company leads', 'Delete a company file (companies:write)');
   action('get', '/companies/{id}/dashboard', 'Company dashboard', 'Key numbers counted from CRM records: employees, emails, calls, meetings, follow-ups, RFQs and business, by currency (companies:read)');
   action('get', '/companies/{id}/employees', 'Company dashboard', 'The employee directory with emails sent, responses, last update and next follow-up (companies:read, contacts:read)');
   r.registerPath({ method: 'get', path: '/companies/{id}/interactions', tags: ['Company dashboard'], summary: 'Logged interactions and synced emails, newest first, marked LOGGED or SYNCED (companies:read, activities:read)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: interactionListQuerySchema }, responses: { 200: ok('Interactions'), ...notFound, ...errors } });
   action('post', '/interactions', 'Company dashboard', 'Log an interaction with a company and, if a follow-up date is given, schedule the follow-up (activities:write)', interactionInputSchema);
+  action('patch', '/interactions/{id}', 'Company dashboard', 'Edit a logged interaction (activities:write)', interactionUpdateSchema);
   action('delete', '/interactions/{id}', 'Company dashboard', 'Delete a logged interaction (activities:write)');
   r.registerPath({ method: 'get', path: '/follow-ups', tags: ['Follow-ups'], summary: 'Follow-ups by bucket (today, upcoming, overdue, completed, rescheduled, cancelled) for me, my team or everyone (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Follow-ups'), ...errors } });
   r.registerPath({ method: 'get', path: '/follow-ups/counts', tags: ['Follow-ups'], summary: 'How many follow-ups are in each bucket (activities:read)', security: secured, request: { query: followUpListQuerySchema }, responses: { 200: ok('Counts'), ...errors } });
@@ -436,6 +441,8 @@ export function buildOpenApiDocument(): object {
   action('delete', '/pipelines/{id}', 'Pipelines', 'Delete an empty, non-default pipeline (pipelines:manage)');
   action('get', '/activities', 'Activities', 'Timeline for a record (activities:read)', undefined, { query: z.object({ leadId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), companyId: z.string().uuid().optional(), opportunityId: z.string().uuid().optional() }) });
   action('post', '/activities', 'Activities', 'Log a call, email, meeting or note (activities:write)', activityInputSchema);
+  action('get', '/activities/{id}', 'Activities', 'One logged activity (activities:read)');
+  action('patch', '/activities/{id}', 'Activities', 'Edit a logged activity (activities:write)', activityUpdateSchema);
   action('delete', '/activities/{id}', 'Activities', 'Delete (activities:write)');
   action('get', '/tasks', 'Tasks', 'My or all tasks (activities:read)', undefined, { query: taskListQuerySchema });
   action('post', '/tasks', 'Tasks', 'Create a task (activities:write)', taskInputSchema);
