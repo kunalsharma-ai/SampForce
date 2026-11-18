@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { explainNetworkError, hostAndPort, networkCode } from '../common/network-error';
 import { publicFetch } from '../common/net-guard';
 import { MailerService } from '../mail/mailer.service';
 
@@ -102,8 +103,9 @@ export class ConnectionTests {
     try {
       res = await fetch(`${trim(t.base)}/models`, { headers: { accept: 'application/json', ...(t.apiKey ? { authorization: `Bearer ${t.apiKey}` } : {}) }, signal: AbortSignal.timeout(TIMEOUT), redirect: 'error' });
     } catch (err) {
-      if (err instanceof Error && err.name === 'TimeoutError') throw err;
-      throw new Error(`${t.name} could not be reached at ${trim(t.base)}. Check the address and that the server is running.`);
+      const { host, port } = hostAndPort(t.base);
+      if (err instanceof Error && err.name === 'TimeoutError') throw new Error(explainNetworkError({ code: 'ETIMEDOUT' }, t.name, host, port));
+      throw new Error(explainNetworkError(err, t.name, host, port));
     }
     if (res.status === 401 || res.status === 403) throw new Error(`${t.name} refused the API key (${res.status}). Check ${t.keyName}.`);
     if (!res.ok) throw new Error(`${t.name} answered ${res.status}.`);
@@ -172,7 +174,16 @@ export class ConnectionTests {
       return await this.mailer.verify();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Never echo the URL back: it holds the password.
+      const code = networkCode(err);
+      const smtpCode = (err as { code?: string }).code;
+      // Never echo the URL back: it holds the password. Host and port are fine to show.
+      const { host, port } = hostAndPort(this.env.SMTP_URL ?? '');
+      const smtpPort = port === '80' || port === '443' || !port ? (this.env.SMTP_URL?.startsWith('smtps:') ? '465' : '587') : port;
+      if (smtpCode === 'EAUTH') throw new Error(`The email service refused the user name or password (EAUTH): ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 160)}`);
+      if (code === 'ETIMEDOUT' || /Greeting never received|Connection timeout/i.test(msg)) {
+        throw new Error(`The email service did not answer at ${host} port ${smtpPort} (ETIMEDOUT). Many cloud providers block outgoing email ports (25, 465, 587) on new servers: ask yours to open them, or try port 2525 if your email service offers it. Also allow the port in the server's own firewall.`);
+      }
+      if (code) throw new Error(explainNetworkError(err, 'The email service', host, smtpPort));
       throw new Error(`The email service refused the connection or sign-in: ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 200)}`);
     }
   }

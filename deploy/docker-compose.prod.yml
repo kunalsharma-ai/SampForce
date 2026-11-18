@@ -42,6 +42,11 @@ x-app-env: &app-env
   WEB_ORIGINS: ${WEB_ORIGINS:-https://${DOMAIN}}
   METRICS_PORT: '9464'
 
+# Lets the API and the worker reach services running on this server itself (a self-hosted Ollama, a local mail
+# relay) at host.docker.internal. Inside a container, localhost is the container, not the server.
+x-host-gateway: &host-gateway
+  - 'host.docker.internal:host-gateway'
+
 services:
   # MongoDB 7.0 (see docs/DATABASE.md for why not 8), a one-member replica set with authentication (see mongo/start.sh and mongo/healthcheck.sh).
   mongo:
@@ -94,6 +99,7 @@ services:
     user: '1000:1000'
     env_file: [sampforce.env]
     environment: *app-env
+    extra_hosts: *host-gateway
     depends_on:
       migrate: { condition: service_completed_successfully }
     # The image's own HEALTHCHECK calls /api/v1/health/ready.
@@ -106,6 +112,7 @@ services:
     command: ['node', 'dist/worker.js']
     env_file: [sampforce.env]
     environment: *app-env
+    extra_hosts: *host-gateway
     depends_on:
       migrate: { condition: service_completed_successfully }
       api: { condition: service_started }
