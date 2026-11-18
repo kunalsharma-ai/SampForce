@@ -142,6 +142,11 @@ export const apiEnvSchema = z.object({
   CUSTOM_AI_MODEL: z.string().optional().transform((v) => v || undefined),
   /** Comma-separated provider keys in the order they are tried (anthropic,groq,gemini…). Unset: every configured provider in the built-in order. */
   AI_PROVIDER_ORDER: z.string().optional().transform((v) => v || undefined),
+  /**
+   * Private or internal hosts that workspaces may use for their own AI or email server (ADR 0068): host names,
+   * addresses and ranges, comma-separated (ollama.lan, 10.0.0.0/8, 2406:b400::/32). Set in the operator console.
+   */
+  TRUSTED_PRIVATE_HOSTS: z.string().optional().transform((v) => v || undefined),
   /** Provider endpoints, for tests that point them at a local stand-in (like AI_API_BASE_URL). */
   OPENAI_API_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
   GEMINI_API_BASE_URL: z.string().url().default('https://generativelanguage.googleapis.com/v1beta/openai'),

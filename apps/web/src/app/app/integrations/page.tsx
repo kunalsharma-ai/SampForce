@@ -6,6 +6,7 @@ import { Tr } from '@/lib/i18n';
 import { ApiKeysAndZapier } from './api-keys';
 import { BrowserExtension } from './browser-extension';
 import { MailboxConnections, WebhooksManager } from './integrations-board';
+import { OwnServers } from './own-servers';
 import { WorkspaceApps } from './workspace-apps';
 
 export const metadata: Metadata = { title: 'Integrations' };
@@ -20,13 +21,14 @@ const PLANNED: { category: string; items: { name: string; phase: string; needs: 
 export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-8">
-      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned." />
+      <PageHeader title="Integrations" description="Connect your own mailbox and calendar, connect workspace apps such as Slack, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned." />
       <Suspense>
         <MailboxConnections />
       </Suspense>
       <Suspense>
         <WorkspaceApps />
       </Suspense>
+      <OwnServers />
       <BrowserExtension />
       <ApiKeysAndZapier />
       <WebhooksManager />

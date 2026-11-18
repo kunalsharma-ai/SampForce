@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { explainSmtpError, OwnServersStore } from '../own-servers/own-servers.store';
 
 export interface SystemMail {
   to: string;
@@ -22,7 +23,10 @@ export class MailerService {
   private readonly log = new Logger(MailerService.name);
   private cached: { key: string; transport: Transporter } | null = null;
 
-  constructor(@Inject(API_ENV) private readonly env: ApiEnv) {}
+  constructor(
+    @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly own: OwnServersStore,
+  ) {}
 
   /** Built on first use and rebuilt when SMTP_URL or MAIL_FROM changes, so a key saved in the operator console applies at once. */
   private get transport(): Transporter | null {
@@ -49,8 +53,39 @@ export class MailerService {
     return !!this.env.SMTP_URL && !!this.env.MAIL_FROM;
   }
 
-  /** Throws MAIL_NOT_CONFIGURED when there is no email service, and a 503 when it refuses the message. */
-  async send(mail: SystemMail): Promise<void> {
+  /** Whether email can go out for this workspace: through its own email server (ADR 0068) or the shared one. */
+  async configuredFor(tenantId: string | null | undefined): Promise<boolean> {
+    if (this.configured) return true;
+    if (!tenantId) return false;
+    return !!(await this.own.row(tenantId, 'SMTP'));
+  }
+
+  /**
+   * Throws MAIL_NOT_CONFIGURED when there is no email service, and a 503 when it refuses the message. With a
+   * workspace, email the workspace sends (portal invitations, replies, portal password resets) goes through the
+   * workspace's own email server first; when that fails, through the shared one, so a message is not lost.
+   */
+  async send(mail: SystemMail, tenantId?: string | null): Promise<void> {
+    if (tenantId) {
+      let own: Awaited<ReturnType<OwnServersStore['mailer']>> = null;
+      let ownHost: { host: string; port: number } | null = null;
+      try {
+        own = await this.own.mailer(tenantId);
+        if (own) {
+          ownHost = own.host;
+          await own.transport.sendMail({ from: own.from, to: mail.to, subject: mail.subject, text: mail.text });
+          void this.own.recordEmail(tenantId, null).catch(() => undefined);
+          return;
+        }
+      } catch (err) {
+        const e = new Error(ownHost ? explainSmtpError(err, ownHost.host, ownHost.port) : err instanceof Error ? err.message : String(err));
+        this.log.warn({ err: e.message }, 'The workspace’s own email server did not take the message; trying the shared one');
+        void this.own.recordEmail(tenantId, e).catch(() => undefined);
+        if (!this.configured) throw new ServiceUnavailableException({ code: 'MAIL_FAILED', message: 'The email could not be sent. Try again in a few minutes.' });
+      } finally {
+        own?.close();
+      }
+    }
     const transport = this.transport;
     if (!transport || !this.env.MAIL_FROM) throw new ServiceUnavailableException(MAIL_NOT_CONFIGURED);
     try {

@@ -129,7 +129,7 @@ export class PortalAdminService {
   }
 
   private async sendInvite(tx: TenantTx, tenantId: string, to: string, name: string, url: string): Promise<boolean> {
-    if (!this.mailer.configured) return false;
+    if (!(await this.mailer.configuredFor(tenantId))) return false;
     const seller = (await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } })).name;
     return this.mailer
       // In the language of the person sending it (ADR 0052): the client's own language is not known yet.
@@ -137,7 +137,7 @@ export class PortalAdminService {
         to,
         subject: tr('{seller} invited you to their client portal', { seller }),
         text: `${tr('Hello {name},', { name })}\n\n${tr('{seller} has given you access to their client portal, where you can follow your projects, review proposals and send requests.', { seller })}\n\n${tr('Choose a password here (the link works for 7 days):')}\n${url}\n`,
-      })
+      }, tenantId)
       .then(() => true)
       .catch(() => false);
   }
@@ -309,7 +309,7 @@ export class PortalAdminService {
       await addUpdate(tx, auth.tenantId, r.companyId, 'request', `Reply on ${requestRef(r.number)}`, r.subject);
       const opener = r.portalUserId ? await tx.portalUser.findFirst({ where: { id: r.portalUserId, status: 'active' }, select: { email: true, name: true } }) : null;
       const settings = await tx.portalSettings.findUnique({ where: { tenantId: auth.tenantId } });
-      if (opener && settings?.enabled && this.mailer.configured) {
+      if (opener && settings?.enabled && (await this.mailer.configuredFor(auth.tenantId))) {
         const seller = (await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true } })).name;
         // Best effort: the reply is saved either way and shows in the portal.
         await this.mailer
@@ -317,7 +317,7 @@ export class PortalAdminService {
             to: opener.email,
             subject: tr('{seller} replied to {ref}: {subject}', { seller, ref: requestRef(r.number), subject: r.subject }),
             text: `${tr('Hello {name},', { name: opener.name })}\n\n${tr('There is a new reply to your request. Read it and answer in the portal:')}\n${this.portalAuth.portalUrl(settings.slug)}\n`,
-          })
+          }, auth.tenantId)
           .catch(() => undefined);
       }
       return requestDetail(tx, auth.tenantId, id);

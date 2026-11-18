@@ -7,7 +7,8 @@ import { PrismaService } from '../common/prisma.service';
 import { requestLanguage } from '../common/request-language';
 import { errorMessage } from '../worker/queue';
 import { inLanguagePrompt } from './language';
-import { AI_PROVIDER_DEFS, AiProviderChain } from './ai-providers';
+import { OwnServersStore } from '../own-servers/own-servers.store';
+import { AI_PROVIDER_DEFS, AiProviderChain, type OwnEntry } from './ai-providers';
 import { type Effort, type ModelBlock, type ModelMessage, type ModelProvider, type ModelRequest, type ModelResponse } from './provider';
 import { Redactor } from './redact';
 
@@ -58,6 +59,7 @@ export class AiGateway {
     private readonly prisma: PrismaService,
     @Inject(API_ENV) private readonly env: ApiEnv,
     @Inject(AI_PROVIDER) private readonly providers: AiProviderChain,
+    private readonly own: OwnServersStore,
   ) {}
 
   /** Resolved per call, so an AI key saved in the operator console applies without a restart (ADR 0051, 0067). */
@@ -91,31 +93,40 @@ export class AiGateway {
       const s = await this.settings(tx, tenantId);
       const credits = await this.credits(tx, tenantId, s.monthlyCreditCap);
       const disabled = new Set(s.disabledAgents);
+      const own = await this.own.ai(tenantId);
+      const ownCount = own?.entries.length ?? 0;
       const agents = Object.values(AI_AGENTS).map((a) => {
         const reason = !s.enabled
           ? 'AI is switched off for this workspace.'
           : disabled.has(a.key)
             ? 'An administrator switched this agent off.'
-            : !this.provider
+            : !this.provider && !ownCount
               ? 'No AI provider is configured on this installation.'
-              : credits.remaining <= 0
+              : credits.remaining <= 0 && !ownCount
                 ? 'This month’s AI credits are used up.'
                 : null;
         return { key: a.key, enabled: s.enabled && !disabled.has(a.key), available: reason === null, reason };
       });
-      const plan = this.providers.plan();
-      const first = plan[0] ? AI_PROVIDER_DEFS[plan[0]] : null;
+      const plan = own && !own.useShared ? [] : this.providers.plan();
+      const shared = plan.map((k) => ({ name: AI_PROVIDER_DEFS[k].name, model: AI_PROVIDER_DEFS[k].model(this.env) }));
+      const ownRows = (own?.entries ?? []).map((e) => ({ name: `${e.name} (your workspace)`, model: e.provider.model || null }));
+      const all = [...ownRows, ...shared];
+      const first = all[0] ?? null;
       return {
         provider: {
           configured: !!first,
           name: first?.name ?? 'Anthropic Claude',
-          model: first?.model(this.env) ?? null,
-          fallbacks: plan.slice(1).map((k) => ({ name: AI_PROVIDER_DEFS[k].name, model: AI_PROVIDER_DEFS[k].model(this.env) })),
-          note: first
-            ? plan.length > 1
-              ? 'An API key is set. When this provider is busy, out of free quota or failing, SampForce moves on to the next provider at once.'
-              : 'An API key is set. SampForce has not verified it until the first call succeeds; failures are shown on each run.'
-            : 'An operator must add an AI provider key in the operator console under Providers: Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, Mistral or a self-hosted server such as Ollama. Until then AI features say they are unavailable.',
+          model: first?.model ?? null,
+          fallbacks: all.slice(1).map((r) => ({ name: r.name, model: r.model ?? '' })),
+          note: ownCount
+            ? own!.useShared && shared.length
+              ? 'Your workspace’s own AI providers answer first, at no cost in AI credits. When they fail, SampForce’s shared providers answer and use AI credits.'
+              : 'Your workspace’s own AI providers answer every request, at no cost in AI credits.'
+            : first
+              ? all.length > 1
+                ? 'An API key is set. When this provider is busy, out of free quota or failing, SampForce moves on to the next provider at once.'
+                : 'An API key is set. SampForce has not verified it until the first call succeeds; failures are shown on each run.'
+              : 'An operator must add an AI provider key in the operator console under Providers: Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, Mistral or a self-hosted server such as Ollama. A workspace admin can also add the workspace’s own keys or AI server under Integrations. Until then AI features say they are unavailable.',
         },
         settings: {
           enabled: s.enabled,
@@ -131,23 +142,28 @@ export class AiGateway {
   }
 
   /** Throws AiUnavailable when the agent may not call a model now. Returns the redaction setting. */
-  async preflight(ctx: Omit<CallContext, 'promptVersion'>): Promise<{ redact: boolean }> {
+  async preflight(ctx: Omit<CallContext, 'promptVersion'>): Promise<{ redact: boolean; own: OwnEntry[]; useShared: boolean }> {
+    const own = await this.own.ai(ctx.tenantId);
+    const ownEntries = own?.entries ?? [];
     const agent = AI_AGENTS[ctx.agent];
     return this.prisma.run({ tenantId: ctx.tenantId, userId: ctx.userId ?? '' }, async (tx) => {
       const s = await this.settings(tx, ctx.tenantId);
       if (!(await hasFeature(tx, ctx.tenantId, 'ai_assistant'))) throw new AiUnavailable('AI_NOT_IN_PLAN', 'AI is not included in this workspace’s plan. A workspace admin can upgrade on the Billing page.');
       if (!s.enabled) throw new AiUnavailable('AI_DISABLED', 'AI is switched off for this workspace. An administrator can turn it back on in AI Agents.');
       if (s.disabledAgents.includes(ctx.agent)) throw new AiUnavailable('AGENT_DISABLED', `The ${agent.name} agent is switched off for this workspace.`);
-      if (!this.provider) throw new AiUnavailable('AI_NOT_CONFIGURED', 'No AI provider is configured on this installation, so this needs an operator to add an API key.');
+      let useShared = !own || own.useShared;
+      if (!this.provider && !ownEntries.length) throw new AiUnavailable('AI_NOT_CONFIGURED', 'No AI provider is configured on this installation, so this needs an operator to add an API key.');
       const credits = await this.credits(tx, ctx.tenantId, s.monthlyCreditCap);
       if (credits.remaining < creditsFor(0, 0, agent.tier)) {
-        throw new AiUnavailable('AI_CREDITS_EXHAUSTED', `This workspace has used its ${credits.limit} AI credits for this month.`);
+        // The workspace's own providers cost no credits (ADR 0068): with them, only the shared ones are left out.
+        if (!ownEntries.length) throw new AiUnavailable('AI_CREDITS_EXHAUSTED', `This workspace has used its ${credits.limit} AI credits for this month.`);
+        useShared = false;
       }
       if (ctx.userId) {
         const recent = await tx.aiUsage.count({ where: { tenantId: ctx.tenantId, userId: ctx.userId, createdAt: { gte: new Date(Date.now() - 60_000) } } });
         if (recent >= this.env.AI_USER_CALLS_PER_MINUTE) throw new AiUnavailable('AI_RATE_LIMITED', 'Too many AI requests in the last minute. Try again shortly.');
       }
-      return { redact: s.redactPii };
+      return { redact: s.redactPii, own: ownEntries, useShared };
     });
   }
 
@@ -157,8 +173,10 @@ export class AiGateway {
    * system prompt, messages and tool definitions are left as they are.
    */
   async call(ctx: CallContext, req: ModelRequest, redactor: Redactor | null): Promise<ModelResponse> {
-    await this.preflight(ctx);
-    const provider = this.provider!;
+    const { own, useShared } = await this.preflight(ctx);
+    const provider = this.provider;
+    const fallbackName = own[0] ? `own:${own[0].kind}` : (provider?.name ?? 'none');
+    const fallbackModel = own[0]?.provider.model ?? provider?.model ?? '';
     const tier = AI_AGENTS[ctx.agent].tier;
     const localized: ModelRequest = { ...req, system: inLanguagePrompt(req.system, requestLanguage()) };
     const outgoing: ModelRequest = redactor
@@ -168,11 +186,12 @@ export class AiGateway {
     let res: ModelResponse | null = null;
     let failure: unknown = null;
     try {
-      res = await provider.generate({ ...outgoing, effort: outgoing.effort ?? EFFORT[tier] });
+      res = await this.providers.generateWith({ ...outgoing, effort: outgoing.effort ?? EFFORT[tier] }, own, useShared);
     } catch (err) {
       failure = err;
     }
-    const credits = res ? creditsFor(res.inputTokens, res.outputTokens, tier) : 0;
+    // An answer from the workspace's own provider is paid for by the workspace directly: no AI credits.
+    const credits = res && !res.provider?.startsWith('own:') ? creditsFor(res.inputTokens, res.outputTokens, tier) : 0;
     await this.prisma.run({ tenantId: ctx.tenantId, userId: ctx.userId ?? '' }, (tx) =>
       tx.aiUsage.create({
         data: {
@@ -180,8 +199,8 @@ export class AiGateway {
           userId: ctx.userId,
           runId: ctx.runId ?? null,
           agent: ctx.agent,
-          provider: res?.provider ?? provider.name,
-          model: res?.model ?? provider.model,
+          provider: res?.provider ?? fallbackName,
+          model: res?.model ?? fallbackModel,
           inputTokens: res?.inputTokens ?? 0,
           outputTokens: res?.outputTokens ?? 0,
           credits,

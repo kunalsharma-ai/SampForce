@@ -352,6 +352,7 @@ export class OperatorService {
       const position = aiKey ? usable.indexOf(aiKey) : -1;
       const appStatus =
         p.key === 'checkout' ? this.checkoutStatus()
+          : p.key === 'workspace_servers' ? (this.env.TRUSTED_PRIVATE_HOSTS ? p.app.on : p.app.off)
           : p.key === 'ai_routing' ? this.aiRoutingStatus(usable)
             : aiKey && configured ? (position < 0 ? 'Switched off in "AI providers and fallback order"' : position === 0 ? 'Answers AI requests first' : `Fallback ${position} of ${usable.length - 1}: answers when the providers before it are busy or failing`)
               : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;

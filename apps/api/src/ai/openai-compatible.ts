@@ -123,6 +123,8 @@ export class OpenAiCompatibleProvider implements ModelProvider {
     private readonly env: ApiEnv,
     private readonly profile: CompatibleProfile,
     private readonly target: () => CompatibleTarget,
+    /** How requests are sent: plain fetch for the deployment's providers, the workspace guard for a workspace's own server. */
+    private readonly fetcher: (url: string, init: RequestInit) => Promise<Response> = (url, init) => fetch(url, { ...init, redirect: 'error' }),
   ) {
     this.name = profile.key;
   }
@@ -188,7 +190,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
 
   private async post(t: CompatibleTarget, body: Record<string, unknown>): Promise<Response> {
     try {
-      return await fetch(`${trim(t.baseUrl)}/chat/completions`, {
+      return await this.fetcher(`${trim(t.baseUrl)}/chat/completions`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -198,9 +200,11 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.env.AI_REQUEST_TIMEOUT_MS),
-        redirect: 'error',
       });
     } catch (err) {
+      // A workspace server on a private address the operator has not approved: a setting to fix, not a busy server.
+      if (err instanceof Error && err.name === 'UnsafeTargetError') throw new AiProviderFailure(err.message, 'auth');
+      if ((err as { cause?: { name?: string; message?: string } })?.cause?.name === 'UnsafeTargetError') throw new AiProviderFailure(String((err as { cause: { message: string } }).cause.message), 'auth');
       const timeout = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
       if (timeout) throw new TransientProviderError(`${this.profile.name} did not answer in time.`);
       const { host, port } = hostAndPort(t.baseUrl);

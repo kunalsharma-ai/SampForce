@@ -1,6 +1,7 @@
 import type { ProviderKey } from '@dealflow/types';
 import { parseProviderOrder } from '../ai/ai-providers';
 import { parsePriceMap } from '../billing/providers';
+import { parseTrustedHosts } from '../common/trusted-targets';
 import type { ManagedKeyName } from '../common/provider-keys';
 import type { ReceiptProvider } from '../common/webhook-receipts';
 
@@ -40,6 +41,15 @@ export interface CatalogueProvider {
   /** Set for providers that send signed webhooks: the console shows whether a signed event has arrived. */
   webhook?: ReceiptProvider;
 }
+
+const trustedHostsError = (v: string) => {
+  try {
+    parseTrustedHosts(v);
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Not a valid list.';
+  }
+};
 
 const providerOrderError = (v: string) => {
   try {
@@ -389,6 +399,22 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
         'Create SMTP credentials there and verify the sender domain (SPF and DKIM), so mail is not marked as spam.',
         'Write the SMTP URL as smtps://USER:PASSWORD@HOST:465, or smtp://USER:PASSWORD@HOST:587 for STARTTLS. If the user name or password has @, : or / in it, replace those with %40, %3A and %2F.',
         'Enter the sender, for example SampForce <no-reply@yourdomain.com>, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'workspace_servers', name: 'Workspace servers', usedFor: "Private or internal servers that workspaces may use as their own AI server or email server. Public servers need no approval",
+    fields: [
+      { name: 'TRUSTED_PRIVATE_HOSTS', label: 'Approved private hosts', required: false, validate: trustedHostsError, help: 'Host names, addresses or ranges, separated by commas, for example ollama.lan, 10.0.0.0/8, 2406:b400::/32. Empty: workspaces can only use public servers.' },
+    ],
+    tested: [],
+    checkNote: 'This is a setting, not a key, so there is nothing to test. Workspace admins test their own servers under Integrations.',
+    app: { off: 'Workspaces can connect their own AI and email servers on public addresses only', on: 'Workspaces can also use the approved private hosts' },
+    setup: {
+      steps: [
+        'Workspace admins can add their own AI keys, their own AI server and their own email server under Integrations > Your own servers. Public servers work straight away.',
+        'A private or internal address (10.x, 172.16-31.x, 192.168.x, a private IPv6 range, localhost) is refused unless you list it here, because otherwise any workspace admin could make SampForce reach into this server\'s own network.',
+        'Approve only servers you run or trust, for example your own Ollama machine. Do not approve 169.254.169.254 (the cloud metadata service) or the database\'s address.',
       ],
     },
   },

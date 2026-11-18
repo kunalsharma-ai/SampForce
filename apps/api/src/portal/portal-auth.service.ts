@@ -163,7 +163,7 @@ export class PortalAuthService {
       return { to: u.email, name: u.name, token, seller: (await brandingOf(tx, tenantId)).seller };
     });
     if (!out) return;
-    if (!this.mailer.configured) {
+    if (!(await this.mailer.configuredFor(tenantId))) {
       this.log.warn('Portal password reset requested but no email service is configured');
       return;
     }
@@ -172,7 +172,7 @@ export class PortalAuthService {
         to: out.to,
         subject: `Reset your ${out.seller} portal password`,
         text: `Hello ${out.name},\n\nUse this link within ${RESET_MINUTES} minutes to choose a new password:\n${this.portalUrl(slug)}/reset?token=${encodeURIComponent(out.token)}\n\nIf you did not ask for this, you can ignore this email.`,
-      })
+      }, tenantId)
       .catch(() => undefined);
   }
 
