@@ -121,6 +121,7 @@ export const growth = {
   ],
   'Agents': ['Agentes', 'Agents', 'Agenten', 'الوكلاء'],
   'AI provider': ['Proveedor de IA', 'Fournisseur d’IA', 'KI-Anbieter', 'مزوّد الذكاء الاصطناعي'],
+  'Falls back to': ['Si falla, usa', 'En secours', 'Ersatzweise', 'البديل عند التعذّر'],
   'API key set': ['Clave de API definida', 'Clé d’API définie', 'API-Schlüssel gesetzt', 'تم ضبط مفتاح API'],
   'Not configured': ['No configurado', 'Non configuré', 'Nicht konfiguriert', 'غير مُهيّأ'],
   'AI credits this month': ['Créditos de IA este mes', 'Crédits d’IA ce mois-ci', 'KI-Guthaben diesen Monat', 'أرصدة الذكاء الاصطناعي هذا الشهر'],

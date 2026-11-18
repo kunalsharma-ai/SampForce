@@ -79,6 +79,56 @@ export class ConnectionTests {
     return `Key accepted (${ids.length} model${ids.length === 1 ? '' : 's'} listed${ids.length ? `; ${ids.includes(model) ? `${model} is available` : `${model} was not in the first page`}` : ''}). No tokens were used.`;
   }
 
+  /** Where an OpenAI-compatible provider lives and which key and model are set, read at call time. */
+  private compatibleTarget(key: 'openai' | 'gemini' | 'groq' | 'mistral' | 'custom_ai' | 'openrouter'): { name: string; base: string; apiKey: string | undefined; model: string; keyName: string } {
+    const e = this.env;
+    switch (key) {
+      case 'openai': return { name: 'OpenAI', base: e.OPENAI_API_BASE_URL, apiKey: e.OPENAI_API_KEY, model: e.OPENAI_MODEL, keyName: 'OPENAI_API_KEY' };
+      case 'gemini': return { name: 'Google Gemini', base: e.GEMINI_API_BASE_URL, apiKey: e.GEMINI_API_KEY, model: e.GEMINI_MODEL, keyName: 'GEMINI_API_KEY' };
+      case 'groq': return { name: 'Groq', base: e.GROQ_API_BASE_URL, apiKey: e.GROQ_API_KEY, model: e.GROQ_MODEL, keyName: 'GROQ_API_KEY' };
+      case 'mistral': return { name: 'Mistral', base: e.MISTRAL_API_BASE_URL, apiKey: e.MISTRAL_API_KEY, model: e.MISTRAL_MODEL, keyName: 'MISTRAL_API_KEY' };
+      case 'openrouter': return { name: 'OpenRouter', base: e.OPENROUTER_API_BASE_URL, apiKey: e.OPENROUTER_API_KEY, model: e.OPENROUTER_MODEL, keyName: 'OPENROUTER_API_KEY' };
+      case 'custom_ai': return { name: 'The AI server', base: e.CUSTOM_AI_BASE_URL ?? '', apiKey: e.CUSTOM_AI_API_KEY, model: e.CUSTOM_AI_MODEL ?? '', keyName: 'CUSTOM_AI_API_KEY' };
+    }
+  }
+
+  /**
+   * GET {base}/models on an OpenAI-compatible API (OpenAI, Gemini, Groq, Mistral, Ollama and most self-hosted servers).
+   * It is free: no tokens are spent. Gemini lists models as "models/<id>", so ids are compared without that prefix.
+   */
+  async compatible(key: 'openai' | 'gemini' | 'groq' | 'mistral' | 'custom_ai'): Promise<string> {
+    const t = this.compatibleTarget(key);
+    let res: Response;
+    try {
+      res = await fetch(`${trim(t.base)}/models`, { headers: { accept: 'application/json', ...(t.apiKey ? { authorization: `Bearer ${t.apiKey}` } : {}) }, signal: AbortSignal.timeout(TIMEOUT), redirect: 'error' });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'TimeoutError') throw err;
+      throw new Error(`${t.name} could not be reached at ${trim(t.base)}. Check the address and that the server is running.`);
+    }
+    if (res.status === 401 || res.status === 403) throw new Error(`${t.name} refused the API key (${res.status}). Check ${t.keyName}.`);
+    if (!res.ok) throw new Error(`${t.name} answered ${res.status}.`);
+    const body = await readJson(res);
+    const ids = Array.isArray(body.data) ? (body.data as { id?: string }[]).map((m) => String(m.id ?? '').replace(/^models\//, '')).filter(Boolean) : [];
+    const model = t.model.replace(/^models\//, '');
+    if (key === 'custom_ai' && ids.length && !ids.includes(model)) {
+      throw new Error(`The server answered, but it has no model called ${model}. It offers: ${ids.slice(0, 8).join(', ')}${ids.length > 8 ? ', …' : ''}.`);
+    }
+    const found = ids.length ? `; ${ids.includes(model) ? `${model} is available` : `${model} was not in the list, so check the model name`}` : '';
+    return `${key === 'custom_ai' ? 'Server answered' : 'Key accepted'} (${ids.length} model${ids.length === 1 ? '' : 's'} listed${found}). No tokens were used.`;
+  }
+
+  /** OpenRouter lists models without checking the key, so its key endpoint is used: it returns the key's credit and free-tier status. */
+  async openrouter(): Promise<string> {
+    const t = this.compatibleTarget('openrouter');
+    const res = await fetch(`${trim(t.base)}/key`, { headers: { accept: 'application/json', authorization: `Bearer ${t.apiKey ?? ''}` }, signal: AbortSignal.timeout(TIMEOUT) });
+    if (res.status === 401 || res.status === 403) throw new Error(`OpenRouter refused the API key (${res.status}). Check OPENROUTER_API_KEY.`);
+    if (!res.ok) throw new Error(`OpenRouter answered ${res.status}.`);
+    const data = ((await readJson(res)).data ?? {}) as { is_free_tier?: boolean; limit_remaining?: number | null; usage?: number };
+    const tier = data.is_free_tier ? 'free tier: models ending in :free have a daily request limit' : 'paid credit on the account';
+    const left = typeof data.limit_remaining === 'number' ? `, ${data.limit_remaining} credit left on this key` : '';
+    return `Key accepted (${tier}${left}). Model set: ${t.model}. No tokens were used.`;
+  }
+
   async google(): Promise<string> {
     const res = await this.post(this.env.GOOGLE_TOKEN_URL, {
       grant_type: 'authorization_code', code: PROBE_CODE, redirect_uri: this.mailboxRedirect('google'),

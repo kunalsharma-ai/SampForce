@@ -121,6 +121,33 @@ export const apiEnvSchema = z.object({
   /** Claude API endpoint (tests point this at a local fixture). Deliberately not ANTHROPIC_BASE_URL. */
   AI_API_BASE_URL: z.string().url().default('https://api.anthropic.com'),
   AI_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  /**
+   * Other AI providers (ADR 0067). Keys and models are entered in the operator console under Providers and kept in the
+   * database; the schema lists them only so the console can validate them. Every provider except Anthropic is called
+   * through its OpenAI-compatible chat completions endpoint.
+   */
+  OPENAI_API_KEY: z.string().optional().transform((v) => v || undefined),
+  OPENAI_MODEL: z.string().min(1).default('gpt-5-mini'),
+  GEMINI_API_KEY: z.string().optional().transform((v) => v || undefined),
+  GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+  GROQ_API_KEY: z.string().optional().transform((v) => v || undefined),
+  GROQ_MODEL: z.string().min(1).default('llama-3.3-70b-versatile'),
+  OPENROUTER_API_KEY: z.string().optional().transform((v) => v || undefined),
+  OPENROUTER_MODEL: z.string().min(1).default('meta-llama/llama-3.3-70b-instruct:free'),
+  MISTRAL_API_KEY: z.string().optional().transform((v) => v || undefined),
+  MISTRAL_MODEL: z.string().min(1).default('mistral-small-latest'),
+  /** Any OpenAI-compatible server: Ollama (http://ollama:11434/v1), LM Studio, vLLM, LiteLLM, Together, DeepSeek… */
+  CUSTOM_AI_BASE_URL: z.string().url().optional().transform((v) => v || undefined),
+  CUSTOM_AI_API_KEY: z.string().optional().transform((v) => v || undefined),
+  CUSTOM_AI_MODEL: z.string().optional().transform((v) => v || undefined),
+  /** Comma-separated provider keys in the order they are tried (anthropic,groq,gemini…). Unset: every configured provider in the built-in order. */
+  AI_PROVIDER_ORDER: z.string().optional().transform((v) => v || undefined),
+  /** Provider endpoints, for tests that point them at a local stand-in (like AI_API_BASE_URL). */
+  OPENAI_API_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
+  GEMINI_API_BASE_URL: z.string().url().default('https://generativelanguage.googleapis.com/v1beta/openai'),
+  GROQ_API_BASE_URL: z.string().url().default('https://api.groq.com/openai/v1'),
+  OPENROUTER_API_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
+  MISTRAL_API_BASE_URL: z.string().url().default('https://api.mistral.ai/v1'),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600_000).default(90_000),
   /** Ask the Claude API to re-run a declined request on its recommended fallback model. */
   AI_SERVER_FALLBACKS: bool.default('true'),

@@ -49,6 +49,8 @@ export const errorsProviders = {
   'This proposal has nothing to pay.': ['Esta propuesta no tiene nada que pagar.', 'Cette proposition n’a rien à payer.', 'Bei diesem Vorschlag ist nichts zu bezahlen.', 'لا يوجد مبلغ مستحق في هذا المقترح.'],
   '{provider} answered HTTP {status}.': ['{provider} respondió HTTP {status}.', '{provider} a répondu HTTP {status}.', '{provider} hat mit HTTP {status} geantwortet.', 'أجاب {provider} برمز HTTP {status}.'],
   '{provider} answered HTTP {status}: {detail}.': ['{provider} respondió HTTP {status}: {detail}.', '{provider} a répondu HTTP {status} : {detail}.', '{provider} hat mit HTTP {status} geantwortet: {detail}.', 'أجاب {provider} برمز HTTP {status}: {detail}.'],
+  '{provider} did not answer in time.': ['{provider} no respondió a tiempo.', '{provider} n’a pas répondu à temps.', '{provider} hat nicht rechtzeitig geantwortet.', 'لم يستجب {provider} في الوقت المحدد.'],
+  '{provider} sent an empty answer.': ['{provider} envió una respuesta vacía.', '{provider} a renvoyé une réponse vide.', '{provider} hat eine leere Antwort gesendet.', 'أرسل {provider} إجابة فارغة.'],
   '{provider} could not be reached.': ['No se pudo contactar con {provider}.', '{provider} est injoignable.', '{provider} ist nicht erreichbar.', 'تعذر الوصول إلى {provider}.'],
   '{provider} refused the keys.': ['{provider} rechazó las claves.', '{provider} a refusé les clés.', '{provider} hat die Schlüssel abgelehnt.', 'رفض {provider} المفاتيح.'],
   '{provider} refused the keys. {detail}': ['{provider} rechazó las claves. {detail}', '{provider} a refusé les clés. {detail}', '{provider} hat die Schlüssel abgelehnt. {detail}', 'رفض {provider} المفاتيح. {detail}'],

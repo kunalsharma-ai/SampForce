@@ -154,7 +154,8 @@ export const aiSettingsUpdateSchema = z.object({
 export type AiSettingsUpdate = z.infer<typeof aiSettingsUpdateSchema>;
 
 export interface AiStatus {
-  provider: { configured: boolean; name: string; model: string | null; note: string };
+  /** The first provider tried, and the ones tried next when it is busy or failing (ADR 0067). */
+  provider: { configured: boolean; name: string; model: string | null; fallbacks: { name: string; model: string }[]; note: string };
   settings: { enabled: boolean; disabledAgents: AiAgentKey[]; autoQualifyLeads: boolean; redactPii: boolean; monthlyCreditCap: number | null };
   credits: { used: number; allowance: number; limit: number; remaining: number; periodStart: string; seats: number };
   /** Per agent: whether it can run a model call right now, and why not. */

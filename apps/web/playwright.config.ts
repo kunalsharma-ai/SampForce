@@ -32,6 +32,14 @@ export default defineConfig({
       env: { AI_FIXTURE_PORT: '4100' },
     },
     {
+      // Local stand-in for OpenAI-compatible chat completions (Groq, Gemini, OpenAI, Mistral, OpenRouter, Ollama).
+      command: 'npx tsx test/fixtures/openai-fixture-server.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4110/health',
+      reuseExistingServer: !process.env.CI,
+      env: { OPENAI_FIXTURE_PORT: '4110' },
+    },
+    {
       // Local stand-in for company websites and mail-server lookups, for the email finder.
       command: 'npx tsx test/fixtures/finder-fixture.ts',
       cwd: '../api',
@@ -130,6 +138,12 @@ export default defineConfig({
         // Not a real key: requests go to the fixture above, never to Anthropic.
         ANTHROPIC_API_KEY: 'test-key-not-real',
         AI_API_BASE_URL: 'http://127.0.0.1:4100',
+        // Other AI providers' endpoints go to the OpenAI-compatible stand-in; their keys are entered in the console.
+        OPENAI_API_BASE_URL: 'http://127.0.0.1:4110',
+        GEMINI_API_BASE_URL: 'http://127.0.0.1:4110',
+        GROQ_API_BASE_URL: 'http://127.0.0.1:4110',
+        OPENROUTER_API_BASE_URL: 'http://127.0.0.1:4110',
+        MISTRAL_API_BASE_URL: 'http://127.0.0.1:4110',
         // The email finder reads made-up company sites from the stand-in above, never the internet.
         FINDER_FIXTURE_URL: 'http://127.0.0.1:4300',
         // Enables the operator console; e2e creates its own operator account.
