@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { ApiEnv } from '../common/env';
+import { explainNetworkError, hostAndPort } from '../common/network-error';
 import { AiProviderFailure, type ModelBlock, type ModelMessage, type ModelProvider, type ModelRequest, type ModelResponse, retryAfterMs, TransientProviderError } from './provider';
 
 /**
@@ -201,7 +202,10 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       });
     } catch (err) {
       const timeout = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-      throw new TransientProviderError(timeout ? `${this.profile.name} did not answer in time.` : `${this.profile.name} could not be reached.`);
+      if (timeout) throw new TransientProviderError(`${this.profile.name} did not answer in time.`);
+      const { host, port } = hostAndPort(t.baseUrl);
+      // The cause (no IPv6 route, refused, firewall) goes to the log and the console's provider health line.
+      throw new TransientProviderError(explainNetworkError(err, this.profile.name, host, port));
     }
   }
 }

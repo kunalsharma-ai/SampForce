@@ -297,6 +297,10 @@ Use letters and digits only (for example `openssl rand -hex 32`), because the pa
 | `Authentication failed` in the api, worker or migrate logs | `.env` was regenerated after the first start. Restore the original `.env`, or change the user's password (above) |
 | `mongo` stays unhealthy, logs mention the key file | `mongo/keyfile` is missing or was changed. Restore it with `.env`; `scripts/generate-secrets.sh` writes it only once |
 | Password-reset emails do not arrive | Add SMTP in the operator console under Providers and press Test connection |
+| A connection test says `ENETUNREACH` or `no IPv6 route` | Docker gives containers no IPv6 by default, so an address like `http://[2406:…]:11434/v1` cannot be reached from SampForce even though it works from your laptop. Use the server's IPv4 address or a host name with an IPv4 record, or start SampForce with IPv6: `docker compose -f docker-compose.prod.yml -f docker-compose.ipv6.yml up -d` (Docker 27 or newer, and the server itself must have IPv6) |
+| A connection test says `ECONNREFUSED` for Ollama | Ollama listens only on 127.0.0.1 unless told otherwise. On the Ollama machine: `sudo systemctl edit ollama`, add `[Service]` and `Environment="OLLAMA_HOST=0.0.0.0:11434"`, then `sudo systemctl restart ollama`. Keep port 11434 closed to the internet and open only to the SampForce server |
+| Ollama runs on the SampForce server itself | Enter `http://host.docker.internal:11434/v1` (not `localhost`, which inside a container is the container). Ollama must listen on 0.0.0.0 as above, and `sudo ufw allow from 172.16.0.0/12 to any port 11434` lets the containers in |
+| The email test says `ETIMEDOUT` or `Greeting never received` | The cloud provider blocks outgoing email ports on new servers (common for 25, often 465 and 587 too). Check from the server: `nc -vz smtp.yourprovider.com 587`. Ask the provider to unblock it, or use port 2525 if your email service offers it |
 
 ## 13. What has and has not been tested
 

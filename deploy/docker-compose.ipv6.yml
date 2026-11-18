@@ -1,0 +1,14 @@
+# Optional: gives SampForce's containers IPv6, so they can reach services that have only an IPv6 address
+# (for example an Ollama server or a mail server known by its IPv6 address). Docker leaves IPv6 off by default,
+# so without this a container fails with ENETUNREACH on any IPv6 address.
+#
+# Needs Docker Engine 27 or newer and a server that has IPv6 itself (check: ip -6 route show default). Use it with
+# the main file:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ipv6.yml up -d
+#
+# Docker picks a private IPv6 range for the network and translates outgoing traffic to the server's own address,
+# as it does for IPv4. Nothing is published over IPv6 by this file; Caddy's ports stay as they are.
+networks:
+  default:
+    enable_ipv6: true

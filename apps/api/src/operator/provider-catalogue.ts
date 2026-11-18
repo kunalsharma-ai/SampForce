@@ -357,7 +357,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
   {
     key: 'custom_ai', name: 'Self-hosted or other AI (OpenAI-compatible)', group: 'ai', usedFor: 'AI features from your own server (Ollama, LM Studio, vLLM, LiteLLM) or any provider with an OpenAI-compatible API (DeepSeek, Together, Fireworks…)',
     fields: [
-      { name: 'CUSTOM_AI_BASE_URL', label: 'API address', required: true, help: 'The address that ends before /chat/completions, for example http://ollama:11434/v1 for Ollama in the same Docker network, or https://api.deepseek.com/v1.' },
+      { name: 'CUSTOM_AI_BASE_URL', label: 'API address', required: true, help: 'The address that ends before /chat/completions: http://host.docker.internal:11434/v1 for Ollama on this server, http://ollama:11434/v1 for an Ollama container next to SampForce, an IPv4 address or host name for another machine, or https://api.deepseek.com/v1. IPv6 addresses need IPv6 turned on for the containers (docker-compose.ipv6.yml).' },
       { name: 'CUSTOM_AI_MODEL', label: 'Model', required: true, help: 'The model name the server knows, for example llama3.1 or qwen2.5 for Ollama. It must support tool calling for Copilot.' },
       { name: 'CUSTOM_AI_API_KEY', label: 'API key', required: false, help: 'Leave empty for a local server that needs no key.' },
     ],
@@ -369,7 +369,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
       steps: [
         'For Ollama: install it on a machine the SampForce server can reach, then run "ollama pull llama3.1" (or another model with tool support).',
         'Make Ollama listen beyond localhost (OLLAMA_HOST=0.0.0.0) if it runs outside the SampForce containers, and keep that port closed to the internet.',
-        'Enter the address with /v1 at the end (for example http://192.168.1.20:11434/v1) and the model name. A local server needs no API key.',
+        'Enter the address with /v1 at the end and the model name. On the SampForce server itself use http://host.docker.internal:11434/v1, never localhost (inside a container that is the container). For another machine use its IPv4 address or a host name; an IPv6-only address needs IPv6 turned on for the containers (see SERVER_SETUP.md, Troubleshooting). A local server needs no API key.',
         'For a hosted OpenAI-compatible provider, enter its API address, model name and key instead. Save, then press Test connection.',
       ],
     },
