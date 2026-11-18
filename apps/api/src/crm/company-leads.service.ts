@@ -210,6 +210,19 @@ export class CompanyLeadsService {
     });
   }
 
+  renameFile(auth: AuthContext, fileId: string, name: string, meta: RequestMeta): Promise<CompanyFileRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const f = await tx.companyFile.findFirst({ where: { id: fileId, tenantId: auth.tenantId }, select: { companyId: true, name: true } });
+      if (!f) throw notFound('File');
+      await this.editableCompany(tx, auth, f.companyId);
+      if (name !== f.name) {
+        await tx.companyFile.update({ where: { id: fileId }, data: { name } });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.file_renamed', entityType: 'company', entityId: f.companyId, metadata: { fileId, from: f.name, to: name }, meta });
+      }
+      return (await fileRows(tx, auth.tenantId, f.companyId)).find((x) => x.id === fileId)!;
+    });
+  }
+
   removeFile(auth: AuthContext, fileId: string, meta: RequestMeta): Promise<void> {
     return this.prisma.run(auth, async (tx) => {
       const f = await tx.companyFile.findFirst({ where: { id: fileId, tenantId: auth.tenantId }, select: { companyId: true, name: true } });

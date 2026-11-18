@@ -10,6 +10,7 @@ import type {
   InteractionInput,
   InteractionKind,
   InteractionRow,
+  InteractionUpdate,
   MoneyByCurrency,
   Page,
   RfqInput,
@@ -55,6 +56,15 @@ export function useInteractions(companyId: string, filter: { kind?: InteractionK
 export function useLogInteraction() {
   const invalidate = useInvalidateWork();
   return useMutation({ mutationFn: (input: InteractionInput) => api<InteractionRow>('/interactions', { method: 'POST', json: input }), onSuccess: invalidate });
+}
+
+export function useUpdateInteraction() {
+  const invalidate = useInvalidateWork();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: InteractionUpdate }) => api<InteractionRow>(`/interactions/${id}`, { method: 'PATCH', json: input }),
+    onSuccess: () => Promise.all([invalidate(), qc.invalidateQueries({ queryKey: ['timeline'] })]),
+  });
 }
 
 export function useRemoveInteraction() {

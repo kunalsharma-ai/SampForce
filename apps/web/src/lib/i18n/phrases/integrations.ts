@@ -454,11 +454,11 @@ export const integrations = {
   ],
   'Recent SMS activity': ['Actividad reciente de SMS', 'Activité SMS récente', 'Letzte SMS-Aktivität', 'نشاط SMS الأخير'],
   'Integrations': ['Integraciones', 'Intégrations', 'Integrationen', 'عمليات التكامل'],
-  'Connect your own mailbox and calendar, connect workspace apps such as Slack, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned.': [
-    'Conecta tu propio buzón y calendario, conecta aplicaciones del espacio de trabajo como Slack, configura la extensión del navegador, conecta Zapier con claves de API, gestiona los webhooks salientes y consulta qué integraciones siguen planificadas.',
-    'Connectez votre propre boîte mail et votre agenda, connectez des applications d’espace de travail comme Slack, configurez l’extension de navigateur, connectez Zapier avec des clés d’API, gérez les webhooks sortants et voyez quelles intégrations sont encore prévues.',
-    'Verbinden Sie Ihr eigenes Postfach und Ihren Kalender, verbinden Sie Arbeitsbereich-Apps wie Slack, richten Sie die Browsererweiterung ein, verbinden Sie Zapier mit API-Schlüsseln, verwalten Sie ausgehende Webhooks und sehen Sie, welche Integrationen noch geplant sind.',
-    'اربط بريدك وتقويمك، واربط تطبيقات مساحة العمل مثل Slack، وأعدّ إضافة المتصفح، واربط Zapier بمفاتيح API، وأدِر خطافات الويب الصادرة، واطّلع على عمليات التكامل التي لا تزال مخططة.',
+  'Connect your own mailbox and calendar, connect workspace apps such as Slack, use your own AI and email servers, set up the browser extension, connect Zapier with API keys, manage outbound webhooks, and see which integrations are still planned.': [
+    'Conecta tu propio buzón y calendario, conecta aplicaciones del espacio de trabajo como Slack, usa tus propios servidores de IA y de correo, configura la extensión del navegador, conecta Zapier con claves de API, gestiona los webhooks salientes y consulta qué integraciones siguen planificadas.',
+    'Connectez votre propre boîte mail et votre agenda, connectez des applications d’espace de travail comme Slack, utilisez vos propres serveurs d’IA et d’e-mail, configurez l’extension de navigateur, connectez Zapier avec des clés d’API, gérez les webhooks sortants et voyez quelles intégrations sont encore prévues.',
+    'Verbinden Sie Ihr eigenes Postfach und Ihren Kalender, verbinden Sie Arbeitsbereich-Apps wie Slack, nutzen Sie eigene KI- und E-Mail-Server, richten Sie die Browsererweiterung ein, verbinden Sie Zapier mit API-Schlüsseln, verwalten Sie ausgehende Webhooks und sehen Sie, welche Integrationen noch geplant sind.',
+    'اربط بريدك وتقويمك، واربط تطبيقات مساحة العمل مثل Slack، واستخدم خوادم الذكاء الاصطناعي والبريد الخاصة بك، وأعدّ إضافة المتصفح، واربط Zapier بمفاتيح API، وأدِر خطافات الويب الصادرة، واطّلع على عمليات التكامل التي لا تزال مخططة.',
   ],
   'Planned integrations': ['Integraciones planificadas', 'Intégrations prévues', 'Geplante Integrationen', 'عمليات التكامل المخططة'],
   'Requires:': ['Requiere:', 'Nécessite :', 'Erfordert:', 'يتطلب:'],

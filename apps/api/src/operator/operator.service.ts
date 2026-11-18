@@ -340,7 +340,7 @@ export class OperatorService {
           updatedAt: st.updatedAt, updatedBy: st.updatedById ? (editors.get(st.updatedById) ?? null) : null, help: f.help ?? null,
         };
       });
-      const configured = env.filter((x) => x.required).every((x) => x.set);
+      const configured = env.filter((x) => x.required).every((x) => x.set) && (p.configured?.(this.env as unknown as Record<string, unknown>) ?? true);
       const checkable = p.tested.length > 0;
       const stored = checks.get(p.key) ?? null;
       // A test made with other keys (or before fingerprints were kept) is shown, but proves nothing now.
@@ -352,6 +352,7 @@ export class OperatorService {
       const position = aiKey ? usable.indexOf(aiKey) : -1;
       const appStatus =
         p.key === 'checkout' ? this.checkoutStatus()
+          : p.key === 'workspace_servers' ? (this.env.TRUSTED_PRIVATE_HOSTS ? p.app.on : p.app.off)
           : p.key === 'ai_routing' ? this.aiRoutingStatus(usable)
             : aiKey && configured ? (position < 0 ? 'Switched off in "AI providers and fallback order"' : position === 0 ? 'Answers AI requests first' : `Fallback ${position} of ${usable.length - 1}: answers when the providers before it are busy or failing`)
               : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;
@@ -426,6 +427,7 @@ export class OperatorService {
     const p = PROVIDER_CATALOGUE.find((x) => x.key === key)!;
     const missing = p.fields.filter((f) => f.required && !this.env[f.name]).map((f) => f.name);
     if (missing.length) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: `Add ${missing.join(' and ')} first.` });
+    if (p.configured && !p.configured(this.env as unknown as Record<string, unknown>)) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: 'Add the SMTP server (or an SMTP URL) first.' });
     const run: Record<ProviderCheckKey, () => Promise<string>> = {
       apollo: () => this.apollo.check(), hunter: () => this.hunter.check(), deepgram: () => this.deepgram.check(),
       anthropic: () => this.tests.anthropic(),

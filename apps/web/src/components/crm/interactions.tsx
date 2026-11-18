@@ -1,12 +1,12 @@
 'use client';
 
-import { INTERACTION_KINDS, type InteractionKind, type InteractionRow, interactionInputSchema } from '@dealflow/types';
+import { INTERACTION_KINDS, type InteractionKind, type InteractionRow, interactionInputSchema, interactionUpdateSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
-import { CalendarClock, FileSignature, Handshake, Linkedin, Mail, MailOpen, MessageCircle, MessagesSquare, Paperclip, Phone, PhoneIncoming, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
+import { CalendarClock, FileSignature, Handshake, Linkedin, Mail, MailOpen, MessageCircle, MessagesSquare, Paperclip, Pencil, Phone, PhoneIncoming, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { InfoTip } from '@/components/info-tip';
-import { fromLocalInput, toLocalInput, useInteractions, useLogInteraction, useRemoveInteraction } from '@/lib/company-work';
+import { fromLocalInput, toLocalInput, useInteractions, useLogInteraction, useRemoveInteraction, useUpdateInteraction } from '@/lib/company-work';
 import { useCompanyFiles } from '@/lib/company-leads';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
@@ -39,6 +39,7 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
   const list = useInteractions(company.id, { kind, contactId });
   const remove = useRemoveInteraction();
   const [logging, setLogging] = React.useState(false);
+  const [editing, setEditing] = React.useState<InteractionRow | null>(null);
   useCompanyAction('logInteraction', canWrite ? () => setLogging(true) : null);
   return (
     <Card id="company-interactions">
@@ -79,17 +80,24 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
         ) : (
           <ol className="relative space-y-3 border-s border-border ps-5" aria-label={t('Interactions')}>
             {list.data.map((i) => (
-              <InteractionItem key={`${i.source}-${i.id}`} i={i} canDelete={canWrite && i.source === 'LOGGED'} onDelete={() => window.confirm(t('Delete “{subject}”?', { subject: i.subject })) && remove.mutate(i.id)} />
+              <InteractionItem
+                key={`${i.source}-${i.id}`}
+                i={i}
+                canDelete={canWrite && i.source === 'LOGGED'}
+                onEdit={() => setEditing(i)}
+                onDelete={() => window.confirm(t('Delete “{subject}”?', { subject: i.subject })) && remove.mutate(i.id)}
+              />
             ))}
           </ol>
         )}
       </CardContent>
       <LogInteractionDialog company={company} employees={employees} open={logging} onOpenChange={setLogging} />
+      <LogInteractionDialog company={company} employees={employees} editing={editing} open={!!editing} onOpenChange={(o) => !o && setEditing(null)} />
     </Card>
   );
 }
 
-function InteractionItem({ i, canDelete, onDelete }: { i: InteractionRow; canDelete: boolean; onDelete: () => void }) {
+function InteractionItem({ i, canDelete, onEdit, onDelete }: { i: InteractionRow; canDelete: boolean; onEdit: () => void; onDelete: () => void }) {
   const t = useT();
   const Icon = KIND_ICON[i.kind];
   return (
@@ -108,6 +116,11 @@ function InteractionItem({ i, canDelete, onDelete }: { i: InteractionRow; canDel
               </Badge>
             ) : (
               <Badge tone="neutral">{t('Logged by hand')}</Badge>
+            )}
+            {i.editedAt && (
+              <span className="text-xs text-muted-foreground" title={formatDateTime(i.editedAt)}>
+                {t('(edited)')}
+              </span>
             )}
           </p>
           <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
@@ -145,21 +158,48 @@ function InteractionItem({ i, canDelete, onDelete }: { i: InteractionRow; canDel
           )}
         </div>
         {canDelete && (
-          <Button size="sm" variant="ghost" onClick={onDelete} aria-label={t('Delete “{subject}”', { subject: i.subject })}>
-            <Trash2 aria-hidden />
-          </Button>
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" onClick={onEdit} aria-label={t('Edit “{subject}”', { subject: i.subject })}>
+              <Pencil aria-hidden />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onDelete} aria-label={t('Delete “{subject}”', { subject: i.subject })}>
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
         )}
       </div>
     </li>
   );
 }
 
-/** Logs an email, call, meeting, message, RFQ step or negotiation, and optionally schedules the follow-up. */
-export function LogInteractionDialog({ company, employees, open, onOpenChange }: { company: { id: string; name: string }; employees: { id: string; name: string }[]; open: boolean; onOpenChange: (o: boolean) => void }) {
+/**
+ * Logs an email, call, meeting, message, RFQ step or negotiation, and optionally schedules the follow-up. With
+ * `editing`, it edits that logged interaction instead (a follow-up it scheduled is edited on its own).
+ */
+export function LogInteractionDialog({
+  company,
+  employees,
+  open,
+  onOpenChange,
+  editing,
+}: {
+  company: { id: string; name: string };
+  employees: { id: string; name: string }[];
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  editing?: InteractionRow | null;
+}) {
   const t = useT();
   const log = useLogInteraction();
+  const update = useUpdateInteraction();
   const files = useCompanyFiles(company.id);
-  const blank = () => ({ kind: 'EMAIL_SENT' as InteractionKind, contactId: '', subject: '', occurredAt: toLocalInput(new Date()), sender: '', recipient: '', outcome: '', sentiment: '' as '' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE', remarks: '', nextAction: '', followUpAt: '', fileId: '' });
+  const blank = () =>
+    editing
+      ? {
+          kind: editing.kind, contactId: editing.contact?.id ?? '', subject: editing.subject, occurredAt: toLocalInput(editing.occurredAt), sender: editing.sender ?? '', recipient: editing.recipient ?? '',
+          outcome: editing.outcome ?? '', sentiment: (editing.sentiment ?? '') as '' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE', remarks: editing.remarks ?? '', nextAction: editing.nextAction ?? '', followUpAt: '', fileId: editing.file?.id ?? '',
+        }
+      : { kind: 'EMAIL_SENT' as InteractionKind, contactId: '', subject: '', occurredAt: toLocalInput(new Date()), sender: '', recipient: '', outcome: '', sentiment: '' as '' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE', remarks: '', nextAction: '', followUpAt: '', fileId: '' };
   const [v, setV] = React.useState(blank);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -169,10 +209,30 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
       setErrors({});
       setFormError(null);
     }
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing]);
   const set = (p: Partial<typeof v>) => setV((x) => ({ ...x, ...p }));
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (editing) {
+      const parsed = interactionUpdateSchema.safeParse({
+        contactId: v.contactId || null, kind: v.kind, subject: v.subject, occurredAt: fromLocalInput(v.occurredAt) ?? undefined, sender: v.sender || null, recipient: v.recipient || null,
+        outcome: v.outcome || null, sentiment: v.sentiment || null, remarks: v.remarks || null, nextAction: v.nextAction || null, fileId: v.fileId || null,
+      });
+      if (!parsed.success) {
+        const out: Record<string, string> = {};
+        for (const i of parsed.error.issues) out[String(i.path[0])] ??= t.maybe(i.message);
+        setErrors(out);
+        return;
+      }
+      try {
+        await update.mutateAsync({ id: editing.id, input: parsed.data });
+        onOpenChange(false);
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : t('Could not save.'));
+      }
+      return;
+    }
     const body = {
       companyId: company.id,
       contactId: v.contactId || null,
@@ -205,8 +265,10 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{t('Log interaction')}</DialogTitle>
-        <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('With {company}. Emails you log here are marked as logged by hand, apart from synced ones.', { company: company.name })}</DialogDescription>
+        <DialogTitle className="text-lg font-semibold">{editing ? t('Edit interaction') : t('Log interaction')}</DialogTitle>
+        <DialogDescription className="mb-4 text-sm text-muted-foreground">
+          {editing ? t('With {company}. Changes are saved to this interaction and kept in the audit log.', { company: company.name }) : t('With {company}. Emails you log here are marked as logged by hand, apart from synced ones.', { company: company.name })}
+        </DialogDescription>
         <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           <Field id="ix-kind" label={t('Interaction type')}>
             <Select value={v.kind} onChange={(e) => set({ kind: e.target.value as InteractionKind })}>
@@ -260,9 +322,11 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
           <Field id="ix-next" label={t('Next action')}>
             <Input value={v.nextAction} onChange={(e) => set({ nextAction: e.target.value })} maxLength={500} />
           </Field>
-          <Field id="ix-follow" label={t('Follow-up date')} hint={t('Set it to schedule the follow-up too.')}>
-            <Input type="datetime-local" value={v.followUpAt} onChange={(e) => set({ followUpAt: e.target.value })} />
-          </Field>
+          {!editing && (
+            <Field id="ix-follow" label={t('Follow-up date')} hint={t('Set it to schedule the follow-up too.')}>
+              <Input type="datetime-local" value={v.followUpAt} onChange={(e) => set({ followUpAt: e.target.value })} />
+            </Field>
+          )}
           {!!files.data?.length && (
             <div className="sm:col-span-2">
               <Field id="ix-file" label={t('Attachment')} hint={t('One of the company’s files. Upload new files in Attachments.')}>
@@ -286,8 +350,8 @@ export function LogInteractionDialog({ company, employees, open, onOpenChange }:
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={log.isPending}>
-              {log.isPending ? t('Saving…') : t('Log interaction')}
+            <Button type="submit" disabled={log.isPending || update.isPending}>
+              {log.isPending || update.isPending ? t('Saving…') : editing ? t('Save changes') : t('Log interaction')}
             </Button>
           </div>
         </form>

@@ -21,6 +21,19 @@ interface AiProviderDef {
 
 const isReasoningModel = (model: string) => /^(gpt-5|o\d)/i.test(model.replace(/^openai\//, ''));
 
+const PROFILES: Record<Exclude<AiProviderKey, 'anthropic'>, CompatibleProfile> = {
+  openai: { key: 'openai', name: 'OpenAI', json: 'schema', tokenParam: 'max_completion_tokens', effort: isReasoningModel },
+  gemini: { key: 'gemini', name: 'Google Gemini', json: 'schema', tokenParam: 'max_tokens' },
+  mistral: { key: 'mistral', name: 'Mistral', json: 'object', tokenParam: 'max_tokens', toolIds: 'mistral' },
+  groq: { key: 'groq', name: 'Groq', json: 'object', tokenParam: 'max_completion_tokens' },
+  openrouter: {
+    key: 'openrouter', name: 'OpenRouter', json: 'prompt', tokenParam: 'max_tokens',
+    // OpenRouter's optional attribution headers: the deployment's own address and product name.
+    headers: (env) => ({ 'HTTP-Referer': env.PUBLIC_WEB_URL, 'X-Title': 'SampForce' }),
+  },
+  custom_ai: { key: 'custom_ai', name: 'Self-hosted or other (OpenAI-compatible)', json: 'prompt', tokenParam: 'max_tokens' },
+};
+
 const compatible = (
   profile: CompatibleProfile,
   target: (env: ApiEnv) => CompatibleTarget,
@@ -48,41 +61,72 @@ export const AI_PROVIDER_DEFS: Record<AiProviderKey, AiProviderDef> = {
     build: (env) => new AnthropicProvider(env),
   },
   openai: compatible(
-    { key: 'openai', name: 'OpenAI', json: 'schema', tokenParam: 'max_completion_tokens', effort: isReasoningModel },
+    PROFILES.openai,
     (env) => ({ baseUrl: env.OPENAI_API_BASE_URL, apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL }),
     (env) => !!env.OPENAI_API_KEY,
   ),
   gemini: compatible(
-    { key: 'gemini', name: 'Google Gemini', json: 'schema', tokenParam: 'max_tokens' },
+    PROFILES.gemini,
     (env) => ({ baseUrl: env.GEMINI_API_BASE_URL, apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }),
     (env) => !!env.GEMINI_API_KEY,
   ),
   mistral: compatible(
-    { key: 'mistral', name: 'Mistral', json: 'object', tokenParam: 'max_tokens', toolIds: 'mistral' },
+    PROFILES.mistral,
     (env) => ({ baseUrl: env.MISTRAL_API_BASE_URL, apiKey: env.MISTRAL_API_KEY, model: env.MISTRAL_MODEL }),
     (env) => !!env.MISTRAL_API_KEY,
   ),
   groq: compatible(
-    { key: 'groq', name: 'Groq', json: 'object', tokenParam: 'max_completion_tokens' },
+    PROFILES.groq,
     (env) => ({ baseUrl: env.GROQ_API_BASE_URL, apiKey: env.GROQ_API_KEY, model: env.GROQ_MODEL }),
     (env) => !!env.GROQ_API_KEY,
   ),
   openrouter: compatible(
-    {
-      key: 'openrouter', name: 'OpenRouter', json: 'prompt', tokenParam: 'max_tokens',
-      // OpenRouter's optional attribution headers: the deployment's own address and product name.
-      headers: (env) => ({ 'HTTP-Referer': env.PUBLIC_WEB_URL, 'X-Title': 'SampForce' }),
-    },
+    PROFILES.openrouter,
     (env) => ({ baseUrl: env.OPENROUTER_API_BASE_URL, apiKey: env.OPENROUTER_API_KEY, model: env.OPENROUTER_MODEL }),
     (env) => !!env.OPENROUTER_API_KEY,
   ),
   custom_ai: compatible(
-    { key: 'custom_ai', name: 'Self-hosted or other (OpenAI-compatible)', json: 'prompt', tokenParam: 'max_tokens' },
+    PROFILES.custom_ai,
     (env) => ({ baseUrl: env.CUSTOM_AI_BASE_URL ?? '', apiKey: env.CUSTOM_AI_API_KEY, model: env.CUSTOM_AI_MODEL ?? '' }),
     // A local Ollama server needs no key: the address and the model are enough.
     (env) => !!env.CUSTOM_AI_BASE_URL && !!env.CUSTOM_AI_MODEL,
   ),
 };
+
+/** A workspace's own provider (ADR 0068): its key, model and, for an own server, address. */
+export interface OwnProviderCreds {
+  kind: AiProviderKey;
+  apiKey: string | null;
+  model: string;
+  baseUrl: string | null;
+}
+
+/** Profiles and fixed endpoints of the compatible providers, reused for a workspace's own keys. */
+const OWN_TARGET: Record<Exclude<AiProviderKey, 'anthropic'>, (env: ApiEnv) => string> = {
+  openai: (env) => env.OPENAI_API_BASE_URL,
+  gemini: (env) => env.GEMINI_API_BASE_URL,
+  groq: (env) => env.GROQ_API_BASE_URL,
+  openrouter: (env) => env.OPENROUTER_API_BASE_URL,
+  mistral: (env) => env.MISTRAL_API_BASE_URL,
+  custom_ai: () => '',
+};
+
+/** The default model of each provider, when a workspace leaves the model empty. */
+export const defaultModel = (env: ApiEnv, kind: AiProviderKey): string =>
+  kind === 'custom_ai' ? '' : AI_PROVIDER_DEFS[kind].model(Object.assign(Object.create(env) as ApiEnv, DEFAULT_MODELS));
+
+const DEFAULT_MODELS = { AI_MODEL: 'claude-opus-5-5', OPENAI_MODEL: 'gpt-5-mini', GEMINI_MODEL: 'gemini-2.5-flash', GROQ_MODEL: 'llama-3.3-70b-versatile', OPENROUTER_MODEL: 'meta-llama/llama-3.3-70b-instruct:free', MISTRAL_MODEL: 'mistral-small-latest' };
+
+/**
+ * Builds a client for a workspace's own provider. The known providers keep their fixed public endpoints, so a
+ * workspace can only choose an address for its own server, and that one goes through `ownFetch` (the workspace guard).
+ */
+export function buildOwnProvider(env: ApiEnv, creds: OwnProviderCreds, ownFetch: (url: string, init: RequestInit) => Promise<Response>): ModelProvider {
+  if (creds.kind === 'anthropic') return new AnthropicProvider(env, { apiKey: creds.apiKey ?? '', model: creds.model });
+  const profile = creds.kind === 'custom_ai' ? { ...PROFILES.custom_ai, name: 'Your AI server' } : PROFILES[creds.kind];
+  const base = creds.kind === 'custom_ai' ? (creds.baseUrl ?? '') : OWN_TARGET[creds.kind](env);
+  return new OpenAiCompatibleProvider(env, profile, () => ({ baseUrl: base, apiKey: creds.apiKey ?? undefined, model: creds.model }), creds.kind === 'custom_ai' ? ownFetch : undefined);
+}
 
 export const isAiProviderKey = (v: string): v is AiProviderKey => (AI_PROVIDER_KEYS as readonly string[]).includes(v);
 
@@ -127,6 +171,15 @@ export interface HealthStore {
   write(key: AiProviderKey, health: ProviderHealth): Promise<void>;
 }
 
+/** One of a workspace's own providers, ready to call. `id` is unique per workspace and provider (for resting). */
+export interface OwnEntry {
+  id: string;
+  kind: AiProviderKey;
+  name: string;
+  provider: ModelProvider;
+  onResult?: (err: AiProviderFailure | null) => void;
+}
+
 export interface ModelProviderSource {
   current(): ModelProvider | null;
 }
@@ -142,7 +195,7 @@ export interface ModelProviderSource {
 export class AiProviderChain implements ModelProviderSource {
   private readonly log = new Logger('AiProviderChain');
   private readonly clients = new Map<AiProviderKey, { signature: string; provider: ModelProvider }>();
-  private readonly resting = new Map<AiProviderKey, number>();
+  private readonly resting = new Map<string, number>();
   private readonly health = new Map<AiProviderKey, ProviderHealth>();
 
   constructor(
@@ -191,30 +244,60 @@ export class AiProviderChain implements ModelProviderSource {
   }
 
   async generate(req: ModelRequest): Promise<ModelResponse> {
-    const plan = this.plan();
-    const failures: { key: AiProviderKey; err: AiProviderFailure }[] = [];
-    for (const key of plan) {
+    return this.generateWith(req, [], true);
+  }
+
+  /**
+   * Tries a workspace's own providers first (ADR 0068), in its order, then, when `useShared`, the deployment's.
+   * Own providers rest on failure like shared ones, keyed per workspace; their answers are marked `own:<kind>` so the
+   * gateway can leave the plan's AI credits alone.
+   */
+  async generateWith(req: ModelRequest, own: OwnEntry[], useShared: boolean): Promise<ModelResponse> {
+    const ownReady = own.filter((o) => !this.isResting(o.id));
+    const ownPlan = ownReady.length ? [...ownReady, ...own.filter((o) => this.isResting(o.id))] : own;
+    const shared = useShared ? this.plan() : [];
+    const attempts: { id: string; name: string; run: () => Promise<ModelResponse>; ok: () => void; fail: (err: AiProviderFailure, until: number | null) => void; label: string }[] = [
+      ...ownPlan.map((o) => ({
+        id: o.id, name: `${o.name} (workspace)`, label: `own:${o.kind}`,
+        run: () => o.provider.generate(req),
+        ok: () => o.onResult?.(null),
+        fail: (err: AiProviderFailure) => o.onResult?.(err),
+      })),
+      ...shared.map((key) => ({
+        id: key, name: AI_PROVIDER_DEFS[key].name, label: key,
+        run: () => this.client(key).generate(req),
+        ok: () => this.record(key, null),
+        fail: (err: AiProviderFailure, until: number | null) => this.record(key, err, until),
+      })),
+    ];
+    const failures: { name: string; err: AiProviderFailure }[] = [];
+    for (const a of attempts) {
       try {
-        const res = await this.client(key).generate(req);
-        this.resting.delete(key);
-        this.record(key, null);
-        return { ...res, provider: key };
+        const res = await a.run();
+        this.resting.delete(a.id);
+        a.ok();
+        return { ...res, provider: a.label };
       } catch (err) {
         if (!(err instanceof AiProviderFailure)) throw err;
-        failures.push({ key, err });
+        failures.push({ name: a.name, err });
         const rest = Math.min(MAX_COOLDOWN_MS, err.retryAfterMs ?? COOLDOWN_MS[err.kind]);
-        if (rest > 0) this.resting.set(key, this.now() + rest);
-        this.record(key, err, rest > 0 ? this.now() + rest : null);
-        if (plan.length > 1) this.log.warn({ provider: key, kind: err.kind, err: err.message }, 'AI provider failed; trying the next one');
+        if (rest > 0) this.resting.set(a.id, this.now() + rest);
+        a.fail(err, rest > 0 ? this.now() + rest : null);
+        if (attempts.length > 1) this.log.warn({ provider: a.label, kind: err.kind, err: err.message }, 'AI provider failed; trying the next one');
       }
     }
     const last = failures[failures.length - 1]?.err;
     if (!last) throw new AiProviderFailure('No AI provider is configured on this installation.', 'auth');
     if (failures.length === 1) throw last;
-    const summary = failures.map((f) => `${AI_PROVIDER_DEFS[f.key].name}: ${f.err.message}`).join(' ');
+    const summary = failures.map((f) => `${f.name}: ${f.err.message}`).join(' ');
     // Retry later if any provider only had a temporary problem; otherwise the keys need an operator.
     if (failures.some((f) => f.err instanceof TransientProviderError)) throw new TransientProviderError(`Every AI provider failed. ${summary}`.slice(0, 900));
     throw new AiProviderFailure(`Every AI provider failed. ${summary}`.slice(0, 900), last.kind);
+  }
+
+  private isResting(id: string): boolean {
+    const until = this.resting.get(id);
+    return !!until && until > this.now();
   }
 
   /** Keeps the console's health line current: every failure is written, a success only when it changes the picture. */

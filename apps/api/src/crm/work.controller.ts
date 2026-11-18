@@ -3,6 +3,8 @@ import type { Request, Response } from 'express';
 import {
   type ActivityInput,
   activityInputSchema,
+  type ActivityUpdate,
+  activityUpdateSchema,
   CUSTOM_FIELD_ENTITIES,
   EXPORT_FORMATS,
   type CustomFieldDefInput,
@@ -80,6 +82,18 @@ export class ActivitiesController {
   @RequirePermissions('activities:write')
   create(@Auth() auth: AuthContext, @Body(new ZodPipe(activityInputSchema)) body: ActivityInput, @Meta() meta: RequestMeta) {
     return this.activities.create(auth, body, meta);
+  }
+
+  @Get(':id')
+  @RequirePermissions('activities:read')
+  get(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    return this.activities.get(auth, id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('activities:write')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(activityUpdateSchema)) body: ActivityUpdate, @Meta() meta: RequestMeta) {
+    return this.activities.update(auth, id, body, meta);
   }
 
   @Delete(':id')

@@ -21,7 +21,9 @@ export function isPrivateAddress(ip: string): boolean {
   return v6 === '::' || v6 === '::1' || v6.startsWith('fc') || v6.startsWith('fd') || v6.startsWith('fe80') || v6.startsWith('ff');
 }
 
-export class UnsafeTargetError extends Error {}
+export class UnsafeTargetError extends Error {
+  override name = 'UnsafeTargetError';
+}
 
 export async function assertPublicUrl(raw: string, allowPrivate: boolean): Promise<URL> {
   let url: URL;
@@ -49,13 +51,13 @@ const systemResolver: Resolver = (hostname) => lookup(hostname, { all: true, ver
  * addresses checked here, so a host name cannot pass {@link assertPublicUrl} and then resolve somewhere internal
  * when the request is made (DNS rebinding).
  */
-export function guardedLookup(resolve: Resolver = systemResolver): LookupFunction {
+export function guardedLookup(resolve: Resolver = systemResolver, allow: (hostname: string, address: string) => boolean = () => false): LookupFunction {
   return (hostname, options, callback) => {
     resolve(hostname)
       .then((all) => {
         const wanted = options.family === 4 || options.family === 6 ? all.filter((a) => a.family === options.family) : all;
         if (wanted.length === 0) throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${hostname}`), { code: 'ENOTFOUND' });
-        if (wanted.some((a) => isPrivateAddress(a.address))) {
+        if (wanted.some((a) => isPrivateAddress(a.address) && !allow(hostname, a.address))) {
           throw new UnsafeTargetError('The URL points to a private or reserved network address');
         }
         if (options.all) (callback as unknown as (e: null, a: LookupAddress[]) => void)(null, wanted);

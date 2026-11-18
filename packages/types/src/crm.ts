@@ -394,6 +394,10 @@ export interface OwnerChangeRow {
   createdAt: string;
 }
 
+/** Renaming a file kept with a company. The file itself does not change. */
+export const companyFileRenameSchema = z.object({ name: z.string().trim().min(1, 'Enter a file name').max(200) }).strict();
+export type CompanyFileRename = z.infer<typeof companyFileRenameSchema>;
+
 export interface CompanyFileRow {
   id: string;
   name: string;
@@ -663,6 +667,17 @@ export const activityInputSchema = z.object({
 });
 export type ActivityInput = z.infer<typeof activityInputSchema>;
 
+/** Editing a logged activity: what it was, what happened and when. The records it is linked to stay as they are. */
+export const activityUpdateSchema = z
+  .object({
+    type: z.enum(ACTIVITY_TYPES).optional(),
+    subject: z.string().trim().min(1, 'Enter a subject').max(200).optional(),
+    body: optionalText(10_000),
+    occurredAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
+export type ActivityUpdate = z.infer<typeof activityUpdateSchema>;
+
 export interface ActivityRow {
   id: string;
   type: (typeof ACTIVITY_TYPES)[number];
@@ -675,6 +690,10 @@ export interface ActivityRow {
   contactId: string | null;
   companyId: string | null;
   opportunityId: string | null;
+  /** Set once someone has changed the activity after logging it. */
+  editedAt?: string | null;
+  /** The interaction kind when it was logged as a company interaction; its type then follows that kind. */
+  interaction?: string | null;
 }
 
 /** States an email address can be in. Provider checks (Prospect Finder) and bounces set them. */

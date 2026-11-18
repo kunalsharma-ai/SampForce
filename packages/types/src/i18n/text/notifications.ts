@@ -215,4 +215,9 @@ export const notifications = {
   '{title} was lost in SampBidx': ['{title} se perdió en SampBidx', '{title} a été perdu dans SampBidx', '{title} wurde in SampBidx verloren', 'خُسر {title} في SampBidx'],
   'SampBidx rejected {title}': ['SampBidx rechazó {title}', 'SampBidx a refusé {title}', 'SampBidx hat {title} abgelehnt', 'رفض SampBidx \u200f{title}'],
   '{title} was cancelled in SampBidx': ['{title} se canceló en SampBidx', '{title} a été annulé dans SampBidx', '{title} wurde in SampBidx storniert', 'أُلغي {title} في SampBidx'],
+  // Edit everywhere (ADR 0065)
+  'Instruction updated by {name}': ['Instrucción actualizada por {name}', 'Instruction modifiée par {name}', 'Anweisung geändert von {name}', 'عدّل {name} التعليمات'],
+  'Remark updated by {name}': ['Observación actualizada por {name}', 'Remarque modifiée par {name}', 'Bemerkung geändert von {name}', 'عدّل {name} الملاحظة'],
+  'Lead transfer request updated: {lead}': ['Solicitud de traspaso de lead actualizada: {lead}', 'Demande de transfert de prospect modifiée : {lead}', 'Anfrage zur Lead-Übergabe geändert: {lead}', 'عُدّل طلب نقل العميل المحتمل: {lead}'],
+  'Updated by {name}.': ['Actualizado por {name}.', 'Modifié par {name}.', 'Geändert von {name}.', 'عدّله {name}.'],
 } satisfies TextTable;

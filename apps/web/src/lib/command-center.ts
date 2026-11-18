@@ -13,9 +13,11 @@ import type {
   InstructionInput,
   InstructionProgress,
   InstructionRow,
+  InstructionUpdate,
   LeadTransferDecision,
   LeadTransferInput,
   LeadTransferRow,
+  LeadTransferUpdate,
   ManagerDashboard,
   ReportPeriod,
   SeniorDashboard,
@@ -181,6 +183,11 @@ export function useTransferMutations() {
         api<LeadTransferRow>(`/lead-transfers/${id}/decision`, { method: 'POST', json: input }),
       ...opts,
     }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: LeadTransferUpdate }) =>
+        api<LeadTransferRow>(`/lead-transfers/${id}`, { method: 'PATCH', json: input }),
+      ...opts,
+    }),
     cancel: useMutation({
       mutationFn: (id: string) =>
         api<LeadTransferRow>(`/lead-transfers/${id}/cancel`, { method: 'POST', json: {} }),
@@ -256,6 +263,10 @@ export function useInstructionMutations() {
     progress: useMutation({
       mutationFn: ({ id, input }: { id: string; input: InstructionProgress }) =>
         api<InstructionRow>(`/instructions/${id}/progress`, { method: 'POST', json: input }),
+      ...opts,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, input }: { id: string; input: InstructionUpdate }) => api<InstructionRow>(`/instructions/${id}`, { method: 'PATCH', json: input }),
       ...opts,
     }),
     cancel: useMutation({

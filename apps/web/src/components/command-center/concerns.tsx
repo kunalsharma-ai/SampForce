@@ -13,7 +13,7 @@ import {
   Input,
   Skeleton,
 } from '@dealflow/ui';
-import { ArrowUpRight, CircleCheck, MessageSquareWarning } from 'lucide-react';
+import { ArrowUpRight, CircleCheck, MessageSquareWarning, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { useCompanyAction } from '@/components/crm/company-actions';
@@ -23,6 +23,7 @@ import { useHasFeature } from '@/lib/features';
 import { useCan } from '@/lib/session';
 import { Select, Textarea } from '@/components/crm/select';
 import { useClientConcerns, useConcernMutations } from '@/lib/command-center';
+import { useCompanyEmployees } from '@/lib/company-work';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { CONCERN_CATEGORY_LABEL, SEVERITY_LABEL, SEVERITY_TONE } from './cc-labels';
@@ -32,26 +33,41 @@ import { CONCERN_CATEGORY_LABEL, SEVERITY_LABEL, SEVERITY_TONE } from './cc-labe
  * escalated up the reporting lines when needed, and resolved with final remarks.
  */
 
-/** Raise a concern on a company (company page quick action). */
+/** The `date` input value of a deadline, in the browser's time zone. */
+function toDateInput(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Raise a concern on a company (company page quick action). With `editing`, changes that concern instead: its
+ * category, title, description, severity, employee, owner and deadline (ADR 0065).
+ */
 export function RaiseConcernDialog({
   company,
-  employees,
+  employees: given,
+  editing,
   onClose,
 }: {
   company: { id: string; name: string };
-  employees: { id: string; name: string }[];
+  employees?: { id: string; name: string }[];
+  editing?: ClientConcernRow;
   onClose: () => void;
 }) {
   const t = useT();
-  const { raise } = useConcernMutations();
+  const { raise, update } = useConcernMutations();
+  const loaded = useCompanyEmployees(company.id);
+  const employees = given ?? loaded.data ?? [];
   const [form, setForm] = React.useState({
-    category: 'GENERAL' as (typeof CONCERN_CATEGORIES)[number],
-    title: '',
-    description: '',
-    severity: 'MEDIUM' as (typeof CONCERN_SEVERITIES)[number],
-    contactId: '',
-    ownerId: '',
-    deadline: '',
+    category: (editing?.category ?? 'GENERAL') as (typeof CONCERN_CATEGORIES)[number],
+    title: editing?.title ?? '',
+    description: editing?.description ?? '',
+    severity: (editing?.severity ?? 'MEDIUM') as (typeof CONCERN_SEVERITIES)[number],
+    contactId: editing?.contact?.id ?? '',
+    ownerId: editing?.owner?.id ?? '',
+    deadline: toDateInput(editing?.deadlineAt ?? null),
   });
   const [error, setError] = React.useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
@@ -59,6 +75,23 @@ export function RaiseConcernDialog({
     e.preventDefault();
     if (!form.title.trim()) return setError(t('Enter a short title.'));
     try {
+      if (editing) {
+        await update.mutateAsync({
+          id: editing.id,
+          input: {
+            category: form.category,
+            title: form.title.trim(),
+            description: form.description.trim() || null,
+            severity: form.severity,
+            contactId: form.contactId || null,
+            // An empty owner keeps the current one.
+            ...(form.ownerId ? { ownerId: form.ownerId } : {}),
+            deadlineAt: form.deadline ? new Date(`${form.deadline}T17:00:00`).toISOString() : null,
+          },
+        });
+        onClose();
+        return;
+      }
       await raise.mutateAsync({
         companyId: company.id,
         category: form.category,
@@ -77,7 +110,7 @@ export function RaiseConcernDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent side="right" className="max-w-lg overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{t('Raise a client concern')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{editing ? t('Edit client concern') : t('Raise a client concern')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
           {t('For {company}. The owner and their manager are notified.', { company: company.name })}
         </DialogDescription>
@@ -135,8 +168,8 @@ export function RaiseConcernDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={raise.isPending}>
-              {raise.isPending ? t('Saving…') : t('Raise concern')}
+            <Button type="submit" disabled={raise.isPending || update.isPending}>
+              {raise.isPending || update.isPending ? t('Saving…') : editing ? t('Save changes') : t('Raise concern')}
             </Button>
           </div>
         </form>
@@ -159,6 +192,7 @@ export function ConcernList({
   const q = useClientConcerns(box, { companyId });
   const [escalating, setEscalating] = React.useState<ClientConcernRow | null>(null);
   const [resolving, setResolving] = React.useState<ClientConcernRow | null>(null);
+  const [editing, setEditing] = React.useState<ClientConcernRow | null>(null);
   if (q.isPending) return <Skeleton className="h-20" />;
   if (q.error) return <p role="alert" className="text-sm text-critical">{q.error.message}</p>;
   if (!q.data?.length) return <p className="p-2 text-sm text-muted-foreground">{emptyText}</p>;
@@ -203,6 +237,11 @@ export function ConcernList({
                 </Button>
               )}
               {c.canEdit && (
+                <Button size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={t('Edit “{subject}”', { subject: c.title })}>
+                  <Pencil aria-hidden />
+                </Button>
+              )}
+              {c.canEdit && (
                 <Button size="sm" onClick={() => setResolving(c)}>
                   <CircleCheck aria-hidden /> {t('Resolve')}
                 </Button>
@@ -213,6 +252,7 @@ export function ConcernList({
       </ul>
       {escalating && <EscalateDialog row={escalating} onClose={() => setEscalating(null)} />}
       {resolving && <ResolveDialog row={resolving} onClose={() => setResolving(null)} />}
+      {editing && <RaiseConcernDialog company={editing.company} editing={editing} onClose={() => setEditing(null)} />}
     </>
   );
 }

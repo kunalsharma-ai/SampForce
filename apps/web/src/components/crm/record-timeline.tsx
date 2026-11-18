@@ -3,12 +3,13 @@
 import { Badge, Button, Skeleton } from '@dealflow/ui';
 import { TIMELINE_KIND_LABELS, type TimelineEntity, type TimelineItem, type TimelineKind, type TimelinePage } from '@dealflow/types';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ArrowDownLeft, ArrowUpRight, CalendarDays, CheckCircle2, FileSignature, FileText, FormInput, GitBranch, Mails, MousePointerClick, PlusCircle, ShieldAlert, StickyNote } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, CalendarDays, CheckCircle2, FileSignature, FileText, FormInput, GitBranch, Mails, MousePointerClick, Pencil, PlusCircle, ShieldAlert, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { EditActivityDialog } from './edit-activity-dialog';
 
 const ICONS: Record<TimelineKind, typeof StickyNote> = {
   created: PlusCircle,
@@ -39,8 +40,9 @@ const ABOUT_HREF = { lead: '/app/leads/', contact: '/app/contacts/', deal: '/app
  * Customer 360 timeline: everything SampForce knows about a record in one stream (activity, email, meetings,
  * sequences, stage moves, quotes, contracts, forms, escalations). Companies roll up their contacts and deals.
  */
-export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: string }) {
+export function RecordTimeline({ entity, id, canEdit = false }: { entity: TimelineEntity; id: string; canEdit?: boolean }) {
   const [kind, setKind] = useState<TimelineKind | 'all'>('all');
+  const [editing, setEditing] = useState<string | null>(null);
   const t = useT();
   const q = useInfiniteQuery({
     queryKey: ['timeline', entity, id, kind],
@@ -81,7 +83,7 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
       ) : (
         <ol className="space-y-3" aria-label={t('Timeline, newest first')}>
           {items.map((i) => (
-            <TimelineRow key={i.id} item={i} />
+            <TimelineRow key={i.id} item={i} onEdit={canEdit && i.kind === 'activity' ? () => setEditing(i.id.slice('activity:'.length)) : undefined} />
           ))}
         </ol>
       )}
@@ -90,11 +92,12 @@ export function RecordTimeline({ entity, id }: { entity: TimelineEntity; id: str
           {q.isFetchingNextPage ? t('Loading…') : t('Show older')}
         </Button>
       )}
+      <EditActivityDialog activityId={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
 
-function TimelineRow({ item: i }: { item: TimelineItem }) {
+function TimelineRow({ item: i, onEdit }: { item: TimelineItem; onEdit?: () => void }) {
   const t = useT();
   const Icon = i.direction === 'in' ? ArrowDownLeft : i.direction === 'out' && i.kind === 'email' ? ArrowUpRight : ICONS[i.kind];
   return (
@@ -127,6 +130,11 @@ function TimelineRow({ item: i }: { item: TimelineItem }) {
           </time>
         </p>
       </div>
+      {onEdit && (
+        <Button size="sm" variant="ghost" className="shrink-0" onClick={onEdit} aria-label={t('Edit “{subject}”', { subject: i.title })}>
+          <Pencil aria-hidden />
+        </Button>
+      )}
     </li>
   );
 }

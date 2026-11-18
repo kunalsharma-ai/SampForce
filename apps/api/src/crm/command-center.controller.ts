@@ -9,9 +9,11 @@ import {
   instructionInputSchema,
   instructionListSchema,
   instructionProgressSchema,
+  instructionUpdateSchema,
   leadTransferDecisionSchema,
   leadTransferInputSchema,
   leadTransferListSchema,
+  leadTransferUpdateSchema,
   revenueRecordUpdateSchema,
   z,
 } from '@dealflow/types';
@@ -102,6 +104,13 @@ export class LeadTransfersController {
     return this.transfers.decide(auth, id, body, meta);
   }
 
+  /** The requester changes a pending request. */
+  @Patch(':id')
+  @RequirePermissions('companies:write')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(leadTransferUpdateSchema)) body: z.output<typeof leadTransferUpdateSchema>, @Meta() meta: RequestMeta) {
+    return this.transfers.update(auth, id, body, meta);
+  }
+
   @Post(':id/cancel')
   @HttpCode(200)
   @RequirePermissions('companies:write')
@@ -135,6 +144,13 @@ export class InstructionsController {
   @RequirePermissions('dashboard:read')
   progress(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(instructionProgressSchema)) body: z.output<typeof instructionProgressSchema>, @Meta() meta: RequestMeta) {
     return this.instructions.progress(auth, id, body, meta);
+  }
+
+  /** The sender changes an open instruction. */
+  @Patch(':id')
+  @RequirePermissions('dashboard:read')
+  update(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(instructionUpdateSchema)) body: z.output<typeof instructionUpdateSchema>, @Meta() meta: RequestMeta) {
+    return this.instructions.update(auth, id, body, meta);
   }
 
   @Post(':id/cancel')

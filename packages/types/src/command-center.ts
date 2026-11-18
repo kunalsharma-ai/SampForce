@@ -456,6 +456,20 @@ export const leadTransferInputSchema = z
   .strict();
 export type LeadTransferInput = z.input<typeof leadTransferInputSchema>;
 
+/** The requester edits a request that is still waiting for a decision. The lead it is about stays the same. */
+export const leadTransferUpdateSchema = z
+  .object({
+    contactId: z.string().uuid().nullable().optional(),
+    toUserId: z.string().uuid().nullable().optional(),
+    reason: z.enum(TRANSFER_REASONS as [string, ...string[]]).optional(),
+    opportunityValue: z.coerce.number().min(0).max(1e13).nullable().optional(),
+    currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a 3-letter ISO currency code').nullable().optional(),
+    remarks: z.string().trim().max(2000).nullable().optional(),
+    fileIds: z.array(z.string().uuid()).max(10).optional(),
+  })
+  .strict();
+export type LeadTransferUpdate = z.input<typeof leadTransferUpdateSchema>;
+
 export const leadTransferDecisionSchema = z
   .object({
     action: z.enum(['APPROVE', 'REJECT', 'REASSIGN']),
@@ -497,6 +511,10 @@ export interface LeadTransferRow {
   creator: PersonRef | null;
   /** Whether the caller may approve, reject or reassign it. */
   canDecide: boolean;
+  /** The requester may edit or withdraw it while it waits for a decision. */
+  canEdit: boolean;
+  /** When the requester last changed it (null = never). */
+  editedAt: string | null;
   createdAt: string;
 }
 
@@ -794,6 +812,17 @@ export const instructionInputSchema = z
   .strict();
 export type InstructionInput = z.input<typeof instructionInputSchema>;
 
+/** The sender edits an open instruction: its wording, kind, priority or due date. The recipient is told it changed. */
+export const instructionUpdateSchema = z
+  .object({
+    kind: z.enum(INSTRUCTION_KINDS).optional(),
+    message: z.string().trim().min(1, 'Write the instruction').max(2000).optional(),
+    priority: z.enum(MESSAGE_PRIORITIES).optional(),
+    dueAt: z.string().datetime({ offset: true }).nullable().optional(),
+  })
+  .strict();
+export type InstructionUpdate = z.input<typeof instructionUpdateSchema>;
+
 export const instructionProgressSchema = z
   .object({
     action: z.enum(['ACKNOWLEDGE', 'DONE', 'REOPEN']),
@@ -823,9 +852,12 @@ export interface InstructionRow {
   completedAt: string | null;
   completionNote: string | null;
   createdAt: string;
-  /** The caller is the recipient (can acknowledge and complete) or the sender (can withdraw). */
+  /** When the sender last changed it (null = never). */
+  editedAt: string | null;
+  /** The caller is the recipient (can acknowledge and complete) or the sender (can edit and withdraw while open). */
   canProgress: boolean;
   canCancel: boolean;
+  canEdit: boolean;
 }
 
 // ─── Client concerns (spec section 19) ───

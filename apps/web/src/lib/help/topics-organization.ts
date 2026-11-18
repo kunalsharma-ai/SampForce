@@ -170,6 +170,30 @@ export const organizationHelp = {
       'يربط كل شخص بريده الخاص مرة واحدة في يومه الأول.',
     ],
   },
+  'integrations.own_servers': {
+    title: 'Your own servers',
+    what: [
+      'Your workspace’s own AI keys or AI server, and its own email server.',
+      'Las claves o el servidor de IA propios de tu espacio de trabajo, y su propio servidor de correo.',
+      'Les clés ou le serveur d’IA de votre espace de travail, et son propre serveur d’e-mail.',
+      'Eigene KI-Schlüssel oder ein eigener KI-Server Ihres Arbeitsbereichs und sein eigener E-Mail-Server.',
+      'مفاتيح أو خادم الذكاء الاصطناعي الخاص بمساحة عملك، وخادم بريدها الخاص.',
+    ],
+    how: [
+      'An admin adds keys or a server address. SampForce tries them first and, if allowed, falls back to the shared ones. A private address needs the operator’s approval.',
+      'Un administrador añade claves o la dirección de un servidor. SampForce los prueba primero y, si se permite, recurre a los compartidos. Una dirección privada necesita la aprobación del operador.',
+      'Un administrateur ajoute des clés ou l’adresse d’un serveur. SampForce les essaie d’abord et, si c’est permis, se rabat sur ceux partagés. Une adresse privée exige l’accord de l’opérateur.',
+      'Ein Admin fügt Schlüssel oder eine Serveradresse hinzu. SampForce versucht sie zuerst und greift, falls erlaubt, auf die gemeinsamen zurück. Private Adressen brauchen die Freigabe des Betreibers.',
+      'يضيف المسؤول المفاتيح أو عنوان الخادم. يجرّبها SampForce أولًا، ويرجع إلى المشتركة إن سُمح بذلك. يحتاج العنوان الخاص إلى موافقة المشغّل.',
+    ],
+    where: [
+      'Use it to run AI on your own free or paid keys without using AI credits, or to send portal email from your own domain.',
+      'Úsalo para usar la IA con tus propias claves, gratuitas o de pago, sin gastar créditos de IA, o para enviar el correo del portal desde tu dominio.',
+      'Utilisez-le pour faire tourner l’IA sur vos propres clés, gratuites ou payantes, sans crédits d’IA, ou pour envoyer les e-mails du portail depuis votre domaine.',
+      'Nutzen Sie es, um KI mit eigenen kostenlosen oder bezahlten Schlüsseln ohne KI-Credits zu betreiben oder Portal-E-Mails von Ihrer Domain zu senden.',
+      'استخدمه لتشغيل الذكاء الاصطناعي بمفاتيحك المجانية أو المدفوعة دون أرصدة، أو لإرسال بريد البوابة من نطاقك.',
+    ],
+  },
   'integrations.apps': {
     title: 'Workspace apps',
     what: [
