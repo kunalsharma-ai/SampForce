@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { Prisma, type TenantTx } from '@dealflow/database';
 import { FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
+import { AI_HEALTH_PREFIX, AI_PROVIDER_DEFS, type AiProviderKey, isAiProviderKey, providerOrder, readHealth } from '../ai/ai-providers';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
 import { BillingProviders } from '../billing/billing-providers';
@@ -316,7 +317,10 @@ export class OperatorService {
   }
 
   async providers(): Promise<OperatorProviderRow[]> {
-    const rows = await this.prisma.platformSetting.findMany({ where: { OR: [{ key: { startsWith: PROVIDER_CHECK_PREFIX } }, { key: { startsWith: WEBHOOK_RECEIPT_PREFIX } }] } });
+    const rows = await this.prisma.platformSetting.findMany({ where: { OR: [{ key: { startsWith: PROVIDER_CHECK_PREFIX } }, { key: { startsWith: WEBHOOK_RECEIPT_PREFIX } }, { key: { startsWith: AI_HEALTH_PREFIX } }] } });
+    const health = new Map(rows.filter((r) => r.key.startsWith(AI_HEALTH_PREFIX)).map((r) => [r.key.slice(AI_HEALTH_PREFIX.length), readHealth(r.value)]));
+    const order = providerOrder(this.env);
+    const usable = order.filter((k) => AI_PROVIDER_DEFS[k].configured(this.env));
     const checks = new Map(rows.filter((r) => r.key.startsWith(PROVIDER_CHECK_PREFIX)).map((r) => [r.key.slice(PROVIDER_CHECK_PREFIX.length), readProviderCheck(r.value)]));
     const receipts = new Map(rows.filter((r) => r.key.startsWith(WEBHOOK_RECEIPT_PREFIX)).map((r) => [r.key.slice(WEBHOOK_RECEIPT_PREFIX.length), r.value]));
     const states = new Map(MANAGED_KEY_NAMES.map((n) => [n, this.keys.state(n)]));
@@ -344,13 +348,29 @@ export class OperatorService {
       const current = stored && stored.key !== null && stored.key === fp ? stored : null;
       const lastCheck = stored ? { ok: stored.ok, at: stored.at, message: stored.message, by: stored.by, stale: !current } : null;
       const state = !configured ? 'not_configured' : !current ? 'configured' : current.ok ? 'verified' : 'failed';
-      const appStatus = p.key === 'checkout' ? this.checkoutStatus() : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;
+      const aiKey = isAiProviderKey(p.key) ? p.key : null;
+      const position = aiKey ? usable.indexOf(aiKey) : -1;
+      const appStatus =
+        p.key === 'checkout' ? this.checkoutStatus()
+          : p.key === 'ai_routing' ? this.aiRoutingStatus(usable)
+            : aiKey && configured ? (position < 0 ? 'Switched off in "AI providers and fallback order"' : position === 0 ? 'Answers AI requests first' : `Fallback ${position} of ${usable.length - 1}: answers when the providers before it are busy or failing`)
+              : !configured ? p.app.off : state === 'verified' && p.app.verified ? p.app.verified : p.app.on;
+      const ai = aiKey
+        ? { enabled: order.includes(aiKey), position: position < 0 ? null : position + 1, model: AI_PROVIDER_DEFS[aiKey].model(this.env) || null, health: health.get(aiKey) ?? null }
+        : null;
       const setup = {
         consoleUrl: p.setup.consoleUrl ?? null, consoleLabel: p.setup.consoleLabel ?? null, steps: p.setup.steps,
         urls: (p.setup.urls ?? []).map((u) => ({ label: u.label, url: this.publicUrl(u.path), where: u.where })),
       };
-      return { key: p.key, name: p.name, usedFor: p.usedFor, env, configured, checkable, checkNote: p.checkNote, lastCheck, state, appStatus, setup, webhook: this.webhookStatus(p, receipts.get(p.webhook ?? '')) };
+      return { key: p.key, name: p.name, group: p.group ?? null, ai, usedFor: p.usedFor, env, configured, checkable, checkNote: p.checkNote, lastCheck, state, appStatus, setup, webhook: this.webhookStatus(p, receipts.get(p.webhook ?? '')) };
     });
+  }
+
+  /** Which AI providers answer now, in order, in one line. */
+  private aiRoutingStatus(usable: AiProviderKey[]): string {
+    if (!usable.length) return 'No AI provider has keys, so AI features say they are not configured';
+    const names = usable.map((k) => AI_PROVIDER_DEFS[k].name);
+    return usable.length === 1 ? `${names[0]} answers every AI request, with no fallback` : `${names[0]} answers first, then ${names.slice(1).join(', then ')}`;
   }
 
   /** What workspaces see for billing right now, in one line. */
@@ -388,10 +408,11 @@ export class OperatorService {
         continue;
       }
       const parsed = parseManagedValue(name, raw);
-      const extra = parsed.ok ? (p.fields.find((f) => f.name === name)?.validate?.(parsed.value) ?? null) : null;
+      const def = p.fields.find((f) => f.name === name);
+      const extra = parsed.ok ? (def?.validate?.(parsed.value) ?? null) : null;
       if (!parsed.ok) details.push({ path: `values.${name}`, message: parsed.message });
       else if (extra) details.push({ path: `values.${name}`, message: extra });
-      else changes[name] = parsed.value;
+      else changes[name] = def?.normalize ? def.normalize(parsed.value) : parsed.value;
     }
     if (details.length) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: details[0]!.message, details });
     const done = await this.keys.apply(changes, op.id);
@@ -407,7 +428,9 @@ export class OperatorService {
     if (missing.length) throw new BadRequestException({ code: 'NOT_CONFIGURED', message: `Add ${missing.join(' and ')} first.` });
     const run: Record<ProviderCheckKey, () => Promise<string>> = {
       apollo: () => this.apollo.check(), hunter: () => this.hunter.check(), deepgram: () => this.deepgram.check(),
-      anthropic: () => this.tests.anthropic(), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
+      anthropic: () => this.tests.anthropic(),
+      openai: () => this.tests.compatible('openai'), gemini: () => this.tests.compatible('gemini'), groq: () => this.tests.compatible('groq'),
+      openrouter: () => this.tests.openrouter(), mistral: () => this.tests.compatible('mistral'), custom_ai: () => this.tests.compatible('custom_ai'), google: () => this.tests.google(), microsoft: () => this.tests.microsoft(),
       slack: () => this.tests.slack(), zoom: () => this.tests.zoom(), docusign: () => this.tests.docusign(),
       smtp: () => this.tests.smtp(), zapier: () => this.tests.zapier(), stripe: () => this.tests.stripe(), razorpay: () => this.tests.razorpay(),
     };

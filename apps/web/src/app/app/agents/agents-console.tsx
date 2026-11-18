@@ -76,6 +76,12 @@ function ProviderCard({ status }: { status: AiStatus }) {
           <Badge tone={p.configured ? 'success' : 'warning'}>{p.configured ? t('API key set') : t('Not configured')}</Badge>
           {p.model && <Badge>{p.model}</Badge>}
         </div>
+        {p.fallbacks?.length > 0 && (
+          <p>
+            <span className="text-muted-foreground">{t('Falls back to')}: </span>
+            {p.fallbacks.map((f) => `${f.name} (${f.model})`).join(', ')}
+          </p>
+        )}
         <p className="text-muted-foreground">{t.maybe(p.note)}</p>
       </CardContent>
     </Card>

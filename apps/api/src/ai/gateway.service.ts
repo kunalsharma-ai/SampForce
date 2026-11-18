@@ -7,7 +7,8 @@ import { PrismaService } from '../common/prisma.service';
 import { requestLanguage } from '../common/request-language';
 import { errorMessage } from '../worker/queue';
 import { inLanguagePrompt } from './language';
-import { AnthropicProvider, type Effort, type ModelBlock, type ModelMessage, type ModelProvider, type ModelRequest, type ModelResponse } from './provider';
+import { AI_PROVIDER_DEFS, AiProviderChain } from './ai-providers';
+import { type Effort, type ModelBlock, type ModelMessage, type ModelProvider, type ModelRequest, type ModelResponse } from './provider';
 import { Redactor } from './redact';
 
 export const AI_PROVIDER = Symbol('AI_PROVIDER');
@@ -56,10 +57,10 @@ export class AiGateway {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(API_ENV) private readonly env: ApiEnv,
-    @Inject(AI_PROVIDER) private readonly providers: ModelProviderSource,
+    @Inject(AI_PROVIDER) private readonly providers: AiProviderChain,
   ) {}
 
-  /** Resolved per call, so an ANTHROPIC_API_KEY saved in the operator console applies without a restart. */
+  /** Resolved per call, so an AI key saved in the operator console applies without a restart (ADR 0051, 0067). */
   private get provider(): ModelProvider | null {
     return this.providers.current();
   }
@@ -102,14 +103,19 @@ export class AiGateway {
                 : null;
         return { key: a.key, enabled: s.enabled && !disabled.has(a.key), available: reason === null, reason };
       });
+      const plan = this.providers.plan();
+      const first = plan[0] ? AI_PROVIDER_DEFS[plan[0]] : null;
       return {
         provider: {
-          configured: !!this.provider,
-          name: 'Anthropic Claude',
-          model: this.provider?.model ?? null,
-          note: this.provider
-            ? 'An API key is set. SampForce has not verified it until the first call succeeds; failures are shown on each run.'
-            : 'An operator must add ANTHROPIC_API_KEY in the operator console (Providers) or the deployment secrets. Until then AI features say they are unavailable.',
+          configured: !!first,
+          name: first?.name ?? 'Anthropic Claude',
+          model: first?.model(this.env) ?? null,
+          fallbacks: plan.slice(1).map((k) => ({ name: AI_PROVIDER_DEFS[k].name, model: AI_PROVIDER_DEFS[k].model(this.env) })),
+          note: first
+            ? plan.length > 1
+              ? 'An API key is set. When this provider is busy, out of free quota or failing, SampForce moves on to the next provider at once.'
+              : 'An API key is set. SampForce has not verified it until the first call succeeds; failures are shown on each run.'
+            : 'An operator must add an AI provider key in the operator console under Providers: Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, Mistral or a self-hosted server such as Ollama. Until then AI features say they are unavailable.',
         },
         settings: {
           enabled: s.enabled,
@@ -174,7 +180,7 @@ export class AiGateway {
           userId: ctx.userId,
           runId: ctx.runId ?? null,
           agent: ctx.agent,
-          provider: provider.name,
+          provider: res?.provider ?? provider.name,
           model: res?.model ?? provider.model,
           inputTokens: res?.inputTokens ?? 0,
           outputTokens: res?.outputTokens ?? 0,
@@ -210,21 +216,4 @@ function restoreBlock(b: ModelBlock, r: Redactor): ModelBlock {
   if (b.type === 'text') return { ...b, text: r.restore(b.text) };
   if (b.type === 'tool_use') return { ...b, input: r.restoreDeep(b.input) };
   return b;
-}
-
-export interface ModelProviderSource {
-  current(): ModelProvider | null;
-}
-
-/** The Claude client for the key set now: built once per key, rebuilt when the key changes, none without a key. */
-export function providerFactory(env: ApiEnv): ModelProviderSource {
-  let cached: { key: string; provider: ModelProvider } | null = null;
-  return {
-    current() {
-      const key = env.ANTHROPIC_API_KEY;
-      if (!key) return null;
-      if (cached?.key !== key) cached = { key, provider: new AnthropicProvider(env) };
-      return cached.provider;
-    },
-  };
 }

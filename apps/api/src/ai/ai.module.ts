@@ -11,7 +11,9 @@ import { CopilotService } from './copilot.service';
 import { EmailAssistantService } from './email-assistant.service';
 import { ForecastPlanService } from './forecast-plan.service';
 import { ForecastService } from './forecast.service';
-import { AI_PROVIDER, AiGateway, providerFactory } from './gateway.service';
+import { AiProviderChain, platformHealthStore } from './ai-providers';
+import { AI_PROVIDER, AiGateway } from './gateway.service';
+import { PrismaService } from '../common/prisma.service';
 import { RecordContextBuilder } from './record-context';
 import { RetentionController } from './retention.controller';
 import { RevenueModule } from '../revenue/revenue.module';
@@ -26,7 +28,7 @@ import { VoiceNotesService } from '../voice/voice-notes.service';
   imports: [CrmModule, IntelligenceModule, RevenueModule],
   controllers: [AiController, ForecastController, MeetingRecordsController, VoiceNotesController, RetentionController],
   providers: [
-    { provide: AI_PROVIDER, inject: [API_ENV], useFactory: (env: ApiEnv) => providerFactory(env) },
+    { provide: AI_PROVIDER, inject: [API_ENV, PrismaService], useFactory: (env: ApiEnv, prisma: PrismaService) => new AiProviderChain(env, platformHealthStore(prisma)) },
     AiGateway,
     AiService,
     RecordContextBuilder,
@@ -41,6 +43,6 @@ import { VoiceNotesService } from '../voice/voice-notes.service';
     MeetingRecordsService,
     VoiceNotesService,
   ],
-  exports: [AiRunner, AiGateway],
+  exports: [AiRunner, AiGateway, AI_PROVIDER],
 })
 export class AiModule {}

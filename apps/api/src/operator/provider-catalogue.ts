@@ -1,4 +1,5 @@
 import type { ProviderKey } from '@dealflow/types';
+import { parseProviderOrder } from '../ai/ai-providers';
 import { parsePriceMap } from '../billing/providers';
 import type { ManagedKeyName } from '../common/provider-keys';
 import type { ReceiptProvider } from '../common/webhook-receipts';
@@ -12,6 +13,8 @@ export interface CatalogueField {
   switch?: true;
   /** A check beyond the environment variable's own rule; returns an error message, or null when the value is fine. */
   validate?: (value: string) => string | null;
+  /** Rewrites a valid value into one spelling before it is stored. */
+  normalize?: (value: string) => string;
 }
 
 /** A URL to paste into the provider's console: a path on this deployment's public address. */
@@ -24,6 +27,8 @@ export interface CatalogueUrl {
 export interface CatalogueProvider {
   key: ProviderKey;
   name: string;
+  /** AI providers are listed together, and none of them is required on its own (ADR 0067). */
+  group?: 'ai';
   usedFor: string;
   fields: CatalogueField[];
   /** The fields the connection test sends (empty: there is nothing to call). Their fingerprint is stored with the result. */
@@ -35,6 +40,18 @@ export interface CatalogueProvider {
   /** Set for providers that send signed webhooks: the console shows whether a signed event has arrived. */
   webhook?: ReceiptProvider;
 }
+
+const providerOrderError = (v: string) => {
+  try {
+    parseProviderOrder(v);
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Not a valid order.';
+  }
+};
+
+/** What workspaces see for one AI provider; the routing card works out the real line from the order (ADR 0067). */
+const AI_APP = { off: 'Not used: no key', on: 'Used for AI features in the order set under "AI providers and fallback order"' };
 
 const priceMap = (v: string) => {
   try {
@@ -213,20 +230,147 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     webhook: 'docusign',
   },
   {
-    key: 'anthropic', name: 'Anthropic (Claude)', usedFor: 'AI agents, email assistant, proposals, meeting and voice readings',
+    key: 'ai_routing', name: 'AI providers and fallback order', group: 'ai',
+    usedFor: 'Which AI providers SampForce uses, and the order it tries them in. When one is rate limited, out of free quota or failing, the next one answers straight away',
+    fields: [
+      { name: 'AI_PROVIDER_ORDER', label: 'Order', required: false, validate: providerOrderError, normalize: (v) => parseProviderOrder(v).join(','), help: 'Provider keys separated by commas, first tried first, for example groq,gemini,anthropic. A provider left out is switched off. Empty: every provider with keys, in the order listed on this page.' },
+    ],
+    tested: [],
+    checkNote: 'This is a setting, not a key, so there is nothing to test. Each provider below has its own test.',
+    app: { off: '', on: '' },
+    setup: {
+      steps: [
+        'Add keys for one or more AI providers below. Free keys work: Google Gemini, Groq, Mistral and OpenRouter all offer free tiers, and a self-hosted Ollama server costs nothing per call.',
+        'Put the provider you want answering most of the time first. Free tiers have low limits per minute and per day, so add two or three providers: when the first one is busy SampForce moves on to the next and rests the busy one for a minute.',
+        'Copilot looks up CRM records with tools, so every model in the list must support tool calling (function calling). The suggested models do.',
+      ],
+    },
+  },
+  {
+    key: 'anthropic', name: 'Anthropic (Claude)', group: 'ai', usedFor: 'AI agents, email assistant, proposals, meeting and voice readings',
     fields: [
       { name: 'ANTHROPIC_API_KEY', label: 'API key', required: true, help: 'Claude Console > API keys.' },
       { name: 'AI_MODEL', label: 'Model', required: false, help: 'The Claude model every AI feature uses. Leave it at the default unless Anthropic retires it; the connection test checks the key can use it.' },
     ],
     tested: ['ANTHROPIC_API_KEY'],
     checkNote: 'Lists the models the key may use. No message is sent, so no tokens are used.',
-    app: { off: 'AI features show as not configured', on: 'AI features available' },
+    app: AI_APP,
     setup: {
       consoleUrl: 'https://console.anthropic.com/settings/keys', consoleLabel: 'Claude Console API keys',
       steps: [
         'Sign in to the Claude Console with the organisation that should be billed, and add a payment method under Billing.',
         'Settings > API keys > Create key, name it "SampForce".',
         'Copy the key (it is shown once), paste it below, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'openai', name: 'OpenAI', group: 'ai', usedFor: 'AI features, as the main AI provider or a fallback',
+    fields: [
+      { name: 'OPENAI_API_KEY', label: 'API key', required: true, help: 'platform.openai.com > API keys.' },
+      { name: 'OPENAI_MODEL', label: 'Model', required: false, help: 'Default gpt-5-mini. Any chat model that supports function calling works.' },
+    ],
+    tested: ['OPENAI_API_KEY'],
+    checkNote: 'Lists the models the key may use. No message is sent, so no tokens are used.',
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://platform.openai.com/api-keys', consoleLabel: 'OpenAI API keys',
+      steps: [
+        'Sign in to the OpenAI platform and add credit under Billing (the OpenAI API has no free tier).',
+        'API keys > Create new secret key, name it "SampForce", and copy it.',
+        'Paste it below, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'gemini', name: 'Google Gemini', group: 'ai', usedFor: 'AI features, as the main AI provider or a fallback. Has a free tier',
+    fields: [
+      { name: 'GEMINI_API_KEY', label: 'API key', required: true, help: 'Google AI Studio > Get API key.' },
+      { name: 'GEMINI_MODEL', label: 'Model', required: false, help: 'Default gemini-2.5-flash, which the free tier includes.' },
+    ],
+    tested: ['GEMINI_API_KEY'],
+    checkNote: 'Lists the models the key may use. No message is sent, so no tokens are used.',
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://aistudio.google.com/apikey', consoleLabel: 'Google AI Studio API keys',
+      steps: [
+        'Sign in to Google AI Studio with a Google account and choose "Create API key".',
+        'The free tier needs no billing account. It allows a limited number of requests per minute and per day; add billing in Google Cloud for higher limits.',
+        'Copy the key, paste it below, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'groq', name: 'Groq', group: 'ai', usedFor: 'AI features, as the main AI provider or a fallback. Has a free tier',
+    fields: [
+      { name: 'GROQ_API_KEY', label: 'API key', required: true, help: 'console.groq.com > API Keys.' },
+      { name: 'GROQ_MODEL', label: 'Model', required: false, help: 'Default llama-3.3-70b-versatile. Pick a model that supports tool use.' },
+    ],
+    tested: ['GROQ_API_KEY'],
+    checkNote: 'Lists the models the key may use. No message is sent, so no tokens are used.',
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://console.groq.com/keys', consoleLabel: 'GroqCloud API keys',
+      steps: [
+        'Sign up at console.groq.com. The free plan needs no card; its limits per minute and per day are shown under Settings > Limits.',
+        'API Keys > Create API Key, name it "SampForce", and copy it.',
+        'Paste it below, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'openrouter', name: 'OpenRouter', group: 'ai', usedFor: 'AI features through one key for hundreds of models, including free ones',
+    fields: [
+      { name: 'OPENROUTER_API_KEY', label: 'API key', required: true, help: 'openrouter.ai > Settings > API Keys.' },
+      { name: 'OPENROUTER_MODEL', label: 'Model', required: false, help: 'Default meta-llama/llama-3.3-70b-instruct:free. Models ending in :free cost nothing; choose one that supports tools.' },
+    ],
+    tested: ['OPENROUTER_API_KEY'],
+    checkNote: "Reads the key's own details (credit and free-tier status). No message is sent, so no tokens are used.",
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://openrouter.ai/settings/keys', consoleLabel: 'OpenRouter API keys',
+      steps: [
+        'Sign up at openrouter.ai and open Settings > API Keys > Create Key, named "SampForce".',
+        'Free models (their names end in :free) have a daily request limit, which is higher once the account has bought some credit.',
+        'Copy the key, paste it below, choose a model on openrouter.ai/models if you want another one, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'mistral', name: 'Mistral', group: 'ai', usedFor: 'AI features, as the main AI provider or a fallback. Has a free plan',
+    fields: [
+      { name: 'MISTRAL_API_KEY', label: 'API key', required: true, help: 'console.mistral.ai > API Keys.' },
+      { name: 'MISTRAL_MODEL', label: 'Model', required: false, help: 'Default mistral-small-latest.' },
+    ],
+    tested: ['MISTRAL_API_KEY'],
+    checkNote: 'Lists the models the key may use. No message is sent, so no tokens are used.',
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://console.mistral.ai/api-keys', consoleLabel: 'Mistral API keys',
+      steps: [
+        'Sign in to the Mistral console and choose the free "Experiment" plan (or a paid plan) under Billing.',
+        'API Keys > Create new key, name it "SampForce", and copy it.',
+        'Paste it below, save, then press Test connection.',
+      ],
+    },
+  },
+  {
+    key: 'custom_ai', name: 'Self-hosted or other AI (OpenAI-compatible)', group: 'ai', usedFor: 'AI features from your own server (Ollama, LM Studio, vLLM, LiteLLM) or any provider with an OpenAI-compatible API (DeepSeek, Together, Fireworks…)',
+    fields: [
+      { name: 'CUSTOM_AI_BASE_URL', label: 'API address', required: true, help: 'The address that ends before /chat/completions, for example http://ollama:11434/v1 for Ollama in the same Docker network, or https://api.deepseek.com/v1.' },
+      { name: 'CUSTOM_AI_MODEL', label: 'Model', required: true, help: 'The model name the server knows, for example llama3.1 or qwen2.5 for Ollama. It must support tool calling for Copilot.' },
+      { name: 'CUSTOM_AI_API_KEY', label: 'API key', required: false, help: 'Leave empty for a local server that needs no key.' },
+    ],
+    tested: ['CUSTOM_AI_BASE_URL', 'CUSTOM_AI_API_KEY'],
+    checkNote: 'Lists the models the server offers and checks the model is one of them. No message is sent.',
+    app: AI_APP,
+    setup: {
+      consoleUrl: 'https://ollama.com/download', consoleLabel: 'Ollama downloads',
+      steps: [
+        'For Ollama: install it on a machine the SampForce server can reach, then run "ollama pull llama3.1" (or another model with tool support).',
+        'Make Ollama listen beyond localhost (OLLAMA_HOST=0.0.0.0) if it runs outside the SampForce containers, and keep that port closed to the internet.',
+        'Enter the address with /v1 at the end (for example http://192.168.1.20:11434/v1) and the model name. A local server needs no API key.',
+        'For a hosted OpenAI-compatible provider, enter its API address, model name and key instead. Save, then press Test connection.',
       ],
     },
   },
