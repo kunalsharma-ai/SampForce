@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import type { Prisma, TenantTx } from '@dealflow/database';
 import type { LeadTransferRow, TransferStatus, z } from '@dealflow/types';
-import type { leadTransferDecisionSchema, leadTransferInputSchema, leadTransferListSchema } from '@dealflow/types';
+import type { leadTransferDecisionSchema, leadTransferInputSchema, leadTransferListSchema, leadTransferUpdateSchema } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -138,6 +138,49 @@ export class LeadTransfersService {
     });
   }
 
+  /** The requester changes a request that is still pending; whoever decides it is told it changed. */
+  update(auth: AuthContext, id: string, input: z.output<typeof leadTransferUpdateSchema>, meta: RequestMeta): Promise<LeadTransferRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const t = await tx.leadTransfer.findFirst({ where: { id, tenantId: auth.tenantId } });
+      if (!t || t.requestedById !== auth.userId) throw notFound('Transfer request');
+      if (t.status !== 'PENDING') throw new BadRequestException({ code: 'TRANSFER_DECIDED', message: 'This transfer request has already been decided.' });
+      const company = await tx.company.findFirst({ where: { id: t.companyId, tenantId: auth.tenantId, deletedAt: null } });
+      if (!company) throw notFound('Company');
+      if (input.toUserId) {
+        if (!(await tx.membership.findFirst({ where: { tenantId: auth.tenantId, userId: input.toUserId, status: 'ACTIVE' }, select: { id: true } }))) throw badRef('toUserId');
+        if (input.toUserId === company.ownerId) throw badRef('toUserId', 'already owns this lead');
+      }
+      if (input.contactId && !(await tx.contact.findFirst({ where: { id: input.contactId, tenantId: auth.tenantId, companyId: company.id, deletedAt: null }, select: { id: true } }))) throw badRef('contactId');
+      const fileIds = input.fileIds ? [...new Set(input.fileIds)] : undefined;
+      if (fileIds?.length && (await tx.companyFile.count({ where: { tenantId: auth.tenantId, companyId: company.id, id: { in: fileIds } } })) !== fileIds.length) throw badRef('fileIds');
+      const fields = Object.keys(input).filter((k) => input[k as keyof typeof input] !== undefined);
+      if (!fields.length) return (await this.rows(tx, auth, [t]))[0]!;
+      const row = await tx.leadTransfer.update({
+        where: { id },
+        data: {
+          ...(input.contactId !== undefined ? { contactId: input.contactId } : {}),
+          ...(input.toUserId !== undefined ? { toUserId: input.toUserId } : {}),
+          ...(input.reason !== undefined ? { reason: input.reason } : {}),
+          ...(input.opportunityValue !== undefined ? { opportunityValue: input.opportunityValue } : {}),
+          ...(input.currency !== undefined ? { currency: input.currency } : {}),
+          ...(input.remarks !== undefined ? { remarks: input.remarks } : {}),
+          ...(fileIds ? { fileIds } : {}),
+          editedAt: new Date(),
+        },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'lead_transfer.updated', entityType: 'company', entityId: company.id, metadata: { transferId: id, fields }, meta });
+      const deciders = [...new Set([(await reportingManagerOf(tx, auth.tenantId, auth.userId)) ?? null, row.toUserId].filter((u): u is string => !!u && u !== auth.userId))];
+      const by = await this.nameOf(tx, auth.userId);
+      await this.notifications.send(tx, auth.tenantId, deciders, {
+        type: 'lead_transfer.requested',
+        title: `Lead transfer request updated: ${label(company)}`,
+        body: row.remarks ? `${by}: ${row.remarks}` : `Updated by ${by}.`,
+        link: `/app?view=executive&transfer=${row.id}`,
+      });
+      return (await this.rows(tx, auth, [row]))[0]!;
+    });
+  }
+
   cancel(auth: AuthContext, id: string, meta: RequestMeta): Promise<LeadTransferRow> {
     return this.prisma.run(auth, async (tx) => {
       const t = await tx.leadTransfer.findFirst({ where: { id, tenantId: auth.tenantId } });
@@ -201,6 +244,8 @@ export class LeadTransfersService {
         newOwner: ref(t.newOwnerId),
         creator: ref(c?.createdById),
         canDecide: await this.canDecide(tx, auth, t, reports),
+        canEdit: t.requestedById === auth.userId && t.status === 'PENDING',
+        editedAt: t.editedAt?.toISOString() ?? null,
         createdAt: t.createdAt.toISOString(),
       });
     }

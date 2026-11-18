@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { type BranchInput, branchInputSchema, companyLeadSchema, leadDraftSchema, type OwnerChangeInput, ownerChangeSchema, type z } from '@dealflow/types';
+import { type BranchInput, branchInputSchema, type CompanyFileRename, companyFileRenameSchema, companyLeadSchema, leadDraftSchema, type OwnerChangeInput, ownerChangeSchema, type z } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
@@ -130,6 +130,12 @@ export class CompanyFilesController {
   @RequirePermissions('companies:read')
   async download(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Res() res: Response): Promise<void> {
     sendFile(res, await this.leads.download(auth, id));
+  }
+
+  @Patch(':id')
+  @RequirePermissions('companies:write')
+  rename(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(companyFileRenameSchema)) body: CompanyFileRename, @Meta() meta: RequestMeta) {
+    return this.leads.renameFile(auth, id, body.name, meta);
   }
 
   @Delete(':id')

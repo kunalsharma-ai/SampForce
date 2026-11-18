@@ -3,13 +3,15 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { ACTIVITY_TYPES, type ActivityRow, type Page, type TaskRow, type TimelineEntity } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Mail, MessageSquare, Phone, StickyNote, Users } from 'lucide-react';
+import { CalendarClock, Mail, MessageSquare, Pencil, Phone, StickyNote, Users } from 'lucide-react';
 import { useId, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, titleCase, toQuery } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
+import { EditActivityDialog } from './edit-activity-dialog';
+import { EditTaskDialog } from './edit-task-dialog';
 import { RecordTimeline } from './record-timeline';
 import { Select, Textarea } from './select';
 import { InfoTip } from '@/components/info-tip';
@@ -32,6 +34,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
   const [type, setType] = useState<(typeof ACTIVITY_TYPES)[number]>('NOTE');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [editing, setEditing] = useState<ActivityRow | null>(null);
   const log = useMutation({
     mutationFn: () => api<ActivityRow>('/activities', { method: 'POST', json: { type, subject, body, ...related } }),
     onSuccess: () => {
@@ -94,7 +97,7 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
           </form>
         )}
         {timeline ? (
-          <RecordTimeline entity={timeline.entity} id={timeline.id} />
+          <RecordTimeline entity={timeline.entity} id={timeline.id} canEdit={canWrite} />
         ) : list.isPending ? (
           <Skeleton className="h-20" />
         ) : list.data?.items.length === 0 ? (
@@ -117,13 +120,20 @@ export function ActivityTimeline({ related, timeline }: { related: RelatedRef; t
                     {a.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{a.body}</p>}
                     <p className="text-xs text-muted-foreground">
                       {a.owner?.name ?? tr('Unknown')} · <time dateTime={a.occurredAt}>{relativeTime(a.occurredAt)}</time>
+                      {a.editedAt && <> · {tr('(edited)')}</>}
                     </p>
                   </div>
+                  {canWrite && (
+                    <Button size="sm" variant="ghost" className="shrink-0" onClick={() => setEditing(a)} aria-label={tr('Edit “{subject}”', { subject: a.subject })}>
+                      <Pencil aria-hidden />
+                    </Button>
+                  )}
                 </li>
               );
             })}
           </ol>
         )}
+        <EditActivityDialog activity={editing} onClose={() => setEditing(null)} />
       </CardContent>
     </Card>
   );
@@ -140,6 +150,7 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
   const list = useQuery({ queryKey: ['tasks', 'record', related], queryFn: () => api<TaskRow[]>(`/tasks${toQuery({ scope: 'all', ...related })}`) });
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
+  const [editing, setEditing] = useState<TaskRow | null>(null);
   const invalidate = () => qc.invalidateQueries({ queryKey: ['tasks'] });
   const add = useMutation({
     mutationFn: () => api<TaskRow>('/tasks', { method: 'POST', json: { title, dueAt: due ? new Date(`${due}T17:00:00`).toISOString() : null, ...related } }),
@@ -191,6 +202,11 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
                     {t.dueAt ? tr(t.overdue ? 'Overdue · {date}' : 'Due {date}', { date: formatDate(t.dueAt) }) : tr('No due date')} · {t.assignee?.name ?? tr('Unassigned')}
                   </span>
                 </span>
+                {canWrite && (
+                  <Button size="sm" variant="ghost" className="h-7 shrink-0" onClick={() => setEditing(t)} aria-label={tr('Edit “{subject}”', { subject: t.title })}>
+                    <Pencil aria-hidden />
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -221,6 +237,7 @@ export function RecordTasks({ related }: { related: TaskRelated }) {
             )}
           </form>
         )}
+        <EditTaskDialog task={editing} onClose={() => setEditing(null)} />
       </CardContent>
     </Card>
   );

@@ -3,8 +3,11 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import type { ActivityRow, Page, TaskRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { EditActivityDialog } from '@/components/crm/edit-activity-dialog';
+import { EditTaskDialog } from '@/components/crm/edit-task-dialog';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
 import { formatDate, titleCase, toQuery, useMembers } from '@/lib/crm';
@@ -45,6 +48,7 @@ function TaskList() {
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [editing, setEditing] = useState<TaskRow | null>(null);
   const invalidate = () => qc.invalidateQueries({ queryKey: ['tasks'] });
   const add = useMutation({
     mutationFn: () => api<TaskRow>('/tasks', { method: 'POST', json: { title, dueAt: due ? new Date(`${due}T17:00:00`).toISOString() : null, assigneeId: assigneeId || undefined } }),
@@ -160,11 +164,17 @@ function TaskList() {
                       )}
                     </p>
                   </div>
+                  {canWrite && (
+                    <Button size="sm" variant="ghost" className="h-7 shrink-0" onClick={() => setEditing(task)} aria-label={t('Edit “{subject}”', { subject: task.title })}>
+                      <Pencil aria-hidden />
+                    </Button>
+                  )}
                 </li>
               );
             })}
           </ul>
         )}
+        <EditTaskDialog task={editing} onClose={() => setEditing(null)} />
       </CardContent>
     </Card>
   );
@@ -172,6 +182,8 @@ function TaskList() {
 
 function RecentActivity() {
   const t = useT();
+  const canWrite = useCan('activities:write');
+  const [editing, setEditing] = useState<ActivityRow | null>(null);
   const list = useQuery({ queryKey: ['activities', 'recent'], queryFn: () => api<Page<ActivityRow>>('/activities?pageSize=25') });
   return (
     <Card>
@@ -191,9 +203,11 @@ function RecentActivity() {
             {list.data?.items.map((a) => {
               const rel = relatedHref(a);
               return (
-                <li key={a.id} className="text-sm">
+                <li key={a.id} className="flex gap-2 text-sm">
+                  <div className="min-w-0 flex-1">
                   <p>
                     <span className="font-medium">{a.subject}</span> <span className="text-muted-foreground">· {t.maybe(titleCase(a.type))}</span>
+                    {a.editedAt && <span className="text-xs text-muted-foreground"> {t('(edited)')}</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {a.owner?.name ?? t('Unknown')} · <time dateTime={a.occurredAt}>{relativeTime(a.occurredAt)}</time>
@@ -206,11 +220,18 @@ function RecentActivity() {
                       </>
                     )}
                   </p>
+                  </div>
+                  {canWrite && (
+                    <Button size="sm" variant="ghost" className="h-7 shrink-0" onClick={() => setEditing(a)} aria-label={t('Edit “{subject}”', { subject: a.subject })}>
+                      <Pencil aria-hidden />
+                    </Button>
+                  )}
                 </li>
               );
             })}
           </ol>
         )}
+        <EditActivityDialog activity={editing} onClose={() => setEditing(null)} />
       </CardContent>
     </Card>
   );

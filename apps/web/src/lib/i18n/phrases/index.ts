@@ -29,6 +29,13 @@ import { commandCenter } from './command-center';
 import { crmAdmin } from './crm-admin';
 import { sampbidx } from './sampbidx';
 import { chat } from './chat';
+import { edit } from './edit';
+import type { PhraseTable } from './types';
+
+/** Every page phrase table. A phrase lives in exactly one table (src/lib/i18n/i18n.test.ts checks for repeats). */
+export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, crmAdmin, chat, edit } as const satisfies Record<string, PhraseTable>;
+
+export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...sampbidx, ...crmAdmin, ...chat, ...edit } as const;
 import { importPhrases } from './import';
 import { ownServers } from './own-servers';
 import type { PhraseTable } from './types';

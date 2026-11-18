@@ -14,7 +14,7 @@ import {
   Input,
   Skeleton,
 } from '@dealflow/ui';
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
@@ -108,6 +108,7 @@ export function TransferRequests() {
 function TransferItem({ row: r, onDecide }: { row: LeadTransferRow; onDecide: () => void }) {
   const t = useT();
   const { cancel } = useTransferMutations();
+  const [editing, setEditing] = React.useState(false);
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 px-2 py-3">
       <div className="min-w-0">
@@ -121,6 +122,7 @@ function TransferItem({ row: r, onDecide }: { row: LeadTransferRow; onDecide: ()
             r.proposed ? t('to {name}', { name: r.proposed.name }) : t('to their manager’s choice'),
             r.opportunityValue !== null && money(r.opportunityValue, r.currency ?? 'USD'),
             formatDate(r.createdAt),
+            r.editedAt && t('(edited)'),
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -139,6 +141,11 @@ function TransferItem({ row: r, onDecide }: { row: LeadTransferRow; onDecide: ()
             {t('Decide')}
           </Button>
         )}
+        {r.canEdit && (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={t('Edit “{subject}”', { subject: r.company.name })}>
+            <Pencil aria-hidden />
+          </Button>
+        )}
         {r.status === 'PENDING' && !r.canDecide && (
           <Button
             size="sm"
@@ -150,6 +157,7 @@ function TransferItem({ row: r, onDecide }: { row: LeadTransferRow; onDecide: ()
           </Button>
         )}
       </div>
+      {editing && <RequestTransferDialog company={r.company} editing={r} open={editing} onClose={() => setEditing(false)} />}
     </li>
   );
 }
@@ -256,18 +264,23 @@ function DecisionDialog({ row: r, onClose }: { row: LeadTransferRow; onClose: ()
   );
 }
 
-/** "Request transfer" on a company page: asks a manager or senior person to take the lead. */
+/**
+ * "Request transfer" on a company page: asks a manager or senior person to take the lead. With `editing`, the
+ * requester changes that pending request instead.
+ */
 export function RequestTransferDialog({
   company,
   open,
   onClose,
+  editing,
 }: {
   company: { id: string; name: string; currency?: string | null };
   open: boolean;
   onClose: () => void;
+  editing?: LeadTransferRow;
 }) {
   const t = useT();
-  const { request } = useTransferMutations();
+  const { request, update } = useTransferMutations();
   const [toUserId, setToUserId] = React.useState('');
   const [reason, setReason] =
     React.useState<(typeof TRANSFER_REASONS)[number]>('SENIOR_DISCUSSION');
@@ -277,16 +290,25 @@ export function RequestTransferDialog({
   const [error, setError] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (open) {
-      setToUserId('');
-      setReason('SENIOR_DISCUSSION');
-      setValue('');
-      setRemarks('');
+      setToUserId(editing?.proposed?.id ?? '');
+      setReason((editing?.reason as (typeof TRANSFER_REASONS)[number] | undefined) ?? 'SENIOR_DISCUSSION');
+      setValue(editing?.opportunityValue != null ? String(editing.opportunityValue) : '');
+      if (editing?.currency) setCurrency(editing.currency);
+      setRemarks(editing?.remarks ?? '');
       setError(null);
     }
-  }, [open]);
+  }, [open, editing]);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (editing) {
+        await update.mutateAsync({
+          id: editing.id,
+          input: { toUserId: toUserId || null, reason, opportunityValue: value ? Number(value) : null, currency: value ? currency : null, remarks: remarks || null },
+        });
+        onClose();
+        return;
+      }
       await request.mutateAsync({
         companyId: company.id,
         toUserId: toUserId || null,
@@ -304,7 +326,7 @@ export function RequestTransferDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg p-6">
         <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-          <ArrowRightLeft className="size-5" aria-hidden /> {t('Request a lead transfer')}
+          <ArrowRightLeft className="size-5" aria-hidden /> {editing ? t('Edit transfer request') : t('Request a lead transfer')}
         </DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
           {t('Your manager decides. You stay recorded as the person who created {name}.', {
@@ -355,8 +377,8 @@ export function RequestTransferDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={request.isPending}>
-              {request.isPending ? t('Sending…') : t('Send request')}
+            <Button type="submit" disabled={request.isPending || update.isPending}>
+              {editing ? (update.isPending ? t('Saving…') : t('Save changes')) : request.isPending ? t('Sending…') : t('Send request')}
             </Button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@dealflow/database';
-import type { ActivityInput, ActivityRow, Page } from '@dealflow/types';
+import type { ActivityInput, ActivityRow, ActivityUpdate, Page } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -88,6 +88,48 @@ export class ActivitiesService {
     });
   }
 
+  get(auth: AuthContext, id: string): Promise<ActivityRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const row = await tx.activity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
+      if (!row) throw notFound('Activity');
+      return toActivityRow(row, await ownerRefs(tx, [row.ownerId]));
+    });
+  }
+
+  /**
+   * Edits a logged activity: its type, subject, details or when it happened. Whoever may log and delete activities
+   * may edit them (the same rule as delete); the audit log keeps who changed what. Interactions logged on a company
+   * keep their interaction kind, so their type is changed through the interaction instead.
+   */
+  update(auth: AuthContext, id: string, input: ActivityUpdate, meta: RequestMeta): Promise<ActivityRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const before = await tx.activity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null } });
+      if (!before) throw notFound('Activity');
+      if (input.type !== undefined && input.type !== before.type && before.interaction) {
+        throw new BadRequestException({
+          code: 'INTERACTION_TYPE',
+          message: 'Change the type of a company interaction from the company page.',
+          details: [{ path: 'type', message: 'set by the interaction kind' }],
+        });
+      }
+      const data: Prisma.ActivityUpdateInput = {
+        ...(input.type !== undefined ? { type: input.type } : {}),
+        ...(input.subject !== undefined ? { subject: input.subject } : {}),
+        ...(input.body !== undefined ? { body: input.body } : {}),
+        ...(input.occurredAt !== undefined ? { occurredAt: new Date(input.occurredAt) } : {}),
+      };
+      const changed = changedFields(before, input);
+      const row = changed.length ? await tx.activity.update({ where: { id }, data: { ...data, editedAt: new Date() } }) : before;
+      if (changed.length) {
+        await this.audit.record(tx, {
+          tenantId: auth.tenantId, actorUserId: auth.userId, action: 'activity.updated', entityType: 'activity', entityId: id,
+          metadata: { fields: changed }, meta,
+        });
+      }
+      return toActivityRow(row, await ownerRefs(tx, [row.ownerId]));
+    });
+  }
+
   remove(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
     return this.prisma.run(auth, async (tx) => {
       const { count } = await tx.activity.updateMany({
@@ -113,5 +155,17 @@ export function toActivityRow(r: ActivityModel, owners: Map<string, { id: string
     contactId: r.contactId,
     companyId: r.companyId,
     opportunityId: r.opportunityId,
+    editedAt: r.editedAt?.toISOString() ?? null,
+    interaction: r.interaction ?? null,
   };
+}
+
+/** The fields an edit actually changes, for the audit log (values are left out: notes can be personal). */
+function changedFields(before: ActivityModel, input: ActivityUpdate): string[] {
+  const out: string[] = [];
+  if (input.type !== undefined && input.type !== before.type) out.push('type');
+  if (input.subject !== undefined && input.subject !== before.subject) out.push('subject');
+  if (input.body !== undefined && (input.body ?? null) !== before.body) out.push('body');
+  if (input.occurredAt !== undefined && new Date(input.occurredAt).getTime() !== before.occurredAt.getTime()) out.push('occurredAt');
+  return out;
 }

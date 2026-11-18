@@ -1,8 +1,8 @@
 'use client';
 
-import { type CustomFieldDef, FOLLOW_UP_PRIORITIES, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, FOLLOW_UP_PRIORITIES, type z, FOLLOW_UP_TYPES, type FollowUpRow, type FollowUpType, followUpInputSchema, followUpUpdateSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
-import { CalendarClock, Check, Flag, Plus, Repeat, X } from 'lucide-react';
+import { CalendarClock, Check, Flag, Pencil, Plus, Repeat, X } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { InfoTip } from '@/components/info-tip';
@@ -57,6 +57,7 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
   const m = useFollowUpMutations();
   const typeName = useFollowUpTypeName();
   const [mode, setMode] = React.useState<'complete' | 'reschedule' | null>(null);
+  const [editing, setEditing] = React.useState(false);
   const open = f.status === 'OPEN';
   return (
     <li className={cn('rounded-lg border border-border p-3 text-sm', f.due === 'OVERDUE' && 'border-critical/50 bg-critical/5', f.due === 'TODAY' && 'border-warning/50 bg-warning/5')}>
@@ -103,6 +104,9 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
             <Button size="sm" variant="outline" onClick={() => setMode('complete')} aria-label={t('Complete “{title}”', { title: f.title })}>
               <Check aria-hidden /> {t('Done')}
             </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={t('Edit “{subject}”', { subject: f.title })}>
+              <Pencil aria-hidden />
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => setMode('reschedule')} aria-label={t('Reschedule “{title}”', { title: f.title })}>
               <Repeat aria-hidden />
             </Button>
@@ -113,6 +117,9 @@ export function FollowUpItem({ f, showCompany = true }: { f: FollowUpRow; showCo
         )}
       </div>
       <FollowUpActionDialog f={f} mode={mode} onClose={() => setMode(null)} />
+      {f.company && editing && (
+        <FollowUpDialog open={editing} onOpenChange={setEditing} editing={f} preset={{ companyId: f.company.id, companyName: f.company.name }} />
+      )}
     </li>
   );
 }
@@ -187,8 +194,23 @@ export interface FollowUpPreset {
   rfqId?: string | null;
 }
 
-/** Schedules a follow-up with a company: type, date and time, priority, people and the discussion so far. */
-export function FollowUpDialog({ preset, open, onOpenChange, employees }: { preset: FollowUpPreset; open: boolean; onOpenChange: (o: boolean) => void; employees?: { id: string; name: string }[] }) {
+/**
+ * Schedules a follow-up with a company: type, date and time, priority, people and the discussion so far. With
+ * `editing`, it changes that follow-up instead; the assignee is notified when it moves to someone else.
+ */
+export function FollowUpDialog({
+  preset,
+  open,
+  onOpenChange,
+  employees,
+  editing,
+}: {
+  preset: FollowUpPreset;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  employees?: { id: string; name: string }[];
+  editing?: FollowUpRow | null;
+}) {
   const t = useT();
   const m = useFollowUpMutations();
   const typeName = useFollowUpTypeName();
@@ -203,8 +225,14 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
     return d ? cfRaw(d) : undefined;
   });
   const blank = React.useCallback(
-    () => ({ type: preset.type ?? ('CALL' as FollowUpType), title: '', dueAt: toLocalInput(new Date(Date.now() + 86_400_000)), priority: 'NORMAL' as (typeof FOLLOW_UP_PRIORITIES)[number], contactId: preset.contactId ?? '', assigneeId: preset.ownerId ?? '', managerId: '', summary: '', nextAction: '', remarks: '' }),
-    [preset.type, preset.contactId, preset.ownerId],
+    () =>
+      editing
+        ? {
+            type: editing.type, title: editing.title, dueAt: toLocalInput(editing.dueAt), priority: editing.priority, contactId: editing.contact?.id ?? '', assigneeId: editing.assignee?.id ?? '',
+            managerId: editing.manager?.id ?? '', summary: editing.summary ?? '', nextAction: editing.nextAction ?? '', remarks: editing.remarks ?? '',
+          }
+        : { type: preset.type ?? ('CALL' as FollowUpType), title: '', dueAt: toLocalInput(new Date(Date.now() + 86_400_000)), priority: 'NORMAL' as (typeof FOLLOW_UP_PRIORITIES)[number], contactId: preset.contactId ?? '', assigneeId: preset.ownerId ?? '', managerId: '', summary: '', nextAction: '', remarks: '' },
+    [preset.type, preset.contactId, preset.ownerId, editing],
   );
   const [v, setV] = React.useState(blank);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -212,11 +240,11 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
   React.useEffect(() => {
     if (open) {
       setV(blank());
-      setCustom({});
+      setCustom(editing ? { ...editing.customFields } : {});
       setErrors({});
       setFormError(null);
     }
-  }, [open, blank]);
+  }, [open, blank, editing]);
   const set = (p: Partial<typeof v>) => setV((x) => ({ ...x, ...p }));
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,11 +261,20 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       nextAction: v.nextAction || null,
       remarks: v.remarks || null,
       rfqId: preset.rfqId ?? null,
+      // Read-only fields are left out; when editing, an emptied field is sent as null so the API clears it.
       customFields: Object.fromEntries(
-        formFields.filter((d) => d.access.edit && logic.shows(d)).map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const).filter(([, x]) => x !== ''),
+        formFields
+          .filter((d) => d.access.edit && logic.shows(d))
+          .map((d) => [d.key, fieldPayloadValue(d, custom[d.key])] as const)
+          .filter(([, x]) => x !== '' || !!editing)
+          .map(([k, x]) => [k, x === '' ? null : x]),
       ),
     };
-    const parsed = followUpInputSchema.safeParse(body);
+    const { companyId: _companyId, rfqId: _rfqId, ...changes } = body;
+    // When editing, an empty executive or manager keeps the current one (empty only means "the default" when adding).
+    const parsed = editing
+      ? followUpUpdateSchema.safeParse({ ...changes, assigneeId: v.assigneeId || undefined, managerId: v.managerId || undefined, ...(employees ? {} : { contactId: undefined }) })
+      : followUpInputSchema.safeParse(body);
     if (!parsed.success) {
       const out: Record<string, string> = {};
       for (const i of parsed.error.issues) out[String(i.path[0])] ??= i.path[0] === 'dueAt' ? t('Choose the date and time.') : t.maybe(i.message);
@@ -245,7 +282,8 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
       return;
     }
     try {
-      await m.create.mutateAsync(parsed.data);
+      if (editing) await m.update.mutateAsync({ id: editing.id, input: parsed.data });
+      else await m.create.mutateAsync(parsed.data as z.output<typeof followUpInputSchema>);
       onOpenChange(false);
     } catch (err) {
       if (err instanceof ApiError && err.details?.length) setErrors(Object.fromEntries(err.details.map((d) => [d.path, d.message])));
@@ -255,7 +293,7 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{preset.type === 'CALL' ? t('Schedule a call') : t('Add follow-up')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{editing ? t('Edit follow-up') : preset.type === 'CALL' ? t('Schedule a call') : t('Add follow-up')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">{t('With {company}. The person it is assigned to is notified.', { company: preset.companyName })}</DialogDescription>
         <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
           <Field id="fu-type" label={t('Follow-up type')}>
@@ -296,10 +334,10 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
               ))}
             </Select>
           </Field>
-          <Field id="fu-assignee" label={t('Assigned executive')} hint={t('Left empty: the lead owner.')}>
+          <Field id="fu-assignee" label={t('Assigned executive')} hint={editing ? undefined : t('Left empty: the lead owner.')}>
             <PersonSelect value={v.assigneeId} onChange={(id) => set({ assigneeId: id })} />
           </Field>
-          <Field id="fu-manager" label={t('Assigned manager')} hint={t('Left empty: the executive’s reporting manager.')}>
+          <Field id="fu-manager" label={t('Assigned manager')} hint={editing ? undefined : t('Left empty: the executive’s reporting manager.')}>
             <PersonSelect value={v.managerId} onChange={(id) => set({ managerId: id })} />
           </Field>
           <div className="sm:col-span-2">
@@ -333,8 +371,8 @@ export function FollowUpDialog({ preset, open, onOpenChange, employees }: { pres
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={m.create.isPending}>
-              {m.create.isPending ? t('Saving…') : t('Save follow-up')}
+            <Button type="submit" disabled={m.create.isPending || m.update.isPending}>
+              {m.create.isPending || m.update.isPending ? t('Saving…') : editing ? t('Save changes') : t('Save follow-up')}
             </Button>
           </div>
         </form>

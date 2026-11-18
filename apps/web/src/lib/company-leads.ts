@@ -103,6 +103,10 @@ export function useCompanyFileMutations(companyId: string) {
   const refresh = () => qc.invalidateQueries({ queryKey: ['company-files', companyId] });
   return {
     upload: useMutation({ mutationFn: (file: File) => uploadCompanyFile(companyId, file), onSuccess: refresh }),
+    rename: useMutation({
+      mutationFn: ({ id, name }: { id: string; name: string }) => api<CompanyFileRow>(`/company-files/${id}`, { method: 'PATCH', json: { name } }),
+      onSuccess: () => Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['interactions'] }), qc.invalidateQueries({ queryKey: ['rfqs'] })]),
+    }),
     remove: useMutation({ mutationFn: (id: string) => api(`/company-files/${id}`, { method: 'DELETE' }), onSuccess: refresh }),
   };
 }

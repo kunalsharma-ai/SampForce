@@ -1209,6 +1209,8 @@ model Activity {
   rfqId         String?      @map("rfq_id")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
+  /// When a person last edited it after logging (null = never edited).
+  editedAt      DateTime?    @map("edited_at")
   deletedAt     DateTime?    @map("deleted_at")
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -3881,6 +3883,8 @@ model LeadTransfer {
   newOwnerId       String?   @map("new_owner_id")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
+  /// When the requester last changed the pending request.
+  editedAt         DateTime? @map("edited_at")
 
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@index([tenantId, requestedById, createdAt(sort: Desc)])
@@ -3910,6 +3914,8 @@ model Instruction {
   completionNote String?   @map("completion_note")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
+  /// When the sender last changed the message or its details.
+  editedAt       DateTime? @map("edited_at")
 
   @@index([tenantId, toId, status])
   @@index([tenantId, fromId, createdAt(sort: Desc)])

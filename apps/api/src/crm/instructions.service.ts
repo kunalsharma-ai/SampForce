@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import type { Prisma, TenantTx } from '@dealflow/database';
 import type { InstructionRow, InstructionStatus, MessagePriority, z } from '@dealflow/types';
-import type { instructionInputSchema, instructionListSchema, instructionProgressSchema } from '@dealflow/types';
+import type { instructionInputSchema, instructionListSchema, instructionProgressSchema, instructionUpdateSchema } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -104,6 +104,46 @@ export class InstructionsService {
     });
   }
 
+  /** The sender edits an instruction that is still open; the recipient is notified that it changed. */
+  update(auth: AuthContext, id: string, input: z.output<typeof instructionUpdateSchema>, meta: RequestMeta): Promise<InstructionRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const r = await tx.instruction.findFirst({ where: { id, tenantId: auth.tenantId } });
+      if (!r || (r.toId !== auth.userId && r.fromId !== auth.userId)) throw notFound('Instruction');
+      if (r.fromId !== auth.userId) throw new ForbiddenException({ code: 'NOT_YOUR_INSTRUCTION', message: 'Only the person who sent an instruction can edit it.' });
+      if (r.status === 'DONE' || r.status === 'CANCELLED') throw new BadRequestException({ code: 'INSTRUCTION_CLOSED', message: 'This instruction is already done or withdrawn.' });
+      const fields: string[] = [];
+      if (input.kind !== undefined && input.kind !== r.kind) fields.push('kind');
+      if (input.message !== undefined && input.message !== r.message) fields.push('message');
+      if (input.priority !== undefined && input.priority !== r.priority) fields.push('priority');
+      if (input.dueAt !== undefined && (input.dueAt ? new Date(input.dueAt).getTime() : null) !== (r.dueAt?.getTime() ?? null)) fields.push('dueAt');
+      if (!fields.length) return (await this.rows(tx, auth, [r]))[0]!;
+      const row = await tx.instruction.update({
+        where: { id },
+        data: {
+          ...(input.kind !== undefined ? { kind: input.kind } : {}),
+          ...(input.message !== undefined ? { message: input.message } : {}),
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+          ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
+          editedAt: new Date(),
+        },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'instruction.updated', entityType: 'instruction', entityId: id, metadata: { fields }, meta });
+      const by = await nameOf(tx, auth.userId);
+      await this.notifications.send(tx, auth.tenantId, [row.toId], {
+        type: row.kind === 'REMARK' ? 'manager.remark' : 'manager.instruction',
+        title: row.kind === 'REMARK' ? `Remark updated by ${by}` : `Instruction updated by ${by}`,
+        body: row.message,
+        link: `/app?view=executive&instruction=${row.id}`,
+        senderId: auth.userId,
+        priority: row.priority as MessagePriority,
+        companyId: row.companyId,
+        contactId: row.contactId,
+        actionRequired: row.kind === 'INSTRUCTION',
+      });
+      return (await this.rows(tx, auth, [row]))[0]!;
+    });
+  }
+
   /** The sender withdraws an instruction that is not done yet. */
   cancel(auth: AuthContext, id: string, meta: RequestMeta): Promise<InstructionRow> {
     return this.prisma.run(auth, async (tx) => {
@@ -145,8 +185,10 @@ export class InstructionsService {
         completedAt: r.completedAt?.toISOString() ?? null,
         completionNote: r.completionNote,
         createdAt: r.createdAt.toISOString(),
+        editedAt: r.editedAt?.toISOString() ?? null,
         canProgress: r.toId === auth.userId && status !== 'CANCELLED',
         canCancel: r.fromId === auth.userId && open,
+        canEdit: r.fromId === auth.userId && open,
       };
     });
   }

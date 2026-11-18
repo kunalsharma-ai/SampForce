@@ -66,6 +66,9 @@ export const interactionInputSchema = z.object({
   rfqId: uuidRef,
 });
 export type InteractionInput = z.infer<typeof interactionInputSchema>;
+/** Editing a logged interaction. It stays on its company; a follow-up it scheduled is changed on its own. */
+export const interactionUpdateSchema = interactionInputSchema.omit({ companyId: true, followUpAt: true }).partial().strict();
+export type InteractionUpdate = z.infer<typeof interactionUpdateSchema>;
 
 export const interactionListQuerySchema = z.object({
   kind: z.enum(INTERACTION_KINDS).optional(),
@@ -93,6 +96,8 @@ export interface InteractionRow {
   rfq: { id: string; number: string } | null;
   createdBy: PersonRef | null;
   aiAssisted: boolean;
+  /** When someone last edited it (null = never; synced emails are never edited). */
+  editedAt?: string | null;
 }
 
 // ───────────── Follow-ups ─────────────
