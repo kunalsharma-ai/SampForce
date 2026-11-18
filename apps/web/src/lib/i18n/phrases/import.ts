@@ -1,0 +1,101 @@
+import type { PhraseTable } from './types';
+
+/** Smart import and companies with their contacts (ADR 0066). */
+export const importPhrases = {
+  // Import: fields
+  State: ['Estado o provincia', 'État ou province', 'Bundesland', 'الولاية أو المقاطعة'],
+  'Postal code': ['Código postal', 'Code postal', 'Postleitzahl', 'الرمز البريدي'],
+  'Company email': ['Correo de la empresa', 'E-mail de l’entreprise', 'Unternehmens-E-Mail', 'بريد الشركة'],
+  'Company phone': ['Teléfono de la empresa', 'Téléphone de l’entreprise', 'Unternehmenstelefon', 'هاتف الشركة'],
+  // Import: the file
+  'Companies with their employees': ['Empresas con sus empleados', 'Entreprises avec leurs employés', 'Unternehmen mit ihren Mitarbeitenden', 'الشركات مع موظفيها'],
+  'Each row is a company and one of its employees. Rows with the same company name become one company; companies you already have are matched by name or website.': [
+    'Cada fila es una empresa y uno de sus empleados. Las filas con el mismo nombre de empresa forman una sola empresa; las empresas que ya tienes se reconocen por nombre o sitio web.',
+    'Chaque ligne est une entreprise et l’un de ses employés. Les lignes portant le même nom d’entreprise forment une seule entreprise ; les entreprises existantes sont reconnues par leur nom ou leur site web.',
+    'Jede Zeile ist ein Unternehmen und eine seiner Mitarbeitenden. Zeilen mit demselben Unternehmensnamen werden zu einem Unternehmen; vorhandene Unternehmen werden über Name oder Website erkannt.',
+    'كل صف هو شركة وأحد موظفيها. الصفوف التي تحمل اسم الشركة نفسه تصبح شركة واحدة، ويُتعرّف على الشركات الموجودة لديك بالاسم أو الموقع الإلكتروني.',
+  ],
+  'Each row becomes one record.': ['Cada fila se convierte en un registro.', 'Chaque ligne devient une fiche.', 'Jede Zeile wird ein Datensatz.', 'يصبح كل صف سجلًا واحدًا.'],
+  'CSV or Excel file': ['Archivo CSV o Excel', 'Fichier CSV ou Excel', 'CSV- oder Excel-Datei', 'ملف CSV أو Excel'],
+  'Choose a CSV or Excel file': ['Elige un archivo CSV o Excel', 'Choisissez un fichier CSV ou Excel', 'CSV- oder Excel-Datei wählen', 'اختر ملف CSV أو Excel'],
+  'CSV or Excel (.xlsx) up to 2 MB. The first row must contain column names; any names work.': [
+    'CSV o Excel (.xlsx) de hasta 2 MB. La primera fila debe tener los nombres de las columnas; sirve cualquier nombre.',
+    'CSV ou Excel (.xlsx) jusqu’à 2 Mo. La première ligne doit contenir les noms des colonnes ; tous les noms conviennent.',
+    'CSV oder Excel (.xlsx) bis 2 MB. Die erste Zeile muss Spaltennamen enthalten; jeder Name funktioniert.',
+    'ملف CSV أو Excel ‏(.xlsx) حتى 2 ميغابايت. يجب أن يحتوي الصف الأول على أسماء الأعمدة، وأي اسم يصلح.',
+  ],
+  'Could not read this file.': ['No se pudo leer este archivo.', 'Impossible de lire ce fichier.', 'Diese Datei konnte nicht gelesen werden.', 'تعذرت قراءة هذا الملف.'],
+  'Read from the sheet “{sheet}”.': ['Leído de la hoja «{sheet}».', 'Lu depuis la feuille « {sheet} ».', 'Aus dem Blatt „{sheet}“ gelesen.', 'قُرئ من الورقة "{sheet}".'],
+  // Import: matching
+  '{count} matched': ['{count} reconocidas', '{count} associées', '{count} zugeordnet', 'تمت مطابقة {count}'],
+  '{count} new fields': ['{count} campos nuevos', '{count} nouveaux champs', '{count} neue Felder', '{count} حقول جديدة'],
+  'Match again': ['Volver a asignar', 'Associer à nouveau', 'Neu zuordnen', 'أعد المطابقة'],
+  'This file has company and employee columns. Import each row as a company with its employee?': [
+    'Este archivo tiene columnas de empresa y de empleado. ¿Importar cada fila como una empresa con su empleado?',
+    'Ce fichier contient des colonnes d’entreprise et d’employé. Importer chaque ligne comme une entreprise avec son employé ?',
+    'Diese Datei hat Unternehmens- und Mitarbeiterspalten. Jede Zeile als Unternehmen mit Mitarbeitendem importieren?',
+    'يحتوي هذا الملف على أعمدة للشركة وللموظف. هل تريد استيراد كل صف كشركة مع موظفها؟',
+  ],
+  'Import as companies with their employees': ['Importar como empresas con sus empleados', 'Importer comme entreprises avec leurs employés', 'Als Unternehmen mit Mitarbeitenden importieren', 'استورد كشركات مع موظفيها'],
+  'Headings are matched to fields even with different spelling or small typos. Columns that match no field are added as new custom fields when you import.': [
+    'Los encabezados se asignan a los campos aunque estén escritos de otra forma o tengan pequeñas erratas. Las columnas que no coinciden con ningún campo se añaden como campos personalizados nuevos al importar.',
+    'Les en-têtes sont associés aux champs même avec une autre orthographe ou de petites fautes. Les colonnes sans champ correspondant sont ajoutées comme nouveaux champs personnalisés à l’import.',
+    'Überschriften werden Feldern auch bei anderer Schreibweise oder kleinen Tippfehlern zugeordnet. Spalten ohne passendes Feld werden beim Import als neue benutzerdefinierte Felder angelegt.',
+    'تُطابَق العناوين مع الحقول حتى مع اختلاف الكتابة أو الأخطاء الإملائية البسيطة. تُضاف الأعمدة التي لا تطابق أي حقل كحقول مخصصة جديدة عند الاستيراد.',
+  ],
+  'Headings are matched to fields even with different spelling or small typos. Columns that match no field are left out; an administrator can add fields for them.': [
+    'Los encabezados se asignan a los campos aunque estén escritos de otra forma o tengan pequeñas erratas. Las columnas que no coinciden con ningún campo se omiten; un administrador puede añadir campos para ellas.',
+    'Les en-têtes sont associés aux champs même avec une autre orthographe ou de petites fautes. Les colonnes sans champ correspondant sont ignorées ; un administrateur peut leur ajouter des champs.',
+    'Überschriften werden Feldern auch bei anderer Schreibweise oder kleinen Tippfehlern zugeordnet. Spalten ohne passendes Feld werden ausgelassen; eine Administratorin oder ein Administrator kann Felder dafür anlegen.',
+    'تُطابَق العناوين مع الحقول حتى مع اختلاف الكتابة أو الأخطاء الإملائية البسيطة. تُترك الأعمدة التي لا تطابق أي حقل، ويمكن للمسؤول إضافة حقول لها.',
+  ],
+  'Add as a new field': ['Añadir como campo nuevo', 'Ajouter comme nouveau champ', 'Als neues Feld hinzufügen', 'أضف كحقل جديد'],
+  'New company field': ['Campo nuevo de empresa', 'Nouveau champ d’entreprise', 'Neues Unternehmensfeld', 'حقل شركة جديد'],
+  'New employee field': ['Campo nuevo de empleado', 'Nouveau champ d’employé', 'Neues Mitarbeiterfeld', 'حقل موظف جديد'],
+  'New field': ['Campo nuevo', 'Nouveau champ', 'Neues Feld', 'حقل جديد'],
+  'Adds the text field “{label}”.': ['Añade el campo de texto «{label}».', 'Ajoute le champ texte « {label} ».', 'Legt das Textfeld „{label}“ an.', 'يضيف حقل النص "{label}".'],
+  'When an employee is already in SampForce (same email, phone or LinkedIn)': [
+    'Cuando un empleado ya está en SampForce (mismo correo, teléfono o LinkedIn)',
+    'Quand un employé est déjà dans SampForce (même e-mail, téléphone ou LinkedIn)',
+    'Wenn ein Mitarbeitender schon in SampForce ist (gleiche E-Mail, Telefonnummer oder LinkedIn)',
+    'عندما يكون الموظف موجودًا في SampForce بالفعل (البريد أو الهاتف أو LinkedIn نفسه)',
+  ],
+  // Import: results
+  'New companies to add: {count}': ['Empresas nuevas por añadir: {count}', 'Nouvelles entreprises à ajouter : {count}', 'Neue Unternehmen zum Hinzufügen: {count}', 'شركات جديدة ستُضاف: {count}'],
+  'New companies added: {count}': ['Empresas nuevas añadidas: {count}', 'Nouvelles entreprises ajoutées : {count}', 'Neue Unternehmen hinzugefügt: {count}', 'شركات جديدة أُضيفت: {count}'],
+  'Existing companies matched: {count}': ['Empresas existentes reconocidas: {count}', 'Entreprises existantes reconnues : {count}', 'Vorhandene Unternehmen erkannt: {count}', 'شركات موجودة تمت مطابقتها: {count}'],
+  'Employees to add: {count}': ['Empleados por añadir: {count}', 'Employés à ajouter : {count}', 'Mitarbeitende zum Hinzufügen: {count}', 'موظفون سيُضافون: {count}'],
+  'Employees added: {count}': ['Empleados añadidos: {count}', 'Employés ajoutés : {count}', 'Mitarbeitende hinzugefügt: {count}', 'موظفون أُضيفوا: {count}'],
+  'New custom fields this import adds': ['Campos personalizados nuevos que añade esta importación', 'Nouveaux champs personnalisés ajoutés par cet import', 'Neue benutzerdefinierte Felder aus diesem Import', 'الحقول المخصصة الجديدة التي يضيفها هذا الاستيراد'],
+  'New custom fields added': ['Campos personalizados nuevos añadidos', 'Nouveaux champs personnalisés ajoutés', 'Neue benutzerdefinierte Felder angelegt', 'أُضيفت حقول مخصصة جديدة'],
+  // Companies and their contacts
+  'Companies and contacts': ['Empresas y contactos', 'Entreprises et contacts', 'Unternehmen und Kontakte', 'الشركات وجهات الاتصال'],
+  'Contacts at {company}: {count}': ['Contactos en {company}: {count}', 'Contacts chez {company} : {count}', 'Kontakte bei {company}: {count}', 'جهات الاتصال في {company}: {count}'],
+  'Add, edit and see this company’s contacts here.': ['Añade, edita y consulta aquí los contactos de esta empresa.', 'Ajoutez, modifiez et consultez ici les contacts de cette entreprise.', 'Kontakte dieses Unternehmens hier hinzufügen, bearbeiten und ansehen.', 'أضف جهات اتصال هذه الشركة وعدّلها واطّلع عليها هنا.'],
+  'Open company': ['Abrir empresa', 'Ouvrir l’entreprise', 'Unternehmen öffnen', 'افتح الشركة'],
+  'Edit employee / POC': ['Editar empleado / contacto', 'Modifier l’employé / interlocuteur', 'Mitarbeitende / Ansprechperson bearbeiten', 'تعديل الموظف / جهة الاتصال'],
+  'Add an existing contact': ['Añadir un contacto existente', 'Ajouter un contact existant', 'Vorhandenen Kontakt hinzufügen', 'أضف جهة اتصال موجودة'],
+  'The contact moves to {company} and shows in its employee list.': ['El contacto pasa a {company} y aparece en su lista de empleados.', 'Le contact passe chez {company} et apparaît dans sa liste d’employés.', 'Der Kontakt wechselt zu {company} und erscheint in dessen Mitarbeiterliste.', 'تنتقل جهة الاتصال إلى {company} وتظهر في قائمة موظفيها.'],
+  'Search contacts by name or email': ['Busca contactos por nombre o correo', 'Recherchez des contacts par nom ou e-mail', 'Kontakte nach Name oder E-Mail suchen', 'ابحث عن جهات الاتصال بالاسم أو البريد'],
+  'Add to company': ['Añadir a la empresa', 'Ajouter à l’entreprise', 'Zum Unternehmen hinzufügen', 'أضف إلى الشركة'],
+  'Remove from {company}': ['Quitar de {company}', 'Retirer de {company}', 'Aus {company} entfernen', 'إزالة من {company}'],
+  'Remove {name} from this company': ['Quitar a {name} de esta empresa', 'Retirer {name} de cette entreprise', '{name} aus diesem Unternehmen entfernen', 'إزالة {name} من هذه الشركة'],
+  'Add the people you deal with at this company. They are saved with the company and listed under Contacts too.': [
+    'Añade las personas con las que tratas en esta empresa. Se guardan con la empresa y aparecen también en Contactos.',
+    'Ajoutez les personnes avec qui vous traitez dans cette entreprise. Elles sont enregistrées avec l’entreprise et figurent aussi dans Contacts.',
+    'Fügen Sie die Personen hinzu, mit denen Sie bei diesem Unternehmen zu tun haben. Sie werden mit dem Unternehmen gespeichert und stehen auch unter Kontakte.',
+    'أضف الأشخاص الذين تتعامل معهم في هذه الشركة. يُحفظون مع الشركة ويظهرون في جهات الاتصال أيضًا.',
+  ],
+  'Company leads with their employees. Open the contacts count to add or edit a company’s people in place.': [
+    'Leads de empresa con sus empleados. Abre el número de contactos para añadir o editar a las personas de una empresa sin salir de la lista.',
+    'Prospects entreprises avec leurs employés. Ouvrez le nombre de contacts pour ajouter ou modifier les personnes d’une entreprise sur place.',
+    'Unternehmens-Leads mit ihren Mitarbeitenden. Öffnen Sie die Kontaktanzahl, um die Personen eines Unternehmens direkt hinzuzufügen oder zu bearbeiten.',
+    'عملاء الشركات المحتملون مع موظفيهم. افتح عدد جهات الاتصال لإضافة أشخاص الشركة أو تعديلهم في مكانهم.',
+  ],
+  'Bring in companies with their employees, leads, contacts or companies from a CSV or Excel file (up to 2 MB and 5,000 rows). Every file is checked before anything is saved.': [
+    'Importa empresas con sus empleados, leads, contactos o empresas desde un archivo CSV o Excel (hasta 2 MB y 5000 filas). Cada archivo se revisa antes de guardar nada.',
+    'Importez des entreprises avec leurs employés, des prospects, des contacts ou des entreprises depuis un fichier CSV ou Excel (jusqu’à 2 Mo et 5 000 lignes). Chaque fichier est vérifié avant tout enregistrement.',
+    'Importieren Sie Unternehmen mit ihren Mitarbeitenden, Leads, Kontakte oder Unternehmen aus einer CSV- oder Excel-Datei (bis 2 MB und 5.000 Zeilen). Jede Datei wird geprüft, bevor etwas gespeichert wird.',
+    'استورد الشركات مع موظفيها أو العملاء المحتملين أو جهات الاتصال أو الشركات من ملف CSV أو Excel (حتى 2 ميغابايت و5000 صف). يُفحص كل ملف قبل حفظ أي شيء.',
+  ],
+} as const satisfies PhraseTable;

@@ -312,13 +312,13 @@ export interface PlatformAuditRow {
 }
 
 /** A provider in the operator console's provider setup list (ADR 0031, keys editable since ADR 0051). */
-export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'checkout', 'stripe', 'razorpay'] as const;
+export const PROVIDER_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'ai_routing', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'zapier', 'checkout', 'stripe', 'razorpay'] as const;
 export type ProviderKey = (typeof PROVIDER_KEYS)[number];
 /**
  * Every provider has a connection test: a call that proves the keys and costs nothing. "checkout" is a group of
  * settings (online payments on or off, price ids), not a provider, so there is nothing to call.
  */
-export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
+export const PROVIDER_CHECK_KEYS = ['apollo', 'hunter', 'deepgram', 'google', 'microsoft', 'slack', 'zoom', 'docusign', 'anthropic', 'openai', 'gemini', 'groq', 'openrouter', 'mistral', 'custom_ai', 'smtp', 'zapier', 'stripe', 'razorpay'] as const;
 export type ProviderCheckKey = (typeof PROVIDER_CHECK_KEYS)[number];
 
 /** A URL the operator pastes into the provider's own console (a redirect URL, a webhook endpoint). */
@@ -371,9 +371,21 @@ export interface OperatorProviderField {
   help: string | null;
 }
 
+/** Recent health of one AI provider, written by the AI gateway's fallback chain (ADR 0067). */
+export interface AiProviderHealth {
+  lastOkAt: string | null;
+  lastFailure: { at: string; kind: 'rate_limited' | 'unavailable' | 'auth' | 'rejected'; message: string } | null;
+  /** Until when the provider is rested after its last failure (other providers answer first meanwhile). */
+  coolingUntil: string | null;
+}
+
 export interface OperatorProviderRow {
   key: ProviderKey;
   name: string;
+  /** `ai`: one of the AI providers, or the card that orders them. */
+  group: 'ai' | null;
+  /** For AI providers: whether the fallback order includes it, its place among the providers that answer now (1 = first), and health. */
+  ai: { enabled: boolean; position: number | null; model: string | null; health: AiProviderHealth | null } | null;
   usedFor: string;
   env: OperatorProviderField[];
   configured: boolean;

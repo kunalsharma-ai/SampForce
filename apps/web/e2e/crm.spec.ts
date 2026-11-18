@@ -129,7 +129,7 @@ test('imports leads from CSV after a check, and finds them in search', async ({ 
   await signUp(page, 'Importer');
   await page.goto('/app/settings/import?entity=leads');
   const csv = 'Name,Email,Company\nMargaret Hamilton,margaret@apollo.test,MIT\nBad Row,not-email,X\n';
-  await page.getByLabel('CSV file').setInputFiles({ name: 'leads.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await page.getByLabel('Choose a CSV or Excel file').setInputFiles({ name: 'leads.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await expect(page.getByLabel('Field for column Name')).toHaveValue('fullName');
   await expect(page.getByLabel('Field for column Company')).toHaveValue('companyName');
   await page.getByRole('button', { name: 'Check file' }).click();

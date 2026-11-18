@@ -36,11 +36,11 @@ export const intelligenceHelp = {
       'خدمة الذكاء الاصطناعي التي تشغّل الوكلاء والمساعد، وهل هي متاحة الآن.',
     ],
     how: [
-      'If it says not available, ask your administrator to add the provider key in the operator console.',
-      'Si indica no disponible, pide a tu administrador que añada la clave del proveedor en la consola.',
-      'S’il est indiqué indisponible, demandez à votre administrateur d’ajouter la clé du fournisseur dans la console.',
-      'Steht dort nicht verfügbar, bitten Sie Ihren Administrator, den Anbieterschlüssel in der Konsole zu hinterlegen.',
-      'إن ظهر غير متاح، فاطلب من المسؤول إضافة مفتاح المزوّد في وحدة التحكم.',
+      'If it says not available, ask your administrator to add a key in the operator console (Anthropic, OpenAI, Gemini, Groq, Mistral and others). With several keys, the next one answers when the first is busy.',
+      'Si indica no disponible, pide a tu administrador que añada una clave en la consola (Anthropic, OpenAI, Gemini, Groq, Mistral y otros). Con varias claves, responde la siguiente cuando la primera está ocupada.',
+      'S’il est indiqué indisponible, demandez à votre administrateur d’ajouter une clé dans la console (Anthropic, OpenAI, Gemini, Groq, Mistral…). Avec plusieurs clés, la suivante répond quand la première est occupée.',
+      'Steht dort nicht verfügbar, bitten Sie Ihren Administrator, in der Konsole einen Schlüssel zu hinterlegen (Anthropic, OpenAI, Gemini, Groq, Mistral …). Mit mehreren antwortet der nächste, wenn der erste ausgelastet ist.',
+      'إن ظهر غير متاح، فاطلب من المسؤول إضافة مفتاح في وحدة التحكم (Anthropic أو OpenAI أو Gemini أو Groq أو Mistral وغيرها). ومع عدة مفاتيح، يجيب التالي عندما يكون الأول مشغولًا.',
     ],
     where: [
       'Check it first when an AI button does not respond.',

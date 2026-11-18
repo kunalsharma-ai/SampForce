@@ -3,6 +3,7 @@ export * from './billing';
 export * from './automation';
 export * from './crm';
 export * from './csv';
+export * from './import-mapping';
 export * from './ai';
 export * from './dashboard';
 export * from './forecast';

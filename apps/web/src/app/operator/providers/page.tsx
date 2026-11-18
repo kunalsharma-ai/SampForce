@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import type { DeploymentSettingRow, OperatorProviderField, OperatorProviderRow, ProviderSetupGuide, ProviderWebhookStatus } from '@dealflow/types';
+import type { AiProviderHealth, DeploymentSettingRow, OperatorProviderField, OperatorProviderRow, ProviderSetupGuide, ProviderWebhookStatus } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
@@ -50,6 +50,8 @@ function KeyForm({ p, onDone, onCancel }: { p: OperatorProviderRow; onDone: () =
     mutationFn: (body: Record<string, string | null>) => api<OperatorProviderRow>(`/operator/providers/${p.key}/keys`, { method: 'POST', json: { values: body } }),
     onSuccess: (row) => {
       qc.setQueryData<OperatorProviderRow[]>(['operator', 'providers'], (rows) => rows?.map((r) => (r.key === row.key ? row : r)));
+      // A new AI key changes the fallback order card and the other AI cards' places in it.
+      if (row.group === 'ai') void qc.invalidateQueries({ queryKey: ['operator', 'providers'] });
       onDone();
     },
   });
@@ -207,6 +209,135 @@ function WebhookLine({ w }: { w: ProviderWebhookStatus }) {
   );
 }
 
+const FAILURE: Record<NonNullable<AiProviderHealth['lastFailure']>['kind'], string> = {
+  rate_limited: 'Rate limited (free tier or quota used up)',
+  unavailable: 'Busy or unreachable',
+  auth: 'Key, credit or model refused',
+  rejected: 'Request refused',
+};
+
+/** The last answer and the last failure the AI gateway saw from this provider, and whether it is resting now. */
+function AiHealthLine({ h }: { h: AiProviderHealth }) {
+  const resting = h.coolingUntil && Date.parse(h.coolingUntil) > Date.now() ? h.coolingUntil : null;
+  const failedLast = h.lastFailure && (!h.lastOkAt || h.lastFailure.at > h.lastOkAt);
+  return (
+    <div className="space-y-1 rounded-md border border-border bg-muted/30 p-2 text-xs" aria-label="AI provider health">
+      {h.lastOkAt && <p className="text-success">Last answered an AI request on {when(h.lastOkAt)}</p>}
+      {h.lastFailure && (
+        <p className={failedLast ? 'text-critical' : 'text-muted-foreground'}>
+          Last failure on {when(h.lastFailure.at)}: {FAILURE[h.lastFailure.kind]}. {h.lastFailure.message}
+        </p>
+      )}
+      {resting && <p className="text-warning">Resting until {when(resting)}: the next provider in the order answers meanwhile.</p>}
+    </div>
+  );
+}
+
+/** The order AI providers are tried in, with a switch for each (saved as AI_PROVIDER_ORDER). */
+function AiRoutingCard({ routing, providers, admin }: { routing: OperatorProviderRow; providers: OperatorProviderRow[]; admin: boolean }) {
+  const qc = useQueryClient();
+  const field = routing.env[0]!;
+  const saved = field.source === 'console' || field.source === 'environment' ? (field.hint ?? '').split(',').map((x) => x.trim()).filter(Boolean) : null;
+  const initial = () => {
+    const keys = providers.map((p) => p.key as string);
+    if (!saved) return keys.map((key) => ({ key, on: true }));
+    const listed = saved.filter((k) => keys.includes(k));
+    return [...listed.map((key) => ({ key, on: true })), ...keys.filter((k) => !listed.includes(k)).map((key) => ({ key, on: false }))];
+  };
+  const [rows, setRows] = useState(initial);
+  const [done, setDone] = useState<string | null>(null);
+  const byKey = new Map(providers.map((p) => [p.key as string, p]));
+  const save = useMutation({
+    mutationFn: (value: string | null) => api<OperatorProviderRow>(`/operator/providers/ai_routing/keys`, { method: 'POST', json: { values: { AI_PROVIDER_ORDER: value } } }),
+    onSuccess: async (_row, value) => {
+      await qc.invalidateQueries({ queryKey: ['operator', 'providers'] });
+      setDone(value === null ? 'Back to the built-in order.' : 'Order saved. The next AI request uses it.');
+    },
+  });
+  const move = (i: number, d: -1 | 1) =>
+    setRows((r) => {
+      const n = [...r];
+      const j = i + d;
+      if (j < 0 || j >= n.length) return r;
+      [n[i], n[j]] = [n[j]!, n[i]!];
+      return n;
+    });
+  const value = rows.filter((r) => r.on).map((r) => r.key).join(',');
+  const answering = rows.filter((r) => r.on && byKey.get(r.key)?.configured);
+  return (
+    <Card role="region" aria-labelledby="provider-ai_routing" className="lg:col-span-2">
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle id="provider-ai_routing">{routing.name}</CardTitle>
+          <Badge tone={answering.length ? 'success' : 'warning'}>
+            {answering.length === 0 ? 'No AI provider ready' : answering.length === 1 ? '1 provider ready, no fallback' : `${answering.length} providers ready`}
+          </Badge>
+        </div>
+        <CardDescription>{routing.usedFor}.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p role="status">
+          <span className="text-muted-foreground">Now: </span>
+          {routing.appStatus}
+        </p>
+        <ol className="divide-y divide-border rounded-md border border-border" aria-label="AI provider order">
+          {rows.map((r, i) => {
+            const p = byKey.get(r.key);
+            if (!p) return null;
+            const resting = p.ai?.health?.coolingUntil && Date.parse(p.ai.health.coolingUntil) > Date.now();
+            return (
+              <li key={r.key} className="flex flex-wrap items-center gap-2 p-2">
+                <span className="w-6 text-center font-mono text-xs text-muted-foreground">{r.on ? rows.slice(0, i + 1).filter((x) => x.on).length : '–'}</span>
+                <label className="flex min-w-0 flex-1 items-center gap-2">
+                  <input type="checkbox" checked={r.on} disabled={!admin || save.isPending} onChange={(e) => setRows((rs) => rs.map((x) => (x.key === r.key ? { ...x, on: e.target.checked } : x)))} aria-label={`Use ${p.name}`} />
+                  <span className="min-w-0">
+                    <span className="font-medium">{p.name}</span>
+                    {p.ai?.model && <span className="ml-2 text-xs text-muted-foreground">{p.ai.model}</span>}
+                  </span>
+                </label>
+                <Badge tone={!p.configured ? 'neutral' : resting ? 'warning' : p.state === 'failed' ? 'critical' : 'success'}>
+                  {!p.configured ? 'No key' : resting ? 'Resting' : p.state === 'verified' ? 'Tested' : p.state === 'failed' ? 'Test failed' : 'Key set'}
+                </Badge>
+                {admin && (
+                  <span className="flex gap-1">
+                    <Button type="button" size="sm" variant="ghost" aria-label={`Move ${p.name} up`} disabled={i === 0 || save.isPending} onClick={() => move(i, -1)}>
+                      ↑
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" aria-label={`Move ${p.name} down`} disabled={i === rows.length - 1 || save.isPending} onClick={() => move(i, 1)}>
+                      ↓
+                    </Button>
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <p className="text-xs text-muted-foreground">
+          Providers without a key are skipped. A provider that is rate limited or failing rests for a minute (longer if it asks, or five minutes for a refused key) while the next one answers, and every request is still metered against the workspace&apos;s AI credits.
+        </p>
+        <SetupGuide name="AI fallback" guide={routing.setup} />
+        {done && <p className="text-success" aria-live="polite">{done}</p>}
+        <ErrorText error={save.error} />
+        {admin ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" disabled={!value || save.isPending} onClick={() => { setDone(null); save.mutate(value); }}>
+              {save.isPending ? 'Saving…' : 'Save order'}
+            </Button>
+            {field.source === 'console' && (
+              <Button type="button" size="sm" variant="ghost" disabled={save.isPending} onClick={() => { setDone(null); save.mutate(null); }}>
+                Use the built-in order
+              </Button>
+            )}
+            {!value && <p className="text-xs text-critical">Switch on at least one provider.</p>}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">Only operators with the Admin role can change the order.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ProviderCard({ p, admin }: { p: OperatorProviderRow; admin: boolean }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -239,6 +370,7 @@ function ProviderCard({ p, admin }: { p: OperatorProviderRow; admin: boolean }) 
           <span className="text-muted-foreground">In workspaces: </span>
           {p.appStatus}
         </p>
+        {p.ai?.health && <AiHealthLine h={p.ai.health} />}
         {p.webhook && <WebhookLine w={p.webhook} />}
         <SetupGuide name={p.name} guide={p.setup} />
         {saved && !editing && (
@@ -326,8 +458,13 @@ export default function OperatorProvidersPage() {
   const providers = useQuery({ enabled: !!me.data, queryKey: ['operator', 'providers'], queryFn: () => api<OperatorProviderRow[]>('/operator/providers') });
   if (!me.data || providers.isPending) return <Skeleton className="h-64" />;
   if (providers.error) return <ErrorText error={providers.error} />;
-  const keyed = providers.data.filter((p) => p.checkable);
+  const admin = me.data.role === 'ADMIN';
+  // AI providers are alternatives: none is required on its own, so they are counted apart (ADR 0067).
+  const keyed = providers.data.filter((p) => p.checkable && p.group !== 'ai');
   const missing = keyed.filter((p) => !p.configured).length;
+  const routing = providers.data.find((p) => p.key === 'ai_routing');
+  const aiProviders = providers.data.filter((p) => p.group === 'ai' && p.key !== 'ai_routing');
+  const others = providers.data.filter((p) => p.group !== 'ai');
   return (
     <div className="space-y-6">
       <PageHeader
@@ -335,13 +472,31 @@ export default function OperatorProvidersPage() {
         description="Set up every integration here: open a provider's setup guide, create the keys in its console, paste them below and test the connection. Keys are stored only in the database, encrypted, and take effect within seconds without a restart: no settings file or environment variable is needed. Secrets are never shown again, only their last four characters. Every change and test is recorded in the operator log."
       />
       <p className="text-sm" role="status">
-        {missing === 0 ? 'Every provider has its keys set.' : `${missing} of ${keyed.length} providers are missing keys.`}
+        {missing === 0 ? 'Every provider has its keys set.' : `${missing} of ${keyed.length} providers are missing keys.`}{' '}
+        {`AI: ${aiProviders.filter((p) => p.configured).length} of ${aiProviders.length} AI providers have keys.`}
       </p>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {providers.data.map((p) => (
-          <ProviderCard key={p.key} p={p} admin={me.data!.role === 'ADMIN'} />
-        ))}
-      </div>
+      <section aria-labelledby="ai-providers" className="space-y-3">
+        <div>
+          <h2 id="ai-providers" className="text-lg font-semibold">AI providers</h2>
+          <p className="text-sm text-muted-foreground">
+            Anthropic is one choice among several. Add any of these, including free keys from Google Gemini, Groq, Mistral or OpenRouter, or your own Ollama server, and set the order they are tried in.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {routing && <AiRoutingCard key={routing.env[0]?.hint ?? 'default'} routing={routing} providers={aiProviders} admin={admin} />}
+          {aiProviders.map((p) => (
+            <ProviderCard key={p.key} p={p} admin={admin} />
+          ))}
+        </div>
+      </section>
+      <section aria-labelledby="other-providers" className="space-y-3">
+        <h2 id="other-providers" className="text-lg font-semibold">Other integrations</h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {others.map((p) => (
+            <ProviderCard key={p.key} p={p} admin={admin} />
+          ))}
+        </div>
+      </section>
       <DeploymentCard />
     </div>
   );

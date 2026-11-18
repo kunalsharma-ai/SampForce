@@ -8,7 +8,7 @@ are the target design; the table below says what is built today and where it dif
 | Design item | Built |
 |---|---|
 | AI gateway | `apps/api/src/ai/gateway.service.ts` (a module in the API, not yet a separate `packages/ai`). Preflight order: workspace kill switch, agent switch, provider configured, credits, per-user rate limit. Every call writes an `ai_usage` row that the app role cannot update or delete |
-| Providers | Anthropic only, through the official SDK (`@anthropic-ai/sdk`), default model `claude-opus-5-5` (`AI_MODEL`). Server-side fallbacks are enabled (`AI_SERVER_FALLBACKS`). The `ModelProvider` interface allows other adapters later |
+| Providers | Anthropic through the official SDK (`@anthropic-ai/sdk`, default model `claude-opus-5-5`, server-side fallbacks on), plus OpenAI, Google Gemini, Groq, OpenRouter, Mistral and any OpenAI-compatible server (Ollama, LM Studio, vLLM, LiteLLM) through one chat-completions adapter (ADR 0067). Keys and models are entered in the operator console and stored in the database. The operator sets the order they are tried in (`AI_PROVIDER_ORDER`); a provider that is rate limited or failing is rested and the next one answers |
 | Model tiers | `fast`, `balanced`, `deep` map to the API's effort setting (low, medium, high) on one model, not to different models |
 | Metering | Credits = max(1, ceil((input + 6 × output tokens) / 6000)) × tier multiplier (fast 1, balanced 2, deep 4). Allowance = plan credits × active seats, optionally lowered by an admin cap |
 | Prompt versioning and evals | `prompts.ts` holds versioned prompts and JSON schemas; runs and recommendations store the version; `apps/api/evals` has four golden datasets with deterministic scorers |
@@ -18,7 +18,7 @@ are the target design; the table below says what is built today and where it dif
 | Agents | Copilot, Lead Qualification (manual or automatic on `lead.created` through the worker), Deal Intelligence, Meeting notes (pasted notes, no recording), Proposal draft, Workflow builder, Forecast explainer. Settings live in `ai_settings`; runs in `ai_runs`; results in `ai_recommendations` |
 | Action tiers | Tier 0 reads run immediately. Tier 1 drafts are stored as recommendations. Tier 2 writes (task, note, deal stage) are proposals the person confirms, re-checked against their permissions at confirm time. Tier 3 and tier 4 actions are not exposed as tools at all |
 | Copilot | Bounded tool loop (6 steps) over read tools filtered by the caller's role, with citations. Answers are not streamed yet |
-| Not built | RAG/pgvector, scheduled agents (nightly, weekly), Sales Research, Outreach, Customer Success, Coaching, CRM Administrator, Data Quality and Workflow Optimization agents, bring-your-own provider keys |
+| Not built | RAG/pgvector, scheduled agents (nightly, weekly), Sales Research, Outreach, Customer Success, Coaching, CRM Administrator, Data Quality and Workflow Optimization agents, per-workspace (bring-your-own) provider keys |
 
 ## 1. Principles
 

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { explainNetworkError, hostAndPort, networkCode } from '../common/network-error';
 import { publicFetch } from '../common/net-guard';
 import { MailerService } from '../mail/mailer.service';
 
@@ -79,6 +80,57 @@ export class ConnectionTests {
     return `Key accepted (${ids.length} model${ids.length === 1 ? '' : 's'} listed${ids.length ? `; ${ids.includes(model) ? `${model} is available` : `${model} was not in the first page`}` : ''}). No tokens were used.`;
   }
 
+  /** Where an OpenAI-compatible provider lives and which key and model are set, read at call time. */
+  private compatibleTarget(key: 'openai' | 'gemini' | 'groq' | 'mistral' | 'custom_ai' | 'openrouter'): { name: string; base: string; apiKey: string | undefined; model: string; keyName: string } {
+    const e = this.env;
+    switch (key) {
+      case 'openai': return { name: 'OpenAI', base: e.OPENAI_API_BASE_URL, apiKey: e.OPENAI_API_KEY, model: e.OPENAI_MODEL, keyName: 'OPENAI_API_KEY' };
+      case 'gemini': return { name: 'Google Gemini', base: e.GEMINI_API_BASE_URL, apiKey: e.GEMINI_API_KEY, model: e.GEMINI_MODEL, keyName: 'GEMINI_API_KEY' };
+      case 'groq': return { name: 'Groq', base: e.GROQ_API_BASE_URL, apiKey: e.GROQ_API_KEY, model: e.GROQ_MODEL, keyName: 'GROQ_API_KEY' };
+      case 'mistral': return { name: 'Mistral', base: e.MISTRAL_API_BASE_URL, apiKey: e.MISTRAL_API_KEY, model: e.MISTRAL_MODEL, keyName: 'MISTRAL_API_KEY' };
+      case 'openrouter': return { name: 'OpenRouter', base: e.OPENROUTER_API_BASE_URL, apiKey: e.OPENROUTER_API_KEY, model: e.OPENROUTER_MODEL, keyName: 'OPENROUTER_API_KEY' };
+      case 'custom_ai': return { name: 'The AI server', base: e.CUSTOM_AI_BASE_URL ?? '', apiKey: e.CUSTOM_AI_API_KEY, model: e.CUSTOM_AI_MODEL ?? '', keyName: 'CUSTOM_AI_API_KEY' };
+    }
+  }
+
+  /**
+   * GET {base}/models on an OpenAI-compatible API (OpenAI, Gemini, Groq, Mistral, Ollama and most self-hosted servers).
+   * It is free: no tokens are spent. Gemini lists models as "models/<id>", so ids are compared without that prefix.
+   */
+  async compatible(key: 'openai' | 'gemini' | 'groq' | 'mistral' | 'custom_ai'): Promise<string> {
+    const t = this.compatibleTarget(key);
+    let res: Response;
+    try {
+      res = await fetch(`${trim(t.base)}/models`, { headers: { accept: 'application/json', ...(t.apiKey ? { authorization: `Bearer ${t.apiKey}` } : {}) }, signal: AbortSignal.timeout(TIMEOUT), redirect: 'error' });
+    } catch (err) {
+      const { host, port } = hostAndPort(t.base);
+      if (err instanceof Error && err.name === 'TimeoutError') throw new Error(explainNetworkError({ code: 'ETIMEDOUT' }, t.name, host, port));
+      throw new Error(explainNetworkError(err, t.name, host, port));
+    }
+    if (res.status === 401 || res.status === 403) throw new Error(`${t.name} refused the API key (${res.status}). Check ${t.keyName}.`);
+    if (!res.ok) throw new Error(`${t.name} answered ${res.status}.`);
+    const body = await readJson(res);
+    const ids = Array.isArray(body.data) ? (body.data as { id?: string }[]).map((m) => String(m.id ?? '').replace(/^models\//, '')).filter(Boolean) : [];
+    const model = t.model.replace(/^models\//, '');
+    if (key === 'custom_ai' && ids.length && !ids.includes(model)) {
+      throw new Error(`The server answered, but it has no model called ${model}. It offers: ${ids.slice(0, 8).join(', ')}${ids.length > 8 ? ', …' : ''}.`);
+    }
+    const found = ids.length ? `; ${ids.includes(model) ? `${model} is available` : `${model} was not in the list, so check the model name`}` : '';
+    return `${key === 'custom_ai' ? 'Server answered' : 'Key accepted'} (${ids.length} model${ids.length === 1 ? '' : 's'} listed${found}). No tokens were used.`;
+  }
+
+  /** OpenRouter lists models without checking the key, so its key endpoint is used: it returns the key's credit and free-tier status. */
+  async openrouter(): Promise<string> {
+    const t = this.compatibleTarget('openrouter');
+    const res = await fetch(`${trim(t.base)}/key`, { headers: { accept: 'application/json', authorization: `Bearer ${t.apiKey ?? ''}` }, signal: AbortSignal.timeout(TIMEOUT) });
+    if (res.status === 401 || res.status === 403) throw new Error(`OpenRouter refused the API key (${res.status}). Check OPENROUTER_API_KEY.`);
+    if (!res.ok) throw new Error(`OpenRouter answered ${res.status}.`);
+    const data = ((await readJson(res)).data ?? {}) as { is_free_tier?: boolean; limit_remaining?: number | null; usage?: number };
+    const tier = data.is_free_tier ? 'free tier: models ending in :free have a daily request limit' : 'paid credit on the account';
+    const left = typeof data.limit_remaining === 'number' ? `, ${data.limit_remaining} credit left on this key` : '';
+    return `Key accepted (${tier}${left}). Model set: ${t.model}. No tokens were used.`;
+  }
+
   async google(): Promise<string> {
     const res = await this.post(this.env.GOOGLE_TOKEN_URL, {
       grant_type: 'authorization_code', code: PROBE_CODE, redirect_uri: this.mailboxRedirect('google'),
@@ -122,7 +174,16 @@ export class ConnectionTests {
       return await this.mailer.verify();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Never echo the URL back: it holds the password.
+      const code = networkCode(err);
+      const smtpCode = (err as { code?: string }).code;
+      // Never echo the URL back: it holds the password. Host and port are fine to show.
+      const { host, port } = hostAndPort(this.env.SMTP_URL ?? '');
+      const smtpPort = port === '80' || port === '443' || !port ? (this.env.SMTP_URL?.startsWith('smtps:') ? '465' : '587') : port;
+      if (smtpCode === 'EAUTH') throw new Error(`The email service refused the user name or password (EAUTH): ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 160)}`);
+      if (code === 'ETIMEDOUT' || /Greeting never received|Connection timeout/i.test(msg)) {
+        throw new Error(`The email service did not answer at ${host} port ${smtpPort} (ETIMEDOUT). Many cloud providers block outgoing email ports (25, 465, 587) on new servers: ask yours to open them, or try port 2525 if your email service offers it. Also allow the port in the server's own firewall.`);
+      }
+      if (code) throw new Error(explainNetworkError(err, 'The email service', host, smtpPort));
       throw new Error(`The email service refused the connection or sign-in: ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 200)}`);
     }
   }

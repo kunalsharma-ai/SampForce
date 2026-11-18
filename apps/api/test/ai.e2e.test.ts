@@ -19,7 +19,7 @@ describe('AI without a provider', () => {
     const h = api(u);
     const status = (await h.get('/ai/status').expect(200)).body;
     expect(status.provider).toMatchObject({ configured: false, model: null });
-    expect(status.provider.note).toMatch(/ANTHROPIC_API_KEY/);
+    expect(status.provider.note).toMatch(/AI provider key in the operator console/);
     expect(status.agents.every((a: { available: boolean }) => !a.available)).toBe(true);
     const res = await h.post('/ai/copilot', { question: 'How is my pipeline?' }).expect(503);
     expect(res.body.error.code).toBe('AI_NOT_CONFIGURED');

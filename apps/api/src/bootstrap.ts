@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { json } from 'express';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { loadApiEnv } from '@dealflow/config';
@@ -23,6 +24,8 @@ export async function createApp(): Promise<INestApplication> {
   app.use(cookieParser());
   // Replaces Nest's default JSON parser so SCIM clients' application/scim+json bodies are parsed too.
   // 1 MB fits a pasted meeting transcript (up to 200,000 characters); recordings stream past the parsers.
+  // Imports carry the whole CSV file as text (up to 2 MB), so their route takes more than the 1 MB default.
+  app.use('/api/v1/imports', json({ limit: '4mb' }));
   app.useBodyParser('json', { type: ['application/json', 'application/scim+json'], limit: '1mb' });
   // The website tracking script posts JSON as text/plain so browsers send it without a CORS preflight. Only on its
   // routes: elsewhere text/plain bodies (portal document uploads) must reach their handlers as raw streams.

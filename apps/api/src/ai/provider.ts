@@ -22,6 +22,8 @@ export interface ModelResponse {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** Which provider answered (set by the fallback chain; ADR 0067). */
+  provider?: string;
 }
 
 /** One interface per vendor, so the gateway can add adapters without touching agents. */
@@ -31,8 +33,39 @@ export interface ModelProvider {
   generate(req: ModelRequest): Promise<ModelResponse>;
 }
 
+/**
+ * Why a provider could not answer, so the fallback chain (ADR 0067) can move on to the next provider and rest this one:
+ * `rate_limited` (429, a free tier's quota), `unavailable` (5xx, overload, timeout, network), `auth` (key refused,
+ * no credit left, model not available to the key) or `rejected` (the provider refused this request's shape).
+ */
+export type ProviderFailureKind = 'rate_limited' | 'unavailable' | 'auth' | 'rejected';
+
+/** A provider refused or failed a request. `retryAfterMs` comes from the provider's Retry-After header when it sent one. */
+export class AiProviderFailure extends Error {
+  constructor(
+    message: string,
+    readonly kind: ProviderFailureKind,
+    readonly retryAfterMs: number | null = null,
+  ) {
+    super(message);
+  }
+}
+
 /** Errors worth retrying later (rate limits, overload, timeouts, network). */
-export class TransientProviderError extends Error {}
+export class TransientProviderError extends AiProviderFailure {
+  constructor(message: string, kind: 'rate_limited' | 'unavailable' = 'unavailable', retryAfterMs: number | null = null) {
+    super(message, kind, retryAfterMs);
+  }
+}
+
+/** Milliseconds from a Retry-After header (seconds or an HTTP date), or null. */
+export function retryAfterMs(value: string | null | undefined, now = Date.now()): number | null {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - now) : null;
+}
 
 /**
  * Claude adapter on the official SDK. Thinking is left to the model (adaptive by default on current
@@ -52,7 +85,8 @@ export class AnthropicProvider implements ModelProvider {
       authToken: null,
       baseURL: env.AI_API_BASE_URL,
       timeout: env.AI_REQUEST_TIMEOUT_MS,
-      maxRetries: 2,
+      // One quick retry; after that the fallback chain moves on to the next provider instead of waiting (ADR 0067).
+      maxRetries: 1,
     });
   }
 
@@ -80,10 +114,14 @@ export class AnthropicProvider implements ModelProvider {
         outputTokens: res.usage.output_tokens,
       };
     } catch (err) {
-      if (err instanceof Anthropic.RateLimitError || err instanceof Anthropic.InternalServerError || err instanceof Anthropic.APIConnectionError) {
-        throw new TransientProviderError(err.message);
+      if (err instanceof Anthropic.RateLimitError) throw new TransientProviderError(err.message, 'rate_limited', retryAfterMs(err.headers?.get?.('retry-after')));
+      if (err instanceof Anthropic.InternalServerError || err instanceof Anthropic.APIConnectionError) throw new TransientProviderError(err.message);
+      if (err instanceof Anthropic.APIError) {
+        const status = err.status ?? 0;
+        // 529 is Anthropic's "overloaded"; 401/403 a refused key; 402 no credit; 404 a model the key cannot use.
+        if (status === 529 || status >= 500) throw new TransientProviderError(err.message);
+        throw new AiProviderFailure(`The AI provider rejected the request (${err.status ?? 'no status'}).`, [401, 402, 403, 404].includes(status) ? 'auth' : 'rejected');
       }
-      if (err instanceof Anthropic.APIError) throw new Error(`The AI provider rejected the request (${err.status ?? 'no status'}).`);
       throw err;
     }
   }

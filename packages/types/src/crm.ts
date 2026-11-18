@@ -765,27 +765,60 @@ export interface SearchHit {
 
 // ───────────── Import ─────────────
 
-export const IMPORT_ENTITIES = ['leads', 'contacts', 'companies'] as const;
+/** `companies_contacts`: one row is a company and one of its employees (ADR 0066). */
+export const IMPORT_ENTITIES = ['leads', 'contacts', 'companies', 'companies_contacts'] as const;
 export type ImportEntity = (typeof IMPORT_ENTITIES)[number];
+
+/**
+ * Mapping targets that create a custom field from the column's heading while importing: `new` on a single-record
+ * import, `new:company` or `new:contact` on the combined one.
+ */
+export const NEW_FIELD_TARGETS = ['new', 'new:company', 'new:contact'] as const;
 
 export const importRequestSchema = z.object({
   entity: z.enum(IMPORT_ENTITIES),
   /** Raw CSV text (UTF-8). Files up to 2 MB / 5,000 rows are processed synchronously. */
   csv: z.string().min(1).max(2_000_000),
   /** CSV header → field key. Unmapped columns are ignored. */
-  mapping: z.record(z.string(), z.string()),
+  mapping: z.record(z.string(), z.string()).default({}),
+  /** Map the columns the mapping leaves out by their headings, and turn the ones nothing matches into new custom fields. */
+  autoMap: z.boolean().default(false),
   duplicateStrategy: z.enum(['skip', 'create']).default('skip'),
   dryRun: z.boolean().default(false),
 });
 export type ImportRequest = z.infer<typeof importRequestSchema>;
 
+/** A custom field the import adds (dry run: would add) for a column no existing field matched. */
+export interface ImportNewField {
+  column: string;
+  entity: 'COMPANY' | 'CONTACT' | 'LEAD';
+  key: string;
+  label: string;
+  type: 'TEXT' | 'NUMBER';
+}
+
 export interface ImportResult {
   entity: ImportEntity;
   dryRun: boolean;
   totalRows: number;
+  /** Rows imported (dry run: rows that would be). */
   created: number;
   skippedDuplicates: number;
   errors: { row: number; message: string }[];
+  /** The mapping that was used, after automatic matching. */
+  mapping?: Record<string, string>;
+  newFields?: ImportNewField[];
+  /** Combined import: companies created, existing companies the rows were matched to, and employees created. */
+  companiesCreated?: number;
+  companiesMatched?: number;
+  contactsCreated?: number;
+}
+
+/** POST /imports/file: an Excel workbook (sent as the request body) read into CSV text for the import. */
+export interface ImportFileResult {
+  csv: string;
+  sheet: string;
+  rows: number;
 }
 
 // ───────────── Invitations ─────────────

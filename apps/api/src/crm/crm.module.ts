@@ -22,6 +22,7 @@ import { InstructionsService } from './instructions.service';
 import { LeadTransfersService } from './lead-transfers.service';
 import { RevenueRecordsService } from './revenue-records.service';
 import { ImportExportService } from './import-export.service';
+import { ImportService } from './import.service';
 import { LeadsService } from './leads.service';
 import { PipelinesService } from './pipelines.service';
 import { CompaniesController, ContactsController, LeadsController } from './records.controller';
@@ -77,6 +78,7 @@ import {
     TasksService,
     SearchService,
     ImportExportService,
+    ImportService,
     TerritoriesService,
     CrmConfigService,
     GeoService,
