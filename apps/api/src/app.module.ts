@@ -36,6 +36,7 @@ import { VisitorsModule } from './visitors/visitors.module';
 import { ProspectsModule } from './prospects/prospects.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
+import { OwnServersModule } from './own-servers/own-servers.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
@@ -71,6 +72,7 @@ import { redactUrl } from './observability/redact';
     ChatModule,
     AutomationModule,
     AiModule,
+    OwnServersModule,
     CommercialModule,
     MarketingModule,
     RevenueModule,

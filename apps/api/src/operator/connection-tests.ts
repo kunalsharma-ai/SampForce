@@ -176,12 +176,19 @@ export class ConnectionTests {
       const msg = err instanceof Error ? err.message : String(err);
       const code = networkCode(err);
       const smtpCode = (err as { code?: string }).code;
-      // Never echo the URL back: it holds the password. Host and port are fine to show.
-      const { host, port } = hostAndPort(this.env.SMTP_URL ?? '');
-      const smtpPort = port === '80' || port === '443' || !port ? (this.env.SMTP_URL?.startsWith('smtps:') ? '465' : '587') : port;
-      if (smtpCode === 'EAUTH') throw new Error(`The email service refused the user name or password (EAUTH): ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 160)}`);
+      // Never echo the URL or password back. Host, port and user name are fine to show.
+      const target = this.mailer.target;
+      const host = target?.host ?? '';
+      const smtpPort = String(target?.port ?? '');
+      if (smtpCode === 'EAUTH') {
+        const who = target?.user ?? '';
+        throw new Error(`The email service refused the user name${who ? ` ${who}` : ''} or its password (EAUTH): ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 160)}. Use the full email address as the user name and an app-specific password if the account has two-step sign-in.`);
+      }
       if (code === 'ETIMEDOUT' || /Greeting never received|Connection timeout/i.test(msg)) {
         throw new Error(`The email service did not answer at ${host} port ${smtpPort} (ETIMEDOUT). Many cloud providers block outgoing email ports (25, 465, 587) on new servers: ask yours to open them, or try port 2525 if your email service offers it. Also allow the port in the server's own firewall.`);
+      }
+      if (/wrong version number|ssl3_get_record|packet length too long|unknown protocol/i.test(msg)) {
+        throw new Error(`The email service at ${host} port ${smtpPort} did not start an encrypted connection the expected way. Port 465 needs SSL/TLS on; ports 587 and 2525 need it off (STARTTLS).`);
       }
       if (code) throw new Error(explainNetworkError(err, 'The email service', host, smtpPort));
       throw new Error(`The email service refused the connection or sign-in: ${msg.replace(/smtps?:\/\/\S+/g, '[SMTP_URL]').slice(0, 200)}`);

@@ -32,6 +32,16 @@ export const apiEnvSchema = z.object({
    * Unset = SampForce sends no system email, and password reset says to ask an administrator.
    */
   SMTP_URL: z.string().regex(/^smtps?:\/\//, 'SMTP_URL must start with smtp:// or smtps://').optional().or(z.literal('').transform(() => undefined)),
+  /**
+   * The same email service as separate settings, the way Nodemailer takes them (ADR 0068 follow-up): host, port,
+   * SSL/TLS from the start (465) or STARTTLS (587), user name and password. Used instead of SMTP_URL when SMTP_HOST is set.
+   */
+  SMTP_HOST: z.string().trim().min(1).max(255).optional().or(z.literal('').transform(() => undefined)),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional().or(z.literal('').transform(() => undefined)),
+  /** true: SSL/TLS from the start (port 465). false: STARTTLS when the server offers it (587, 2525). Unset: true only on port 465. */
+  SMTP_SECURE: bool.optional().or(z.literal('').transform(() => undefined)),
+  SMTP_USER: z.string().trim().max(320).optional().or(z.literal('').transform(() => undefined)),
+  SMTP_PASSWORD: z.string().max(1024).optional().or(z.literal('').transform(() => undefined)),
   /** Sender of system emails, for example "SampForce <no-reply@example.com>". Required with SMTP_URL. */
   MAIL_FROM: z.string().min(3).max(200).optional().or(z.literal('').transform(() => undefined)),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(240).default(30),
@@ -142,6 +152,11 @@ export const apiEnvSchema = z.object({
   CUSTOM_AI_MODEL: z.string().optional().transform((v) => v || undefined),
   /** Comma-separated provider keys in the order they are tried (anthropic,groq,gemini…). Unset: every configured provider in the built-in order. */
   AI_PROVIDER_ORDER: z.string().optional().transform((v) => v || undefined),
+  /**
+   * Private or internal hosts that workspaces may use for their own AI or email server (ADR 0068): host names,
+   * addresses and ranges, comma-separated (ollama.lan, 10.0.0.0/8, 2406:b400::/32). Set in the operator console.
+   */
+  TRUSTED_PRIVATE_HOSTS: z.string().optional().transform((v) => v || undefined),
   /** Provider endpoints, for tests that point them at a local stand-in (like AI_API_BASE_URL). */
   OPENAI_API_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
   GEMINI_API_BASE_URL: z.string().url().default('https://generativelanguage.googleapis.com/v1beta/openai'),
@@ -204,8 +219,8 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_NETWORK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_NETWORK_TARGETS is for tests only and cannot be used in production');
   }
-  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) {
-    throw new Error('MAIL_FROM must be set when SMTP_URL is set');
+  if ((parsed.data.SMTP_URL || parsed.data.SMTP_HOST) && !parsed.data.MAIL_FROM) {
+    throw new Error('MAIL_FROM must be set when SMTP_HOST or SMTP_URL is set');
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.FINDER_FIXTURE_URL) {
     throw new Error('FINDER_FIXTURE_URL is for tests only and cannot be used in production');

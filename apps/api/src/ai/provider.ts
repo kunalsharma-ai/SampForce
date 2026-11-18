@@ -77,11 +77,15 @@ export class AnthropicProvider implements ModelProvider {
   private readonly client: Anthropic;
   private readonly fallbacks: boolean;
 
-  constructor(private readonly env: ApiEnv) {
+  /** `own`: a workspace's own key and model (ADR 0068) instead of the deployment's. */
+  constructor(
+    private readonly env: ApiEnv,
+    private readonly own: { apiKey: string; model: string } | null = null,
+  ) {
     this.fallbacks = env.AI_SERVER_FALLBACKS;
     // Every setting is explicit so ambient ANTHROPIC_* variables on the host never redirect traffic.
     this.client = new Anthropic({
-      apiKey: env.ANTHROPIC_API_KEY ?? null,
+      apiKey: own?.apiKey ?? env.ANTHROPIC_API_KEY ?? null,
       authToken: null,
       baseURL: env.AI_API_BASE_URL,
       timeout: env.AI_REQUEST_TIMEOUT_MS,
@@ -92,7 +96,7 @@ export class AnthropicProvider implements ModelProvider {
 
   /** Read at call time: a model changed in the operator console applies to the next request (ADR 0053). */
   get model(): string {
-    return this.env.AI_MODEL;
+    return this.own?.model || this.env.AI_MODEL;
   }
 
   async generate(req: ModelRequest): Promise<ModelResponse> {

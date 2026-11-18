@@ -3495,6 +3495,10 @@ enum AppProvider {
   TWILIO
   /// The workspace's own SampBidx bidding tool (ADR 0061): an API address and key, plus a callback signing secret.
   SAMPBIDX
+  /// The workspace's own AI keys or AI server (ADR 0068), tried before the deployment's shared providers.
+  AI
+  /// The workspace's own email server (SMTP) for the email SampForce sends on the workspace's behalf (ADR 0068).
+  SMTP
 }
 
 /// A workspace-level connection to an outside app (one per app per workspace), made by an admin through the
