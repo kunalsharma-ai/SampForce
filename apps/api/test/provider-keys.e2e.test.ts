@@ -46,7 +46,7 @@ type Row = { key: string; state: string; configured: boolean; env: Field[]; last
 
 /** Every env var a provider here might read: unset for the whole suite so only what a test sets is in play. */
 const UNSET = Object.fromEntries(
-  ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'SMTP_URL', 'MAIL_FROM', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET',
+  ['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET', 'ANTHROPIC_API_KEY', 'SMTP_URL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET',
     'ZOOM_CLIENT_ID', 'ZOOM_CLIENT_SECRET', 'DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_SECRET_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET',
     'RAZORPAY_WEBHOOK_SECRET', 'ZAPIER_INVITE_URL', 'APOLLO_API_KEY', 'HUNTER_API_KEY', 'DEEPGRAM_API_KEY', 'ENCRYPTION_KEY', 'ENCRYPTION_KEY_PREVIOUS'].map((k) => [k, undefined]),
 );
@@ -164,7 +164,7 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     const log = (await admin.get('/audit-log').expect(200)).body as { action: string; metadata: Record<string, unknown> }[];
     expect(log.filter((l) => l.action === 'provider_key.cleared').map((l) => l.metadata.name)).toEqual(expect.arrayContaining(['SLACK_CLIENT_ID', 'SLACK_CLIENT_SECRET']));
 
-    const mail = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'SampForce <no-reply@dealflow.test>' } }).expect(200)).body as Row;
+    const mail = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'SampForce <no-reply@dealflow.test>', SMTP_URL: null } }).expect(200)).body as Row;
     expect(field(mail, 'MAIL_FROM')).toMatchObject({ secret: false, hint: 'SampForce <no-reply@dealflow.test>' });
   });
 
@@ -172,6 +172,11 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
     const { admin } = await boot();
     const bad = (await admin.post('/providers/smtp/keys', { values: { SMTP_URL: 'http://mail.example.com' } }).expect(400)).body;
     expect(bad.error).toMatchObject({ code: 'VALIDATION_FAILED', message: 'SMTP_URL must start with smtp:// or smtps://' });
+    // A password with # in it, not escaped, is caught on save with the fix (a Zoho-style address in the user name is fine).
+    const hash = (await admin.post('/providers/smtp/keys', { values: { SMTP_URL: 'smtps://user%40example.com:pa#ss@smtppro.zoho.in:465' } }).expect(400)).body;
+    expect(hash.error.message).toMatch(/%23/);
+    const port = (await admin.post('/providers/smtp/keys', { values: { SMTP_URL: 'smtps://user%40example.com:pass@smtppro.zoho.in:587' } }).expect(400)).body;
+    expect(port.error.message).toMatch(/Port 587 uses STARTTLS/);
     expect((await admin.post('/providers/slack/keys', { values: { HUNTER_API_KEY: 'k' } }).expect(400)).body.error.message).toBe('Slack does not use HUNTER_API_KEY.');
     await admin.post('/providers/slack/keys', { values: { ENCRYPTION_KEY: 'k'.repeat(40) } }).expect(400);
     await admin.post('/providers/slack/keys', { values: { SLACK_CLIENT_ID: 'line\nbreak' } }).expect(400);
@@ -218,8 +223,34 @@ describe('provider keys entered in the operator console (stand-ins)', () => {
 
     await admin.post('/providers/smtp/keys', { values: { SMTP_URL: smtp.url } }).expect(200);
     const sent = smtp.messages.length;
-    expect((await admin.post('/providers/smtp/check').expect(200)).body).toMatchObject({ state: 'verified', lastCheck: { message: 'The email service accepted the connection and sign-in. No email was sent.' } });
+    expect((await admin.post('/providers/smtp/check').expect(200)).body).toMatchObject({ state: 'verified', lastCheck: { message: expect.stringMatching(/^Connected to 127\.0\.0\.1 port \d+ \(STARTTLS when offered\)\. No email was sent\.$/) } });
     expect(smtp.messages.length).toBe(sent);
+    await request(app.getHttpServer()).post('/api/v1/auth/password-reset/request').set('origin', ORIGIN).send({ email: owner.email }).expect(202);
+    for (let i = 0; i < 25 && smtp.messages.length === sent; i++) await sleep(100);
+    expect(smtp.messages.at(-1)!.to).toEqual([owner.email]);
+  });
+
+  it('takes the email service as separate host, port, SSL/TLS, user and password settings, like Nodemailer', async () => {
+    const { app, admin } = await boot();
+    const owner = await registerUser(app, 'Keys Mail Fields Ltd');
+    const port = String(new URL(smtp.url).port);
+    // Only the sender: not enough yet.
+    const half = (await admin.post('/providers/smtp/keys', { values: { MAIL_FROM: 'SampForce <no-reply@dealflow.test>', SMTP_URL: null } }).expect(200)).body as Row;
+    expect(half.state).toBe('not_configured');
+    expect((await admin.post('/providers/smtp/check').expect(400)).body.error.message).toBe('Add the SMTP server (or an SMTP URL) first.');
+
+    // SSL/TLS switched on against a server that only speaks plain SMTP and STARTTLS: the test says which switch is wrong.
+    await admin.post('/providers/smtp/keys', { values: { SMTP_HOST: '127.0.0.1', SMTP_PORT: port, SMTP_SECURE: 'true', SMTP_USER: 'sales@dealflow.test', SMTP_PASSWORD: 'app-specific-secret-9x9x' } }).expect(200);
+    const wrong = (await admin.post('/providers/smtp/check').expect(200)).body as Row;
+    expect(wrong.state).toBe('failed');
+    expect(wrong.lastCheck!.message).toMatch(/did not start an encrypted connection the expected way.*Port 465 needs SSL\/TLS on/);
+    expect(JSON.stringify(wrong)).not.toContain('app-specific-secret-9x9x');
+
+    // Off, and without sign-in (the stand-in has none): verified, and system email goes out through it.
+    await admin.post('/providers/smtp/keys', { values: { SMTP_SECURE: 'false', SMTP_USER: null, SMTP_PASSWORD: null } }).expect(200);
+    const ok = (await admin.post('/providers/smtp/check').expect(200)).body as Row;
+    expect(ok).toMatchObject({ state: 'verified', lastCheck: { message: `Connected to 127.0.0.1 port ${port} (STARTTLS when offered). No email was sent.` } });
+    const sent = smtp.messages.length;
     await request(app.getHttpServer()).post('/api/v1/auth/password-reset/request').set('origin', ORIGIN).send({ email: owner.email }).expect(202);
     for (let i = 0; i < 25 && smtp.messages.length === sent; i++) await sleep(100);
     expect(smtp.messages.at(-1)!.to).toEqual([owner.email]);

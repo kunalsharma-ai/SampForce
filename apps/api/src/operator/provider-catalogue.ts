@@ -1,3 +1,4 @@
+import { smtpUrlError } from '../common/smtp-url';
 import type { ProviderKey } from '@dealflow/types';
 import { parseProviderOrder } from '../ai/ai-providers';
 import { parsePriceMap } from '../billing/providers';
@@ -38,6 +39,8 @@ export interface CatalogueProvider {
   app: { off: string; on: string; verified?: string };
   /** Step-by-step setup in the provider's own console (ADR 0053). */
   setup: { consoleUrl?: string; consoleLabel?: string; steps: string[]; urls?: CatalogueUrl[] };
+  /** When "required" alone cannot say it: whether the provider has what it needs (for example SMTP server or URL). */
+  configured?: (env: Record<string, unknown>) => boolean;
   /** Set for providers that send signed webhooks: the console shows whether a signed event has arrived. */
   webhook?: ReceiptProvider;
 }
@@ -387,17 +390,23 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
   {
     key: 'smtp', name: 'Email (SMTP)', usedFor: 'Password resets, invitations, client portal email',
     fields: [
-      { name: 'SMTP_URL', label: 'SMTP URL', required: true, help: 'smtps://user:password@smtp.example.com:465, or smtp://… :587 for STARTTLS.' },
-      { name: 'MAIL_FROM', label: 'Sender', required: true, help: 'For example: SampForce <no-reply@example.com>' },
+      { name: 'SMTP_HOST', label: 'SMTP server', required: false, help: 'For example smtppro.zoho.in, smtp.gmail.com or email-smtp.eu-west-1.amazonaws.com.' },
+      { name: 'SMTP_PORT', label: 'Port', required: false, validate: (v) => (/^\d{1,5}$/.test(v) && +v >= 1 && +v <= 65535 ? null : 'Enter a port number such as 465 or 587.'), help: '465 for SSL/TLS, 587 (or 2525) for STARTTLS. Empty: 465.' },
+      { name: 'SMTP_SECURE', label: 'SSL/TLS (port 465)', required: false, switch: true, help: 'On for port 465 (secure: true). Off for 587 or 2525, where the connection is upgraded with STARTTLS. Unset: on only for port 465.' },
+      { name: 'SMTP_USER', label: 'User name', required: false, help: 'Usually the full email address, for example sales@yourcompany.com.' },
+      { name: 'SMTP_PASSWORD', label: 'Password', required: false, help: 'For Zoho, Gmail or Microsoft 365 with two-step sign-in, an app-specific password.' },
+      { name: 'MAIL_FROM', label: 'Sender', required: true, help: 'For example: SampForce <no-reply@example.com>. Zoho and most services only accept the signed-in address (or its aliases) here.' },
+      { name: 'SMTP_URL', label: 'SMTP URL (older setups)', required: false, validate: smtpUrlError, normalize: (v) => v.trim(), help: 'Only used when SMTP server is empty: smtps://user:password@smtp.example.com:465, or smtp://… :587 for STARTTLS.' },
     ],
-    tested: ['SMTP_URL'],
+    configured: (env) => !!(env.SMTP_HOST || env.SMTP_URL) && !!env.MAIL_FROM,
+    tested: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_URL'],
     checkNote: 'Connects to the email service and signs in, then disconnects. No email is sent.',
     app: { off: 'System email is not sent', on: 'System email is sent' },
     setup: {
       steps: [
-        'Use any email service that offers SMTP (Amazon SES, Postmark, SendGrid, Mailgun, Google Workspace, Microsoft 365).',
-        'Create SMTP credentials there and verify the sender domain (SPF and DKIM), so mail is not marked as spam.',
-        'Write the SMTP URL as smtps://USER:PASSWORD@HOST:465, or smtp://USER:PASSWORD@HOST:587 for STARTTLS. If the user name or password has @, : or / in it, replace those with %40, %3A and %2F.',
+        'Use any email service that offers SMTP (Zoho Mail, Google Workspace, Microsoft 365, Amazon SES, Postmark, SendGrid, Mailgun).',
+        'Create SMTP credentials there (an app-specific password if the account has two-step sign-in) and verify the sender domain (SPF and DKIM), so mail is not marked as spam.',
+        'Enter the SMTP server, the port (465 with SSL/TLS on, or 587 with it off), the user name and the password. These are the same settings as Nodemailer\'s host, port, secure and auth.',
         'Enter the sender, for example SampForce <no-reply@yourdomain.com>, save, then press Test connection.',
       ],
     },

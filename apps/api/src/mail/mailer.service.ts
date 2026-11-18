@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 import { API_ENV, type ApiEnv } from '../common/env';
+import { describeSmtpTarget, type SmtpOptions, smtpOptionsFrom, transportOptions } from '../common/smtp-url';
 import { explainSmtpError, OwnServersStore } from '../own-servers/own-servers.store';
 
 export interface SystemMail {
@@ -15,7 +16,7 @@ export const MAIL_NOT_CONFIGURED = {
 };
 
 /**
- * SampForce's own email (password resets), sent through the email service in SMTP_URL. This is separate from
+ * SampForce's own email (password resets), sent through the email service set in the operator console (SMTP_HOST and the settings next to it, or SMTP_URL). This is separate from
  * people's connected mailboxes, which send their one-to-one and sequence emails.
  */
 @Injectable()
@@ -28,29 +29,48 @@ export class MailerService {
     private readonly own: OwnServersStore,
   ) {}
 
-  /** Built on first use and rebuilt when SMTP_URL or MAIL_FROM changes, so a key saved in the operator console applies at once. */
+  /**
+   * Built on first use and rebuilt when the SMTP settings or MAIL_FROM change, so a value saved in the operator
+   * console applies at once. Written out as host, port, secure and auth, as in Nodemailer's own examples.
+   */
   private get transport(): Transporter | null {
-    const url = this.env.SMTP_URL;
-    if (!url) return null;
-    const key = `${url}\n${this.env.MAIL_FROM ?? ''}`;
+    let opts: SmtpOptions | null;
+    try {
+      opts = smtpOptionsFrom(this.env);
+    } catch (err) {
+      this.log.error({ err: err instanceof Error ? err.message : String(err) }, 'The SMTP settings could not be read');
+      return null;
+    }
+    if (!opts) return null;
+    const key = JSON.stringify([transportOptions(opts), this.env.MAIL_FROM ?? ''] );
     if (this.cached?.key !== key) {
       this.cached?.transport.close();
-      this.cached = { key, transport: createTransport(url, { from: this.env.MAIL_FROM }) };
+      this.cached = { key, transport: createTransport(transportOptions(opts), { from: this.env.MAIL_FROM }) };
     }
     return this.cached.transport;
   }
 
+  /** Where system email goes, without the password: for the console's connection test. */
+  get target(): SmtpOptions | null {
+    try {
+      return smtpOptionsFrom(this.env);
+    } catch {
+      return null;
+    }
+  }
+
   /** Opens a connection and signs in without sending anything (the operator console's connection test). */
   async verify(): Promise<string> {
+    const target = smtpOptionsFrom(this.env);
     const t = this.transport;
-    if (!t) throw new Error('SMTP_URL is not set.');
+    if (!t || !target) throw new Error('Add SMTP_HOST (or SMTP_URL) first.');
     if (!this.env.MAIL_FROM) throw new Error('MAIL_FROM is not set.');
     await t.verify();
-    return 'The email service accepted the connection and sign-in. No email was sent.';
+    return `Connected to ${describeSmtpTarget(target)}${target.user ? ` and signed in as ${target.user}` : ''}. No email was sent.`;
   }
 
   get configured(): boolean {
-    return !!this.env.SMTP_URL && !!this.env.MAIL_FROM;
+    return !!(this.env.SMTP_HOST || this.env.SMTP_URL) && !!this.env.MAIL_FROM;
   }
 
   /** Whether email can go out for this workspace: through its own email server (ADR 0068) or the shared one. */

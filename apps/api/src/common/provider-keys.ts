@@ -38,6 +38,11 @@ export const MANAGED_KEYS = {
   MISTRAL_API_KEY: { secret: true },
   CUSTOM_AI_API_KEY: { secret: true },
   SMTP_URL: { secret: true },
+  SMTP_HOST: { secret: false },
+  SMTP_PORT: { secret: false },
+  SMTP_SECURE: { secret: false },
+  SMTP_USER: { secret: false },
+  SMTP_PASSWORD: { secret: true },
   MAIL_FROM: { secret: false },
   ZAPIER_INVITE_URL: { secret: false },
   STRIPE_SECRET_KEY: { secret: true },
@@ -106,6 +111,8 @@ export function parseManagedValue(name: ManagedKeyName, raw: string): { ok: true
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Not a valid value.' };
   // Switches are stored in one spelling ("true"/"false") whatever was typed ("1", "0").
   if (typeof parsed.data === 'boolean') return { ok: true, value: String(parsed.data) };
+  // Numbers (a port) are stored as the number they were read as.
+  if (typeof parsed.data === 'number') return { ok: true, value: String(parsed.data) };
   return typeof parsed.data === 'string' && parsed.data ? { ok: true, value: parsed.data } : { ok: false, message: 'Not a valid value.' };
 }
 

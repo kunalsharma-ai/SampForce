@@ -32,6 +32,16 @@ export const apiEnvSchema = z.object({
    * Unset = SampForce sends no system email, and password reset says to ask an administrator.
    */
   SMTP_URL: z.string().regex(/^smtps?:\/\//, 'SMTP_URL must start with smtp:// or smtps://').optional().or(z.literal('').transform(() => undefined)),
+  /**
+   * The same email service as separate settings, the way Nodemailer takes them (ADR 0068 follow-up): host, port,
+   * SSL/TLS from the start (465) or STARTTLS (587), user name and password. Used instead of SMTP_URL when SMTP_HOST is set.
+   */
+  SMTP_HOST: z.string().trim().min(1).max(255).optional().or(z.literal('').transform(() => undefined)),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional().or(z.literal('').transform(() => undefined)),
+  /** true: SSL/TLS from the start (port 465). false: STARTTLS when the server offers it (587, 2525). Unset: true only on port 465. */
+  SMTP_SECURE: bool.optional().or(z.literal('').transform(() => undefined)),
+  SMTP_USER: z.string().trim().max(320).optional().or(z.literal('').transform(() => undefined)),
+  SMTP_PASSWORD: z.string().max(1024).optional().or(z.literal('').transform(() => undefined)),
   /** Sender of system emails, for example "SampForce <no-reply@example.com>". Required with SMTP_URL. */
   MAIL_FROM: z.string().min(3).max(200).optional().or(z.literal('').transform(() => undefined)),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(240).default(30),
@@ -209,8 +219,8 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_NETWORK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_NETWORK_TARGETS is for tests only and cannot be used in production');
   }
-  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) {
-    throw new Error('MAIL_FROM must be set when SMTP_URL is set');
+  if ((parsed.data.SMTP_URL || parsed.data.SMTP_HOST) && !parsed.data.MAIL_FROM) {
+    throw new Error('MAIL_FROM must be set when SMTP_HOST or SMTP_URL is set');
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.FINDER_FIXTURE_URL) {
     throw new Error('FINDER_FIXTURE_URL is for tests only and cannot be used in production');
