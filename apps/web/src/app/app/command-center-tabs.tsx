@@ -70,7 +70,7 @@ export function CommandCenter() {
       <div
         role="tablist"
         aria-label={t('Dashboards')}
-        className="mb-4 inline-flex rounded-lg border border-border bg-surface p-0.5"
+        className="mb-4 inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5"
       >
         {views.map((v) => (
           <button
@@ -80,7 +80,7 @@ export function CommandCenter() {
             aria-selected={view === v}
             onClick={() => choose(v)}
             className={cn(
-              'h-8 rounded-md px-3 text-sm transition-colors',
+              'h-8 shrink-0 whitespace-nowrap rounded-md px-3 text-sm transition-colors',
               view === v
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
