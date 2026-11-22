@@ -65,3 +65,19 @@ and will extend this record.
 **Consequences.** Every request resolves the organisation's tree (one small query per request). Existing
 organisations behave as before until they create Manager or Executive Workspaces. Routes added later must name their
 feature or map to a resource, or they are only checked by role.
+
+## Part 2: Console clients, plans and limits
+
+- **Plans you sell.** Console Admins create plans of their own (`custom_<slug>` codes) next to the shipped ones. A plan
+  holds its features, limits (including Manager and Executive Workspaces), price, currency, billing frequency, support
+  level, term, auto-renewal, the plans it may move to, and whether it is on sale. Editing a shipped plan stores a row
+  the first time. Changes reach every client on the plan, and every workspace inside it, on the next request.
+- **Clients.** Creating a client provisions the organisation, its Super Workspace (with the administrator's
+  designation), the subscription (plan, seats, start, term, price, payment status, workspace limits) and an
+  administrator invitation link. The administrator becomes the owner on accepting.
+- **Subscription changes** (scenario 14) take the organisation's lock, honour the plan's "moves to" list, and record
+  each change with its reason, so the client's history reads "Manager Workspaces: plan limit (4) → 5".
+- **State.** Suspended clients cannot sign in; deactivated clients are suspended with the subscription cancelled;
+  activating restores both. Data is kept in every state.
+- **Authority.** The Console sets the Super Workspace's action ceiling and whether it may create Executive Workspaces.
+- **Overview** shows client counts, revenue, outstanding payments, plans sold and renewals due. It has no activity feed.

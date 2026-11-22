@@ -51,12 +51,15 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <Logo compact />
-          <span className="font-semibold">Operator console</span>
+          <span className="font-semibold">Console Admin</span>
           <Badge tone="warning">Platform staff</Badge>
           {me.data && (
             <nav aria-label="Operator" className="flex gap-3 text-sm">
               <Link href="/operator" className={path === '/operator' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Workspaces
+                Overview
+              </Link>
+              <Link href="/operator/clients" className={path.startsWith('/operator/clients') || path.startsWith('/operator/tenants') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Clients
               </Link>
               <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Plans

@@ -1,6 +1,6 @@
 'use client';
 
-import { cheapestPlanWith, FEATURE_BY_KEY, type FeatureKey, PLAN_CATALOG, type PlanCode, type PublicPricing } from '@dealflow/types';
+import { cheapestPlanWith, FEATURE_BY_KEY, type FeatureKey, PLAN_CATALOG, type PublicPricing } from '@dealflow/types';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@dealflow/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Lock } from 'lucide-react';

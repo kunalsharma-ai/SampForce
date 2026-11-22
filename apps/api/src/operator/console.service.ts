@@ -63,6 +63,7 @@ export function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+const planLimit = (n: number | null | undefined) => `plan limit (${n ?? 'none'})`;
 const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
 const money = (cents: number | null | undefined, currency: string) => (cents === null || cents === undefined ? 'priced per client' : `${currency} ${(cents / 100).toFixed(2)}`);
 
@@ -97,8 +98,12 @@ export class ConsoleService {
     };
   }
 
+  /** Every plan: the stored rows, plus any shipped plan a deployment has not stored yet (it then has its shipped values). */
   private async planRows(): Promise<PlanRow[]> {
-    return this.prisma.plan.findMany({ select: { code: true, name: true, custom: true, terms: true, entitlements: true, updatedAt: true }, orderBy: { createdAt: 'asc' } });
+    const rows: PlanRow[] = await this.prisma.plan.findMany({ select: { code: true, name: true, custom: true, terms: true, entitlements: true, updatedAt: true }, orderBy: { createdAt: 'asc' } });
+    const stored = new Set(rows.map((r) => r.code));
+    const missing = PLAN_CATALOG.filter((p) => !stored.has(p.code)).map((p) => ({ code: p.code, name: p.name, custom: false, terms: null, entitlements: null, updatedAt: new Date(0) }));
+    return [...missing, ...rows];
   }
 
   async plans(): Promise<ConsolePlanRow[]> {
@@ -115,7 +120,7 @@ export class ConsoleService {
 
   private planRow(r: PlanRow, d: PlanEntitlements, clients: number): ConsolePlanRow {
     return {
-      code: r.code, name: r.name, custom: r.custom || !isPlanCode(r.code), features: d.features,
+      code: r.code, name: PLAN_CATALOG.find((p) => p.code === r.code)?.name ?? r.name, custom: r.custom || !isPlanCode(r.code), features: d.features,
       limits: { maxUsers: d.maxUsers, maxPipelines: d.maxPipelines, monthlyAiCredits: d.monthlyAiCredits, automationRunsPerMonth: d.automationRunsPerMonth, maxManagerWorkspaces: d.maxManagerWorkspaces, maxExecutiveWorkspaces: d.maxExecutiveWorkspaces },
       terms: this.termsOf(r), clients, updatedAt: r.updatedAt.toISOString(),
     };
@@ -164,9 +169,16 @@ export class ConsoleService {
     const features = input.features ? normaliseFeatures(input.features) : before.features;
     const limits = input.limits ?? { maxUsers: before.maxUsers, maxPipelines: before.maxPipelines, monthlyAiCredits: before.monthlyAiCredits, automationRunsPerMonth: before.automationRunsPerMonth, maxManagerWorkspaces: before.maxManagerWorkspaces, maxExecutiveWorkspaces: before.maxExecutiveWorkspaces };
     const terms = { ...this.termsOf(row), ...(input.terms ?? {}) };
-    await this.prisma.plan.update({
+    const shipped = PLAN_CATALOG.find((p) => p.code === code);
+    await this.prisma.plan.upsert({
       where: { code },
-      data: {
+      create: {
+        code, name: row.name, custom: false, monthlyPriceCents: shipped?.monthly !== null && shipped?.monthly !== undefined ? shipped.monthly * 100 : null,
+        annualMonthlyPriceCents: shipped?.annualMonthly !== null && shipped?.annualMonthly !== undefined ? shipped.annualMonthly * 100 : null,
+        entitlements: { ...limits, features, catalogVersion: FEATURE_CATALOG_VERSION } as Prisma.InputJsonValue,
+        terms: terms as unknown as Prisma.InputJsonValue,
+      },
+      update: {
         ...(input.name ? { name: input.name } : {}),
         entitlements: { ...limits, features, catalogVersion: FEATURE_CATALOG_VERSION } as Prisma.InputJsonValue,
         terms: terms as unknown as Prisma.InputJsonValue,
@@ -196,14 +208,15 @@ export class ConsoleService {
     const terms = plan ? this.termsOf(plan) : null;
     return {
       planCode: sub.planCode,
-      planName: plan?.name ?? sub.planCode,
+      planName: PLAN_CATALOG.find((p) => p.code === sub.planCode)?.name ?? plan?.name ?? sub.planCode,
       status: sub.status,
       seats: sub.seats,
       billingFrequency: sub.billingInterval,
       startedOn: day(sub.currentPeriodStart)!,
       renewsOn: day(sub.currentPeriodEnd),
       durationMonths: sub.durationMonths ?? terms?.durationMonths ?? null,
-      priceCents: sub.priceCents ?? terms?.priceCents ?? null,
+      // A shipped plan's list price is per user, so only a price agreed for the client (or a Console plan's) counts.
+      priceCents: sub.priceCents ?? (isPlanCode(sub.planCode) ? null : (terms?.priceCents ?? null)),
       currency: sub.currency ?? terms?.currency ?? 'USD',
       paymentStatus: PAYMENT_STATUSES.includes(sub.paymentStatus as PaymentStatus) ? (sub.paymentStatus as PaymentStatus) : null,
       autoRenew: sub.autoRenew,
@@ -325,6 +338,7 @@ export class ConsoleService {
    */
   async createClient(op: OperatorContext, input: ClientCreate, ip: string | null): Promise<ConsoleClientCreated> {
     const { row: plan, terms } = await this.planFor(input.planCode);
+    const defs = await planDefinitions(this.prisma as unknown as TenantTx);
     const tenantId = randomUUID();
     const slug = `${slugify(input.organisation.name)}-${randomBytes(3).toString('hex')}`;
     const start = input.startsOn ? new Date(`${input.startsOn}T00:00:00Z`) : new Date();
@@ -338,8 +352,8 @@ export class ConsoleService {
       `Term: ${months} months from ${day(start)} to ${day(addMonths(start, months))}`,
       `Price: ${money(price, currency)} per ${frequency === 'YEAR' ? 'year' : 'month'}`,
       `Payment: ${input.paymentStatus}`,
-      `Manager Workspaces: ${input.maxManagerWorkspaces ?? 'plan limit'}`,
-      `Executive Workspaces: ${input.maxExecutiveWorkspaces ?? 'plan limit'}`,
+      `Manager Workspaces: ${input.maxManagerWorkspaces ?? planLimit(defs[plan.code]?.maxManagerWorkspaces)}`,
+      `Executive Workspaces: ${input.maxExecutiveWorkspaces ?? planLimit(defs[plan.code]?.maxExecutiveWorkspaces)}`,
       `Super Workspace creates Executive Workspaces: ${input.superCanCreateExecutives ? 'yes' : 'no'}`,
     ];
     const inviteUrl = await this.prisma.run({ tenantId }, async (tx) => {
@@ -391,6 +405,7 @@ export class ConsoleService {
       await transactionLock(tx, `workspaces:${id}`);
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
       if (!before) throw new NotFoundException(NOT_FOUND);
+      const defs = await planDefinitions(tx);
       const data: Prisma.SubscriptionUncheckedUpdateInput = {};
       const note = (label: string, from: unknown, to: unknown) => {
         if (String(from ?? '') !== String(to ?? '')) changes.push(`${label}: ${from ?? 'none'} → ${to ?? 'none'}`);
@@ -403,21 +418,48 @@ export class ConsoleService {
         data.planCode = plan.row.code;
         note('Plan', old?.name ?? before.planCode, plan.row.name);
       }
-      if (input.seats !== undefined) (data.seats = input.seats), note('Seats', before.seats, input.seats);
-      if (input.billingFrequency) (data.billingInterval = input.billingFrequency), note('Billing', before.billingInterval, input.billingFrequency);
+      if (input.seats !== undefined) {
+        data.seats = input.seats;
+        note('Seats', before.seats, input.seats);
+      }
+      if (input.billingFrequency) {
+        data.billingInterval = input.billingFrequency;
+        note('Billing', before.billingInterval, input.billingFrequency);
+      }
       if (input.renewsOn) {
         const end = new Date(`${input.renewsOn}T00:00:00Z`);
         if (end <= before.currentPeriodStart) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'The renewal date must be after the subscription started.', details: [{ path: 'renewsOn', message: 'After the start date' }] });
         data.currentPeriodEnd = end;
         note('Renews on', day(before.currentPeriodEnd), input.renewsOn);
       }
-      if (input.durationMonths !== undefined) (data.durationMonths = input.durationMonths), note('Term (months)', before.durationMonths, input.durationMonths);
-      if (input.priceCents !== undefined) (data.priceCents = input.priceCents), note('Price', money(before.priceCents, before.currency ?? 'USD'), money(input.priceCents, input.currency ?? before.currency ?? 'USD'));
-      if (input.currency) (data.currency = input.currency), note('Currency', before.currency, input.currency);
-      if (input.paymentStatus) (data.paymentStatus = input.paymentStatus), note('Payment', before.paymentStatus, input.paymentStatus);
-      if (input.autoRenew !== undefined) (data.autoRenew = input.autoRenew), note('Renews by itself', before.autoRenew ? 'yes' : 'no', input.autoRenew ? 'yes' : 'no');
-      if (input.maxManagerWorkspaces !== undefined) (data.maxManagerWorkspaces = input.maxManagerWorkspaces), note('Manager Workspaces', before.maxManagerWorkspaces ?? 'plan limit', input.maxManagerWorkspaces ?? 'plan limit');
-      if (input.maxExecutiveWorkspaces !== undefined) (data.maxExecutiveWorkspaces = input.maxExecutiveWorkspaces), note('Executive Workspaces', before.maxExecutiveWorkspaces ?? 'plan limit', input.maxExecutiveWorkspaces ?? 'plan limit');
+      if (input.durationMonths !== undefined) {
+        data.durationMonths = input.durationMonths;
+        note('Term (months)', before.durationMonths, input.durationMonths);
+      }
+      if (input.priceCents !== undefined) {
+        data.priceCents = input.priceCents;
+        note('Price', money(before.priceCents, before.currency ?? 'USD'), money(input.priceCents, input.currency ?? before.currency ?? 'USD'));
+      }
+      if (input.currency) {
+        data.currency = input.currency;
+        note('Currency', before.currency, input.currency);
+      }
+      if (input.paymentStatus) {
+        data.paymentStatus = input.paymentStatus;
+        note('Payment', before.paymentStatus, input.paymentStatus);
+      }
+      if (input.autoRenew !== undefined) {
+        data.autoRenew = input.autoRenew;
+        note('Renews by itself', before.autoRenew ? 'yes' : 'no', input.autoRenew ? 'yes' : 'no');
+      }
+      if (input.maxManagerWorkspaces !== undefined) {
+        data.maxManagerWorkspaces = input.maxManagerWorkspaces;
+        note('Manager Workspaces', before.maxManagerWorkspaces ?? planLimit(defs[before.planCode]?.maxManagerWorkspaces), input.maxManagerWorkspaces ?? planLimit(defs[(data.planCode as string | undefined) ?? before.planCode]?.maxManagerWorkspaces));
+      }
+      if (input.maxExecutiveWorkspaces !== undefined) {
+        data.maxExecutiveWorkspaces = input.maxExecutiveWorkspaces;
+        note('Executive Workspaces', before.maxExecutiveWorkspaces ?? planLimit(defs[before.planCode]?.maxExecutiveWorkspaces), input.maxExecutiveWorkspaces ?? planLimit(defs[(data.planCode as string | undefined) ?? before.planCode]?.maxExecutiveWorkspaces));
+      }
       if (!changes.length) return;
       await tx.subscription.update({ where: { tenantId: id }, data });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });

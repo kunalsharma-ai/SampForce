@@ -15,4 +15,7 @@ export const workspaces = {
     'Der Tarif Ihrer Organisation enthält es, aber der übergeordnete Arbeitsbereich hat es diesem Arbeitsbereich nicht freigegeben. Fragen Sie dessen Administration.',
     'تتضمنها خطة مؤسستك، لكن مساحة العمل الأعلى لم تمنحها لهذه المساحة. اطلبها من مسؤولها إن احتجت إليها.',
   ],
+  // Console Admin help titles (ADR 0071, part 2)
+  'Clients': ['Clientes', 'Clients', 'Kunden', 'العملاء'],
+  'Client organisation': ['Organización cliente', 'Organisation cliente', 'Kundenorganisation', 'المؤسسة العميلة'],
 } as const satisfies PhraseTable;
