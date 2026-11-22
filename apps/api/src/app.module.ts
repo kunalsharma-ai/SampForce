@@ -16,6 +16,7 @@ import { PreferencesModule } from './preferences/preferences.module';
 import { ViewsModule } from './views/views.module';
 import { CommonModule } from './common/common.module';
 import { ChatModule } from './chat/chat.module';
+import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
@@ -73,6 +74,7 @@ import { redactUrl } from './observability/redact';
     CommandCenterModule,
     CrmModule,
     ChatModule,
+    SupportModule,
     AutomationModule,
     AiModule,
     OwnServersModule,

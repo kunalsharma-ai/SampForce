@@ -1,0 +1,658 @@
+import type { FeatureKey, Permission, WorkspaceLevel } from '@dealflow/types';
+import type { HelpCategoryId } from './categories';
+import type { HelpId } from './topics';
+import type { HelpText } from './types';
+
+/**
+ * One frequently asked question. `feature`, `levels` and `permission` say who sees it: a question about a feature the
+ * reader's workspace does not have, a level they are not at, or a permission their role lacks is left out, so the Help
+ * Center only answers questions about what the reader can actually use. `guide` links the answer to the feature
+ * guide entry that explains the page in more depth.
+ */
+export interface HelpFaq {
+  id: string;
+  category: HelpCategoryId;
+  q: HelpText;
+  a: HelpText;
+  feature?: FeatureKey;
+  levels?: readonly WorkspaceLevel[];
+  permission?: Permission;
+  guide?: HelpId;
+}
+
+type Rule = Pick<HelpFaq, 'feature' | 'levels' | 'permission' | 'guide'>;
+const f = (id: string, category: HelpCategoryId, rule: Rule, q: HelpText, a: HelpText): HelpFaq => ({ id, category, q, a, ...rule });
+
+export const HELP_FAQS: readonly HelpFaq[] = [
+  // ── Getting started ──────────────────────────────────────────────────────────────────────────────────────────────
+  f('start.whereToBegin', 'start', { guide: 'page.commandCenter' },
+    ['Where do I start each day?', '¿Por dónde empiezo cada día?', 'Par où commencer chaque jour ?', 'Wo fange ich jeden Tag an?', 'من أين أبدأ كل يوم؟'],
+    [
+      'Open the Command Center (the first item in the menu). It shows your numbers, the work that is due today and overdue, and your pipeline. Open any number to see the records behind it.',
+      'Abre el Command Center (el primer elemento del menú). Muestra tus cifras, el trabajo para hoy y el atrasado, y tu pipeline. Abre cualquier cifra para ver los registros que la forman.',
+      'Ouvrez le Command Center (premier élément du menu). Il montre vos chiffres, le travail du jour et en retard, et votre pipeline. Ouvrez un chiffre pour voir les fiches qui le composent.',
+      'Öffnen Sie das Command Center (der erste Menüpunkt). Es zeigt Ihre Zahlen, die heute fällige und überfällige Arbeit und Ihre Pipeline. Öffnen Sie eine Zahl, um die Datensätze dahinter zu sehen.',
+      'افتح Command Center (أول عنصر في القائمة). يعرض أرقامك والعمل المستحق اليوم والمتأخر ومسار مبيعاتك. افتح أي رقم لرؤية السجلات التي خلفه.',
+    ]),
+  f('start.search', 'start', {},
+    ['How do I find a record or a page quickly?', '¿Cómo encuentro rápido un registro o una página?', 'Comment trouver vite une fiche ou une page ?', 'Wie finde ich schnell einen Datensatz oder eine Seite?', 'كيف أجد سجلًا أو صفحة بسرعة؟'],
+    [
+      'Press Ctrl K (Cmd K on a Mac) or use the search box at the top. Type a name, email, company or page and choose a result. Press ? to see every keyboard shortcut.',
+      'Pulsa Ctrl K (Cmd K en Mac) o usa el buscador de arriba. Escribe un nombre, correo, empresa o página y elige un resultado. Pulsa ? para ver todos los atajos de teclado.',
+      'Appuyez sur Ctrl K (Cmd K sur Mac) ou utilisez la recherche en haut. Tapez un nom, un e-mail, une entreprise ou une page et choisissez un résultat. Appuyez sur ? pour voir tous les raccourcis.',
+      'Drücken Sie Strg K (Cmd K am Mac) oder nutzen Sie die Suche oben. Geben Sie einen Namen, eine E-Mail, ein Unternehmen oder eine Seite ein und wählen Sie ein Ergebnis. Mit ? sehen Sie alle Tastenkürzel.',
+      'اضغط Ctrl K (أو Cmd K على Mac) أو استخدم مربع البحث في الأعلى. اكتب اسمًا أو بريدًا أو شركة أو صفحة واختر نتيجة. اضغط ? لرؤية كل اختصارات لوحة المفاتيح.',
+    ]),
+  f('start.infoButton', 'start', {},
+    ['What does the small i button next to a title do?', '¿Qué hace el pequeño botón i junto a un título?', 'À quoi sert le petit bouton i à côté d’un titre ?', 'Was macht die kleine i-Schaltfläche neben einem Titel?', 'ما وظيفة زر i الصغير بجانب العنوان؟'],
+    [
+      'It explains that page or section: what it is for, how to use it and when it helps. The same explanations are collected in the feature guide of this Help Center.',
+      'Explica esa página o sección: para qué sirve, cómo usarla y cuándo ayuda. Las mismas explicaciones están reunidas en la guía de funciones de este Centro de ayuda.',
+      'Il explique la page ou la section : à quoi elle sert, comment l’utiliser et quand elle aide. Les mêmes explications sont réunies dans le guide des fonctions de ce centre d’aide.',
+      'Sie erklärt die Seite oder den Bereich: wofür er da ist, wie Sie ihn nutzen und wann er hilft. Dieselben Erklärungen stehen gesammelt im Funktionsleitfaden dieses Hilfe-Centers.',
+      'يشرح الصفحة أو القسم: الغرض منه وطريقة استخدامه ومتى يفيد. الشروح نفسها مجموعة في دليل الميزات في مركز المساعدة هذا.',
+    ]),
+  f('start.lockedFeature', 'start', {},
+    ['Why can’t I see a feature a colleague mentioned?', '¿Por qué no veo una función que mencionó un colega?', 'Pourquoi je ne vois pas une fonction dont parle un collègue ?', 'Warum sehe ich eine Funktion nicht, von der ein Kollege spricht?', 'لماذا لا أرى ميزة ذكرها زميلي؟'],
+    [
+      'What you see depends on three things: your organisation’s plan, what your parent workspace switched on for your workspace, and your role. Ask your Super Workspace administrator if you need it, or raise a query below.',
+      'Lo que ves depende de tres cosas: el plan de tu organización, lo que tu espacio superior activó para el tuyo y tu rol. Pide la función al administrador del espacio Super o envía una consulta abajo.',
+      'Ce que vous voyez dépend de trois choses : l’offre de votre organisation, ce que l’espace parent a activé pour le vôtre et votre rôle. Demandez à l’administrateur de l’espace Super ou posez une question ci-dessous.',
+      'Was Sie sehen, hängt von drei Dingen ab: dem Tarif Ihrer Organisation, dem, was der übergeordnete Arbeitsbereich für Ihren freigegeben hat, und Ihrer Rolle. Fragen Sie den Administrator des Super-Arbeitsbereichs oder stellen Sie unten eine Anfrage.',
+      'ما تراه يعتمد على ثلاثة أمور: خطة مؤسستك، وما فعّلته مساحة العمل الأعلى لمساحتك، ودورك. اطلبها من مسؤول مساحة العمل العليا أو أرسل استفسارًا أدناه.',
+    ]),
+
+  // ── Your account ─────────────────────────────────────────────────────────────────────────────────────────────────
+  f('account.password', 'account', {},
+    ['I forgot my password. What do I do?', 'Olvidé mi contraseña. ¿Qué hago?', 'J’ai oublié mon mot de passe. Que faire ?', 'Ich habe mein Passwort vergessen. Was tun?', 'نسيت كلمة المرور. ماذا أفعل؟'],
+    [
+      'On the sign-in page choose “Forgot password?”, enter your work email and follow the link we send you. The link works once and expires after a short time.',
+      'En la página de inicio de sesión elige «¿Olvidaste tu contraseña?», escribe tu correo de trabajo y sigue el enlace que te enviamos. El enlace funciona una vez y caduca pronto.',
+      'Sur la page de connexion, choisissez « Mot de passe oublié ? », saisissez votre e-mail professionnel et suivez le lien envoyé. Le lien ne sert qu’une fois et expire rapidement.',
+      'Wählen Sie auf der Anmeldeseite „Passwort vergessen?“, geben Sie Ihre geschäftliche E-Mail ein und folgen Sie dem Link, den wir senden. Der Link gilt einmal und läuft bald ab.',
+      'في صفحة تسجيل الدخول اختر «نسيت كلمة المرور؟» وأدخل بريد العمل واتبع الرابط الذي نرسله. يعمل الرابط مرة واحدة وتنتهي صلاحيته بعد وقت قصير.',
+    ]),
+  f('account.twoStep', 'account', { guide: 'page.accountSecurity' },
+    ['How do I turn on two-step verification?', '¿Cómo activo la verificación en dos pasos?', 'Comment activer la validation en deux étapes ?', 'Wie schalte ich die Bestätigung in zwei Schritten ein?', 'كيف أفعّل التحقق بخطوتين؟'],
+    [
+      'Open your account menu, then Account security. Scan the code with an authenticator app, enter the six-digit code and keep the recovery codes somewhere safe. You can also sign out other devices there.',
+      'Abre el menú de tu cuenta y luego Seguridad de la cuenta. Escanea el código con una app de autenticación, escribe el código de seis dígitos y guarda los códigos de recuperación. Ahí también puedes cerrar otras sesiones.',
+      'Ouvrez le menu du compte puis Sécurité du compte. Scannez le code avec une application d’authentification, saisissez le code à six chiffres et gardez les codes de secours en lieu sûr. Vous pouvez aussi y déconnecter d’autres appareils.',
+      'Öffnen Sie das Kontomenü und dann Kontosicherheit. Scannen Sie den Code mit einer Authentifizierungs-App, geben Sie den sechsstelligen Code ein und bewahren Sie die Wiederherstellungscodes sicher auf. Dort melden Sie auch andere Geräte ab.',
+      'افتح قائمة حسابك ثم أمان الحساب. امسح الرمز بتطبيق مصادقة وأدخل الرمز المكوّن من ستة أرقام واحفظ رموز الاسترداد في مكان آمن. يمكنك هناك أيضًا تسجيل خروج الأجهزة الأخرى.',
+    ]),
+  f('account.language', 'account', { guide: 'page.settings' },
+    ['How do I change the language?', '¿Cómo cambio el idioma?', 'Comment changer la langue ?', 'Wie ändere ich die Sprache?', 'كيف أغيّر اللغة؟'],
+    [
+      'Open Settings, then Language & region, and pick English, Español, Français, Deutsch or العربية. Menus, help, emails and PDFs follow your choice; Arabic also switches the layout to right-to-left.',
+      'Abre Ajustes y luego Idioma y región, y elige English, Español, Français, Deutsch o العربية. Menús, ayuda, correos y PDF siguen tu elección; el árabe cambia también el diseño a derecha a izquierda.',
+      'Ouvrez Paramètres puis Langue et région, et choisissez English, Español, Français, Deutsch ou العربية. Menus, aide, e-mails et PDF suivent votre choix ; l’arabe passe aussi l’affichage de droite à gauche.',
+      'Öffnen Sie Einstellungen und dann Sprache & Region und wählen Sie English, Español, Français, Deutsch oder العربية. Menüs, Hilfe, E-Mails und PDFs folgen Ihrer Wahl; Arabisch stellt die Ansicht auf rechts nach links um.',
+      'افتح الإعدادات ثم اللغة والمنطقة واختر English أو Español أو Français أو Deutsch أو العربية. تتبع القوائم والمساعدة والرسائل وملفات PDF اختيارك، وتجعل العربية الواجهة من اليمين إلى اليسار.',
+    ]),
+  f('account.appearance', 'account', { guide: 'page.themeStudio' },
+    ['Can I change colours, dark mode or reduce motion?', '¿Puedo cambiar colores, modo oscuro o reducir el movimiento?', 'Puis-je changer les couleurs, le mode sombre ou réduire les animations ?', 'Kann ich Farben, den dunklen Modus oder Bewegungen ändern?', 'هل يمكنني تغيير الألوان أو الوضع الداكن أو تقليل الحركة؟'],
+    [
+      'Yes. Use the theme button at the top for light or dark, or open Settings, then Appearance, for the Theme Studio: colours, density, effects and motion with a live preview and a readability check.',
+      'Sí. Usa el botón de tema arriba para claro u oscuro, o abre Ajustes y luego Apariencia para el Theme Studio: colores, densidad, efectos y movimiento con vista previa y control de legibilidad.',
+      'Oui. Utilisez le bouton de thème en haut pour clair ou sombre, ou ouvrez Paramètres puis Apparence pour le Theme Studio : couleurs, densité, effets et animations avec aperçu et contrôle de lisibilité.',
+      'Ja. Nutzen Sie oben die Design-Schaltfläche für hell oder dunkel, oder öffnen Sie Einstellungen und dann Darstellung für das Theme Studio: Farben, Dichte, Effekte und Bewegung mit Vorschau und Lesbarkeitsprüfung.',
+      'نعم. استخدم زر المظهر في الأعلى للوضع الفاتح أو الداكن، أو افتح الإعدادات ثم المظهر للوصول إلى Theme Studio: الألوان والكثافة والتأثيرات والحركة مع معاينة مباشرة وفحص لسهولة القراءة.',
+    ]),
+
+  // ── Workspaces & permissions ─────────────────────────────────────────────────────────────────────────────────────
+  f('workspaces.levels', 'workspaces', { guide: 'page.workspaces' },
+    ['What are Super, Manager and Executive Workspaces?', '¿Qué son los espacios Super, Manager y Executive?', 'Que sont les espaces Super, Manager et Executive ?', 'Was sind Super-, Manager- und Executive-Arbeitsbereiche?', 'ما مساحات العمل العليا والمدير والتنفيذي؟'],
+    [
+      'They are the levels of your organisation. The Super Workspace runs the whole organisation, Manager Workspaces lead teams, and each Executive Workspace is one salesperson. Each level can use only what the level above gives it.',
+      'Son los niveles de tu organización. El espacio Super dirige toda la organización, los espacios Manager dirigen equipos y cada espacio Executive es un vendedor. Cada nivel solo usa lo que le da el nivel superior.',
+      'Ce sont les niveaux de votre organisation. L’espace Super pilote toute l’organisation, les espaces Manager dirigent des équipes et chaque espace Executive est un commercial. Chaque niveau n’utilise que ce que le niveau au-dessus lui donne.',
+      'Das sind die Ebenen Ihrer Organisation. Der Super-Arbeitsbereich leitet die ganze Organisation, Manager-Arbeitsbereiche führen Teams und jeder Executive-Arbeitsbereich ist ein Vertriebsmitarbeiter. Jede Ebene nutzt nur, was die Ebene darüber freigibt.',
+      'هي مستويات مؤسستك. مساحة العمل العليا تدير المؤسسة كلها، ومساحات المدير تقود الفرق، وكل مساحة تنفيذية لشخص مبيعات واحد. لا يستخدم كل مستوى إلا ما يمنحه المستوى الأعلى.',
+    ]),
+  f('workspaces.permissionCenter', 'workspaces', { levels: ['SUPER', 'MANAGER'], feature: 'permission_management', guide: 'page.workspaces' },
+    ['How do I choose what a team can use and do?', '¿Cómo elijo lo que un equipo puede usar y hacer?', 'Comment choisir ce qu’une équipe peut utiliser et faire ?', 'Wie lege ich fest, was ein Team nutzen und tun darf?', 'كيف أحدد ما يمكن للفريق استخدامه وفعله؟'],
+    [
+      'Open Settings, then Workspaces, choose the workspace and open its Permission Center. Switch features on or off and choose actions such as view, create, edit or delete. You can only hand on what your own workspace has.',
+      'Abre Ajustes y luego Espacios de trabajo, elige el espacio y abre su Centro de permisos. Activa o desactiva funciones y elige acciones como ver, crear, editar o eliminar. Solo puedes ceder lo que tiene tu propio espacio.',
+      'Ouvrez Paramètres puis Espaces de travail, choisissez l’espace et ouvrez son centre d’autorisations. Activez ou coupez des fonctions et choisissez des actions comme voir, créer, modifier ou supprimer. Vous ne transmettez que ce que votre espace possède.',
+      'Öffnen Sie Einstellungen und dann Arbeitsbereiche, wählen Sie den Bereich und öffnen Sie sein Rechtecenter. Schalten Sie Funktionen ein oder aus und wählen Sie Aktionen wie Ansehen, Anlegen, Bearbeiten oder Löschen. Sie geben nur weiter, was Ihr Bereich selbst hat.',
+      'افتح الإعدادات ثم مساحات العمل، واختر المساحة وافتح مركز الصلاحيات الخاص بها. فعّل الميزات أو أوقفها واختر إجراءات مثل العرض أو الإنشاء أو التعديل أو الحذف. لا يمكنك منح إلا ما تملكه مساحتك.',
+    ]),
+  f('workspaces.invite', 'workspaces', { permission: 'members:manage', guide: 'page.team' },
+    ['How do I invite a colleague?', '¿Cómo invito a un colega?', 'Comment inviter un collègue ?', 'Wie lade ich einen Kollegen ein?', 'كيف أدعو زميلًا؟'],
+    [
+      'Open Team Management, choose Invite, enter their email and pick a role. They get an email with a link to join. Pending invitations stay listed until they accept or you cancel them.',
+      'Abre Gestión del equipo, elige Invitar, escribe su correo y elige un rol. Recibirá un correo con un enlace para unirse. Las invitaciones pendientes siguen en la lista hasta que las acepte o las canceles.',
+      'Ouvrez Gestion de l’équipe, choisissez Inviter, saisissez son e-mail et un rôle. Il reçoit un e-mail avec un lien pour rejoindre. Les invitations en attente restent listées jusqu’à acceptation ou annulation.',
+      'Öffnen Sie die Teamverwaltung, wählen Sie Einladen, geben Sie die E-Mail ein und wählen Sie eine Rolle. Die Person erhält eine E-Mail mit einem Beitrittslink. Offene Einladungen bleiben gelistet, bis sie angenommen oder storniert werden.',
+      'افتح إدارة الفريق واختر دعوة وأدخل بريده واختر دورًا. يصله بريد فيه رابط للانضمام. تبقى الدعوات المعلقة في القائمة حتى يقبلها أو تلغيها.',
+    ]),
+  f('workspaces.roles', 'workspaces', { permission: 'members:read', guide: 'page.team' },
+    ['What is the difference between a role and a workspace?', '¿Qué diferencia hay entre un rol y un espacio de trabajo?', 'Quelle différence entre un rôle et un espace de travail ?', 'Was ist der Unterschied zwischen Rolle und Arbeitsbereich?', 'ما الفرق بين الدور ومساحة العمل؟'],
+    [
+      'Your workspace sets which features and actions are open to you; your role sets the permissions inside them, such as reading deals or managing billing. You need both to do something.',
+      'Tu espacio fija qué funciones y acciones tienes abiertas; tu rol fija los permisos dentro de ellas, como leer oportunidades o gestionar la facturación. Necesitas ambos para hacer algo.',
+      'Votre espace fixe les fonctions et actions ouvertes ; votre rôle fixe les autorisations à l’intérieur, comme lire les opportunités ou gérer la facturation. Il faut les deux pour agir.',
+      'Ihr Arbeitsbereich legt fest, welche Funktionen und Aktionen offen sind; Ihre Rolle legt die Rechte darin fest, etwa Deals lesen oder die Abrechnung verwalten. Sie brauchen beides.',
+      'تحدد مساحة عملك الميزات والإجراءات المتاحة لك، ويحدد دورك الصلاحيات داخلها مثل قراءة الصفقات أو إدارة الفوترة. تحتاج إلى الاثنين لتنفيذ أي شيء.',
+    ]),
+
+  // ── CRM ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  f('crm.newLead', 'crm', { feature: 'lead_management', guide: 'page.newCompanyLead' },
+    ['How do I add a new lead?', '¿Cómo añado un lead nuevo?', 'Comment ajouter un nouveau prospect ?', 'Wie lege ich einen neuen Lead an?', 'كيف أضيف عميلًا محتملًا جديدًا؟'],
+    [
+      'Use Create at the top and choose Lead, or open Companies and choose Create new lead. Fill in the company, its location, people and owner and save; SampForce gives it the next lead number and checks for duplicates.',
+      'Usa Crear arriba y elige Lead, o abre Empresas y elige Crear lead. Completa la empresa, su ubicación, personas y responsable y guarda; SampForce le da el siguiente número y busca duplicados.',
+      'Utilisez Créer en haut et choisissez Prospect, ou ouvrez Entreprises puis Créer un prospect. Renseignez l’entreprise, son lieu, ses personnes et son responsable puis enregistrez ; SampForce attribue le numéro suivant et cherche les doublons.',
+      'Nutzen Sie oben Erstellen und wählen Sie Lead, oder öffnen Sie Unternehmen und wählen Sie Neuen Lead anlegen. Füllen Sie Unternehmen, Standort, Personen und Verantwortlichen aus und speichern Sie; SampForce vergibt die nächste Nummer und prüft auf Duplikate.',
+      'استخدم إنشاء في الأعلى واختر عميل محتمل، أو افتح الشركات واختر إنشاء عميل محتمل. املأ الشركة وموقعها وأشخاصها والمسؤول عنها واحفظ، فيمنحها SampForce الرقم التالي ويتحقق من التكرار.',
+    ]),
+  f('crm.convert', 'crm', { feature: 'lead_conversion', guide: 'page.leadRecord' },
+    ['How do I turn a lead into a deal?', '¿Cómo convierto un lead en oportunidad?', 'Comment transformer un prospect en opportunité ?', 'Wie mache ich aus einem Lead eine Verkaufschance?', 'كيف أحوّل العميل المحتمل إلى صفقة؟'],
+    [
+      'Open the lead and choose Convert. SampForce creates or links the contact and company and, if you want, a deal in the pipeline you pick. The lead’s history moves with it.',
+      'Abre el lead y elige Convertir. SampForce crea o vincula el contacto y la empresa y, si quieres, una oportunidad en el pipeline que elijas. El historial del lead la acompaña.',
+      'Ouvrez le prospect et choisissez Convertir. SampForce crée ou relie le contact et l’entreprise et, si vous le souhaitez, une opportunité dans le pipeline choisi. L’historique suit.',
+      'Öffnen Sie den Lead und wählen Sie Umwandeln. SampForce legt Kontakt und Unternehmen an oder verknüpft sie und auf Wunsch eine Verkaufschance in der gewählten Pipeline. Der Verlauf wandert mit.',
+      'افتح العميل المحتمل واختر تحويل. ينشئ SampForce جهة الاتصال والشركة أو يربطهما، وصفقة في المسار الذي تختاره إن أردت. وينتقل سجل العميل معها.',
+    ]),
+  f('crm.duplicates', 'crm', { feature: 'duplicate_checks', guide: 'page.leadRecord' },
+    ['How does SampForce handle duplicates?', '¿Cómo maneja SampForce los duplicados?', 'Comment SampForce gère-t-il les doublons ?', 'Wie geht SampForce mit Duplikaten um?', 'كيف يتعامل SampForce مع السجلات المكررة؟'],
+    [
+      'When you create or import a record it looks for matching names, emails, phone numbers and websites and warns you. On a lead, Possible duplicates lists the matches so you can merge them.',
+      'Al crear o importar un registro busca nombres, correos, teléfonos y webs coincidentes y te avisa. En un lead, Posibles duplicados muestra las coincidencias para que las fusiones.',
+      'À la création ou à l’import, il cherche noms, e-mails, téléphones et sites identiques et vous avertit. Sur un prospect, Doublons possibles liste les correspondances à fusionner.',
+      'Beim Anlegen oder Importieren sucht es passende Namen, E-Mails, Telefonnummern und Websites und warnt Sie. Bei einem Lead listet Mögliche Duplikate die Treffer zum Zusammenführen.',
+      'عند إنشاء سجل أو استيراده يبحث عن أسماء وبريد وأرقام هواتف ومواقع مطابقة وينبهك. وفي العميل المحتمل يعرض قسم التكرارات المحتملة المطابقات لتدمجها.',
+    ]),
+  f('crm.edit', 'crm', {},
+    ['Can I edit something I already saved?', '¿Puedo editar algo que ya guardé?', 'Puis-je modifier ce que j’ai déjà enregistré ?', 'Kann ich etwas Gespeichertes bearbeiten?', 'هل يمكنني تعديل شيء حفظته من قبل؟'],
+    [
+      'Yes, if your role allows it. Records, interactions, follow-ups and concerns all have an Edit option on their row or record page. Every change is kept in the record’s history.',
+      'Sí, si tu rol lo permite. Registros, interacciones, seguimientos e incidencias tienen la opción Editar en su fila o página. Cada cambio queda en el historial del registro.',
+      'Oui, si votre rôle le permet. Fiches, interactions, relances et réclamations ont une option Modifier sur leur ligne ou leur page. Chaque changement reste dans l’historique.',
+      'Ja, wenn Ihre Rolle es erlaubt. Datensätze, Interaktionen, Nachfassungen und Anliegen haben in ihrer Zeile oder Seite die Option Bearbeiten. Jede Änderung bleibt im Verlauf.',
+      'نعم، إذا سمح دورك بذلك. للسجلات والتفاعلات والمتابعات والشكاوى خيار تعديل في صفها أو صفحتها. ويُحفظ كل تغيير في سجل التاريخ.',
+    ]),
+
+  // ── Deals ────────────────────────────────────────────────────────────────────────────────────────────────────────
+  f('deals.move', 'deals', { feature: 'opportunity_management', guide: 'page.deals' },
+    ['How do I move a deal to the next stage?', '¿Cómo paso una oportunidad a la siguiente etapa?', 'Comment passer une opportunité à l’étape suivante ?', 'Wie verschiebe ich einen Deal in die nächste Phase?', 'كيف أنقل الصفقة إلى المرحلة التالية؟'],
+    [
+      'On the Deals board, drag the card to the next column, or open the deal and change its stage. Won and lost deals ask for a reason, which feeds win and loss analysis.',
+      'En el tablero de Oportunidades arrastra la tarjeta a la siguiente columna, o abre la oportunidad y cambia su etapa. Las ganadas y perdidas piden un motivo para el análisis.',
+      'Sur le tableau des opportunités, glissez la carte dans la colonne suivante, ou ouvrez l’opportunité et changez l’étape. Gagnée ou perdue, un motif est demandé pour l’analyse.',
+      'Ziehen Sie die Karte auf dem Deal-Board in die nächste Spalte oder öffnen Sie den Deal und ändern Sie die Phase. Gewonnene und verlorene Deals fragen nach einem Grund für die Analyse.',
+      'في لوحة الصفقات اسحب البطاقة إلى العمود التالي، أو افتح الصفقة وغيّر مرحلتها. تطلب الصفقات الرابحة والخاسرة سببًا يُستخدم في التحليل.',
+    ]),
+  f('deals.pipelines', 'deals', { feature: 'sales_pipeline', permission: 'pipelines:manage', guide: 'page.pipelines' },
+    ['Can I change the stages of my pipeline?', '¿Puedo cambiar las etapas de mi pipeline?', 'Puis-je changer les étapes de mon pipeline ?', 'Kann ich die Phasen meiner Pipeline ändern?', 'هل يمكنني تغيير مراحل مسار المبيعات؟'],
+    [
+      'Yes. Open Pipelines, choose a pipeline and add, rename, reorder or remove stages, each with its win probability. You can keep several pipelines for different kinds of business.',
+      'Sí. Abre Pipelines, elige uno y añade, renombra, reordena o quita etapas, cada una con su probabilidad. Puedes tener varios pipelines para distintos negocios.',
+      'Oui. Ouvrez Pipelines, choisissez-en un et ajoutez, renommez, réordonnez ou supprimez des étapes, chacune avec sa probabilité. Vous pouvez en garder plusieurs.',
+      'Ja. Öffnen Sie Pipelines, wählen Sie eine aus und fügen Sie Phasen hinzu, benennen, sortieren oder entfernen Sie sie, jeweils mit Gewinnwahrscheinlichkeit. Mehrere Pipelines sind möglich.',
+      'نعم. افتح مسارات المبيعات واختر مسارًا وأضف المراحل أو أعد تسميتها أو ترتيبها أو احذفها، ولكل منها احتمال فوز. يمكنك الاحتفاظ بعدة مسارات.',
+    ]),
+  f('deals.health', 'deals', { feature: 'opportunity_management', guide: 'page.dealHealth' },
+    ['What does a deal health score mean?', '¿Qué significa la salud de una oportunidad?', 'Que signifie le score de santé d’une opportunité ?', 'Was bedeutet der Gesundheitswert eines Deals?', 'ماذا تعني درجة صحة الصفقة؟'],
+    [
+      'It is a risk score worked out from real signals, such as no recent contact or a close date that keeps slipping. Deal health lists the signals behind every score so you know what to fix.',
+      'Es una puntuación de riesgo calculada con señales reales, como falta de contacto o una fecha de cierre que se retrasa. Salud de oportunidades muestra las señales detrás de cada puntuación.',
+      'C’est un score de risque calculé à partir de signaux réels, comme l’absence de contact ou une date de clôture qui recule. Santé des affaires liste les signaux derrière chaque score.',
+      'Ein Risikowert aus echten Signalen, etwa kein Kontakt in letzter Zeit oder ein sich verschiebendes Abschlussdatum. Deal-Gesundheit listet die Signale hinter jedem Wert.',
+      'هي درجة مخاطر تُحسب من إشارات حقيقية مثل غياب التواصل مؤخرًا أو تأخر تاريخ الإغلاق باستمرار. تعرض صفحة صحة الصفقات الإشارات وراء كل درجة.',
+    ]),
+  f('deals.rfq', 'deals', { feature: 'rfqs', guide: 'page.rfqs' },
+    ['How do I log and price an RFQ?', '¿Cómo registro y cotizo una RFQ?', 'Comment enregistrer et chiffrer une RFQ ?', 'Wie erfasse und bepreise ich eine RFQ?', 'كيف أسجّل طلب تسعير وأسعّره؟'],
+    [
+      'Open RFQs and choose New RFQ, or start one from a company lead. Enter the research specification, LOI, IR and CPI; SampForce numbers it and tracks its deadline. A won RFQ can become a deal.',
+      'Abre RFQ y elige Nueva RFQ, o empieza una desde un lead de empresa. Indica la especificación, LOI, IR y CPI; SampForce la numera y sigue su plazo. Una RFQ ganada puede ser una oportunidad.',
+      'Ouvrez RFQ et choisissez Nouvelle RFQ, ou partez d’un prospect entreprise. Saisissez la spécification, LOI, IR et CPI ; SampForce la numérote et suit l’échéance. Une RFQ gagnée peut devenir une opportunité.',
+      'Öffnen Sie RFQs und wählen Sie Neue RFQ, oder starten Sie bei einem Unternehmens-Lead. Geben Sie Spezifikation, LOI, IR und CPI ein; SampForce nummeriert sie und verfolgt die Frist. Eine gewonnene RFQ wird zum Deal.',
+      'افتح طلبات التسعير واختر طلب جديد أو ابدأ من عميل محتمل لشركة. أدخل مواصفات البحث وLOI وIR وCPI، فيرقّمه SampForce ويتابع موعده. ويمكن أن يصبح الطلب الرابح صفقة.',
+    ]),
+
+  // ── Activities & follow-ups ──────────────────────────────────────────────────────────────────────────────────────
+  f('work.followUp', 'work', { feature: 'follow_up_management', guide: 'page.followUps' },
+    ['How do I schedule a follow-up?', '¿Cómo programo un seguimiento?', 'Comment planifier une relance ?', 'Wie plane ich eine Nachfassung?', 'كيف أجدول متابعة؟'],
+    [
+      'On a company or lead, choose Add follow-up and pick the date, time and type. It appears in Follow-ups and on your Command Center when it is due, and you can reschedule, complete or cancel it.',
+      'En una empresa o lead elige Añadir seguimiento y elige fecha, hora y tipo. Aparece en Seguimientos y en tu Command Center cuando vence, y puedes reprogramarlo, completarlo o cancelarlo.',
+      'Sur une entreprise ou un prospect, choisissez Ajouter une relance avec date, heure et type. Elle apparaît dans Relances et sur votre Command Center à l’échéance ; vous pouvez la replanifier, la terminer ou l’annuler.',
+      'Wählen Sie bei einem Unternehmen oder Lead Nachfassung hinzufügen mit Datum, Uhrzeit und Art. Sie erscheint unter Nachfassungen und im Command Center, wenn sie fällig ist, und lässt sich verschieben, erledigen oder absagen.',
+      'في الشركة أو العميل المحتمل اختر إضافة متابعة وحدد التاريخ والوقت والنوع. تظهر في المتابعات وفي Command Center عند حلول موعدها، ويمكنك إعادة جدولتها أو إكمالها أو إلغاؤها.',
+    ]),
+  f('work.tasks', 'work', { feature: 'task_management', guide: 'page.activities' },
+    ['Where are my tasks?', '¿Dónde están mis tareas?', 'Où sont mes tâches ?', 'Wo sind meine Aufgaben?', 'أين مهامي؟'],
+    [
+      'Open Sales Activities, or the tasks button at the top. You see your open tasks with their due dates next to logged calls, emails, meetings and notes. Create a task from any record with Create.',
+      'Abre Actividades de ventas o el botón de tareas de arriba. Ves tus tareas abiertas con su fecha junto a llamadas, correos, reuniones y notas. Crea una tarea desde cualquier registro con Crear.',
+      'Ouvrez Activités commerciales ou le bouton des tâches en haut. Vos tâches ouvertes et leurs échéances côtoient appels, e-mails, réunions et notes. Créez une tâche depuis n’importe quelle fiche avec Créer.',
+      'Öffnen Sie Vertriebsaktivitäten oder oben die Aufgaben-Schaltfläche. Ihre offenen Aufgaben mit Fälligkeit stehen neben Anrufen, E-Mails, Besprechungen und Notizen. Mit Erstellen legen Sie eine Aufgabe an.',
+      'افتح أنشطة المبيعات أو زر المهام في الأعلى. ترى مهامك المفتوحة ومواعيدها بجانب المكالمات والرسائل والاجتماعات والملاحظات. أنشئ مهمة من أي سجل بزر إنشاء.',
+    ]),
+  f('work.approvals', 'work', { feature: 'automation', guide: 'page.approvals' },
+    ['Why is something waiting for approval?', '¿Por qué algo espera aprobación?', 'Pourquoi quelque chose attend-il une approbation ?', 'Warum wartet etwas auf Freigabe?', 'لماذا ينتظر شيء ما الموافقة؟'],
+    [
+      'Some steps need a person to decide, such as a workflow email or webhook, or a quote discount above the limit. Open Approvals, read the request and approve or reject it.',
+      'Algunos pasos necesitan que alguien decida, como un correo o webhook de un flujo, o un descuento por encima del límite. Abre Aprobaciones, lee la solicitud y apruébala o recházala.',
+      'Certaines étapes demandent une décision, comme un e-mail ou un webhook de workflow, ou une remise au-dessus de la limite. Ouvrez Approbations, lisez la demande et approuvez ou refusez.',
+      'Manche Schritte brauchen eine Entscheidung, etwa eine Workflow-E-Mail, ein Webhook oder ein Rabatt über dem Limit. Öffnen Sie Freigaben, lesen Sie die Anfrage und genehmigen oder lehnen Sie ab.',
+      'بعض الخطوات تحتاج إلى قرار شخص، مثل بريد أو خطاف من سير عمل أو خصم أعلى من الحد. افتح الموافقات واقرأ الطلب ثم وافق أو ارفض.',
+    ]),
+  f('work.meetings', 'work', { feature: 'meeting_intelligence', guide: 'page.meetings' },
+    ['How do meeting notes and summaries work?', '¿Cómo funcionan las notas y resúmenes de reuniones?', 'Comment fonctionnent les notes et résumés de réunion ?', 'Wie funktionieren Besprechungsnotizen und Zusammenfassungen?', 'كيف تعمل ملاحظات الاجتماعات وملخصاتها؟'],
+    [
+      'Meetings from your synced calendar appear in Meetings. Add notes or a transcript to one and SampForce writes a summary with next steps, linked to the people and deals involved.',
+      'Las reuniones de tu calendario sincronizado aparecen en Reuniones. Añade notas o una transcripción y SampForce escribe un resumen con próximos pasos, vinculado a personas y oportunidades.',
+      'Les réunions de votre agenda synchronisé apparaissent dans Réunions. Ajoutez des notes ou une transcription et SampForce rédige un résumé avec les prochaines étapes, lié aux personnes et affaires.',
+      'Besprechungen aus Ihrem synchronisierten Kalender erscheinen unter Besprechungen. Fügen Sie Notizen oder ein Transkript hinzu, und SampForce schreibt eine Zusammenfassung mit nächsten Schritten, verknüpft mit Personen und Deals.',
+      'تظهر اجتماعات تقويمك المتزامن في صفحة الاجتماعات. أضف ملاحظات أو نصًا مكتوبًا فيكتب SampForce ملخصًا بالخطوات التالية مرتبطًا بالأشخاص والصفقات.',
+    ]),
+
+  // ── Email & chat ─────────────────────────────────────────────────────────────────────────────────────────────────
+  f('communication.mailbox', 'communication', { feature: 'email_sync', guide: 'page.integrations' },
+    ['How do I connect my Gmail or Outlook mailbox?', '¿Cómo conecto mi buzón de Gmail u Outlook?', 'Comment connecter ma boîte Gmail ou Outlook ?', 'Wie verbinde ich mein Gmail- oder Outlook-Postfach?', 'كيف أربط بريد Gmail أو Outlook؟'],
+    [
+      'Open Integrations and choose Connect next to Google or Microsoft 365, then sign in and allow access. Your customer emails and meetings then sync to the right records, and you can send from your own address.',
+      'Abre Integraciones y elige Conectar junto a Google o Microsoft 365, inicia sesión y permite el acceso. Tus correos y reuniones con clientes se sincronizan con sus registros y puedes enviar desde tu dirección.',
+      'Ouvrez Intégrations et choisissez Connecter à côté de Google ou Microsoft 365, connectez-vous et autorisez l’accès. E-mails et réunions clients se synchronisent sur les bonnes fiches et vous envoyez depuis votre adresse.',
+      'Öffnen Sie Integrationen und wählen Sie Verbinden neben Google oder Microsoft 365, melden Sie sich an und erlauben Sie den Zugriff. Kunden-E-Mails und Termine landen dann bei den richtigen Datensätzen, und Sie senden von Ihrer Adresse.',
+      'افتح التكاملات واختر ربط بجانب Google أو Microsoft 365 ثم سجّل الدخول واسمح بالوصول. تتزامن بعدها رسائل عملائك واجتماعاتهم مع السجلات الصحيحة، ويمكنك الإرسال من عنوانك.',
+    ]),
+  f('communication.inbox', 'communication', { feature: 'team_inbox', guide: 'page.communication' },
+    ['What is the team inbox for?', '¿Para qué sirve la bandeja del equipo?', 'À quoi sert la boîte d’équipe ?', 'Wofür ist das Team-Postfach?', 'ما فائدة صندوق الفريق؟'],
+    [
+      'It collects customer conversations in one place, sorted by what needs a reply. Assign a thread to someone, set its status and leave internal notes your customer never sees.',
+      'Reúne las conversaciones con clientes en un sitio, ordenadas por lo que necesita respuesta. Asigna un hilo, fija su estado y deja notas internas que el cliente nunca ve.',
+      'Elle réunit les conversations clients au même endroit, triées selon ce qui attend une réponse. Attribuez un fil, fixez son statut et laissez des notes internes invisibles du client.',
+      'Es sammelt Kundengespräche an einem Ort, sortiert nach dem, was eine Antwort braucht. Weisen Sie einen Thread zu, setzen Sie den Status und hinterlassen Sie interne Notizen, die der Kunde nie sieht.',
+      'يجمع محادثات العملاء في مكان واحد مرتبة حسب ما يحتاج إلى رد. أسند المحادثة إلى شخص وحدد حالتها واترك ملاحظات داخلية لا يراها العميل.',
+    ]),
+  f('communication.chat', 'communication', { feature: 'team_chat', guide: 'page.chat' },
+    ['How do I chat with my team?', '¿Cómo chateo con mi equipo?', 'Comment discuter avec mon équipe ?', 'Wie chatte ich mit meinem Team?', 'كيف أدردش مع فريقي؟'],
+    [
+      'Open Team chat from the chat button at the top. Start a direct message or join a channel. Messages arrive live, show when they were delivered and read, and are kept even if you go offline.',
+      'Abre el chat del equipo con el botón de chat de arriba. Empieza un mensaje directo o únete a un canal. Los mensajes llegan al momento, indican entrega y lectura y se guardan aunque pierdas conexión.',
+      'Ouvrez le chat d’équipe avec le bouton en haut. Lancez un message direct ou rejoignez un canal. Les messages arrivent en direct, indiquent remise et lecture et sont gardés même hors ligne.',
+      'Öffnen Sie den Team-Chat über die Chat-Schaltfläche oben. Starten Sie eine Direktnachricht oder treten Sie einem Kanal bei. Nachrichten kommen sofort an, zeigen Zustellung und Lesen und bleiben auch offline erhalten.',
+      'افتح دردشة الفريق من زر الدردشة في الأعلى. ابدأ رسالة مباشرة أو انضم إلى قناة. تصل الرسائل فورًا وتُظهر التسليم والقراءة وتُحفظ حتى لو انقطع اتصالك.',
+    ]),
+
+  // ── Prospecting & outreach ───────────────────────────────────────────────────────────────────────────────────────
+  f('outreach.sequence', 'outreach', { feature: 'sequences', guide: 'page.sequences' },
+    ['How do I send a series of follow-up emails automatically?', '¿Cómo envío una serie de correos de seguimiento automáticamente?', 'Comment envoyer automatiquement une série d’e-mails de relance ?', 'Wie sende ich automatisch eine Reihe von Folge-E-Mails?', 'كيف أرسل سلسلة رسائل متابعة تلقائيًا؟'],
+    [
+      'Create an email sequence, add steps with waiting days and templates, then enrol contacts. Emails go from your own mailbox within the send window, and a person stops getting them as soon as they reply.',
+      'Crea una secuencia, añade pasos con días de espera y plantillas e inscribe contactos. Los correos salen de tu buzón dentro de la ventana de envío y se detienen en cuanto la persona responde.',
+      'Créez une séquence, ajoutez des étapes avec délais et modèles, puis inscrivez des contacts. Les e-mails partent de votre boîte dans la plage d’envoi et s’arrêtent dès que la personne répond.',
+      'Legen Sie eine Sequenz an, fügen Sie Schritte mit Wartetagen und Vorlagen hinzu und tragen Sie Kontakte ein. E-Mails gehen im Sendefenster aus Ihrem Postfach und stoppen, sobald jemand antwortet.',
+      'أنشئ سلسلة بريد وأضف خطوات بأيام انتظار وقوالب ثم سجّل جهات الاتصال. تُرسل الرسائل من بريدك ضمن نافذة الإرسال وتتوقف بمجرد أن يرد الشخص.',
+    ]),
+  f('outreach.finder', 'outreach', { feature: 'email_finder', guide: 'page.finder' },
+    ['How do I find someone’s work email?', '¿Cómo encuentro el correo de trabajo de alguien?', 'Comment trouver l’e-mail professionnel de quelqu’un ?', 'Wie finde ich die geschäftliche E-Mail einer Person?', 'كيف أجد بريد العمل لشخص ما؟'],
+    [
+      'Open the Email Finder, enter the person’s name and company website, and SampForce suggests likely addresses with a confidence level. Verify one before you use it and save it to a contact.',
+      'Abre el Buscador de correos, escribe el nombre y la web de la empresa y SampForce sugiere direcciones probables con su fiabilidad. Verifica una antes de usarla y guárdala en un contacto.',
+      'Ouvrez la recherche d’e-mails, saisissez le nom et le site de l’entreprise ; SampForce propose des adresses probables avec un niveau de confiance. Vérifiez-en une avant de l’utiliser et enregistrez-la.',
+      'Öffnen Sie den E-Mail-Finder, geben Sie Namen und Unternehmenswebsite ein, und SampForce schlägt wahrscheinliche Adressen mit Zuverlässigkeit vor. Prüfen Sie eine vor der Nutzung und speichern Sie sie.',
+      'افتح باحث البريد وأدخل اسم الشخص وموقع شركته، فيقترح SampForce عناوين محتملة بدرجة ثقة. تحقق من العنوان قبل استخدامه واحفظه في جهة اتصال.',
+    ]),
+  f('outreach.extension', 'outreach', { feature: 'browser_extension', guide: 'page.integrations' },
+    ['How do I capture leads from a web page?', '¿Cómo capturo leads desde una página web?', 'Comment capter des prospects depuis une page web ?', 'Wie erfasse ich Leads von einer Webseite?', 'كيف ألتقط عملاء محتملين من صفحة ويب؟'],
+    [
+      'Install the SampForce browser extension from Integrations and sign in. On a company or profile page, open it to scan the people and contact details, then save them as leads or to a prospect list.',
+      'Instala la extensión de SampForce desde Integraciones e inicia sesión. En la página de una empresa o perfil, ábrela para ver personas y datos y guárdalos como leads o en una lista.',
+      'Installez l’extension SampForce depuis Intégrations et connectez-vous. Sur une page d’entreprise ou de profil, ouvrez-la pour repérer personnes et coordonnées, puis enregistrez-les en prospects ou en liste.',
+      'Installieren Sie die SampForce-Browsererweiterung über Integrationen und melden Sie sich an. Öffnen Sie sie auf einer Unternehmens- oder Profilseite, um Personen und Kontaktdaten zu erfassen, und speichern Sie sie als Leads oder in einer Liste.',
+      'ثبّت إضافة SampForce للمتصفح من التكاملات وسجّل الدخول. في صفحة شركة أو ملف شخصي افتحها لالتقاط الأشخاص وبيانات الاتصال ثم احفظهم كعملاء محتملين أو في قائمة.',
+    ]),
+  f('outreach.prospects', 'outreach', { feature: 'prospect_lists', guide: 'page.prospects' },
+    ['What is the difference between a prospect and a lead?', '¿Qué diferencia hay entre un prospecto y un lead?', 'Quelle différence entre un prospect de liste et un prospect CRM ?', 'Was unterscheidet einen Interessenten von einem Lead?', 'ما الفرق بين المرشح في القائمة والعميل المحتمل؟'],
+    [
+      'Prospects live in prospect lists, kept apart from the CRM so a bought or scraped list never clutters it. When someone is worth pursuing, add them to the CRM as a lead or contact.',
+      'Los prospectos viven en listas separadas del CRM, para que una lista comprada o extraída no lo llene. Cuando alguien merece la pena, añádelo al CRM como lead o contacto.',
+      'Les prospects de liste restent à part du CRM, pour qu’une liste achetée ou collectée ne l’encombre pas. Quand une personne vaut le coup, ajoutez-la au CRM comme prospect ou contact.',
+      'Interessenten stehen in Listen außerhalb des CRM, damit gekaufte oder gesammelte Listen es nicht überladen. Lohnt sich jemand, fügen Sie ihn als Lead oder Kontakt ins CRM ein.',
+      'المرشحون في قوائم منفصلة عن CRM حتى لا تزدحم بقائمة مشتراة أو مجمعة. عندما يستحق الشخص المتابعة أضفه إلى CRM كعميل محتمل أو جهة اتصال.',
+    ]),
+  f('outreach.visitors', 'outreach', { feature: 'website_visitors', guide: 'page.websiteVisitors' },
+    ['How do I see who visits our website?', '¿Cómo veo quién visita nuestra web?', 'Comment voir qui visite notre site ?', 'Wie sehe ich, wer unsere Website besucht?', 'كيف أرى من يزور موقعنا؟'],
+    [
+      'An administrator adds the tracking snippet from Website Visitors to your site. Visits then show the pages read and where people came from, linked to your leads and contacts, and only for visitors who consented.',
+      'Un administrador añade el fragmento de seguimiento de Visitantes web a tu sitio. Las visitas muestran páginas leídas y su origen, vinculadas a leads y contactos, y solo de quien dio su consentimiento.',
+      'Un administrateur ajoute le code de suivi de Visiteurs du site à votre site. Les visites montrent pages lues et provenance, liées à vos prospects et contacts, uniquement pour les visiteurs consentants.',
+      'Ein Administrator fügt das Tracking-Snippet aus Website-Besucher in Ihre Website ein. Besuche zeigen dann gelesene Seiten und Herkunft, verknüpft mit Leads und Kontakten, nur bei Einwilligung.',
+      'يضيف المسؤول شيفرة التتبع من صفحة زوار الموقع إلى موقعك. تعرض الزيارات بعدها الصفحات المقروءة ومصدرها مرتبطة بعملائك، ولمن وافق فقط.',
+    ]),
+  f('outreach.forms', 'outreach', { feature: 'marketing', guide: 'page.marketing' },
+    ['How do I collect leads from a form on our website?', '¿Cómo recojo leads con un formulario en nuestra web?', 'Comment collecter des prospects via un formulaire sur notre site ?', 'Wie sammle ich Leads über ein Formular auf unserer Website?', 'كيف أجمع عملاء محتملين من نموذج على موقعنا؟'],
+    [
+      'In Marketing, create a lead form, choose its fields and consent wording, and copy its link or embed code into your site. Every submission creates a lead with the consent recorded.',
+      'En Marketing crea un formulario, elige campos y texto de consentimiento y copia su enlace o código en tu web. Cada envío crea un lead con el consentimiento registrado.',
+      'Dans Marketing, créez un formulaire, choisissez champs et mention de consentement, puis copiez le lien ou le code dans votre site. Chaque envoi crée un prospect avec le consentement enregistré.',
+      'Erstellen Sie unter Marketing ein Lead-Formular, wählen Sie Felder und Einwilligungstext und kopieren Sie Link oder Einbettungscode in Ihre Website. Jede Einsendung erzeugt einen Lead mit Einwilligung.',
+      'في التسويق أنشئ نموذج عملاء محتملين واختر حقوله ونص الموافقة وانسخ رابطه أو شيفرته إلى موقعك. كل إرسال ينشئ عميلًا محتملًا مع تسجيل الموافقة.',
+    ]),
+
+  // ── Quotes & contracts ───────────────────────────────────────────────────────────────────────────────────────────
+  f('documents.quote', 'documents', { feature: 'quotes', guide: 'page.quotes' },
+    ['How do I create and send a quote?', '¿Cómo creo y envío una cotización?', 'Comment créer et envoyer un devis ?', 'Wie erstelle und sende ich ein Angebot?', 'كيف أنشئ عرض سعر وأرسله؟'],
+    [
+      'Open a deal and choose New quote, or use the Quick Bid Studio for a fast priced proposal. Add lines from the catalogue, discounts and taxes, then download the PDF or share it.',
+      'Abre una oportunidad y elige Nueva cotización, o usa Quick Bid Studio para una propuesta rápida. Añade líneas del catálogo, descuentos e impuestos y descarga el PDF o compártelo.',
+      'Ouvrez une opportunité et choisissez Nouveau devis, ou utilisez le Quick Bid Studio pour une proposition rapide. Ajoutez lignes du catalogue, remises et taxes, puis téléchargez le PDF ou partagez-le.',
+      'Öffnen Sie einen Deal und wählen Sie Neues Angebot, oder nutzen Sie das Quick Bid Studio für ein schnelles Angebot. Fügen Sie Positionen, Rabatte und Steuern hinzu und laden Sie das PDF oder teilen Sie es.',
+      'افتح صفقة واختر عرض سعر جديد، أو استخدم Quick Bid Studio لمقترح سريع. أضف بنودًا من الكتالوج والخصومات والضرائب ثم نزّل ملف PDF أو شاركه.',
+    ]),
+  f('documents.proposal', 'documents', { feature: 'proposals', guide: 'page.quoteEditor' },
+    ['Can my customer accept a proposal online?', '¿Puede mi cliente aceptar una propuesta en línea?', 'Mon client peut-il accepter une proposition en ligne ?', 'Kann mein Kunde einen Vorschlag online annehmen?', 'هل يمكن لعميلي قبول المقترح عبر الإنترنت؟'],
+    [
+      'Yes. Turn a quote into a proposal and share its link. Your customer reads it in your branding and accepts it online; you see when it was opened and accepted on the quote.',
+      'Sí. Convierte la cotización en propuesta y comparte el enlace. Tu cliente la lee con tu marca y la acepta en línea; ves en la cotización cuándo la abrió y aceptó.',
+      'Oui. Transformez le devis en proposition et partagez le lien. Votre client la lit à vos couleurs et l’accepte en ligne ; vous voyez sur le devis quand elle a été ouverte et acceptée.',
+      'Ja. Machen Sie aus dem Angebot einen Vorschlag und teilen Sie den Link. Ihr Kunde liest ihn in Ihrem Design und nimmt ihn online an; am Angebot sehen Sie, wann er geöffnet und angenommen wurde.',
+      'نعم. حوّل عرض السعر إلى مقترح وشارك رابطه. يقرؤه عميلك بهويتك ويقبله عبر الإنترنت، وترى في العرض متى فُتح ومتى قُبل.',
+    ]),
+  f('documents.contracts', 'documents', { feature: 'contracts', guide: 'page.contracts' },
+    ['How do I keep track of renewals?', '¿Cómo sigo las renovaciones?', 'Comment suivre les renouvellements ?', 'Wie behalte ich Verlängerungen im Blick?', 'كيف أتابع التجديدات؟'],
+    [
+      'Record each customer contract in Contracts with its value, term and renewal date. SampForce reminds the owner before a renewal is due and shows contracts coming up for renewal.',
+      'Registra cada contrato en Contratos con su valor, duración y fecha de renovación. SampForce avisa al responsable antes de la renovación y muestra los que se acercan.',
+      'Enregistrez chaque contrat dans Contrats avec valeur, durée et date de renouvellement. SampForce prévient le responsable avant l’échéance et montre les contrats à renouveler.',
+      'Erfassen Sie jeden Kundenvertrag unter Verträge mit Wert, Laufzeit und Verlängerungsdatum. SampForce erinnert den Verantwortlichen vorher und zeigt anstehende Verlängerungen.',
+      'سجّل كل عقد في صفحة العقود بقيمته ومدته وتاريخ تجديده. يذكّر SampForce المسؤول قبل موعد التجديد ويعرض العقود القريبة من التجديد.',
+    ]),
+
+  // ── AI & automation ──────────────────────────────────────────────────────────────────────────────────────────────
+  f('ai.copilot', 'ai', { feature: 'ai_assistant', permission: 'ai:use' },
+    ['What can Copilot do for me?', '¿Qué puede hacer Copilot por mí?', 'Que peut faire Copilot pour moi ?', 'Was kann Copilot für mich tun?', 'ماذا يمكن أن يفعل Copilot لي؟'],
+    [
+      'Open Copilot from the top bar and ask in plain words, for example “which deals close this month?” or “draft a follow-up to Acme”. It answers from the records you are allowed to see.',
+      'Abre Copilot en la barra superior y pregunta con tus palabras, por ejemplo «¿qué oportunidades cierran este mes?» o «redacta un seguimiento para Acme». Responde con los registros que puedes ver.',
+      'Ouvrez Copilot dans la barre du haut et demandez simplement, par exemple « quelles affaires se concluent ce mois-ci ? » ou « rédige une relance pour Acme ». Il répond avec les fiches que vous pouvez voir.',
+      'Öffnen Sie Copilot in der oberen Leiste und fragen Sie frei, etwa „Welche Deals schließen diesen Monat?“ oder „Entwirf eine Nachfassung an Acme“. Es antwortet aus den Datensätzen, die Sie sehen dürfen.',
+      'افتح Copilot من الشريط العلوي واسأل بكلماتك، مثل «ما الصفقات التي تُغلق هذا الشهر؟» أو «اكتب متابعة إلى Acme». يجيب من السجلات المسموح لك برؤيتها.',
+    ]),
+  f('ai.agents', 'ai', { feature: 'ai_assistant', permission: 'ai:use', guide: 'page.agents' },
+    ['Are AI agents allowed to act on their own?', '¿Los agentes de IA actúan por su cuenta?', 'Les agents IA agissent-ils seuls ?', 'Dürfen KI-Agenten selbstständig handeln?', 'هل يتصرف وكلاء الذكاء الاصطناعي بمفردهم؟'],
+    [
+      'Only within the limits you set. Each agent has clear permissions, and anything that leaves SampForce, such as an email, waits for a person to approve it. Every run is logged with its cost.',
+      'Solo dentro de los límites que fijes. Cada agente tiene permisos claros y todo lo que sale de SampForce, como un correo, espera la aprobación de una persona. Cada ejecución queda registrada con su coste.',
+      'Seulement dans les limites fixées. Chaque agent a des autorisations claires et tout ce qui sort de SampForce, comme un e-mail, attend l’approbation d’une personne. Chaque exécution est tracée avec son coût.',
+      'Nur innerhalb Ihrer Grenzen. Jeder Agent hat klare Rechte, und alles, was SampForce verlässt, etwa eine E-Mail, wartet auf menschliche Freigabe. Jeder Lauf wird mit seinen Kosten protokolliert.',
+      'فقط ضمن الحدود التي تضعها. لكل وكيل صلاحيات واضحة، وكل ما يخرج من SampForce مثل البريد ينتظر موافقة شخص. ويُسجَّل كل تشغيل مع تكلفته.',
+    ]),
+  f('ai.workflow', 'ai', { feature: 'automation', permission: 'automation:manage', guide: 'page.automation' },
+    ['How do I automate a routine step?', '¿Cómo automatizo un paso rutinario?', 'Comment automatiser une étape répétitive ?', 'Wie automatisiere ich einen Routineschritt?', 'كيف أؤتمت خطوة روتينية؟'],
+    [
+      'In the Automation Studio, create a workflow, pick a trigger such as “new lead” or “deal changed stage”, add conditions and actions like create a task or send a message, and turn it on. Test it first with the dry run.',
+      'En Automation Studio crea un flujo, elige un disparador como «nuevo lead» o «la oportunidad cambió de etapa», añade condiciones y acciones como crear una tarea o enviar un mensaje y actívalo. Pruébalo antes.',
+      'Dans l’Automation Studio, créez un workflow, choisissez un déclencheur comme « nouveau prospect » ou « changement d’étape », ajoutez conditions et actions comme créer une tâche ou envoyer un message, puis activez-le. Testez-le d’abord.',
+      'Erstellen Sie im Automation Studio einen Workflow, wählen Sie einen Auslöser wie „neuer Lead“ oder „Deal-Phase geändert“, fügen Sie Bedingungen und Aktionen wie Aufgabe anlegen oder Nachricht senden hinzu und schalten Sie ihn ein. Testen Sie ihn vorher.',
+      'في Automation Studio أنشئ سير عمل واختر مشغّلًا مثل «عميل محتمل جديد» أو «تغيّرت مرحلة الصفقة» وأضف شروطًا وإجراءات مثل إنشاء مهمة أو إرسال رسالة ثم فعّله. اختبره أولًا.',
+    ]),
+
+  // ── Reports & forecasting ────────────────────────────────────────────────────────────────────────────────────────
+  f('insights.report', 'insights', { feature: 'reports', permission: 'reports:read', guide: 'page.reportEditor' },
+    ['How do I build my own report?', '¿Cómo creo mi propio informe?', 'Comment créer mon propre rapport ?', 'Wie erstelle ich einen eigenen Bericht?', 'كيف أنشئ تقريري الخاص؟'],
+    [
+      'Open Reports & Analytics and choose New report. Pick a record type, then columns, filters, grouping and a chart, and watch the live preview. Save it and add it to a dashboard to see it with others.',
+      'Abre Informes y análisis y elige Nuevo informe. Elige un tipo de registro, columnas, filtros, agrupación y gráfico, con vista previa en vivo. Guárdalo y añádelo a un panel.',
+      'Ouvrez Rapports et analyses puis Nouveau rapport. Choisissez un type de fiche, colonnes, filtres, regroupement et graphique avec aperçu en direct. Enregistrez-le et ajoutez-le à un tableau de bord.',
+      'Öffnen Sie Berichte & Analysen und wählen Sie Neuer Bericht. Wählen Sie Datensatztyp, Spalten, Filter, Gruppierung und Diagramm mit Live-Vorschau. Speichern Sie ihn und fügen Sie ihn einem Dashboard hinzu.',
+      'افتح التقارير والتحليلات واختر تقرير جديد. اختر نوع السجل ثم الأعمدة والمرشحات والتجميع والرسم مع معاينة مباشرة. احفظه وأضفه إلى لوحة معلومات.',
+    ]),
+  f('insights.forecast', 'insights', { feature: 'forecasting', guide: 'page.forecasting' },
+    ['How is the forecast worked out?', '¿Cómo se calcula la previsión?', 'Comment la prévision est-elle calculée ?', 'Wie wird die Prognose berechnet?', 'كيف تُحسب التوقعات؟'],
+    [
+      'From your open and won deals: each open deal counts at its stage’s win probability, and won deals count in full. You see the result against your targets for the month, quarter or year.',
+      'Con tus oportunidades abiertas y ganadas: cada abierta cuenta según la probabilidad de su etapa y las ganadas cuentan completas. Ves el resultado frente a tus objetivos del mes, trimestre o año.',
+      'À partir de vos affaires ouvertes et gagnées : chaque affaire ouverte compte selon la probabilité de son étape, les gagnées comptent en entier. Le résultat est comparé à vos objectifs du mois, trimestre ou année.',
+      'Aus offenen und gewonnenen Deals: Jeder offene Deal zählt mit der Wahrscheinlichkeit seiner Phase, gewonnene voll. Sie sehen das Ergebnis gegenüber Ihren Zielen für Monat, Quartal oder Jahr.',
+      'من صفقاتك المفتوحة والرابحة: تُحسب كل صفقة مفتوحة باحتمال فوز مرحلتها، وتُحسب الرابحة كاملة. وترى النتيجة مقابل أهدافك للشهر أو الربع أو السنة.',
+    ]),
+  f('insights.dash', 'insights', {},
+    ['Why does a number show a dash?', '¿Por qué una cifra muestra un guion?', 'Pourquoi un chiffre affiche-t-il un tiret ?', 'Warum zeigt eine Zahl einen Strich?', 'لماذا يظهر شرطة بدل الرقم؟'],
+    [
+      'A dash means there is not enough data yet for that number. SampForce never fills dashboards with made-up figures: every number is counted from your real records.',
+      'Un guion significa que aún no hay datos suficientes para esa cifra. SampForce nunca llena los paneles con cifras inventadas: cada número sale de tus registros reales.',
+      'Un tiret signifie qu’il n’y a pas encore assez de données. SampForce ne remplit jamais les tableaux de bord de chiffres inventés : chaque nombre vient de vos fiches réelles.',
+      'Ein Strich bedeutet, dass es für diese Zahl noch nicht genug Daten gibt. SampForce füllt Dashboards nie mit erfundenen Werten: Jede Zahl stammt aus Ihren echten Datensätzen.',
+      'تعني الشرطة أنه لا توجد بيانات كافية بعد لهذا الرقم. لا يملأ SampForce لوحاته بأرقام مختلقة أبدًا، فكل رقم يُحسب من سجلاتك الحقيقية.',
+    ]),
+  f('insights.gamification', 'insights', { feature: 'gamification', guide: 'page.gamification' },
+    ['How are points and leaderboards counted?', '¿Cómo se cuentan los puntos y las clasificaciones?', 'Comment sont comptés points et classements ?', 'Wie werden Punkte und Ranglisten gezählt?', 'كيف تُحسب النقاط ولوحات الصدارة؟'],
+    [
+      'From real CRM activity, such as calls logged, meetings held and deals won, using the point values your administrator set. Badges and competitions use the same records, so nothing can be entered by hand.',
+      'Con actividad real del CRM, como llamadas, reuniones y oportunidades ganadas, según los puntos que fijó tu administrador. Insignias y competiciones usan los mismos registros, así que nada se introduce a mano.',
+      'À partir de l’activité réelle du CRM, comme appels, réunions et affaires gagnées, selon le barème fixé par l’administrateur. Badges et compétitions utilisent les mêmes fiches, rien n’est saisi à la main.',
+      'Aus echter CRM-Aktivität wie Anrufen, Besprechungen und gewonnenen Deals, mit den Punktwerten Ihres Administrators. Abzeichen und Wettbewerbe nutzen dieselben Datensätze; nichts wird von Hand eingetragen.',
+      'من نشاط CRM الحقيقي مثل المكالمات المسجلة والاجتماعات والصفقات الرابحة، بقيم النقاط التي حددها المسؤول. وتستخدم الشارات والمسابقات السجلات نفسها فلا يُدخل شيء يدويًا.',
+    ]),
+
+  // ── Customers ────────────────────────────────────────────────────────────────────────────────────────────────────
+  f('customers.portal', 'customers', { feature: 'client_portal', guide: 'page.portal' },
+    ['How do I give a customer access to the client portal?', '¿Cómo doy acceso a un cliente al portal?', 'Comment donner accès au portail à un client ?', 'Wie gebe ich einem Kunden Zugang zum Portal?', 'كيف أمنح عميلًا الوصول إلى البوابة؟'],
+    [
+      'Turn the portal on in Client Portal and set your branding, then open the customer’s company and invite their contacts. They sign in to follow projects, approve proposals, share documents and ask for help.',
+      'Activa el portal en Portal de clientes y define tu marca; luego abre la empresa del cliente e invita a sus contactos. Entrarán para seguir proyectos, aprobar propuestas, compartir documentos y pedir ayuda.',
+      'Activez le portail dans Portail client avec vos couleurs, puis ouvrez l’entreprise du client et invitez ses contacts. Ils se connectent pour suivre les projets, approuver les propositions, partager des documents et demander de l’aide.',
+      'Schalten Sie das Portal unter Kundenportal ein und legen Sie Ihr Design fest, öffnen Sie dann das Unternehmen des Kunden und laden Sie seine Kontakte ein. Sie verfolgen Projekte, genehmigen Vorschläge, teilen Dokumente und bitten um Hilfe.',
+      'فعّل البوابة من بوابة العملاء وحدد هويتك، ثم افتح شركة العميل وادعُ جهات الاتصال فيها. يسجلون الدخول لمتابعة المشاريع والموافقة على المقترحات ومشاركة المستندات وطلب المساعدة.',
+    ]),
+  f('customers.health', 'customers', { feature: 'customer_success', guide: 'page.customerSuccess' },
+    ['What makes a customer’s health score drop?', '¿Qué hace bajar la salud de un cliente?', 'Qu’est-ce qui fait baisser la santé d’un client ?', 'Was senkt den Gesundheitswert eines Kunden?', 'ما الذي يخفض درجة صحة العميل؟'],
+    [
+      'Signals such as fewer conversations, open escalations or a renewal coming up without contact. Customer Success explains every point lost, so you can act before the customer leaves.',
+      'Señales como menos conversaciones, escalados abiertos o una renovación próxima sin contacto. Éxito del cliente explica cada punto perdido para que actúes antes de que el cliente se vaya.',
+      'Des signaux comme moins d’échanges, des escalades ouvertes ou un renouvellement proche sans contact. Succès client explique chaque point perdu pour agir avant le départ du client.',
+      'Signale wie weniger Gespräche, offene Eskalationen oder eine nahende Verlängerung ohne Kontakt. Customer Success erklärt jeden verlorenen Punkt, damit Sie handeln, bevor der Kunde geht.',
+      'إشارات مثل قلة المحادثات أو تصعيدات مفتوحة أو تجديد قريب دون تواصل. توضح صفحة نجاح العملاء كل نقطة مفقودة لتتصرف قبل أن يغادر العميل.',
+    ]),
+
+  // ── Apps & integrations ──────────────────────────────────────────────────────────────────────────────────────────
+  f('apps.connect', 'apps', { permission: 'integrations:manage', guide: 'page.integrations' },
+    ['How do I connect Slack, Zoom, WhatsApp or another app?', '¿Cómo conecto Slack, Zoom, WhatsApp u otra app?', 'Comment connecter Slack, Zoom, WhatsApp ou une autre application ?', 'Wie verbinde ich Slack, Zoom, WhatsApp oder eine andere App?', 'كيف أربط Slack أو Zoom أو WhatsApp أو تطبيقًا آخر؟'],
+    [
+      'Open Integrations, find the app and choose Connect. Follow the sign-in or setup steps it shows. The apps listed are the ones your plan includes; each shows whether it is connected and working.',
+      'Abre Integraciones, busca la app y elige Conectar. Sigue los pasos que muestre. Las apps listadas son las que incluye tu plan; cada una indica si está conectada y funcionando.',
+      'Ouvrez Intégrations, trouvez l’application et choisissez Connecter. Suivez les étapes affichées. Les applications listées sont celles de votre offre ; chacune indique si elle est connectée et fonctionne.',
+      'Öffnen Sie Integrationen, suchen Sie die App und wählen Sie Verbinden. Folgen Sie den angezeigten Schritten. Gelistet sind die Apps Ihres Tarifs; jede zeigt, ob sie verbunden ist und funktioniert.',
+      'افتح التكاملات وابحث عن التطبيق واختر ربط، ثم اتبع الخطوات المعروضة. التطبيقات الظاهرة هي التي تتضمنها خطتك، ويُظهر كل منها إن كان مربوطًا ويعمل.',
+    ]),
+  f('apps.api', 'apps', { feature: 'api_access', permission: 'integrations:manage', guide: 'page.integrations' },
+    ['How do I use the API or Zapier?', '¿Cómo uso la API o Zapier?', 'Comment utiliser l’API ou Zapier ?', 'Wie nutze ich die API oder Zapier?', 'كيف أستخدم واجهة API أو Zapier؟'],
+    [
+      'Create an API key in Integrations and give it only the scopes it needs. Use it in Zapier or your own scripts; the full API reference is at /api/v1/docs. You can revoke a key at any time.',
+      'Crea una clave de API en Integraciones con solo los permisos necesarios. Úsala en Zapier o en tus scripts; la referencia completa está en /api/v1/docs. Puedes revocarla cuando quieras.',
+      'Créez une clé d’API dans Intégrations avec les seuls droits nécessaires. Utilisez-la dans Zapier ou vos scripts ; la référence complète est sur /api/v1/docs. Vous pouvez la révoquer à tout moment.',
+      'Erstellen Sie unter Integrationen einen API-Schlüssel mit nur den nötigen Rechten. Nutzen Sie ihn in Zapier oder eigenen Skripten; die Referenz liegt unter /api/v1/docs. Sie können ihn jederzeit widerrufen.',
+      'أنشئ مفتاح API من التكاملات وامنحه الصلاحيات اللازمة فقط. استخدمه في Zapier أو نصوصك البرمجية؛ المرجع الكامل في ‎/api/v1/docs. ويمكنك إلغاؤه في أي وقت.',
+    ]),
+
+  // ── Data & settings ──────────────────────────────────────────────────────────────────────────────────────────────
+  f('data.import', 'data', { feature: 'data_import', guide: 'page.import' },
+    ['How do I import my existing data?', '¿Cómo importo mis datos actuales?', 'Comment importer mes données existantes ?', 'Wie importiere ich meine vorhandenen Daten?', 'كيف أستورد بياناتي الحالية؟'],
+    [
+      'Open Settings, then Import data, and upload a CSV or Excel file. SampForce matches your column headings to fields, shows every row it will create and flags problems before anything is saved.',
+      'Abre Ajustes y luego Importar datos y sube un archivo CSV o Excel. SampForce empareja tus columnas con campos, muestra cada fila que creará y señala problemas antes de guardar nada.',
+      'Ouvrez Paramètres puis Importer des données et chargez un fichier CSV ou Excel. SampForce associe vos colonnes aux champs, montre chaque ligne à créer et signale les problèmes avant tout enregistrement.',
+      'Öffnen Sie Einstellungen und dann Daten importieren und laden Sie eine CSV- oder Excel-Datei hoch. SampForce ordnet Spalten den Feldern zu, zeigt jede Zeile und meldet Probleme, bevor etwas gespeichert wird.',
+      'افتح الإعدادات ثم استيراد البيانات وارفع ملف CSV أو Excel. يطابق SampForce عناوين الأعمدة مع الحقول ويعرض كل صف سينشئه وينبه إلى المشكلات قبل حفظ أي شيء.',
+    ]),
+  f('data.export', 'data', { feature: 'data_export', permission: 'data:export' },
+    ['How do I export my records?', '¿Cómo exporto mis registros?', 'Comment exporter mes fiches ?', 'Wie exportiere ich meine Datensätze?', 'كيف أصدّر سجلاتي؟'],
+    [
+      'On a list such as Leads, Companies or Deals, filter it to what you need and choose Export. You get a file with the columns shown. Exports are recorded in the audit log.',
+      'En una lista como Leads, Empresas u Oportunidades, filtra lo que necesites y elige Exportar. Obtienes un archivo con las columnas visibles. Las exportaciones quedan en el registro de auditoría.',
+      'Sur une liste comme Prospects, Entreprises ou Opportunités, filtrez puis choisissez Exporter. Vous obtenez un fichier avec les colonnes affichées. Les exports sont tracés dans le journal d’audit.',
+      'Filtern Sie eine Liste wie Leads, Unternehmen oder Deals und wählen Sie Exportieren. Sie erhalten eine Datei mit den sichtbaren Spalten. Exporte stehen im Audit-Protokoll.',
+      'في قائمة مثل العملاء المحتملين أو الشركات أو الصفقات صفِّ ما تحتاجه واختر تصدير. تحصل على ملف بالأعمدة الظاهرة. وتُسجَّل عمليات التصدير في سجل التدقيق.',
+    ]),
+  f('data.customFields', 'data', { permission: 'tenant:manage', guide: 'page.customFields' },
+    ['Can I add my own fields?', '¿Puedo añadir mis propios campos?', 'Puis-je ajouter mes propres champs ?', 'Kann ich eigene Felder hinzufügen?', 'هل يمكنني إضافة حقولي الخاصة؟'],
+    [
+      'Yes. Open Settings, then Custom fields, choose the record type and add a field with its type, such as text, number, date or a list of choices. It appears in forms, record pages, imports and exports.',
+      'Sí. Abre Ajustes y luego Campos personalizados, elige el tipo de registro y añade un campo con su tipo, como texto, número, fecha o lista. Aparece en formularios, fichas, importaciones y exportaciones.',
+      'Oui. Ouvrez Paramètres puis Champs personnalisés, choisissez le type de fiche et ajoutez un champ texte, nombre, date ou liste de choix. Il apparaît dans les formulaires, fiches, imports et exports.',
+      'Ja. Öffnen Sie Einstellungen und dann Benutzerdefinierte Felder, wählen Sie den Datensatztyp und fügen Sie ein Feld wie Text, Zahl, Datum oder Auswahlliste hinzu. Es erscheint in Formularen, Seiten, Import und Export.',
+      'نعم. افتح الإعدادات ثم الحقول المخصصة واختر نوع السجل وأضف حقلًا بنوعه مثل نص أو رقم أو تاريخ أو قائمة خيارات. يظهر في النماذج وصفحات السجلات والاستيراد والتصدير.',
+    ]),
+  f('data.audit', 'data', { feature: 'audit_log', permission: 'audit:read', guide: 'page.administration' },
+    ['Can I see who changed something?', '¿Puedo ver quién cambió algo?', 'Puis-je voir qui a modifié quelque chose ?', 'Kann ich sehen, wer etwas geändert hat?', 'هل يمكنني رؤية من غيّر شيئًا؟'],
+    [
+      'Yes. Administration, then Audit log, lists important events such as sign-ins, permission changes, exports and deletions, with who did it and when. Entries cannot be edited or deleted.',
+      'Sí. Administración y luego Registro de auditoría muestra eventos importantes como inicios de sesión, cambios de permisos, exportaciones y eliminaciones, con quién y cuándo. No se pueden editar ni borrar.',
+      'Oui. Administration puis Journal d’audit liste les événements importants comme connexions, changements d’autorisations, exports et suppressions, avec qui et quand. Les entrées ne peuvent être ni modifiées ni supprimées.',
+      'Ja. Administration und dann Audit-Protokoll listet wichtige Ereignisse wie Anmeldungen, Rechteänderungen, Exporte und Löschungen mit Person und Zeit. Einträge lassen sich weder ändern noch löschen.',
+      'نعم. الإدارة ثم سجل التدقيق يعرض الأحداث المهمة مثل تسجيلات الدخول وتغييرات الصلاحيات والتصدير والحذف، مع من فعلها ومتى. ولا يمكن تعديل الإدخالات أو حذفها.',
+    ]),
+
+  // ── Plan & billing ───────────────────────────────────────────────────────────────────────────────────────────────
+  f('billing.plan', 'billing', { permission: 'billing:read', guide: 'page.billing' },
+    ['How do I see what my plan includes or change it?', '¿Cómo veo qué incluye mi plan o lo cambio?', 'Comment voir ce que comprend mon offre ou la changer ?', 'Wie sehe oder ändere ich, was mein Tarif enthält?', 'كيف أرى ما تتضمنه خطتي أو أغيّرها؟'],
+    [
+      'Open Billing. It shows your plan, seats, usage against your allowances and your invoices. Owners and billing administrators can change plan or seats there; a locked feature also shows which plan includes it.',
+      'Abre Facturación. Muestra tu plan, puestos, uso frente a tus límites y facturas. Propietarios y administradores de facturación pueden cambiar el plan o los puestos; una función bloqueada indica qué plan la incluye.',
+      'Ouvrez Facturation. Vous y voyez offre, sièges, utilisation et factures. Propriétaires et administrateurs de facturation peuvent changer d’offre ou de sièges ; une fonction verrouillée indique l’offre qui l’inclut.',
+      'Öffnen Sie Abrechnung. Dort sehen Sie Tarif, Plätze, Nutzung und Rechnungen. Inhaber und Abrechnungsadministratoren ändern dort Tarif oder Plätze; eine gesperrte Funktion zeigt, welcher Tarif sie enthält.',
+      'افتح الفوترة. تعرض خطتك ومقاعدك واستخدامك مقابل الحدود وفواتيرك. يمكن للمالكين ومسؤولي الفوترة تغيير الخطة أو المقاعد هناك، وتُظهر الميزة المقفلة الخطة التي تتضمنها.',
+    ]),
+  f('billing.invoice', 'billing', { permission: 'billing:read', guide: 'page.billing' },
+    ['Where do I find my invoices?', '¿Dónde encuentro mis facturas?', 'Où trouver mes factures ?', 'Wo finde ich meine Rechnungen?', 'أين أجد فواتيري؟'],
+    [
+      'In Billing, under Invoices. Download each one as a PDF. If you pay by bank transfer, the invoice shows the details and when the payment was recorded.',
+      'En Facturación, en Facturas. Descarga cada una en PDF. Si pagas por transferencia, la factura muestra los datos y cuándo se registró el pago.',
+      'Dans Facturation, rubrique Factures. Téléchargez chacune en PDF. Si vous payez par virement, la facture indique les coordonnées et la date d’enregistrement du paiement.',
+      'Unter Abrechnung, Bereich Rechnungen. Laden Sie jede als PDF herunter. Zahlen Sie per Überweisung, zeigt die Rechnung die Bankdaten und wann die Zahlung erfasst wurde.',
+      'في الفوترة ضمن الفواتير. نزّل كل فاتورة بصيغة PDF. وإذا كنت تدفع بالتحويل البنكي فتعرض الفاتورة البيانات وموعد تسجيل الدفعة.',
+    ]),
+
+  // ── Mobile app ───────────────────────────────────────────────────────────────────────────────────────────────────
+  f('mobile.get', 'mobile', {},
+    ['Is there a SampForce mobile app?', '¿Existe una app móvil de SampForce?', 'Existe-t-il une application mobile SampForce ?', 'Gibt es eine SampForce-App für das Handy?', 'هل يوجد تطبيق SampForce للجوال؟'],
+    [
+      'Yes, for iPhone and Android. Your organisation must have the mobile app on its plan, and your Super Workspace decides who can use it and which modules appear. Then sign in with your usual email and password.',
+      'Sí, para iPhone y Android. Tu organización debe tener la app móvil en su plan, y tu espacio Super decide quién la usa y qué módulos aparecen. Después entra con tu correo y contraseña de siempre.',
+      'Oui, pour iPhone et Android. L’offre de votre organisation doit inclure l’application, et l’espace Super décide qui l’utilise et quels modules apparaissent. Connectez-vous ensuite avec vos identifiants habituels.',
+      'Ja, für iPhone und Android. Der Tarif Ihrer Organisation muss die App enthalten, und Ihr Super-Arbeitsbereich entscheidet, wer sie nutzt und welche Module erscheinen. Dann melden Sie sich wie gewohnt an.',
+      'نعم، لأجهزة iPhone وAndroid. يجب أن تتضمن خطة مؤسستك تطبيق الجوال، وتقرر مساحة العمل العليا من يستخدمه والوحدات التي تظهر. ثم سجّل الدخول ببريدك وكلمة مرورك المعتادين.',
+    ]),
+  f('mobile.help', 'mobile', {},
+    ['Can I get help from the mobile app?', '¿Puedo pedir ayuda desde la app móvil?', 'Puis-je obtenir de l’aide depuis l’application mobile ?', 'Bekomme ich in der App Hilfe?', 'هل يمكنني الحصول على المساعدة من تطبيق الجوال؟'],
+    [
+      'Yes. Open More, then Help. You get the same answers and guides as here, for the features you can use, and you can raise a query and read its replies on your phone.',
+      'Sí. Abre Más y luego Ayuda. Tienes las mismas respuestas y guías que aquí, para las funciones que puedes usar, y puedes enviar una consulta y leer sus respuestas en el teléfono.',
+      'Oui. Ouvrez Plus puis Aide. Vous retrouvez les mêmes réponses et guides qu’ici, pour vos fonctions, et vous pouvez poser une question et lire les réponses sur votre téléphone.',
+      'Ja. Öffnen Sie Mehr und dann Hilfe. Sie finden dieselben Antworten und Leitfäden wie hier, für Ihre Funktionen, und können auf dem Telefon eine Anfrage stellen und Antworten lesen.',
+      'نعم. افتح المزيد ثم المساعدة. ستجد الإجابات والأدلة نفسها الموجودة هنا للميزات المتاحة لك، ويمكنك إرسال استفسار وقراءة الردود من هاتفك.',
+    ]),
+
+  // ── Getting help ─────────────────────────────────────────────────────────────────────────────────────────────────
+  f('support.raise', 'support', { guide: 'page.helpQueries' },
+    ['My question isn’t answered here. What now?', 'Mi pregunta no está respondida aquí. ¿Y ahora?', 'Ma question n’a pas de réponse ici. Que faire ?', 'Meine Frage wird hier nicht beantwortet. Was nun?', 'سؤالي غير مُجاب هنا. ماذا أفعل؟'],
+    [
+      'Choose “Other: raise a query”, pick the topic, describe what you need and send it. The SampForce support team answers in My queries, and you get a notification when they reply.',
+      'Elige «Otro: enviar una consulta», escoge el tema, describe lo que necesitas y envíala. El equipo de soporte de SampForce responde en Mis consultas y recibes un aviso cuando contesta.',
+      'Choisissez « Autre : poser une question », sélectionnez le sujet, décrivez votre besoin et envoyez. L’équipe support SampForce répond dans Mes demandes et vous êtes averti à chaque réponse.',
+      'Wählen Sie „Sonstiges: Anfrage stellen“, wählen Sie das Thema, beschreiben Sie Ihr Anliegen und senden Sie es. Das SampForce-Support-Team antwortet unter Meine Anfragen, und Sie werden benachrichtigt.',
+      'اختر «أخرى: أرسل استفسارًا» وحدد الموضوع واشرح ما تحتاجه وأرسله. يرد فريق دعم SampForce في استفساراتي، ويصلك إشعار عند الرد.',
+    ]),
+  f('support.status', 'support', { guide: 'page.helpQueries' },
+    ['What do the query statuses mean?', '¿Qué significan los estados de una consulta?', 'Que signifient les statuts d’une demande ?', 'Was bedeuten die Status einer Anfrage?', 'ماذا تعني حالات الاستفسار؟'],
+    [
+      'Open: waiting for support. In progress: someone is working on it. Answered: support replied and is waiting for you. Closed: it is finished; write again to reopen it.',
+      'Abierta: espera al soporte. En curso: alguien trabaja en ella. Respondida: el soporte contestó y espera tu respuesta. Cerrada: terminada; escribe de nuevo para reabrirla.',
+      'Ouverte : en attente du support. En cours : quelqu’un s’en occupe. Répondue : le support a répondu et attend votre retour. Fermée : terminée ; écrivez à nouveau pour la rouvrir.',
+      'Offen: wartet auf den Support. In Bearbeitung: jemand kümmert sich darum. Beantwortet: der Support hat geantwortet und wartet auf Sie. Geschlossen: erledigt; schreiben Sie erneut, um sie wieder zu öffnen.',
+      'مفتوح: بانتظار الدعم. قيد المعالجة: يعمل عليه شخص. تمّ الرد: رد الدعم وينتظرك. مغلق: انتهى؛ اكتب مرة أخرى لإعادة فتحه.',
+    ]),
+  f('support.chat', 'support', { feature: 'team_chat', permission: 'tenant:manage', guide: 'page.chat' },
+    ['Is there a faster way to reach SampForce?', '¿Hay una forma más rápida de contactar con SampForce?', 'Y a-t-il un moyen plus rapide de joindre SampForce ?', 'Gibt es einen schnelleren Weg zu SampForce?', 'هل توجد طريقة أسرع للتواصل مع SampForce؟'],
+    [
+      'Workspace administrators also have a support line in Team chat for quick questions. Use a query for anything that needs tracking, because it keeps a number, a status and the whole conversation.',
+      'Los administradores también tienen una línea de soporte en el chat del equipo para dudas rápidas. Usa una consulta para lo que necesite seguimiento, porque guarda número, estado y toda la conversación.',
+      'Les administrateurs ont aussi une ligne de support dans le chat d’équipe pour les questions rapides. Utilisez une demande pour tout ce qui doit être suivi : elle garde un numéro, un statut et tout l’échange.',
+      'Administratoren haben im Team-Chat auch eine Support-Leitung für schnelle Fragen. Nutzen Sie eine Anfrage für alles, was verfolgt werden muss, denn sie behält Nummer, Status und den ganzen Verlauf.',
+      'لمسؤولي مساحة العمل أيضًا خط دعم في دردشة الفريق للأسئلة السريعة. استخدم الاستفسار لكل ما يحتاج إلى متابعة لأنه يحفظ رقمًا وحالة والمحادثة كاملة.',
+    ]),
+];
+
+/** Questions operators ask about the Console. Every operator sees all of them. */
+export const CONSOLE_FAQS: readonly HelpFaq[] = [
+  f('console.newClient', 'console-clients', { guide: 'page.operatorWorkspaces' },
+    ['How do I set up a new client?', '¿Cómo doy de alta un cliente nuevo?', 'Comment créer un nouveau client ?', 'Wie lege ich einen neuen Kunden an?', 'كيف أُعدّ عميلًا جديدًا؟'],
+    [
+      'Open Clients and choose New client. Enter the organisation, its first Super Workspace administrator, the plan, price, billing cycle and how many Manager and Executive Workspaces it may create. The administrator gets an invitation.',
+      'Abre Clientes y elige Nuevo cliente. Indica la organización, su primer administrador del espacio Super, el plan, precio, ciclo de facturación y cuántos espacios Manager y Executive puede crear. El administrador recibe una invitación.',
+      'Ouvrez Clients et choisissez Nouveau client. Renseignez l’organisation, son premier administrateur Super, l’offre, le prix, le cycle de facturation et le nombre d’espaces Manager et Executive autorisés. L’administrateur reçoit une invitation.',
+      'Öffnen Sie Kunden und wählen Sie Neuer Kunde. Geben Sie Organisation, ersten Super-Administrator, Tarif, Preis, Abrechnungszyklus und die erlaubte Zahl an Manager- und Executive-Arbeitsbereichen ein. Der Administrator erhält eine Einladung.',
+      'افتح العملاء واختر عميل جديد. أدخل المؤسسة وأول مسؤول لمساحة العمل العليا والخطة والسعر ودورة الفوترة وعدد مساحات المدير والتنفيذي المسموح بها. ويتلقى المسؤول دعوة.',
+    ]),
+  f('console.limits', 'console-clients', { guide: 'page.consoleClient' },
+    ['What happens when a client reaches its workspace limit?', '¿Qué pasa cuando un cliente llega a su límite de espacios?', 'Que se passe-t-il quand un client atteint sa limite d’espaces ?', 'Was passiert, wenn ein Kunde sein Arbeitsbereichslimit erreicht?', 'ماذا يحدث عندما يبلغ العميل حد مساحات العمل؟'],
+    [
+      'Their Super Workspace can no longer create another workspace of that level and sees why. Raise the limit on the client’s page; the change applies at once and is recorded in the subscription history.',
+      'Su espacio Super ya no puede crear otro espacio de ese nivel y ve el motivo. Sube el límite en la página del cliente; el cambio se aplica al momento y queda en el historial de la suscripción.',
+      'Son espace Super ne peut plus créer d’espace de ce niveau et voit pourquoi. Relevez la limite sur la page du client ; le changement s’applique aussitôt et figure dans l’historique de l’abonnement.',
+      'Sein Super-Arbeitsbereich kann keinen weiteren Bereich dieser Ebene anlegen und sieht den Grund. Erhöhen Sie das Limit auf der Kundenseite; die Änderung gilt sofort und steht im Abonnementverlauf.',
+      'لا تستطيع مساحته العليا إنشاء مساحة أخرى من هذا المستوى وترى السبب. ارفع الحد من صفحة العميل؛ يُطبَّق التغيير فورًا ويُسجَّل في سجل الاشتراك.',
+    ]),
+  f('console.privacy', 'console-security', { guide: 'page.operatorWorkspace' },
+    ['Can I see a client’s CRM records?', '¿Puedo ver los registros del CRM de un cliente?', 'Puis-je voir les fiches CRM d’un client ?', 'Kann ich die CRM-Datensätze eines Kunden sehen?', 'هل يمكنني رؤية سجلات CRM لعميل؟'],
+    [
+      'No. The Console shows subscriptions, limits, workspace structure and support conversations, never leads, deals or other sales records. Members and audit logs appear only while the client grants support access.',
+      'No. La Consola muestra suscripciones, límites, estructura y conversaciones de soporte, nunca leads, oportunidades u otros registros de ventas. Miembros y auditoría solo aparecen mientras el cliente concede acceso de soporte.',
+      'Non. La Console montre abonnements, limites, structure et échanges de support, jamais les prospects, affaires ou autres fiches commerciales. Membres et audit n’apparaissent que pendant un accès support accordé par le client.',
+      'Nein. Die Konsole zeigt Abonnements, Grenzen, Struktur und Support-Gespräche, nie Leads, Deals oder andere Vertriebsdaten. Mitglieder und Audit-Protokolle erscheinen nur, solange der Kunde Supportzugang gewährt.',
+      'لا. تعرض لوحة التحكم الاشتراكات والحدود وبنية المساحات ومحادثات الدعم، ولا تعرض أبدًا العملاء المحتملين أو الصفقات أو سجلات المبيعات. ولا يظهر الأعضاء وسجل التدقيق إلا أثناء منح العميل وصول الدعم.',
+    ]),
+  f('console.plans', 'console-plans', { guide: 'page.operatorPlans' },
+    ['How do I change what a plan includes?', '¿Cómo cambio lo que incluye un plan?', 'Comment changer le contenu d’une offre ?', 'Wie ändere ich, was ein Tarif enthält?', 'كيف أغيّر ما تتضمنه الخطة؟'],
+    [
+      'Open Plans, choose the plan and switch features and limits on or off. Every client on that plan gets the change at once. To change one client only, turn a feature on or off on that client’s page instead.',
+      'Abre Planes, elige el plan y activa o desactiva funciones y límites. Todos los clientes de ese plan reciben el cambio al momento. Para un solo cliente, cambia la función en la página de ese cliente.',
+      'Ouvrez Offres, choisissez l’offre et activez ou coupez fonctions et limites. Tous les clients de l’offre reçoivent le changement aussitôt. Pour un seul client, modifiez la fonction sur sa page.',
+      'Öffnen Sie Tarife, wählen Sie den Tarif und schalten Sie Funktionen und Grenzen ein oder aus. Alle Kunden des Tarifs erhalten die Änderung sofort. Für nur einen Kunden ändern Sie die Funktion auf dessen Seite.',
+      'افتح الخطط واختر الخطة وفعّل الميزات والحدود أو أوقفها. يحصل كل عملاء الخطة على التغيير فورًا. ولتغيير عميل واحد فقط فعّل الميزة أو أوقفها من صفحة ذلك العميل.',
+    ]),
+  f('console.providers', 'console-providers', { guide: 'page.operatorProviders' },
+    ['Where do I enter API keys for email, AI or payments?', '¿Dónde introduzco las claves de correo, IA o pagos?', 'Où saisir les clés d’e-mail, d’IA ou de paiement ?', 'Wo gebe ich API-Schlüssel für E-Mail, KI oder Zahlungen ein?', 'أين أدخل مفاتيح البريد أو الذكاء الاصطناعي أو المدفوعات؟'],
+    [
+      'Open Providers, choose the service and follow its setup guide. Keys are stored encrypted in the database and take effect without a restart. Use Test to check a key before clients rely on it.',
+      'Abre Proveedores, elige el servicio y sigue su guía. Las claves se guardan cifradas en la base de datos y se aplican sin reiniciar. Usa Probar para comprobar una clave antes de que los clientes dependan de ella.',
+      'Ouvrez Fournisseurs, choisissez le service et suivez son guide. Les clés sont chiffrées en base et prennent effet sans redémarrage. Utilisez Tester pour vérifier une clé avant que les clients en dépendent.',
+      'Öffnen Sie Anbieter, wählen Sie den Dienst und folgen Sie der Anleitung. Schlüssel werden verschlüsselt in der Datenbank gespeichert und wirken ohne Neustart. Prüfen Sie einen Schlüssel mit Testen.',
+      'افتح المزوّدين واختر الخدمة واتبع دليل إعدادها. تُخزَّن المفاتيح مشفرة في قاعدة البيانات وتعمل دون إعادة تشغيل. استخدم اختبار للتحقق من المفتاح قبل أن يعتمد عليه العملاء.',
+    ]),
+  f('console.tickets', 'console-support', { guide: 'page.operatorSupport' },
+    ['How do I answer a client’s query?', '¿Cómo respondo la consulta de un cliente?', 'Comment répondre à la demande d’un client ?', 'Wie beantworte ich die Anfrage eines Kunden?', 'كيف أجيب عن استفسار عميل؟'],
+    [
+      'Open Support tickets. Filter by status, open a ticket to read the question, the client, the topic and the page it came from, then write your reply. The person who raised it is notified, and the ticket becomes Answered.',
+      'Abre Tickets de soporte. Filtra por estado, abre un ticket para leer la pregunta, el cliente, el tema y la página de origen y escribe tu respuesta. Se avisa a quien la envió y el ticket pasa a Respondido.',
+      'Ouvrez Tickets de support. Filtrez par statut, ouvrez un ticket pour lire la question, le client, le sujet et la page d’origine, puis répondez. La personne est avertie et le ticket passe en Répondu.',
+      'Öffnen Sie Support-Tickets. Filtern Sie nach Status, öffnen Sie ein Ticket mit Frage, Kunde, Thema und Herkunftsseite und schreiben Sie Ihre Antwort. Die Person wird benachrichtigt, und das Ticket wird Beantwortet.',
+      'افتح تذاكر الدعم. صفِّ حسب الحالة وافتح التذكرة لقراءة السؤال والعميل والموضوع والصفحة التي جاء منها، ثم اكتب ردك. يُبلَّغ صاحب الاستفسار وتصبح التذكرة تمّ الرد.',
+    ]),
+  f('console.ticketVsChat', 'console-support', { guide: 'page.operatorChat' },
+    ['What is the difference between Support tickets and Support chat?', '¿Qué diferencia hay entre Tickets de soporte y Chat de soporte?', 'Quelle différence entre Tickets de support et Chat de support ?', 'Was unterscheidet Support-Tickets vom Support-Chat?', 'ما الفرق بين تذاكر الدعم ودردشة الدعم؟'],
+    [
+      'Support chat is one live conversation per client with its administrators, for quick questions. Support tickets are queries anyone in a client’s workspaces raises from Help, each with a number, a status and its own thread.',
+      'El chat de soporte es una conversación en vivo por cliente con sus administradores, para dudas rápidas. Los tickets son consultas que cualquiera envía desde Ayuda, cada una con número, estado y su propio hilo.',
+      'Le chat de support est une conversation en direct par client avec ses administrateurs, pour les questions rapides. Les tickets sont des demandes envoyées depuis l’Aide par n’importe qui, chacune avec numéro, statut et fil.',
+      'Der Support-Chat ist ein Live-Gespräch pro Kunde mit dessen Administratoren für schnelle Fragen. Support-Tickets sind Anfragen, die jede Person über die Hilfe stellt, jeweils mit Nummer, Status und eigenem Verlauf.',
+      'دردشة الدعم محادثة مباشرة واحدة لكل عميل مع مسؤوليه للأسئلة السريعة. أما تذاكر الدعم فاستفسارات يرسلها أي شخص من المساعدة، ولكل منها رقم وحالة ومحادثة خاصة.',
+    ]),
+  f('console.audit', 'console-security', { guide: 'page.operatorAudit' },
+    ['Is what I do in the Console recorded?', '¿Se registra lo que hago en la Consola?', 'Ce que je fais dans la Console est-il enregistré ?', 'Wird aufgezeichnet, was ich in der Konsole tue?', 'هل يُسجَّل ما أفعله في لوحة التحكم؟'],
+    [
+      'Yes. The Operator log records every sign-in, view and change, including ticket replies and status changes, newest first. Entries cannot be edited or deleted.',
+      'Sí. El Registro de operadores guarda cada inicio de sesión, consulta y cambio, incluidas respuestas y cambios de estado de tickets, de más reciente a más antiguo. No se pueden editar ni borrar.',
+      'Oui. Le journal des opérateurs enregistre chaque connexion, consultation et modification, y compris réponses et changements de statut des tickets, du plus récent au plus ancien. Les entrées sont inaltérables.',
+      'Ja. Das Betreiberprotokoll erfasst jede Anmeldung, Ansicht und Änderung, auch Ticketantworten und Statuswechsel, neueste zuerst. Einträge lassen sich weder ändern noch löschen.',
+      'نعم. يسجل سجل المشغّلين كل تسجيل دخول وعرض وتغيير، ومنها ردود التذاكر وتغيير حالتها، بدءًا بالأحدث. ولا يمكن تعديل الإدخالات أو حذفها.',
+    ]),
+];
