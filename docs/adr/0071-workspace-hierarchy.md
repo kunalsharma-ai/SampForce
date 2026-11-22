@@ -81,3 +81,17 @@ feature or map to a resource, or they are only checked by role.
   activating restores both. Data is kept in every state.
 - **Authority.** The Console sets the Super Workspace's action ceiling and whether it may create Executive Workspaces.
 - **Overview** shows client counts, revenue, outstanding payments, plans sold and renewals due. It has no activity feed.
+
+## Part 3: Permission Center
+
+- **Workspaces page** (Settings, Workspaces; `/app/settings/workspaces`) shows the organisation, Manager and Executive
+  Workspace limits, and the structure as a tree. The Super Workspace sees every workspace; a manager sees its team; an
+  executive sees its own. Creating a workspace takes a name, designation, who it reports to and an optional invite.
+- **Permission Center** opens on any workspace the caller is the parent level of. Features are listed by module with
+  their subfeatures under them, and only features the parent has are offered; a subfeature cannot be on without its
+  feature. Actions are a module-by-action matrix where anything the parent lacks shows as a dash. The Super Workspace
+  also sets whether a manager may create Executive Workspaces and see other managers' records.
+- **Enforcement stays on the server.** The page only offers what the API allows; a direct request to hand down more is
+  refused with FEATURE_NOT_GRANTED or ACTION_NOT_GRANTED (covered by the browser test).
+- Editing renames, changes the designation, moves an Executive Workspace to another manager (Super Workspace only) and
+  moves a member in. Archiving needs the workspace to be empty, withdraws its pending invitations and frees its slot.

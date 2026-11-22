@@ -674,6 +674,30 @@ export const organizationHelp = {
       'استخدمه إن كان المندوبون أو الفرق يغطون بلدانًا مختلفة.',
     ],
   },
+  'page.workspaces': {
+    title: 'Workspaces',
+    what: [
+      'Your organisation’s Super, Manager and Executive Workspaces, who is in each, and the Permission Center that sets what each may use and do.',
+      'Los espacios principal, de gerente y de ejecutivo de tu organización, quién está en cada uno, y el Centro de permisos que define qué puede usar y hacer cada uno.',
+      'Les espaces principal, manager et commerciaux de votre organisation, qui est dans chacun, et le Centre des autorisations qui fixe ce que chacun peut faire.',
+      'Super-, Manager- und Executive-Arbeitsbereiche Ihrer Organisation, wer darin ist, und das Berechtigungszentrum, das festlegt, was jeder nutzen und tun darf.',
+      'مساحات العمل الرئيسية والمديرين والتنفيذيين في مؤسستك، ومن في كل منها، ومركز الأذونات الذي يحدد ما يمكن لكل منها استخدامه وفعله.',
+    ],
+    how: [
+      'Create a workspace and invite its person, then open Permissions to switch features and actions on or off. You can only hand down what your own workspace has.',
+      'Crea un espacio e invita a su persona, luego abre Permisos para activar o desactivar funciones y acciones. Solo puedes conceder lo que tiene tu propio espacio.',
+      'Créez un espace et invitez sa personne, puis ouvrez Autorisations pour activer ou couper fonctions et actions. Vous n’accordez que ce que votre espace possède.',
+      'Legen Sie einen Arbeitsbereich an und laden Sie die Person ein, dann schalten Sie unter Berechtigungen Funktionen und Aktionen. Sie geben nur weiter, was Sie haben.',
+      'أنشئ مساحة عمل وادعُ الشخص إليها، ثم افتح الأذونات لتفعيل الميزات والإجراءات أو إيقافها. لا يمكنك منح إلا ما لدى مساحتك.',
+    ],
+    where: [
+      'Use it when someone joins, a team is formed, or a person should see less or more.',
+      'Úsalo cuando alguien se incorpora, se forma un equipo o una persona debe ver más o menos.',
+      'Utilisez-le quand quelqu’un arrive, qu’une équipe se forme ou qu’une personne doit voir plus ou moins.',
+      'Nutzen Sie es, wenn jemand dazukommt, ein Team entsteht oder jemand mehr oder weniger sehen soll.',
+      'استخدمها عند انضمام شخص، أو تشكيل فريق، أو حين يجب أن يرى شخص أقل أو أكثر.',
+    ],
+  },
   'page.administration': {
     title: 'Administration',
     what: [

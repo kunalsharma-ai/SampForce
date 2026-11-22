@@ -82,6 +82,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/settings/custom-fields': 'page.customFields',
   '/app/settings/import': 'page.import',
   '/app/settings/territories': 'page.territories',
+  '/app/settings/workspaces': 'page.workspaces',
   '/app/administration': 'page.administration',
   '/app/administration/security': 'page.workspaceSecurity',
   '/app/account/security': 'page.accountSecurity',
