@@ -30,6 +30,7 @@ export interface StoredNode {
   actions: unknown;
   canCreateExecutives: boolean;
   canViewOtherManagers: boolean;
+  canChatWithPeers: boolean;
   archivedAt: Date | null;
   createdAt: Date;
 }
@@ -69,6 +70,7 @@ function virtualRoot(tenantId: string): StoredNode {
     actions: null,
     canCreateExecutives: true,
     canViewOtherManagers: false,
+    canChatWithPeers: false,
     archivedAt: null,
     createdAt: new Date(0),
   };

@@ -571,6 +571,9 @@ model WorkspaceNode {
   canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
   /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
   canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
+  /// executive, the other executives of the same team). Both sides need it.
+  canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
   createdById          String?   @map("created_by_id")
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -4317,6 +4320,11 @@ model SupportTicket {
   status               SupportTicketStatus   @default(OPEN)
   handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
   handlerNodeId        String?               @map("handler_node_id")
+  /// The SampForce operator looking after a Console ticket.
+  assignedOperatorId   String?               @map("assigned_operator_id")
+  /// How it was resolved, written by whoever closes or answers it last.
+  resolutionNote       String?               @map("resolution_note")
+  escalatedAt          DateTime?             @map("escalated_at")
   lastMessageAt        DateTime              @default(now()) @map("last_message_at")
   answeredAt           DateTime?             @map("answered_at")
   closedAt             DateTime?             @map("closed_at")
@@ -4329,6 +4337,7 @@ model SupportTicket {
   @@unique([tenantId, number])
   @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
   @@index([status, lastMessageAt(sort: Desc)])
+  @@index([tenantId, handlerLevel, handlerNodeId, lastMessageAt(sort: Desc)])
   @@map("support_tickets")
 }
 

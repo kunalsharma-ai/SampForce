@@ -1,5 +1,5 @@
 import { Prisma, transactionLock, type TenantTx } from '@dealflow/database';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import {
   type OperatorSupportTicketDetail,
   type OperatorSupportTicketRow,
@@ -9,7 +9,10 @@ import {
   type SupportTicketDetail,
   type SupportTicketMessageRow,
   type SupportTicketRow,
+  type SupportHandlerLevel,
   type SupportTicketStatus,
+  type WorkspaceLevel,
+  operatorSupportUpdateSchema,
   supportTicketCreateSchema,
 } from '@dealflow/types';
 import { z } from 'zod';
@@ -19,7 +22,7 @@ import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { OperatorContext } from '../operator/operator-auth';
-import { branchUserIds, workspaceLevelOf } from '../workspaces/access';
+import { branchUserIds, levelOf, workspaceLevelOf } from '../workspaces/access';
 
 type Ticket = Prisma.SupportTicketGetPayload<{ include: { messages: true } }>;
 type TicketMessage = Ticket['messages'][number];
@@ -30,10 +33,10 @@ const SUPPORT_NAME = 'SampForce support';
 const forbidden = () => new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to perform this action.' });
 
 /**
- * Help Center support tickets (ADR 0073). People raise a query from Help on the web or in the mobile app; the
- * SampForce Console answers it. Each organisation numbers its tickets from 1. Workspace routing through managers and
- * the Super Workspace (ADR 0071 part 5) adds handlers on top of the `handlerLevel` field; every ticket starts at the
- * Console today.
+ * Help Center support tickets (ADR 0073). People raise a query from Help on the web or in the mobile app. Each
+ * organisation numbers its tickets from 1. With the workspace hierarchy (ADR 0071 part 5) a ticket goes to the level
+ * above its raiser (an executive's manager, then the Super Workspace, then the SampForce Console); whoever handles it
+ * answers it or escalates it one level up. The Console only ever sees tickets that reached it.
  */
 @Injectable()
 export class SupportService {
@@ -51,11 +54,13 @@ export class SupportService {
       const last = await tx.supportTicket.aggregate({ where: { tenantId: auth.tenantId }, _max: { number: true } });
       const number = (last._max.number ?? 0) + 1;
       const now = new Date();
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      const route = org.firstHandler(auth.workspaceNodeId);
       const ticket = await tx.supportTicket.create({
         data: {
           tenantId: auth.tenantId,
           number,
-          workspaceNodeId: auth.workspaceNodeId ?? null,
+          workspaceNodeId: org.isRoot(auth.workspaceNodeId) ? null : (auth.workspaceNodeId ?? null),
           raisedByUserId: auth.userId,
           raisedByMembershipId: auth.membershipId,
           subject: input.subject,
@@ -65,8 +70,8 @@ export class SupportService {
           source: (auth.via as string | undefined) === 'mobile' ? 'mobile' : 'web',
           priority: input.priority,
           status: 'OPEN',
-          handlerLevel: 'CONSOLE',
-          handlerNodeId: null,
+          handlerLevel: route.level,
+          handlerNodeId: route.nodeId,
           lastMessageAt: now,
         },
       });
@@ -79,83 +84,179 @@ export class SupportService {
         action: 'support_ticket.raised',
         entityType: 'support_ticket',
         entityId: ticket.id,
-        metadata: { number, category: input.category, priority: input.priority },
+        metadata: { number, category: input.category, priority: input.priority, handlerLevel: route.level },
         meta,
       });
+      await this.notifyHandlers(tx, org, ticket, auth.userId, `New query #${number}`);
       return ticket.id;
     });
     return this.get(auth, id);
   }
 
-  /** The caller's tickets, or with scope=team also those of their branch (managers) or organisation (Super admins). */
-  list(auth: AuthContext, scope: 'mine' | 'team', status?: SupportTicketStatus): Promise<SupportTicketRow[]> {
+  /**
+   * The caller's tickets; with scope=team also those of their branch (managers) or organisation (Super admins); with
+   * scope=handling the tickets their workspace answers.
+   */
+  list(auth: AuthContext, scope: 'mine' | 'team' | 'handling', status?: SupportTicketStatus): Promise<SupportTicketRow[]> {
     return this.prisma.run(auth, async (tx) => {
-      const raisers = scope === 'team' ? await this.teamRaisers(tx, auth) : [auth.userId];
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      let where: Prisma.SupportTicketWhereInput;
+      if (scope === 'handling') {
+        const handles = org.handles(auth);
+        if (!handles) return [];
+        where = handles.level === 'SUPER' ? { handlerLevel: 'SUPER' } : { handlerLevel: 'MANAGER', handlerNodeId: handles.nodeId };
+      } else {
+        const raisers = scope === 'team' ? await this.teamRaisers(tx, auth) : [auth.userId];
+        where = raisers ? { raisedByUserId: { in: raisers } } : {};
+      }
       const rows = await tx.supportTicket.findMany({
-        where: { tenantId: auth.tenantId, ...(raisers ? { raisedByUserId: { in: raisers } } : {}), ...(status ? { status } : {}) },
+        where: { tenantId: auth.tenantId, ...where, ...(status ? { status } : {}) },
         include: { messages: { orderBy: { createdAt: 'asc' } } },
         orderBy: { lastMessageAt: 'desc' },
         take: 200,
       });
-      const names = await userNames(tx, rows.map((r) => r.raisedByUserId));
-      return rows.map((r) => toRow(r, names, auth.userId));
+      const ctx = await this.rowContext(tx, rows, org);
+      return rows.map((r) => toRow(r, ctx, { userId: auth.userId, handling: org.isHandler(auth, r) }));
     });
   }
 
   async get(auth: AuthContext, id: string): Promise<SupportTicketDetail> {
     return this.prisma.run(auth, async (tx) => {
-      const ticket = await this.visibleTicket(tx, auth, id);
-      const names = await userNames(tx, [ticket.raisedByUserId, ...ticket.messages.map((m) => m.authorUserId)]);
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      const ticket = await this.visibleTicket(tx, auth, org, id);
+      const ctx = await this.rowContext(tx, [ticket], org);
+      const handling = org.isHandler(auth, ticket);
       return {
-        ...toRow(ticket, names, auth.userId),
-        messages: ticket.messages.map((m) => toMessage(m, names, { userId: auth.userId })),
-        canReply: ticket.raisedByUserId === auth.userId,
+        ...toRow(ticket, ctx, { userId: auth.userId, handling }),
+        messages: ticket.messages.map((m) => toMessage(m, ctx.names, { userId: auth.userId })),
+        canReply: ticket.raisedByUserId === auth.userId || handling,
       };
     });
   }
 
-  /** The raiser writes again. A closed or answered ticket opens again, so support sees it is waiting. */
+  /**
+   * The raiser writes again, or the workspace handling it answers. A raiser's message opens a closed or answered
+   * ticket again so its handler sees it is waiting; a handler's answer marks it Answered.
+   */
   async reply(auth: AuthContext, id: string, body: string, meta: RequestMeta): Promise<SupportTicketDetail> {
     await this.prisma.run(auth, async (tx) => {
-      const ticket = await this.visibleTicket(tx, auth, id);
-      if (ticket.raisedByUserId !== auth.userId) throw forbidden();
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      const ticket = await this.visibleTicket(tx, auth, org, id);
+      const handling = org.isHandler(auth, ticket);
+      const raiser = ticket.raisedByUserId === auth.userId;
+      if (!raiser && !handling) throw forbidden();
       const now = new Date();
+      // The raiser's own workspace answering their ticket (a manager raising and handling none) is still the raiser.
+      const answering = handling && !raiser;
       await tx.supportTicketMessage.create({
-        data: { tenantId: auth.tenantId, ticketId: id, authorKind: 'USER', authorUserId: auth.userId, authorMembershipId: auth.membershipId, body, createdAt: now },
+        data: { tenantId: auth.tenantId, ticketId: id, authorKind: answering ? 'WORKSPACE' : 'USER', authorUserId: auth.userId, authorMembershipId: auth.membershipId, body, createdAt: now },
       });
-      const reopen = ticket.status === 'ANSWERED' || ticket.status === 'CLOSED';
-      await tx.supportTicket.update({ where: { id }, data: { lastMessageAt: now, ...(reopen ? { status: 'OPEN', closedAt: null } : {}) } });
+      const reopen = !answering && (ticket.status === 'ANSWERED' || ticket.status === 'CLOSED');
+      const next: SupportTicketStatus = answering ? 'ANSWERED' : reopen ? 'OPEN' : ticket.status;
+      await tx.supportTicket.update({
+        where: { id },
+        data: { lastMessageAt: now, status: next, ...(answering ? { answeredAt: now, closedAt: null } : reopen ? { closedAt: null } : {}) },
+      });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
         actorUserId: auth.userId,
-        action: 'support_ticket.message_added',
+        action: answering ? 'support_ticket.answered' : 'support_ticket.message_added',
         entityType: 'support_ticket',
         entityId: id,
-        metadata: { number: ticket.number, ...(reopen ? { from: ticket.status, to: 'OPEN' } : {}) },
+        metadata: { number: ticket.number, ...(next !== ticket.status ? { from: ticket.status, to: next } : {}), ...(answering ? { handlerLevel: ticket.handlerLevel } : {}) },
         meta,
       });
+      if (answering)
+        await this.notifications.send(tx, auth.tenantId, [ticket.raisedByUserId], {
+          type: 'support.reply',
+          title: `Your query #${ticket.number} has an answer`,
+          body: ticket.subject,
+          link: `/app/help/queries?ticket=${id}`,
+          priority: ticket.priority === 'HIGH' ? 'HIGH' : 'NORMAL',
+          actionRequired: true,
+        });
+      else await this.notifyHandlers(tx, org, ticket, auth.userId, `New message on query #${ticket.number}`);
     });
     return this.get(auth, id);
   }
 
-  /** The raiser may close their ticket or open it again; everything else is the support desk's. */
-  async setStatus(auth: AuthContext, id: string, status: SupportTicketStatus, meta: RequestMeta): Promise<SupportTicketDetail> {
+  /** The raiser may close their ticket or open it again; the workspace handling it sets any status and the note. */
+  async setStatus(auth: AuthContext, id: string, input: { status: SupportTicketStatus; resolutionNote?: string | null }, meta: RequestMeta): Promise<SupportTicketDetail> {
     await this.prisma.run(auth, async (tx) => {
-      const ticket = await this.visibleTicket(tx, auth, id);
-      if (ticket.raisedByUserId !== auth.userId || (status !== 'CLOSED' && status !== 'OPEN')) throw forbidden();
-      if (ticket.status === status) return;
-      await tx.supportTicket.update({ where: { id }, data: { status, closedAt: status === 'CLOSED' ? new Date() : null } });
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      const ticket = await this.visibleTicket(tx, auth, org, id);
+      const handling = org.isHandler(auth, ticket);
+      const raiser = ticket.raisedByUserId === auth.userId;
+      if (!handling && (!raiser || (input.status !== 'CLOSED' && input.status !== 'OPEN') || input.resolutionNote !== undefined)) throw forbidden();
+      const note = handling && input.resolutionNote !== undefined ? { resolutionNote: input.resolutionNote || null } : {};
+      if (ticket.status === input.status && !('resolutionNote' in note)) return;
+      await tx.supportTicket.update({ where: { id }, data: { status: input.status, closedAt: input.status === 'CLOSED' ? (ticket.closedAt ?? new Date()) : null, ...note } });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
         actorUserId: auth.userId,
         action: 'support_ticket.status_changed',
         entityType: 'support_ticket',
         entityId: id,
-        metadata: { number: ticket.number, from: ticket.status, to: status },
+        metadata: { number: ticket.number, from: ticket.status, to: input.status, ...('resolutionNote' in note ? { resolutionNote: true } : {}) },
         meta,
       });
+      if (handling && !raiser && input.status === 'CLOSED' && ticket.status !== 'CLOSED')
+        await this.notifications.send(tx, auth.tenantId, [ticket.raisedByUserId], {
+          type: 'support.closed',
+          title: `Your query #${ticket.number} was closed`,
+          body: ticket.subject,
+          link: `/app/help/queries?ticket=${id}`,
+        });
     });
     return this.get(auth, id);
+  }
+
+  /**
+   * The workspace handling a ticket passes it one level up: a manager to the Super Workspace, the Super Workspace to
+   * SampForce support. A note, when given, goes into the conversation for the next handler and the raiser to read.
+   */
+  async escalate(auth: AuthContext, id: string, note: string | undefined, meta: RequestMeta): Promise<SupportTicketDetail> {
+    await this.prisma.run(auth, async (tx) => {
+      const org = await Hierarchy.load(tx, auth.tenantId);
+      const ticket = await this.visibleTicket(tx, auth, org, id);
+      if (!org.isHandler(auth, ticket)) throw forbidden();
+      const up: SupportHandlerLevel = ticket.handlerLevel === 'MANAGER' ? 'SUPER' : 'CONSOLE';
+      const now = new Date();
+      if (note)
+        await tx.supportTicketMessage.create({
+          data: { tenantId: auth.tenantId, ticketId: id, authorKind: 'WORKSPACE', authorUserId: auth.userId, authorMembershipId: auth.membershipId, body: note, createdAt: now },
+        });
+      const moved = await tx.supportTicket.update({
+        where: { id },
+        data: { handlerLevel: up, handlerNodeId: null, escalatedAt: now, status: 'OPEN', closedAt: null, lastMessageAt: now },
+      });
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        action: 'support_ticket.escalated',
+        entityType: 'support_ticket',
+        entityId: id,
+        metadata: { number: ticket.number, from: ticket.handlerLevel, to: up },
+        meta,
+      });
+      await this.notifyHandlers(tx, org, moved, auth.userId, `Query #${ticket.number} was passed to you`);
+    });
+    return this.get(auth, id);
+  }
+
+  /** Tells the people of the workspace now handling a ticket; the Console sees its own count instead. */
+  private async notifyHandlers(tx: TenantTx, org: Hierarchy, ticket: { id: string; number: number; subject: string; priority: string; handlerLevel: SupportHandlerLevel; handlerNodeId: string | null }, except: string, title: string) {
+    if (ticket.handlerLevel === 'CONSOLE') return;
+    const users = (await org.handlerUserIds(tx, ticket)).filter((u) => u !== except);
+    if (!users.length) return;
+    await this.notifications.send(tx, org.tenantId, users, {
+      type: 'support.handling',
+      title,
+      body: ticket.subject,
+      link: `/app/help/queries?scope=handling&ticket=${ticket.id}`,
+      priority: ticket.priority === 'HIGH' ? 'HIGH' : 'NORMAL',
+      actionRequired: true,
+    });
   }
 
   /**
@@ -169,22 +270,33 @@ export class SupportService {
     return [auth.userId];
   }
 
-  private async visibleTicket(tx: TenantTx, auth: AuthContext, id: string): Promise<Ticket> {
+  private async visibleTicket(tx: TenantTx, auth: AuthContext, org: Hierarchy, id: string): Promise<Ticket> {
     const ticket = await tx.supportTicket.findFirst({ where: { tenantId: auth.tenantId, id }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
     if (!ticket) throw notFound('Support ticket');
-    if (ticket.raisedByUserId === auth.userId) return ticket;
+    if (ticket.raisedByUserId === auth.userId || org.isHandler(auth, ticket)) return ticket;
     const raisers = await this.teamRaisers(tx, auth);
     if (raisers && !raisers.includes(ticket.raisedByUserId)) throw notFound('Support ticket');
     return ticket;
   }
 
+  /** Names for rows: raisers and authors, handler workspaces and assigned operators. */
+  private async rowContext(tx: TenantTx, rows: Ticket[], org: Hierarchy | null): Promise<RowContext> {
+    const [names, operators] = await Promise.all([
+      userNames(tx, rows.flatMap((r) => [r.raisedByUserId, ...r.messages.map((m) => m.authorUserId)])),
+      operatorNames(tx, rows.map((r) => r.assignedOperatorId)),
+    ]);
+    return { names, operators, nodeName: (nodeId) => (nodeId ? (org?.nameOf(nodeId) ?? '') : '') };
+  }
+
   // ── Console side ─────────────────────────────────────────────────────────────────────────────────────────────────
+  // The Console sees only tickets that reached it: queries a workspace answers inside the organisation stay there.
 
   operatorList(_op: OperatorContext, q: { status?: SupportTicketStatus; q?: string; tenantId?: string }): Promise<OperatorSupportTicketRow[]> {
     return this.prisma.run({ operatorScan: true }, async (tx) => {
       const number = q.q && /^#?\d+$/.test(q.q) ? Number(q.q.replace('#', '')) : null;
       const rows = await tx.supportTicket.findMany({
         where: {
+          handlerLevel: 'CONSOLE',
           ...(q.status ? { status: q.status } : {}),
           ...(q.tenantId ? { tenantId: q.tenantId } : {}),
           ...(q.q ? (number !== null ? { number } : { subject: { contains: q.q, mode: 'insensitive' } }) : {}),
@@ -198,14 +310,14 @@ export class SupportService {
   }
 
   async operatorCounts(_op: OperatorContext): Promise<SupportCounts> {
-    const groups = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.groupBy({ by: ['status'], _count: { _all: true } }));
+    const groups = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.groupBy({ by: ['status'], where: { handlerLevel: 'CONSOLE' }, _count: { _all: true } }));
     const n = (s: SupportTicketStatus) => groups.find((g) => g.status === s)?._count._all ?? 0;
     return { open: n('OPEN'), inProgress: n('IN_PROGRESS'), answered: n('ANSWERED'), closed: n('CLOSED') };
   }
 
   async operatorGet(op: OperatorContext, id: string): Promise<OperatorSupportTicketDetail> {
     return this.prisma.run({ operatorScan: true }, async (tx) => {
-      const ticket = await tx.supportTicket.findFirst({ where: { id }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
+      const ticket = await tx.supportTicket.findFirst({ where: { id, handlerLevel: 'CONSOLE' }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
       if (!ticket) throw notFound('Support ticket');
       const [row] = await this.operatorRows(tx, [ticket]);
       const names = await userNames(tx, ticket.messages.map((m) => m.authorUserId));
@@ -218,11 +330,12 @@ export class SupportService {
   async operatorReply(op: OperatorContext, id: string, body: string, ip: string | null): Promise<OperatorSupportTicketDetail> {
     const tenantId = await this.tenantOf(id);
     await this.prisma.run({ tenantId }, async (tx) => {
-      const ticket = await tx.supportTicket.findFirst({ where: { tenantId, id } });
+      const ticket = await tx.supportTicket.findFirst({ where: { tenantId, id, handlerLevel: 'CONSOLE' } });
       if (!ticket) throw notFound('Support ticket');
       const now = new Date();
       await tx.supportTicketMessage.create({ data: { tenantId, ticketId: id, authorKind: 'OPERATOR', operatorId: op.id, body, createdAt: now } });
-      await tx.supportTicket.update({ where: { id }, data: { status: 'ANSWERED', answeredAt: now, lastMessageAt: now, closedAt: null } });
+      // The first operator to answer looks after it unless someone was assigned already.
+      await tx.supportTicket.update({ where: { id }, data: { status: 'ANSWERED', answeredAt: now, lastMessageAt: now, closedAt: null, assignedOperatorId: ticket.assignedOperatorId ?? op.id } });
       await this.audit.record(tx, {
         tenantId,
         actorUserId: null,
@@ -245,37 +358,43 @@ export class SupportService {
     return this.operatorGet(op, id);
   }
 
-  async operatorSetStatus(op: OperatorContext, id: string, status: SupportTicketStatus, ip: string | null): Promise<OperatorSupportTicketDetail> {
+  /** Status, the representative looking after it, and the resolution note. */
+  async operatorUpdate(op: OperatorContext, id: string, input: z.output<typeof operatorSupportUpdateSchema>, ip: string | null): Promise<OperatorSupportTicketDetail> {
     const tenantId = await this.tenantOf(id);
     const changed = await this.prisma.run({ tenantId }, async (tx) => {
-      const ticket = await tx.supportTicket.findFirst({ where: { tenantId, id } });
+      const ticket = await tx.supportTicket.findFirst({ where: { tenantId, id, handlerLevel: 'CONSOLE' } });
       if (!ticket) throw notFound('Support ticket');
-      if (ticket.status === status) return false;
-      await tx.supportTicket.update({ where: { id }, data: { status, closedAt: status === 'CLOSED' ? new Date() : null } });
-      await this.audit.record(tx, {
-        tenantId,
-        actorUserId: null,
-        actorType: 'PLATFORM_ADMIN',
-        action: 'support_ticket.status_changed',
-        entityType: 'support_ticket',
-        entityId: id,
-        metadata: { number: ticket.number, operatorId: op.id, from: ticket.status, to: status },
-      });
-      if (status === 'CLOSED')
+      if (input.assignedOperatorId) {
+        const rep = await tx.platformOperator.findFirst({ where: { id: input.assignedOperatorId, status: 'ACTIVE' }, select: { id: true } });
+        if (!rep) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Choose an active operator.', details: [{ path: 'assignedOperatorId', message: 'Choose an active operator.' }] });
+      }
+      const data: Prisma.SupportTicketUpdateInput = {};
+      if (input.status !== undefined && input.status !== ticket.status) Object.assign(data, { status: input.status, closedAt: input.status === 'CLOSED' ? new Date() : null });
+      if (input.assignedOperatorId !== undefined && input.assignedOperatorId !== ticket.assignedOperatorId) data.assignedOperatorId = input.assignedOperatorId;
+      if (input.resolutionNote !== undefined && (input.resolutionNote || null) !== ticket.resolutionNote) data.resolutionNote = input.resolutionNote || null;
+      if (!Object.keys(data).length) return null;
+      await tx.supportTicket.update({ where: { id }, data });
+      const base = { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN' as const, entityType: 'support_ticket', entityId: id };
+      if ('status' in data)
+        await this.audit.record(tx, { ...base, action: 'support_ticket.status_changed', metadata: { number: ticket.number, operatorId: op.id, from: ticket.status, to: input.status } });
+      if ('assignedOperatorId' in data)
+        await this.audit.record(tx, { ...base, action: 'support_ticket.assigned', metadata: { number: ticket.number, operatorId: op.id, from: ticket.assignedOperatorId, to: input.assignedOperatorId } });
+      if ('resolutionNote' in data) await this.audit.record(tx, { ...base, action: 'support_ticket.resolution_noted', metadata: { number: ticket.number, operatorId: op.id } });
+      if (data.status === 'CLOSED')
         await this.notifications.send(tx, tenantId, [ticket.raisedByUserId], {
           type: 'support.closed',
           title: `SampForce support closed query #${ticket.number}`,
           body: ticket.subject,
           link: `/app/help/queries?ticket=${id}`,
         });
-      return true;
+      return Object.keys(data);
     });
-    if (changed) await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.status_changed', targetTenantId: tenantId, metadata: { ticketId: id, status }, ip } });
+    if (changed) await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.updated', targetTenantId: tenantId, metadata: { ticketId: id, fields: changed }, ip } });
     return this.operatorGet(op, id);
   }
 
   private async tenantOf(id: string): Promise<string> {
-    const t = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.findFirst({ where: { id }, select: { tenantId: true } }));
+    const t = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.findFirst({ where: { id, handlerLevel: 'CONSOLE' }, select: { tenantId: true } }));
     if (!t) throw notFound('Support ticket');
     return t.tenantId;
   }
@@ -283,21 +402,95 @@ export class SupportService {
   private async operatorRows(tx: TenantTx, rows: Ticket[]): Promise<OperatorSupportTicketRow[]> {
     const tenantIds = [...new Set(rows.map((r) => r.tenantId))];
     const nodeIds = [...new Set(rows.map((r) => r.workspaceNodeId).filter((x): x is string => !!x))];
-    const [tenants, nodes, names] = await Promise.all([
+    const [tenants, nodes, ctx] = await Promise.all([
       tenantIds.length ? tx.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
       nodeIds.length ? tx.workspaceNode.findMany({ where: { id: { in: nodeIds } }, select: { id: true, name: true, level: true } }) : Promise.resolve([]),
-      userNames(tx, rows.map((r) => r.raisedByUserId)),
+      this.rowContext(tx, rows, null),
     ]);
     const tenantById = new Map(tenants.map((t) => [t.id, t]));
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
     return rows.map((r) => {
       const node = r.workspaceNodeId ? nodeById.get(r.workspaceNodeId) : null;
       return {
-        ...toRow(r, names, null),
+        ...toRow(r, ctx, { userId: null, handling: true }),
         tenant: { id: r.tenantId, name: tenantById.get(r.tenantId)?.name ?? '' },
         workspace: node ? { level: node.level, name: node.name } : { level: 'SUPER', name: 'Super Workspace' },
       };
     });
+  }
+}
+
+interface RowContext {
+  names: Map<string, string>;
+  operators: Map<string, string>;
+  nodeName: (nodeId: string | null) => string;
+}
+
+/**
+ * The organisation's workspaces as ticket routing needs them: where a new ticket goes, who handles one now, and who
+ * gets told.
+ */
+class Hierarchy {
+  private constructor(
+    readonly tenantId: string,
+    private readonly nodes: Map<string, { id: string; level: string; name: string; parentId: string | null; archivedAt: Date | null }>,
+    private readonly rootId: string | null,
+    private readonly levels: Map<string, WorkspaceLevel>,
+  ) {}
+
+  static async load(tx: TenantTx, tenantId: string): Promise<Hierarchy> {
+    const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, level: true, name: true, parentId: true, archivedAt: true } });
+    const root = nodes.find((n) => n.level === 'SUPER' && !n.parentId);
+    return new Hierarchy(tenantId, new Map(nodes.map((n) => [n.id, n])), root?.id ?? null, new Map(nodes.map((n) => [n.id, levelOf(n.level)])));
+  }
+
+  isRoot(nodeId: string | null | undefined): boolean {
+    return !nodeId || nodeId === this.rootId || !this.nodes.has(nodeId) || this.levels.get(nodeId) === 'SUPER';
+  }
+
+  levelOf(nodeId: string | null | undefined): WorkspaceLevel {
+    return this.isRoot(nodeId) ? 'SUPER' : this.levels.get(nodeId!)!;
+  }
+
+  nameOf(nodeId: string): string {
+    return this.nodes.get(nodeId)?.name ?? '';
+  }
+
+  /** An executive's ticket goes to its manager; a manager's (or an executive's straight under the Super) to the Super Workspace; the Super's to SampForce. */
+  firstHandler(nodeId: string | null | undefined): { level: SupportHandlerLevel; nodeId: string | null } {
+    const level = this.levelOf(nodeId);
+    if (level === 'SUPER') return { level: 'CONSOLE', nodeId: null };
+    if (level === 'EXECUTIVE') {
+      const parent = this.nodes.get(this.nodes.get(nodeId!)!.parentId ?? '');
+      if (parent && !parent.archivedAt && levelOf(parent.level) === 'MANAGER') return { level: 'MANAGER', nodeId: parent.id };
+    }
+    return { level: 'SUPER', nodeId: null };
+  }
+
+  /** What the caller's workspace answers: its own Manager Workspace's tickets, or the Super Workspace's (administrators only). */
+  handles(auth: AuthContext): { level: 'MANAGER' | 'SUPER'; nodeId: string | null } | null {
+    const level = this.levelOf(auth.workspaceNodeId);
+    if (level === 'MANAGER') return { level: 'MANAGER', nodeId: auth.workspaceNodeId! };
+    if (level === 'SUPER' && auth.permissions.includes('members:manage')) return { level: 'SUPER', nodeId: null };
+    return null;
+  }
+
+  isHandler(auth: AuthContext, t: { handlerLevel: SupportHandlerLevel; handlerNodeId: string | null }): boolean {
+    const h = this.handles(auth);
+    if (!h || t.handlerLevel === 'CONSOLE') return false;
+    return h.level === t.handlerLevel && (h.level === 'SUPER' || h.nodeId === t.handlerNodeId);
+  }
+
+  async handlerUserIds(tx: TenantTx, t: { handlerLevel: SupportHandlerLevel; handlerNodeId: string | null }): Promise<string[]> {
+    if (t.handlerLevel === 'MANAGER' && t.handlerNodeId) {
+      const rows = await tx.membership.findMany({ where: { tenantId: this.tenantId, status: 'ACTIVE', workspaceNodeId: t.handlerNodeId }, select: { userId: true } });
+      return rows.map((r) => r.userId);
+    }
+    if (t.handlerLevel !== 'SUPER') return [];
+    const roles = await tx.role.findMany({ where: { tenantId: this.tenantId, permissions: { has: 'members:manage' } }, select: { id: true } });
+    if (!roles.length) return [];
+    const rows = await tx.membership.findMany({ where: { tenantId: this.tenantId, status: 'ACTIVE', roleId: { in: roles.map((r) => r.id) } }, select: { userId: true, workspaceNodeId: true } });
+    return rows.filter((r) => this.isRoot(r.workspaceNodeId)).map((r) => r.userId);
   }
 }
 
@@ -315,8 +508,9 @@ async function operatorNames(tx: TenantTx, ids: (string | null | undefined)[]): 
   return new Map(ops.map((o) => [o.id, o.name]));
 }
 
-function toRow(t: Ticket, names: Map<string, string>, readerId: string | null): SupportTicketRow {
+function toRow(t: Ticket, ctx: RowContext, reader: { userId: string | null; handling: boolean }): SupportTicketRow {
   const last = t.messages[t.messages.length - 1];
+  const handlerName = t.handlerLevel === 'CONSOLE' ? SUPPORT_NAME : t.handlerLevel === 'SUPER' ? 'Super Workspace' : ctx.nodeName(t.handlerNodeId);
   return {
     id: t.id,
     number: t.number,
@@ -326,10 +520,16 @@ function toRow(t: Ticket, names: Map<string, string>, readerId: string | null): 
     priority: t.priority,
     status: t.status,
     handlerLevel: t.handlerLevel,
+    handler: { level: t.handlerLevel, name: handlerName },
+    assignedTo: t.assignedOperatorId ? { id: t.assignedOperatorId, name: ctx.operators.get(t.assignedOperatorId) ?? SUPPORT_NAME } : null,
+    resolutionNote: t.resolutionNote,
+    handling: reader.handling,
+    canEscalate: reader.handling && t.handlerLevel !== 'CONSOLE',
+    escalatedAt: t.escalatedAt?.toISOString() ?? null,
     source: t.source,
     pagePath: t.pagePath,
-    raisedBy: { id: t.raisedByUserId, name: names.get(t.raisedByUserId) ?? '' },
-    mine: readerId !== null && t.raisedByUserId === readerId,
+    raisedBy: { id: t.raisedByUserId, name: ctx.names.get(t.raisedByUserId) ?? '' },
+    mine: reader.userId !== null && t.raisedByUserId === reader.userId,
     messageCount: t.messages.length,
     lastMessageAt: t.lastMessageAt.toISOString(),
     lastAuthorKind: (last?.authorKind as SupportAuthorKind | undefined) ?? null,

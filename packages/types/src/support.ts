@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { featureKeySchema } from './features';
 
 /*
- * Help Center support tickets (ADR 0073): "Other: raise a query" in Help, on the web and in the mobile app. Every
- * ticket goes to the SampForce Console today; the workspace hierarchy (ADR 0071 part 5) adds routing through managers
- * and the Super Workspace with `handlerLevel`.
+ * Help Center support tickets (ADR 0073): "Other: raise a query" in Help, on the web and in the mobile app. With the
+ * workspace hierarchy (ADR 0071 part 5) a ticket goes to the level above the person who raised it: an executive's to
+ * its manager, a manager's to the Super Workspace, and the Super Workspace's to the SampForce Console. Whoever handles
+ * it answers or escalates it one level up.
  */
 
 export const SUPPORT_TICKET_STATUSES = ['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED'] as const;
@@ -41,12 +42,28 @@ export type SupportTicketCreateInput = z.input<typeof supportTicketCreateSchema>
 export const supportMessageSchema = z.object({ body: z.string().trim().min(1).max(SUPPORT_BODY_MAX) });
 export type SupportMessageInput = z.input<typeof supportMessageSchema>;
 
-/** The raiser may only close or reopen; operators set any status. */
-export const supportStatusSchema = z.object({ status: z.enum(SUPPORT_TICKET_STATUSES) });
+export const SUPPORT_NOTE_MAX = 2000;
+const resolutionNote = z.string().trim().max(SUPPORT_NOTE_MAX).nullable().optional();
+
+/** The raiser may only close or reopen; whoever handles the ticket sets any status and the resolution note. */
+export const supportStatusSchema = z.object({ status: z.enum(SUPPORT_TICKET_STATUSES), resolutionNote });
+
+/** Passes a ticket one level up the hierarchy, with an optional note for the next handler. */
+export const supportEscalateSchema = z.object({ note: z.string().trim().max(SUPPORT_NOTE_MAX).optional() });
+export type SupportEscalateInput = z.input<typeof supportEscalateSchema>;
+
+/** The Console: status, the operator looking after it, and the resolution note. */
+export const operatorSupportUpdateSchema = z
+  .object({ status: z.enum(SUPPORT_TICKET_STATUSES).optional(), assignedOperatorId: z.string().uuid().nullable().optional(), resolutionNote })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'Change at least one thing');
+export type OperatorSupportUpdateInput = z.input<typeof operatorSupportUpdateSchema>;
 
 export const supportListQuerySchema = z.object({
-  /** mine: tickets I raised. team: also my branch's (managers) or the whole organisation's (Super administrators). */
-  scope: z.enum(['mine', 'team']).default('mine'),
+  /**
+   * mine: tickets I raised. team: also my branch's (managers) or the whole organisation's (Super administrators).
+   * handling: the tickets waiting on my workspace to answer.
+   */
+  scope: z.enum(['mine', 'team', 'handling']).default('mine'),
   status: z.enum(SUPPORT_TICKET_STATUSES).optional(),
 });
 
@@ -80,6 +97,16 @@ export interface SupportTicketRow {
   priority: SupportTicketPriority;
   status: SupportTicketStatus;
   handlerLevel: SupportHandlerLevel;
+  /** Who answers it now: a Manager Workspace, the Super Workspace, or SampForce support (CONSOLE). */
+  handler: { level: SupportHandlerLevel; name: string };
+  /** The SampForce support representative looking after it, once the Console assigns one. */
+  assignedTo: SupportPerson | null;
+  resolutionNote: string | null;
+  /** True when the reader's workspace is the one answering it. */
+  handling: boolean;
+  /** Whether the reader may pass it one level up. */
+  canEscalate: boolean;
+  escalatedAt: string | null;
   source: string;
   pagePath: string | null;
   raisedBy: SupportPerson | null;
@@ -94,7 +121,7 @@ export interface SupportTicketRow {
 
 export interface SupportTicketDetail extends SupportTicketRow {
   messages: SupportTicketMessageRow[];
-  /** Whether the reader may write in it (the raiser, or an operator). */
+  /** Whether the reader may write in it (the raiser, whoever handles it, or an operator). */
   canReply: boolean;
 }
 

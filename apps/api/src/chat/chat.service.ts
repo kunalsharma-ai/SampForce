@@ -36,6 +36,7 @@ import { companyScope, visibility } from '../crm/visibility';
 import type { OperatorContext } from '../operator/operator-auth';
 import { type ChatAudience, ChatBus, type ChatListener } from './chat-bus';
 import { isOnline } from './chat-presence';
+import { ChatReach, chatNotAllowed } from './chat-reach';
 
 /** A workspace user (in their workspace), or a super admin from the operator console acting in one workspace. */
 export type ChatActor = { kind: 'user'; auth: AuthContext } | { kind: 'operator'; op: OperatorContext };
@@ -106,12 +107,16 @@ export class ChatService {
     if (found !== unique.length) throw badRequest('VALIDATION_FAILED', 'Choose people from this workspace.', path);
   }
 
-  /** People holding tenant:manage: the workspace admins, who are always on the support line. */
+  /**
+   * People holding tenant:manage in the Super Workspace: the organisation's administrators, who are always on the
+   * support line. Managers and executives reach SampForce through their Super Workspace (ADR 0071 part 5).
+   */
   private async adminIds(tx: TenantTx, tenantId: string): Promise<string[]> {
     const roles = await tx.role.findMany({ where: { tenantId, permissions: { has: 'tenant:manage' } }, select: { id: true } });
     if (!roles.length) return [];
     const rows = await tx.membership.findMany({ where: { tenantId, status: 'ACTIVE', roleId: { in: roles.map((r) => r.id) } }, select: { userId: true } });
-    return rows.map((r) => r.userId);
+    const reach = await ChatReach.load(tx, tenantId);
+    return rows.map((r) => r.userId).filter((u) => reach.isSuper(u));
   }
 
   /** The workspace's support line to super admins, created on first use, with every workspace admin on it. */
@@ -143,7 +148,10 @@ export class ChatService {
     }
     if (!conv.members.some((m) => m.userId === actor.auth.userId)) {
       // Admins who joined after the support line was made are added the first time they open it.
-      if (conv.kind === 'SUPPORT' && isAdmin(actor)) return this.supportLine(tx, tenantId);
+      if (conv.kind === 'SUPPORT' && isAdmin(actor)) {
+        const line = await this.supportLine(tx, tenantId);
+        if (line.members.some((m) => m.userId === actor.auth.userId)) return line;
+      }
       throw notFound('Conversation');
     }
     return conv;
@@ -300,7 +308,10 @@ export class ChatService {
       ]);
       const seen = new Map(presence.map((p) => [p.userId, p]));
       const now = Date.now();
+      // Only the people the caller's workspace may chat with (ADR 0071 part 5).
+      const reach = await ChatReach.load(tx, auth.tenantId);
       return rows
+        .filter((r) => reach.canTalk(auth.userId, r.user.id))
         .map((r) => {
           const p = seen.get(r.user.id);
           return {
@@ -320,7 +331,7 @@ export class ChatService {
   list(auth: AuthContext, archived: boolean): Promise<ChatConversationRow[]> {
     const actor: ChatActor = { kind: 'user', auth };
     return this.run(actor, undefined, async (tx) => {
-      if (isAdmin(actor)) await this.supportLine(tx, auth.tenantId);
+      if (isAdmin(actor) && (await ChatReach.load(tx, auth.tenantId)).isSuper(auth.userId)) await this.supportLine(tx, auth.tenantId);
       const mine = await tx.chatMember.findMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, select: { conversationId: true } });
       const convs = await tx.chatConversation.findMany({
         where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, archivedAt: archived ? { not: null } : null },
@@ -342,6 +353,7 @@ export class ChatService {
       if (input.kind === 'DIRECT') {
         if (input.userId === auth.userId) throw badRequest('VALIDATION_FAILED', 'Choose someone other than yourself.', 'userId');
         await this.assertMembers(tx, tid, [input.userId], 'userId');
+        (await ChatReach.load(tx, tid)).assert(auth.userId, [input.userId]);
         const directKey = [auth.userId, input.userId].sort().join(':');
         const existing = await tx.chatConversation.findFirst({ where: { tenantId: tid, directKey }, include: { members: true } });
         if (existing) return (await this.conversationRows(tx, actor, [existing]))[0]!;
@@ -352,6 +364,7 @@ export class ChatService {
       } else {
         const memberIds = [...new Set(input.memberIds.filter((id) => id !== auth.userId))];
         await this.assertMembers(tx, tid, memberIds, 'memberIds');
+        (await ChatReach.load(tx, tid)).assert(auth.userId, memberIds);
         const link = await this.resolveLink(tx, actor, tid, input.link, 'link');
         conv = await tx.chatConversation.create({
           data: {
@@ -393,6 +406,7 @@ export class ChatService {
       const conv = await this.conversation(tx, actor, auth.tenantId, id);
       if (!this.canManage(actor, conv)) throw forbidden('Only the channel owner or a workspace admin can change who is in it.');
       await this.assertMembers(tx, auth.tenantId, userIds, 'userIds');
+      (await ChatReach.load(tx, auth.tenantId)).assert(auth.userId, userIds);
       const have = new Set(conv.members.map((m) => m.userId));
       const add = [...new Set(userIds)].filter((u) => !have.has(u));
       if (add.length) await tx.chatMember.createMany({ data: add.map((userId) => ({ tenantId: auth.tenantId, conversationId: id, userId })) });
@@ -476,6 +490,11 @@ export class ChatService {
         return (await this.messageRows(tx, actor, tid, [dup]))[0]!;
       }
       if (conv.archivedAt) throw forbidden('This channel is archived.');
+      // A direct conversation stops taking messages when the hierarchy no longer lets the two talk; its history stays.
+      if (conv.kind === 'DIRECT' && actor.kind === 'user') {
+        const other = conv.members.find((m) => m.userId && m.userId !== actor.auth.userId)?.userId;
+        if (other && !(await ChatReach.load(tx, tid)).canTalk(actor.auth.userId, other)) throw chatNotAllowed();
+      }
       const link = await this.resolveLink(tx, actor, tid, input.link, 'link');
       const files = input.attachmentIds.length
         ? await tx.chatAttachment.findMany({ where: { tenantId: tid, id: { in: input.attachmentIds }, conversationId: id, messageId: null, ...(actor.kind === 'user' ? { uploadedByUserId: actor.auth.userId } : { uploadedByOperatorId: actor.op.id }) }, select: { id: true, name: true } })

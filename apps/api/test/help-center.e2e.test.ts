@@ -125,16 +125,17 @@ describe('help center and support tickets', () => {
           .post('/support/tickets', { subject: 'How do I export RFQs?', body: 'I need last month’s RFQs in Excel for a client.', category: 'data', featureKey: 'rfqs', priority: 'HIGH', pagePath: '/app/rfqs' })
           .expect(201)
       ).body;
-      expect(t).toMatchObject({ number: 1, status: 'OPEN', handlerLevel: 'CONSOLE', priority: 'HIGH', category: 'data', featureKey: 'rfqs', pagePath: '/app/rfqs', source: 'web', mine: true, canReply: true, messageCount: 1 });
+      // An executive's query goes to its manager first (ADR 0071 part 5).
+      expect(t).toMatchObject({ number: 1, status: 'OPEN', handlerLevel: 'MANAGER', handler: { level: 'MANAGER', name: 'North Team' }, priority: 'HIGH', category: 'data', featureKey: 'rfqs', pagePath: '/app/rfqs', source: 'web', mine: true, canReply: true, messageCount: 1 });
       expect(t.raisedBy.name).toBe('Amit Executive');
       expect(t.messages).toEqual([expect.objectContaining({ authorKind: 'USER', mine: true, body: 'I need last month’s RFQs in Excel for a client.' })]);
       ticketId = t.id;
       const second = (await api(member).post('/support/tickets', { subject: 'Seat question', body: 'Can we add two seats?' }).expect(201)).body;
-      expect(second).toMatchObject({ number: 2, category: 'other', priority: 'NORMAL' });
+      expect(second).toMatchObject({ number: 2, category: 'other', priority: 'NORMAL', handlerLevel: 'CONSOLE' });
       // Another organisation starts at 1.
       expect((await api(outsider).post('/support/tickets', { subject: 'Hello there', body: 'First question here.' }).expect(201)).body.number).toBe(1);
       const stored = await db.supportTicket.findFirst({ where: { id: ticketId } });
-      expect(stored).toMatchObject({ workspaceNodeId: expect.any(String), raisedByUserId: executive.userId, handlerNodeId: null });
+      expect(stored).toMatchObject({ workspaceNodeId: expect.any(String), raisedByUserId: executive.userId, handlerNodeId: managerId });
       const audit = await db.auditLog.findFirst({ where: { tenantId: owner.tenantId, action: 'support_ticket.raised', entityId: ticketId } });
       expect(audit?.metadata).toMatchObject({ number: 1, category: 'data', priority: 'HIGH' });
     });
@@ -150,12 +151,14 @@ describe('help center and support tickets', () => {
       const mine = (await api(executive).get('/support/tickets').expect(200)).body as { number: number }[];
       expect(mine.map((t) => t.number)).toEqual([1]);
       expect(((await api(member).get('/support/tickets').expect(200)).body as { number: number }[]).map((t) => t.number)).toEqual([2]);
-      // The manager sees their executive's ticket with scope=team, read-only.
+      // The manager sees their executive's ticket with scope=team, and answers it, since it waits on their workspace.
       const team = (await api(manager).get('/support/tickets?scope=team').expect(200)).body as { number: number; mine: boolean }[];
       expect(team.map((t) => t.number)).toEqual([1]);
       const asManager = (await api(manager).get(`/support/tickets/${ticketId}`).expect(200)).body;
-      expect(asManager).toMatchObject({ mine: false, canReply: false });
-      await api(manager).post(`/support/tickets/${ticketId}/messages`, { body: 'Let me try' }).expect(403);
+      expect(asManager).toMatchObject({ mine: false, canReply: true, handling: true, canEscalate: true });
+      // The Super administrator reads it but does not answer it while the manager has it.
+      expect((await api(owner).get(`/support/tickets/${ticketId}`).expect(200)).body).toMatchObject({ canReply: false, handling: false });
+      await api(owner).post(`/support/tickets/${ticketId}/messages`, { body: 'Let me try' }).expect(403);
       // The owner manages members in the Super Workspace, so sees the whole organisation.
       expect(((await api(owner).get('/support/tickets?scope=team').expect(200)).body as { number: number }[]).map((t) => t.number).sort()).toEqual([1, 2]);
       // A plain member does not see a colleague's ticket, and nobody sees another organisation's.
@@ -165,6 +168,10 @@ describe('help center and support tickets', () => {
     });
 
     it('lets the Console answer, notifies the raiser and reopens when they write again', async () => {
+      // The Console does not see it until the manager and then the Super Workspace pass it up.
+      await opGet(`/${ticketId}`).expect(404);
+      await api(manager).post(`/support/tickets/${ticketId}/escalate`, {}).expect(200);
+      expect((await api(owner).post(`/support/tickets/${ticketId}/escalate`, {}).expect(200)).body).toMatchObject({ handlerLevel: 'CONSOLE', canEscalate: false });
       const counts = (await opGet('/counts').expect(200)).body;
       expect(counts.open).toBeGreaterThanOrEqual(3);
       const list = (await opGet(`?tenantId=${owner.tenantId}`).expect(200)).body as { id: string; tenant: { name: string }; workspace: { level: string; name: string } }[];

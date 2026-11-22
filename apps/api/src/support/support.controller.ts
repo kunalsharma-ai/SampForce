@@ -2,6 +2,8 @@ import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Que
 import { Throttle } from '@nestjs/throttler';
 import {
   operatorSupportQuerySchema,
+  operatorSupportUpdateSchema,
+  supportEscalateSchema,
   supportListQuerySchema,
   supportMessageSchema,
   supportStatusSchema,
@@ -45,7 +47,14 @@ export class SupportController {
 
   @Patch(':id')
   status(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(supportStatusSchema)) body: z.output<typeof supportStatusSchema>, @Meta() meta: RequestMeta) {
-    return this.support.setStatus(auth, id, body.status, meta);
+    return this.support.setStatus(auth, id, body, meta);
+  }
+
+  /** The workspace handling the ticket passes it one level up (ADR 0071 part 5). */
+  @Post(':id/escalate')
+  @HttpCode(200)
+  escalate(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(supportEscalateSchema)) body: z.output<typeof supportEscalateSchema>, @Meta() meta: RequestMeta) {
+    return this.support.escalate(auth, id, body.note, meta);
   }
 }
 
@@ -81,7 +90,7 @@ export class OperatorSupportController {
   }
 
   @Patch(':id')
-  status(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(supportStatusSchema)) body: z.output<typeof supportStatusSchema>, @Req() req: Request) {
-    return this.support.operatorSetStatus(op, id, body.status, req.ip ?? null);
+  update(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(operatorSupportUpdateSchema)) body: z.output<typeof operatorSupportUpdateSchema>, @Req() req: Request) {
+    return this.support.operatorUpdate(op, id, body, req.ip ?? null);
   }
 }

@@ -206,6 +206,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
   const [actions, setActions] = useState<ActionGrants>(() => ({ ...row.actions }));
   const [canCreateExecutives, setCanCreateExecutives] = useState(row.canCreateExecutives);
   const [canViewOtherManagers, setCanViewOtherManagers] = useState(row.canViewOtherManagers);
+  const [canChatWithPeers, setCanChatWithPeers] = useState(row.canChatWithPeers);
   const [saved, setSaved] = useState(false);
   const modules = FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0);
   const managerSettings = row.level === 'MANAGER' && callerLevel === 'SUPER';
@@ -252,6 +253,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
       // Only what the parent has can be handed down; anything else would be refused.
       actions: Object.fromEntries(Object.entries(actions).map(([k, list]) => [k, (list ?? []).filter((a) => (parent.actions[k] ?? parent.actions[FEATURE_BY_KEY[k as FeatureKey]?.group ?? ''] ?? []).includes(a))])),
       ...(managerSettings ? { canCreateExecutives, canViewOtherManagers } : {}),
+      ...(row.level !== 'SUPER' ? { canChatWithPeers } : {}),
     };
     permissions.mutate({ id: row.id, input }, { onSuccess: () => setSaved(true) });
   };
@@ -375,6 +377,19 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
                 <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={canViewOtherManagers} onChange={(e) => { setSaved(false); setCanViewOtherManagers(e.target.checked); }} />
                 <span>{t('May see other Manager Workspaces’ records')}</span>
               </label>
+            </section>
+          )}
+
+          {row.level !== 'SUPER' && (
+            <section aria-labelledby="pc-chat" className="space-y-2" data-chat-setting>
+              <h3 id="pc-chat" className="text-sm font-semibold">
+                {t('Chat')}
+              </h3>
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={canChatWithPeers} onChange={(e) => { setSaved(false); setCanChatWithPeers(e.target.checked); }} />
+                <span>{row.level === 'MANAGER' ? t('May chat with other Manager Workspaces') : t('May chat with the other executives of its team')}</span>
+              </label>
+              <p className="text-xs text-muted-foreground">{t('Both workspaces need this before they can chat. The Super Workspace and their own manager can always reach them.')}</p>
             </section>
           )}
 

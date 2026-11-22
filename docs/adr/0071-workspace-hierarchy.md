@@ -116,3 +116,25 @@ feature or map to a resource, or they are only checked by role.
 - Both appear at the top of every Command Center dashboard ("Tasks for you", "Your targets"): high-priority tasks are
   bold with a strong edge and overdue ones are marked in the critical colour. There is no recent-activity list.
 - Calendar boundaries are UTC days for now; a per-organisation time zone can come with the dashboards in part 6.
+
+## Part 5: Chat rules and support tickets
+
+- **One chat, with rules by level** (on top of the real-time chat of ADR 0069; no second chat system). The server
+  decides who may talk (`ChatReach`) whenever a direct conversation is opened, people are put into a channel or a
+  direct message is sent; the people list only offers whom the caller may reach:
+  - people of the same workspace, and the Super Workspace with everyone;
+  - a manager with the executives of its own team;
+  - two managers only when the Super Workspace allows both (`canChatWithPeers` on each Manager Workspace);
+  - two executives only of the same team, and only when their parent allows both.
+  A channel takes members from whoever adds them. When a permission is withdrawn, an existing direct conversation
+  keeps its history but refuses new messages (CHAT_NOT_ALLOWED). The SampForce support line in chat is for the Super
+  Workspace's administrators only.
+- **Support tickets go up the hierarchy** (on top of the Help Center ticket core, ADR 0073): an executive's query goes
+  to its manager, a manager's (or an executive's straight under the Super Workspace) to the Super Workspace, and the
+  Super Workspace's to SampForce support (scenario 13). The workspace handling it answers (`WORKSPACE` messages), sets
+  its status and resolution note, or escalates it one level up (`POST /support/tickets/:id/escalate`). The handlers
+  are notified; `scope=handling` lists what waits on the caller.
+- **The Console only sees tickets that reached it.** Queries answered inside the organisation never leave it, which
+  keeps support conversations separate from internal ones. Operators assign a support representative
+  (`assignedOperatorId`, shown to the client) and write a resolution note; both are audited.
+- File attachments on tickets are not built yet; chat already carries files.
