@@ -8,7 +8,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
-import { operatorRealm, useChatBackground, useChatUnread } from '@/lib/chat';
+import { ChatNotices } from '@/components/chat/chat-notices';
+import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
 import * as React from 'react';
 
 export function useOperator(enabled = true) {
@@ -19,13 +20,16 @@ export function useOperator(enabled = true) {
 function OperatorChatLink({ active }: { active: boolean }) {
   const me = useOperator();
   const realm = React.useMemo(() => (me.data ? operatorRealm(me.data.id) : null), [me.data]);
-  useChatBackground(realm);
+  useChatLive(realm);
   const unread = useChatUnread(realm).data?.total ?? 0;
   return (
-    <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
-      Support chat
-      {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
-    </Link>
+    <>
+      <ChatNotices />
+      <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
+        Support chat
+        {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
+      </Link>
+    </>
   );
 }
 

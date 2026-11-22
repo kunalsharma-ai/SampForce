@@ -60,22 +60,34 @@ test('colleagues chat live in a channel and direct messages, with files, record 
   await expect(dialog).toBeHidden();
   await expect(main.getByRole('heading', { name: 'Project updates', level: 2 })).toBeVisible();
 
-  // Priya has the page open: the message arrives live, without reloading.
-  await priya.page.goto('/app/chat');
-  await expect(priya.page.getByRole('main').locator('[data-chat-connection="live"]')).toBeVisible();
+  // Priya is elsewhere in SampForce: the message reaches her live, as a pop-up, a badge and the tab title.
+  await priya.page.goto('/app');
+  await expect(priya.page.locator('[data-chat-unread="0"]')).toBeAttached();
   await main.getByLabel('Message', { exact: true }).fill('India B2B fieldwork starts Monday. Quotas are in the sheet.');
   await main.getByLabel('Message', { exact: true }).press('Enter');
   await expect(main.locator('[data-message]').filter({ hasText: 'India B2B fieldwork starts Monday.' })).toBeVisible();
-  await expect(main.locator('[data-read-receipt="sent"]')).toBeVisible();
+  // It reached her device at once: Delivered, before she reads it.
+  await expect(main.locator('[data-read-receipt="delivered"]')).toBeVisible();
+  const notice = priya.page.locator('[data-chat-notice="Project updates"]');
+  await expect(notice).toContainText('India B2B fieldwork starts Monday.');
+  await expect(priya.page.locator('[data-chat-unread="1"]')).toBeVisible();
+  await expect(priya.page).toHaveTitle(/^\(1\) /);
+  await priya.page.goto('/app/chat');
   const pm = priya.page.getByRole('main');
   const item = pm.locator('[data-conversation="Project updates"]');
   await expect(item).toContainText('1');
-  await expect(priya.page.locator('[data-chat-unread="1"]')).toBeVisible();
   await item.click();
   await expect(pm.locator('[data-message]').filter({ hasText: 'India B2B fieldwork starts Monday.' })).toBeVisible();
   // Opening it reads it: the sender sees the read receipt, the badge clears.
   await expect(main.locator('[data-read-receipt="seen"]')).toContainText('Seen');
   await expect(priya.page.locator('[data-chat-unread="0"]')).toBeAttached();
+  await expect(priya.page).not.toHaveTitle(/^\(\d+\) /);
+
+  // Typing shows on the other side, and stops when the message arrives.
+  await main.getByLabel('Message', { exact: true }).pressSequentially('Checking the', { delay: 20 });
+  await expect(pm.locator('[data-typing]')).toContainText('Test Person is typing…');
+  await expect(pm.locator('[data-chat-subtitle]')).toContainText('Test Person is typing…');
+  await main.getByLabel('Message', { exact: true }).fill('');
 
   // Priya answers with a file; the owner points the channel at the company.
   await pm.locator('[data-chat-file-input]').setInputFiles({ name: 'quota-sheet.csv', mimeType: 'text/csv', buffer: Buffer.from('market,n\nIN,400\n') });
@@ -110,7 +122,7 @@ test('colleagues chat live in a channel and direct messages, with files, record 
 
   // A direct message.
   await main.getByRole('button', { name: 'New message' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Priya Nair' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Priya Nair/ }).click();
   await expect(main.getByRole('heading', { name: 'Priya Nair', level: 2 })).toBeVisible();
   await main.getByLabel('Message', { exact: true }).fill('Can you call Acme about the feasibility budget?');
   await main.getByLabel('Message', { exact: true }).press('Enter');
@@ -223,6 +235,84 @@ test('a workspace admin and a super admin talk on the support line', async ({ pa
   await expect(reply.getByText('Super admin')).toBeVisible();
   await axe(page);
   await shot(page, '07-team-chat-support-line');
+});
+
+test('a group of three stays in sync across devices, through a refresh, a dropped network and a gateway without WebSockets', async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  await signUp(page, 'Group Sync Research');
+  const asha = await teammate(browser, page, 'Asha Rao');
+  const vik = await teammate(browser, page, 'Vikram Shah');
+  // Vikram's office gateway does not pass WebSockets on: his browser falls back to held requests.
+  await vik.ctx.route(/\/api\/v1\/chat\/socket-ticket$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ticket: 'x', path: '/api/v1/chat/no-socket-here', expiresAt: new Date().toISOString() }) }));
+  const main = page.getByRole('main');
+
+  // A group from New message: pick two people.
+  await page.goto('/app/chat');
+  await main.getByRole('button', { name: 'New message' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Add Asha Rao to a group' }).click();
+  await dialog.getByRole('button', { name: /^Vikram Shah/ }).click();
+  await dialog.getByLabel('Group name').fill('Pune field team');
+  await dialog.getByRole('button', { name: 'Start group' }).click();
+  await expect(main.getByRole('heading', { name: 'Pune field team', level: 2 })).toBeVisible();
+
+  await asha.page.goto('/app/chat');
+  const am = asha.page.getByRole('main');
+  await vik.page.goto('/app/chat');
+  const vm = vik.page.getByRole('main');
+  await expect(vm.locator('[data-chat-connection="live"][data-chat-transport="polling"]')).toBeVisible({ timeout: 20_000 });
+  await expect(am.locator('[data-chat-connection="live"][data-chat-transport="websocket"]')).toBeVisible();
+  await am.locator('[data-conversation="Pune field team"]').click();
+  await vm.locator('[data-conversation="Pune field team"]').click();
+  // Everyone sees the others online.
+  await expect(main.locator('[data-chat-subtitle]')).toContainText('3 people, 3 online');
+
+  // Three people write at once; everyone ends with all three, once each, in the same order.
+  await Promise.all([
+    main.getByLabel('Message', { exact: true }).fill('Owner: quotas updated'),
+    am.getByLabel('Message', { exact: true }).fill('Asha: 40 completes'),
+    vm.getByLabel('Message', { exact: true }).fill('Vikram: 35 completes'),
+  ]);
+  await Promise.all([main.getByLabel('Message', { exact: true }).press('Enter'), am.getByLabel('Message', { exact: true }).press('Enter'), vm.getByLabel('Message', { exact: true }).press('Enter')]);
+  const texts = ['Owner: quotas updated', 'Asha: 40 completes', 'Vikram: 35 completes'];
+  for (const m of [main, am, vm]) for (const x of texts) await expect(m.locator('[data-message]').filter({ hasText: x })).toHaveCount(1, { timeout: 15_000 });
+  const orderOf = async (m: typeof main) => (await m.locator('[data-message]').allInnerTexts()).map((x) => texts.find((y) => x.includes(y))).filter(Boolean);
+  expect(await orderOf(am)).toEqual(await orderOf(main));
+  expect(await orderOf(vm)).toEqual(await orderOf(main));
+  // Everyone has read everything: "Seen by everyone".
+  await main.getByLabel('Message', { exact: true }).fill('Great, thanks both');
+  await main.getByLabel('Message', { exact: true }).press('Enter');
+  await expect(main.locator('[data-read-receipt="seen"]')).toContainText('Seen by everyone', { timeout: 15_000 });
+
+  // Asha's second device (another browser session of hers) has the same history.
+  const ashaPhone = await browser.newContext({ storageState: await asha.ctx.storageState() });
+  const phone = await ashaPhone.newPage();
+  await phone.goto('/app/chat');
+  await phone.getByRole('main').locator('[data-conversation="Pune field team"]').click();
+  for (const x of texts) await expect(phone.getByRole('main').locator('[data-message]').filter({ hasText: x })).toHaveCount(1);
+
+  // A refresh keeps the conversation and its history.
+  await asha.page.reload();
+  await expect(am.getByRole('heading', { name: 'Pune field team', level: 2 })).toBeVisible();
+  for (const x of texts) await expect(am.locator('[data-message]').filter({ hasText: x })).toHaveCount(1);
+
+  // Asha's network drops; messages sent meanwhile arrive when it returns, without a reload.
+  await asha.ctx.setOffline(true);
+  await expect(am.locator('[data-chat-connection="offline"]')).toBeVisible({ timeout: 15_000 });
+  await main.getByLabel('Message', { exact: true }).fill('Sent while Asha was offline');
+  await main.getByLabel('Message', { exact: true }).press('Enter');
+  await page.waitForTimeout(1000);
+  await expect(am.locator('[data-message]').filter({ hasText: 'Sent while Asha was offline' })).toHaveCount(0);
+  await asha.ctx.setOffline(false);
+  await expect(am.locator('[data-chat-connection="live"]')).toBeVisible({ timeout: 20_000 });
+  await expect(am.locator('[data-message]').filter({ hasText: 'Sent while Asha was offline' })).toHaveCount(1, { timeout: 15_000 });
+  await expect(vm.locator('[data-message]').filter({ hasText: 'Sent while Asha was offline' })).toHaveCount(1, { timeout: 15_000 });
+  await phone.getByRole('main').locator('[data-message]').filter({ hasText: 'Sent while Asha was offline' }).waitFor();
+  await shot(page, '08-team-chat-group-in-sync');
+  await shot(vik.page, '09-team-chat-compatibility-mode');
+  await ashaPhone.close();
+  await asha.ctx.close();
+  await vik.ctx.close();
 });
 
 async function expectNoViolations(page: Page) {

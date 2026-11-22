@@ -4,6 +4,8 @@ import type { Request, Response } from 'express';
 import {
   chatConversationInputSchema,
   chatConversationUpdateSchema,
+  chatDeliveredSchema,
+  chatEventsQuerySchema,
   chatLinkQuerySchema,
   chatMembersInputSchema,
   chatMessageEditSchema,
@@ -17,11 +19,16 @@ import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature 
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
-import { ChatBus } from './chat-bus';
-import { openChatStream } from './chat-stream';
+import { ChatPresence } from './chat-presence';
+import { ChatSocketTickets } from './chat-socket';
 import { type ChatActor, ChatService } from './chat.service';
 
 const uuid = new ParseUUIDPipe();
+
+/** Settles when the browser gives up on a held request, so the server stops waiting for it. */
+function closedOf(req: Request): Promise<void> {
+  return new Promise((resolve) => req.on('close', () => resolve()));
+}
 const user = (auth: AuthContext): ChatActor => ({ kind: 'user', auth });
 
 /**
@@ -33,14 +40,39 @@ const user = (auth: AuthContext): ChatActor => ({ kind: 'user', auth });
 export class ChatController {
   constructor(
     private readonly chat: ChatService,
-    private readonly bus: ChatBus,
+    private readonly tickets: ChatSocketTickets,
+    private readonly presence: ChatPresence,
   ) {}
 
-  /** Live events (Server-Sent Events). The browser re-reads what an event names. */
-  @Get('stream')
+  /** A one-minute pass for opening the live WebSocket (`/api/v1/chat/socket?ticket=`). */
+  @Post('socket-ticket')
+  @HttpCode(200)
+  socketTicket(@Auth() auth: AuthContext) {
+    return this.tickets.issue({ realm: 'user', tenantId: auth.tenantId, userId: auth.userId, sessionId: auth.sessionId });
+  }
+
+  /**
+   * Catch-up without a WebSocket: events after `cursor`, answered as soon as there is one or after `wait` seconds.
+   * Browsers use it when a gateway between them and SampForce does not pass WebSockets on.
+   */
+  @Get('events')
   @SkipThrottle()
-  stream(@Auth() auth: AuthContext, @Req() req: Request, @Res() res: Response): void {
-    openChatStream(this.bus, req, res, { realm: 'user', tenantId: auth.tenantId, userId: auth.userId });
+  async events(@Auth() auth: AuthContext, @Query(new ZodPipe(chatEventsQuerySchema)) q: z.output<typeof chatEventsQuerySchema>, @Req() req: Request) {
+    void this.presence.touch(auth.tenantId, auth.userId);
+    return this.chat.events({ realm: 'user', tenantId: auth.tenantId, userId: auth.userId }, q, closedOf(req));
+  }
+
+  /** Who in the workspace is online now. */
+  @Get('presence')
+  presenceList(@Auth() auth: AuthContext) {
+    return this.presence.list(auth.tenantId);
+  }
+
+  /** Messages so far reached this device: moves the caller's "Delivered" (one conversation, or all). */
+  @Post('delivered')
+  @HttpCode(200)
+  delivered(@Auth() auth: AuthContext, @Body(new ZodPipe(chatDeliveredSchema)) body: z.output<typeof chatDeliveredSchema>) {
+    return this.chat.markDelivered(user(auth), body.conversationId ?? undefined);
   }
 
   @Get('unread')
@@ -104,6 +136,14 @@ export class ChatController {
     return this.chat.send(user(auth), id, body);
   }
 
+  /** "Typing…" for browsers without a WebSocket (the socket sends it itself). */
+  @Post('conversations/:id/typing')
+  @HttpCode(204)
+  @SkipThrottle()
+  async typingNow(@Auth() auth: AuthContext, @Param('id', uuid) id: string): Promise<void> {
+    await this.chat.typing({ tenantId: auth.tenantId, userId: auth.userId }, id);
+  }
+
   @Post('conversations/:id/read')
   @HttpCode(200)
   read(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatReadSchema)) body: z.output<typeof chatReadSchema>) {
@@ -143,17 +183,36 @@ export class ChatController {
 export class OperatorChatController {
   constructor(
     private readonly chat: ChatService,
-    private readonly bus: ChatBus,
+    private readonly tickets: ChatSocketTickets,
   ) {}
 
   private op(op: OperatorContext): ChatActor {
     return { kind: 'operator', op };
   }
 
-  @Get('stream')
+  @Post('socket-ticket')
+  @HttpCode(200)
+  socketTicket(@Operator() op: OperatorContext) {
+    return this.tickets.issue({ realm: 'operator', operatorId: op.id });
+  }
+
+  @Get('events')
   @SkipThrottle()
-  stream(@Operator() op: OperatorContext, @Req() req: Request, @Res() res: Response): void {
-    openChatStream(this.bus, req, res, { realm: 'operator', operatorId: op.id });
+  events(@Operator() op: OperatorContext, @Query(new ZodPipe(chatEventsQuerySchema)) q: z.output<typeof chatEventsQuerySchema>, @Req() req: Request) {
+    return this.chat.events({ realm: 'operator', operatorId: op.id }, q, closedOf(req));
+  }
+
+  @Post('conversations/:id/delivered')
+  @HttpCode(200)
+  async delivered(@Operator() op: OperatorContext, @Param('id', uuid) id: string) {
+    return this.chat.markDelivered(this.op(op), id, await this.chat.tenantOfConversation(id));
+  }
+
+  @Post('conversations/:id/typing')
+  @HttpCode(204)
+  @SkipThrottle()
+  async typingNow(@Operator() op: OperatorContext, @Param('id', uuid) id: string): Promise<void> {
+    await this.chat.typing({ operatorId: op.id }, id);
   }
 
   @Get('unread')

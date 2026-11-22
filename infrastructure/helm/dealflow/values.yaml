@@ -84,7 +84,11 @@ ingress:
   enabled: true
   className: nginx
   host: app.example.com
-  annotations: {}
+  # Team chat keeps a WebSocket open on /api/v1/chat/socket (ADR 0069). ingress-nginx passes WebSockets on by
+  # itself; the longer timeouts stop it closing quiet connections (the API also pings every 25 seconds).
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   tls:
     enabled: true
     secretName: dealflow-tls

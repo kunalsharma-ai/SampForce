@@ -74,6 +74,8 @@ export const chatSearchQuerySchema = z.object({
 
 export const chatLinkQuerySchema = z.object({ q: z.string().trim().max(100).default('') });
 
+export const chatDeliveredSchema = z.object({ conversationId: z.string().uuid().nullable().optional() });
+
 export const chatReadSchema = z.object({ messageId: z.string().uuid().nullable().optional() });
 
 export interface ChatPerson {
@@ -81,6 +83,21 @@ export interface ChatPerson {
   id: string;
   name: string;
   operator: boolean;
+}
+
+/** Someone in the workspace who can be messaged, for the people picker and the online dots. */
+export interface ChatDirectoryPerson extends ChatPerson {
+  email: string | null;
+  /** The workspace role's name ("Admin", "Sales rep"). */
+  role: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+}
+
+export interface ChatPresenceRow {
+  userId: string;
+  online: boolean;
+  lastSeenAt: string | null;
 }
 
 export interface ChatLink {
@@ -96,6 +113,8 @@ export interface ChatMemberRow {
   person: ChatPerson;
   role: 'OWNER' | 'MEMBER';
   lastReadAt: string | null;
+  /** Everything up to this time has reached one of their devices. */
+  lastDeliveredAt: string | null;
 }
 
 export interface ChatConversationRow {
@@ -151,10 +170,57 @@ export interface ChatLinkOption {
   label: string;
 }
 
-/** What the live stream sends. Clients re-read what changed; the stream itself carries no message text. */
-export type ChatStreamEvent =
+/**
+ * What the live connection sends. Clients re-read what changed; events carry no message text. `sid` is the stored
+ * signal's id, so a client that hears the same event twice (WebSocket and catch-up, two servers) acts on it once.
+ */
+export type ChatStreamEvent = { sid?: string } & (
   | { type: 'ready' }
   | { type: 'message'; conversationId: string; messageId: string; authorId: string | null }
   | { type: 'message_changed'; conversationId: string; messageId: string }
   | { type: 'read'; conversationId: string; personId: string; at: string }
-  | { type: 'conversation'; conversationId: string };
+  | { type: 'delivered'; conversationId: string; personId: string; at: string }
+  | { type: 'conversation'; conversationId: string }
+  /** Someone is writing in a conversation; shown for a few seconds unless repeated. */
+  | { type: 'typing'; conversationId: string; personId: string; name: string }
+  /** Someone in the workspace came online or went offline: re-read presence. */
+  | { type: 'presence'; userId: string; online: boolean }
+);
+
+/** How often an open client says it is still writing, and how long the indicator stays without another. */
+export const CHAT_TYPING_REPEAT_MS = 3000;
+export const CHAT_TYPING_SHOW_MS = 6000;
+/** A person counts as online while a connection refreshed their presence this recently. */
+export const CHAT_ONLINE_WINDOW_MS = 75_000;
+
+/**
+ * Catching up without a WebSocket (a gateway that does not pass WebSockets on): the browser asks for events after
+ * `cursor`, and the server answers as soon as there is one, or after `wait` seconds with none. `seen` lists the
+ * event ids the browser already has from the last few seconds, so nothing is handed out twice.
+ */
+export const chatEventsQuerySchema = z.object({
+  cursor: z.string().datetime({ offset: true }).optional(),
+  seen: z
+    .string()
+    .max(4000)
+    .optional()
+    .transform((s) => (s ? s.split(',').filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 100) : [])),
+  wait: z.coerce.number().int().min(0).max(25).default(25),
+});
+
+export interface ChatEventsPage {
+  events: ChatStreamEvent[];
+  /** Send this back as `cursor` on the next request. */
+  cursor: string;
+}
+
+/** A one-minute pass for opening the WebSocket, issued to a signed-in session. */
+export interface ChatSocketTicket {
+  ticket: string;
+  /** Path of the WebSocket on this server, e.g. /api/v1/chat/socket. */
+  path: string;
+  expiresAt: string;
+}
+
+/** What a browser may send on the WebSocket. */
+export type ChatClientFrame = { type: 'ping' } | { type: 'typing'; conversationId: string };

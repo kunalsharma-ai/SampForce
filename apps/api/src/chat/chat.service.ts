@@ -10,7 +10,9 @@ import {
   type ChatLink,
   type ChatLinkOption,
   type ChatLinkType,
+  type ChatMemberRow,
   type ChatMessageRow,
+  type ChatDirectoryPerson,
   type ChatPerson,
   type ChatSearchHit,
   type ChatStreamEvent,
@@ -18,6 +20,8 @@ import {
   chatConversationUpdateSchema,
   chatMessageInputSchema,
   chatMessagesQuerySchema,
+  chatEventsQuerySchema,
+  type ChatEventsPage,
   chatSearchQuerySchema,
   hasPermission,
   type Permission,
@@ -30,7 +34,8 @@ import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import { companyScope, visibility } from '../crm/visibility';
 import type { OperatorContext } from '../operator/operator-auth';
-import { type ChatAudience, ChatBus } from './chat-bus';
+import { type ChatAudience, ChatBus, type ChatListener } from './chat-bus';
+import { isOnline } from './chat-presence';
 
 /** A workspace user (in their workspace), or a super admin from the operator console acting in one workspace. */
 export type ChatActor = { kind: 'user'; auth: AuthContext } | { kind: 'operator'; op: OperatorContext };
@@ -174,8 +179,14 @@ export class ChatService {
     const unread = await Promise.all(convs.map((c) => this.unread(tx, actor, c)));
     return convs.map((c, i) => {
       const members = c.members
-        .map((m) => ({ person: people.get(m.userId ? `u:${m.userId}` : `o:${m.operatorId}`), role: m.role, lastReadAt: m.lastReadAt?.toISOString() ?? null }))
-        .filter((m): m is { person: ChatPerson; role: 'OWNER' | 'MEMBER'; lastReadAt: string | null } => !!m.person)
+        .map((m) => ({
+          person: people.get(m.userId ? `u:${m.userId}` : `o:${m.operatorId}`),
+          role: m.role,
+          lastReadAt: m.lastReadAt?.toISOString() ?? null,
+          // Read implies it reached a device.
+          lastDeliveredAt: latest(m.lastDeliveredAt, m.lastReadAt)?.toISOString() ?? null,
+        }))
+        .filter((m): m is ChatMemberRow & { person: ChatPerson } => !!m.person)
         .sort((a, b) => Number(a.person.operator) - Number(b.person.operator) || a.person.name.localeCompare(b.person.name));
       const other = c.kind === 'DIRECT' ? members.find((m) => m.person.id !== personId(actor)) : undefined;
       return {
@@ -280,10 +291,29 @@ export class ChatService {
   // ─── Conversations ───
 
   /** People of the workspace to start a direct message or fill a channel with. */
-  directory(auth: AuthContext): Promise<ChatPerson[]> {
+  /** Everyone active in the workspace, with email, role and whether they are online, for the people picker. */
+  directory(auth: AuthContext): Promise<ChatDirectoryPerson[]> {
     return this.prisma.run(auth, async (tx) => {
-      const rows = await tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE' }, include: { user: { select: { id: true, name: true } } } });
-      return rows.map((r) => ({ id: r.user.id, name: r.user.name, operator: false })).sort((a, b) => a.name.localeCompare(b.name));
+      const [rows, presence] = await Promise.all([
+        tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE', user: { status: 'ACTIVE' } }, include: { user: { select: { id: true, name: true, email: true } }, role: { select: { name: true } } } }),
+        tx.chatPresence.findMany({ where: { tenantId: auth.tenantId } }),
+      ]);
+      const seen = new Map(presence.map((p) => [p.userId, p]));
+      const now = Date.now();
+      return rows
+        .map((r) => {
+          const p = seen.get(r.user.id);
+          return {
+            id: r.user.id,
+            name: r.user.name,
+            operator: false,
+            email: r.user.email,
+            role: r.role?.name ?? null,
+            online: isOnline(p, now),
+            lastSeenAt: p ? latest(p.lastSeenAt, p.offlineAt)!.toISOString() : null,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
     });
   }
 
@@ -467,7 +497,7 @@ export class ChatService {
       await tx.chatConversation.update({ where: { id }, data: { lastMessageAt: msg.createdAt, lastMessagePreview: preview } });
       // Your own message is read by you.
       const mine = conv.members.find((m) => (actor.kind === 'user' ? m.userId === actor.auth.userId : m.operatorId === actor.op.id));
-      if (mine) await tx.chatMember.update({ where: { id: mine.id }, data: { lastReadAt: msg.createdAt } });
+      if (mine) await tx.chatMember.update({ where: { id: mine.id }, data: { lastReadAt: msg.createdAt, lastDeliveredAt: msg.createdAt } });
       signals.push(await this.bus.record(tx, this.audience(conv), { type: 'message', conversationId: id, messageId: msg.id, authorId: personId(actor) }));
       return (await this.messageRows(tx, actor, tid, [msg]))[0]!;
     });
@@ -524,7 +554,7 @@ export class ChatService {
         at = last?.createdAt ?? at;
       }
       if (me.lastReadAt && me.lastReadAt >= at) return { lastReadAt: me.lastReadAt.toISOString() };
-      await tx.chatMember.update({ where: { id: me.id }, data: { lastReadAt: at } });
+      await tx.chatMember.update({ where: { id: me.id }, data: { lastReadAt: at, ...(!me.lastDeliveredAt || me.lastDeliveredAt < at ? { lastDeliveredAt: at } : {}) } });
       signals.push(await this.bus.record(tx, this.audience(conv), { type: 'read', conversationId: id, personId: personId(actor), at: at.toISOString() }));
       return { lastReadAt: at.toISOString() };
     });
@@ -596,6 +626,106 @@ export class ChatService {
     });
   }
 
+  // ─── Delivery, typing and catch-up (ADR 0069) ───
+
+  /**
+   * Everything in the caller's conversations has reached this device: their "Delivered" moves up to each
+   * conversation's latest message, and the senders hear about it. Called by the browser when it connects and when a
+   * message arrives. Only conversations with something new are written.
+   */
+  markDelivered(actor: ChatActor, conversationId?: string, tenantId?: string): Promise<{ updated: number }> {
+    const tid = tenantOf(actor, tenantId);
+    return this.run(actor, tid, async (tx, signals) => {
+      const who = actor.kind === 'user' ? { userId: actor.auth.userId } : { operatorId: actor.op.id };
+      const mine = await tx.chatMember.findMany({ where: { tenantId: tid, ...who, ...(conversationId ? { conversationId } : {}) } });
+      if (!mine.length) return { updated: 0 };
+      const convs = await tx.chatConversation.findMany({ where: { tenantId: tid, id: { in: mine.map((m) => m.conversationId) }, lastMessageAt: { not: null } }, include: { members: true } });
+      const byId = new Map(convs.map((c) => [c.id, c]));
+      let updated = 0;
+      for (const m of mine) {
+        const conv = byId.get(m.conversationId);
+        const at = conv?.lastMessageAt;
+        const have = latest(m.lastDeliveredAt, m.lastReadAt);
+        if (!conv || !at || (have && have >= at)) continue;
+        await tx.chatMember.update({ where: { id: m.id }, data: { lastDeliveredAt: at } });
+        signals.push(await this.bus.record(tx, this.audience(conv), { type: 'delivered', conversationId: conv.id, personId: personId(actor), at: at.toISOString() }));
+        updated++;
+      }
+      return { updated };
+    });
+  }
+
+  /** "X is typing": sent to the conversation's other people when the caller is in it; never stored for long. */
+  async typing(who: { tenantId: string; userId: string } | { operatorId: string }, conversationId: string): Promise<void> {
+    if ('operatorId' in who) {
+      const tenantId = await this.tenantOfConversation(conversationId);
+      const op = await this.prisma.platformOperator.findUnique({ where: { id: who.operatorId }, select: { name: true, status: true } });
+      if (!op || op.status !== 'ACTIVE') return;
+      const conv = await this.prisma.run({ tenantId }, (tx) => tx.chatConversation.findFirst({ where: { id: conversationId, tenantId, kind: 'SUPPORT', archivedAt: null }, include: { members: true } }));
+      if (!conv) return;
+      await this.bus.emit(this.audience(conv), { type: 'typing', conversationId, personId: who.operatorId, name: op.name });
+      return;
+    }
+    const found = await this.prisma.run({ tenantId: who.tenantId, userId: who.userId }, async (tx) => {
+      const conv = await tx.chatConversation.findFirst({ where: { id: conversationId, tenantId: who.tenantId, archivedAt: null }, include: { members: true } });
+      if (!conv || !conv.members.some((m) => m.userId === who.userId)) return null;
+      const user = await tx.user.findFirst({ where: { id: who.userId }, select: { name: true } });
+      return { conv, name: user?.name ?? '' };
+    });
+    if (!found) throw notFound('Conversation');
+    await this.bus.emit(this.audience(found.conv), { type: 'typing', conversationId, personId: who.userId, name: found.name });
+  }
+
+  /**
+   * Events for the caller after `cursor`, for browsers that cannot keep a WebSocket open (a gateway that does not
+   * pass them on). Answers at once when something is waiting, otherwise holds the request for up to `wait` seconds.
+   * The first call (no cursor) or a cursor older than two minutes answers "ready": re-read everything.
+   */
+  async events(who: { realm: 'user'; tenantId: string; userId: string } | { realm: 'operator'; operatorId: string }, q: z.output<typeof chatEventsQuerySchema>, closed: Promise<void>): Promise<ChatEventsPage> {
+    const started = new Date();
+    const cursor = q.cursor ? new Date(q.cursor) : null;
+    if (!cursor || started.getTime() - cursor.getTime() > 120_000 || cursor.getTime() > started.getTime() + 5000) {
+      return { events: [{ type: 'ready' }], cursor: started.toISOString() };
+    }
+    const seen = new Set(q.seen);
+    const queue: ChatStreamEvent[] = [];
+    let wake: (() => void) | null = null;
+    // Listen first, then read what is stored, so nothing falls between the two.
+    const unsubscribe = this.bus.subscribe({
+      ...(who.realm === 'user' ? { realm: 'user', tenantId: who.tenantId, userId: who.userId } : { realm: 'operator', operatorId: who.operatorId }),
+      send: (e: ChatStreamEvent) => {
+        queue.push(e);
+        wake?.();
+      },
+    } as ChatListener);
+    try {
+      // Look back five seconds: a signal is stamped a moment before its change commits.
+      const since = new Date(Math.min(cursor.getTime(), started.getTime()) - 5000);
+      const rows =
+        who.realm === 'user'
+          ? await this.prisma.run({ tenantId: who.tenantId }, (tx) => tx.chatSignal.findMany({ where: { tenantId: who.tenantId, createdAt: { gt: since }, userIds: { has: who.userId } }, orderBy: { createdAt: 'asc' }, take: 500 }))
+          : await this.prisma.run({ chatRelay: true }, (tx) => tx.chatSignal.findMany({ where: { createdAt: { gt: since }, operators: true }, orderBy: { createdAt: 'asc' }, take: 500 }));
+      const out: ChatStreamEvent[] = [];
+      const add = (e: ChatStreamEvent) => {
+        if (e.sid) {
+          if (seen.has(e.sid)) return;
+          seen.add(e.sid);
+        }
+        out.push(e);
+      };
+      for (const r of rows) add({ ...(r.event as unknown as ChatStreamEvent), sid: r.id });
+      if (!out.length && !queue.length && q.wait > 0) {
+        await Promise.race([new Promise<void>((resolve) => (wake = resolve)), new Promise<void>((resolve) => setTimeout(resolve, q.wait * 1000).unref()), closed]);
+        // Gather what else arrives in the same moment (a message and its delivery to others).
+        if (queue.length) await new Promise((r) => setTimeout(r, 30));
+      }
+      for (const e of queue) add(e);
+      return { events: out, cursor: started.toISOString() };
+    } finally {
+      unsubscribe();
+    }
+  }
+
   // ─── Operator console ───
 
   /** Every workspace's support line, busiest first, with this super admin's unread count. */
@@ -638,6 +768,13 @@ export class ChatService {
     return this.tenantOfConversation(m.conversationId);
   }
 
+}
+
+/** The later of two optional times. */
+function latest(a: Date | null | undefined, b: Date | null | undefined): Date | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return a > b ? a : b;
 }
 
 /** Unread first, then the latest message, then the newest conversation. */

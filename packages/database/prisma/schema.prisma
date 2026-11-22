@@ -412,6 +412,7 @@ model Tenant {
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
   chatSignals            ChatSignal[]
+  chatPresence           ChatPresence[]
 
   @@map("tenants")
 }
@@ -4050,16 +4051,18 @@ model ChatConversation {
 
 /// One person in a conversation: a workspace user, or (support line) a super admin from the operator console.
 model ChatMember {
-  id             String         @id @default(uuid()) @map("_id")
-  tenantId       String         @map("tenant_id")
-  conversationId String         @map("conversation_id")
-  userId         String?        @map("user_id")
-  operatorId     String?        @map("operator_id")
-  role           ChatMemberRole @default(MEMBER)
+  id              String         @id @default(uuid()) @map("_id")
+  tenantId        String         @map("tenant_id")
+  conversationId  String         @map("conversation_id")
+  userId          String?        @map("user_id")
+  operatorId      String?        @map("operator_id")
+  role            ChatMemberRole @default(MEMBER)
   /// Everything up to this time has been read (read receipts and unread counts).
-  lastReadAt     DateTime?      @map("last_read_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  lastReadAt      DateTime?      @map("last_read_at")
+  /// Everything up to this time has reached one of this person's devices ("Delivered" ticks).
+  lastDeliveredAt DateTime?      @map("last_delivered_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -4135,5 +4138,22 @@ model ChatSignal {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([createdAt])
+  @@index([tenantId, createdAt])
   @@map("chat_signals")
+}
+
+/// When a workspace user was last connected to team chat (online/offline dots). One per person and workspace.
+model ChatPresence {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  userId     String    @map("user_id")
+  /// Refreshed about every 30 seconds while the person has SampForce open on any device.
+  lastSeenAt DateTime  @map("last_seen_at")
+  /// Set when their last connection to this server closed; a later lastSeenAt means they came back.
+  offlineAt  DateTime? @map("offline_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, userId])
+  @@map("chat_presence")
 }
