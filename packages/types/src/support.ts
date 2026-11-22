@@ -196,3 +196,25 @@ export interface OperatorSupportTicketDetail extends OperatorSupportTicketRow {
 }
 
 export type SupportCounts = Record<SupportTicketStatus, number>;
+
+export const SUPPORT_REPORT_DAYS = [7, 30, 90, 365] as const;
+export const supportReportQuerySchema = z.object({ days: z.coerce.number().int().refine((d) => (SUPPORT_REPORT_DAYS as readonly number[]).includes(d)).default(30) });
+
+/** The Console's support report: queries raised in the last `days`, how fast they were answered and closed. */
+export interface SupportReport {
+  days: number;
+  raised: number;
+  /** Still waiting for support now, of those raised in the period. */
+  open: number;
+  byStatus: Record<SupportTicketStatus, number>;
+  byPriority: Record<SupportTicketPriority, number>;
+  byCategory: { category: string; count: number }[];
+  bySource: { source: string; count: number }[];
+  byClient: { tenantId: string; name: string; count: number }[];
+  byOperator: { operatorId: string | null; name: string; assigned: number; resolved: number }[];
+  /** Hours from raising to the first answer, and to resolved or closed; null with nothing to measure. */
+  firstAnswerHours: { average: number | null; median: number | null };
+  resolutionHours: { average: number | null; median: number | null };
+  /** Raised per day, oldest first, for the trend chart. */
+  perDay: { date: string; count: number }[];
+}

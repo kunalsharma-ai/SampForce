@@ -198,4 +198,21 @@ describe('help center content from the Console', () => {
     await A.post(`/categories/onboarding-${tag}/archive`).expect(200);
     expect((await content(owner)).categories.map((x) => x.id)).not.toContain(`onboarding-${tag}`);
   });
+
+  it('reports on support queries for the Console', async () => {
+    const t = (await api(owner).post('/support/tickets', { subject: `Report check ${tag}`, body: 'Counting this one in the report.', category: 'deals', priority: 'HIGH' }).expect(201)).body;
+    await support.patch(`/api/v1/operator/support/tickets/${t.id}`).set('origin', ORIGIN).send({ status: 'RESOLVED' }).expect(200);
+    const r = (await support.get('/api/v1/operator/support/tickets/report?days=7').expect(200)).body;
+    expect(r.days).toBe(7);
+    expect(r.raised).toBeGreaterThanOrEqual(1);
+    expect(r.byStatus.RESOLVED).toBeGreaterThanOrEqual(1);
+    expect(r.byPriority.HIGH).toBeGreaterThanOrEqual(1);
+    expect(r.byCategory.find((c: { category: string }) => c.category === 'deals')?.count).toBeGreaterThanOrEqual(1);
+    expect(r.byClient.length).toBeGreaterThan(0);
+    expect(r.perDay).toHaveLength(7);
+    expect(r.perDay.at(-1).count).toBeGreaterThanOrEqual(1);
+    expect(r.resolutionHours.average).not.toBeNull();
+    await support.get('/api/v1/operator/support/tickets/report?days=3').expect(400);
+    await request(app.getHttpServer()).get('/api/v1/operator/support/tickets/report').expect(401);
+  });
 });

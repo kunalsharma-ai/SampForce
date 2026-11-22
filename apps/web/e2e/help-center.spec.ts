@@ -17,6 +17,8 @@ async function shot(page: Page, name: string, fullPage = false) {
 }
 
 async function axe(page: Page) {
+  // A pointer left over a button after a click would check its hover colour instead.
+  await page.mouse.move(0, 0);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
@@ -169,6 +171,18 @@ test('help at every level, a raised query and its answer from the Console', asyn
   // Answered tickets leave the Open tab; they are found under Answered.
   await ops.locator('[data-status-filter="AWAITING_USER"]').click();
   await expect(ops.locator('[data-ticket]').filter({ hasText: org })).toBeVisible();
+
+  // Support reports: what was raised, by whom and how fast.
+  await ops.locator('[data-support-view="reports"]').click();
+  const report = ops.locator('[data-support-report]');
+  await expect(report.locator('[data-report-stat="raised"]')).not.toContainText(/^\D*0$/);
+  await expect(report.locator('[data-report-group="client"]')).toContainText(org);
+  await expect(report.locator('[data-report-group="topic"] [data-report-row="deals"]')).toBeVisible();
+  await report.locator('[data-report-days="7"]').click();
+  await expect(report.locator('[data-report-trend] li')).toHaveCount(7);
+  await axe(ops);
+  await shot(ops, '26-console-support-reports', true);
+  await ops.locator('[data-support-view="tickets"]').click();
   await axe(ops);
   await shot(ops, '11-console-support-tickets');
   await ops.getByRole('link', { name: 'Help', exact: true }).click();
