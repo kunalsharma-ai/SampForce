@@ -311,6 +311,8 @@ export interface PlatformAuditRow {
   operator: { id: string; email: string } | null;
   action: string;
   targetTenantId: string | null;
+  /** The client organisation the entry is about, by name. */
+  client: { id: string; name: string | null } | null;
   metadata: Record<string, unknown>;
   createdAt: string;
 }

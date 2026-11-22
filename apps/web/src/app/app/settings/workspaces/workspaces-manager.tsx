@@ -207,6 +207,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
   const [canCreateExecutives, setCanCreateExecutives] = useState(row.canCreateExecutives);
   const [canViewOtherManagers, setCanViewOtherManagers] = useState(row.canViewOtherManagers);
   const [canChatWithPeers, setCanChatWithPeers] = useState(row.canChatWithPeers);
+  const [canViewAuditLog, setCanViewAuditLog] = useState(row.canViewAuditLog);
   const [saved, setSaved] = useState(false);
   const modules = FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0);
   const managerSettings = row.level === 'MANAGER' && callerLevel === 'SUPER';
@@ -252,7 +253,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
       features: FEATURES.map((f) => f.key).filter((k) => features.has(k) && parent.features.includes(k)),
       // Only what the parent has can be handed down; anything else would be refused.
       actions: Object.fromEntries(Object.entries(actions).map(([k, list]) => [k, (list ?? []).filter((a) => (parent.actions[k] ?? parent.actions[FEATURE_BY_KEY[k as FeatureKey]?.group ?? ''] ?? []).includes(a))])),
-      ...(managerSettings ? { canCreateExecutives, canViewOtherManagers } : {}),
+      ...(managerSettings ? { canCreateExecutives, canViewOtherManagers, canViewAuditLog } : {}),
       ...(row.level !== 'SUPER' ? { canChatWithPeers } : {}),
     };
     permissions.mutate({ id: row.id, input }, { onSuccess: () => setSaved(true) });
@@ -376,6 +377,10 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={canViewOtherManagers} onChange={(e) => { setSaved(false); setCanViewOtherManagers(e.target.checked); }} />
                 <span>{t('May see other Manager Workspaces’ records')}</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm" data-audit-setting>
+                <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={canViewAuditLog} onChange={(e) => { setSaved(false); setCanViewAuditLog(e.target.checked); }} />
+                <span>{t('May read its own team’s audit log')}</span>
               </label>
             </section>
           )}

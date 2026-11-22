@@ -572,6 +572,8 @@ model WorkspaceNode {
   canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
   /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
   canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  /// Manager: whether the Super Workspace lets it read the audit log of its own team (never anyone else's).
+  canViewAuditLog      Boolean   @default(false) @map("can_view_audit_log")
   /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")

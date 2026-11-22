@@ -55,3 +55,4 @@ export * from './workspaces';
 export * from './console';
 export * from './workspace-work';
 export * from './workspace-dashboard';
+export * from './audit';
