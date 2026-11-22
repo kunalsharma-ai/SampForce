@@ -19,6 +19,9 @@ export default defineConfig({
       // Webhook and adapter tests talk to local fixture servers.
       ALLOW_PRIVATE_NETWORK_TARGETS: 'true',
       WEBHOOK_DISABLE_AFTER_FAILURES: '3',
+      // Team chat: relay between API servers and re-check open sockets quickly.
+      CHAT_RELAY_MS: '200',
+      CHAT_SOCKET_RECHECK_MS: '500',
     },
     hookTimeout: 30_000,
   },
