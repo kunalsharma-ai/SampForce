@@ -5,6 +5,7 @@ import type {
   OperatorSupportTicketDetail,
   OperatorSupportTicketRow,
   OperatorSupportUpdateInput,
+  SupportAttachmentRow,
   SupportPerson,
   SupportCounts,
   SupportTicketCreateInput,
@@ -65,10 +66,26 @@ export function useRaiseQuery() {
   });
 }
 
+/** A reply with its text and the ids of files uploaded for it. */
+export interface TicketReply {
+  body: string;
+  attachmentIds?: string[];
+}
+
+/** Uploads a screenshot or file to send with a new query or a reply; the Console uploads into the ticket. */
+export function uploadSupportFile(file: File, ticketId?: string): Promise<SupportAttachmentRow> {
+  const path = ticketId ? `/operator/support/tickets/${ticketId}/attachments` : '/support/attachments';
+  return api<SupportAttachmentRow>(`${path}?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } });
+}
+
+export function supportFileHref(fileId: string, operatorTicketId?: string): string {
+  return operatorTicketId ? `/api/v1/operator/support/tickets/${operatorTicketId}/attachments/${fileId}/download` : `/api/v1/support/attachments/${fileId}/download`;
+}
+
 export function useReplyToTicket(id: string) {
   const refresh = useRefresh();
   return useMutation({
-    mutationFn: (body: string) => api<SupportTicketDetail>(`/support/tickets/${id}/messages`, { method: 'POST', json: { body } }),
+    mutationFn: (input: TicketReply) => api<SupportTicketDetail>(`/support/tickets/${id}/messages`, { method: 'POST', json: input }),
     onSuccess: refresh,
   });
 }
@@ -124,7 +141,7 @@ export function useOperatorTicketActions(id: string) {
     void qc.invalidateQueries({ queryKey: [...supportKeys.operator, 'counts'] });
   };
   return {
-    reply: useMutation({ mutationFn: (body: string) => api<OperatorSupportTicketDetail>(`/operator/support/tickets/${id}/messages`, { method: 'POST', json: { body } }), onSuccess: done }),
+    reply: useMutation({ mutationFn: (input: TicketReply) => api<OperatorSupportTicketDetail>(`/operator/support/tickets/${id}/messages`, { method: 'POST', json: input }), onSuccess: done }),
     status: useMutation({ mutationFn: (status: SupportTicketStatus) => api<OperatorSupportTicketDetail>(`/operator/support/tickets/${id}`, { method: 'PATCH', json: { status } }), onSuccess: done }),
     update: useMutation({ mutationFn: (input: OperatorSupportUpdateInput) => api<OperatorSupportTicketDetail>(`/operator/support/tickets/${id}`, { method: 'PATCH', json: input }), onSuccess: done }),
   };

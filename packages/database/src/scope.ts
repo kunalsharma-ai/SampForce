@@ -127,6 +127,7 @@ const OPERATOR_READ = new Set([
   // never CRM records. Replies and status changes run in the workspace's own context.
   'SupportTicket',
   'SupportTicketMessage',
+  'SupportTicketAttachment',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */

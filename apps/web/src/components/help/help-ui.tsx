@@ -74,18 +74,22 @@ export function ToneIcon({ icon, tone, size = 'md' }: { icon: string; tone: numb
 }
 
 const STATUS_TONE: Record<SupportTicketStatus, 'primary' | 'warning' | 'success' | 'neutral'> = {
-  OPEN: 'warning',
+  SUBMITTED: 'warning',
+  UNDER_REVIEW: 'primary',
   IN_PROGRESS: 'primary',
-  ANSWERED: 'success',
+  AWAITING_USER: 'success',
+  RESOLVED: 'success',
   CLOSED: 'neutral',
 };
 
 export function useStatusLabel() {
   const t = useT();
   const labels: Record<SupportTicketStatus, string> = {
-    OPEN: t('Open query'),
+    SUBMITTED: t('Submitted'),
+    UNDER_REVIEW: t('Under review'),
     IN_PROGRESS: t('In progress'),
-    ANSWERED: t('Answered'),
+    AWAITING_USER: t('Awaiting response'),
+    RESOLVED: t('Resolved'),
     CLOSED: t('Closed query'),
   };
   return (s: SupportTicketStatus) => labels[s];

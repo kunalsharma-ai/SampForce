@@ -415,6 +415,7 @@ model Tenant {
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
   supportTicketMessages  SupportTicketMessage[]
+  supportFiles           SupportTicketAttachment[]
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
@@ -4269,9 +4270,11 @@ model ChatSignal {
 // ───────────── Help Center support tickets (ADR 0073) ─────────────
 
 enum SupportTicketStatus {
-  OPEN
+  SUBMITTED
+  UNDER_REVIEW
   IN_PROGRESS
-  ANSWERED
+  AWAITING_USER
+  RESOLVED
   CLOSED
 }
 
@@ -4317,7 +4320,7 @@ model SupportTicket {
   /// "web" or "mobile".
   source               String                @default("web")
   priority             SupportTicketPriority @default(NORMAL)
-  status               SupportTicketStatus   @default(OPEN)
+  status               SupportTicketStatus   @default(SUBMITTED)
   handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
   handlerNodeId        String?               @map("handler_node_id")
   /// The SampForce operator looking after a Console ticket.
@@ -4328,6 +4331,19 @@ model SupportTicket {
   lastMessageAt        DateTime              @default(now()) @map("last_message_at")
   answeredAt           DateTime?             @map("answered_at")
   closedAt             DateTime?             @map("closed_at")
+  resolvedAt           DateTime?             @map("resolved_at")
+  /// With category "other": the raiser's own name for the kind of problem.
+  categoryOther        String?               @map("category_other")
+  /// lead, contact, company or deal; the label is the record's name when the query was raised.
+  relatedRecordType    String?               @map("related_record_type")
+  relatedRecordId      String?               @map("related_record_id")
+  relatedRecordLabel   String?               @map("related_record_label")
+  /// IN_APP, EMAIL or PHONE.
+  contactMethod        String                @default("IN_APP") @map("contact_method")
+  contactPhone         String?               @map("contact_phone")
+  appVersion           String?               @map("app_version")
+  /// Captured by the server when raised: workspace name and level, role name, email.
+  context              Json?
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
 
@@ -4357,6 +4373,27 @@ model SupportTicketMessage {
 
   @@index([tenantId, ticketId, createdAt])
   @@map("support_ticket_messages")
+}
+
+/// Screenshots and files on a support ticket's messages (ADR 0073). Uploaded first, then sent with a message.
+model SupportTicketAttachment {
+  id                   String   @id @default(uuid()) @map("_id")
+  tenantId             String   @map("tenant_id")
+  ticketId             String?  @map("ticket_id")
+  messageId            String?  @map("message_id")
+  uploadedByUserId     String?  @map("uploaded_by_user_id")
+  uploadedByOperatorId String?  @map("uploaded_by_operator_id")
+  name                 String
+  contentType          String   @map("content_type")
+  sizeBytes            Int      @map("size_bytes")
+  data                 Bytes
+  sha256               String
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, ticketId, messageId])
+  @@map("support_ticket_attachments")
 }
 
 /// When a workspace user was last connected to team chat (online/offline dots). One per person and workspace.
