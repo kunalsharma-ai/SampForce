@@ -1,6 +1,6 @@
 # ADR 0041: Personal navigation, Focus Workspace and keyboard shortcuts
 
-- Status: Accepted
+- Status: Accepted (decision 3 withdrawn 2026-11-22, see below)
 - Date: 2026-11-01
 - Part of: Frontend design spec (Part 3 navigation and shell, Part 13 long-session comfort, Part 14 mobile)
 
@@ -19,7 +19,7 @@ and the only shortcut was Ctrl/⌘ K.
 2. **Links are validated as SampForce paths.** `appPathSchema` accepts only `/app` and `/app/...` with a safe
    character set and rejects `//`, `..` and backslashes, so a stored favourite cannot send anyone off-site. Stored JSON
    is re-validated on read and anything invalid is dropped.
-3. **Recent pages are recorded by the shell, after render.** The shell posts a visit 1.5 seconds after a route
+3. **~~Recent pages are recorded by the shell, after render.~~ Withdrawn 2026-11-22.** The shell posts a visit 1.5 seconds after a route
    settles, labelled with the page's `h1` (so record pages show the record's name, not its id). The list keeps 15,
    newest first, with repeats moved to the front. Failures are ignored: history is a convenience and must never break
    a page. The endpoint is rate limited (120 per minute).
@@ -40,3 +40,12 @@ and the only shortcut was Ctrl/⌘ K.
   pages, menu order and hiding, shortcuts, Focus Workspace, palette actions, the Copilot hand-off and the mobile bar,
   with axe scans of the new dialogs.
 - Saved views per list and drag-and-drop reordering of the menu are left for the data table work (PR 3).
+
+## Amendment 2026-11-22: no recent page history
+
+The owner asked that no workspace keeps a history of visited pages. The Recent section is gone from the sidebar and
+the command palette, the shell no longer posts visits, `POST` and `DELETE /me/navigation/visits` are removed (404),
+`NavigationState` no longer has `recent`, and the `recent` field is dropped from `workspace_navigation`. `pnpm db:setup`
+(`eraseRecentPageHistory`) unsets the field on every existing document, so history recorded before the change is
+deleted too. Favourites, menu order and hidden modules are unchanged.
+

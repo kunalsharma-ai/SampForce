@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@dealflow/ui';
 import type { Permission, SearchHit } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
 import { Command } from 'cmdk';
-import { Bot, Building2, Clock, ContactRound, FileSpreadsheet, Handshake, Keyboard, Maximize2, Moon, Palette, Plus, SlidersHorizontal, Star, Sun, UserPlus } from 'lucide-react';
+import { Bot, Building2, ContactRound, FileSpreadsheet, Handshake, Keyboard, Maximize2, Moon, Palette, Plus, SlidersHorizontal, Star, Sun, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -37,7 +37,7 @@ const CREATE: { kind: QuickCreateKind; label: string; permission: Permission }[]
 ];
 
 /**
- * Global search and commands (Ctrl/⌘ K): records the person can read, favourites, recent pages, quick create,
+ * Global search and commands (Ctrl/⌘ K): records the person can read, favourites, quick create,
  * navigation (including hidden modules), shell actions and a hand-off to Copilot. Matching is fuzzy (lib/fuzzy.ts).
  */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -92,7 +92,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     { id: 'keys', label: 'Keyboard shortcuts', icon: Keyboard, run: () => shell.setShortcutsOpen(true) },
   ];
   const favs = fuzzyFilter(nav.pinned, q, (p) => p.label);
-  const recent = fuzzyFilter(nav.recent.slice(0, q ? 15 : 5), q, (r) => r.label);
   const creates = fuzzyFilter(
     CREATE.filter((c) => me?.permissions.includes(c.permission)),
     q,
@@ -159,16 +158,6 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   <Command.Item key={p.href} value={`fav-${p.href}`} onSelect={() => go(p.href)} className={ITEM}>
                     <Star className="size-4 text-muted-foreground" aria-hidden />
                     {p.label}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            )}
-            {recent.length > 0 && (
-              <Command.Group heading="Recent">
-                {recent.map((r) => (
-                  <Command.Item key={r.href} value={`recent-${r.href}`} onSelect={() => go(r.href)} className={ITEM}>
-                    <Clock className="size-4 text-muted-foreground" aria-hidden />
-                    {r.label}
                   </Command.Item>
                 ))}
               </Command.Group>

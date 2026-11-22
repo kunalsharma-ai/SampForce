@@ -121,14 +121,13 @@ model UserSavedTheme {
   @@map("user_saved_themes")
 }
 
-/// A person's own navigation in one workspace: pinned pages and records, recent visits, sidebar order and hidden
-/// modules. The workspace guard limits documents to the current workspace AND the current user.
+/// A person's own navigation in one workspace: pinned pages and records, sidebar order and hidden modules.
+/// Recently visited pages are not recorded (2026-11-22); setup removes any old `recent` field. The workspace guard limits documents to the current workspace AND the current user.
 model WorkspaceNavigation {
   id              String   @id @default(uuid()) @map("_id")
   tenantId        String   @map("tenant_id")
   userId          String   @map("user_id")
   pinned          Json     @default("[]")
-  recent          Json     @default("[]")
   moduleOrder     String[] @default([]) @map("module_order")
   hiddenModules   String[] @default([]) @map("hidden_modules")
   /// Command Center widgets, sizes and filters (dashboardLayoutSchema); null means the default layout.

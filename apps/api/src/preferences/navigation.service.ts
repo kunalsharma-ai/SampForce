@@ -8,7 +8,6 @@ import {
   type NavigationState,
   type NavItem,
   navItemSchema,
-  pushRecent,
   type UpdateNavigationInput,
 } from '@dealflow/types';
 import { Prisma } from '@dealflow/database';
@@ -16,24 +15,16 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { dashboardPolicyOfMember } from '../crm/crm-admin.service';
 
-const EMPTY: NavigationState = { pinned: [], recent: [], moduleOrder: [], hiddenModules: [] };
+const EMPTY: NavigationState = { pinned: [], moduleOrder: [], hiddenModules: [] };
 
 /** Reads stored JSON defensively: anything that no longer validates is dropped rather than sent to the browser. */
 function items(v: Prisma.JsonValue): NavItem[] {
   return Array.isArray(v) ? v.flatMap((x) => (navItemSchema.safeParse(x).success ? [navItemSchema.parse(x)] : [])) : [];
 }
-function recentItems(v: Prisma.JsonValue): NavigationState['recent'] {
-  if (!Array.isArray(v)) return [];
-  return v.flatMap((x) => {
-    const r = x as Record<string, unknown>;
-    const parsed = navItemSchema.safeParse({ href: r?.href, label: r?.label, kind: r?.kind });
-    return parsed.success && typeof r.visitedAt === 'string' ? [{ ...parsed.data, visitedAt: r.visitedAt }] : [];
-  });
-}
 
 /**
  * Personal navigation in the current workspace. The document is held by the workspace guard to both the workspace and the person,
- * so one member can never read or change another's pins or history.
+ * so one member can never read or change another's pins or layout. Visited pages are not recorded.
  */
 @Injectable()
 export class NavigationService {
@@ -44,7 +35,7 @@ export class NavigationService {
       tx.workspaceNavigation.findUnique({ where: { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } } }),
     );
     if (!row) return EMPTY;
-    return { pinned: items(row.pinned), recent: recentItems(row.recent), moduleOrder: row.moduleOrder, hiddenModules: row.hiddenModules };
+    return { pinned: items(row.pinned), moduleOrder: row.moduleOrder, hiddenModules: row.hiddenModules };
   }
 
   async update(auth: AuthContext, input: UpdateNavigationInput): Promise<NavigationState> {
@@ -60,17 +51,6 @@ export class NavigationService {
         update: data,
       }),
     );
-    return this.get(auth);
-  }
-
-  /** Records a page visit at the front of the recent list. */
-  async visit(auth: AuthContext, item: NavItem): Promise<NavigationState> {
-    await this.prisma.run(auth, async (tx) => {
-      const key = { tenantId_userId: { tenantId: auth.tenantId, userId: auth.userId } };
-      const row = await tx.workspaceNavigation.findUnique({ where: key });
-      const recent = pushRecent(row ? recentItems(row.recent) : [], item, new Date()) as unknown as Prisma.InputJsonValue;
-      await tx.workspaceNavigation.upsert({ where: key, create: { tenantId: auth.tenantId, userId: auth.userId, recent }, update: { recent } });
-    });
     return this.get(auth);
   }
 
@@ -104,13 +84,6 @@ export class NavigationService {
       }),
     );
     return this.getDashboardLayout(auth);
-  }
-
-  async clearRecent(auth: AuthContext): Promise<NavigationState> {
-    await this.prisma.run(auth, (tx) =>
-      tx.workspaceNavigation.updateMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, data: { recent: [] } }),
-    );
-    return this.get(auth);
   }
 }
 

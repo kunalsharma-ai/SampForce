@@ -11,7 +11,6 @@ import { useT } from '@/lib/i18n';
 import { useRegionalSync } from '@/lib/regional-sync';
 import { useSession, useSignOut } from '@/lib/session';
 import { useLockedFeature } from '@/lib/features';
-import { useRecordVisits } from '@/lib/workspace-nav';
 import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
@@ -27,7 +26,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // The workspace brand colour goes through the theme engine, which keeps it readable in both modes.
   useAppearanceSync(!!data, data?.tenant.brandColor ?? null);
-  useRecordVisits(!!data && !data.restriction);
   useRegionalSync(!!data);
   const t = useT();
   // A page outside the workspace's plan shows the upgrade page; the API refuses its data anyway (ADR 0057).

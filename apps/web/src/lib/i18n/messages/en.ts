@@ -21,7 +21,6 @@ export const en = {
   // Sidebar
   'nav.main': 'Main',
   'nav.favourites': 'Favourites',
-  'nav.recent': 'Recent',
   'nav.removeFavourite': 'Remove {label} from favourites',
   'nav.removeFavouriteShort': 'Remove from favourites',
   'nav.customize': 'Customize',
