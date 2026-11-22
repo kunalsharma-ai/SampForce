@@ -178,7 +178,10 @@ describe('help center content from the Console', () => {
     expect(topic).toMatchObject({ id: `onboarding-${tag}`, parentId: 'start', archivedAt: null });
 
     await admin.post('/api/v1/operator/help/media?name=evil.html').set('origin', ORIGIN).set('content-type', 'text/html').send(Buffer.from('<script>')).expect(400);
-    const pic = (await admin.post('/api/v1/operator/help/media?name=board.png').set('origin', ORIGIN).set('content-type', 'image/png').send(Buffer.from('png-bytes')).expect(201)).body;
+    // A file must really be what it says: a page renamed .png is refused.
+    await admin.post('/api/v1/operator/help/media?name=fake.png').set('origin', ORIGIN).set('content-type', 'image/png').send(Buffer.from('<html>not a picture')).expect(400);
+    const png = Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.from('png-bytes')]);
+    const pic = (await admin.post('/api/v1/operator/help/media?name=board.png').set('origin', ORIGIN).set('content-type', 'image/png').send(png).expect(201)).body;
     expect(pic.markdown).toBe(`![board.png](media:${pic.id})`);
     await A.post('/articles', article({ categoryId: `onboarding-${tag}`, body: { en: `![x](media:${randomUUID()})` } })).expect(400);
     const a = (await A.post('/articles', article({ categoryId: `onboarding-${tag}`, body: { en: `Look at the board:\n\n${pic.markdown}` } })).expect(201)).body;

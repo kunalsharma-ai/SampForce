@@ -94,6 +94,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorChat': 'console-support',
   'page.operatorSupport': 'console-support',
   'page.operatorHelp': 'console-support',
+  'page.operatorHelpManage': 'console-support',
   'page.operatorAudit': 'console-security',
 };
 

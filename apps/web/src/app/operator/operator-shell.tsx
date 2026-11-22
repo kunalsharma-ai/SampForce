@@ -92,7 +92,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Settings
               </Link>
-              <Link href="/operator/help" className={path === '/operator/help' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+              <Link href="/operator/help" className={path.startsWith('/operator/help') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Help
               </Link>
             </nav>

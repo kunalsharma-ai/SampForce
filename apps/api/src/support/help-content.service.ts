@@ -251,7 +251,7 @@ export class HelpContentService {
   async upload(op: OperatorContext, file: { name: string; contentType: string; data: Buffer }, ip: string | null): Promise<HelpMediaRow> {
     if (file.data.length === 0) throw new BadRequestException({ code: 'EMPTY_FILE', message: 'The file is empty.' });
     if (file.data.length > HELP_MEDIA_MAX_BYTES) throw new PayloadTooLargeException({ code: 'PAYLOAD_TOO_LARGE', message: 'Files can be up to 10 MB.' });
-    if (!MEDIA_TYPES.test(file.contentType)) throw invalid('file', 'Use a PNG, JPEG, GIF or WebP picture, an MP4 or WebM video, or a PDF.');
+    if (!MEDIA_TYPES.test(file.contentType) || !looksLike(file.data, file.contentType)) throw invalid('file', 'Use a PNG, JPEG, GIF or WebP picture, an MP4 or WebM video, or a PDF.');
     const m = await this.prisma.helpMedia.create({
       data: { name: file.name, contentType: file.contentType, sizeBytes: file.data.length, data: new Uint8Array(file.data), sha256: createHash('sha256').update(file.data).digest('hex'), operatorId: op.id },
     });
@@ -422,6 +422,30 @@ function toCategory(c: Prisma.HelpCategoryEntryGetPayload<object>): HelpCategory
     sortOrder: c.sortOrder,
     archivedAt: c.archivedAt?.toISOString() ?? null,
   };
+}
+
+/** The file's first bytes must match the type it claims, so a renamed file of another kind is refused. */
+function looksLike(data: Buffer, type: string): boolean {
+  const hex = data.subarray(0, 12).toString('hex');
+  const ascii = data.subarray(0, 12).toString('latin1');
+  switch (type) {
+    case 'image/png':
+      return hex.startsWith('89504e470d0a1a0a');
+    case 'image/jpeg':
+      return hex.startsWith('ffd8ff');
+    case 'image/gif':
+      return ascii.startsWith('GIF8');
+    case 'image/webp':
+      return ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'WEBP';
+    case 'video/mp4':
+      return ascii.slice(4, 8) === 'ftyp';
+    case 'video/webm':
+      return hex.startsWith('1a45dfa3');
+    case 'application/pdf':
+      return ascii.startsWith('%PDF-');
+    default:
+      return false;
+  }
 }
 
 function toMedia(m: { id: string; name: string; contentType: string; sizeBytes: number }): HelpMediaRow {

@@ -3,6 +3,7 @@
 import type { SupportTicketPriority, SupportTicketStatus } from '@dealflow/types';
 import { Badge } from '@dealflow/ui';
 import {
+  BookOpen,
   Bot,
   Building,
   Building2,
@@ -51,7 +52,11 @@ const ICONS: Record<string, LucideIcon> = {
   layers: Layers,
   'key-round': KeyRound,
   'shield-check': ShieldCheck,
+  'book-open': BookOpen,
 };
+
+/** The icon names the Console may pick for a topic. */
+export const HELP_ICON_NAMES = Object.keys(ICONS);
 
 export function categoryIcon(name: string): LucideIcon {
   return ICONS[name] ?? LifeBuoy;

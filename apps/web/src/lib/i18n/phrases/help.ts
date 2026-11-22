@@ -129,6 +129,7 @@ export const help = {
   'Closed query': ['Cerrada', 'Fermée', 'Geschlossen', 'مغلق'],
   'Awaiting response': ['Esperando respuesta', 'En attente de réponse', 'Wartet auf Antwort', 'بانتظار الرد'],
   // Console: Support tickets
+  'Manage Help': ['Gestionar la ayuda', 'Gérer l’aide', 'Hilfe verwalten', 'إدارة المساعدة'],
   'Support tickets': ['Tickets de soporte', 'Tickets de support', 'Support-Tickets', 'تذاكر الدعم'],
   'Queries raised from Help in every client’s workspaces.': [
     'Consultas enviadas desde Ayuda en los espacios de cada cliente.',
@@ -181,4 +182,22 @@ export const help = {
     'Wird für Sie mitgesendet: Ihr Arbeitsbereich, Ihre Rolle, Ihre E-Mail und die App-Version.',
     'يُرسَل نيابةً عنك: مساحة عملك ودورك وبريدك الإلكتروني وإصدار التطبيق.',
   ],
+  // Help Center articles, feedback and highlights (ADR 0073)
+  'Last updated {date}': ['Actualizado el {date}', 'Mis à jour le {date}', 'Aktualisiert am {date}', 'آخر تحديث {date}'],
+  'Watch the video': ['Ver el vídeo', 'Voir la vidéo', 'Video ansehen', 'شاهد الفيديو'],
+  'Was this helpful?': ['¿Te resultó útil?', 'Cela vous a-t-il aidé ?', 'War das hilfreich?', 'هل كان هذا مفيدًا؟'],
+  'What was missing or unclear? (optional)': ['¿Qué faltaba o no quedaba claro? (opcional)', 'Qu’est-ce qui manquait ou n’était pas clair ? (facultatif)', 'Was hat gefehlt oder war unklar? (optional)', 'ما الذي كان ناقصًا أو غير واضح؟ (اختياري)'],
+  'Send feedback': ['Enviar comentario', 'Envoyer l’avis', 'Feedback senden', 'أرسل الملاحظات'],
+  'Thanks, your answer helps us improve this help.': [
+    'Gracias, tu respuesta nos ayuda a mejorar esta ayuda.',
+    'Merci, votre réponse nous aide à améliorer cette aide.',
+    'Danke, Ihre Antwort hilft uns, diese Hilfe zu verbessern.',
+    'شكرًا، إجابتك تساعدنا على تحسين هذه المساعدة.',
+  ],
+  Answer: ['Respuesta', 'Réponse', 'Antwort', 'إجابة'],
+  'Related articles': ['Artículos relacionados', 'Articles associés', 'Verwandte Artikel', 'مقالات ذات صلة'],
+  Announcements: ['Anuncios', 'Annonces', 'Ankündigungen', 'الإعلانات'],
+  'Popular articles': ['Artículos populares', 'Articles populaires', 'Beliebte Artikel', 'المقالات الشائعة'],
+  'Recently updated guides': ['Guías actualizadas recientemente', 'Guides mis à jour récemment', 'Kürzlich aktualisierte Anleitungen', 'أدلة حُدّثت مؤخرًا'],
+  'These guides may help': ['Estas guías pueden ayudarte', 'Ces guides peuvent vous aider', 'Diese Anleitungen helfen vielleicht', 'قد تساعدك هذه الأدلة'],
 } as const satisfies PhraseTable;
