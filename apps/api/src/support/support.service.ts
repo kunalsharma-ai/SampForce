@@ -30,7 +30,7 @@ type TicketMessage = Ticket['messages'][number];
 /** How SampForce's own team is named to workspaces: one support desk, not individual operators. */
 const SUPPORT_NAME = 'SampForce support';
 
-const forbidden = () => new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to perform this action.' });
+const forbidden = () => new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to do that.' });
 
 /**
  * Help Center support tickets (ADR 0073). People raise a query from Help on the web or in the mobile app. Each
