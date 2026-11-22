@@ -220,4 +220,12 @@ export const notifications = {
   'Remark updated by {name}': ['Observación actualizada por {name}', 'Remarque modifiée par {name}', 'Bemerkung geändert von {name}', 'عدّل {name} الملاحظة'],
   'Lead transfer request updated: {lead}': ['Solicitud de traspaso de lead actualizada: {lead}', 'Demande de transfert de prospect modifiée : {lead}', 'Anfrage zur Lead-Übergabe geändert: {lead}', 'عُدّل طلب نقل العميل المحتمل: {lead}'],
   'Updated by {name}.': ['Actualizado por {name}.', 'Modifié par {name}.', 'Geändert von {name}.', 'عدّله {name}.'],
+  // Targets and tasks (ADR 0071, part 4)
+  'You have a new target': ['Tienes un nuevo objetivo', 'Vous avez un nouvel objectif', 'Sie haben ein neues Ziel', 'لديك هدف جديد'],
+  'New task: {title}': ['Nueva tarea: {title}', 'Nouvelle tâche : {title}', 'Neue Aufgabe: {title}', 'مهمة جديدة: {title}'],
+  'Task changed: {title}': ['Tarea modificada: {title}', 'Tâche modifiée : {title}', 'Aufgabe geändert: {title}', 'تم تغيير المهمة: {title}'],
+  'Task completed: {title}': ['Tarea completada: {title}', 'Tâche terminée : {title}', 'Aufgabe erledigt: {title}', 'اكتملت المهمة: {title}'],
+  'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
+  'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
+  '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
 } satisfies TextTable;

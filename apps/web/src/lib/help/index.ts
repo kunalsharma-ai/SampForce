@@ -36,6 +36,8 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/pipelines': 'page.pipelines',
   '/app/activities': 'page.activities',
   '/app/follow-ups': 'page.followUps',
+  '/app/tasks': 'page.tasks',
+  '/app/targets': 'page.targets',
   '/app/rfqs': 'page.rfqs',
   '/app/chat': 'page.chat',
   '/app/communication': 'page.communication',

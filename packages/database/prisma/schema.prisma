@@ -579,6 +579,35 @@ model WorkspaceNode {
   @@map("workspace_nodes")
 }
 
+/// A target set for a workspace (ADR 0071): a metric over a period, set by the Super Workspace or handed down by a
+/// manager from its own target. Achievement is counted from the records of the workspace's people and those below it.
+model WorkspaceTarget {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  workspaceNodeId String    @map("workspace_node_id")
+  /// LEADS, CALLS, DEALS_WON or REVENUE.
+  metric          String
+  /// DAILY, WEEKLY, MONTHLY, QUARTERLY or CUSTOM.
+  period          String
+  startsAt        DateTime  @map("starts_at")
+  /// The day after the last day (periods are [startsAt, endsAt)).
+  endsAt          DateTime  @map("ends_at")
+  amount          Float
+  note            String?
+  /// The target this one was split from, when a manager (or the Super Workspace) hands part of a target down.
+  parentTargetId  String?   @map("parent_target_id")
+  setById         String?   @map("set_by_id")
+  /// SUPER or MANAGER: which level set it.
+  setByLevel      String    @map("set_by_level")
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, workspaceNodeId])
+  @@index([tenantId, parentTargetId])
+  @@map("workspace_targets")
+}
+
 model Team {
   id          String   @id @default(uuid()) @map("_id")
   tenantId    String   @map("tenant_id")
@@ -1330,6 +1359,9 @@ model Task {
   /// Reminder bookkeeping (ADR 0062) so each reminder goes out once per due date.
   reminderSentAt    DateTime?    @map("reminder_sent_at")
   overdueNotifiedAt DateTime?    @map("overdue_notified_at")
+  /// Workspace hierarchy (ADR 0071): the workspace a task was handed down to, and the workspace it came from.
+  workspaceNodeId   String?      @map("workspace_node_id")
+  assignedByNodeId  String?      @map("assigned_by_node_id")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
   deletedAt         DateTime?    @map("deleted_at")
@@ -1344,7 +1376,37 @@ model Task {
   @@index([tenantId, assigneeId])
   @@index([tenantId, companyId, status])
   @@index([tenantId, followUpType, status, dueAt])
+  @@index([tenantId, workspaceNodeId, status])
   @@map("tasks")
+}
+
+/// A comment on a task handed down the workspace hierarchy (ADR 0071).
+model TaskComment {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  taskId    String   @map("task_id")
+  authorId  String?  @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, taskId, createdAt])
+  @@map("task_comments")
+}
+
+/// The full history of a handed-down task: who created, changed or commented on it, and what changed. Append-only.
+model TaskEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  taskId    String   @map("task_id")
+  actorId   String?  @map("actor_id")
+  /// created, updated or commented.
+  kind      String
+  /// [{ field, from, to }]
+  changes   Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, taskId, createdAt])
+  @@map("task_events")
 }
 
 // ───────────────────────────── Extensibility & onboarding ─────────────────────────────

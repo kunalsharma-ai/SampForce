@@ -41,6 +41,8 @@ export const ar: Messages = {
   'module.pipelines': 'مسارات المبيعات',
   'module.accounts': 'الحسابات',
   'module.follow-ups': 'المتابعات',
+  'module.tasks': 'المهام',
+  'module.targets': 'الأهداف',
   'module.rfqs': 'طلبات عروض الأسعار',
   'module.chat': 'دردشة الفريق',
   'module.activities': 'أنشطة المبيعات',

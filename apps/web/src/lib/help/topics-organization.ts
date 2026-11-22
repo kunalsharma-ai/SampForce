@@ -674,6 +674,54 @@ export const organizationHelp = {
       'استخدمه إن كان المندوبون أو الفرق يغطون بلدانًا مختلفة.',
     ],
   },
+  'page.tasks': {
+    title: 'Tasks',
+    what: [
+      'Tasks handed down the workspaces: from the Super Workspace to managers, and from managers to their executives.',
+      'Tareas asignadas entre espacios: del espacio principal a los gerentes y de los gerentes a sus ejecutivos.',
+      'Les tâches transmises entre espaces : de l’espace principal aux managers, et des managers à leurs commerciaux.',
+      'Aufgaben zwischen Arbeitsbereichen: vom Super-Arbeitsbereich an Manager und von Managern an ihre Executives.',
+      'المهام المُسندة بين المساحات: من المساحة الرئيسية إلى المديرين، ومن المديرين إلى تنفيذييهم.',
+    ],
+    how: [
+      'Open a task to comment, mark it done or see its history. New task assigns one to a workspace below yours; the person is told at once.',
+      'Abre una tarea para comentar, marcarla como hecha o ver su historial. Nueva tarea asigna una a un espacio inferior y avisa a la persona.',
+      'Ouvrez une tâche pour commenter, la terminer ou voir l’historique. Nouvelle tâche l’attribue à un espace en dessous ; la personne est prévenue.',
+      'Öffnen Sie eine Aufgabe zum Kommentieren, Erledigen oder für den Verlauf. Neue Aufgabe weist eine nach unten zu; die Person erfährt es sofort.',
+      'افتح مهمة للتعليق أو تعليمها كمنجزة أو رؤية سجلها. «مهمة جديدة» تُسند مهمة لمساحة أدنى ويُبلَّغ الشخص فورًا.',
+    ],
+    where: [
+      'High-priority and overdue tasks also show at the top of your dashboard.',
+      'Las tareas de prioridad alta y vencidas también aparecen arriba en tu panel.',
+      'Les tâches prioritaires et en retard s’affichent aussi en haut de votre tableau de bord.',
+      'Dringende und überfällige Aufgaben erscheinen auch oben in Ihrem Dashboard.',
+      'تظهر المهام ذات الأولوية العالية والمتأخرة أيضًا أعلى لوحتك.',
+    ],
+  },
+  'page.targets': {
+    title: 'Targets',
+    what: [
+      'Leads, calls, deals won or revenue to reach in a day, week, month, quarter or custom period, for each workspace.',
+      'Leads, llamadas, negocios ganados o ingresos que alcanzar en un día, semana, mes, trimestre o periodo propio, por espacio.',
+      'Prospects, appels, affaires gagnées ou revenus à atteindre par jour, semaine, mois, trimestre ou période libre, par espace.',
+      'Leads, Anrufe, gewonnene Deals oder Umsatz pro Tag, Woche, Monat, Quartal oder eigenem Zeitraum, je Arbeitsbereich.',
+      'عملاء محتملون أو مكالمات أو صفقات مربوحة أو إيرادات يجب بلوغها يوميًا أو أسبوعيًا أو شهريًا أو فصليًا أو لفترة مخصصة، لكل مساحة.',
+    ],
+    how: [
+      'Set a target for a workspace below yours. A manager can split its own target among its executives. Progress counts real records.',
+      'Fija un objetivo para un espacio inferior. Un gerente puede repartir el suyo entre sus ejecutivos. El progreso cuenta registros reales.',
+      'Fixez un objectif pour un espace en dessous. Un manager peut répartir le sien entre ses commerciaux. La progression compte les vraies données.',
+      'Legen Sie Ziele für Arbeitsbereiche unter Ihnen fest. Manager verteilen ihr Ziel auf ihre Executives. Gezählt wird aus echten Daten.',
+      'حدّد هدفًا لمساحة أدنى. يمكن للمدير توزيع هدفه على تنفيذييه. يُحتسب التقدّم من السجلات الفعلية.',
+    ],
+    where: [
+      'Use it at the start of each period, and check it on your dashboard.',
+      'Úsalo al inicio de cada periodo y revísalo en tu panel.',
+      'Utilisez-le en début de période et suivez-le sur votre tableau de bord.',
+      'Nutzen Sie es zu Beginn jedes Zeitraums und verfolgen Sie es im Dashboard.',
+      'استخدمه في بداية كل فترة وتابعه في لوحتك.',
+    ],
+  },
   'page.workspaces': {
     title: 'Workspaces',
     what: [
