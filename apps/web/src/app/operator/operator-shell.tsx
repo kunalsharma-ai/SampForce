@@ -61,6 +61,9 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Plans
               </Link>
+              <Link href="/operator/mobile" className={path.startsWith('/operator/mobile') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Mobile app
+              </Link>
               <OperatorChatLink active={path === '/operator/chat'} />
               <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Operator log

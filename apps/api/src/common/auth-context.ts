@@ -26,7 +26,9 @@ export interface AuthContext {
    * Set when the caller is the browser extension (only routes marked @ExtensionAccess) or a workspace API key
    * (only routes marked @ApiKeyAccess). For an API key, sessionId is the key's id.
    */
-  via?: 'extension' | 'api_key';
+  via?: 'extension' | 'api_key' | 'mobile';
+  /** The phone (MobileDevice id) of a mobile session (ADR 0072). */
+  deviceId?: string;
 }
 
 export interface RequestMeta {
@@ -52,6 +54,13 @@ export const ExtensionAccess = () => SetMetadata(EXTENSION_ACCESS, true);
 export const API_KEY_ACCESS = 'dealflow:apiKeyAccess';
 /** Reachable with a workspace API key (Zapier, scripts). Every other route refuses one. */
 export const ApiKeyAccess = () => SetMetadata(API_KEY_ACCESS, true);
+
+export const MOBILE_ACCESS = 'dealflow:mobileAccess';
+/**
+ * Reachable from the SampForce phone app (ADR 0072). Every other route refuses a mobile session, so the app can only
+ * use what was built and checked for it, whatever request a modified app sends.
+ */
+export const MobileAccess = () => SetMetadata(MOBILE_ACCESS, true);
 
 export const REQUIRED_PERMISSIONS = 'dealflow:permissions';
 /** Every listed permission must be granted by the caller's role in the active tenant. */

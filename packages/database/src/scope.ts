@@ -120,6 +120,10 @@ const OPERATOR_READ = new Set([
   'ChatConversation',
   'ChatMember',
   'ChatMessage',
+  // Mobile app (ADR 0072): the Console's overview of every organisation's mobile access and phones. Decisions are
+  // written in the organisation's own context.
+  'MobileAccess',
+  'MobileDevice',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */

@@ -51,6 +51,14 @@ export default function OperatorTenantPage() {
         )}
       </Card>
       <WorkspaceFeatures d={d} admin={admin} />
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <span className="text-sm">
+          <span className="font-medium">Mobile app</span> <span className="text-muted-foreground">· approve, suspend or withdraw this client’s iPhone and Android access</span>
+        </span>
+        <Link href={`/operator/mobile/${d.id}`} className="text-sm text-primary underline-offset-2 hover:underline">
+          Manage mobile access
+        </Link>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Invoices</CardTitle>

@@ -230,12 +230,17 @@ model Session {
   extensionTokenHash String?   @unique @map("extension_token_hash")
   /// The name the person gave a browser extension connection.
   extensionName      String?   @map("extension_name")
+  /// "MOBILE" for the SampForce phone app (ADR 0072); null for the web. Copied onto every rotated session.
+  client             String?
+  /// The phone this session belongs to (MobileDevice id), for mobile sessions.
+  deviceId           String?   @map("device_id")
   lastUsedAt         DateTime? @map("last_used_at")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId])
+  @@index([deviceId])
   @@map("sessions")
 }
 
@@ -298,6 +303,8 @@ model Tenant {
   savedViews             SavedView[]
   territories            Territory[]
   featureOverrides       TenantFeatureOverride[]
+  mobileAccess           MobileAccess?
+  mobileDevices          MobileDevice[]
   territoryCountries     TerritoryCountry[]
   roles                  Role[]
   memberships            Membership[]
@@ -4136,4 +4143,61 @@ model ChatSignal {
 
   @@index([createdAt])
   @@map("chat_signals")
+}
+
+// ───────────────────────────── Mobile app (ADR 0072) ─────────────────────────────
+
+/// Mobile app access of one organisation: the Console Admin's decision and the Super Workspace's activation.
+model MobileAccess {
+  id                  String    @id @default(uuid()) @map("_id")
+  tenantId            String    @unique @map("tenant_id")
+  /// OFF, REQUESTED, APPROVED, REJECTED, SUSPENDED or REVOKED (MOBILE_ACCESS_STATUSES).
+  status              String    @default("OFF")
+  requestMessage      String?   @map("request_message")
+  requestedAt         DateTime? @map("requested_at")
+  requestedById       String?   @map("requested_by_id")
+  /// The Console's last decision: why, when and by which operator.
+  decisionStatus      String?   @map("decision_status")
+  decisionReason      String?   @map("decision_reason")
+  decidedAt           DateTime? @map("decided_at")
+  decidedByOperatorId String?   @map("decided_by_operator_id")
+  /// Set while the Super Workspace has mobile access switched on for its people.
+  activatedAt         DateTime? @map("activated_at")
+  activatedById       String?   @map("activated_by_id")
+  /// Phones signed in at once across the organisation; null = no limit.
+  maxDevices          Int?      @map("max_devices")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("mobile_access")
+}
+
+/// A phone (or the app's web build) signed in to an organisation. One row per person, organisation and app install.
+model MobileDevice {
+  id          String    @id @default(uuid()) @map("_id")
+  tenantId    String    @map("tenant_id")
+  userId      String    @map("user_id")
+  /// Random id the app keeps in secure storage, so signing in again on the same phone reuses the row.
+  installId   String    @map("install_id")
+  /// IOS, ANDROID or WEB.
+  platform    String
+  model       String?
+  osVersion   String?   @map("os_version")
+  appVersion  String?   @map("app_version")
+  name        String?
+  /// Push token for this phone (M8); null until the person allows notifications.
+  pushToken   String?   @map("push_token")
+  /// Null while the phone is signed in.
+  signedOutAt DateTime? @map("signed_out_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, userId, installId])
+  @@index([tenantId, signedOutAt])
+  @@map("mobile_devices")
 }

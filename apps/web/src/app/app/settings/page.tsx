@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
-import { ChevronRight, ListPlus, MapPinned, SlidersHorizontal, Upload } from 'lucide-react';
+import { ChevronRight, ListPlus, MapPinned, SlidersHorizontal, Smartphone, Upload } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
@@ -29,6 +29,7 @@ export default function SettingsPage() {
             { href: '/app/settings/crm?section=fields', icon: ListPlus, title: 'Custom fields', text: 'Add fields to companies, employees, leads, deals, follow-ups and RFQs.' },
             { href: '/app/settings/territories', icon: MapPinned, title: 'Territories', text: 'Sales territories by country.' },
             { href: '/app/settings/import', icon: Upload, title: 'Import data', text: 'Bring in records from a CSV file, with a check before anything is saved.' },
+            { href: '/app/settings/mobile', icon: Smartphone, title: 'Mobile app', text: 'iPhone and Android app: approval, switching it on and the phones signed in.' },
           ].map((l) => (
             <Link key={l.href} href={l.href} className="flex items-center gap-3 px-6 py-4 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
               <l.icon className="size-5 text-muted-foreground" aria-hidden />

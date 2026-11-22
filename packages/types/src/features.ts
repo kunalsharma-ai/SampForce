@@ -69,6 +69,8 @@ export const FEATURE_KEYS = [
   // ADR 0062
   'custom_fields_advanced',
   'excel_export',
+  // ADR 0072
+  'mobile_app',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -138,6 +140,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'sso_scim', group: 'Administration', label: 'Single sign-on and SCIM', description: 'OpenID Connect sign-in and SCIM provisioning.', defaultFrom: 'free', paths: [] },
   { key: 'custom_fields_advanced', group: 'Administration', label: 'Advanced custom fields', description: 'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.', defaultFrom: 'growth', paths: [] },
   { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [] },
+  { key: 'mobile_app', group: 'Apps', label: 'Mobile app', description: 'The SampForce app for iPhone and Android, once the Console Admin approves it and the Super Workspace switches it on.', defaultFrom: 'free', paths: ['/app/settings/mobile'] },
 ];
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
