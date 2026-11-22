@@ -219,6 +219,12 @@ export function guidesFor(reader: HelpReader): HelpGuide[] {
   return allGuides().filter((g) => audienceOf(g.category) === reader.audience && allowed(reader, { ...GUIDE_RULES[g.id], feature: guideFeature(g.id) }));
 }
 
+/** What a page needs: its plan feature, a role permission and the workspace levels that use it (none = everyone). */
+export function guideRequirements(id: HelpId): { feature: FeatureKey | null; permission: Permission | null; levels: readonly WorkspaceLevel[] | null } {
+  const rule = GUIDE_RULES[id];
+  return { feature: rule?.feature ?? guideFeature(id), permission: rule?.permission ?? null, levels: rule?.levels ?? null };
+}
+
 /** Why a reader cannot use a page: their plan lacks the feature, their role the permission, or their workspace level. */
 export interface RestrictedGuide {
   guide: HelpGuide;

@@ -23,6 +23,7 @@ export const help = {
   ],
   'Search features': ['Buscar funciones', 'Rechercher une fonction', 'Funktionen suchen', 'ابحث في الميزات'],
   'No feature matches “{query}”.': ['Ninguna función coincide con «{query}».', 'Aucune fonction ne correspond à « {query} ».', 'Keine Funktion passt zu „{query}“.', 'لا توجد ميزة تطابق «{query}».'],
+  'Open the full guide': ['Abrir la guía completa', 'Ouvrir le guide complet', 'Vollständige Anleitung öffnen', 'افتح الدليل الكامل'],
   'Open page': ['Abrir página', 'Ouvrir la page', 'Seite öffnen', 'افتح الصفحة'],
   'Sections on this page': ['Secciones de esta página', 'Sections de cette page', 'Bereiche auf dieser Seite', 'أقسام هذه الصفحة'],
   // Help Center (ADR 0073)
@@ -263,4 +264,38 @@ export const help = {
   'Lists them in Help with the reason and who can give access.': ['Las muestra en Ayuda con el motivo y quién puede dar acceso.', 'Les liste dans l’Aide avec la raison et qui peut donner accès.', 'Listet sie in der Hilfe mit Grund und wer Zugriff geben kann.', 'يعرضها في المساعدة مع السبب ومن يمكنه منح الوصول.'],
   'Note for everyone in Help (optional)': ['Nota para todos en Ayuda (opcional)', 'Note pour tous dans l’Aide (facultatif)', 'Hinweis für alle in der Hilfe (optional)', 'ملاحظة للجميع في المساعدة (اختياري)'],
   'For example: for password resets, ask IT first.': ['Por ejemplo: para restablecer contraseñas, pregunta primero a TI.', 'Par exemple : pour réinitialiser un mot de passe, demandez d’abord à l’informatique.', 'Zum Beispiel: Für Passwort-Resets zuerst die IT fragen.', 'مثلًا: لإعادة تعيين كلمة المرور اسأل قسم تقنية المعلومات أولًا.'],
+  // Guide dialog: who can use it, and troubleshooting
+  'Start here: {role}': ['Empieza aquí: {role}', 'Pour commencer : {role}', 'Hier starten: {role}', 'ابدأ هنا: {role}'],
+  'Who can use it': ['Quién puede usarlo', 'Qui peut l’utiliser', 'Wer es nutzen kann', 'من يمكنه استخدامه'],
+  'Plan feature': ['Función del plan', 'Fonction de l’offre', 'Tariffunktion', 'ميزة الخطة'],
+  'Included in every plan': ['Incluido en todos los planes', 'Inclus dans toutes les offres', 'In jedem Tarif enthalten', 'مضمّنة في كل الخطط'],
+  'Role permission': ['Permiso del rol', 'Permission du rôle', 'Rollenberechtigung', 'صلاحية الدور'],
+  'Workspace levels': ['Niveles de espacio', 'Niveaux d’espace', 'Arbeitsbereichsebenen', 'مستويات المساحة'],
+  'Every level': ['Todos los niveles', 'Tous les niveaux', 'Alle Ebenen', 'كل المستويات'],
+  'If something goes wrong': ['Si algo falla', 'En cas de problème', 'Wenn etwas nicht klappt', 'إذا حدث خطأ'],
+  'If the page or a button is missing, your plan, role or workspace level does not include it: see Who can use it above, then ask your workspace administrator.': [
+    'Si falta la página o un botón, tu plan, rol o nivel de espacio no lo incluye: mira Quién puede usarlo arriba y pregunta al administrador del espacio.',
+    'Si la page ou un bouton manque, votre offre, rôle ou niveau d’espace ne l’inclut pas : voyez Qui peut l’utiliser ci-dessus, puis demandez à l’administrateur.',
+    'Fehlt die Seite oder eine Schaltfläche, umfasst Ihr Tarif, Ihre Rolle oder Ebene sie nicht: siehe Wer es nutzen kann oben, dann den Administrator fragen.',
+    'إذا غابت الصفحة أو زر، فخطتك أو دورك أو مستوى مساحتك لا يشمله: راجع من يمكنه استخدامه أعلاه، ثم اسأل مسؤول المساحة.',
+  ],
+  'If an action fails, read the message on the screen: it says what to fix, such as a required field or a duplicate record. Correct it and try again.': [
+    'Si una acción falla, lee el mensaje en pantalla: indica qué corregir, como un campo obligatorio o un registro duplicado. Corrígelo y vuelve a intentarlo.',
+    'Si une action échoue, lisez le message à l’écran : il dit quoi corriger, comme un champ obligatoire ou un doublon. Corrigez et réessayez.',
+    'Schlägt eine Aktion fehl, lesen Sie die Meldung: Sie sagt, was zu korrigieren ist, etwa ein Pflichtfeld oder ein Duplikat. Korrigieren und erneut versuchen.',
+    'إذا فشل إجراء فاقرأ الرسالة على الشاشة: تذكر ما يجب تصحيحه، مثل حقل مطلوب أو سجل مكرر. صحّحه وحاول مجددًا.',
+  ],
+  'If it says you are not allowed, your role lacks the permission shown above. An administrator can change your role in Team.': [
+    'Si dice que no tienes permiso, a tu rol le falta el permiso indicado arriba. Un administrador puede cambiar tu rol en Equipo.',
+    'S’il indique que vous n’êtes pas autorisé, votre rôle n’a pas la permission ci-dessus. Un administrateur peut changer votre rôle dans Équipe.',
+    'Heißt es, Sie dürfen das nicht, fehlt Ihrer Rolle die oben genannte Berechtigung. Ein Administrator kann Ihre Rolle unter Team ändern.',
+    'إذا ظهر أنك غير مسموح لك، فدورك يفتقد الصلاحية المذكورة أعلاه. يمكن للمسؤول تغيير دورك من الفريق.',
+  ],
+  'If it still fails, raise a query from here: the page is attached, so support sees where it happened.': [
+    'Si sigue fallando, envía una consulta desde aquí: se adjunta la página para que el soporte vea dónde ocurrió.',
+    'Si cela échoue encore, posez une question d’ici : la page est jointe, le support voit où cela s’est produit.',
+    'Klappt es weiter nicht, stellen Sie hier eine Anfrage: Die Seite wird mitgesendet, damit der Support sieht, wo es passierte.',
+    'إذا استمر الفشل فأرسل استفسارًا من هنا: تُرفق الصفحة ليرى الدعم أين حدث ذلك.',
+  ],
+  'Raise a query about this page': ['Enviar una consulta sobre esta página', 'Poser une question sur cette page', 'Anfrage zu dieser Seite stellen', 'أرسل استفسارًا عن هذه الصفحة'],
 } as const satisfies PhraseTable;

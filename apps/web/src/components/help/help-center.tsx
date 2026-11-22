@@ -1,6 +1,13 @@
 'use client';
 
-import { categoriesFor, faqsFor, guidesFor, type HelpReader } from '@dealflow/help';
+import {
+  categoriesFor,
+  faqsFor,
+  guidesFor,
+  type HelpReader,
+  helpText,
+  roleGuideFor,
+} from '@dealflow/help';
 import { Button, Input, Skeleton } from '@dealflow/ui';
 import {
   ArrowRight,
@@ -67,7 +74,7 @@ export function HelpCenter({
   const [category, setCategory] = useState<string | null>(params.get('category'));
   const [opened, setOpened] = useState<HelpItem | null>(null);
   const [raising, setRaising] = useState(params.get('raise') === '1');
-  const [from] = useState(params.get('from'));
+  const [from, setFrom] = useState(params.get('from'));
   const faqsRef = useRef<HTMLElement>(null);
   const audience = reader?.audience;
   const remote = useHelpContent(audience);
@@ -99,6 +106,19 @@ export function HelpCenter({
     () => (view && query.trim() ? searchView(view, query) : null),
     [view, query],
   );
+
+  // "Open the full guide" from a page's i button lands here with ?guide=<page id>; it opens once the content is in.
+  const [guideParam] = useState(params.get('guide'));
+  const guideOpened = useRef(false);
+  useEffect(() => {
+    if (!guideParam || !view || !remote.isFetched || guideOpened.current) return;
+    guideOpened.current = true;
+    const g = view.guides.find((x) => x.id === guideParam);
+    if (g) {
+      setOpened(g);
+      if (workspace) countHelpView(g.key);
+    }
+  }, [guideParam, view, remote.isFetched, workspace]);
 
   const open = (item: HelpItem) => {
     setOpened(item);
@@ -336,6 +356,9 @@ export function HelpCenter({
             />
           )}
 
+          {/* ── Start here, for the reader's role ── */}
+          {!category && reader && <RoleStart reader={reader} view={view} onOpen={open} t={t} />}
+
           {/* ── Topics ── */}
           <section aria-labelledby="help-topics">
             <SectionTitle
@@ -470,9 +493,69 @@ export function HelpCenter({
         related={related}
         audience={audience!}
         myFeedback={view.myFeedback}
+        onRaise={
+          workspace
+            ? (path) => {
+                setOpened(null);
+                if (path) setFrom(path);
+                setRaising(true);
+              }
+            : undefined
+        }
       />
       {raiseDialog}
     </div>
+  );
+}
+
+/** The pages to learn first for the reader's role, in order, as far as their plan and role include them. */
+function RoleStart({
+  reader,
+  view,
+  onOpen,
+  t,
+}: {
+  reader: HelpReader;
+  view: HelpView;
+  onOpen: (i: HelpItem) => void;
+  t: Translator;
+}) {
+  const role = roleGuideFor(reader);
+  const guides = role.pages.flatMap((id) => view.guides.filter((g) => g.builtin?.id === id));
+  if (!guides.length) return null;
+  return (
+    <section
+      aria-labelledby="help-role"
+      className="rounded-3xl border border-border bg-card p-6"
+      data-help-role={role.role}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 id="help-role" className="text-xl font-semibold tracking-tight">
+          {t('Start here: {role}', { role: helpText(role.title, t.language) })}
+        </h2>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">{helpText(role.intro, t.language)}</p>
+      <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {guides.map((g, i) => (
+          <li key={g.key}>
+            <button
+              type="button"
+              onClick={() => onOpen(g)}
+              className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-start text-sm hover:border-primary/40"
+              data-help-role-step={g.id}
+            >
+              <span
+                className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                aria-hidden
+              >
+                {i + 1}
+              </span>
+              <span className="font-medium">{g.title}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

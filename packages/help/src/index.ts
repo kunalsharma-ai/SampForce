@@ -8,6 +8,7 @@ export * from './topics';
 export * from './categories';
 export * from './faqs';
 export * from './access';
+export * from './roles';
 
 import { allGuides } from './access';
 import { CONSOLE_FAQS, HELP_FAQS } from './faqs';

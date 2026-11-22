@@ -356,3 +356,35 @@ test('Help settings: hidden menu, missing features explained, Help switched off 
   await expect(center.getByRole('heading', { level: 1, name: 'How can we help?' })).toBeVisible();
   await opsCtx.close();
 });
+
+/**
+ * Guides for every module (ADR 0073): a start-here path for the reader's role, who can use each page and what to do
+ * when something fails, and the full guide one click away from every page's i button.
+ */
+test('role start-here guides, requirements, troubleshooting and the full guide from a page', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await signUp(page, `Help Guides ${Date.now()}`);
+  await page.goto('/app/help');
+  const role = page.locator('[data-help-role="superAdmin"]');
+  await expect(role).toContainText('Start here: Super Admin');
+  await role.locator('[data-help-role-step="page.team"]').click();
+  const dialog = page.locator('[data-help-guide-dialog="page.team"]');
+  await expect(dialog.locator('[data-help-requirements]')).toContainText('members:read');
+  await expect(dialog.locator('[data-help-troubleshooting] li')).toHaveCount(4);
+  await axe(page);
+  await shot(page, '31-guide-requirements-troubleshooting');
+  await dialog.locator('[data-raise-about-page]').click();
+  const form = page.locator('[data-raise-query-dialog]');
+  await expect(form.getByText('Sent with the page you came from: /app/team')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await shot(page, '32-help-role-start-here');
+
+  // From a module's own i button to its full guide.
+  await page.goto('/app/deals');
+  await page.locator('[data-help-topic="page.deals"]').first().click();
+  await page.locator('[data-full-guide="page.deals"]').click();
+  await expect(page).toHaveURL(/\/app\/help/);
+  await expect(page.locator('[data-help-guide-dialog="page.deals"]')).toBeVisible();
+});

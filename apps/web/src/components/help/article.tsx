@@ -1,14 +1,18 @@
 'use client';
 
-import { helpText } from '@dealflow/help';
+import { guideRequirements, helpText } from '@dealflow/help';
+import { FEATURE_BY_KEY, WORKSPACE_LEVEL_LABEL } from '@dealflow/types';
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogTitle } from '@dealflow/ui';
 import {
   ArrowRight,
   CalendarClock,
+  KeyRound,
+  LifeBuoy,
   Lightbulb,
   PlayCircle,
   ThumbsDown,
   ThumbsUp,
+  Wrench,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -249,6 +253,7 @@ export function HelpItemDialog({
   related,
   audience,
   myFeedback,
+  onRaise,
 }: {
   item: HelpItem | null;
   onClose: () => void;
@@ -256,6 +261,8 @@ export function HelpItemDialog({
   related: HelpItem[];
   audience: 'workspace' | 'console';
   myFeedback: Record<string, boolean>;
+  /** Raise a query about the page this guide explains. */
+  onRaise?: (fromPath: string | null) => void;
 }) {
   const t = useT();
   const faq = item && isFaq(item) ? item : null;
@@ -306,6 +313,10 @@ export function HelpItemDialog({
                   </Button>
                 )}
               </div>
+              {guide?.builtin && audience === 'workspace' && <WhoCanUse id={guide.builtin.id} />}
+              {guide?.builtin && audience === 'workspace' && (
+                <Troubleshooting href={guide.builtin.href ?? null} onRaise={onRaise} />
+              )}
               {audience === 'workspace' && (
                 <FeedbackBar articleKey={item.key} mine={myFeedback[item.key]} />
               )}
@@ -351,5 +362,95 @@ function Explanation({ guide, t }: { guide: ViewGuide; t: Translator }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/** What a page needs: the plan feature, the role permission and the workspace levels, so nobody guesses. */
+function WhoCanUse({ id }: { id: Parameters<typeof guideRequirements>[0] }) {
+  const t = useT();
+  const r = guideRequirements(id);
+  const rows: [string, React.ReactNode][] = [
+    [
+      t('Plan feature'),
+      r.feature ? t.maybe(FEATURE_BY_KEY[r.feature].label) : t('Included in every plan'),
+    ],
+    [
+      t('Role permission'),
+      r.permission ? (
+        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{r.permission}</code>
+      ) : (
+        t('Everyone in the workspace')
+      ),
+    ],
+    [
+      t('Workspace levels'),
+      r.levels
+        ? r.levels.map((l) => t.maybe(WORKSPACE_LEVEL_LABEL[l])).join(', ')
+        : t('Every level'),
+    ],
+  ];
+  return (
+    <div className="rounded-xl border border-border p-3" data-help-requirements>
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <KeyRound className="size-4 text-primary" aria-hidden /> {t('Who can use it')}
+      </h3>
+      <dl className="grid gap-2 text-sm sm:grid-cols-3">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-xs text-muted-foreground">{label}</dt>
+            <dd className="mt-0.5 font-medium">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/** What to do when the page or an action on it does not work, ending with a query about this very page. */
+function Troubleshooting({
+  href,
+  onRaise,
+}: {
+  href: string | null;
+  onRaise?: (fromPath: string | null) => void;
+}) {
+  const t = useT();
+  const steps = [
+    t(
+      'If the page or a button is missing, your plan, role or workspace level does not include it: see Who can use it above, then ask your workspace administrator.',
+    ),
+    t(
+      'If an action fails, read the message on the screen: it says what to fix, such as a required field or a duplicate record. Correct it and try again.',
+    ),
+    t(
+      'If it says you are not allowed, your role lacks the permission shown above. An administrator can change your role in Team.',
+    ),
+    t(
+      'If it still fails, raise a query from here: the page is attached, so support sees where it happened.',
+    ),
+  ];
+  return (
+    <div className="rounded-xl border border-border p-3" data-help-troubleshooting>
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <Wrench className="size-4 text-primary" aria-hidden /> {t('If something goes wrong')}
+      </h3>
+      <ol className="list-decimal space-y-1.5 ps-5 text-sm">
+        {steps.map((s) => (
+          <li key={s}>{s}</li>
+        ))}
+      </ol>
+      {onRaise && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          onClick={() => onRaise(href)}
+          data-raise-about-page
+        >
+          <LifeBuoy aria-hidden /> {t('Raise a query about this page')}
+        </Button>
+      )}
+    </div>
   );
 }

@@ -18,6 +18,8 @@ import {
   guideHref,
   guidesFor,
   restrictedGuides,
+  ROLE_GUIDES,
+  roleGuideFor,
   searchHelp,
 } from './index';
 
@@ -101,6 +103,19 @@ describe('who sees what', () => {
     // Exactly the guides the reader does not get.
     expect(restrictedGuides(limited).length + guidesFor(limited).length).toBe(guidesFor(everything).length);
     expect(restrictedGuides({ audience: 'console' })).toEqual([]);
+  });
+
+  it('gives every role a start-here guide of real pages, in five languages', () => {
+    for (const g of Object.values(ROLE_GUIDES)) {
+      fiveLanguages(g.title, `${g.role}.title`);
+      fiveLanguages(g.intro, `${g.role}.intro`);
+      for (const p of g.pages) expect(HELP_TOPICS[p], `${g.role}: ${p}`).toBeTruthy();
+    }
+    expect(roleGuideFor({ audience: 'console' }).role).toBe('console');
+    expect(roleGuideFor(everything).role).toBe('superAdmin');
+    expect(roleGuideFor({ ...everything, permissions: [] }).role).toBe('SUPER');
+    expect(roleGuideFor({ ...everything, level: 'MANAGER' }).role).toBe('MANAGER');
+    expect(roleGuideFor({ ...everything, level: 'EXECUTIVE' }).role).toBe('EXECUTIVE');
   });
 
   it('follows the workspace level', () => {
