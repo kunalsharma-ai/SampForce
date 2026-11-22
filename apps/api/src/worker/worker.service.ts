@@ -1,5 +1,6 @@
 import { ZoomService } from '../apps/zoom.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
+import { CompanyLogosService } from '../crm/company-logos.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
@@ -39,11 +40,13 @@ export interface WorkerTick {
   zoomTranscripts: number;
   /** Follow-up and RFQ deadline reminders sent (ADR 0062). */
   reminders: number;
+  /** Company logos looked up from company websites (ADR 0070). */
+  logos: number;
 }
 
 /**
  * The background worker: one loop that drains the database-backed queues (outbox, workflow runs,
- * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health, trial expiry and dunning, sequence sends). Safe to run several copies; every claim uses
+ * webhook deliveries, approval expiry, mailbox sync, queued AI agent runs, contract expiry and renewal reminders, customer health, trial expiry and dunning, sequence sends, company logo look-ups). Safe to run several copies; every claim uses
  * a conditional update that takes a lease (worker/queue.ts), so exactly one copy wins each item.
  */
 @Injectable()
@@ -71,6 +74,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly prospects: ProspectsService,
     private readonly zoom: ZoomService,
     private readonly reminders: CrmRemindersService,
+    private readonly logos: CompanyLogosService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -125,7 +129,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const prospectImports = await this.prospects.sweep();
     const zoomTranscripts = await this.zoom.importDue();
     const reminders = await this.reminders.sweep();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders };
+    const logos = await this.logos.runDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
@@ -144,5 +149,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     await this.running;
+    await this.logos.settle();
   }
 }

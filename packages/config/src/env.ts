@@ -73,6 +73,8 @@ export const apiEnvSchema = z.object({
    * this server instead of the internet, as GET /site/<host>/<path> and GET /mx/<domain>.
    */
   FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /** Tests only: company logo look-ups (ADR 0070) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
+  LOGO_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /** Optional data provider for the email finder (Hunter.io). Unset = SampForce's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
@@ -224,6 +226,9 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.FINDER_FIXTURE_URL) {
     throw new Error('FINDER_FIXTURE_URL is for tests only and cannot be used in production');
+  }
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.LOGO_FIXTURE_URL) {
+    throw new Error('LOGO_FIXTURE_URL is for tests only and cannot be used in production');
   }
   const d = parsed.data;
   if (d.STRIPE_SECRET_KEY && !d.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');

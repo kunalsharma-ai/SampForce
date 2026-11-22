@@ -14,6 +14,8 @@ export interface TableColumn<T> {
   cell: (row: T, q: string) => React.ReactNode;
   /** Plain text for search highlighting and the phone layout. */
   text?: (row: T) => string | null;
+  /** Shown before the text, e.g. a company logo; decorative (the text names the row). */
+  icon?: (row: T) => React.ReactNode;
   align?: 'right';
   /** Default width in pixels. */
   size?: number;

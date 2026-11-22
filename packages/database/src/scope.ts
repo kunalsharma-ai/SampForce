@@ -97,6 +97,8 @@ export type LookupModel = keyof typeof LOOKUP_FIELDS;
 /** Queue collections the worker may read and write across workspaces (`worker_scan` FOR ALL). */
 const WORKER_ALL = new Set([
   'AiRun',
+  // Company logo look-ups (ADR 0070): the worker claims PENDING logos across workspaces.
+  'CompanyLogo',
   'ApprovalRequest',
   'DomainEvent',
   'GamificationSettings',

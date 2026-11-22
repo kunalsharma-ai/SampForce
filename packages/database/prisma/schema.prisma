@@ -404,6 +404,7 @@ model Tenant {
   companyBranches        CompanyBranch[]
   leadOwnerChanges       LeadOwnerChange[]
   companyFiles           CompanyFile[]
+  companyLogos           CompanyLogo[]
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
@@ -658,6 +659,7 @@ model Company {
   branches     CompanyBranch[]
   ownerChanges LeadOwnerChange[]
   files        CompanyFile[]
+  logo         CompanyLogo?
   tasks        Task[]
   rfqs         Rfq[]
 
@@ -807,6 +809,40 @@ model CompanyFile {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
   @@map("company_files")
+}
+
+/// A company's logo (ADR 0070): found automatically from the company's website, or uploaded by someone. Kept apart
+/// from the company so lists never load image bytes. The document doubles as the worker's queue item: PENDING with
+/// a due nextRunAt means "look for a logo now".
+model CompanyLogo {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  companyId    String    @unique @map("company_id")
+  /// AUTO (found from the website) or UPLOAD (someone chose the picture; never replaced automatically).
+  source       String
+  /// PENDING (waiting for the worker), FOUND, NOT_FOUND (the site has no usable icon) or FAILED (gave up after retries).
+  status       String
+  /// The domain the automatic logo was looked up for; a change of website looks again.
+  domain       String?
+  contentType  String?   @map("content_type")
+  data         Bytes?
+  sizeBytes    Int?      @map("size_bytes")
+  /// Pixel size of the image (the larger side); null for SVG, which scales.
+  width        Int?
+  sourceUrl    String?   @map("source_url")
+  attempts     Int       @default(0)
+  nextRunAt    DateTime? @map("next_run_at")
+  lastError    String?   @map("last_error")
+  uploadedById String?   @map("uploaded_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId])
+  @@index([status, nextRunAt])
+  @@map("company_logos")
 }
 
 /// A request for quotation from a company lead (ADR 0060, Phase 3). Numbered RFQ-0001.. per workspace. Receiving an
