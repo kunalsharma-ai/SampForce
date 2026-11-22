@@ -251,19 +251,28 @@ export function searchHelp(
   language: LanguageCode,
   items: { faqs: readonly HelpFaq[]; guides: readonly HelpGuide[] },
   title: (english: string) => string = (s) => s,
+  options: { partial?: boolean } = {},
 ): HelpHit[] {
-  const words = foldText(query).split(' ').filter((w) => w.length > 0);
+  const all = foldText(query).split(' ').filter((w) => w.length > 0);
+  // A partial search (the suggestions under "Raise a query") reads a whole sentence, so it skips short words and
+  // needs only half of the rest to match; the search box needs every word.
+  const long = all.filter((w) => w.length >= 4);
+  const words = options.partial && long.length ? long : all;
   if (words.length === 0) return [];
+  const needed = options.partial ? Math.ceil(words.length / 2) : words.length;
   const score = (strong: string[], weak: string[]): number => {
     const s = foldText(strong.join(' '));
     const w = foldText(weak.join(' '));
     let total = 0;
+    let matched = 0;
     for (const word of words) {
       if (s.includes(word)) total += 3;
       else if (w.includes(word)) total += 1;
-      else return 0;
+      else if (!options.partial) return 0;
+      else continue;
+      matched += 1;
     }
-    return total;
+    return matched >= needed ? total : 0;
   };
   const hits: HelpHit[] = [];
   for (const faq of items.faqs) {

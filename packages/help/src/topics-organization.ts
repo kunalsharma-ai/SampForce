@@ -629,11 +629,11 @@ export const organizationHelp = {
   'page.import': {
     title: 'Import data',
     what: [
-      'Brings leads, contacts or companies into SampForce from a CSV file, checking every row before anything is saved.',
-      'Trae leads, contactos o empresas a SampForce desde un CSV, comprobando cada fila antes de guardar nada.',
-      'Importe prospects, contacts ou entreprises dans SampForce depuis un CSV, en vérifiant chaque ligne avant tout enregistrement.',
-      'Holt Leads, Kontakte oder Unternehmen aus einer CSV-Datei in SampForce und prüft jede Zeile, bevor etwas gespeichert wird.',
-      'يجلب العملاء المحتملين أو جهات الاتصال أو الشركات إلى SampForce من ملف CSV، مع فحص كل صف قبل حفظ أي شيء.',
+      'Brings leads, contacts or companies into SampForce from a CSV or Excel file, checking every row before anything is saved.',
+      'Trae leads, contactos o empresas a SampForce desde un CSV o Excel, comprobando cada fila antes de guardar nada.',
+      'Importe prospects, contacts ou entreprises dans SampForce depuis un fichier CSV ou Excel, en vérifiant chaque ligne avant tout enregistrement.',
+      'Holt Leads, Kontakte oder Unternehmen aus einer CSV- oder Excel-Datei in SampForce und prüft jede Zeile, bevor etwas gespeichert wird.',
+      'يجلب العملاء المحتملين أو جهات الاتصال أو الشركات إلى SampForce من ملف CSV أو Excel، مع فحص كل صف قبل حفظ أي شيء.',
     ],
     how: [
       'Choose a file, match each column to a field, check the results of the test run, then import.',

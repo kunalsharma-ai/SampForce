@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
 import { operatorRealm, useChatBackground, useChatUnread } from '@/lib/chat';
+import { useOperatorTicketCounts } from '@/lib/support';
 import * as React from 'react';
 
 export function useOperator(enabled = true) {
@@ -25,6 +26,18 @@ function OperatorChatLink({ active }: { active: boolean }) {
     <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
       Support chat
       {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
+    </Link>
+  );
+}
+
+/** Support tickets raised from Help in every client's workspaces, with how many wait for an answer (ADR 0073). */
+function OperatorTicketsLink({ active }: { active: boolean }) {
+  const counts = useOperatorTicketCounts();
+  const waiting = (counts.data?.open ?? 0) + (counts.data?.inProgress ?? 0);
+  return (
+    <Link href="/operator/support" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-tickets-waiting={waiting}>
+      Support tickets
+      {waiting > 0 && <span className="ms-1 rounded-full bg-warning px-1.5 text-[11px] font-semibold text-background">{waiting}</span>}
     </Link>
   );
 }
@@ -54,7 +67,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
           <span className="font-semibold">Console Admin</span>
           <Badge tone="warning">Platform staff</Badge>
           {me.data && (
-            <nav aria-label="Operator" className="flex gap-3 text-sm">
+            <nav aria-label="Operator" className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
               <Link href="/operator" className={path === '/operator' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Overview
               </Link>
@@ -65,6 +78,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
                 Plans
               </Link>
               <OperatorChatLink active={path === '/operator/chat'} />
+              <OperatorTicketsLink active={path === '/operator/support'} />
               <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Operator log
               </Link>
@@ -73,6 +87,9 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Settings
+              </Link>
+              <Link href="/operator/help" className={path === '/operator/help' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Help
               </Link>
             </nav>
           )}
