@@ -152,7 +152,10 @@ describe('senior management command center', () => {
     expect(ins('lowConversion').items.map((i: { id: string }) => i.id)).toEqual([a.userId]);
     expect(ins('repeatRfqs').items[0]).toMatchObject({ id: acme, value: 2 });
     expect(ins('revenueConcentration').items[0]).toMatchObject({ id: acme, value: 66.7 });
-    expect(ins('teamsBehind').count).toBe(0);
+    // Whether a team is behind depends on how much of the month has gone, so compare with the teams' own status.
+    type Mgr = { person: { id: string }; status: string };
+    const behind = [...new Set(d.departmentRows.flatMap((r: { managers: Mgr[] }) => r.managers).filter((m: Mgr) => m.status === 'BEHIND' || m.status === 'AT_RISK').map((m: Mgr) => m.person.id))];
+    expect(ins('teamsBehind').items.map((i: { id: string }) => i.id).sort()).toEqual([...behind].sort());
     expect(ins('stuckNegotiation').count).toBe(0);
     // A concern on Acme shows until it is resolved.
     const concern = (await api(a).post('/client-concerns', { companyId: acme, category: 'PRICING', severity: 'HIGH', title: 'Too expensive' }).expect(201)).body;

@@ -1756,4 +1756,52 @@ export const organizationHelp = {
       'تحتسب المؤسسة كل صفقة مرة واحدة، والقاعدة تحدد فقط لمن تُضاف. وتبقى التقسيمات اليدوية كما هي.',
     ],
   },
+  'page.mobileAccess': {
+    title: 'Mobile app',
+    what: [
+      'Whether your people can use SampForce on iPhone and Android. Phones use the same accounts, data and permissions as the web.',
+      'Si tu equipo puede usar SampForce en iPhone y Android. Los teléfonos usan las mismas cuentas, datos y permisos que la web.',
+      'Si vos équipes peuvent utiliser SampForce sur iPhone et Android. Les téléphones utilisent les mêmes comptes, données et droits que le web.',
+      'Ob Ihre Leute SampForce auf iPhone und Android nutzen können. Telefone nutzen dieselben Konten, Daten und Berechtigungen wie das Web.',
+      'هل يمكن لفريقك استخدام SampForce على iPhone وAndroid. تستخدم الهواتف الحسابات والبيانات والصلاحيات نفسها التي يستخدمها الويب.',
+    ],
+    how: [
+      'Ask the SampForce team for access. Once they approve it, switch mobile access on. You can sign out any phone, or switch mobile access off to sign every phone out.',
+      'Pide acceso al equipo de SampForce. Cuando lo aprueben, activa el acceso móvil. Puedes cerrar la sesión de cualquier teléfono o desactivar el acceso para cerrarlas todas.',
+      'Demandez l’accès à l’équipe SampForce. Une fois approuvé, activez l’accès mobile. Vous pouvez déconnecter un téléphone, ou désactiver l’accès pour les déconnecter tous.',
+      'Bitten Sie das SampForce-Team um Zugang. Nach der Freigabe schalten Sie den mobilen Zugang ein. Sie können jedes Telefon abmelden oder den Zugang ausschalten, um alle abzumelden.',
+      'اطلب الوصول من فريق SampForce. بعد الموافقة، شغّل الوصول من الجوال. يمكنك تسجيل خروج أي هاتف، أو إيقاف الوصول لتسجيل خروج جميع الهواتف.',
+    ],
+    where: [
+      'Use it when your field team needs SampForce away from a computer, or when a phone is lost.',
+      'Úsalo cuando tu equipo de campo necesite SampForce lejos del ordenador, o cuando se pierda un teléfono.',
+      'Utilisez-la quand votre équipe terrain a besoin de SampForce loin d’un ordinateur, ou quand un téléphone est perdu.',
+      'Nutzen Sie es, wenn Ihr Außendienst SampForce unterwegs braucht oder ein Telefon verloren geht.',
+      'استخدمها عندما يحتاج فريقك الميداني إلى SampForce بعيدًا عن الحاسوب، أو عند فقدان هاتف.',
+    ],
+  },
+  'page.operatorMobile': {
+    title: 'Mobile app',
+    what: [
+      'Which client organisations may use the SampForce app, their requests, and how many phones they use. Names of people show only while a client grants support access.',
+      'Qué organizaciones clientes pueden usar la aplicación de SampForce, sus solicitudes y cuántos teléfonos usan. Los nombres solo aparecen si el cliente concede acceso de soporte.',
+      'Quelles organisations clientes peuvent utiliser l’application SampForce, leurs demandes et le nombre de téléphones. Les noms n’apparaissent que si le client accorde l’accès support.',
+      'Welche Kundenorganisationen die SampForce-App nutzen dürfen, ihre Anfragen und wie viele Telefone sie nutzen. Namen nur bei gewährtem Supportzugang.',
+      'المؤسسات العميلة التي يمكنها استخدام تطبيق SampForce، وطلباتها، وعدد الهواتف المستخدمة. تظهر أسماء الأشخاص فقط أثناء منح وصول الدعم.',
+    ],
+    how: [
+      'Open an organisation to approve, reject, suspend, reinstate or revoke its access, with a reason the client sees. You can also limit how many phones it signs in.',
+      'Abre una organización para aprobar, rechazar, suspender, restablecer o revocar su acceso, con un motivo que el cliente ve. También puedes limitar cuántos teléfonos usa.',
+      'Ouvrez une organisation pour approuver, refuser, suspendre, rétablir ou révoquer son accès, avec un motif visible par le client. Vous pouvez aussi limiter le nombre de téléphones.',
+      'Öffnen Sie eine Organisation, um ihren Zugang mit einer für den Kunden sichtbaren Begründung freizugeben, abzulehnen, zu sperren, wiederherzustellen oder zu widerrufen. Sie können auch die Zahl der Telefone begrenzen.',
+      'افتح مؤسسة للموافقة على وصولها أو رفضه أو تعليقه أو استعادته أو إلغائه، مع سبب يراه العميل. ويمكنك أيضًا تحديد عدد الهواتف.',
+    ],
+    where: [
+      'Use it when a client asks for the app, or when an account must be paused, for example for an unpaid invoice.',
+      'Úsalo cuando un cliente pida la aplicación o cuando haya que pausar una cuenta, por ejemplo por una factura impagada.',
+      'Utilisez-la quand un client demande l’application, ou quand un compte doit être mis en pause, par exemple pour une facture impayée.',
+      'Nutzen Sie es, wenn ein Kunde die App anfragt oder ein Konto pausiert werden muss, etwa wegen einer offenen Rechnung.',
+      'استخدمها عندما يطلب عميل التطبيق، أو عند ضرورة إيقاف حساب مؤقتًا، مثلًا بسبب فاتورة غير مدفوعة.',
+    ],
+  },
 } as const satisfies HelpTable;
