@@ -78,6 +78,12 @@ export class OperatorSupportController {
     return this.support.operatorCounts(op);
   }
 
+  /** The operators a ticket can be assigned to. */
+  @Get('representatives')
+  representatives() {
+    return this.support.representatives();
+  }
+
   @Get(':id')
   get(@Operator() op: OperatorContext, @Param('id', uuid) id: string) {
     return this.support.operatorGet(op, id);

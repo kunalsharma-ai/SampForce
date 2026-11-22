@@ -10,7 +10,7 @@ import { Select, Textarea } from '@/components/crm/select';
 import { TicketStatusBadge, ToneIcon, usePriorityLabel, useStatusLabel } from '@/components/help/help-ui';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
-import { useOperatorTicket, useOperatorTicketActions, useOperatorTicketCounts, useOperatorTickets } from '@/lib/support';
+import { useOperatorTicket, useOperatorTicketActions, useOperatorTicketCounts, useOperatorTickets, useSupportRepresentatives } from '@/lib/support';
 import { useOperator } from '../operator-shell';
 
 /** The Console's Support tickets inbox (ADR 0073): every client's queries from Help, answered here. */
@@ -125,7 +125,9 @@ function TicketPane({ id }: { id: string }) {
   const statusLabel = useStatusLabel();
   const ticket = useOperatorTicket(id);
   const actions = useOperatorTicketActions(id);
+  const reps = useSupportRepresentatives();
   const [body, setBody] = useState('');
+  const [note, setNote] = useState<string | null>(null);
   if (ticket.isLoading) return <Skeleton className="h-96" />;
   if (!ticket.data) return null;
   const d = ticket.data;
@@ -162,6 +164,42 @@ function TicketPane({ id }: { id: string }) {
           <Meta label={t('Priority')} value={priority(d.priority)} />
           <Meta label={t('From page')} value={d.pagePath ?? '—'} />
         </dl>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">{t('Support representative')}</span>
+            <Select
+              className="h-9"
+              value={d.assignedTo?.id ?? ''}
+              disabled={actions.update.isPending}
+              onChange={(e) => actions.update.mutate({ assignedOperatorId: e.target.value || null })}
+              data-assign-representative
+            >
+              <option value="">{t('Nobody yet')}</option>
+              {(reps.data ?? []).map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <form
+            className="space-y-1 text-sm"
+            onSubmit={(e) => {
+              e.preventDefault();
+              actions.update.mutate({ resolutionNote: (note ?? d.resolutionNote ?? '').trim() || null });
+            }}
+          >
+            <label htmlFor="resolution-note" className="text-muted-foreground">
+              {t('Resolution note')}
+            </label>
+            <div className="flex gap-2">
+              <Textarea id="resolution-note" rows={1} value={note ?? d.resolutionNote ?? ''} onChange={(e) => setNote(e.target.value)} placeholder={t('How it was resolved, for the person who asked')} />
+              <Button type="submit" size="sm" variant="outline" disabled={actions.update.isPending} data-save-resolution>
+                {t('Save')}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
       <ol className="flex-1 space-y-3 p-4" aria-label={t('Conversation')}>
         {d.messages.map((m) => (
@@ -181,9 +219,9 @@ function TicketPane({ id }: { id: string }) {
           {t('Your answer')}
         </label>
         <Textarea id="operator-reply" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the ticket becomes Answered.')} />
-        {(actions.reply.error || actions.status.error) && (
+        {(actions.reply.error || actions.status.error || actions.update.error) && (
           <p role="alert" className="text-sm text-critical">
-            {(actions.reply.error ?? actions.status.error)?.message}
+            {(actions.reply.error ?? actions.status.error ?? actions.update.error)?.message}
           </p>
         )}
         <div className="flex justify-end">

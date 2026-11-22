@@ -1,18 +1,18 @@
 'use client';
 
 import { HELP_CATEGORY_BY_ID, type HelpCategoryId, helpText } from '@dealflow/help';
-import type { SupportTicketDetail, SupportTicketMessageRow, SupportTicketRow } from '@dealflow/types';
+import { SUPPORT_TICKET_STATUSES, type SupportTicketDetail, type SupportTicketMessageRow, type SupportTicketRow, type SupportTicketStatus } from '@dealflow/types';
 import { Button, Card, Skeleton } from '@dealflow/ui';
-import { ArrowLeft, Inbox, LifeBuoy, MessageSquareReply } from 'lucide-react';
+import { ArrowLeft, ArrowUpCircle, Inbox, LifeBuoy, MessageSquareReply } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { Textarea } from '@/components/crm/select';
+import { Select, Textarea } from '@/components/crm/select';
 import { Segmented } from '@/components/forms/segmented';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
-import { useCanSeeTeamQueries, useReplyToTicket, useTicket, useTicketStatus, useTickets } from '@/lib/support';
-import { TicketStatusBadge, ToneIcon, usePriorityLabel } from './help-ui';
+import { type TicketScope, useCanSeeTeamQueries, useEscalateTicket, useReplyToTicket, useTicket, useTicketStatus, useTickets } from '@/lib/support';
+import { TicketStatusBadge, ToneIcon, usePriorityLabel, useStatusLabel } from './help-ui';
 
 /** My queries (ADR 0073): the questions a person sent from Help, and for managers their team's, with each conversation. */
 export function MyQueries() {
@@ -21,10 +21,21 @@ export function MyQueries() {
   const pathname = usePathname();
   const params = useSearchParams();
   const canTeam = useCanSeeTeamQueries();
-  const [scope, setScope] = useState<'mine' | 'team'>('mine');
+  const asked = params.get('scope');
+  const [scope, setScopeState] = useState<TicketScope>(canTeam && (asked === 'team' || asked === 'handling') ? asked : 'mine');
   const list = useTickets(scope);
   const selected = params.get('ticket');
-  const select = (id: string | null) => router.replace(id ? `${pathname}?ticket=${id}` : pathname, { scroll: false });
+  const go = (next: TicketScope, id: string | null) => {
+    const q = new URLSearchParams();
+    if (next !== 'mine') q.set('scope', next);
+    if (id) q.set('ticket', id);
+    router.replace(q.size ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
+  const select = (id: string | null) => go(scope, id);
+  const setScope = (next: TicketScope) => {
+    setScopeState(next);
+    go(next, null);
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -40,7 +51,7 @@ export function MyQueries() {
         }
       />
       {canTeam && (
-        <div className="mb-4 max-w-sm">
+        <div className="mb-4 max-w-xl">
           <Segmented
             legend={t('Show')}
             name="query-scope"
@@ -49,6 +60,7 @@ export function MyQueries() {
             options={[
               { value: 'mine', label: t('My queries') },
               { value: 'team', label: t('My team’s queries') },
+              { value: 'handling', label: t('Waiting on my workspace') },
             ]}
           />
         </div>
@@ -150,13 +162,29 @@ function TicketThread({ id, onBack }: { id: string; onBack: () => void }) {
           {d.pagePath && <span>{d.pagePath}</span>}
           {!d.mine && d.raisedBy && <span>{t('Raised by {name}', { name: d.raisedBy.name })}</span>}
         </p>
+        <p className="mt-1 flex flex-wrap gap-x-3 text-xs" data-ticket-handler={d.handler.level}>
+          <span>
+            <span className="text-muted-foreground">{t('Answered by')}</span> <span className="font-medium">{d.handler.level === 'CONSOLE' ? t('SampForce support') : t.maybe(d.handler.name)}</span>
+          </span>
+          {d.assignedTo && (
+            <span>
+              <span className="text-muted-foreground">{t('Support representative')}</span> <span className="font-medium">{d.assignedTo.name}</span>
+            </span>
+          )}
+        </p>
       </div>
+      {d.resolutionNote && (
+        <div className="border-b border-border bg-success/5 px-4 py-3 text-sm" data-resolution-note>
+          <p className="text-xs font-semibold text-success">{t('Resolution')}</p>
+          <p className="mt-0.5 whitespace-pre-wrap">{d.resolutionNote}</p>
+        </div>
+      )}
       <ol className="flex-1 space-y-3 p-4" aria-label={t('Conversation')}>
         {d.messages.map((m) => (
           <Message key={m.id} message={m} />
         ))}
       </ol>
-      {d.canReply && <Composer ticket={d} />}
+      {d.handling && !d.mine ? <HandlerPanel ticket={d} /> : d.canReply && <Composer ticket={d} />}
     </Card>
   );
 }
@@ -169,6 +197,7 @@ function Message({ message }: { message: SupportTicketMessageRow }) {
       <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${message.mine ? 'bg-primary text-primary-foreground' : support ? 'border border-success/30 bg-success/10' : 'bg-muted'}`}>
         <p className={`text-xs font-semibold ${message.mine ? 'text-primary-foreground/80' : support ? 'text-success' : 'text-muted-foreground'}`}>
           {support ? t('SampForce support') : (message.author?.name ?? '')}
+          {message.authorKind === 'WORKSPACE' && !message.mine && <span className="font-normal"> · {t('answering')}</span>}
         </p>
         <p className="mt-0.5 whitespace-pre-wrap">{message.body}</p>
         <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
@@ -211,5 +240,93 @@ function Composer({ ticket }: { ticket: SupportTicketDetail }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * For the workspace a query waits on (ADR 0071 part 5): answer it, set its status and resolution note, or pass it one
+ * level up (a manager to the Super Workspace, the Super Workspace to SampForce support).
+ */
+function HandlerPanel({ ticket }: { ticket: SupportTicketDetail }) {
+  const t = useT();
+  const statusLabel = useStatusLabel();
+  const reply = useReplyToTicket(ticket.id);
+  const status = useTicketStatus(ticket.id);
+  const escalate = useEscalateTicket(ticket.id);
+  const [body, setBody] = useState('');
+  const [next, setNext] = useState<SupportTicketStatus>(ticket.status);
+  const [note, setNote] = useState(ticket.resolutionNote ?? '');
+  const [passOn, setPassOn] = useState('');
+  const error = reply.error ?? status.error ?? escalate.error;
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    await reply.mutateAsync(body.trim());
+    setBody('');
+  };
+  const upTo = ticket.handlerLevel === 'MANAGER' ? t('the Super Workspace') : t('SampForce support');
+  return (
+    <div className="space-y-4 border-t border-border p-4" data-handler-panel>
+      <form onSubmit={send} className="space-y-2">
+        <label htmlFor="ticket-answer" className="text-sm font-medium">
+          {t('Your answer')}
+        </label>
+        <Textarea id="ticket-answer" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the query becomes Answered.')} />
+        <div className="flex justify-end">
+          <Button type="submit" size="sm" disabled={!body.trim() || reply.isPending} data-send-answer>
+            {t('Send answer')}
+          </Button>
+        </div>
+      </form>
+      <form
+        className="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end"
+        onSubmit={(e) => {
+          e.preventDefault();
+          status.mutate({ status: next, resolutionNote: note.trim() || null });
+        }}
+      >
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">{t('Status')}</span>
+          <Select className="h-9" value={next} onChange={(e) => setNext(e.target.value as SupportTicketStatus)}>
+            {SUPPORT_TICKET_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">{t('Resolution note')}</span>
+          <Textarea rows={1} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('How it was resolved, for the person who asked')} />
+        </label>
+        <Button type="submit" size="sm" variant="outline" disabled={status.isPending} data-save-status>
+          {t('Save')}
+        </Button>
+      </form>
+      {ticket.canEscalate && (
+        <form
+          className="space-y-2 rounded-lg border border-dashed border-border p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            escalate.mutate(passOn.trim(), { onSuccess: () => setPassOn('') });
+          }}
+        >
+          <label htmlFor="ticket-escalate" className="text-sm font-medium">
+            {t('Pass it to {who}', { who: upTo })}
+          </label>
+          <Textarea id="ticket-escalate" rows={2} value={passOn} onChange={(e) => setPassOn(e.target.value)} placeholder={t('A note for them (optional)')} />
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" variant="outline" disabled={escalate.isPending} data-escalate>
+              <ArrowUpCircle aria-hidden /> {t('Escalate')}
+            </Button>
+          </div>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-critical">
+          {error.message}
+        </p>
+      )}
+    </div>
   );
 }
