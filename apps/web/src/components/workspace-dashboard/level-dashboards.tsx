@@ -67,7 +67,7 @@ export function LevelDashboard({ level }: { level: 'SUPER' | 'MANAGER' | 'EXECUT
 function PeriodTabs({ value, onChange }: { value: WorkspaceDashboardPeriod; onChange: (p: WorkspaceDashboardPeriod) => void }) {
   const t = useT();
   return (
-    <div role="radiogroup" aria-label={t('Period')} className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+    <div role="radiogroup" aria-label={t('Period')} className="inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5">
       {WORKSPACE_DASHBOARD_PERIODS.map((p) => (
         <button
           key={p}
@@ -75,7 +75,7 @@ function PeriodTabs({ value, onChange }: { value: WorkspaceDashboardPeriod; onCh
           role="radio"
           aria-checked={value === p}
           onClick={() => onChange(p)}
-          className={cn('h-8 rounded-md px-3 text-sm transition-colors', value === p ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+          className={cn('h-8 shrink-0 whitespace-nowrap rounded-md px-3 text-sm transition-colors', value === p ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
         >
           {t(WORKSPACE_DASHBOARD_PERIOD_LABEL[p])}
         </button>
