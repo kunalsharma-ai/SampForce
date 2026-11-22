@@ -13,7 +13,7 @@ import {
   seniorQuerySchema,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CommandCenterService } from './command-center.service';
 import { ManagerDashboardService } from './manager.service';
@@ -81,6 +81,7 @@ export class CommandCenterController {
 
   /** A monthly, quarterly or yearly target for a person the caller manages, or for the workspace. */
   @Put('targets')
+  @AlsoRequireFeature('sales_target_management')
   @HttpCode(200)
   @RequirePermissions('pipelines:manage')
   setTarget(@Auth() auth: AuthContext, @Body(new ZodPipe(salesTargetInputSchema)) body: z.infer<typeof salesTargetInputSchema>, @Meta() meta: RequestMeta) {

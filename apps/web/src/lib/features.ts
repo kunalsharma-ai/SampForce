@@ -33,3 +33,10 @@ export const featureLabel = (f: FeatureKey) => FEATURE_BY_KEY[f].label;
 export function isPlanRefusal(err: unknown): boolean {
   return !!err && typeof err === 'object' && (err as { code?: string }).code === 'FEATURE_NOT_IN_PLAN';
 }
+
+/** True when the organisation's plan has the feature but the caller's workspace was not given it (ADR 0071). */
+export function useWithheldByWorkspace(feature: FeatureKey): boolean {
+  const { data } = useSession();
+  if (!data) return false;
+  return data.tenant.planFeatures.includes(feature) && !data.tenant.features.includes(feature);
+}

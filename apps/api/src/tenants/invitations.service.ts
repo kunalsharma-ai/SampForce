@@ -39,8 +39,13 @@ export class InvitationsService {
    * Creates an invitation and returns its link once. Only the SHA-256 hash of the token is stored.
    * No email provider is configured yet, so nothing is sent: the inviter copies the link.
    */
-  create(auth: AuthContext, input: { email: string; roleKey: string }, meta: RequestMeta): Promise<InvitationCreated> {
-    return this.prisma.run(auth, async (tx) => {
+  create(auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null }, meta: RequestMeta): Promise<InvitationCreated> {
+    return this.prisma.run(auth, (tx) => this.createIn(tx, auth, input, meta));
+  }
+
+  /** The same inside the caller's transaction (a new workspace and its invitation commit together, ADR 0071). */
+  async createIn(tx: TenantTx, auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null }, meta: RequestMeta): Promise<InvitationCreated> {
+    {
       const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId: auth.tenantId, key: input.roleKey } } });
       if (!role) throw new BadRequestException({ code: 'UNKNOWN_ROLE', message: 'That role does not exist.' });
       if (role.key === 'owner' && auth.roleKey !== 'owner') {
@@ -67,19 +72,20 @@ export class InvitationsService {
           roleId: role.id,
           tokenHash: TokenService.hashRefresh(token),
           invitedById: auth.userId,
+          workspaceNodeId: input.workspaceNodeId ?? null,
           expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
         },
         include: { role: true },
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'member.invited', entityType: 'invitation', entityId: row.id,
-        metadata: { email: input.email, role: role.key }, meta,
+        metadata: { email: input.email, role: role.key, ...(input.workspaceNodeId ? { workspaceNodeId: input.workspaceNodeId } : {}) }, meta,
       });
       const origin = this.env.WEB_ORIGINS.split(',')[0]!.trim().replace(/\/$/, '');
       const inviteUrl = `${origin}/invite/${token}`;
       if (this.env.NODE_ENV !== 'production') this.logger.log({ email: input.email }, `Invitation link (dev only, not emailed): ${inviteUrl}`);
       return { ...toRow(row), inviteUrl, emailDelivery: 'not_configured' };
-    });
+    }
   }
 
   revoke(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {

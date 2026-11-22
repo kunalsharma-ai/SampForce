@@ -458,6 +458,9 @@ model Subscription {
   pastDueSince           DateTime?          @map("past_due_since")
   /// Invoice-paid plans: when billing managers were last reminded to renew (once per period end).
   renewalRemindedAt      DateTime?          @map("renewal_reminded_at")
+  /// Workspace limits (ADR 0071) set by the Console Admin for this client; null = the plan's limit.
+  maxManagerWorkspaces   Int?               @map("max_manager_workspaces")
+  maxExecutiveWorkspaces Int?               @map("max_executive_workspaces")
   createdAt              DateTime           @default(now()) @map("created_at")
   updatedAt              DateTime           @updatedAt @map("updated_at")
 
@@ -510,6 +513,9 @@ model Membership {
   designationId      String?          @map("designation_id")
   departmentId       String?          @map("department_id")
   reportingManagerId String?          @map("reporting_manager_id")
+  /// The workspace (ADR 0071) this person works in: a Super, Manager or Executive Workspace of the organisation.
+  /// Null = the organisation's Super Workspace (everyone who joined before the hierarchy existed).
+  workspaceNodeId    String?          @map("workspace_node_id")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 
@@ -521,7 +527,44 @@ model Membership {
   @@unique([tenantId, userId])
   @@unique([tenantId, externalId])
   @@index([userId])
+  @@index([tenantId, workspaceNodeId])
   @@map("memberships")
+}
+
+/// The four-level workspace hierarchy (ADR 0071). The organisation is the tenant; inside it one SUPER workspace is the
+/// root, MANAGER workspaces hang under it and EXECUTIVE workspaces under a manager or the root. All of them share the
+/// organisation's CRM data; a workspace narrows what its people may see and do. A child's features and actions are
+/// always its own grant intersected with its parent's, recomputed on every request, so a revocation applies at once.
+model WorkspaceNode {
+  id                   String    @id @default(uuid()) @map("_id")
+  tenantId             String    @map("tenant_id")
+  /// SUPER, MANAGER or EXECUTIVE.
+  level                String
+  name                 String
+  /// The name lower-cased and trimmed: an organisation never has two workspaces of the same name.
+  nameKey              String    @map("name_key")
+  parentId             String?   @map("parent_id")
+  /// The designation shown with the workspace (Client Administrator, Sales Manager, Sales Executive by default).
+  designation          String
+  /// Feature keys the parent granted (the root ignores it: it gets everything the subscription includes).
+  features             String[]
+  /// Actions the parent granted, per module or feature key ({ "CRM": ["view", "create"] }). On the root this is the
+  /// ceiling the Console Admin sets for the client; null on the root = no ceiling.
+  actions              Json?
+  /// Root: whether the Console allows the Super Workspace to create Executive Workspaces. Manager: whether the Super
+  /// Workspace allows it to create Executive Workspaces under itself.
+  canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
+  /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
+  canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  createdById          String?   @map("created_by_id")
+  archivedAt           DateTime? @map("archived_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, nameKey])
+  @@index([tenantId, parentId])
+  @@index([tenantId, level])
+  @@map("workspace_nodes")
 }
 
 model Team {
@@ -1364,6 +1407,8 @@ model Invitation {
   roleId      String    @map("role_id")
   tokenHash   String    @unique @map("token_hash")
   invitedById String    @map("invited_by_id")
+  /// The workspace (ADR 0071) the person joins when they accept. Null = the Super Workspace.
+  workspaceNodeId String? @map("workspace_node_id")
   expiresAt   DateTime  @map("expires_at")
   acceptedAt  DateTime? @map("accepted_at")
   revokedAt   DateTime? @map("revoked_at")

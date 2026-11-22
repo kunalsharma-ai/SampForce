@@ -20,7 +20,7 @@ import {
   contactDuplicateCheckSchema,
   z,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CompaniesService } from './companies.service';
 import { ContactsService } from './contacts.service';
@@ -74,6 +74,8 @@ export class LeadsController {
   }
 
   @Post(':id/assign')
+  @AlsoRequireFeature('lead_assignment')
+  @RequireAction('assign')
   @HttpCode(200)
   @RequirePermissions('leads:write')
   assign(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(assignSchema)) body: { ownerId: string }, @Meta() meta: RequestMeta) {
@@ -81,12 +83,14 @@ export class LeadsController {
   }
 
   @Get(':id/duplicates')
+  @AlsoRequireFeature('lead_merge')
   @RequirePermissions('leads:read')
   duplicates(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.leads.duplicates(auth, id);
   }
 
   @Post(':id/merge')
+  @AlsoRequireFeature('lead_merge')
   @HttpCode(200)
   @RequirePermissions('leads:write')
   merge(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(mergeSchema)) body: { duplicateId: string }, @Meta() meta: RequestMeta) {
@@ -95,6 +99,7 @@ export class LeadsController {
 
   /** Conversion creates a contact (and usually a company and a deal), so it needs write access to those too. */
   @Post(':id/convert')
+  @AlsoRequireFeature('lead_conversion')
   @HttpCode(200)
   @RequirePermissions('leads:write', 'contacts:write', 'companies:write', 'deals:write')
   convert(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(leadConvertSchema)) body: LeadConvertInput, @Meta() meta: RequestMeta) {
@@ -115,6 +120,7 @@ export class ContactsController {
 
   /** Employees with the same email, phone or LinkedIn profile, anywhere in the workspace (names only). */
   @Post('check-duplicates')
+  @AlsoRequireFeature('duplicate_checks')
   @HttpCode(200)
   @RequirePermissions('contacts:read')
   checkDuplicates(@Auth() auth: AuthContext, @Body(new ZodPipe(contactDuplicateCheckSchema)) body: ContactDuplicateCheck) {
@@ -160,6 +166,7 @@ export class CompaniesController {
 
   /** Companies with the same name, domain, email, phone or LinkedIn page, anywhere in the workspace (names only). */
   @Post('check-duplicates')
+  @AlsoRequireFeature('duplicate_checks')
   @HttpCode(200)
   @RequirePermissions('companies:read')
   checkDuplicates(@Auth() auth: AuthContext, @Body(new ZodPipe(companyDuplicateCheckSchema)) body: CompanyDuplicateCheck) {

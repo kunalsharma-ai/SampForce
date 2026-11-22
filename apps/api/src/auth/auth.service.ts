@@ -31,6 +31,7 @@ import { inLanguage, requestLanguage, tr } from '../common/request-language';
 import { type LanguageCode, languageCodeSchema } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
+import { resolveWorkspaceAccess } from '../workspaces/access';
 import { PasswordService } from './password.service';
 import { type AuthMethod, TokenService } from './token.service';
 
@@ -432,13 +433,14 @@ export class AuthService {
   }
 
   async me(auth: AuthContext): Promise<MeResponse> {
-    const [user, tenant, memberships, ent] = await Promise.all([
+    const [user, tenant, memberships, ent, access] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId } }),
       this.prisma.run(auth, (tx) =>
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, include: { subscription: true } }),
       ),
       this.listMemberships(auth.userId, auth),
       this.prisma.run(auth, (tx) => entitlementsFor(tx, auth.tenantId)),
+      this.prisma.run(auth, (tx) => resolveWorkspaceAccess(tx, auth.tenantId, auth.workspaceNodeId)),
     ]);
     return {
       user: { id: user.id, name: user.name, email: user.email },
@@ -449,11 +451,13 @@ export class AuthService {
         plan: tenant.subscription?.planCode ?? 'free',
         isDemo: tenant.isDemo,
         brandColor: tenant.brandColor,
-        features: ent.features,
+        features: access.features,
+        planFeatures: ent.features,
         appliedPlan: ent.appliedPlan,
       },
       role: auth.roleKey,
       permissions: auth.permissions,
+      workspace: { id: access.node.id, level: access.level, name: access.virtual || access.level === 'SUPER' ? tenant.name : access.node.name, designation: access.node.designation, actions: access.actions as Record<string, string[]> },
       memberships,
       authMethod: auth.authMethod,
       mfaEnabled: !!user.mfaEnabledAt,
@@ -522,8 +526,8 @@ export class AuthService {
       }
       await tx.membership.upsert({
         where: { tenantId_userId: { tenantId, userId } },
-        create: { tenantId, userId, roleId: inv.roleId },
-        update: { roleId: inv.roleId, status: 'ACTIVE' },
+        create: { tenantId, userId, roleId: inv.roleId, workspaceNodeId: inv.workspaceNodeId ?? null },
+        update: { roleId: inv.roleId, status: 'ACTIVE', ...(inv.workspaceNodeId ? { workspaceNodeId: inv.workspaceNodeId } : {}) },
       });
       await this.audit.record(tx, {
         tenantId, actorUserId: userId, action: 'member.joined', entityType: 'invitation', entityId: inv.id,

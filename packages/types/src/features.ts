@@ -11,7 +11,7 @@ import { PLAN_CODES, type PlanCode } from './plan-codes';
  * the audit log. Without those a workspace cannot work or pay, so every plan has them.
  */
 
-export const FEATURE_GROUPS = ['Sales', 'Engage', 'Intelligence', 'Revenue', 'Apps', 'Administration'] as const;
+export const FEATURE_GROUPS = ['CRM', 'Sales', 'Communication', 'Engage', 'Intelligence', 'Revenue', 'Apps', 'Administration'] as const;
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
 export const FEATURE_KEYS = [
@@ -69,6 +69,41 @@ export const FEATURE_KEYS = [
   // ADR 0062
   'custom_fields_advanced',
   'excel_export',
+  // ADR 0071: the core CRM, communication and administration modules join the catalogue so plans and workspaces
+  // can switch them, with their subfeatures.
+  'lead_management',
+  'lead_assignment',
+  'lead_conversion',
+  'lead_merge',
+  'account_management',
+  'company_branches',
+  'company_files',
+  'company_owner_changes',
+  'lead_drafts',
+  'contact_management',
+  'duplicate_checks',
+  'opportunity_management',
+  'deal_board',
+  'deal_bulk_update',
+  'deal_cloning',
+  'deal_history',
+  'sales_pipeline',
+  'activity_tracking',
+  'interactions',
+  'follow_up_management',
+  'follow_up_rescheduling',
+  'record_timeline',
+  'global_search',
+  'data_import',
+  'data_export',
+  'task_management',
+  'notifications',
+  'workspace_management',
+  'user_management',
+  'permission_management',
+  'sales_target_management',
+  'audit_log',
+  'crm_configuration',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -83,6 +118,13 @@ export interface FeatureDef {
   defaultFrom: PlanCode;
   /** Workspace pages (path prefixes under /app) that belong to the feature and show the upgrade page without it. */
   paths: string[];
+  /** A subfeature: only available while this feature is (ADR 0071). */
+  parent?: FeatureKey;
+  /**
+   * Catalogue version that added the key. Plan lists saved before that version did not know it, so they include it
+   * when its `defaultFrom` says so (see parsePlanEntitlements); lists saved since then are taken as written.
+   */
+  since?: number;
 }
 
 export const FEATURES: FeatureDef[] = [
@@ -100,7 +142,7 @@ export const FEATURES: FeatureDef[] = [
 
   { key: 'email_sync', group: 'Engage', label: 'Mailbox and calendar sync', description: 'Gmail and Microsoft 365 email and calendar sync, and sending from your own mailbox.', defaultFrom: 'free', paths: [] },
   { key: 'team_inbox', group: 'Engage', label: 'Team inbox', description: 'Shared conversation threads with status, owners and internal notes.', defaultFrom: 'growth', paths: ['/app/communication'] },
-  { key: 'team_chat', group: 'Engage', label: 'Team chat', description: 'Direct messages, group channels and a support line to super admins, served by your own SampForce server so it also works on an office network without internet.', defaultFrom: 'free', paths: ['/app/chat'] },
+  { key: 'team_chat', group: 'Communication', label: 'Internal chat', description: 'Direct messages, group channels and a support line to super admins, served by your own SampForce server so it also works on an office network without internet.', defaultFrom: 'free', paths: ['/app/chat'] },
   { key: 'email_templates', group: 'Engage', label: 'Email templates', description: 'Email templates, the block designer and workspace merge fields.', defaultFrom: 'launch', paths: [] },
   { key: 'sequences', group: 'Engage', label: 'Email sequences', description: 'Multi-step email sequences with send windows, tracking and reply detection.', defaultFrom: 'launch', paths: ['/app/sequences'] },
   { key: 'email_finder', group: 'Engage', label: 'Email finder', description: 'Find and verify work email addresses.', defaultFrom: 'growth', paths: ['/app/finder'] },
@@ -137,8 +179,60 @@ export const FEATURES: FeatureDef[] = [
   { key: 'custom_roles', group: 'Administration', label: 'Custom roles', description: 'Roles with your own permission sets beyond the five standard roles.', defaultFrom: 'professional', paths: [] },
   { key: 'sso_scim', group: 'Administration', label: 'Single sign-on and SCIM', description: 'OpenID Connect sign-in and SCIM provisioning.', defaultFrom: 'free', paths: [] },
   { key: 'custom_fields_advanced', group: 'Administration', label: 'Advanced custom fields', description: 'All 14 custom field types, fields on follow-ups and RFQs, and fields shown or edited by some designations only.', defaultFrom: 'growth', paths: [] },
-  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [] },
+  { key: 'excel_export', group: 'Administration', label: 'Excel export', description: 'Export companies, employees, leads, deals and RFQs as Excel workbooks.', defaultFrom: 'launch', paths: [], parent: 'data_export' },
+
+  // ADR 0071: core modules and their subfeatures. Every plan includes them unless an operator takes them out.
+  { key: 'lead_management', group: 'CRM', label: 'Lead management', description: 'Inbound leads: capture, qualify, own and work them.', defaultFrom: 'free', paths: ['/app/leads'], since: 2 },
+  { key: 'lead_assignment', group: 'CRM', label: 'Lead assignment', description: 'Assign inbound leads to an owner.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'lead_conversion', group: 'CRM', label: 'Lead conversion', description: 'Convert an inbound lead into a company, contact and deal.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'lead_merge', group: 'CRM', label: 'Duplicate leads and merging', description: 'Find duplicate inbound leads and merge them.', defaultFrom: 'free', paths: [], parent: 'lead_management', since: 2 },
+  { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Company leads (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies', '/app/accounts'], since: 2 },
+  { key: 'company_branches', group: 'CRM', label: 'Company branches', description: 'Branches and offices of a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'company_files', group: 'CRM', label: 'Company files', description: 'Files kept on a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'company_owner_changes', group: 'CRM', label: 'Company owner changes', description: 'Change a company’s owner with a reason, and its owner history.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'lead_drafts', group: 'CRM', label: 'New lead wizard drafts', description: 'Save the new lead wizard as a draft and finish it later.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'contact_management', group: 'CRM', label: 'Contact management', description: 'Employees and points of contact of companies.', defaultFrom: 'free', paths: ['/app/contacts'], since: 2 },
+  { key: 'duplicate_checks', group: 'CRM', label: 'Duplicate checks', description: 'Warn about existing companies and contacts while typing a new one.', defaultFrom: 'free', paths: [], parent: 'contact_management', since: 2 },
+  { key: 'opportunity_management', group: 'CRM', label: 'Opportunity management', description: 'Deals with value, stage, owner and close date.', defaultFrom: 'free', paths: ['/app/deals'], since: 2 },
+  { key: 'deal_board', group: 'CRM', label: 'Deal board', description: 'The pipeline board of deals by stage.', defaultFrom: 'free', paths: [], parent: 'opportunity_management', since: 2 },
+  { key: 'deal_bulk_update', group: 'CRM', label: 'Bulk deal updates', description: 'Change many deals at once.', defaultFrom: 'free', paths: [], parent: 'opportunity_management', since: 2 },
+  { key: 'deal_cloning', group: 'CRM', label: 'Deal cloning', description: 'Copy a deal into a new one.', defaultFrom: 'free', paths: [], parent: 'opportunity_management', since: 2 },
+  { key: 'deal_history', group: 'CRM', label: 'Deal stage history', description: 'Every stage change of a deal.', defaultFrom: 'free', paths: [], parent: 'opportunity_management', since: 2 },
+  { key: 'sales_pipeline', group: 'CRM', label: 'Sales pipelines', description: 'Pipelines and their stages.', defaultFrom: 'free', paths: ['/app/pipelines'], since: 2 },
+  { key: 'activity_tracking', group: 'CRM', label: 'Calls and activities', description: 'Calls, meetings, emails and notes logged on records.', defaultFrom: 'free', paths: ['/app/activities'], since: 2 },
+  { key: 'interactions', group: 'CRM', label: 'Client interactions', description: 'Interactions recorded on a company with their outcome.', defaultFrom: 'free', paths: [], parent: 'activity_tracking', since: 2 },
+  { key: 'follow_up_management', group: 'CRM', label: 'Follow-up management', description: 'Follow-ups with type, due date, reminders and outcome.', defaultFrom: 'free', paths: ['/app/follow-ups'], since: 2 },
+  { key: 'follow_up_rescheduling', group: 'CRM', label: 'Follow-up rescheduling', description: 'Move a follow-up to a new date, counted on the follow-up.', defaultFrom: 'free', paths: [], parent: 'follow_up_management', since: 2 },
+  { key: 'record_timeline', group: 'CRM', label: 'Record timeline', description: 'The history of everything that happened on a record.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'global_search', group: 'CRM', label: 'Global search', description: 'Search every record from the top bar.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'data_import', group: 'CRM', label: 'Data import', description: 'Import companies, contacts and leads from CSV and Excel files.', defaultFrom: 'free', paths: ['/app/settings/import'], since: 2 },
+  { key: 'data_export', group: 'CRM', label: 'Data export', description: 'Export records as CSV files.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'task_management', group: 'Communication', label: 'Task assignment', description: 'Tasks assigned to people and workspaces, with priority, due date and status.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'notifications', group: 'Communication', label: 'Notifications', description: 'The notification inbox in the top bar.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'workspace_management', group: 'Administration', label: 'Workspace management', description: 'Create and manage Manager and Executive Workspaces within the subscription’s limits.', defaultFrom: 'free', paths: ['/app/settings/workspaces'], since: 2 },
+  { key: 'user_management', group: 'Administration', label: 'User management', description: 'Invite people, change their roles and teams.', defaultFrom: 'free', paths: ['/app/team'], since: 2 },
+  { key: 'permission_management', group: 'Administration', label: 'Permission management', description: 'Roles, and the features and actions each workspace hands down.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'sales_target_management', group: 'Administration', label: 'Sales target management', description: 'Set and distribute sales targets.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'audit_log', group: 'Administration', label: 'Audit log', description: 'Who changed what, and when.', defaultFrom: 'free', paths: [], since: 2 },
+  { key: 'crm_configuration', group: 'Administration', label: 'CRM configuration', description: 'Statuses, departments, designations, lead numbering and other CRM settings.', defaultFrom: 'free', paths: ['/app/settings/crm'], since: 2 },
 ];
+
+/** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
+export const FEATURE_CATALOG_VERSION = 2;
+
+/** Subfeatures of a feature, in catalogue order. */
+export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {
+  return FEATURES.filter((f) => f.parent === feature).map((f) => f.key);
+}
+
+/** Drops every subfeature whose parent feature is missing: a subfeature never works without its feature. */
+export function withParents(list: readonly FeatureKey[]): FeatureKey[] {
+  const set = new Set(list);
+  return list.filter((k) => {
+    const parent = FEATURES.find((f) => f.key === k)?.parent;
+    return !parent || set.has(parent);
+  });
+}
 
 /** The plan feature behind each workspace app (the keys of APP_KEYS in apps.ts). */
 export const APP_FEATURES = { slack: 'slack', teams: 'teams', zoom: 'zoom', docusign: 'docusign', payments: 'card_payments', whatsapp: 'whatsapp', twilio: 'sms', sampbidx: 'sampbidx' } as const satisfies Record<string, FeatureKey>;
@@ -203,6 +297,8 @@ export const operatorPlanDefinitionSchema = z
         maxPipelines: limit.min(1).nullable(),
         monthlyAiCredits: limit,
         automationRunsPerMonth: limit,
+        maxManagerWorkspaces: limit.nullable().optional(),
+        maxExecutiveWorkspaces: limit.nullable().optional(),
       })
       .strict(),
     reason: z.string().trim().min(5).max(500),

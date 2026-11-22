@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { type BranchInput, branchInputSchema, type CompanyFileRename, companyFileRenameSchema, companyLeadSchema, leadDraftSchema, type OwnerChangeInput, ownerChangeSchema, type z } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { CompaniesService } from './companies.service';
@@ -28,30 +28,35 @@ export class CompanyLeadsController {
   }
 
   @Get('drafts')
+  @AlsoRequireFeature('lead_drafts')
   @RequirePermissions('companies:write')
   drafts(@Auth() auth: AuthContext) {
     return this.leads.drafts(auth);
   }
 
   @Post('drafts')
+  @AlsoRequireFeature('lead_drafts')
   @RequirePermissions('companies:write')
   createDraft(@Auth() auth: AuthContext, @Body(new ZodPipe(leadDraftSchema)) body: z.output<typeof leadDraftSchema>) {
     return this.leads.saveDraft(auth, null, body);
   }
 
   @Get('drafts/:id')
+  @AlsoRequireFeature('lead_drafts')
   @RequirePermissions('companies:write')
   draft(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.leads.draft(auth, id);
   }
 
   @Put('drafts/:id')
+  @AlsoRequireFeature('lead_drafts')
   @RequirePermissions('companies:write')
   saveDraft(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(leadDraftSchema)) body: z.output<typeof leadDraftSchema>) {
     return this.leads.saveDraft(auth, id, body);
   }
 
   @Delete('drafts/:id')
+  @AlsoRequireFeature('lead_drafts')
   @HttpCode(204)
   @RequirePermissions('companies:write')
   removeDraft(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
@@ -69,24 +74,28 @@ export class CompanyLeadPartsController {
   ) {}
 
   @Get('branches')
+  @AlsoRequireFeature('company_branches')
   @RequirePermissions('companies:read')
   branches(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.leads.branches(auth, id);
   }
 
   @Post('branches')
+  @AlsoRequireFeature('company_branches')
   @RequirePermissions('companies:write')
   addBranch(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(branchInputSchema)) body: BranchInput, @Meta() meta: RequestMeta) {
     return this.leads.saveBranch(auth, id, null, body, meta);
   }
 
   @Put('branches/:branchId')
+  @AlsoRequireFeature('company_branches')
   @RequirePermissions('companies:write')
   saveBranch(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Param('branchId', uuid) branchId: string, @Body(new ZodPipe(branchInputSchema)) body: BranchInput, @Meta() meta: RequestMeta) {
     return this.leads.saveBranch(auth, id, branchId, body, meta);
   }
 
   @Delete('branches/:branchId')
+  @AlsoRequireFeature('company_branches')
   @HttpCode(204)
   @RequirePermissions('companies:write')
   removeBranch(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Param('branchId', uuid) branchId: string, @Meta() meta: RequestMeta) {
@@ -94,6 +103,7 @@ export class CompanyLeadPartsController {
   }
 
   @Get('owner-history')
+  @AlsoRequireFeature('company_owner_changes')
   @RequirePermissions('companies:read')
   ownerHistory(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.leads.ownerHistory(auth, id);
@@ -101,6 +111,8 @@ export class CompanyLeadPartsController {
 
   /** Gives the lead to someone else, with a reason; the new owner is notified and the change is kept in the history. */
   @Post('owner')
+  @AlsoRequireFeature('company_owner_changes')
+  @RequireAction('assign')
   @HttpCode(200)
   @RequirePermissions('companies:write')
   changeOwner(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(ownerChangeSchema)) body: OwnerChangeInput, @Meta() meta: RequestMeta) {
@@ -108,12 +120,14 @@ export class CompanyLeadPartsController {
   }
 
   @Get('files')
+  @AlsoRequireFeature('company_files')
   @RequirePermissions('companies:read')
   files(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.leads.files(auth, id);
   }
 
   @Post('files')
+  @AlsoRequireFeature('company_files')
   @RequirePermissions('companies:write')
   async upload(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Query('rfqId') rfqId: string | undefined, @Req() req: Request, @Meta() meta: RequestMeta) {
     if (rfqId) await uuid.transform(rfqId, { type: 'query' });
@@ -122,6 +136,7 @@ export class CompanyLeadPartsController {
 }
 
 @Controller('company-files')
+@AlsoRequireFeature('company_files')
 @ApiKeyAccess()
 export class CompanyFilesController {
   constructor(private readonly leads: CompanyLeadsService) {}

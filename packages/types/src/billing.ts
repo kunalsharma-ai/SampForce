@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
 import { PERMISSIONS } from './permissions';
-import { applyFeatureOverrides, type FeatureKey, type FeatureOverride, type OperatorWorkspaceFeatures } from './features';
+import { applyFeatureOverrides, type FeatureKey, type FeatureOverride, type OperatorWorkspaceFeatures, withParents } from './features';
 import { PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode, type PlanEntitlements } from './plans';
 
 // ───────────── Plans and entitlements ─────────────
@@ -52,7 +52,8 @@ export function effectiveEntitlements(sub: { planCode: string; status: Subscript
   const appliedPlan: PlanCode = restricted ? 'free' : planCode;
   const entitlements = sources.plans?.[appliedPlan] ?? PLAN_ENTITLEMENTS[appliedPlan];
   const seatLimit = entitlements.maxUsers ?? (sub?.status === 'TRIALING' ? Math.max(sub.seats, TRIAL_SEATS) : Math.max(1, sub?.seats ?? 1));
-  const features = applyFeatureOverrides(entitlements.features, sources.overrides ?? []);
+  // A subfeature never works without its feature (ADR 0071).
+  const features = withParents(applyFeatureOverrides(entitlements.features, sources.overrides ?? []));
   return { planCode, appliedPlan, entitlements, seatLimit, restricted, features };
 }
 

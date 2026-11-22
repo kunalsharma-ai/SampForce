@@ -21,7 +21,7 @@ import {
   taskUpdateSchema,
   z,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ActivitiesService } from './activities.service';
@@ -105,6 +105,7 @@ export class ActivitiesController {
 }
 
 @Controller('tasks')
+@AlsoRequireFeature('task_management')
 @ApiKeyAccess()
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}
@@ -136,6 +137,7 @@ export class TasksController {
 }
 
 @Controller('search')
+@AlsoRequireFeature('global_search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
@@ -207,11 +209,13 @@ export class ImportExportController {
   ) {}
 
   @Get('imports/fields')
+  @AlsoRequireFeature('data_import')
   fields() {
     return IMPORT_FIELDS;
   }
 
   @Post('imports')
+  @AlsoRequireFeature('data_import')
   @HttpCode(200)
   run(@Auth() auth: AuthContext, @Body(new ZodPipe(importRequestSchema)) body: ImportRequest, @Meta() meta: RequestMeta) {
     // A company-and-employee file writes both kinds of record.
@@ -224,6 +228,7 @@ export class ImportExportController {
 
   /** An Excel workbook becomes CSV text here, and is then mapped and imported like a CSV file. Nothing is saved. */
   @Post('imports/file')
+  @AlsoRequireFeature('data_import')
   @HttpCode(200)
   async readFile(@Auth() auth: AuthContext, @Req() req: Request) {
     if (!(['leads:write', 'contacts:write', 'companies:write'] as const).some((p) => auth.permissions.includes(p))) requirePermission(auth, 'contacts:write');
@@ -234,6 +239,7 @@ export class ImportExportController {
 
   /** Exports are bulk data egress: they need data:export on top of read access, and are audited. */
   @Get('exports/:entity')
+  @RequireAction('export')
   @RequirePermissions('data:export')
   async export(
     @Auth() auth: AuthContext,

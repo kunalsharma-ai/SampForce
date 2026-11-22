@@ -7,7 +7,7 @@ import { Lock } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useT } from '@/lib/i18n';
-import { useHasFeature } from '@/lib/features';
+import { useHasFeature, useWithheldByWorkspace } from '@/lib/features';
 import { useCan, useSession } from '@/lib/session';
 
 const planName = (code: PlanCode | null | undefined) => (PLAN_CATALOG.find((p) => p.code === code)?.name ?? code ?? '').replace('SampForce ', '');
@@ -24,7 +24,23 @@ export function FeatureLocked({ feature }: { feature: FeatureKey }) {
   const canBuy = useCan('billing:manage');
   const plans = useLivePlans();
   const def = FEATURE_BY_KEY[feature];
+  const withheld = useWithheldByWorkspace(feature);
   const from = plans.data ? cheapestPlanWith(feature, Object.fromEntries(plans.data.plans.map((p) => [p.code, p.entitlements.features]))) : null;
+  if (withheld)
+    return (
+      <Card className="mx-auto mt-8 max-w-lg" data-feature-locked={feature} data-withheld="workspace">
+        <CardHeader>
+          <div className="mb-2 grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Lock className="size-5" aria-hidden />
+          </div>
+          <CardTitle>{t('{feature} is not available in your workspace', { feature: t.maybe(def.label) })}</CardTitle>
+          <CardDescription>{t.maybe(def.description)}</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          {t('Your organisation’s plan includes it, but the workspace above yours has not handed it to this workspace. Ask its administrator if you need it.')}
+        </CardContent>
+      </Card>
+    );
   return (
     <Card className="mx-auto mt-8 max-w-lg" data-feature-locked={feature}>
       <CardHeader>

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { z } from '@dealflow/types';
-import { Auth, type AuthContext } from '../common/auth-context';
+import { Auth, type AuthContext, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { NotificationsService } from './notifications.service';
 
@@ -9,6 +9,7 @@ const readBody = z.object({ ids: z.union([z.literal('all'), z.array(z.string().u
 
 /** Personal inbox: every signed-in member can read and clear their own notifications. */
 @Controller('notifications')
+@AlsoRequireFeature('notifications')
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
 

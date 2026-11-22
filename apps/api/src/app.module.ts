@@ -38,6 +38,8 @@ import { IntelligenceModule } from './intelligence/intelligence.module';
 import { MailModule } from './mail/mail.module';
 import { OwnServersModule } from './own-servers/own-servers.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { HierarchyGuard } from './workspaces/hierarchy.guard';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 
@@ -66,6 +68,7 @@ import { redactUrl } from './observability/redact';
     AuditModule,
     AuthModule,
     TenantsModule,
+    WorkspacesModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,
@@ -101,6 +104,8 @@ import { redactUrl } from './observability/redact';
     { provide: APP_GUARD, useClass: AuthGuard },
     // After AuthGuard, which sets the workspace: plan features (ADR 0057).
     { provide: APP_GUARD, useClass: FeatureGuard },
+    // After FeatureGuard: the caller's workspace must have the route's features and action (ADR 0071).
+    { provide: APP_GUARD, useClass: HierarchyGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })
