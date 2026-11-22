@@ -413,6 +413,8 @@ model Tenant {
   sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
+  supportTickets         SupportTicket[]
+  supportTicketMessages  SupportTicketMessage[]
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
@@ -4255,4 +4257,91 @@ model ChatSignal {
 
   @@index([createdAt])
   @@map("chat_signals")
+}
+
+// ───────────── Help Center support tickets (ADR 0073) ─────────────
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+/// Who is answering a ticket now. Every ticket goes to the Console today; workspace routing (ADR 0071 part 5) starts
+/// Executive tickets at their manager and escalates upwards.
+enum SupportHandlerLevel {
+  MANAGER
+  SUPER
+  CONSOLE
+}
+
+enum SupportAuthorKind {
+  /// The person who raised the ticket, or a colleague in the same workspace.
+  USER
+  /// A manager or Super Workspace administrator answering from above.
+  WORKSPACE
+  /// A SampForce operator in the Console.
+  OPERATOR
+}
+
+/// A query raised from Help ("Other: raise a query"), in the web app or the mobile app.
+model SupportTicket {
+  id                   String                @id @default(uuid()) @map("_id")
+  tenantId             String                @map("tenant_id")
+  /// Per organisation, for "#12" references.
+  number               Int
+  /// The raiser's workspace in the hierarchy; null = the Super Workspace.
+  workspaceNodeId      String?               @map("workspace_node_id")
+  raisedByUserId       String                @map("raised_by_user_id")
+  raisedByMembershipId String                @map("raised_by_membership_id")
+  subject              String
+  /// A Help Center category id, such as "deals" or "billing".
+  category             String
+  featureKey           String?               @map("feature_key")
+  /// The page the person was on when they asked.
+  pagePath             String?               @map("page_path")
+  /// "web" or "mobile".
+  source               String                @default("web")
+  priority             SupportTicketPriority @default(NORMAL)
+  status               SupportTicketStatus   @default(OPEN)
+  handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
+  handlerNodeId        String?               @map("handler_node_id")
+  lastMessageAt        DateTime              @default(now()) @map("last_message_at")
+  answeredAt           DateTime?             @map("answered_at")
+  closedAt             DateTime?             @map("closed_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages SupportTicketMessage[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
+  @@index([status, lastMessageAt(sort: Desc)])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id                 String            @id @default(uuid()) @map("_id")
+  tenantId           String            @map("tenant_id")
+  ticketId           String            @map("ticket_id")
+  authorKind         SupportAuthorKind @map("author_kind")
+  authorUserId       String?           @map("author_user_id")
+  authorMembershipId String?           @map("author_membership_id")
+  operatorId         String?           @map("operator_id")
+  body               String
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, ticketId, createdAt])
+  @@map("support_ticket_messages")
 }

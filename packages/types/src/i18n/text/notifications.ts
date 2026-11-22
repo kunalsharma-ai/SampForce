@@ -5,6 +5,19 @@ import type { TextTable } from '../catalogue';
  * language at hand) and translated when the person opens their notifications (ADR 0052).
  */
 export const notifications = {
+  // Help Center support tickets (ADR 0073)
+  'SampForce support replied to query #{number}': [
+    'El soporte de SampForce respondió a la consulta n.º {number}',
+    'Le support SampForce a répondu à la demande n° {number}',
+    'Der SampForce-Support hat auf Anfrage #{number} geantwortet',
+    'ردّ دعم SampForce على الاستفسار رقم {number}',
+  ],
+  'SampForce support closed query #{number}': [
+    'El soporte de SampForce cerró la consulta n.º {number}',
+    'Le support SampForce a fermé la demande n° {number}',
+    'Der SampForce-Support hat Anfrage #{number} geschlossen',
+    'أغلق دعم SampForce الاستفسار رقم {number}',
+  ],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
