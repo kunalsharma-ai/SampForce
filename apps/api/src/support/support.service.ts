@@ -9,6 +9,7 @@ import {
   type SupportTicketMessageRow,
   type SupportTicketRow,
   type SupportHandlerLevel,
+  type SupportPerson,
   type SupportTicketStatus,
   type WorkspaceLevel,
   operatorSupportUpdateSchema,
@@ -355,6 +356,11 @@ export class SupportService {
     });
     await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.answered', targetTenantId: tenantId, metadata: { ticketId: id }, ip } });
     return this.operatorGet(op, id);
+  }
+
+  /** Active operators, who can look after a ticket. */
+  representatives(): Promise<SupportPerson[]> {
+    return this.prisma.platformOperator.findMany({ where: { status: 'ACTIVE' }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
   }
 
   /** Status, the representative looking after it, and the resolution note. */
