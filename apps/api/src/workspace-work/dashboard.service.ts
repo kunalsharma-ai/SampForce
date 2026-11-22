@@ -1,5 +1,5 @@
 import type { TenantTx } from '@dealflow/database';
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import type {
   DashboardWorkspace,
   ExecutiveDay,
@@ -93,6 +93,8 @@ export class WorkspaceDashboardService {
       };
 
       if (me.level === 'SUPER') {
+        // The organisation's figures are for its administrators; other Super Workspace members keep their own dashboards.
+        if (!auth.permissions.includes('members:manage')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to perform this action.' });
         const [usage, totals, managers, executives, work] = await Promise.all([
           this.workspaces.usage(tx, auth.tenantId),
           c.figures(null, range.start, range.end),

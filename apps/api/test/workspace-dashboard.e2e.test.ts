@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
+import { api, inviteMember, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
 
 /*
  * One dashboard per workspace level (ADR 0071, part 6), counted from real records: an executive's day, a manager's
@@ -98,6 +98,11 @@ describe('workspace dashboards', () => {
     expect(d.topManager.workspace.name).toBe('North India Sales');
     expect(d.topExecutive).toMatchObject({ workspace: { name: 'Priya Sharma' }, manager: { name: 'North India Sales' } });
     expect(d.work).toEqual(expect.objectContaining({ openTasks: expect.any(Number), overdueFollowUps: expect.any(Number) }));
+  });
+
+  it('keeps the organisation’s figures to its administrators', async () => {
+    const member = await inviteMember(app, superAdmin, 'member');
+    await api(member).get('/workspace-dashboard').expect(403);
   });
 
   it('counts only the caller’s organisation', async () => {

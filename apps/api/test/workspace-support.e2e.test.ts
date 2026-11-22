@@ -164,6 +164,10 @@ describe('chat and support tickets across the hierarchy', () => {
       await api(superAdmin).post(`/support/tickets/${t.id}/escalate`, {}).expect(403);
       const row = ((await ops.get('/api/v1/operator/support/tickets').expect(200)).body as { id: string; workspace: { level: string; name: string } }[]).find((r) => r.id === t.id);
       expect(row?.workspace).toEqual({ level: 'MANAGER', name: 'South India Sales' });
+      // The Console's overview counts it among the queries waiting, and lists the client.
+      const overview = (await ops.get('/api/v1/operator/overview').expect(200)).body;
+      expect(overview.support.waiting).toBeGreaterThanOrEqual(1);
+      expect(overview.needsAttention).toEqual(expect.arrayContaining([expect.objectContaining({ id: superAdmin.tenantId, why: expect.stringMatching(/support quer(y|ies) waiting$/) })]));
     });
   });
 

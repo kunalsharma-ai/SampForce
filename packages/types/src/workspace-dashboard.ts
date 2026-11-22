@@ -10,12 +10,12 @@ import type { TargetMetric } from './workspace-work';
 
 export const WORKSPACE_DASHBOARD_PERIODS = ['TODAY', 'WEEK', 'MONTH', 'QUARTER'] as const;
 export type WorkspaceDashboardPeriod = (typeof WORKSPACE_DASHBOARD_PERIODS)[number];
-export const WORKSPACE_DASHBOARD_PERIOD_LABEL: Record<WorkspaceDashboardPeriod, string> = {
+export const WORKSPACE_DASHBOARD_PERIOD_LABEL = {
   TODAY: 'Today',
   WEEK: 'This week',
   MONTH: 'This month',
   QUARTER: 'This quarter',
-};
+} as const satisfies Record<WorkspaceDashboardPeriod, string>;
 
 export const workspaceDashboardQuerySchema = z.object({ period: z.enum(WORKSPACE_DASHBOARD_PERIODS).default('MONTH') });
 export type WorkspaceDashboardQuery = z.input<typeof workspaceDashboardQuerySchema>;

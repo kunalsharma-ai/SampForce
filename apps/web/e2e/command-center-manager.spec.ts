@@ -74,7 +74,7 @@ test('a manager runs their team from the manager dashboard: instructions, follow
     expect((await page.request.put('/api/v1/command-center/targets', { data: { period: month, userId, amount }, headers: ORIGIN })).ok()).toBe(true);
 
   // The manager opens on the manager dashboard.
-  await page.goto('/app');
+  await page.goto('/app?view=manager');
   await expect(main.getByRole('heading', { name: 'Manager dashboard', level: 1 })).toBeVisible();
   await expect(main.getByText('2 reporting employees', { exact: false })).toBeVisible();
   const kpis = main.getByRole('list', { name: 'Team metrics' });
