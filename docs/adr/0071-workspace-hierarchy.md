@@ -138,3 +138,21 @@ feature or map to a resource, or they are only checked by role.
   keeps support conversations separate from internal ones. Operators assign a support representative
   (`assignedOperatorId`, shown to the client) and write a resolution note; both are audited.
 - File attachments on tickets are not built yet; chat already carries files.
+
+## Part 6: Four dashboards
+
+- **One dashboard per level** (`GET /workspace-dashboard?period=TODAY|WEEK|MONTH|QUARTER`), counted on each request
+  through the Command Center's `Metrics` and the targets page's own achievement, so the numbers agree everywhere:
+  - **Super Workspace, "Organisation"** (administrators with members:manage only): workspaces used and left, leads,
+    calls, deals and sales, the organisation's running targets, performance by Manager and by Executive Workspace,
+    the leading manager and executive, open and overdue tasks and follow-ups.
+  - **Manager, "Team"**: its executives, team totals and targets, an executive ranking with the top one and the one
+    needing support, a daily, weekly and monthly report, an 8-week trend, and other managers' figures (never their
+    records) only when the Super Workspace allows it.
+  - **Executive, "My day"**: today's lead target, leads, what remains, calls against the call target, today's sales,
+    the monthly sales target, follow-ups coming up and overdue.
+  - **Console Admin**: the platform overview of part 2 now also counts support queries waiting on SampForce.
+- Each level has its own colour (violet, sky, green, as in the header badge), title and layout. Managers see only the
+  Team and Manager tabs; executives only My day and Executive. The designation dashboards (ADR 0063) stay one tab away
+  for the Super Workspace. No dashboard has a recent-activity list (Kunal, 2026-11-22).
+- "Important announcements" are the tasks and instructions already shown at the top; no separate announcement feed.

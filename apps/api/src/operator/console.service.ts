@@ -588,7 +588,7 @@ export class ConsoleService {
       .map((r) => ({ id: r.id, name: r.name, renewsOn: r.subscription!.renewsOn!, planName: r.subscription!.planName, autoRenew: r.subscription!.autoRenew }));
     // Queries that reached SampForce support and wait on it (ADR 0071 part 5): only tickets the client passed up.
     const waiting = await this.prisma.run({ operatorScan: true }, (tx) =>
-      tx.supportTicket.groupBy({ by: ['tenantId'], where: { handlerLevel: 'CONSOLE', status: { in: ['OPEN', 'IN_PROGRESS'] } }, _count: { _all: true } }),
+      tx.supportTicket.groupBy({ by: ['tenantId'], where: { handlerLevel: 'CONSOLE', status: { in: ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS'] } }, _count: { _all: true } }),
     );
     const waitingBy = new Map(waiting.map((w) => [w.tenantId, w._count._all]));
     const attention: ConsoleOverview['needsAttention'] = [];
