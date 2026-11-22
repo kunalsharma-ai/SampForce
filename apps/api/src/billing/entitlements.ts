@@ -16,11 +16,15 @@ import {
 /** Anything that can read the plans table and the workspace's own rows (a tenant transaction or the operator scan). */
 type Reader = Pick<TenantTx, 'plan' | 'subscription' | 'tenantFeatureOverride'>;
 
-/** The live plan definitions: the `plans` table as operators edited it, with shipped values for anything missing. */
-export async function planDefinitions(tx: Pick<TenantTx, 'plan'>): Promise<Record<PlanCode, PlanEntitlements>> {
+/**
+ * The live plan definitions: the `plans` table as operators edited it, with shipped values for anything missing, plus
+ * the plans the Console Admin created (ADR 0071).
+ */
+export async function planDefinitions(tx: Pick<TenantTx, 'plan'>): Promise<Record<PlanCode, PlanEntitlements> & Record<string, PlanEntitlements>> {
   const rows = await tx.plan.findMany({ select: { code: true, entitlements: true } });
   const stored = new Map(rows.map((r) => [r.code, r.entitlements]));
-  return Object.fromEntries(PLAN_CODES.map((c) => [c, parsePlanEntitlements(c, stored.get(c))])) as Record<PlanCode, PlanEntitlements>;
+  const codes = [...new Set([...PLAN_CODES, ...rows.map((r) => r.code)])];
+  return Object.fromEntries(codes.map((c) => [c, parsePlanEntitlements(c, stored.get(c))])) as Record<PlanCode, PlanEntitlements> & Record<string, PlanEntitlements>;
 }
 
 export async function featureOverrides(tx: Pick<TenantTx, 'tenantFeatureOverride'>, tenantId: string): Promise<FeatureOverride[]> {

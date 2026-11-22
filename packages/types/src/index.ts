@@ -51,3 +51,4 @@ export * from './sampbidx';
 export * from './chat';
 export * from './own-servers';
 export * from './workspaces';
+export * from './console';

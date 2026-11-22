@@ -37,6 +37,11 @@ model Plan {
   annualMonthlyPriceCents Int?     @map("annual_monthly_price_cents")
   entitlements            Json
   isPublic                Boolean  @default(true) @map("is_public")
+  /// Created by the Console Admin (ADR 0071) rather than shipped; its code starts with "custom_".
+  custom                  Boolean  @default(false)
+  /// What the Console Admin sells the plan for and how (description, price, billing frequency, support level,
+  /// duration, renewal and upgrade settings). Shape: ConsolePlanTerms in @dealflow/types.
+  terms                   Json?
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -461,6 +466,13 @@ model Subscription {
   /// Workspace limits (ADR 0071) set by the Console Admin for this client; null = the plan's limit.
   maxManagerWorkspaces   Int?               @map("max_manager_workspaces")
   maxExecutiveWorkspaces Int?               @map("max_executive_workspaces")
+  /// Sales-led terms the Console Admin agreed with this client (ADR 0071): price for one billing period in minor
+  /// units, its currency, whether it has been paid, the term in months and whether it renews by itself.
+  priceCents             Int?               @map("price_cents")
+  currency               String?
+  paymentStatus          String?            @map("payment_status")
+  durationMonths         Int?               @map("duration_months")
+  autoRenew              Boolean            @default(true) @map("auto_renew")
   createdAt              DateTime           @default(now()) @map("created_at")
   updatedAt              DateTime           @updatedAt @map("updated_at")
 

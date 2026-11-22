@@ -29,7 +29,7 @@ import { entitlementsFor } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { InvitationsService } from '../tenants/invitations.service';
-import { branchIds, type NodeAccess, resolveOrganisation, type StoredNode } from './access';
+import { branchIds, nameKeyOf, type NodeAccess, resolveOrganisation, type StoredNode } from './access';
 
 type Org = Awaited<ReturnType<typeof resolveOrganisation>>;
 
@@ -40,7 +40,6 @@ export class HierarchyError extends ForbiddenException {
   }
 }
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
-const nameKeyOf = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
  * The workspace hierarchy of an organisation (ADR 0071): creating Manager and Executive Workspaces within the

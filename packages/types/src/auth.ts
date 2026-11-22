@@ -1,5 +1,4 @@
 import type { FeatureKey } from './features';
-import type { PlanCode } from './plan-codes';
 import { z } from 'zod';
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(254);
@@ -69,7 +68,7 @@ export interface MeResponse {
     /** Features the organisation's plan includes: a feature here but not in `features` was withheld by a parent workspace. */
     planFeatures: FeatureKey[];
     /** The plan whose features apply (Free while a paid plan is unpaid or canceled). */
-    appliedPlan: PlanCode;
+    appliedPlan: string;
   };
   role: string;
   permissions: string[];

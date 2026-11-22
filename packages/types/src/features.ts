@@ -328,7 +328,7 @@ export interface OperatorPlanRow {
 
 export interface OperatorWorkspaceFeatures {
   /** The plan whose features apply now (Free while a paid plan is unpaid or canceled). */
-  appliedPlan: PlanCode;
+  appliedPlan: string;
   planFeatures: FeatureKey[];
   overrides: (FeatureOverride & { reason: string; updatedBy: string; updatedAt: string })[];
   /** What the workspace can use now. */

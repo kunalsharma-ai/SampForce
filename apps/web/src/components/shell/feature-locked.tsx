@@ -10,7 +10,7 @@ import { useT } from '@/lib/i18n';
 import { useHasFeature, useWithheldByWorkspace } from '@/lib/features';
 import { useCan, useSession } from '@/lib/session';
 
-const planName = (code: PlanCode | null | undefined) => (PLAN_CATALOG.find((p) => p.code === code)?.name ?? code ?? '').replace('SampForce ', '');
+const planName = (code: string | null | undefined) => (PLAN_CATALOG.find((p) => p.code === code)?.name ?? code ?? '').replace('SampForce ', '');
 
 /** The live plan catalogue (operators can change what each plan includes), to say which plan includes a feature. */
 export function useLivePlans() {

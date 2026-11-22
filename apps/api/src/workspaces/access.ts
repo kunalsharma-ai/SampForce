@@ -48,6 +48,9 @@ export interface NodeAccess {
 /** The parts of a transaction access needs (an operator scan has them too). */
 type Reader = Pick<TenantTx, 'workspaceNode' | 'plan' | 'subscription' | 'tenantFeatureOverride'>;
 
+/** How workspace names are compared: case and repeated spaces do not make a name different. */
+export const nameKeyOf = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
 export function levelOf(value: string): WorkspaceLevel {
   return (WORKSPACE_LEVELS as readonly string[]).includes(value) ? (value as WorkspaceLevel) : 'EXECUTIVE';
 }

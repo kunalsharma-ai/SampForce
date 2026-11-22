@@ -47,18 +47,29 @@ const workspaceCap = (v: unknown, fallback: number | null) => (v === null ? null
  * A stored feature list. Keys added to the catalogue after the list was saved (FeatureDef.since) are included when
  * the plan includes them by default, so a new release never takes a module away from a plan nobody has edited since.
  */
-function storedFeatures(code: PlanCode, list: unknown[], version: unknown): FeatureKey[] {
+function storedFeatures(code: string, list: unknown[], version: unknown): FeatureKey[] {
   const saved = typeof version === 'number' ? version : 1;
   const keys = list.filter((f): f is string => typeof f === 'string');
   if (saved < FEATURE_CATALOG_VERSION) {
-    const defaults = new Set(defaultPlanFeatures(code));
+    const defaults = new Set(isPlanCode(code) ? defaultPlanFeatures(code) : []);
     for (const f of FEATURES) if ((f.since ?? 1) > saved && defaults.has(f.key)) keys.push(f.key);
   }
   return normaliseFeatures(keys);
 }
 
-export function parsePlanEntitlements(code: PlanCode, stored: unknown): PlanEntitlements {
-  const d = PLAN_ENTITLEMENTS[code];
+/** True for the shipped plans; anything else is a plan the Console Admin created (ADR 0071). */
+export function isPlanCode(code: string): code is PlanCode {
+  return (PLAN_CODES as readonly string[]).includes(code);
+}
+
+/** Plans the Console Admin creates have codes with this prefix, so they never clash with a shipped plan. */
+export const CUSTOM_PLAN_PREFIX = 'custom_';
+
+/** What a Console-made plan falls back to for anything missing from its stored definition: Free's limits, no features. */
+const CUSTOM_PLAN_DEFAULTS: PlanEntitlements = { ...LIMITS.free, features: [] };
+
+export function parsePlanEntitlements(code: string, stored: unknown): PlanEntitlements {
+  const d = isPlanCode(code) ? PLAN_ENTITLEMENTS[code] : CUSTOM_PLAN_DEFAULTS;
   const s = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
   const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
   const cap = (v: unknown, fallback: number | null) => (v === null ? null : typeof v === 'number' && Number.isInteger(v) && v >= 1 ? v : fallback);

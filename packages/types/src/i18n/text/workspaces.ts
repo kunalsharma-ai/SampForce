@@ -121,4 +121,16 @@ export const workspaces = {
   'Change at least one permission': ['Cambia al menos un permiso', 'Modifiez au moins une autorisation', 'Ändern Sie mindestens eine Berechtigung', 'غيّر صلاحية واحدة على الأقل'],
   'Change at least one thing': ['Cambia al menos una cosa', 'Modifiez au moins un élément', 'Ändern Sie mindestens eine Sache', 'غيّر شيئًا واحدًا على الأقل'],
   'Unknown module or feature': ['Módulo o función desconocidos', 'Module ou fonctionnalité inconnu', 'Unbekanntes Modul oder unbekannte Funktion', 'وحدة أو ميزة غير معروفة'],
+  // Console Admin (ADR 0071, part 2)
+  'A plan with this name already exists.': ['Ya existe un plan con este nombre.', 'Un forfait porte déjà ce nom.', 'Es gibt bereits einen Tarif mit diesem Namen.', 'توجد خطة بهذا الاسم بالفعل.'],
+  'After the start date': ['Después de la fecha de inicio', 'Après la date de début', 'Nach dem Startdatum', 'بعد تاريخ البدء'],
+  'Client organisation not found.': ['No se encontró la organización cliente.', 'Organisation cliente introuvable.', 'Kundenorganisation nicht gefunden.', 'لم يتم العثور على المؤسسة العميلة.'],
+  'Enter the administrator’s email address.': ['Introduce el correo electrónico del administrador.', 'Saisissez l’adresse e-mail de l’administrateur.', 'Geben Sie die E-Mail-Adresse der Administration ein.', 'أدخل البريد الإلكتروني للمسؤول.'],
+  'Plan not found.': ['No se encontró el plan.', 'Forfait introuvable.', 'Tarif nicht gefunden.', 'لم يتم العثور على الخطة.'],
+  'Shipped plans keep their names. Create a new plan instead.': ['Los planes incluidos conservan su nombre. Crea un plan nuevo.', 'Les forfaits fournis gardent leur nom. Créez plutôt un nouveau forfait.', 'Mitgelieferte Tarife behalten ihren Namen. Legen Sie stattdessen einen neuen Tarif an.', 'تحتفظ الخطط المضمّنة بأسمائها. أنشئ خطة جديدة بدلًا من ذلك.'],
+  'The renewal date must be after the subscription started.': ['La fecha de renovación debe ser posterior al inicio de la suscripción.', 'La date de renouvellement doit suivre le début de l’abonnement.', 'Das Verlängerungsdatum muss nach dem Beginn des Abonnements liegen.', 'يجب أن يكون تاريخ التجديد بعد بدء الاشتراك.'],
+  'There is no plan "{code}".': ['No existe el plan "{code}".', 'Il n’existe pas de forfait « {code} ».', 'Es gibt keinen Tarif „{code}“.', 'لا توجد خطة "{code}".'],
+  'This client is scheduled for deletion.': ['Este cliente está programado para eliminarse.', 'Ce client doit être supprimé.', 'Dieser Kunde ist zur Löschung vorgesehen.', 'هذا العميل مجدول للحذف.'],
+  'Use a three-letter currency code': ['Usa un código de moneda de tres letras', 'Utilisez un code de devise à trois lettres', 'Verwenden Sie einen dreistelligen Währungscode', 'استخدم رمز عملة من ثلاثة أحرف'],
+  '{plan} can only move to the plans its settings list. Change the plan’s upgrade settings first.': ['{plan} solo puede pasar a los planes indicados en su configuración. Cambia primero las opciones de mejora del plan.', '{plan} ne peut passer qu’aux forfaits indiqués dans ses réglages. Modifiez d’abord les options de mise à niveau du forfait.', '{plan} kann nur zu den in seinen Einstellungen genannten Tarifen wechseln. Ändern Sie zuerst die Upgrade-Einstellungen des Tarifs.', 'لا يمكن نقل {plan} إلا إلى الخطط المذكورة في إعداداتها. غيّر إعدادات الترقية للخطة أولًا.'],
 } satisfies TextTable;
