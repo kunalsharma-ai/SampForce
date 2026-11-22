@@ -22,7 +22,16 @@ describe('company logos', () => {
   let logos: CompanyLogosService;
   let restore: () => void;
 
-  const runWorker = () => logos.runDue(new Date(), true);
+  /** Runs look-ups until none is due (other suites leave queued logos in the shared test database). */
+  const runWorker = async () => {
+    let total = 0;
+    for (let i = 0; i < 50; i++) {
+      const n = await logos.runDue(new Date(), true);
+      if (!n) break;
+      total += n;
+    }
+    return total;
+  };
   const company = async (id: string) => (await http.get(`/companies/${id}`).expect(200)).body;
   const binary = (res: { on: (e: string, cb: (c?: Buffer) => void) => void }, cb: (err: Error | null, body: Buffer) => void) => {
     const chunks: Buffer[] = [];
