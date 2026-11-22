@@ -6,6 +6,7 @@ import {
   supportEscalateSchema,
   supportListQuerySchema,
   supportMessageSchema,
+  supportReportQuerySchema,
   supportStatusSchema,
   supportTicketCreateSchema,
 } from '@dealflow/types';
@@ -95,6 +96,12 @@ export class OperatorSupportController {
   @Get('counts')
   counts(@Operator() op: OperatorContext) {
     return this.support.operatorCounts(op);
+  }
+
+  /** Support reports for the period: volume, topics, clients, who handles them and how fast. */
+  @Get('report')
+  report(@Query(new ZodPipe(supportReportQuerySchema)) q: z.output<typeof supportReportQuerySchema>) {
+    return this.support.operatorReport(q.days);
   }
 
   /** The operators a ticket can be assigned to. */

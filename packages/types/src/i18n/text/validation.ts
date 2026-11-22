@@ -8,6 +8,7 @@ export const validation = {
   // Zod's default messages, for checks that carry no message of their own.
   Required: ['Obligatorio', 'Obligatoire', 'Pflichtfeld', 'مطلوب'],
   Invalid: ['No válido', 'Non valide', 'Ungültig', 'غير صالح'],
+  'Give a phone number to be called on.': ['Indica un número de teléfono para llamarte.', 'Indiquez un numéro où vous rappeler.', 'Geben Sie eine Telefonnummer für den Rückruf an.', 'أدخل رقم هاتف للاتصال بك.'],
   'Invalid input': ['Dato no válido', 'Saisie non valide', 'Ungültige Eingabe', 'إدخال غير صالح'],
   'Invalid date': ['Fecha no válida', 'Date non valide', 'Ungültiges Datum', 'تاريخ غير صالح'],
   'Invalid email': ['Correo no válido', 'E-mail non valide', 'Ungültige E-Mail-Adresse', 'بريد إلكتروني غير صالح'],

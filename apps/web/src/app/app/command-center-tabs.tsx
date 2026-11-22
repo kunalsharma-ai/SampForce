@@ -96,6 +96,7 @@ export function CommandCenter() {
     <div>
       {tabs}
       {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
+      {view === 'workspace' && level === 'SUPER' && <OnboardingChecklist />}
       {view === 'workspace' && <LevelDashboard level={level} />}
       {(hasTasks || hasTargets) && (
         <div className={view === 'workspace' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
