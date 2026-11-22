@@ -9,7 +9,7 @@ import type {
   TargetMetric,
   TargetRow,
   TargetTotal,
-  TrendPoint,
+  WorkspaceTrendPoint,
   UpcomingFollowUp,
   WorkCounts,
   WorkspaceDashboard,
@@ -20,10 +20,10 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { Metrics, r2 } from '../command-center/metrics';
 import { loadRates } from '../revenue/fx';
-import { RevenueRecordsService } from '../revenue/revenue-records.service';
+import { RevenueRecordsService } from '../crm/revenue-records.service';
 import { branchIds, type NodeAccess, resolveOrganisation } from '../workspaces/access';
 import { WorkspacesService } from '../workspaces/workspaces.service';
-import { callerOf, type Org, may, refOf } from './hierarchy';
+import { callerOf, type Org, refOf } from './hierarchy';
 import { TargetsService } from './targets.service';
 
 const DAY = 86_400_000;
@@ -140,7 +140,7 @@ export class WorkspaceDashboardService {
           reports,
           trend: await c.trend(users, now),
           // Figures only: other managers' records stay behind record visibility.
-          otherManagers: others && may(me, 'reports', 'view') ? others : others ? [] : null,
+          otherManagers: others,
         };
         return view;
       }
@@ -225,9 +225,9 @@ class Counter {
   }
 
   /** Leads and revenue for each of the last eight weeks, oldest first. */
-  async trend(users: string[], now: Date): Promise<TrendPoint[]> {
+  async trend(users: string[], now: Date): Promise<WorkspaceTrendPoint[]> {
     const thisWeek = periodRange('WEEK', now).start.getTime();
-    const out: TrendPoint[] = [];
+    const out: WorkspaceTrendPoint[] = [];
     for (let i = 7; i >= 0; i--) {
       const start = new Date(thisWeek - i * 7 * DAY);
       const end = new Date(start.getTime() + 7 * DAY);

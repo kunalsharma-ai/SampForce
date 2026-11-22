@@ -90,7 +90,7 @@ export interface PeriodReport {
   revenue: number;
 }
 
-export interface TrendPoint {
+export interface WorkspaceTrendPoint {
   /** Monday of the week (UTC). */
   week: string;
   leads: number;
@@ -108,7 +108,7 @@ export interface ManagerDashboardView extends DashboardBase {
   lowest: WorkspacePerformance | null;
   work: WorkCounts;
   reports: PeriodReport[];
-  trend: TrendPoint[];
+  trend: WorkspaceTrendPoint[];
   /** Other Manager Workspaces' figures, only when the Super Workspace allows it (never their records). */
   otherManagers: WorkspacePerformance[] | null;
 }
