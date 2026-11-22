@@ -1,5 +1,6 @@
 'use client';
 
+import { InfoTip } from '@/components/info-tip';
 import {
   type ExecutiveDay,
   type ManagerDashboardView,
@@ -87,7 +88,10 @@ function Hero({ level, title, subtitle, picker }: { level: keyof typeof TONE; ti
   return (
     <div className={cn('mb-4 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-border bg-gradient-to-br to-transparent p-5', TONE[level].band)} data-level-dashboard={level}>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <InfoTip topic="page.commandCenter" />
+        </div>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
       </div>
       {picker}
