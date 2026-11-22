@@ -145,4 +145,12 @@ describe('help search', () => {
   it('finds guides by page title', () => {
     expect(searchHelp('sequences', 'en', items).some((h) => h.kind === 'guide' && h.guide.id === 'page.sequences')).toBe(true);
   });
+
+  it('matches half the longer words of a sentence in a partial search', () => {
+    const sentence = 'Export deals to Excel for our board';
+    expect(searchHelp(sentence, 'en', items)).toEqual([]);
+    const hits = searchHelp(sentence, 'en', items, undefined, { partial: true });
+    expect(hits.some((h) => h.kind === 'faq' && h.faq.id === 'data.export')).toBe(true);
+    expect(searchHelp('zebra giraffe walrus', 'en', items, undefined, { partial: true })).toEqual([]);
+  });
 });
