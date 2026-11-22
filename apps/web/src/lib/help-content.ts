@@ -14,6 +14,8 @@ import {
   type HelpArticleStats,
   type HelpContent,
   type HelpReaderArticle,
+  type HelpSettingsInput,
+  type HelpSettingsView,
   type LanguageCode,
   localText,
 } from '@dealflow/types';
@@ -38,6 +40,22 @@ export function useHelpContent(audience: 'workspace' | 'console' | undefined) {
     queryFn: () =>
       api<HelpContent>(audience === 'console' ? '/operator/help/content' : '/help/content'),
     staleTime: 60_000,
+  });
+}
+
+/** The organisation's Help settings (the Console's switch and the Super Workspace's choices). */
+export function useHelpSettings(enabled = true) {
+  return useQuery({ enabled, queryKey: ['help', 'settings'], queryFn: () => api<HelpSettingsView>('/help/settings'), staleTime: 60_000 });
+}
+
+export function useSaveHelpSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: HelpSettingsInput) => api<HelpSettingsView>('/help/settings', { method: 'PUT', json: input }),
+    onSuccess: (s) => {
+      qc.setQueryData(['help', 'settings'], s);
+      void qc.invalidateQueries({ queryKey: ['help', 'content'] });
+    },
   });
 }
 

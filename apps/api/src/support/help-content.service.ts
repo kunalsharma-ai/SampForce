@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma } from '@dealflow/database';
 import { builtinHelpKeys, faqsFor, guidesFor, HELP_CATEGORY_BY_ID, HELP_CONTENT_UPDATED, type HelpReader } from '@dealflow/help';
-import { BadRequestException, ConflictException, Injectable, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import {
   HELP_MEDIA_MAX_BYTES,
   type HelpArticleDetail,
@@ -15,12 +15,15 @@ import {
   type HelpLocalText,
   type HelpMediaRow,
   type HelpReaderArticle,
+  type HelpSettingsView,
+  helpSettingsInputSchema,
   helpArticleInputSchema,
   helpCategoryInputSchema,
   helpFeedbackSchema,
 } from '@dealflow/types';
 import type { z } from 'zod';
 import type { AuthContext } from '../common/auth-context';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import type { OperatorContext } from '../operator/operator-auth';
@@ -43,7 +46,10 @@ const invalid = (path: string, message: string) => new BadRequestException({ cod
  */
 @Injectable()
 export class HelpContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   // ── Readers ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -54,18 +60,57 @@ export class HelpContentService {
 
   /** Published articles the reader may see, built-in help the Console hid, topics, totals and the reader's answers. */
   async content(auth: AuthContext): Promise<HelpContent> {
-    const reader = await this.reader(auth);
+    const [reader, settings] = await Promise.all([this.reader(auth), this.settings(auth)]);
     const base = await this.published('workspace', reader);
+    if (!settings.helpEnabled) return { ...base, categories: [], articles: [], stats: {}, myFeedback: {}, settings };
     const mine = await this.prisma.run(auth, (tx) => tx.helpFeedback.findMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, select: { articleKey: true, helpful: true } }));
-    return { ...base, myFeedback: Object.fromEntries(mine.map((f) => [f.articleKey, f.helpful])) };
+    return { ...base, myFeedback: Object.fromEntries(mine.map((f) => [f.articleKey, f.helpful])), settings };
+  }
+
+  // ── Settings ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  /** The organisation's Help settings. The Super Workspace's administrators (tenant:manage) may change their part. */
+  async settings(auth: AuthContext): Promise<HelpSettingsView> {
+    const [row, reader] = await Promise.all([this.prisma.run(auth, (tx) => tx.helpSettings.findUnique({ where: { tenantId: auth.tenantId } })), this.reader(auth)]);
+    return toSettings(row, (reader.level ?? 'SUPER') === 'SUPER' && auth.permissions.includes('tenant:manage'));
+  }
+
+  async saveSettings(auth: AuthContext, input: z.output<typeof helpSettingsInputSchema>, ip: string | null): Promise<HelpSettingsView> {
+    const current = await this.settings(auth);
+    if (!current.canManage) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only the Super Workspace’s administrators can change Help settings.' });
+    const data = { menuVisible: input.menuVisible, explainRestricted: input.explainRestricted, supportNote: input.supportNote?.trim() || null };
+    const row = await this.prisma.run(auth, async (tx) => {
+      const saved = await tx.helpSettings.upsert({ where: { tenantId: auth.tenantId }, create: { tenantId: auth.tenantId, ...data }, update: data });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'help.settings_updated', entityType: 'help_settings', entityId: saved.id, metadata: data, meta: { ipAddress: ip, userAgent: null, requestId: '' } });
+      return saved;
+    });
+    return toSettings(row, true);
+  }
+
+  /** The Console's view and switch for one client. */
+  async clientSettings(tenantId: string): Promise<HelpSettingsView> {
+    const row = await this.prisma.run({ tenantId }, async (tx) => {
+      if (!(await tx.tenant.findUnique({ where: { id: tenantId }, select: { id: true } }))) throw notFound('Client');
+      return tx.helpSettings.findUnique({ where: { tenantId } });
+    });
+    return toSettings(row, false);
+  }
+
+  async setClientHelp(op: OperatorContext, tenantId: string, helpEnabled: boolean, ip: string | null): Promise<HelpSettingsView> {
+    const row = await this.prisma.run({ tenantId }, async (tx) => {
+      if (!(await tx.tenant.findUnique({ where: { id: tenantId }, select: { id: true } }))) throw notFound('Client');
+      return tx.helpSettings.upsert({ where: { tenantId }, create: { tenantId, helpEnabled }, update: { helpEnabled } });
+    });
+    await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'help_settings.client_updated', targetTenantId: tenantId, metadata: { helpEnabled }, ip } });
+    return toSettings(row, false);
   }
 
   /** The Console's own Help page reads the console audience. */
   async consoleContent(): Promise<HelpContent> {
-    return { ...(await this.published('console', null)), myFeedback: {} };
+    return { ...(await this.published('console', null)), myFeedback: {}, settings: toSettings(null, false) };
   }
 
-  private async published(audience: HelpContentAudience, reader: (HelpReader & { tenantId: string; roleKey: string }) | null): Promise<Omit<HelpContent, 'myFeedback'>> {
+  private async published(audience: HelpContentAudience, reader: (HelpReader & { tenantId: string; roleKey: string }) | null): Promise<Omit<HelpContent, 'myFeedback' | 'settings'>> {
     const [rows, archived, categories, stats] = await Promise.all([
       this.prisma.helpArticle.findMany({ where: { status: 'PUBLISHED', audience }, orderBy: [{ pinned: 'desc' }, { updatedAt: 'desc' }] }),
       this.prisma.helpArticle.findMany({ where: { status: 'ARCHIVED', audience, builtinKey: { not: null } }, select: { builtinKey: true } }),
@@ -84,6 +129,7 @@ export class HelpContentService {
 
   /** Whether the reader can see the article a key names, so feedback and views only count real, visible help. */
   private async readable(auth: AuthContext, key: string): Promise<boolean> {
+    if (!(await this.settings(auth)).helpEnabled) return false;
     const reader = await this.reader(auth);
     if (key.startsWith('article:')) {
       const a = await this.prisma.helpArticle.findFirst({ where: { id: key.slice(8), status: 'PUBLISHED', audience: 'workspace' } });
@@ -391,6 +437,17 @@ function visibleTo(a: Article, reader: HelpReader & { tenantId: string; roleKey:
   if (a.roleKeys.length && !a.roleKeys.includes(reader.roleKey)) return false;
   if (a.tenantIds.length && !a.tenantIds.includes(reader.tenantId)) return false;
   return true;
+}
+
+function toSettings(row: { helpEnabled: boolean; menuVisible: boolean; explainRestricted: boolean; supportNote: string | null; updatedAt: Date } | null, canManage: boolean): HelpSettingsView {
+  return {
+    helpEnabled: row?.helpEnabled ?? true,
+    menuVisible: row?.menuVisible ?? true,
+    explainRestricted: row?.explainRestricted ?? true,
+    supportNote: row?.supportNote ?? null,
+    canManage,
+    updatedAt: row?.updatedAt.toISOString() ?? null,
+  };
 }
 
 function toReaderArticle(a: Article): HelpReaderArticle {

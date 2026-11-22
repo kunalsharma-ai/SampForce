@@ -219,6 +219,32 @@ export function guidesFor(reader: HelpReader): HelpGuide[] {
   return allGuides().filter((g) => audienceOf(g.category) === reader.audience && allowed(reader, { ...GUIDE_RULES[g.id], feature: guideFeature(g.id) }));
 }
 
+/** Why a reader cannot use a page: their plan lacks the feature, their role the permission, or their workspace level. */
+export interface RestrictedGuide {
+  guide: HelpGuide;
+  reason: 'feature' | 'permission' | 'level';
+  feature?: FeatureKey;
+  permission?: Permission;
+}
+
+/**
+ * The pages this reader cannot use, with the reason, so Help can explain why and who can grant it instead of
+ * pretending the feature does not exist. The first rule that fails is the reason, plan first.
+ */
+export function restrictedGuides(reader: HelpReader): RestrictedGuide[] {
+  if (reader.audience === 'console') return [];
+  const out: RestrictedGuide[] = [];
+  for (const g of allGuides()) {
+    if (audienceOf(g.category) !== reader.audience) continue;
+    const rule = { ...GUIDE_RULES[g.id], feature: guideFeature(g.id) ?? undefined };
+    if (allowed(reader, rule)) continue;
+    if (rule.feature && !allowed(reader, { feature: rule.feature })) out.push({ guide: g, reason: 'feature', feature: rule.feature });
+    else if (rule.permission && !allowed(reader, { permission: rule.permission })) out.push({ guide: g, reason: 'permission', permission: rule.permission });
+    else out.push({ guide: g, reason: 'level' });
+  }
+  return out;
+}
+
 /** The questions this reader can use, by the same rules. A question that links a guide also needs that guide. */
 export function faqsFor(reader: HelpReader): HelpFaq[] {
   const list = reader.audience === 'console' ? CONSOLE_FAQS : HELP_FAQS;

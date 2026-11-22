@@ -17,6 +17,7 @@ import {
   guideFeature,
   guideHref,
   guidesFor,
+  restrictedGuides,
   searchHelp,
 } from './index';
 
@@ -88,6 +89,18 @@ describe('who sees what', () => {
     expect(faqsFor(without).map((q) => q.id)).not.toContain('outreach.sequence');
     expect(faqsFor(without).map((q) => q.id)).not.toContain('deals.rfq');
     expect(faqsFor(without).map((q) => q.id)).toContain('start.search');
+  });
+
+  it('explains what a reader cannot use, and why', () => {
+    expect(restrictedGuides(everything)).toEqual([]);
+    const limited: HelpReader = { ...everything, level: 'EXECUTIVE', features: FEATURE_KEYS.filter((f) => f !== 'sequences'), permissions: PERMISSIONS.filter((p) => p !== 'billing:read') };
+    const why = new Map(restrictedGuides(limited).map((r) => [r.guide.id, r]));
+    expect(why.get('page.sequences')).toMatchObject({ reason: 'feature', feature: 'sequences' });
+    expect(why.get('page.billing')).toMatchObject({ reason: 'permission', permission: 'billing:read' });
+    expect(why.get('page.workspaces')).toMatchObject({ reason: 'level' });
+    // Exactly the guides the reader does not get.
+    expect(restrictedGuides(limited).length + guidesFor(limited).length).toBe(guidesFor(everything).length);
+    expect(restrictedGuides({ audience: 'console' })).toEqual([]);
   });
 
   it('follows the workspace level', () => {

@@ -417,6 +417,7 @@ model Tenant {
   supportTicketMessages  SupportTicketMessage[]
   supportFiles           SupportTicketAttachment[]
   helpFeedback           HelpFeedback[]
+  helpSettings           HelpSettings?
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
@@ -4539,4 +4540,24 @@ model HelpFeedback {
   @@unique([tenantId, userId, articleKey])
   @@index([articleKey, createdAt(sort: Desc)])
   @@map("help_feedback")
+}
+
+/// Help & Support settings of one organisation (ADR 0073): what the Console allows and what the Super Workspace chose.
+/// Raising and following queries is never switched off by these.
+model HelpSettings {
+  id                 String   @id @default(uuid()) @map("_id")
+  tenantId           String   @unique @map("tenant_id")
+  /// Set by the Console: the Help Center's answers and guides for this client.
+  helpEnabled        Boolean  @default(true) @map("help_enabled")
+  /// Set by the Super Workspace: the Help icon in the top bar.
+  menuVisible        Boolean  @default(true) @map("menu_visible")
+  /// Set by the Super Workspace: list features people cannot use, with why and who can grant them.
+  explainRestricted  Boolean  @default(true) @map("explain_restricted")
+  /// Set by the Super Workspace: a note shown in Help, such as who to ask inside the company first.
+  supportNote        String?  @map("support_note")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("help_settings")
 }

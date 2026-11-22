@@ -215,4 +215,37 @@ describe('help center content from the Console', () => {
     await support.get('/api/v1/operator/support/tickets/report?days=3').expect(400);
     await request(app.getHttpServer()).get('/api/v1/operator/support/tickets/report').expect(401);
   });
+
+  it('lets the Console switch Help off for a client and the Super Workspace choose its options, never blocking support', async () => {
+    // The Super Workspace's administrator manages the options; a member only reads them.
+    expect((await api(owner).get('/help/settings').expect(200)).body).toMatchObject({ helpEnabled: true, menuVisible: true, explainRestricted: true, supportNote: null, canManage: true });
+    expect((await api(member).get('/help/settings').expect(200)).body.canManage).toBe(false);
+    await api(member).put('/help/settings', { menuVisible: false, explainRestricted: true }).expect(403);
+    const saved = (await api(owner).put('/help/settings', { menuVisible: false, explainRestricted: false, supportNote: 'Ask Priya in IT first.' }).expect(200)).body;
+    expect(saved).toMatchObject({ menuVisible: false, explainRestricted: false, supportNote: 'Ask Priya in IT first.' });
+    expect((await api(member).get('/help').expect(200)).body.restricted).toEqual([]);
+
+    // The Console's switch: support staff read it, only administrators change it.
+    const path = `/api/v1/operator/help/clients/${owner.tenantId}/settings`;
+    expect((await support.get(path).expect(200)).body.helpEnabled).toBe(true);
+    await support.put(path).set('origin', ORIGIN).send({ helpEnabled: false }).expect(403);
+    await admin.put(path).set('origin', ORIGIN).send({ helpEnabled: false }).expect(200);
+    await admin.get(`/api/v1/operator/help/clients/${randomUUID()}/settings`).expect(404);
+
+    // Off: no answers or guides, no feedback, but queries still go through.
+    const off = (await api(member).get('/help').expect(200)).body;
+    expect(off.faqs).toEqual([]);
+    expect(off.guides).toEqual([]);
+    expect(off.settings.helpEnabled).toBe(false);
+    expect((await content(member)).articles).toEqual([]);
+    await api(member).post('/help/feedback', { articleKey: 'faq:start.search', helpful: true }).expect(404);
+    await api(member).post('/support/tickets', { subject: `Still reachable ${tag}`, body: 'Help is off but I can still ask.' }).expect(201);
+
+    await admin.put(path).set('origin', ORIGIN).send({ helpEnabled: true }).expect(200);
+    await api(owner).put('/help/settings', { menuVisible: true, explainRestricted: true, supportNote: null }).expect(200);
+    const on = (await api(member).get('/help').expect(200)).body;
+    expect(on.faqs.length).toBeGreaterThan(0);
+    // A member without billing access learns why Billing is missing.
+    expect(on.restricted.find((r: { id: string }) => r.id === 'page.billing')).toMatchObject({ reason: 'permission', permission: 'billing:read' });
+  });
 });

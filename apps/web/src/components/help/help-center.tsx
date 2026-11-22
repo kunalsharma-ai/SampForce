@@ -44,6 +44,7 @@ import {
   UpdatedOn,
   VideoLink,
 } from './article';
+import { HelpSettingsButton, RestrictedFeatures, SupportNote } from './help-extras';
 import { ToneIcon } from './help-ui';
 import { RaiseQueryDialog } from './raise-query';
 
@@ -105,6 +106,83 @@ export function HelpCenter({
   };
 
   if (!view || remote.isLoading) return <Skeleton className="h-[32rem] rounded-3xl" />;
+  const settings = remote.data?.settings;
+  const raiseCard = workspace ? (
+    <section
+      aria-labelledby="help-more"
+      className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-r from-accent/15 via-primary/10 to-background p-6 sm:p-8"
+      data-raise-query-card
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -end-16 -top-16 size-48 rounded-full bg-accent/25 blur-3xl"
+      />
+      <div className="relative flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <span
+            className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg"
+            aria-hidden
+          >
+            <LifeBuoy className="size-6" />
+          </span>
+          <div>
+            <h2 id="help-more" className="text-lg font-semibold">
+              {t('Didn’t find your answer?')}
+            </h2>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              {t(
+                'Tell the SampForce support team what you need. You get a reference number, a notification when they reply, and the whole conversation in My queries.',
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {queriesHref && (
+            <Button asChild variant="outline">
+              <Link href={queriesHref}>
+                <Inbox aria-hidden /> {t('My queries')}
+              </Link>
+            </Button>
+          )}
+          <Button onClick={() => setRaising(true)} data-raise-query>
+            {t('Other: raise a query')} <ArrowRight className="rtl:rotate-180" aria-hidden />
+          </Button>
+        </div>
+      </div>
+    </section>
+  ) : null;
+  const raiseDialog =
+    workspace && reader ? (
+      <RaiseQueryDialog
+        open={raising}
+        onOpenChange={setRaising}
+        reader={reader}
+        categories={queryCategories}
+        initialQuery={query}
+        fromPath={from}
+        queriesHref={queriesHref ?? '/app/help/queries'}
+        defaultCategory={queryCategories.some((c) => c.id === category) ? category : null}
+      />
+    ) : null;
+
+  // The Console switched Help off for this client: no answers or guides, but support is still one click away.
+  if (workspace && settings && !settings.helpEnabled)
+    return (
+      <div className="mx-auto max-w-4xl space-y-6" data-help-center="workspace" data-help-off>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-3xl font-semibold tracking-tight">{t('Help & support')}</h1>
+          <PageHelp />
+        </div>
+        <p className="text-muted-foreground">
+          {t(
+            'Answers and guides are not part of your organisation’s SampForce service. The support team is still here for any question.',
+          )}
+        </p>
+        <SupportNote note={settings.supportNote} />
+        {raiseCard}
+        {raiseDialog}
+      </div>
+    );
   const inTopic = (id: string, topic: string) =>
     id === topic || view.categories.some((c) => c.id === id && c.parentId === topic);
   const counts = new Map(
@@ -140,6 +218,11 @@ export function HelpCenter({
           aria-hidden
           className="pointer-events-none absolute -bottom-32 start-1/3 size-72 rounded-full bg-accent/20 blur-3xl"
         />
+        {workspace && settings?.canManage && (
+          <div className="absolute end-4 top-4 z-10">
+            <HelpSettingsButton settings={settings} />
+          </div>
+        )}
         <div className="relative mx-auto max-w-3xl text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-background/60 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
             <Sparkles className="size-3.5" aria-hidden />
@@ -374,51 +457,11 @@ export function HelpCenter({
         </>
       )}
 
-      {/* ── Still need help ── */}
-      {workspace && (
-        <section
-          aria-labelledby="help-more"
-          className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-r from-accent/15 via-primary/10 to-background p-6 sm:p-8"
-          data-raise-query-card
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -end-16 -top-16 size-48 rounded-full bg-accent/25 blur-3xl"
-          />
-          <div className="relative flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <span
-                className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg"
-                aria-hidden
-              >
-                <LifeBuoy className="size-6" />
-              </span>
-              <div>
-                <h2 id="help-more" className="text-lg font-semibold">
-                  {t('Didn’t find your answer?')}
-                </h2>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                  {t(
-                    'Tell the SampForce support team what you need. You get a reference number, a notification when they reply, and the whole conversation in My queries.',
-                  )}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {queriesHref && (
-                <Button asChild variant="outline">
-                  <Link href={queriesHref}>
-                    <Inbox aria-hidden /> {t('My queries')}
-                  </Link>
-                </Button>
-              )}
-              <Button onClick={() => setRaising(true)} data-raise-query>
-                {t('Other: raise a query')} <ArrowRight className="rtl:rotate-180" aria-hidden />
-              </Button>
-            </div>
-          </div>
-        </section>
+      {workspace && settings?.explainRestricted && !hits && reader && (
+        <RestrictedFeatures reader={reader} />
       )}
+      {workspace && <SupportNote note={settings?.supportNote ?? null} />}
+      {raiseCard}
 
       <HelpItemDialog
         item={opened}
@@ -428,18 +471,7 @@ export function HelpCenter({
         audience={audience!}
         myFeedback={view.myFeedback}
       />
-      {workspace && reader && (
-        <RaiseQueryDialog
-          open={raising}
-          onOpenChange={setRaising}
-          reader={reader}
-          categories={queryCategories}
-          initialQuery={query}
-          fromPath={from}
-          queriesHref={queriesHref ?? '/app/help/queries'}
-          defaultCategory={queryCategories.some((c) => c.id === category) ? category : null}
-        />
-      )}
+      {raiseDialog}
     </div>
   );
 }

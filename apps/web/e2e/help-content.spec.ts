@@ -97,13 +97,11 @@ test('Console help content, from writing to reader feedback', async ({ page, bro
   await expect(ops.locator(`[data-help-media="${pic}"]`)).toContainText(`![${pic}](media:`);
   await shot(ops, '20-console-help-files');
   // Something that only claims to be a picture is refused.
-  await ops
-    .locator('[data-help-media-input]')
-    .setInputFiles({
-      name: 'fake.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from('<html>not a picture</html>'),
-    });
+  await ops.locator('[data-help-media-input]').setInputFiles({
+    name: 'fake.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('<html>not a picture</html>'),
+  });
   await expect(ops.getByText('Use a PNG, JPEG, GIF or WebP picture')).toBeVisible();
 
   // A guide: write, preview, save, publish.
@@ -265,5 +263,96 @@ test('Console help content, from writing to reader feedback', async ({ page, bro
   await page.reload();
   await expect(center.getByRole('heading', { level: 1, name: 'How can we help?' })).toBeVisible();
   await expect(center.getByText(guideTitle)).toHaveCount(0);
+  await opsCtx.close();
+});
+
+/**
+ * Help settings (ADR 0073): the Super Workspace hides the Help icon and leaves a note, people learn why features are
+ * missing, and the Console can switch Help off for a client, while raising a query always stays possible.
+ */
+test('Help settings: hidden menu, missing features explained, Help switched off by the Console', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(180_000);
+  const org = `Help Settings ${Date.now()}`;
+  await signUp(page, org, { plan: 'free' });
+  await page.goto('/app/help');
+  const center = page.locator('[data-help-center="workspace"]');
+  await expect(center.getByRole('heading', { level: 1, name: 'How can we help?' })).toBeVisible();
+
+  // On the free plan, missing features are explained rather than offered.
+  const restricted = center.locator('[data-help-restricted]');
+  await restricted.locator('summary').click();
+  await expect(restricted.locator('[data-restricted="page.sequences"]')).toHaveAttribute(
+    'data-reason',
+    'feature',
+  );
+  await expect(restricted.locator('[data-restricted="page.sequences"]')).toContainText(
+    'Super Workspace administrator',
+  );
+  await expect(center.locator('[data-help-guide="page.sequences"]')).toHaveCount(0);
+
+  // The Super Workspace's administrator hides the Help icon and leaves a note.
+  await center.locator('[data-help-settings]').click();
+  const dialog = page.locator('[data-help-settings-dialog]');
+  await dialog.locator('[data-setting="menuVisible"]').uncheck();
+  await dialog
+    .getByLabel('Note for everyone in Help (optional)')
+    .fill('For password resets, ask Priya in IT first.');
+  await shot(page, '27-help-settings');
+  await dialog.locator('[data-save-help-settings]').click();
+  await expect(dialog).toBeHidden();
+  await expect(center.locator('[data-help-support-note]')).toContainText('ask Priya in IT first');
+  await expect(page.locator('[data-help-menu]')).toHaveCount(0);
+  // Support stays reachable from the account menu.
+  await page.getByRole('button', { name: 'Account menu' }).click();
+  await expect(page.locator('[data-account-help]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await axe(page);
+  await shot(page, '28-help-restricted-and-note', true);
+
+  // The Console switches Help off for this client.
+  const email = `ops-settings-${Date.now()}@platform.test`;
+  execFileSync('node', ['-r', '@swc-node/register', 'scripts/create-operator.ts'], {
+    cwd: '../api',
+    env: {
+      ...process.env,
+      DATABASE_URL: E2E_DATABASE_URL,
+      OPERATOR_EMAIL: email,
+      OPERATOR_PASSWORD: 'operator-password-1',
+      OPERATOR_NAME: 'Asha Admin',
+      OPERATOR_ROLE: 'ADMIN',
+    },
+  });
+  const opsCtx = await browser.newContext(VIEW);
+  const ops = await opsCtx.newPage();
+  await ops.goto('/operator/login');
+  await ops.getByLabel('Email').fill(email);
+  await ops.getByLabel('Password').fill('operator-password-1');
+  await ops.getByRole('button', { name: 'Sign in' }).click();
+  await ops.getByRole('link', { name: 'Clients', exact: true }).click();
+  await ops.getByLabel('Search clients').fill(org);
+  await ops.locator('[data-console-clients]').getByRole('link', { name: org }).click();
+  const helpCard = ops.locator('[data-client-help]');
+  await expect(helpCard).toContainText('Help icon hidden');
+  await helpCard.locator('[data-client-help-enabled]').click(); // saved straight away, then shown
+  await expect(helpCard.locator('[data-client-help-enabled]')).not.toBeChecked();
+  await shot(ops, '29-console-client-help');
+
+  await page.reload();
+  const off = page.locator('[data-help-off]');
+  await expect(off.getByRole('heading', { level: 1, name: 'Help & support' })).toBeVisible();
+  await expect(off.locator('[data-faq]')).toHaveCount(0);
+  await expect(off.locator('[data-help-support-note]')).toBeVisible();
+  await off.locator('[data-raise-query]').click();
+  await expect(page.locator('[data-raise-query-dialog]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await shot(page, '30-help-switched-off');
+
+  await helpCard.locator('[data-client-help-enabled]').click();
+  await expect(helpCard.locator('[data-client-help-enabled]')).toBeChecked();
+  await page.reload();
+  await expect(center.getByRole('heading', { level: 1, name: 'How can we help?' })).toBeVisible();
   await opsCtx.close();
 });

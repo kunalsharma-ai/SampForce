@@ -1,9 +1,26 @@
 'use client';
 
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@dealflow/ui';
-import { BookOpen, CircleHelp, Inbox, Keyboard, LifeBuoy, MessagesSquare, Search } from 'lucide-react';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@dealflow/ui';
+import {
+  BookOpen,
+  CircleHelp,
+  Inbox,
+  Keyboard,
+  LifeBuoy,
+  MessagesSquare,
+  Search,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useHelpSettings } from '@/lib/help-content';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -13,7 +30,13 @@ import { useT } from '@/lib/i18n';
 export function HelpMenu({ onShortcuts }: { onShortcuts: () => void }) {
   const t = useT();
   const pathname = usePathname();
-  const from = pathname && pathname.startsWith('/app') && !pathname.startsWith('/app/help') ? `&from=${encodeURIComponent(pathname)}` : '';
+  const settings = useHelpSettings();
+  const from =
+    pathname && pathname.startsWith('/app') && !pathname.startsWith('/app/help')
+      ? `&from=${encodeURIComponent(pathname)}`
+      : '';
+  // The Super Workspace may hide the icon; Help & support stays in the account menu, so queries are never cut off.
+  if (settings.data && (!settings.data.menuVisible || !settings.data.helpEnabled)) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

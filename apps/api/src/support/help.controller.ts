@@ -7,6 +7,7 @@ import {
   type HelpReader,
   type HelpTopic,
   helpText,
+  restrictedGuides,
   searchHelp,
 } from '@dealflow/help';
 import type { LanguageCode } from '@dealflow/types';
@@ -34,8 +35,11 @@ export class HelpController {
     // The Console's own articles, topics and edits of built-in help come with it; built-in help it hid is left out.
     const content = await this.content.content(auth);
     const hidden = new Set([...content.hidden, ...content.articles.map((a) => a.builtinKey).filter(Boolean)]);
-    const faqs = faqsFor(reader).filter((f) => !hidden.has(`faq:${f.id}`));
-    const guides = guidesFor(reader).filter((g) => !hidden.has(`guide:${g.id}`));
+    // With help switched off by the Console only support remains: raising and following queries.
+    const on = content.settings.helpEnabled;
+    const faqs = on ? faqsFor(reader).filter((f) => !hidden.has(`faq:${f.id}`)) : [];
+    const guides = on ? guidesFor(reader).filter((g) => !hidden.has(`guide:${g.id}`)) : [];
+    const restricted = on && content.settings.explainRestricted ? restrictedGuides(reader) : [];
     const text = (t: HelpTopic) => ({ title: t.title, what: helpText(t.what, language), how: helpText(t.how, language), where: helpText(t.where, language) });
     return {
       language,
@@ -44,6 +48,9 @@ export class HelpController {
       faqs: faqs.map((q) => ({ id: q.id, category: q.category, question: helpText(q.q, language), answer: helpText(q.a, language), guide: q.guide ?? null })),
       guides: guides.map((g: HelpGuide) => ({ id: g.id, category: g.category, href: g.href ?? null, ...text(g.topic), sections: g.sections.map((s) => ({ id: s.id, ...text(s.topic) })) })),
       content,
+      settings: content.settings,
+      /** Pages the reader cannot use, and why: their plan (ask the Super Workspace), their role or their level. */
+      restricted: restricted.map((r) => ({ id: r.guide.id, title: r.guide.topic.title, category: r.guide.category, reason: r.reason, feature: r.feature ?? null, permission: r.permission ?? null })),
       results: query.q ? searchHelp(query.q, language as LanguageCode, { faqs, guides }).map((h) => ({ kind: h.kind, id: h.kind === 'faq' ? h.faq.id : h.guide.id })) : null,
     };
   }

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { HELP_ARTICLE_KEY, helpArticleInputSchema, helpArticleListQuerySchema, helpCategoryInputSchema, helpFeedbackSchema, helpViewSchema } from '@dealflow/types';
+import { HELP_ARTICLE_KEY, helpArticleInputSchema, helpArticleListQuerySchema, helpCategoryInputSchema, helpFeedbackSchema, helpSettingsInputSchema, helpViewSchema, operatorHelpSettingsSchema } from '@dealflow/types';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { Auth, type AuthContext, Public } from '../common/auth-context';
@@ -39,6 +39,17 @@ export class HelpContentController {
   @Throttle({ default: { limit: 120, ttl: 60_000 } })
   view(@Auth() auth: AuthContext, @Body(new ZodPipe(helpViewSchema)) body: z.output<typeof helpViewSchema>) {
     return this.content.view(auth, body.articleKey);
+  }
+
+  /** The organisation's Help settings; raising and following queries works whatever they say. */
+  @Get('settings')
+  settings(@Auth() auth: AuthContext) {
+    return this.content.settings(auth);
+  }
+
+  @Put('settings')
+  saveSettings(@Auth() auth: AuthContext, @Body(new ZodPipe(helpSettingsInputSchema)) body: z.output<typeof helpSettingsInputSchema>, @Req() req: Request) {
+    return this.content.saveSettings(auth, body, req.ip ?? null);
   }
 
   @Get('media/:id')
@@ -153,6 +164,18 @@ export class OperatorHelpController {
   @Get('media/:id')
   async media(@Param('id', uuid) id: string, @Res() res: Response): Promise<void> {
     sendMedia(res, await this.content.media(id));
+  }
+
+  /** Whether a client gets the Help Center's answers and guides. Support stays reachable either way. */
+  @Get('clients/:tenantId/settings')
+  clientSettings(@Param('tenantId', uuid) tenantId: string) {
+    return this.content.clientSettings(tenantId);
+  }
+
+  @Put('clients/:tenantId/settings')
+  @OperatorRoles('ADMIN')
+  setClientSettings(@Operator() op: OperatorContext, @Param('tenantId', uuid) tenantId: string, @Body(new ZodPipe(operatorHelpSettingsSchema)) body: z.output<typeof operatorHelpSettingsSchema>, @Req() req: Request) {
+    return this.content.setClientHelp(op, tenantId, body.helpEnabled, req.ip ?? null);
   }
 
   @Get('feedback')

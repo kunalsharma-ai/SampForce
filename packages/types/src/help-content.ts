@@ -150,6 +150,8 @@ export interface HelpContent {
   builtinUpdatedAt: string;
   /** The reader's own "Was this helpful?" answers, so the question shows what they said. */
   myFeedback: Record<string, boolean>;
+  /** The organisation's Help settings; with help switched off by the Console, no answers or guides are sent. */
+  settings: HelpSettingsView;
 }
 
 export interface HelpArticleRow {
@@ -207,3 +209,24 @@ export interface HelpFeedbackRow {
   createdAt: string;
   reviewedAt: string | null;
 }
+
+/** Help & Support settings of an organisation: the Console's switch and the Super Workspace's choices. */
+export interface HelpSettingsView {
+  /** The Console allows the Help Center's answers and guides for this client. */
+  helpEnabled: boolean;
+  menuVisible: boolean;
+  explainRestricted: boolean;
+  supportNote: string | null;
+  /** Whether the reader may change the Super Workspace's choices. */
+  canManage: boolean;
+  updatedAt: string | null;
+}
+
+export const helpSettingsInputSchema = z.object({
+  menuVisible: z.boolean(),
+  explainRestricted: z.boolean(),
+  supportNote: z.string().trim().max(500).nullable().optional(),
+});
+export type HelpSettingsInput = z.input<typeof helpSettingsInputSchema>;
+
+export const operatorHelpSettingsSchema = z.object({ helpEnabled: z.boolean() });
