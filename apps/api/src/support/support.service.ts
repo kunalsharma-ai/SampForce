@@ -1,7 +1,15 @@
 import { Prisma, transactionLock, type TenantTx } from '@dealflow/database';
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import { BadRequestException, ForbiddenException, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import {
   type OperatorSupportTicketDetail,
+  SUPPORT_ATTACHMENT_MAX_BYTES,
+  SUPPORT_RAISER_STATUSES,
+  SUPPORT_TICKET_STATUSES,
+  type SupportAttachmentRow,
+  type SupportContactMethod,
+  type SupportRecordType,
+  type SupportTicketContext,
   type OperatorSupportTicketRow,
   type SupportAuthorKind,
   type SupportCounts,
@@ -26,6 +34,29 @@ import { branchUserIds, levelOf, workspaceLevelOf } from '../workspaces/access';
 
 type Ticket = Prisma.SupportTicketGetPayload<{ include: { messages: true } }>;
 type TicketMessage = Ticket['messages'][number];
+type Files = Map<string, SupportAttachmentRow[]>;
+type Uploader = { userId: string } | { operatorId: string };
+
+/** What the person who raised a query is told when its status changes. */
+const STATUS_TITLE: Record<SupportTicketStatus, (n: number) => string> = {
+  SUBMITTED: (n) => `Your query #${n} was opened again`,
+  UNDER_REVIEW: (n) => `Your query #${n} is under review`,
+  IN_PROGRESS: (n) => `Your query #${n} is in progress`,
+  AWAITING_USER: (n) => `Your query #${n} is waiting for your reply`,
+  RESOLVED: (n) => `Your query #${n} is resolved`,
+  CLOSED: (n) => `Your query #${n} was closed`,
+};
+
+/** The fields that change with a status: when it was resolved or closed. */
+function statusData(status: SupportTicketStatus, t: { resolvedAt: Date | null; closedAt: Date | null }, now = new Date()) {
+  return {
+    status,
+    closedAt: status === 'CLOSED' ? (t.closedAt ?? now) : null,
+    resolvedAt: status === 'RESOLVED' || status === 'CLOSED' ? (t.resolvedAt ?? (status === 'RESOLVED' ? now : null)) : null,
+  };
+}
+
+const badRequest = (path: string, message: string) => new BadRequestException({ code: 'VALIDATION_FAILED', message, details: [{ path, message }] });
 
 /** How SampForce's own team is named to workspaces: one support desk, not individual operators. */
 const SUPPORT_NAME = 'SampForce support';
@@ -56,6 +87,8 @@ export class SupportService {
       const now = new Date();
       const org = await Hierarchy.load(tx, auth.tenantId);
       const route = org.firstHandler(auth.workspaceNodeId);
+      const related = input.relatedRecord ? await relatedRecord(tx, auth.tenantId, input.relatedRecord.type, input.relatedRecord.id) : null;
+      const context = await captureContext(tx, auth, org);
       const ticket = await tx.supportTicket.create({
         data: {
           tenantId: auth.tenantId,
@@ -69,15 +102,24 @@ export class SupportService {
           pagePath: input.pagePath ?? null,
           source: (auth.via as string | undefined) === 'mobile' ? 'mobile' : 'web',
           priority: input.priority,
-          status: 'OPEN',
+          status: 'SUBMITTED',
           handlerLevel: route.level,
           handlerNodeId: route.nodeId,
           lastMessageAt: now,
+          categoryOther: input.category === 'other' ? input.categoryOther || null : null,
+          relatedRecordType: related?.type ?? null,
+          relatedRecordId: related?.id ?? null,
+          relatedRecordLabel: related?.label ?? null,
+          contactMethod: input.contactMethod,
+          contactPhone: input.contactMethod === 'PHONE' ? (input.contactPhone ?? null) : null,
+          appVersion: input.appVersion ?? null,
+          context: context as unknown as Prisma.InputJsonValue,
         },
       });
-      await tx.supportTicketMessage.create({
+      const first = await tx.supportTicketMessage.create({
         data: { tenantId: auth.tenantId, ticketId: ticket.id, authorKind: 'USER', authorUserId: auth.userId, authorMembershipId: auth.membershipId, body: input.body, createdAt: now },
       });
+      await attach(tx, auth.tenantId, ticket.id, first.id, input.attachmentIds, { userId: auth.userId });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
         actorUserId: auth.userId,
@@ -126,19 +168,21 @@ export class SupportService {
       const ticket = await this.visibleTicket(tx, auth, org, id);
       const ctx = await this.rowContext(tx, [ticket], org);
       const handling = org.isHandler(auth, ticket);
+      const files = await ticketFiles(tx, ticket);
       return {
         ...toRow(ticket, ctx, { userId: auth.userId, handling }),
-        messages: ticket.messages.map((m) => toMessage(m, ctx.names, { userId: auth.userId })),
+        messages: ticket.messages.map((m) => toMessage(m, ctx.names, files, { userId: auth.userId })),
         canReply: ticket.raisedByUserId === auth.userId || handling,
       };
     });
   }
 
   /**
-   * The raiser writes again, or the workspace handling it answers. A raiser's message opens a closed or answered
-   * ticket again so its handler sees it is waiting; a handler's answer marks it Answered.
+   * The raiser writes again, or the workspace handling it answers. A raiser's message on a ticket that was waiting
+   * for them, resolved or closed puts it back under review; a handler's answer makes it wait for the raiser.
    */
-  async reply(auth: AuthContext, id: string, body: string, meta: RequestMeta): Promise<SupportTicketDetail> {
+  async reply(auth: AuthContext, id: string, input: { body: string; attachmentIds: string[] }, meta: RequestMeta): Promise<SupportTicketDetail> {
+    const body = input.body;
     await this.prisma.run(auth, async (tx) => {
       const org = await Hierarchy.load(tx, auth.tenantId);
       const ticket = await this.visibleTicket(tx, auth, org, id);
@@ -148,14 +192,15 @@ export class SupportService {
       const now = new Date();
       // The raiser's own workspace answering their ticket (a manager raising and handling none) is still the raiser.
       const answering = handling && !raiser;
-      await tx.supportTicketMessage.create({
+      const message = await tx.supportTicketMessage.create({
         data: { tenantId: auth.tenantId, ticketId: id, authorKind: answering ? 'WORKSPACE' : 'USER', authorUserId: auth.userId, authorMembershipId: auth.membershipId, body, createdAt: now },
       });
-      const reopen = !answering && (ticket.status === 'ANSWERED' || ticket.status === 'CLOSED');
-      const next: SupportTicketStatus = answering ? 'ANSWERED' : reopen ? 'OPEN' : ticket.status;
+      await attach(tx, auth.tenantId, id, message.id, input.attachmentIds, { userId: auth.userId });
+      const reopen = !answering && (ticket.status === 'AWAITING_USER' || ticket.status === 'RESOLVED' || ticket.status === 'CLOSED');
+      const next: SupportTicketStatus = answering ? 'AWAITING_USER' : reopen ? 'UNDER_REVIEW' : ticket.status;
       await tx.supportTicket.update({
         where: { id },
-        data: { lastMessageAt: now, status: next, ...(answering ? { answeredAt: now, closedAt: null } : reopen ? { closedAt: null } : {}) },
+        data: { lastMessageAt: now, ...statusData(next, ticket, now), ...(answering ? { answeredAt: now } : {}) },
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
@@ -180,17 +225,20 @@ export class SupportService {
     return this.get(auth, id);
   }
 
-  /** The raiser may close their ticket or open it again; the workspace handling it sets any status and the note. */
+  /**
+   * The raiser may mark their ticket resolved, close it or open it again; the workspace handling it sets any status
+   * and the note. The raiser is told of every change someone else makes.
+   */
   async setStatus(auth: AuthContext, id: string, input: { status: SupportTicketStatus; resolutionNote?: string | null }, meta: RequestMeta): Promise<SupportTicketDetail> {
     await this.prisma.run(auth, async (tx) => {
       const org = await Hierarchy.load(tx, auth.tenantId);
       const ticket = await this.visibleTicket(tx, auth, org, id);
       const handling = org.isHandler(auth, ticket);
       const raiser = ticket.raisedByUserId === auth.userId;
-      if (!handling && (!raiser || (input.status !== 'CLOSED' && input.status !== 'OPEN') || input.resolutionNote !== undefined)) throw forbidden();
+      if (!handling && (!raiser || !SUPPORT_RAISER_STATUSES.includes(input.status) || input.resolutionNote !== undefined)) throw forbidden();
       const note = handling && input.resolutionNote !== undefined ? { resolutionNote: input.resolutionNote || null } : {};
       if (ticket.status === input.status && !('resolutionNote' in note)) return;
-      await tx.supportTicket.update({ where: { id }, data: { status: input.status, closedAt: input.status === 'CLOSED' ? (ticket.closedAt ?? new Date()) : null, ...note } });
+      await tx.supportTicket.update({ where: { id }, data: { ...statusData(input.status, ticket), ...note } });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
         actorUserId: auth.userId,
@@ -200,13 +248,7 @@ export class SupportService {
         metadata: { number: ticket.number, from: ticket.status, to: input.status, ...('resolutionNote' in note ? { resolutionNote: true } : {}) },
         meta,
       });
-      if (handling && !raiser && input.status === 'CLOSED' && ticket.status !== 'CLOSED')
-        await this.notifications.send(tx, auth.tenantId, [ticket.raisedByUserId], {
-          type: 'support.closed',
-          title: `Your query #${ticket.number} was closed`,
-          body: ticket.subject,
-          link: `/app/help/queries?ticket=${id}`,
-        });
+      if (handling && !raiser && input.status !== ticket.status) await notifyRaiser(this.notifications, tx, auth.tenantId, ticket, input.status);
     });
     return this.get(auth, id);
   }
@@ -228,7 +270,7 @@ export class SupportService {
         });
       const moved = await tx.supportTicket.update({
         where: { id },
-        data: { handlerLevel: up, handlerNodeId: null, escalatedAt: now, status: 'OPEN', closedAt: null, lastMessageAt: now },
+        data: { handlerLevel: up, handlerNodeId: null, escalatedAt: now, ...statusData('SUBMITTED', ticket, now), lastMessageAt: now },
       });
       await this.audit.record(tx, {
         tenantId: auth.tenantId,
@@ -311,8 +353,7 @@ export class SupportService {
 
   async operatorCounts(_op: OperatorContext): Promise<SupportCounts> {
     const groups = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.groupBy({ by: ['status'], where: { handlerLevel: 'CONSOLE' }, _count: { _all: true } }));
-    const n = (s: SupportTicketStatus) => groups.find((g) => g.status === s)?._count._all ?? 0;
-    return { open: n('OPEN'), inProgress: n('IN_PROGRESS'), answered: n('ANSWERED'), closed: n('CLOSED') };
+    return Object.fromEntries(SUPPORT_TICKET_STATUSES.map((s) => [s, groups.find((g) => g.status === s)?._count._all ?? 0])) as SupportCounts;
   }
 
   async operatorGet(op: OperatorContext, id: string): Promise<OperatorSupportTicketDetail> {
@@ -322,20 +363,23 @@ export class SupportService {
       const [row] = await this.operatorRows(tx, [ticket]);
       const names = await userNames(tx, ticket.messages.map((m) => m.authorUserId));
       const operators = await operatorNames(tx, ticket.messages.map((m) => m.operatorId));
-      return { ...row!, messages: ticket.messages.map((m) => toMessage(m, names, { operatorId: op.id, operators })) };
+      const files = await ticketFiles(tx, ticket);
+      return { ...row!, messages: ticket.messages.map((m) => toMessage(m, names, files, { operatorId: op.id, operators })) };
     });
   }
 
-  /** An operator answers: the ticket becomes Answered and the person who raised it is notified. */
-  async operatorReply(op: OperatorContext, id: string, body: string, ip: string | null): Promise<OperatorSupportTicketDetail> {
+  /** An operator answers: the ticket waits for the person who raised it, who is notified. */
+  async operatorReply(op: OperatorContext, id: string, input: { body: string; attachmentIds: string[] }, ip: string | null): Promise<OperatorSupportTicketDetail> {
+    const body = input.body;
     const tenantId = await this.tenantOf(id);
     await this.prisma.run({ tenantId }, async (tx) => {
       const ticket = await tx.supportTicket.findFirst({ where: { tenantId, id, handlerLevel: 'CONSOLE' } });
       if (!ticket) throw notFound('Support ticket');
       const now = new Date();
-      await tx.supportTicketMessage.create({ data: { tenantId, ticketId: id, authorKind: 'OPERATOR', operatorId: op.id, body, createdAt: now } });
+      const message = await tx.supportTicketMessage.create({ data: { tenantId, ticketId: id, authorKind: 'OPERATOR', operatorId: op.id, body, createdAt: now } });
+      await attach(tx, tenantId, id, message.id, input.attachmentIds, { operatorId: op.id });
       // The first operator to answer looks after it unless someone was assigned already.
-      await tx.supportTicket.update({ where: { id }, data: { status: 'ANSWERED', answeredAt: now, lastMessageAt: now, closedAt: null, assignedOperatorId: ticket.assignedOperatorId ?? op.id } });
+      await tx.supportTicket.update({ where: { id }, data: { ...statusData('AWAITING_USER', ticket, now), answeredAt: now, lastMessageAt: now, assignedOperatorId: ticket.assignedOperatorId ?? op.id } });
       await this.audit.record(tx, {
         tenantId,
         actorUserId: null,
@@ -374,7 +418,7 @@ export class SupportService {
         if (!rep) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Choose an active operator.', details: [{ path: 'assignedOperatorId', message: 'Choose an active operator.' }] });
       }
       const data: Prisma.SupportTicketUpdateInput = {};
-      if (input.status !== undefined && input.status !== ticket.status) Object.assign(data, { status: input.status, closedAt: input.status === 'CLOSED' ? new Date() : null });
+      if (input.status !== undefined && input.status !== ticket.status) Object.assign(data, statusData(input.status, ticket));
       if (input.assignedOperatorId !== undefined && input.assignedOperatorId !== ticket.assignedOperatorId) data.assignedOperatorId = input.assignedOperatorId;
       if (input.resolutionNote !== undefined && (input.resolutionNote || null) !== ticket.resolutionNote) data.resolutionNote = input.resolutionNote || null;
       if (!Object.keys(data).length) return null;
@@ -385,17 +429,45 @@ export class SupportService {
       if ('assignedOperatorId' in data)
         await this.audit.record(tx, { ...base, action: 'support_ticket.assigned', metadata: { number: ticket.number, operatorId: op.id, from: ticket.assignedOperatorId, to: input.assignedOperatorId } });
       if ('resolutionNote' in data) await this.audit.record(tx, { ...base, action: 'support_ticket.resolution_noted', metadata: { number: ticket.number, operatorId: op.id } });
-      if (data.status === 'CLOSED')
-        await this.notifications.send(tx, tenantId, [ticket.raisedByUserId], {
-          type: 'support.closed',
-          title: `SampForce support closed query #${ticket.number}`,
-          body: ticket.subject,
-          link: `/app/help/queries?ticket=${id}`,
-        });
+      if ('status' in data && input.status) await notifyRaiser(this.notifications, tx, tenantId, ticket, input.status);
       return Object.keys(data);
     });
     if (changed) await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.updated', targetTenantId: tenantId, metadata: { ticketId: id, fields: changed }, ip } });
     return this.operatorGet(op, id);
+  }
+
+  // ── Files ────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  /** Someone in a workspace uploads a file to send with a new query or a reply. Until it is sent only they can open it. */
+  upload(auth: AuthContext, file: { name: string; contentType: string; data: Buffer }): Promise<SupportAttachmentRow> {
+    checkFile(file);
+    return this.prisma.run(auth, (tx) => storeFile(tx, auth.tenantId, null, file, { userId: auth.userId }));
+  }
+
+  async download(auth: AuthContext, fileId: string): Promise<{ name: string; contentType: string; data: Buffer }> {
+    return this.prisma.run(auth, async (tx) => {
+      const f = await tx.supportTicketAttachment.findFirst({ where: { tenantId: auth.tenantId, id: fileId } });
+      if (!f) throw notFound('File');
+      if (!f.messageId || !f.ticketId) {
+        if (f.uploadedByUserId !== auth.userId) throw notFound('File');
+      } else await this.visibleTicket(tx, auth, await Hierarchy.load(tx, auth.tenantId), f.ticketId);
+      return { name: f.name, contentType: f.contentType, data: Buffer.from(f.data) };
+    });
+  }
+
+  async operatorUpload(op: OperatorContext, ticketId: string, file: { name: string; contentType: string; data: Buffer }): Promise<SupportAttachmentRow> {
+    checkFile(file);
+    const tenantId = await this.tenantOf(ticketId);
+    return this.prisma.run({ tenantId }, (tx) => storeFile(tx, tenantId, ticketId, file, { operatorId: op.id }));
+  }
+
+  async operatorDownload(op: OperatorContext, ticketId: string, fileId: string): Promise<{ name: string; contentType: string; data: Buffer }> {
+    const tenantId = await this.tenantOf(ticketId);
+    return this.prisma.run({ tenantId }, async (tx) => {
+      const f = await tx.supportTicketAttachment.findFirst({ where: { tenantId, id: fileId, ticketId } });
+      if (!f || (!f.messageId && f.uploadedByOperatorId !== op.id)) throw notFound('File');
+      return { name: f.name, contentType: f.contentType, data: Buffer.from(f.data) };
+    });
   }
 
   private async tenantOf(id: string): Promise<string> {
@@ -499,6 +571,92 @@ class Hierarchy {
   }
 }
 
+function checkFile(file: { name: string; data: Buffer }) {
+  if (file.data.length === 0) throw new BadRequestException({ code: 'EMPTY_FILE', message: 'The file is empty.' });
+  if (file.data.length > SUPPORT_ATTACHMENT_MAX_BYTES) throw new PayloadTooLargeException({ code: 'PAYLOAD_TOO_LARGE', message: 'Files can be up to 10 MB.' });
+  if (!file.name || file.name.length > 200) throw new BadRequestException({ code: 'INVALID_NAME', message: 'Give the file a name.' });
+}
+
+async function storeFile(tx: TenantTx, tenantId: string, ticketId: string | null, file: { name: string; contentType: string; data: Buffer }, by: Uploader): Promise<SupportAttachmentRow> {
+  const row = await tx.supportTicketAttachment.create({
+    data: {
+      tenantId,
+      ticketId,
+      name: file.name,
+      contentType: file.contentType || 'application/octet-stream',
+      sizeBytes: file.data.length,
+      data: new Uint8Array(file.data),
+      sha256: createHash('sha256').update(file.data).digest('hex'),
+      ...('userId' in by ? { uploadedByUserId: by.userId } : { uploadedByOperatorId: by.operatorId }),
+    },
+  });
+  return { id: row.id, name: row.name, contentType: row.contentType, sizeBytes: row.sizeBytes };
+}
+
+/** Links files the author uploaded (and has not sent yet) to their message. */
+async function attach(tx: TenantTx, tenantId: string, ticketId: string, messageId: string, ids: string[], by: Uploader) {
+  if (!ids.length) return;
+  const unique = [...new Set(ids)];
+  const found = await tx.supportTicketAttachment.findMany({
+    where: { tenantId, id: { in: unique }, messageId: null, ...('userId' in by ? { uploadedByUserId: by.userId } : { uploadedByOperatorId: by.operatorId, ticketId }) },
+    select: { id: true },
+  });
+  if (found.length !== unique.length) throw badRequest('attachmentIds', 'refers to a record that does not exist');
+  await tx.supportTicketAttachment.updateMany({ where: { tenantId, id: { in: unique } }, data: { ticketId, messageId } });
+}
+
+async function ticketFiles(tx: TenantTx, ticket: { id: string; tenantId: string }): Promise<Files> {
+  const rows = await tx.supportTicketAttachment.findMany({
+    where: { tenantId: ticket.tenantId, ticketId: ticket.id, messageId: { not: null } },
+    select: { id: true, name: true, contentType: true, sizeBytes: true, messageId: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const byMessage: Files = new Map();
+  for (const r of rows) byMessage.set(r.messageId!, [...(byMessage.get(r.messageId!) ?? []), { id: r.id, name: r.name, contentType: r.contentType, sizeBytes: r.sizeBytes }]);
+  return byMessage;
+}
+
+/** The record a query is about must exist in the workspace; its name is kept so support reads it at a glance. */
+async function relatedRecord(tx: TenantTx, tenantId: string, type: SupportRecordType, id: string): Promise<{ type: SupportRecordType; id: string; label: string }> {
+  const where = { tenantId, id };
+  let label: string | null | undefined;
+  if (type === 'lead') label = (await tx.lead.findFirst({ where, select: { fullName: true } }))?.fullName;
+  else if (type === 'company') label = (await tx.company.findFirst({ where, select: { name: true } }))?.name;
+  else if (type === 'deal') label = (await tx.opportunity.findFirst({ where, select: { name: true } }))?.name;
+  else {
+    const c = await tx.contact.findFirst({ where, select: { firstName: true, lastName: true } });
+    label = c ? [c.firstName, c.lastName].filter(Boolean).join(' ') : null;
+  }
+  if (label == null) throw badRequest('relatedRecord', 'refers to a record that does not exist');
+  return { type, id, label };
+}
+
+/** What the app already knows about the person raising a query, so they never type it. */
+async function captureContext(tx: TenantTx, auth: AuthContext, org: Hierarchy): Promise<SupportTicketContext> {
+  const [membership, user] = await Promise.all([
+    tx.membership.findFirst({ where: { tenantId: auth.tenantId, id: auth.membershipId }, select: { roleId: true } }),
+    tx.user.findFirst({ where: { id: auth.userId }, select: { email: true } }),
+  ]);
+  const role = membership ? await tx.role.findFirst({ where: { tenantId: auth.tenantId, id: membership.roleId }, select: { name: true } }) : null;
+  const level = org.levelOf(auth.workspaceNodeId);
+  return {
+    workspaceName: org.isRoot(auth.workspaceNodeId) ? 'Super Workspace' : org.nameOf(auth.workspaceNodeId!),
+    workspaceLevel: level,
+    roleName: role?.name ?? auth.roleKey,
+    email: user?.email ?? '',
+  };
+}
+
+async function notifyRaiser(notifications: NotificationsService, tx: TenantTx, tenantId: string, ticket: { id: string; number: number; subject: string; raisedByUserId: string; priority: string }, status: SupportTicketStatus) {
+  await notifications.send(tx, tenantId, [ticket.raisedByUserId], {
+    type: 'support.status',
+    title: STATUS_TITLE[status](ticket.number),
+    body: ticket.subject,
+    link: `/app/help/queries?ticket=${ticket.id}`,
+    ...(status === 'AWAITING_USER' ? { actionRequired: true, priority: ticket.priority === 'HIGH' ? 'HIGH' : 'NORMAL' } : {}),
+  });
+}
+
 async function userNames(tx: TenantTx, ids: (string | null | undefined)[]): Promise<Map<string, string>> {
   const list = [...new Set(ids.filter((x): x is string => !!x))];
   if (!list.length) return new Map();
@@ -533,6 +691,13 @@ function toRow(t: Ticket, ctx: RowContext, reader: { userId: string | null; hand
     escalatedAt: t.escalatedAt?.toISOString() ?? null,
     source: t.source,
     pagePath: t.pagePath,
+    categoryOther: t.categoryOther,
+    relatedRecord: t.relatedRecordType && t.relatedRecordId ? { type: t.relatedRecordType as SupportRecordType, id: t.relatedRecordId, label: t.relatedRecordLabel ?? '' } : null,
+    contactMethod: t.contactMethod as SupportContactMethod,
+    contactPhone: t.contactPhone,
+    appVersion: t.appVersion,
+    context: (t.context as SupportTicketContext | null) ?? null,
+    resolvedAt: t.resolvedAt?.toISOString() ?? null,
     raisedBy: { id: t.raisedByUserId, name: ctx.names.get(t.raisedByUserId) ?? '' },
     mine: reader.userId !== null && t.raisedByUserId === reader.userId,
     messageCount: t.messages.length,
@@ -546,6 +711,7 @@ function toRow(t: Ticket, ctx: RowContext, reader: { userId: string | null; hand
 function toMessage(
   m: TicketMessage,
   names: Map<string, string>,
+  files: Files,
   reader: { userId?: string; operatorId?: string; operators?: Map<string, string> },
 ): SupportTicketMessageRow {
   const author =
@@ -560,6 +726,7 @@ function toMessage(
     author,
     mine: m.authorKind === 'OPERATOR' ? !!reader.operatorId && m.operatorId === reader.operatorId : !!reader.userId && m.authorUserId === reader.userId,
     body: m.body,
+    attachments: files.get(m.id) ?? [],
     createdAt: m.createdAt.toISOString(),
   };
 }

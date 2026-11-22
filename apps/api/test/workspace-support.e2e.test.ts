@@ -95,7 +95,7 @@ describe('chat and support tickets across the hierarchy', () => {
           .post('/support/tickets', { subject: 'Invoices show the wrong GST number', body: 'Our November invoice shows last year’s GST number.', category: 'billing', priority: 'HIGH' })
           .expect(201)
       ).body;
-      expect(raised).toMatchObject({ handlerLevel: 'CONSOLE', handler: { level: 'CONSOLE', name: 'SampForce support' }, status: 'OPEN', assignedTo: null, resolutionNote: null, canEscalate: false });
+      expect(raised).toMatchObject({ handlerLevel: 'CONSOLE', handler: { level: 'CONSOLE', name: 'SampForce support' }, status: 'SUBMITTED', assignedTo: null, resolutionNote: null, canEscalate: false });
 
       const inbox = (await ops.get('/api/v1/operator/support/tickets').expect(200)).body as { id: string }[];
       expect(inbox.map((t) => t.id)).toContain(raised.id);
@@ -132,13 +132,13 @@ describe('chat and support tickets across the hierarchy', () => {
       expect(((await ops.get('/api/v1/operator/support/tickets').expect(200)).body as { id: string }[]).map((r) => r.id)).not.toContain(t.id);
 
       const answered = (await api(north).post(`/support/tickets/${t.id}/messages`, { body: 'The price list is in Quotes → Templates.' }).expect(201)).body;
-      expect(answered).toMatchObject({ status: 'ANSWERED', handling: true });
+      expect(answered).toMatchObject({ status: 'AWAITING_USER', handling: true });
       expect(answered.messages.at(-1)).toMatchObject({ authorKind: 'WORKSPACE', author: { name: 'Rahul Sharma' } });
       const mine = (await api(priya).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
       expect(mine.find((n) => n.type === 'support.reply')?.title).toMatch(/^Your query #\d+ has an answer$/);
 
       // Priya writes back; it opens again, the manager is told, and passes it up with a note.
-      expect((await api(priya).post(`/support/tickets/${t.id}/messages`, { body: 'It is not there for me.' }).expect(201)).body.status).toBe('OPEN');
+      expect((await api(priya).post(`/support/tickets/${t.id}/messages`, { body: 'It is not there for me.' }).expect(201)).body.status).toBe('UNDER_REVIEW');
       const up = (await api(north).post(`/support/tickets/${t.id}/escalate`, { note: 'Looks like a permission gap, please check.' }).expect(200)).body;
       expect(up).toMatchObject({ handlerLevel: 'SUPER', handler: { level: 'SUPER', name: 'Super Workspace' }, handling: false, canReply: false, escalatedAt: expect.any(String) });
       await api(north).post(`/support/tickets/${t.id}/messages`, { body: 'One more thing' }).expect(403);
@@ -151,7 +151,7 @@ describe('chat and support tickets across the hierarchy', () => {
       expect(final).toMatchObject({ status: 'CLOSED', resolutionNote: 'Quotes templates granted to North India Sales.' });
       expect(final.messages.map((m: { authorKind: string }) => m.authorKind)).toEqual(['USER', 'WORKSPACE', 'USER', 'WORKSPACE']);
       // The raiser may not write the resolution note.
-      await api(priya).patch(`/support/tickets/${t.id}`, { status: 'OPEN', resolutionNote: 'Mine' }).expect(403);
+      await api(priya).patch(`/support/tickets/${t.id}`, { status: 'SUBMITTED', resolutionNote: 'Mine' }).expect(403);
       const escalations = await db.auditLog.findMany({ where: { tenantId: superAdmin.tenantId, action: 'support_ticket.escalated', entityId: t.id } });
       expect(escalations.map((e) => e.metadata)).toEqual([expect.objectContaining({ from: 'MANAGER', to: 'SUPER' })]);
     });

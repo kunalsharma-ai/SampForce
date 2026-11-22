@@ -1,13 +1,14 @@
 'use client';
 
 import { HELP_CATEGORY_BY_ID, type HelpCategoryId, helpText } from '@dealflow/help';
-import { FEATURE_BY_KEY, type FeatureKey, SUPPORT_TICKET_STATUSES, type SupportTicketStatus } from '@dealflow/types';
+import { FEATURE_BY_KEY, type FeatureKey, SUPPORT_TICKET_STATUSES, type SupportAttachmentRow, type SupportTicketStatus } from '@dealflow/types';
 import { Badge, Button, Card, Input, Skeleton } from '@dealflow/ui';
 import { Inbox, Search, Smartphone } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
 import { TicketStatusBadge, ToneIcon, usePriorityLabel, useStatusLabel } from '@/components/help/help-ui';
+import { AttachmentPicker, MessageFiles, RelatedRecord } from '@/components/help/support-files';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
 import { useOperatorTicket, useOperatorTicketActions, useOperatorTicketCounts, useOperatorTickets, useSupportRepresentatives } from '@/lib/support';
@@ -22,7 +23,7 @@ export default function OperatorSupportPage() {
   );
 }
 
-const FILTERS: (SupportTicketStatus | 'ALL')[] = ['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED', 'ALL'];
+const FILTERS: (SupportTicketStatus | 'ALL')[] = [...SUPPORT_TICKET_STATUSES, 'ALL'];
 
 function SupportInbox() {
   const t = useT();
@@ -31,14 +32,14 @@ function SupportInbox() {
   const pathname = usePathname();
   const params = useSearchParams();
   const statusLabel = useStatusLabel();
-  const [filter, setFilter] = useState<SupportTicketStatus | 'ALL'>('OPEN');
+  const [filter, setFilter] = useState<SupportTicketStatus | 'ALL'>('SUBMITTED');
   const [q, setQ] = useState('');
   const counts = useOperatorTicketCounts(!!me.data);
   const list = useOperatorTickets({ status: filter === 'ALL' ? undefined : filter, q: q.trim() || undefined }, !!me.data);
   const selected = params.get('ticket');
   const select = (id: string) => router.replace(`${pathname}?ticket=${id}`, { scroll: false });
   const count = (s: SupportTicketStatus | 'ALL') =>
-    !counts.data ? null : s === 'ALL' ? counts.data.open + counts.data.inProgress + counts.data.answered + counts.data.closed : { OPEN: counts.data.open, IN_PROGRESS: counts.data.inProgress, ANSWERED: counts.data.answered, CLOSED: counts.data.closed }[s];
+    !counts.data ? null : s === 'ALL' ? SUPPORT_TICKET_STATUSES.reduce((n, x) => n + counts.data![x], 0) : counts.data[s];
 
   return (
     <div>
@@ -127,7 +128,16 @@ function TicketPane({ id }: { id: string }) {
   const actions = useOperatorTicketActions(id);
   const reps = useSupportRepresentatives();
   const [body, setBody] = useState('');
+  const [files, setFiles] = useState<SupportAttachmentRow[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // Opening a new ticket marks it Under review, and the client is told it was seen.
+  const reviewed = useRef<string | null>(null);
+  const status = ticket.data?.status;
+  useEffect(() => {
+    if (status !== 'SUBMITTED' || reviewed.current === id) return;
+    reviewed.current = id;
+    actions.status.mutate('UNDER_REVIEW');
+  }, [status, id, actions.status]);
   if (ticket.isLoading) return <Skeleton className="h-96" />;
   if (!ticket.data) return null;
   const d = ticket.data;
@@ -135,8 +145,9 @@ function TicketPane({ id }: { id: string }) {
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) return;
-    await actions.reply.mutateAsync(body.trim());
+    await actions.reply.mutateAsync({ body: body.trim(), attachmentIds: files.map((f) => f.id) });
     setBody('');
+    setFiles([]);
   };
   return (
     <Card className="flex flex-col overflow-hidden" data-ticket-pane={d.number}>
@@ -159,10 +170,23 @@ function TicketPane({ id }: { id: string }) {
         <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
           <Meta label={t('Client')} value={d.tenant.name} />
           <Meta label={t('Raised by')} value={`${d.raisedBy?.name ?? ''}${d.workspace ? ` · ${t.maybe(d.workspace.name)}` : ''}`} />
-          <Meta label={t('Topic')} value={cat ? helpText(cat.title, t.language) : t('Something else')} />
+          <Meta label={t('Topic')} value={cat ? helpText(cat.title, t.language) : d.categoryOther ? `${t('Other')}: ${d.categoryOther}` : t('Other')} />
           <Meta label={t('Feature')} value={d.featureKey ? t.maybe(FEATURE_BY_KEY[d.featureKey as FeatureKey]?.label ?? d.featureKey) : '—'} />
           <Meta label={t('Priority')} value={priority(d.priority)} />
           <Meta label={t('From page')} value={d.pagePath ?? '—'} />
+          {d.context && <Meta label={t('Role')} value={d.context.roleName} />}
+          {d.context && <Meta label={t('Email')} value={d.context.email} />}
+          <Meta label={t('Contact by')} value={d.contactMethod === 'PHONE' ? `${t('Phone')} · ${d.contactPhone ?? ''}` : d.contactMethod === 'EMAIL' ? t('Email') : t('In the app')} />
+          <Meta label={t('App version')} value={d.appVersion ?? '—'} />
+          <Meta label={t('Source')} value={d.source === 'mobile' ? t('Mobile app') : t('Web')} />
+          {d.relatedRecord && (
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">{t('Record')}</dt>
+              <dd>
+                <RelatedRecord record={d.relatedRecord} link={false} />
+              </dd>
+            </div>
+          )}
         </dl>
         <div className="mt-3 grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
           <label className="space-y-1 text-sm">
@@ -207,6 +231,7 @@ function TicketPane({ id }: { id: string }) {
             <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${m.authorKind === 'OPERATOR' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
               <p className={`text-xs font-semibold ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{m.author?.name}</p>
               <p className="mt-0.5 whitespace-pre-wrap">{m.body}</p>
+              <MessageFiles files={m.attachments} operatorTicketId={d.id} inverted={m.authorKind === 'OPERATOR'} />
               <p className={`mt-1 text-[11px] ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                 {new Date(m.createdAt).toLocaleString(t.formatLocale, { dateStyle: 'medium', timeStyle: 'short' })}
               </p>
@@ -218,7 +243,8 @@ function TicketPane({ id }: { id: string }) {
         <label htmlFor="operator-reply" className="text-sm font-medium">
           {t('Your answer')}
         </label>
-        <Textarea id="operator-reply" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the ticket becomes Answered.')} />
+        <Textarea id="operator-reply" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the ticket waits for their reply.')} />
+        <AttachmentPicker files={files} onChange={setFiles} ticketId={d.id} id="operator-reply-files" />
         {(actions.reply.error || actions.status.error || actions.update.error) && (
           <p role="alert" className="text-sm text-critical">
             {(actions.reply.error ?? actions.status.error ?? actions.update.error)?.message}

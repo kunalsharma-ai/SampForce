@@ -1,9 +1,9 @@
 'use client';
 
 import { faqsFor, guidesFor, type HelpCategory, type HelpReader, helpText, searchHelp } from '@dealflow/help';
-import { FEATURE_BY_KEY, SUPPORT_BODY_MAX, SUPPORT_SUBJECT_MAX, type SupportTicketDetail, type SupportTicketPriority } from '@dealflow/types';
+import { FEATURE_BY_KEY, SUPPORT_BODY_MAX, SUPPORT_SUBJECT_MAX, type SupportAttachmentRow, type SupportContactMethod, type SupportTicketDetail, type SupportTicketPriority } from '@dealflow/types';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Label } from '@dealflow/ui';
-import { CheckCircle2, LifeBuoy, Lightbulb } from 'lucide-react';
+import { CheckCircle2, LifeBuoy, Lightbulb, Link2, ShieldCheck, X } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
@@ -11,6 +11,9 @@ import { Segmented } from '@/components/forms/segmented';
 import { useT } from '@/lib/i18n';
 import { useRaiseQuery } from '@/lib/support';
 import { usePriorityLabel } from './help-ui';
+import { AttachmentPicker, recordFromPath, useRecordTypeLabel } from './support-files';
+
+const APP_VERSION = `web ${process.env.NEXT_PUBLIC_APP_VERSION ?? ''}`.trim();
 
 /**
  * "Other: raise a query": a short form that files a support ticket (ADR 0073). While the person types, the answers
@@ -45,6 +48,13 @@ export function RaiseQueryDialog({
   const [body, setBody] = useState('');
   const [sent, setSent] = useState<SupportTicketDetail | null>(null);
   const [touched, setTouched] = useState(false);
+  const [categoryOther, setCategoryOther] = useState('');
+  const [files, setFiles] = useState<SupportAttachmentRow[]>([]);
+  const [contact, setContact] = useState<SupportContactMethod>('IN_APP');
+  const [phone, setPhone] = useState('');
+  const record = useMemo(() => recordFromPath(fromPath), [fromPath]);
+  const [linkRecord, setLinkRecord] = useState(true);
+  const recordLabel = useRecordTypeLabel();
 
   const content = useMemo(() => ({ faqs: faqsFor(reader), guides: guidesFor(reader) }), [reader]);
   const suggestions = useMemo(
@@ -54,6 +64,7 @@ export function RaiseQueryDialog({
   const features = (reader.features ?? []).map((k) => FEATURE_BY_KEY[k]).filter(Boolean).sort((a, b) => t.maybe(a.label).localeCompare(t.maybe(b.label), t.language));
   const subjectOk = subject.trim().length >= 3;
   const bodyOk = body.trim().length >= 5;
+  const phoneOk = contact !== 'PHONE' || /^[+\d][\d\s\-().]{5,}$/.test(phone.trim());
 
   const reset = () => {
     setSent(null);
@@ -61,6 +72,10 @@ export function RaiseQueryDialog({
     setBody('');
     setFeature('');
     setLevel('NORMAL');
+    setCategoryOther('');
+    setFiles([]);
+    setContact('IN_APP');
+    setPhone('');
     setTouched(false);
     raise.reset();
   };
@@ -68,11 +83,17 @@ export function RaiseQueryDialog({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (!subjectOk || !bodyOk) return;
+    if (!subjectOk || !bodyOk || !phoneOk) return;
     const ticket = await raise.mutateAsync({
       subject: subject.trim(),
       body: body.trim(),
       category,
+      categoryOther: category === 'other' ? categoryOther.trim() || null : null,
+      relatedRecord: record && linkRecord ? record : null,
+      contactMethod: contact,
+      contactPhone: contact === 'PHONE' ? phone.trim() : null,
+      appVersion: APP_VERSION,
+      attachmentIds: files.map((f) => f.id),
       featureKey: feature ? (feature as (typeof features)[number]['key']) : null,
       priority: level,
       pagePath: fromPath && /^\/[\w\-/.[\]]*$/.test(fromPath) ? fromPath : null,
@@ -164,7 +185,7 @@ export function RaiseQueryDialog({
                       {helpText(c.title, t.language)}
                     </option>
                   ))}
-                  <option value="other">{t('Something else')}</option>
+                  <option value="other">{t('Other')}</option>
                 </Select>
               </div>
               <div className="space-y-1.5">
@@ -179,6 +200,13 @@ export function RaiseQueryDialog({
                 </Select>
               </div>
             </div>
+
+            {category === 'other' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="query-category-other">{t('What kind of problem is it? (optional)')}</Label>
+                <Input id="query-category-other" value={categoryOther} maxLength={80} onChange={(e) => setCategoryOther(e.target.value)} placeholder={t('For example: printing, a client’s data, training')} />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="query-body">{t('Details')}</Label>
@@ -207,7 +235,59 @@ export function RaiseQueryDialog({
               options={(['LOW', 'NORMAL', 'HIGH'] as const).map((p) => ({ value: p, label: priority(p) }))}
             />
 
-            {fromPath && <p className="text-xs text-muted-foreground">{t('Sent with the page you came from: {path}', { path: fromPath })}</p>}
+            <div className="space-y-1.5">
+              <Label htmlFor="query-files">{t('Screenshots or files (optional)')}</Label>
+              <AttachmentPicker files={files} onChange={setFiles} id="query-files" />
+            </div>
+
+            <Segmented
+              legend={t('How should we reach you?')}
+              name="query-contact"
+              value={contact}
+              onChange={setContact}
+              options={[
+                { value: 'IN_APP', label: t('In the app') },
+                { value: 'EMAIL', label: t('Email') },
+                { value: 'PHONE', label: t('Phone') },
+              ]}
+            />
+            {contact === 'PHONE' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="query-phone">{t('Phone number')}</Label>
+                <Input
+                  id="query-phone"
+                  type="tel"
+                  value={phone}
+                  maxLength={40}
+                  onChange={(e) => setPhone(e.target.value)}
+                  aria-invalid={touched && !phoneOk}
+                  aria-describedby={touched && !phoneOk ? 'query-phone-error' : undefined}
+                />
+                {touched && !phoneOk && (
+                  <p id="query-phone-error" className="text-xs text-critical">
+                    {t('Give a phone number to be called on.')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {record && (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm" data-query-record={record.type}>
+                <span className="flex items-center gap-2">
+                  <Link2 className="size-4 text-primary" aria-hidden />
+                  {linkRecord ? t('About the {record} you came from', { record: recordLabel(record.type).toLowerCase() }) : t('Not linked to a record')}
+                </span>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setLinkRecord(!linkRecord)}>
+                  {linkRecord ? <X aria-hidden /> : null} {linkRecord ? t('Unlink') : t('Link it again')}
+                </Button>
+              </div>
+            )}
+            <p className="flex items-start gap-2 text-xs text-muted-foreground" data-query-context>
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                {t('Sent for you: your workspace, role, email and app version.')} {fromPath && t('Sent with the page you came from: {path}', { path: fromPath })}
+              </span>
+            </p>
             {raise.error && (
               <p role="alert" className="text-sm text-critical">
                 {raise.error.message}
