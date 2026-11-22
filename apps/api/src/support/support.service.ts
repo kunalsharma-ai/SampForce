@@ -5,7 +5,10 @@ import {
   type OperatorSupportTicketDetail,
   SUPPORT_ATTACHMENT_MAX_BYTES,
   SUPPORT_RAISER_STATUSES,
+  SUPPORT_TICKET_PRIORITIES,
   SUPPORT_TICKET_STATUSES,
+  SUPPORT_WAITING_STATUSES,
+  type SupportReport,
   type SupportAttachmentRow,
   type SupportContactMethod,
   type SupportRecordType,
@@ -354,6 +357,69 @@ export class SupportService {
   async operatorCounts(_op: OperatorContext): Promise<SupportCounts> {
     const groups = await this.prisma.run({ operatorScan: true }, (tx) => tx.supportTicket.groupBy({ by: ['status'], where: { handlerLevel: 'CONSOLE' }, _count: { _all: true } }));
     return Object.fromEntries(SUPPORT_TICKET_STATUSES.map((s) => [s, groups.find((g) => g.status === s)?._count._all ?? 0])) as SupportCounts;
+  }
+
+  /** Support reports: what was raised in the period, where from, by whom it is handled and how fast. */
+  async operatorReport(days: number): Promise<SupportReport> {
+    const since = new Date(Date.now() - days * 86_400_000);
+    const rows = await this.prisma.run({ operatorScan: true }, (tx) =>
+      tx.supportTicket.findMany({
+        where: { handlerLevel: 'CONSOLE', createdAt: { gte: since } },
+        select: { tenantId: true, status: true, priority: true, category: true, source: true, assignedOperatorId: true, createdAt: true, answeredAt: true, resolvedAt: true, closedAt: true },
+      }),
+    );
+    const [tenants, operators] = await this.prisma.run({ operatorScan: true }, (tx) =>
+      Promise.all([
+        tx.tenant.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.tenantId))] } }, select: { id: true, name: true } }),
+        operatorNames(tx, rows.map((r) => r.assignedOperatorId)),
+      ]),
+    );
+    const tally = <K extends string>(keys: K[]) => {
+      const m = new Map<K, number>();
+      for (const k of keys) m.set(k, (m.get(k) ?? 0) + 1);
+      return [...m].sort((a, b) => b[1] - a[1]);
+    };
+    const hours = (list: number[]) => {
+      if (!list.length) return { average: null, median: null };
+      const sorted = [...list].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+      const round = (n: number) => Math.round(n * 1000) / 1000;
+      return { average: round(list.reduce((a, b) => a + b, 0) / list.length), median: round(median) };
+    };
+    const h = (from: Date, to: Date | null) => (to ? (to.getTime() - from.getTime()) / 3_600_000 : null);
+    const names = new Map(tenants.map((t) => [t.id, t.name]));
+    const perOperator = new Map<string | null, { assigned: number; resolved: number }>();
+    for (const r of rows) {
+      const o = perOperator.get(r.assignedOperatorId) ?? { assigned: 0, resolved: 0 };
+      o.assigned++;
+      if (r.status === 'RESOLVED' || r.status === 'CLOSED') o.resolved++;
+      perOperator.set(r.assignedOperatorId, o);
+    }
+    const perDay = new Map<string, number>();
+    for (let i = days - 1; i >= 0; i--) perDay.set(new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10), 0);
+    for (const r of rows) {
+      const d = r.createdAt.toISOString().slice(0, 10);
+      if (perDay.has(d)) perDay.set(d, perDay.get(d)! + 1);
+    }
+    return {
+      days,
+      raised: rows.length,
+      open: rows.filter((r) => (SUPPORT_WAITING_STATUSES as readonly string[]).includes(r.status)).length,
+      byStatus: Object.fromEntries(SUPPORT_TICKET_STATUSES.map((s) => [s, rows.filter((r) => r.status === s).length])) as SupportReport['byStatus'],
+      byPriority: Object.fromEntries(SUPPORT_TICKET_PRIORITIES.map((p) => [p, rows.filter((r) => r.priority === p).length])) as SupportReport['byPriority'],
+      byCategory: tally(rows.map((r) => r.category)).map(([category, count]) => ({ category, count })),
+      bySource: tally(rows.map((r) => r.source)).map(([source, count]) => ({ source, count })),
+      byClient: tally(rows.map((r) => r.tenantId))
+        .slice(0, 10)
+        .map(([tenantId, count]) => ({ tenantId, name: names.get(tenantId) ?? 'Removed client', count })),
+      byOperator: [...perOperator]
+        .map(([operatorId, v]) => ({ operatorId, name: operatorId ? (operators.get(operatorId) ?? 'Former operator') : 'Not assigned', ...v }))
+        .sort((a, b) => b.assigned - a.assigned),
+      firstAnswerHours: hours(rows.map((r) => h(r.createdAt, r.answeredAt)).filter((x): x is number => x !== null)),
+      resolutionHours: hours(rows.map((r) => h(r.createdAt, r.resolvedAt ?? r.closedAt)).filter((x): x is number => x !== null)),
+      perDay: [...perDay].map(([date, count]) => ({ date, count })),
+    };
   }
 
   async operatorGet(op: OperatorContext, id: string): Promise<OperatorSupportTicketDetail> {

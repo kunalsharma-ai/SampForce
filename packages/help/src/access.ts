@@ -94,6 +94,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorChat': 'console-support',
   'page.operatorSupport': 'console-support',
   'page.operatorHelp': 'console-support',
+  'page.operatorHelpManage': 'console-support',
   'page.operatorAudit': 'console-security',
 };
 
@@ -216,6 +217,38 @@ const audienceOf = (c: HelpCategoryId): HelpAudience => HELP_CATEGORIES.find((x)
 /** The guides this reader can use: their audience, their plan's features, their level and their role. */
 export function guidesFor(reader: HelpReader): HelpGuide[] {
   return allGuides().filter((g) => audienceOf(g.category) === reader.audience && allowed(reader, { ...GUIDE_RULES[g.id], feature: guideFeature(g.id) }));
+}
+
+/** What a page needs: its plan feature, a role permission and the workspace levels that use it (none = everyone). */
+export function guideRequirements(id: HelpId): { feature: FeatureKey | null; permission: Permission | null; levels: readonly WorkspaceLevel[] | null } {
+  const rule = GUIDE_RULES[id];
+  return { feature: rule?.feature ?? guideFeature(id), permission: rule?.permission ?? null, levels: rule?.levels ?? null };
+}
+
+/** Why a reader cannot use a page: their plan lacks the feature, their role the permission, or their workspace level. */
+export interface RestrictedGuide {
+  guide: HelpGuide;
+  reason: 'feature' | 'permission' | 'level';
+  feature?: FeatureKey;
+  permission?: Permission;
+}
+
+/**
+ * The pages this reader cannot use, with the reason, so Help can explain why and who can grant it instead of
+ * pretending the feature does not exist. The first rule that fails is the reason, plan first.
+ */
+export function restrictedGuides(reader: HelpReader): RestrictedGuide[] {
+  if (reader.audience === 'console') return [];
+  const out: RestrictedGuide[] = [];
+  for (const g of allGuides()) {
+    if (audienceOf(g.category) !== reader.audience) continue;
+    const rule = { ...GUIDE_RULES[g.id], feature: guideFeature(g.id) ?? undefined };
+    if (allowed(reader, rule)) continue;
+    if (rule.feature && !allowed(reader, { feature: rule.feature })) out.push({ guide: g, reason: 'feature', feature: rule.feature });
+    else if (rule.permission && !allowed(reader, { permission: rule.permission })) out.push({ guide: g, reason: 'permission', permission: rule.permission });
+    else out.push({ guide: g, reason: 'level' });
+  }
+  return out;
 }
 
 /** The questions this reader can use, by the same rules. A question that links a guide also needs that guide. */

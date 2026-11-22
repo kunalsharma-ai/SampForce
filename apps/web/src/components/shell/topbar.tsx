@@ -22,6 +22,7 @@ import {
   Check,
   Keyboard,
   ListTodo,
+  LifeBuoy,
   LogOut,
   Maximize2,
   Menu,
@@ -223,6 +224,11 @@ export function Topbar() {
                 <DropdownMenuSeparator />
               </>
             )}
+            <DropdownMenuItem asChild>
+              <Link href="/app/help" data-account-help>
+                <LifeBuoy aria-hidden /> {t('Help & support')}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/app/account/security">
                 <ShieldCheck aria-hidden /> {t('top.security')}
