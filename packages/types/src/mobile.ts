@@ -186,6 +186,8 @@ export interface MobileSession {
   /** Other organisations of the person where mobile access is live; the app can switch to them. */
   workspaces: { tenantId: string; name: string }[];
   device: { id: string; platform: MobilePlatform };
+  /** The published Mobile Configuration version (0 = the built-in default). When it changes, fetch /mobile/config. */
+  configVersion: number;
 }
 
 /** The level a person's designation tier stands for, until the workspace hierarchy gives every person a node. */

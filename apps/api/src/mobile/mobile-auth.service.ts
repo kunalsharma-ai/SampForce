@@ -6,6 +6,7 @@ import { TokenService } from '../auth/token.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { mobileBlocked, mobileBlockReason } from './mobile-gate';
+import { publishedConfigVersion } from './mobile-config.service';
 
 const NO_SESSION = { code: 'NO_SESSION', message: 'Sign in to continue.' };
 
@@ -164,6 +165,7 @@ export class MobileAuthService {
         permissions: auth.permissions,
         workspaces: live.live,
         device: { id: device?.id ?? '', platform: (device?.platform ?? 'WEB') as MobilePlatform },
+        configVersion: await publishedConfigVersion(tx, auth.tenantId),
       };
     });
   }

@@ -113,4 +113,14 @@ export const mobile = {
   // Validation
   'Give a reason of at least 5 characters': ['Indica un motivo de al menos 5 caracteres', 'Indiquez une raison d’au moins 5 caractères', 'Geben Sie einen Grund mit mindestens 5 Zeichen an', 'اذكر سببًا من 5 أحرف على الأقل'],
   'Use letters, digits, - and _ only': ['Usa solo letras, números, - y _', 'Utilisez uniquement des lettres, des chiffres, - et _', 'Verwenden Sie nur Buchstaben, Ziffern, - und _', 'استخدم الحروف والأرقام و- و_ فقط'],
+  'Use 2 to 30 characters for the app name.': ['Usa de 2 a 30 caracteres para el nombre de la aplicación.', 'Utilisez 2 à 30 caractères pour le nom de l’application.', 'Verwenden Sie 2 bis 30 Zeichen für den App-Namen.', 'استخدم من 2 إلى 30 حرفًا لاسم التطبيق.'],
+  'The logo is too large. Use an image under 250 KB.': ['El logotipo es demasiado grande. Usa una imagen de menos de 250 KB.', 'Le logo est trop volumineux. Utilisez une image de moins de 250 Ko.', 'Das Logo ist zu groß. Verwenden Sie ein Bild unter 250 KB.', 'الشعار كبير جدًا. استخدم صورة أصغر من 250 كيلوبايت.'],
+  'Use a PNG, JPEG or WebP image.': ['Usa una imagen PNG, JPEG o WebP.', 'Utilisez une image PNG, JPEG ou WebP.', 'Verwenden Sie ein PNG-, JPEG- oder WebP-Bild.', 'استخدم صورة PNG أو JPEG أو WebP.'],
+  'Use a field from the list.': ['Usa un campo de la lista.', 'Utilisez un champ de la liste.', 'Verwenden Sie ein Feld aus der Liste.', 'استخدم حقلًا من القائمة.'],
+  'Choose up to 5 tabs.': ['Elige hasta 5 pestañas.', 'Choisissez jusqu’à 5 onglets.', 'Wählen Sie bis zu 5 Tabs.', 'اختر 5 علامات تبويب كحد أقصى.'],
+  // Mobile Configuration Center and field rules (M2)
+  'This part of SampForce is not available in your mobile app.': ['Esta parte de SampForce no está disponible en tu aplicación móvil.', 'Cette partie de SampForce n’est pas disponible dans votre application mobile.', 'Dieser Teil von SampForce ist in Ihrer Mobile App nicht verfügbar.', 'هذا الجزء من SampForce غير متاح في تطبيق الجوال لديك.'],
+  'Your workspace does not allow this in the mobile app.': ['Tu espacio de trabajo no permite esto en la aplicación móvil.', 'Votre espace de travail ne permet pas cela dans l’application mobile.', 'Ihr Arbeitsbereich erlaubt das in der Mobile App nicht.', 'لا تسمح مساحة عملك بهذا في تطبيق الجوال.'],
+  'You cannot change some of these fields in the mobile app.': ['No puedes cambiar algunos de estos campos en la aplicación móvil.', 'Vous ne pouvez pas modifier certains de ces champs dans l’application mobile.', 'Einige dieser Felder können Sie in der Mobile App nicht ändern.', 'لا يمكنك تغيير بعض هذه الحقول في تطبيق الجوال.'],
+  'That version does not exist.': ['Esa versión no existe.', 'Cette version n’existe pas.', 'Diese Version gibt es nicht.', 'هذا الإصدار غير موجود.'],
 } satisfies TextTable;

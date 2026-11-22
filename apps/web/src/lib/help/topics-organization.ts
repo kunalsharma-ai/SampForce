@@ -1804,4 +1804,28 @@ export const organizationHelp = {
       'استخدمها عندما يطلب عميل التطبيق، أو عند ضرورة إيقاف حساب مؤقتًا، مثلًا بسبب فاتورة غير مدفوعة.',
     ],
   },
+  'page.mobileConfiguration': {
+    title: 'Mobile configuration',
+    what: [
+      'How the SampForce app looks for your people and what each workspace level sees and may do in it: modules, fields, dashboard cards, tabs, chat and notifications.',
+      'Cómo se ve la aplicación de SampForce para tu equipo y qué ve y puede hacer cada nivel: módulos, campos, tarjetas del panel, pestañas, chat y notificaciones.',
+      'L’aspect de l’application SampForce pour vos équipes et ce que chaque niveau voit et peut faire : modules, champs, cartes du tableau de bord, onglets, discussion et notifications.',
+      'Wie die SampForce-App für Ihre Leute aussieht und was jede Ebene darin sieht und tun darf: Module, Felder, Dashboard-Karten, Tabs, Chat und Benachrichtigungen.',
+      'شكل تطبيق SampForce لفريقك وما يراه كل مستوى وما يمكنه فعله فيه: الوحدات والحقول وبطاقات لوحة المعلومات وعلامات التبويب والدردشة والإشعارات.',
+    ],
+    how: [
+      'Work through the six steps, save the draft, check the preview for each level, then publish. Phones change only when you publish, and you can put an older version back.',
+      'Sigue los seis pasos, guarda el borrador, revisa la vista previa de cada nivel y publica. Los teléfonos solo cambian al publicar, y puedes restaurar una versión anterior.',
+      'Suivez les six étapes, enregistrez le brouillon, vérifiez l’aperçu de chaque niveau, puis publiez. Les téléphones ne changent qu’à la publication, et vous pouvez rétablir une version antérieure.',
+      'Gehen Sie die sechs Schritte durch, speichern Sie den Entwurf, prüfen Sie die Vorschau jeder Ebene und veröffentlichen Sie. Telefone ändern sich erst beim Veröffentlichen; ältere Versionen lassen sich wiederherstellen.',
+      'اتبع الخطوات الست، واحفظ المسودة، وراجع المعاينة لكل مستوى، ثم انشر. لا تتغير الهواتف إلا عند النشر، ويمكنك إعادة إصدار أقدم.',
+    ],
+    where: [
+      'Use it before switching the app on, and whenever a team needs to see more or less on their phones. The server enforces every rule, so hidden fields stay hidden.',
+      'Úsalo antes de activar la aplicación y cuando un equipo necesite ver más o menos en sus teléfonos. El servidor aplica cada regla, así que los campos ocultos siguen ocultos.',
+      'Utilisez-la avant d’activer l’application et dès qu’une équipe doit voir plus ou moins sur son téléphone. Le serveur applique chaque règle : les champs masqués le restent.',
+      'Nutzen Sie es vor dem Einschalten der App und immer dann, wenn ein Team auf dem Telefon mehr oder weniger sehen soll. Der Server setzt jede Regel durch, ausgeblendete Felder bleiben verborgen.',
+      'استخدمه قبل تفعيل التطبيق، وكلما احتاج فريق إلى رؤية المزيد أو أقل على هواتفه. يطبّق الخادم كل قاعدة، لذا تبقى الحقول المخفية مخفية.',
+    ],
+  },
 } as const satisfies HelpTable;

@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  MOBILE_DASHBOARD_CARD_DEFS,
+  MOBILE_FIELDS,
+  MOBILE_MODULE_DEFS,
   ACTIVITY_TYPES,
   DEFAULT_DEPARTMENTS,
   DEFAULT_DESIGNATIONS,
@@ -55,6 +58,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
+import { MOBILE_LEVEL_LABEL, MOBILE_NOTIFICATION_LABEL, MOBILE_PHONE_ACTION_LABEL } from '@/lib/mobile';
 import { ENROLLMENT_LABEL } from '@/lib/sequences';
 import { visitorLanguage } from '@/stores/regional';
 import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
@@ -141,6 +145,8 @@ describe('page phrases', () => {
     ['record intelligence API labels', [...source('../../../../api/src/intelligence/record-intelligence.service.ts').matchAll(/label: tr\('([^']+)'\)/g)].map((m) => m[1]!)],
     ['deal health signals', [...source('../../../../api/src/ai/scoring.ts').matchAll(/risk\('\w+', '([^']+)'/g)].map((m) => m[1]!)],
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
+    // Mobile Configuration Center (ADR 0072): module, field and dashboard card names from the shared mobile config.
+    ['mobile configuration labels', [...MOBILE_MODULE_DEFS.flatMap((m) => [m.label, m.description]), ...Object.values(MOBILE_FIELDS).flatMap((fs) => fs.map((f) => f.label)), ...Object.values(MOBILE_DASHBOARD_CARD_DEFS).flatMap((c) => [c.label, c.description]), ...Object.values(MOBILE_LEVEL_LABEL), ...Object.values(MOBILE_NOTIFICATION_LABEL), ...Object.values(MOBILE_PHONE_ACTION_LABEL)]],
     // Company-centric CRM (ADR 0060): the starter statuses, designations and departments a workspace gets, shown with
     // t.maybe() until someone renames them, and the CRM configuration checks.
     ['company CRM defaults', [...DEFAULT_STATUSES.COMPANY, ...DEFAULT_STATUSES.EMPLOYEE].map((s) => s.name).concat(DEFAULT_DESIGNATIONS.map((d) => d.name), DEFAULT_DEPARTMENTS)],

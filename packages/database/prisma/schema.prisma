@@ -305,6 +305,8 @@ model Tenant {
   featureOverrides       TenantFeatureOverride[]
   mobileAccess           MobileAccess?
   mobileDevices          MobileDevice[]
+  mobileConfig           MobileConfig?
+  mobileConfigVersions   MobileConfigVersion[]
   territoryCountries     TerritoryCountry[]
   roles                  Role[]
   memberships            Membership[]
@@ -4200,4 +4202,40 @@ model MobileDevice {
   @@unique([tenantId, userId, installId])
   @@index([tenantId, signedOutAt])
   @@map("mobile_devices")
+}
+
+/// ADR 0072 (M2): the Super Workspace's Mobile Configuration Center. One draft per organisation; publishing copies it
+/// into a numbered MobileConfigVersion, which is what phones get. Rolling back publishes an older version again.
+model MobileConfig {
+  id               String    @id @default(uuid()) @map("_id")
+  tenantId         String    @unique @map("tenant_id")
+  /// The draft, normalised (see normalizeMobileConfig in @dealflow/types).
+  draft            Json
+  draftUpdatedAt   DateTime? @map("draft_updated_at")
+  draftUpdatedById String?   @map("draft_updated_by_id")
+  /// The version phones get; null until the first publish (phones then get the built-in default).
+  publishedVersion Int?      @map("published_version")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("mobile_configs")
+}
+
+model MobileConfigVersion {
+  id            String   @id @default(uuid()) @map("_id")
+  tenantId      String   @map("tenant_id")
+  version       Int
+  config        Json
+  note          String?
+  /// Set when this version republished an older one (a rollback).
+  restoredFrom  Int?     @map("restored_from")
+  publishedById String?  @map("published_by_id")
+  publishedAt   DateTime @default(now()) @map("published_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, version])
+  @@map("mobile_config_versions")
 }

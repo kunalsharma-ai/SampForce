@@ -3,7 +3,8 @@
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
 import type { MobileAccessState, MobileDeviceRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Smartphone } from 'lucide-react';
+import { CheckCircle2, Circle, SlidersHorizontal, Smartphone } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -125,6 +126,23 @@ export function MobileAccessSettings() {
           <ErrorText error={request.error ?? activation.error} />
         </CardContent>
       </Card>
+
+      {s.inPlan && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="size-5 text-primary" aria-hidden />
+              {t('Mobile configuration')}
+            </CardTitle>
+            <CardDescription>{t('Decide how the app looks and what each workspace level sees and may do, preview it, and publish it to phones.')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/app/settings/mobile/configure" className="inline-flex h-control items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              {t('Open the Configuration Center')}
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import {
@@ -13,16 +13,21 @@ import {
   type MobileRefreshInput,
   mobileRefreshSchema,
   mobileSwitchWorkspaceSchema,
+  type MobileAppConfigInput,
+  mobileAppConfigSchema,
+  mobilePublishSchema,
+  mobileRollbackSchema,
   type OperatorMobileActionInput,
   operatorMobileActionSchema,
   type OperatorMobileLimitsInput,
   operatorMobileLimitsSchema,
 } from '@dealflow/types';
-import { AllowRestricted, Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { AllowRestricted, Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorRoles } from '../operator/operator-auth';
 import { MobileAccessService } from './mobile-access.service';
 import { MobileAuthService } from './mobile-auth.service';
+import { MobileConfigService } from './mobile-config.service';
 
 const AUTH_LIMIT = { default: { limit: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10), ttl: 60_000 } };
 
@@ -76,13 +81,63 @@ export class MobileAuthController {
 
 @Controller('mobile')
 export class MobileSessionController {
-  constructor(private readonly mobile: MobileAuthService) {}
+  constructor(
+    private readonly mobile: MobileAuthService,
+    private readonly configs: MobileConfigService,
+  ) {}
 
   /** Who is signed in on the phone, their organisation and workspace level. */
   @MobileAccess()
   @Get('session')
   session(@Auth() auth: AuthContext) {
     return this.mobile.session(auth);
+  }
+
+  /** The published Mobile Configuration, narrowed to this person. `known` = the version the phone already has. */
+  @MobileAccess()
+  @Get('config')
+  appConfig(@Auth() auth: AuthContext, @Query('known') known?: string) {
+    if (known !== undefined && !/^\d{1,9}$/.test(known)) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Use a field from the list.', details: [{ path: 'known', message: 'Use a field from the list.' }] });
+    return this.configs.forPhone(auth, known === undefined ? null : Number(known));
+  }
+}
+
+/** The Super Workspace's Mobile Configuration Center: edit a draft, publish it, put an older version back. */
+@Controller('mobile-config')
+@RequireFeature('mobile_app')
+export class MobileConfigController {
+  constructor(private readonly config: MobileConfigService) {}
+
+  @Get()
+  @RequirePermissions('tenant:manage')
+  center(@Auth() auth: AuthContext) {
+    return this.config.center(auth);
+  }
+
+  @Put('draft')
+  @RequirePermissions('tenant:manage')
+  save(@Auth() auth: AuthContext, @Body(new ZodPipe(mobileAppConfigSchema)) body: MobileAppConfigInput, @Meta() meta: RequestMeta) {
+    return this.config.saveDraft(auth, body, meta);
+  }
+
+  @Delete('draft')
+  @RequirePermissions('tenant:manage')
+  discard(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {
+    return this.config.discardDraft(auth, meta);
+  }
+
+  @Post('publish')
+  @HttpCode(200)
+  @RequirePermissions('tenant:manage')
+  publish(@Auth() auth: AuthContext, @Body(new ZodPipe(mobilePublishSchema)) body: { note?: string }, @Meta() meta: RequestMeta) {
+    return this.config.publish(auth, body.note, meta);
+  }
+
+  @Post('rollback')
+  @HttpCode(200)
+  @RequirePermissions('tenant:manage')
+  rollback(@Auth() auth: AuthContext, @Body(new ZodPipe(mobileRollbackSchema)) body: { version: number }, @Meta() meta: RequestMeta) {
+    return this.config.rollback(auth, body.version, meta);
   }
 }
 

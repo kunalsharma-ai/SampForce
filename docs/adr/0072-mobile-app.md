@@ -44,3 +44,27 @@ https://claude.ai/artifact/P7ae36uT6ywiYt8rqZbF85.
 **Consequences.** Every new mobile screen needs its routes marked `@MobileAccess()` and tested with a phone token;
 everything else stays closed to phones by default. Field-level rules (M2) and the hierarchy's feature and action
 checks (ADR 0071) are applied on top of this, never instead of it.
+
+## M2: the Mobile Configuration Center (2026-11-22)
+
+- **Draft, publish, versions.** `MobileConfig` holds one draft per organisation; publishing copies it into a numbered
+  `MobileConfigVersion`, which is what phones get. Rolling back publishes an older version again as a new number
+  (`restoredFrom`), so history is never rewritten. Until the first publish, phones get the built-in default (version
+  0). Saving, discarding, publishing and rolling back are written to the workspace audit log. Routes:
+  `/mobile-config` (GET, `PUT/DELETE draft`, `POST publish`, `POST rollback`), `tenant:manage` and the `mobile_app`
+  feature, web only.
+- **One configuration shape** (`packages/types/src/mobile-config.ts`): branding (app name, colours, theme, a logo kept
+  as a data URL up to 250 KB), modules, field rules per module, field and level (view, edit, set on new, clear), record
+  rules per module and level (view, create, edit, delete), dashboard cards per level in order, up to 5 bottom tabs per
+  level, chat, notification types, profile pictures and phone actions. `normalizeMobileConfig` makes it consistent
+  (view is the floor, read-only fields never change, required fields always show, cards only for levels they suit),
+  the same way on the web and the API.
+- **Resolved per person.** `resolveMobileConfig` narrows the published version to the person's level, plan features
+  and role permissions; the phone gets only that (`GET /mobile/config?known=<version>`, which answers `unchanged`
+  when the phone is up to date; `GET /mobile/session` carries `configVersion`). The web preview uses the same function.
+- **Field rules on the server.** `apps/api/src/mobile/field-policy.ts` strips fields a person may not see from every
+  record a phone route sends (`mobileReadable`) and refuses writes to fields they may not set or clear
+  (`checkMobileWrite`, `MOBILE_FIELD_NOT_ALLOWED` with the fields in `details`) or record actions their level may not
+  take (`MOBILE_ACTION_NOT_ALLOWED`). M4's record routes must use them; hiding a field in the app is never the control.
+- **Level.** Until ADR 0071 gives every person a workspace node, the level comes from the designation tier (senior =
+  Super, manager = Manager, otherwise Executive; owners and admins without a designation are Super).
