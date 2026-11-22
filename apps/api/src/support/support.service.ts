@@ -5,7 +5,6 @@ import {
   type OperatorSupportTicketRow,
   type SupportAuthorKind,
   type SupportCounts,
-  type SupportTicketCreateInput,
   type SupportTicketDetail,
   type SupportTicketMessageRow,
   type SupportTicketRow,
