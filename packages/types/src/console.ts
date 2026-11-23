@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
+import type { OperatorPermission } from './console-security';
 import { FEATURE_KEYS, type FeatureKey, featureKeySchema } from './features';
 import { type ActionGrants, actionGrantsSchema, type WorkspaceLevel } from './workspaces';
 
@@ -399,6 +400,13 @@ export interface ConsoleClientPage {
 
 export const CONSOLE_BULK_ACTIONS = ['state', 'extend', 'feature', 'notify'] as const;
 export type ConsoleBulkAction = (typeof CONSOLE_BULK_ACTIONS)[number];
+/** Who may run each bulk action: the same permission as doing it to one client. */
+export const BULK_PERMISSION: Record<ConsoleBulkAction, OperatorPermission> = {
+  state: 'clients.status',
+  extend: 'subscriptions.manage',
+  feature: 'features.manage',
+  notify: 'notifications.broadcast',
+};
 /** Typed by the operator before a bulk action that takes access away. */
 export const BULK_CONFIRM_WORD = 'CONFIRM';
 

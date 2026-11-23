@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@dealflow/database';
 import {
-  type ConsoleBulkAction,
+  BULK_PERMISSION,
   type ConsoleClientBulkInput,
   type ConsoleClientBulkResult,
   type ConsoleClientListQuery,
@@ -9,7 +9,6 @@ import {
   type ConsoleClientRow,
   type ConsoleClientSort,
   geoCountry,
-  type OperatorPermission,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../common/prisma.service';
@@ -24,13 +23,6 @@ import { writePlatformAudit } from './platform-audit';
 const LIST_MAX = 5000;
 const DAY = 86_400_000;
 
-/** Who may run each bulk action: the same permission as doing it to one client. */
-export const BULK_PERMISSION: Record<ConsoleBulkAction, OperatorPermission> = {
-  state: 'clients.status',
-  extend: 'subscriptions.manage',
-  feature: 'features.manage',
-  notify: 'notifications.broadcast',
-};
 
 const SORT_KEY: Record<ConsoleClientSort, (r: ConsoleClientRow) => string | number> = {
   name: (r) => r.name.toLowerCase(),

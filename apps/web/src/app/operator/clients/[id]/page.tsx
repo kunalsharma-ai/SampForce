@@ -15,6 +15,8 @@ import {
   type ActionGrants,
   type ClientState,
   type ConsoleClientCreated,
+  CONSOLE_ACTIVITY_CATEGORIES,
+  CONSOLE_ACTIVITY_PERMISSION,
   type ConsoleClientDetail,
   type ConsolePlanRow,
   type ConsoleWorkspaceRow,
@@ -34,6 +36,7 @@ import { Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { ActivityFeed } from '@/components/console/activity-feed';
 import { ClientLogo, CompanyCard, placeLine } from '@/components/console/client-profile';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -203,6 +206,14 @@ export default function ConsoleClientPage() {
       </div>
 
       <CompanyCard client={c} canEdit={admin} />
+
+      <Card className="p-5" aria-labelledby="timeline-h" data-client-timeline>
+        <h2 id="timeline-h" className="font-medium">
+          Timeline
+        </h2>
+        <p className="mb-4 mt-1 text-sm text-muted-foreground">Everything that happened to this client, newest first: its own events and every Console change.</p>
+        <ActivityFeed categories={CONSOLE_ACTIVITY_CATEGORIES.filter((k) => can(me.data!, CONSOLE_ACTIVITY_PERMISSION[k] as never))} tenantId={c.id} pageSize={10} />
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5" aria-labelledby="ws-h">
