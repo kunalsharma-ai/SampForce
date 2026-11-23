@@ -3,7 +3,6 @@
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   type ActionGrants,
-  type CreateWorkspaceInput,
   FEATURE_BY_KEY,
   FEATURE_GROUPS,
   type FeatureGroup,
@@ -19,7 +18,7 @@ import {
   type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { Copy, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import { KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -29,6 +28,7 @@ import { useSession } from '@/lib/session';
 import { useCanDelete } from '@/lib/features';
 import { useWorkspaceMutations, useWorkspaceTree } from '@/lib/workspaces';
 import { DeactivateWorkspaceDialog, DeleteWorkspaceDialog } from './workspace-lifecycle';
+import { CreateWorkspaceWizard } from './workspace-wizard';
 
 type Creating = 'MANAGER' | 'EXECUTIVE';
 
@@ -111,7 +111,7 @@ export function WorkspacesManager() {
         </CardContent>
       </Card>
 
-      {creating && <CreateDialog level={creating} tree={data} onClose={() => setCreating(null)} />}
+      {creating && <CreateWorkspaceWizard tree={data} initialLevel={creating} onClose={() => setCreating(null)} />}
       {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} rules={data.rules} onClose={() => setPermissionsOf(null)} />}
       {edited && <EditDialog row={edited} tree={data} onClose={() => setEditing(null)} />}
       {deactivating && <DeactivateWorkspaceDialog row={deactivating} onClose={() => setDeactivating(null)} />}
@@ -473,91 +473,6 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
 }
 
 // ───────────── Creating and editing ─────────────
-
-function CreateDialog({ level, tree, onClose }: { level: Creating; tree: WorkspaceTree; onClose: () => void }) {
-  const t = useT();
-  const { create } = useWorkspaceMutations();
-  const managers = tree.workspaces.filter((w) => w.level === 'MANAGER');
-  const isSuper = tree.mine.level === 'SUPER';
-  const [name, setName] = useState('');
-  const [designation, setDesignation] = useState('');
-  const [parentId, setParentId] = useState(isSuper ? '' : tree.mine.id);
-  const [email, setEmail] = useState('');
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{inviteUrl ? t('Workspace created') : level === 'MANAGER' ? t('New Manager Workspace') : t('New Executive Workspace')}</DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">
-          {inviteUrl
-            ? t('Send this link to the person. It works once and for seven days.')
-            : t('It starts with what its parent workspace has, apart from actions this level never needs. Change that in its Permissions afterwards.')}
-        </DialogDescription>
-        {inviteUrl ? (
-          <div className="mt-4 space-y-4">
-            <div className="flex gap-2">
-              <Input readOnly value={inviteUrl} aria-label={t('Invitation link')} />
-              <Button variant="outline" onClick={() => void navigator.clipboard?.writeText(inviteUrl)}>
-                <Copy className="size-4" aria-hidden />
-                {t('Copy')}
-              </Button>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={onClose}>{t('Done')}</Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            className="mt-4 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const input: CreateWorkspaceInput = {
-                level,
-                name,
-                ...(designation.trim() ? { designation } : {}),
-                ...(level === 'EXECUTIVE' && parentId ? { parentId } : {}),
-                ...(email.trim() ? { person: { inviteEmail: email.trim() } } : {}),
-              };
-              create.mutate(input, { onSuccess: (row) => (row.inviteUrl ? setInviteUrl(row.inviteUrl) : onClose()) });
-            }}
-          >
-            <Field id="ws-name" label={t('Workspace name')}>
-              <Input id="ws-name" required minLength={2} maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder={level === 'MANAGER' ? t('For example: North India') : t('For example: Priya Sharma')} />
-            </Field>
-            <Field id="ws-designation" label={t('Designation')} hint={t('What the person in it is called, for example Regional Sales Manager.')}>
-              <Input id="ws-designation" maxLength={80} value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder={level === 'MANAGER' ? t.maybe('Sales Manager') : t.maybe('Sales Executive')} />
-            </Field>
-            {level === 'EXECUTIVE' && isSuper && (
-              <Field id="ws-parent" label={t('Reports to')}>
-                <Select id="ws-parent" value={parentId} onChange={(e) => setParentId(e.target.value)}>
-                  <option value="">{t('The Super Workspace directly')}</option>
-                  {managers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-            <Field id="ws-email" label={t('Invite by email')} hint={t('Optional. You can also move an existing member in later.')}>
-              <Input id="ws-email" type="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Field>
-            <ErrorText error={create.error} />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                {t('Cancel')}
-              </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? t('Saving…') : t('Create workspace')}
-              </Button>
-            </div>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function EditDialog({ row, tree, onClose }: { row: WorkspaceRow; tree: WorkspaceTree; onClose: () => void }) {
   const t = useT();

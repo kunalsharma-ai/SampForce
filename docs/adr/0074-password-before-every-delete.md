@@ -81,3 +81,18 @@ is deliberate.
   audit entries keep its name. A receiving workspace is required whenever there is something to hand over.
 - Who may: the workspace above (the Super Workspace over all, a manager over its own executives), as for every other
   hierarchy change.
+
+## W5: The creation wizard and one email, one role (2026-11-23)
+
+- Creating a Manager or Executive Workspace is a 6-step wizard: type (the Super Workspace is never offered),
+  workspace (name, department, designation, description, reports to, executives moved into a new manager's team,
+  active or created deactivated), person (name, work email, work phone), permissions (modules and actions from the
+  parent, Delete off, the Console's rules applied; a manager's access level), review, then create.
+- New fields: `WorkspaceNode.department`, `description`, `accessLevel` (null means TEAM; OWN limits a manager to its
+  own people's records), `Invitation.name` and `phone` (the name pre-fills the accept page, the phone goes on a new
+  account as `User.phone`).
+- **One email, one role** within an organisation: `GET /workspaces/email-check` answers while the email is typed,
+  and creating a workspace refuses the same cases with 409 `EMAIL_IN_WORKSPACE` (already works here, naming where)
+  or `EMAIL_INVITED` (a pending invitation elsewhere). The team page's invitation no longer replaces a pending
+  invitation into another workspace silently; it refuses with `EMAIL_INVITED`. Re-inviting into the same workspace
+  still replaces the link. One person can still belong to two separate client organisations.
