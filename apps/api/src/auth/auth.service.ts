@@ -30,7 +30,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
 import { inLanguage, requestLanguage, tr } from '../common/request-language';
-import { type ConfirmPasswordInput, type LanguageCode, languageCodeSchema, type PasswordConfirmationIssued } from '@dealflow/types';
+import { type ChangePasswordInput, type ConfirmPasswordInput, type PasswordChanged, type LanguageCode, languageCodeSchema, type PasswordConfirmationIssued } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { resolveWorkspaceAccess } from '../workspaces/access';
@@ -208,6 +208,52 @@ export class AuthService {
     ).catch(() => undefined);
   }
 
+  /**
+   * Changing the password while signed in (W6): the current password first (wrong tries count towards the same
+   * fifteen-minute pause as the password check), then the new one. Every other device is signed out, outstanding
+   * reset links stop working, the change is in the audit log and the person gets an email about it.
+   */
+  async changePassword(auth: AuthContext, input: ChangePasswordInput, meta: RequestMeta): Promise<PasswordChanged> {
+    if (auth.via === 'api_key' || auth.via === 'extension' || !auth.sessionId) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Sign in to change your password.' });
+    const principal = { kind: 'USER' as const, id: auth.userId, sessionId: auth.sessionId };
+    await this.confirmations.assertNotPaused(principal);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, select: { id: true, email: true, name: true, passwordHash: true } });
+    if (!PasswordService.usable(user.passwordHash)) {
+      throw new BadRequestException({ code: 'PASSWORD_NOT_SET', message: 'Your account signs in with single sign-on, so it has no password to change here.' });
+    }
+    if (!(await this.passwords.verify(user.passwordHash, input.currentPassword))) {
+      await this.confirmations.recordFailure(principal);
+      await this.prisma.run({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+        this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'auth.password_change_failed', outcome: 'REFUSED', entityType: 'user', entityId: auth.userId, meta }),
+      );
+      throw new BadRequestException({ code: 'PASSWORD_INCORRECT', message: 'That password is not right.', details: [{ path: 'currentPassword', message: 'That password is not right.' }] });
+    }
+    const passwordHash = await this.passwords.hash(input.newPassword);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: user.id }, data: { passwordHash, failedLoginCount: 0, lockedUntil: null } });
+      await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
+    });
+    const signedOut = await this.revokeSessions(auth, 'others', meta);
+    await this.auditForUser(user.id, 'auth.password_changed', meta);
+    authEvents.inc({ event: 'password_changed' });
+    await inLanguage(await this.languageOf(user.id), () =>
+      this.mailer.send({
+        to: user.email,
+        subject: tr('Your SampForce password was changed'),
+        text: [
+          tr('Hi {name},', { name: user.name }),
+          '',
+          tr('The password for your SampForce account was just changed from its security settings, and your other devices were signed out.'),
+          '',
+          tr('If this was not you, contact your workspace administrator straight away.'),
+          '',
+          'SampForce',
+        ].join('\n'),
+      }),
+    ).catch(() => undefined);
+    return { signedOut };
+  }
+
   /** The person's saved interface language, or the request's when they have not saved one. */
   private async languageOf(userId: string): Promise<LanguageCode> {
     const saved = await this.prisma.userRegionalSetting.findUnique({ where: { userId }, select: { language: true } });
@@ -356,6 +402,13 @@ export class AuthService {
     if (!first) {
       const all = await this.listMemberships(userId);
       if (all.length > 0) throw new ForbiddenException(SSO_REQUIRED);
+      // The company was closed by its owner (W7): say so, and until when it can be reopened.
+      const closed = await this.prisma.run({ userId }, (tx) =>
+        tx.membership.findFirst({ where: { userId, status: 'ACTIVE', tenant: { status: 'PENDING_DELETION', deletedAt: null } }, include: { tenant: { select: { eraseAfter: true } } } }),
+      );
+      if (closed?.tenant.eraseAfter) {
+        throw new ForbiddenException({ code: 'COMPANY_CLOSED', message: `Your company closed its SampForce account. SampForce support can reopen it until ${closed.tenant.eraseAfter.toISOString().slice(0, 10)}.` });
+      }
       throw new ForbiddenException({
         code: 'NO_WORKSPACE',
         message: 'Your account is not a member of any active workspace.',
@@ -528,7 +581,7 @@ export class AuthService {
       tx.invitation.findUniqueOrThrow({ where: { tokenHash: TokenService.hashRefresh(token) }, include: { role: true, tenant: true } }),
     );
     const user = await this.prisma.user.findUnique({ where: { email: inv.email }, select: { id: true } });
-    return { tenantName: inv.tenant.name, email: inv.email, roleName: inv.role.name, hasAccount: !!user };
+    return { tenantName: inv.tenant.name, email: inv.email, roleName: inv.role.name, hasAccount: !!user, ...(inv.name && !user ? { name: inv.name } : {}) };
   }
 
   /**
@@ -557,9 +610,11 @@ export class AuthService {
         });
       }
       user = await this.prisma.user.create({
-        data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data) },
+        data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data), ...(inv.phone ? { phone: inv.phone } : {}) },
       });
     }
+    // The phone the inviter typed (W5) goes on an account that has none.
+    if (inv.phone && !user.phone) user = await this.prisma.user.update({ where: { id: user.id }, data: { phone: inv.phone } });
     const userId = user.id;
 
     await this.prisma.run({ tenantId, userId }, async (tx) => {

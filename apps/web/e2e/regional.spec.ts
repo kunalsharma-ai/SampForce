@@ -154,7 +154,7 @@ test('a language picked on the sign-up page carries over to the new account', as
   await page.goto('/app/settings');
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
-  await expect(main.getByText('Espacio de trabajo', { exact: true })).toBeVisible();
+  await expect(main.getByRole('heading', { name: 'Espacio de trabajo', exact: true }).first()).toBeVisible();
   await expect(main.getByRole('group', { name: 'Densidad de la interfaz' })).toBeVisible();
   await axe(page);
 

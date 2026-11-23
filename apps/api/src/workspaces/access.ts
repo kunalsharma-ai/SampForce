@@ -35,7 +35,10 @@ export interface StoredNode {
   canViewOtherManagers: boolean;
   canViewAuditLog: boolean;
   canChatWithPeers: boolean;
-  /** Optional so stand-ins and older reads need not set them (W4). */
+  /** Optional so stand-ins and older reads need not set them (W4, W5). */
+  department?: string | null;
+  description?: string | null;
+  accessLevel?: string | null;
   deactivatedAt?: Date | null;
   deactivationReason?: string | null;
   archivedAt: Date | null;
@@ -164,9 +167,9 @@ export function branchIds(nodes: readonly Pick<StoredNode, 'id' | 'parentId'>[],
  * Users who work in a workspace's branch (it and everything below it), for record visibility: a manager sees the
  * records of their own workspace and their executives'.
  */
-export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string): Promise<string[]> {
-  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } });
-  const ids = [...branchIds(nodes, nodeId)];
+export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string, { below = true }: { below?: boolean } = {}): Promise<string[]> {
+  const nodes = below ? await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } }) : [];
+  const ids = below ? [...branchIds(nodes, nodeId)] : [nodeId];
   const members = await tx.membership.findMany({ where: { tenantId, status: 'ACTIVE', workspaceNodeId: { in: ids } }, select: { userId: true } });
   return members.map((m) => m.userId);
 }

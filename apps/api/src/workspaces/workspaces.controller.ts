@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import {
   type AssignWorkspaceMemberInput,
   assignWorkspaceMemberSchema,
@@ -14,6 +14,7 @@ import {
   updateWorkspaceSchema,
   type WorkspacePermissionsInput,
   workspacePermissionsSchema,
+  workspaceEmailCheckSchema,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, OwnHierarchyRules, type RequestMeta, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -32,6 +33,14 @@ export class WorkspacesController {
   @Get('me')
   me(@Auth() auth: AuthContext) {
     return this.workspaces.identity(auth);
+  }
+
+  /** Whether an email can be given a new workspace (W5): one email, one role. */
+  @Get('email-check')
+  @RequireFeature('workspace_management')
+  @OwnHierarchyRules()
+  emailCheck(@Auth() auth: AuthContext, @Query(new ZodPipe(workspaceEmailCheckSchema)) query: { email: string }) {
+    return this.workspaces.emailCheck(auth, query.email);
   }
 
   @Get()

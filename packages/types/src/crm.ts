@@ -870,6 +870,8 @@ export interface InvitationPreview {
   email: string;
   roleName: string;
   hasAccount: boolean;
+  /** The name the inviter typed (W5), to pre-fill a new account. */
+  name?: string;
 }
 
 /** Shared field builders, for the company-centric CRM schemas (company-crm.ts). */

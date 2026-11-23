@@ -81,3 +81,60 @@ is deliberate.
   audit entries keep its name. A receiving workspace is required whenever there is something to hand over.
 - Who may: the workspace above (the Super Workspace over all, a manager over its own executives), as for every other
   hierarchy change.
+
+## W5: The creation wizard and one email, one role (2026-11-23)
+
+- Creating a Manager or Executive Workspace is a 6-step wizard: type (the Super Workspace is never offered),
+  workspace (name, department, designation, description, reports to, executives moved into a new manager's team,
+  active or created deactivated), person (name, work email, work phone), permissions (modules and actions from the
+  parent, Delete off, the Console's rules applied; a manager's access level), review, then create.
+- New fields: `WorkspaceNode.department`, `description`, `accessLevel` (null means TEAM; OWN limits a manager to its
+  own people's records), `Invitation.name` and `phone` (the name pre-fills the accept page, the phone goes on a new
+  account as `User.phone`).
+- **One email, one role** within an organisation: `GET /workspaces/email-check` answers while the email is typed,
+  and creating a workspace refuses the same cases with 409 `EMAIL_IN_WORKSPACE` (already works here, naming where)
+  or `EMAIL_INVITED` (a pending invitation elsewhere). The team page's invitation no longer replaces a pending
+  invitation into another workspace silently; it refuses with `EMAIL_INVITED`. Re-inviting into the same workspace
+  still replaces the link. One person can still belong to two separate client organisations.
+
+## W6: The hierarchy tree, Settings in nine sections and changing the password (2026-11-23)
+
+- **Hierarchy tree.** The Workspaces page draws the company, its one Super Workspace, the Manager Workspaces and
+  their Executive Workspaces as a tree with connector lines. Each card shows the person (name and email, or the
+  pending invitation), a status (Active, Invited, Empty, Deactivated), plan-limit use (the Super Workspace shows both
+  limits, a manager the executives in its team) and an Actions menu (Edit, Permissions, Deactivate or Reactivate,
+  Delete when the Delete action is granted). A banner tells the Super Workspace why there is only one.
+- **Settings in nine sections**, each with one sentence on what it is for: Workspace (the existing forms, inline),
+  Users & Workspaces, Roles & Permissions, Security, Password & Authentication, Data Management, Notifications,
+  Integrations and Audit Logs. The sections lead to the pages that already exist, so every old link keeps working;
+  the Team page's roles card and the Workspaces structure card gained anchors (`#roles`, `#structure`).
+- **Changing the password while signed in**: `POST /auth/password` with `{ currentPassword, newPassword }`. A wrong
+  current password counts towards the same five-in-fifteen-minutes pause as the password check and is audited as
+  `auth.password_change_failed` (REFUSED). On success every other session is revoked (this one stays), outstanding
+  reset links stop working, `auth.password_changed` is recorded in each organisation the person belongs to, and the
+  person gets an email. Single sign-on accounts have no password to change (400 `PASSWORD_NOT_SET`); API keys and
+  the extension cannot call it. The form is on Account security, linked from Password & Authentication next to the
+  existing reset-by-email flow.
+
+## W7: Closing the company, with 30 days to reopen (2026-11-23)
+
+- Only an **owner in the Super Workspace** may close the company (403 `COMPANY_CLOSE_FORBIDDEN` otherwise; API keys
+  and the extension never can). Settings, then Workspace, then Close company shows every workspace with its people
+  and the data counts (`GET /tenants/current/close-impact`), then asks for the typed company name and the password,
+  then a second confirmation. `POST /tenants/current/close` takes `{ confirmName, reason?, understood: true }` with
+  the password pass (`@ConfirmPassword({ deletes: false })`: closing is an owner's right, not a workspace's Delete).
+- Closing sets the tenant to `PENDING_DELETION` with `closedAt`, `closedById`, `closeReason` and `eraseAfter`
+  (closedAt + 30 days). Every access check already refuses a tenant that is not ACTIVE (cookies, API keys, the
+  extension, the chat socket, automation and sequences), so sign-in stops for everyone at once; the company's
+  sessions are also revoked. Signing in afterwards answers 403 `COMPANY_CLOSED` with the date until which it can be
+  reopened. The owner gets an email; the tenant audit log records `tenant.closed`, the platform log
+  `client.closed_by_owner`.
+- The Console shows such a client as **Closing** with who closed it, the reason and the erase date, and an ADMIN can
+  reopen it (`POST /operator/clients/:id/reopen` with a reason) until `eraseAfter` (409 `REOPEN_TOO_LATE` after).
+  Reopening restores everything: nothing was removed while it was closing.
+- After `eraseAfter` the worker's sweep erases the company: every collection with a workspace field is emptied of its
+  documents by `tenant_id` (the audit log included), people who belong to no other organisation are anonymised
+  (email freed, name, phone and password removed, signed out; the account row stays because other records may point
+  at it), and the tenant row stays with `deletedAt` and `erasedAt` as the record that the client existed. The
+  platform audit log keeps `client.erased` with the counts. People who also belong to another organisation keep
+  their account.

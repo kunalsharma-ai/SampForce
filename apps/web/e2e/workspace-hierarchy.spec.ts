@@ -1,13 +1,21 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
 import { FEATURE_KEYS } from '@dealflow/types';
-import { signUp } from './helpers';
+import { signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for phase previews). */
 const PREVIEW_DIR = process.env.PREVIEW_DIR;
 
 test.use({ reducedMotion: 'reduce', viewport: { width: 1440, height: 900 }, deviceScaleFactor: PREVIEW_DIR ? 2 : 1 });
+
+/** The wizard's remaining steps (W5): past the person and permissions, then review and create. */
+async function finishWizard(dialog: Locator) {
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Continue' }).click();
+  await dialog.getByRole('button', { name: 'Create workspace' }).click();
+}
 
 async function shot(page: Page, name: string) {
   if (!PREVIEW_DIR) return;
@@ -70,15 +78,18 @@ test('the Permission Center hands features and actions down, and a manager canno
   test.setTimeout(150_000);
   await signUp(page, 'Frequent Research Panels');
   await page.goto('/app/settings');
-  await page.getByRole('link', { name: /Workspaces/ }).click();
+  await page.getByRole('link', { name: /^Workspaces/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
 
   await page.getByRole('button', { name: 'New Manager Workspace' }).click();
   let dialog = page.getByRole('dialog');
   await dialog.getByLabel('Workspace name').fill('West India Sales');
   await dialog.getByLabel('Designation').fill('Regional Sales Manager');
-  await dialog.getByLabel('Invite by email').fill(`meera.${Date.now()}@example.com`);
-  await dialog.getByRole('button', { name: 'Create workspace' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByLabel('Full name').fill('Meera Nair');
+  await dialog.getByLabel('Work email').fill(`meera.${Date.now()}@example.com`);
+  await expect(dialog.getByText('This email is free to use.')).toBeVisible();
+  await finishWizard(dialog);
   const link = dialog.getByLabel('Invitation link');
   await expect(link).toHaveValue(/\/invite\//);
   const token = (await link.inputValue()).split('/invite/')[1]!;
@@ -89,7 +100,7 @@ test('the Permission Center hands features and actions down, and a manager canno
   await axe(page);
 
   // The Super Workspace takes RFQs and deleting in CRM away, and lets the manager build a team.
-  await page.getByRole('button', { name: 'Permissions West India Sales' }).click();
+  await workspaceAction(page, 'West India Sales', 'Permissions');
   dialog = page.getByRole('dialog');
   await dialog.getByRole('checkbox', { name: 'RFQs', exact: true }).uncheck();
   await dialog.getByRole('checkbox', { name: 'Delete in CRM' }).uncheck();
@@ -115,9 +126,11 @@ test('the Permission Center hands features and actions down, and a manager canno
   await manager.getByRole('button', { name: 'New Executive Workspace' }).click();
   dialog = manager.getByRole('dialog');
   await dialog.getByLabel('Workspace name').fill('Priya Sharma');
-  await dialog.getByRole('button', { name: 'Create workspace' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await finishWizard(dialog);
+  await dialog.getByRole('button', { name: 'Done' }).click();
   await expect(manager.locator('[data-workspace="Priya Sharma"]')).toBeVisible();
-  await manager.getByRole('button', { name: 'Permissions Priya Sharma' }).click();
+  await workspaceAction(manager, 'Priya Sharma', 'Permissions');
   dialog = manager.getByRole('dialog');
   await expect(dialog.getByRole('checkbox', { name: 'RFQs', exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('checkbox', { name: 'Delete in CRM' })).toHaveCount(0);
