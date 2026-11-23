@@ -10,8 +10,9 @@ import { OperatorAdminController } from './operator-admin.controller';
 import { OperatorSecurityController } from './operator-security.controller';
 import { OPERATOR_ROUTE_METADATA, OperatorGuard } from './operator-auth';
 import { OperatorController } from './operator.controller';
+import { ConsoleAuditController } from './console-audit.controller';
 
-const CONTROLLERS = [OperatorController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
+const CONTROLLERS = [OperatorController, ConsoleAuditController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
 
 /** Every Console route says what it needs (ADR 0074): a permission, any signed-in operator, or no session at all. */
 describe('operator routes', () => {

@@ -453,6 +453,7 @@ model Tenant {
   chatSignals            ChatSignal[]
   chatPresence           ChatPresence[]
 
+  @@index([createdAt])
   @@map("tenants")
 }
 
@@ -515,6 +516,7 @@ model Subscription {
   plan   Plan   @relation(fields: [planCode], references: [code], onUpdate: NoAction)
 
   @@index([provider, providerCustomerId])
+  @@index([pastDueSince])
   @@map("subscriptions")
 }
 
@@ -616,6 +618,7 @@ model WorkspaceNode {
   @@unique([tenantId, nameKey])
   @@index([tenantId, parentId])
   @@index([tenantId, level])
+  @@index([level, createdAt])
   @@map("workspace_nodes")
 }
 
@@ -2571,6 +2574,9 @@ model Invoice {
 
   @@unique([provider, providerInvoiceId])
   @@index([tenantId, issuedAt])
+  // The Console activity feed (ADR 0074, C3) reads invoices across clients by these times.
+  @@index([issuedAt])
+  @@index([paidAt])
   @@map("invoices")
 }
 
@@ -2688,6 +2694,7 @@ model OperatorLoginEvent {
 
   @@index([operatorId, createdAt])
   @@index([createdAt])
+  @@index([suspicious, createdAt])
   @@map("operator_login_events")
 }
 
@@ -2725,12 +2732,25 @@ model PlatformAuditLog {
   targetTenantId String?  @map("target_tenant_id")
   metadata       Json     @default("{}")
   ip             String?
+  /// What the entry is about (ADR 0074, C3): client, operator, role, plan, provider, setting, ticket, help_article...
+  targetType     String?  @map("target_type")
+  targetId       String?  @map("target_id")
+  /// The target's name when it was written, so the entry still reads well after a rename or delete.
+  targetLabel    String?  @map("target_label")
+  /// The changed fields before and after, with secrets removed (platform-audit.ts redact()).
+  before         Json?
+  after          Json?
+  /// The Console session the change came from, and its browser.
+  sessionId      String?  @map("session_id")
+  userAgent      String?  @map("user_agent")
   createdAt      DateTime @default(now()) @map("created_at")
 
   operator PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([targetTenantId, createdAt])
   @@index([createdAt])
+  @@index([operatorId, createdAt])
+  @@index([targetType, targetId, createdAt])
   @@map("platform_audit_logs")
 }
 
@@ -4645,6 +4665,8 @@ model SupportTicket {
   @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
   @@index([status, lastMessageAt(sort: Desc)])
   @@index([tenantId, handlerLevel, handlerNodeId, lastMessageAt(sort: Desc)])
+  @@index([handlerLevel, createdAt])
+  @@index([handlerLevel, escalatedAt])
   @@map("support_tickets")
 }
 

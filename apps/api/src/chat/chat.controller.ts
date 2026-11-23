@@ -18,7 +18,9 @@ import {
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature } from '../common/auth-context';
 import { MobileModuleAccess } from '../mobile/mobile-module.guard';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard, OperatorPermission } from '../operator/operator-auth';
+import { PrismaService } from '../common/prisma.service';
+import { Operator, type OperatorContext, OperatorGuard, OperatorNoAudit, OperatorPermission } from '../operator/operator-auth';
+import { writePlatformAudit } from '../operator/platform-audit';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ChatPresence } from './chat-presence';
 import { ChatSocketTickets } from './chat-socket';
@@ -188,14 +190,21 @@ export class OperatorChatController {
   constructor(
     private readonly chat: ChatService,
     private readonly tickets: ChatSocketTickets,
+    private readonly prisma: PrismaService,
   ) {}
 
   private op(op: OperatorContext): ChatActor {
     return { kind: 'operator', op };
   }
 
+  /** Answering in a client's support line is recorded in the platform log; the message itself is not copied there. */
+  private log(op: OperatorContext, action: string, tenantId: string, metadata: Record<string, unknown>, req: Request) {
+    return writePlatformAudit(this.prisma, { operatorId: op.id, action, tenantId, target: { type: 'support_chat', id: typeof metadata.conversationId === 'string' ? metadata.conversationId : null, label: null }, metadata, ip: req.ip ?? null });
+  }
+
   @Post('socket-ticket')
   @HttpCode(200)
+  @OperatorNoAudit()
   socketTicket(@Operator() op: OperatorContext) {
     return this.tickets.issue({ realm: 'operator', operatorId: op.id });
   }
@@ -208,6 +217,7 @@ export class OperatorChatController {
 
   @Post('conversations/:id/delivered')
   @HttpCode(200)
+  @OperatorNoAudit()
   async delivered(@Operator() op: OperatorContext, @Param('id', uuid) id: string) {
     return this.chat.markDelivered(this.op(op), id, await this.chat.tenantOfConversation(id));
   }
@@ -215,6 +225,7 @@ export class OperatorChatController {
   @Post('conversations/:id/typing')
   @HttpCode(204)
   @SkipThrottle()
+  @OperatorNoAudit()
   async typingNow(@Operator() op: OperatorContext, @Param('id', uuid) id: string): Promise<void> {
     await this.chat.typing({ operatorId: op.id }, id);
   }
@@ -232,8 +243,10 @@ export class OperatorChatController {
   /** Opens a workspace's support line, creating it if nobody has written yet. */
   @Post('workspaces/:tenantId/support')
   @HttpCode(200)
-  open(@Operator() op: OperatorContext, @Param('tenantId', uuid) tenantId: string) {
-    return this.chat.operatorOpen(op, tenantId);
+  async open(@Operator() op: OperatorContext, @Param('tenantId', uuid) tenantId: string, @Req() req: Request) {
+    const line = await this.chat.operatorOpen(op, tenantId);
+    await this.log(op, 'support_chat.opened', tenantId, { conversationId: line.id }, req);
+    return line;
   }
 
   @Get('conversations/:id')
@@ -247,12 +260,16 @@ export class OperatorChatController {
   }
 
   @Post('conversations/:id/messages')
-  async send(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatMessageInputSchema)) body: z.output<typeof chatMessageInputSchema>) {
-    return this.chat.send(this.op(op), id, body, await this.chat.tenantOfConversation(id));
+  async send(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatMessageInputSchema)) body: z.output<typeof chatMessageInputSchema>, @Req() req: Request) {
+    const tenantId = await this.chat.tenantOfConversation(id);
+    const message = await this.chat.send(this.op(op), id, body, tenantId);
+    await this.log(op, 'support_chat.replied', tenantId, { conversationId: id, messageId: (message as { id?: string }).id ?? null }, req);
+    return message;
   }
 
   @Post('conversations/:id/read')
   @HttpCode(200)
+  @OperatorNoAudit()
   async read(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatReadSchema)) body: z.output<typeof chatReadSchema>) {
     return this.chat.markRead(this.op(op), id, body.messageId, await this.chat.tenantOfConversation(id));
   }
@@ -260,7 +277,9 @@ export class OperatorChatController {
   @Post('conversations/:id/attachments')
   async upload(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Req() req: Request) {
     const tenantId = await this.chat.tenantOfConversation(id);
-    return this.chat.upload(this.op(op), id, fileFrom(req, name, await readUpload(req)), tenantId);
+    const file = await this.chat.upload(this.op(op), id, fileFrom(req, name, await readUpload(req)), tenantId);
+    await this.log(op, 'support_chat.attachment_sent', tenantId, { conversationId: id, fileId: (file as { id?: string }).id ?? null }, req);
+    return file;
   }
 
   @Get('conversations/:id/attachments/:fileId/download')
@@ -269,13 +288,18 @@ export class OperatorChatController {
   }
 
   @Patch('messages/:id')
-  async edit(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatMessageEditSchema)) body: z.output<typeof chatMessageEditSchema>) {
-    return this.chat.edit(this.op(op), id, body.body, await this.chat.tenantOfMessage(id));
+  async edit(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatMessageEditSchema)) body: z.output<typeof chatMessageEditSchema>, @Req() req: Request) {
+    const tenantId = await this.chat.tenantOfMessage(id);
+    const message = await this.chat.edit(this.op(op), id, body.body, tenantId);
+    await this.log(op, 'support_chat.message_edited', tenantId, { conversationId: (message as { conversationId?: string }).conversationId ?? null, messageId: id }, req);
+    return message;
   }
 
   @Delete('messages/:id')
   @HttpCode(204)
-  async remove(@Operator() op: OperatorContext, @Param('id', uuid) id: string) {
-    return this.chat.remove(this.op(op), id, undefined, await this.chat.tenantOfMessage(id));
+  async remove(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Req() req: Request) {
+    const tenantId = await this.chat.tenantOfMessage(id);
+    await this.chat.remove(this.op(op), id, undefined, tenantId);
+    await this.log(op, 'support_chat.message_removed', tenantId, { messageId: id }, req);
   }
 }

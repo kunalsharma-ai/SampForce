@@ -18,6 +18,7 @@ import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { PrismaService } from '../common/prisma.service';
 import { type OperatorContext, operatorContext } from './operator-auth';
 import { OperatorSessions } from './operator-sessions';
+import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 export interface SignInMeta {
   ip: string | null;
@@ -246,12 +247,13 @@ export class OperatorSecurityService {
     }
   }
 
-  async mfaSetup(operatorId: string, password: string): Promise<MfaSetupResponse> {
+  async mfaSetup(operatorId: string, password: string, ip: string | null = null): Promise<MfaSetupResponse> {
     const op = await this.prisma.platformOperator.findUniqueOrThrow({ where: { id: operatorId } });
     if (op.mfaEnabledAt) throw new ConflictException({ code: 'MFA_ALREADY_ON', message: 'Two-step verification is already on.' });
     await this.checkPassword(op, password);
     const secret = generateSecret();
     await this.prisma.platformOperator.update({ where: { id: operatorId }, data: { mfaSecretEnc: this.box.seal(secret), mfaLastStep: null } });
+    await this.audit(operatorId, 'operator.mfa_setup_started', {}, ip);
     return { secret, otpauthUri: otpauthUri(secret, op.email, 'SampForce Console') };
   }
 
@@ -324,7 +326,7 @@ export class OperatorSecurityService {
     return count === 1;
   }
 
-  private async audit(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId: null, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async audit(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, metadata, ip, ...extra });
   }
 }

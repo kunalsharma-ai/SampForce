@@ -4,6 +4,7 @@ import { apiEnvSchema } from '@dealflow/config';
 import { SECRET_BOX, type SecretBox } from './crypto';
 import { API_ENV, type ApiEnv } from './env';
 import { PrismaService } from './prisma.service';
+import { writePlatformAudit } from '../operator/platform-audit';
 
 /**
  * Deployment-wide provider keys an operator enters in the console (ADR 0051); in production the database is their only home (ADR 0059).
@@ -237,9 +238,7 @@ export class ProviderKeysService implements OnModuleInit, OnApplicationShutdown 
           await this.prisma.platformSecret.create({ data: { name, valueEnc: this.box.seal(parsed.value), hint, fingerprint, updatedById: null } });
           imported.push(name);
           // The operator log shows where the value came from; like a console save it holds the fingerprint, never the value.
-          await this.prisma.platformAuditLog.create({
-            data: { operatorId: null, action: 'provider_key.imported', metadata: { name, fingerprint, source: 'environment', ...(MANAGED_KEYS[name].secret ? { last4: hint } : { value: hint }) } },
-          });
+          await writePlatformAudit(this.prisma, { operatorId: null, action: 'provider_key.imported', target: { type: 'provider_key', id: name, label: name }, metadata: { name, fingerprint, source: 'environment', ...(MANAGED_KEYS[name].secret ? { last4: hint } : { value: hint }) } });
         } catch (err) {
           // Another process (the worker, a second replica) imported it at the same moment.
           if ((err as { code?: string }).code !== 'P2002') throw err;

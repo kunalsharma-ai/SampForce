@@ -24,6 +24,7 @@ import { PrismaService } from '../common/prisma.service';
 import { MailerService } from '../mail/mailer.service';
 import { type OperatorContext, operatorContext } from './operator-auth';
 import { OperatorSessions } from './operator-sessions';
+import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 /** An invited operator has no password until they open their link; `!` marks a hash that can never match. */
 const INVITED_HASH = '!invited';
@@ -299,7 +300,7 @@ export class OperatorAdminService {
     return { operatorId: updated.id, signIn: !updated.mfaEnabledAt };
   }
 
-  private async log(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId: null, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async log(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, metadata, ip, ...extra });
   }
 }

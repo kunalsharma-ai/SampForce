@@ -82,8 +82,8 @@ export class OperatorSecurityController {
   @Post('me/mfa/setup')
   @OperatorAny()
   @HttpCode(200)
-  mfaSetup(@Operator() op: OperatorContext, @Body(new ZodPipe(mfaSetupSchema)) body: { password: string }) {
-    return this.security.mfaSetup(op.id, body.password);
+  mfaSetup(@Operator() op: OperatorContext, @Body(new ZodPipe(mfaSetupSchema)) body: { password: string }, @Req() req: Request) {
+    return this.security.mfaSetup(op.id, body.password, ip(req));
   }
 
   @Post('me/mfa/enable')

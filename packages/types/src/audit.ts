@@ -105,6 +105,14 @@ export const platformAuditQuerySchema = z.object({
   operatorId: z.string().uuid().optional(),
   /** Part of the action name, such as "subscription" or "plan.". */
   action: z.string().trim().max(80).optional(),
+  /** What the entry is about (ADR 0074, C3): client, operator, role, plan, provider, setting, ticket... */
+  targetType: z.string().trim().max(40).optional(),
+  targetId: z.string().trim().max(120).optional(),
+  /** Free text matched against the action, the target's name and the operator's email. */
+  q: z.string().trim().max(120).optional(),
+  /** Calendar days, inclusive, in UTC. */
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   /** Entries older than this time, for the next page. */
   before: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),

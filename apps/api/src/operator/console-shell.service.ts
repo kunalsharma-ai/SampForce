@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { ConsoleService } from './console.service';
 import type { OperatorContext } from './operator-auth';
+import { writePlatformAudit } from './platform-audit';
 
 const PER_KIND = 6;
 const LEVEL_LABEL: Record<string, string> = {
@@ -207,15 +208,7 @@ export class ConsoleShellService {
           href: '/operator/plans',
         })),
     ];
-    await this.prisma.platformAuditLog.create({
-      data: {
-        operatorId: op.id,
-        action: 'console.searched',
-        targetTenantId: null,
-        metadata: { q, results: hits.length },
-        ip,
-      },
-    });
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'console.searched', target: null, metadata: { q, results: hits.length }, ip });
     return { q, hits };
   }
 }
