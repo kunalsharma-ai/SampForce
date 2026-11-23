@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   try {
     if (f.action === 'setPlan') {
       await withDbContext(prisma, { tenantId: f.tenantId }, (tx) =>
-        tx.subscription.updateMany({ where: { tenantId: f.tenantId }, data: { planCode: f.planCode.replace(/[^a-z_]/g, ''), seats: 10, status: 'ACTIVE' } }),
+        tx.subscription.updateMany({ where: { tenantId: f.tenantId }, data: { planCode: f.planCode.replace(/[^a-z0-9_]/g, ''), seats: 10, status: 'ACTIVE' } }),
       );
     } else if (f.action === 'inboundEmail') {
       await withDbContext(prisma, { tenantId: f.tenantId, userId: f.userId }, async (tx) => {

@@ -50,6 +50,17 @@ model Plan {
   @@map("plans")
 }
 
+/// Console rules for the workspaces of every client on a plan (workspace redesign W3). Shape: WorkspaceRules in
+/// @dealflow/types. No row = no extra limits.
+model PlanWorkspaceRules {
+  planCode  String   @id @map("_id")
+  rules     Json
+  updatedBy String   @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plan_workspace_rules")
+}
+
 enum UserStatus {
   ACTIVE
   DISABLED
@@ -530,6 +541,9 @@ model Subscription {
   /// Workspace limits (ADR 0071) set by the Console Admin for this client; null = the plan's limit.
   maxManagerWorkspaces   Int?               @map("max_manager_workspaces")
   maxExecutiveWorkspaces Int?               @map("max_executive_workspaces")
+  /// Console rules for this client's workspaces (workspace redesign W3): only what differs from its plan's rules.
+  /// Shape: WorkspaceRulesOverride in @dealflow/types; null = the plan's rules.
+  workspaceRules         Json?              @map("workspace_rules")
   /// Sales-led terms the Console Admin agreed with this client (ADR 0071): price for one billing period in minor
   /// units, its currency, whether it has been paid, the term in months and whether it renews by itself.
   priceCents             Int?               @map("price_cents")

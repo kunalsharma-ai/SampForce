@@ -241,6 +241,8 @@ export interface WorkspaceTree {
   canCreate: { managers: boolean; executives: boolean };
   /** Workspaces the caller can see: the whole organisation for the Super Workspace, the branch below a manager. */
   workspaces: WorkspaceRow[];
+  /** The Console's limits for this organisation's levels (W3): what may never be granted below the Super Workspace. */
+  rules: import('./workspace-rules').WorkspaceRules;
 }
 
 /** The caller's identity in the hierarchy, shown in the header and the profile (ADR 0071). */

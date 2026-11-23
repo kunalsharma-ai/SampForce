@@ -48,3 +48,18 @@ is deliberate.
   (which asks for `manage`) need Delete too. Phone deletes name their module's feature for the same reason.
 - The web hides delete buttons with `useCanDelete(feature?)` (the page's own feature when none is given). The API
   refuses anyway, with `ACTION_NOT_GRANTED`.
+
+## W3: Console rules for workspaces (2026-11-23)
+
+- The Console sets, per plan (`PlanWorkspaceRules`), with a per-client override (`Subscription.workspaceRules`, only
+  the fields that differ): whether Manager and Executive Workspaces may be given Delete, which modules each level may
+  use, and whether each level must use two-step sign-in. No row means no extra limits.
+- They are limits. `resolveOrganisation` caps every Manager and Executive Workspace by them (`capByRules`) after the
+  Super Workspace's grants, so a change applies on the next request and nothing stored is rewritten. The Super
+  Workspace is never capped, and rules never create or remove one.
+- Two-step sign-in: the auth guard puts a password-only session of a required level in the existing `mfa_enrolment`
+  restriction, as the workspace-wide setting does.
+- API: `GET /operator/workspace-rules`, `PUT /operator/workspace-rules/plans/:code`, `GET` and
+  `PUT /operator/workspace-rules/clients/:id`. Every operator reads; only ADMINs change, with a reason, written to the
+  platform audit log (and the client's own log for a client change). Page: Console, Workspace rules; the client card
+  is on the client profile. The Permission Center says when a rule keeps Delete or a module from a level.

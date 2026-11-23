@@ -75,6 +75,7 @@ export const audit = {
   'Refused attempts': ['Intentos rechazados', 'Tentatives refusées', 'Abgelehnte Versuche', 'المحاولات المرفوضة'],
   'Done and refused': ['Hechos y rechazados', 'Effectués et refusés', 'Erledigt und abgelehnt', 'المنفذة والمرفوضة'],
   'Security and passwords': ['Seguridad y contraseñas', 'Sécurité et mots de passe', 'Sicherheit und Passwörter', 'الأمان وكلمات المرور'],
+  'SampForce changed the rules for this organisation’s workspaces': ['SampForce cambió las reglas de los espacios de trabajo de esta organización', 'SampForce a modifié les règles des espaces de travail de cette organisation', 'SampForce hat die Regeln für die Arbeitsbereiche dieser Organisation geändert', 'غيّرت SampForce قواعد مساحات العمل لهذه المؤسسة'],
   'Tried to delete without confirming the password': ['Intentó eliminar sin confirmar la contraseña', 'A tenté de supprimer sans confirmer le mot de passe', 'Versuchte zu löschen, ohne das Passwort zu bestätigen', 'حاول الحذف دون تأكيد كلمة المرور'],
   'Typed a wrong password to confirm a delete': ['Escribió una contraseña incorrecta para confirmar una eliminación', 'A saisi un mauvais mot de passe pour confirmer une suppression', 'Gab ein falsches Passwort ein, um ein Löschen zu bestätigen', 'أدخل كلمة مرور خاطئة لتأكيد الحذف'],
   'Asked for a password reset link': ['Pidió un enlace para restablecer la contraseña', 'A demandé un lien de réinitialisation du mot de passe', 'Forderte einen Link zum Zurücksetzen des Passworts an', 'طلب رابط إعادة تعيين كلمة المرور'],

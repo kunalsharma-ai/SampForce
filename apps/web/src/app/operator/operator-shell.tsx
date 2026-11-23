@@ -81,6 +81,9 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Plans
               </Link>
+              <Link href="/operator/workspace-rules" className={path === '/operator/workspace-rules' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Workspace rules
+              </Link>
               <Link href="/operator/mobile" className={path.startsWith('/operator/mobile') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Mobile app
               </Link>
