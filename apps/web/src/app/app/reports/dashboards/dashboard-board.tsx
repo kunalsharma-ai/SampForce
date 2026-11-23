@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, cn, Input, Skeleton } from '@dealflow/ui';
 import { type DashboardRow, MAX_DASHBOARD_WIDGETS, type ReportRow, type ReportVisibility } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +49,7 @@ function Board({ board, reports }: { board: DashboardRow; reports: ReportRow[] }
       void qc.invalidateQueries({ queryKey: ['dashboards'] });
     },
   });
+  const mayDelete = useCanDelete('reports');
   const remove = useMutation({
     mutationFn: () => api<void>(`/dashboards/${board.id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -98,9 +100,11 @@ function Board({ board, reports }: { board: DashboardRow; reports: ReportRow[] }
                 <Button variant="outline" onClick={() => { setEditing(false); setWidgets(board.widgets); setName(board.name); setVisibility(board.visibility); }}>
                   {t('Cancel')}
                 </Button>
-                <Button variant="ghost" className="text-critical" onClick={() => window.confirm(t('Delete the dashboard “{name}”? Its reports are kept.', { name: board.name })) && remove.mutate()}>
-                  <Trash2 aria-hidden /> {t('Delete')}
-                </Button>
+                {mayDelete && (
+                  <Button variant="ghost" className="text-critical" onClick={() => window.confirm(t('Delete the dashboard “{name}”? Its reports are kept.', { name: board.name })) && remove.mutate()}>
+                    <Trash2 aria-hidden /> {t('Delete')}
+                  </Button>
+                )}
               </>
             ) : (
               <Button variant="outline" onClick={() => setEditing(true)}>

@@ -30,7 +30,7 @@ import { InfoTip } from '@/components/info-tip';
 import { ApiError } from '@/lib/api';
 import { useDesignations } from '@/lib/company-crm';
 import { useFieldAdmin, useFieldMutations } from '@/lib/crm-admin';
-import { useHasFeature } from '@/lib/features';
+import { useHasFeature, useCanDelete } from '@/lib/features';
 import { type MessageKey, useT } from '@/lib/i18n';
 
 export const FIELD_ENTITY_LABEL = {
@@ -64,6 +64,7 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 
 /** Settings → CRM configuration → Custom fields (ADR 0062). */
 export function CustomFieldsSection({ canManage }: { canManage: boolean }) {
+  const mayDelete = useCanDelete('crm_configuration');
   const t = useT();
   const advanced = useHasFeature('custom_fields_advanced');
   const [entity, setEntity] = useState<CustomFieldEntity>('COMPANY');
@@ -188,15 +189,17 @@ export function CustomFieldsSection({ canManage }: { canManage: boolean }) {
                       <Button variant="ghost" size="icon" aria-label={t('Edit {name}', { name: d.label })} onClick={() => setEditing(d)}>
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t('Delete {name}', { name: d.label })}
-                        disabled={m.remove.isPending}
-                        onClick={() => window.confirm(t('Delete {name}? Its values disappear from every record, and its key cannot be used again.', { name: d.label })) && m.remove.mutate(d.id)}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {mayDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('Delete {name}', { name: d.label })}
+                          disabled={m.remove.isPending}
+                          onClick={() => window.confirm(t('Delete {name}? Its values disappear from every record, and its key cannot be used again.', { name: d.label })) && m.remove.mutate(d.id)}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </span>
                   )}
                 </li>

@@ -33,7 +33,7 @@ import { InfoTip } from '@/components/info-tip';
 import { SECTION_LABEL } from '@/components/command-center/cc-labels';
 import { ApiError } from '@/lib/api';
 import { useAttributionRule, useCurrencySettings, useDashboardPolicies, useExportPolicy, useNotificationSettings, useOptionMutations, useOptions } from '@/lib/crm-admin';
-import { useHasFeature } from '@/lib/features';
+import { useHasFeature, useCanDelete } from '@/lib/features';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { TIER_LABELS } from './crm-configuration';
 
@@ -61,6 +61,7 @@ function Failure({ error }: { error: unknown }) {
 export const OPTION_TITLE = { RFQ_STATUS: 'RFQ statuses', DEAL_STATUS: 'Deal statuses', FOLLOW_UP_TYPE: 'Follow-up categories' } as const satisfies Record<OptionListKind, MessageKey>;
 
 export function OptionsSection({ kind, canManage }: { kind: OptionListKind; canManage: boolean }) {
+  const mayDelete = useCanDelete('crm_configuration');
   const t = useT();
   const list = useOptions(kind);
   const m = useOptionMutations(kind);
@@ -122,7 +123,7 @@ export function OptionsSection({ kind, canManage }: { kind: OptionListKind; canM
                       <Button variant="ghost" size="icon" aria-label={t('Edit {name}', { name: t.maybe(row.label) })} onClick={() => setEditing(row)}>
                         <Pencil aria-hidden />
                       </Button>
-                      {CUSTOM_OPTION_VALUE.test(row.value) && (
+                      {CUSTOM_OPTION_VALUE.test(row.value) && mayDelete && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -328,6 +329,7 @@ export function NotificationsSection() {
 // ───────────── Currency ─────────────
 
 export function CurrencySection({ canManage }: { canManage: boolean }) {
+  const mayDelete = useCanDelete('crm_configuration');
   const t = useT();
   const c = useCurrencySettings();
   const [base, setBase] = useState<string | null>(null);
@@ -438,7 +440,7 @@ export function CurrencySection({ canManage }: { canManage: boolean }) {
                     <td className="py-2 text-end tabular-nums">{r.rate.toLocaleString(t.formatLocale, { maximumFractionDigits: 6 })}</td>
                     <td className="py-2 text-end tabular-nums">{r.effectiveDate}</td>
                     <td className="py-2 text-end">
-                      {canManage && (
+                      {canManage && mayDelete && (
                         <Button variant="ghost" size="icon" aria-label={t('Delete {name}', { name: r.currency })} onClick={() => c.removeRate.mutate(r.currency)}>
                           <Trash2 aria-hidden />
                         </Button>

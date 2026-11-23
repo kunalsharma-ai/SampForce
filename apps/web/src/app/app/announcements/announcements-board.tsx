@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
 import type { AnnouncementRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +17,7 @@ import { useCan } from '@/lib/session';
  * notifies everyone, on the web and on phones where the Mobile Configuration allows it.
  */
 export function AnnouncementsBoard() {
+  const mayDelete = useCanDelete();
   const t = useT();
   const canPost = useCan('tenant:manage');
   const qc = useQueryClient();
@@ -91,7 +93,7 @@ export function AnnouncementsBoard() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="whitespace-pre-line text-sm">{a.body}</p>
-                  {canPost && (
+                  {canPost && mayDelete && (
                     <Button variant="outline" size="sm" disabled={remove.isPending} onClick={() => remove.mutate(a.id)} aria-label={t('Remove "{title}"', { title: a.title })}>
                       {t('Remove')}
                     </Button>

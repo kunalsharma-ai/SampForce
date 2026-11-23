@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import {
   type CrmStatusKind,
   type CrmStatusRow,
@@ -229,6 +230,7 @@ type StatusDraft = { name: string; color: string; meaning: StatusMeaning; descri
 const EMPTY_STATUS: StatusDraft = { name: '', color: '#3b82f6', meaning: 'ACTIVE', description: '' };
 
 function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean }) {
+  const mayDelete = useCanDelete('crm_configuration');
   const t = useT();
   const list = useCrmStatuses(kind);
   const m = useStatusMutations(kind);
@@ -291,20 +293,22 @@ function Statuses({ kind, canManage }: { kind: CrmStatusKind; canManage: boolean
                       <Button variant="ghost" size="icon" aria-label={t('Edit {name}', { name: t.maybe(row.name) })} onClick={() => setEditing(row)}>
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t('Delete {name}', { name: t.maybe(row.name) })}
-                        disabled={row.isDefault || m.remove.isPending}
-                        onClick={() => {
-                          if (row.inUse > 0) {
-                            if (window.confirm(t('{count} records have this status, so it cannot be deleted. Deactivate it instead? Records keep it, but it can no longer be picked.', { count: row.inUse })))
-                              m.update.mutate({ id: row.id, input: { archived: true } });
-                          } else if (window.confirm(t('Delete {name}?', { name: t.maybe(row.name) }))) m.remove.mutate(row.id);
-                        }}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {mayDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('Delete {name}', { name: t.maybe(row.name) })}
+                          disabled={row.isDefault || m.remove.isPending}
+                          onClick={() => {
+                            if (row.inUse > 0) {
+                              if (window.confirm(t('{count} records have this status, so it cannot be deleted. Deactivate it instead? Records keep it, but it can no longer be picked.', { count: row.inUse })))
+                                m.update.mutate({ id: row.id, input: { archived: true } });
+                            } else if (window.confirm(t('Delete {name}?', { name: t.maybe(row.name) }))) m.remove.mutate(row.id);
+                          }}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </span>
                   )}
                 </li>
@@ -425,6 +429,7 @@ function StatusForm({ kind, editing, onDone }: { kind: CrmStatusKind; editing: C
 type OrgRow = DepartmentRow | DesignationRow;
 
 function OrgList({ kind, canManage }: { kind: 'departments' | 'designations'; canManage: boolean }) {
+  const mayDelete = useCanDelete('crm_configuration');
   const t = useT();
   const departments = useDepartments();
   const designations = useDesignations();
@@ -468,15 +473,17 @@ function OrgList({ kind, canManage }: { kind: 'departments' | 'designations'; ca
                       <Button variant="ghost" size="icon" aria-label={t('Edit {name}', { name: t.maybe(row.name) })} onClick={() => setEditing(row)}>
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t('Delete {name}', { name: t.maybe(row.name) })}
-                        disabled={m.remove.isPending}
-                        onClick={() => window.confirm(t('Delete {name}?', { name: t.maybe(row.name) })) && m.remove.mutate(row.id)}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {mayDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('Delete {name}', { name: t.maybe(row.name) })}
+                          disabled={m.remove.isPending}
+                          onClick={() => window.confirm(t('Delete {name}?', { name: t.maybe(row.name) })) && m.remove.mutate(row.id)}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </span>
                   )}
                 </li>

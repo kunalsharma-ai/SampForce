@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import type { EmailVariableRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ export function EmailVariables() {
       await qc.invalidateQueries({ queryKey: ['email-variables'] });
     },
   });
+  const mayDelete = useCanDelete('email_templates');
   const remove = useMutation({
     mutationFn: (key: string) => api(`/email-variables/${encodeURIComponent(key)}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['email-variables'] }),
@@ -50,9 +52,11 @@ export function EmailVariables() {
                       <Button size="sm" variant="ghost" onClick={() => setV({ key: x.key, label: x.label, value: x.value })} aria-label={t('Edit {name}', { name: x.label })}>
                         {t('Edit')}
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-critical" onClick={() => remove.mutate(x.key)} disabled={remove.isPending} aria-label={t('Delete {name}', { name: x.label })}>
-                        {t('Delete')}
-                      </Button>
+                      {mayDelete && (
+                        <Button size="sm" variant="ghost" className="text-critical" onClick={() => remove.mutate(x.key)} disabled={remove.isPending} aria-label={t('Delete {name}', { name: x.label })}>
+                          {t('Delete')}
+                        </Button>
+                      )}
                     </>
                   )}
                 </li>

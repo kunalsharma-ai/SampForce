@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   FORM_FIELD_KEYS,
@@ -105,6 +106,7 @@ function SegmentBuilder({ segment, onSaved }: { segment: SegmentRow | null; onSa
       onSaved(s);
     },
   });
+  const mayDelete = useCanDelete('marketing');
   const remove = useMutation({
     mutationFn: () => api(`/segments/${segment!.id}`, { method: 'DELETE' }),
     onSuccess: async () => {
@@ -204,7 +206,7 @@ function SegmentBuilder({ segment, onSaved }: { segment: SegmentRow | null; onSa
               {t('Save segment')}
             </Button>
           )}
-          {canManage && segment && (
+          {canManage && segment && mayDelete && (
             <Button type="button" size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate()}>
               {t('Delete')}
             </Button>

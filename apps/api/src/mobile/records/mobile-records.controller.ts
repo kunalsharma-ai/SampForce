@@ -7,7 +7,8 @@ import {
   type MobileRecordWrite,
   mobileRecordWriteSchema,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta } from '../../common/auth-context';
+import type { FeatureKey } from '@dealflow/types';
+import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta, RequireFeature } from '../../common/auth-context';
 import { ZodPipe } from '../../common/zod.pipe';
 import { MobileRecordsService } from './mobile-records.service';
 import { ConfirmPassword } from '../../common/password-confirmation';
@@ -15,6 +16,14 @@ import { ConfirmPassword } from '../../common/password-confirmation';
 const moduleParam = (m: string): MobileLiveRecordModule => {
   if (!(MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(m)) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
   return m as MobileLiveRecordModule;
+};
+
+/** The catalogue feature of each phone module, so the workspace's Delete permission applies on the phone too (W2). */
+const MODULE_FEATURE: Record<MobileLiveRecordModule, FeatureKey> = {
+  companies: 'account_management',
+  contacts: 'contact_management',
+  follow_ups: 'follow_up_management',
+  tasks: 'task_management',
 };
 
 /**
@@ -52,6 +61,7 @@ export class MobileRecordsController {
   }
 
   @ConfirmPassword()
+  @RequireFeature((req) => MODULE_FEATURE[(req.params as { module?: string }).module as MobileLiveRecordModule] ?? null)
   @Delete(':module/:id')
   @HttpCode(204)
   async remove(@Auth() auth: AuthContext, @Param('module') module: string, @Param('id', ParseUUIDPipe) id: string, @Meta() meta: RequestMeta) {

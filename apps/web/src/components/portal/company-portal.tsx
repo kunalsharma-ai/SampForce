@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { type ContactRow, PORTAL_REQUEST_CATEGORY_LABELS, PORTAL_ROLE_LABELS, PORTAL_ROLES, type PortalRole, type PortalUserRow, portalInviteSchema } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
   const canTasks = useCan('activities:write');
   const [tab, setTab] = useState<Tab>('people');
   const refresh = () => qc.invalidateQueries({ queryKey: ['portal'] });
+  const mayDelete = useCanDelete('client_portal');
   const upload = useMutation({ mutationFn: (f: File) => uploadFile(`/portal/companies/${company.id}/documents`, f), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (id: string) => api(`/portal/documents/${id}`, { method: 'DELETE' }), onSuccess: refresh });
   const message = useMutation({ mutationFn: (body: string) => api(`/portal/companies/${company.id}/messages`, { method: 'POST', json: { body } }), onSuccess: refresh });
@@ -101,7 +103,7 @@ export function CompanyPortal({ company }: { company: { id: string; name: string
               <div className="space-y-3">
                 {canWrite && <UploadButton label={t('Share a document')} pending={upload.isPending} onFile={(f) => upload.mutate(f)} />}
                 {(upload.error || remove.error) && <p role="alert" className="text-sm text-critical">{(upload.error ?? remove.error)?.message}</p>}
-                <DocumentList docs={portal.data.documents} mine="team" onRemove={canWrite ? (d) => { if (window.confirm(t('Remove {name} from the portal? The customer will no longer see it.', { name: d.name }))) remove.mutate(d.id); } : undefined} />
+                <DocumentList docs={portal.data.documents} mine="team" onRemove={canWrite && mayDelete ? (d) => { if (window.confirm(t('Remove {name} from the portal? The customer will no longer see it.', { name: d.name }))) remove.mutate(d.id); } : undefined} />
               </div>
             )}
             {tab === 'messages' && (
@@ -144,6 +146,7 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
     mutationFn: (u: PortalUserRow) => api<{ inviteUrl: string; emailed: boolean }>(`/portal/users/${u.id}/invitation`, { method: 'POST' }).then((r) => ({ ...r, name: u.name })),
     onSuccess: (r) => setLink({ url: r.inviteUrl, emailed: r.emailed, name: r.name }),
   });
+  const mayDelete = useCanDelete('client_portal');
   const remove = useMutation({ mutationFn: (id: string) => api(`/portal/users/${id}`, { method: 'DELETE' }), onSuccess: onChange });
   const err = update.error ?? resend.error ?? remove.error;
   return (
@@ -186,9 +189,11 @@ function PeopleTab({ companyId, users, canWrite, onChange }: { companyId: string
                       {t('Switch on')}
                     </Button>
                   )}
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { if (window.confirm(t('Remove portal access for {name}? Their messages and requests stay.', { name: u.name }))) remove.mutate(u.id); }}>
-                    {t('Remove')}
-                  </Button>
+                  {mayDelete && (
+                    <Button type="button" size="sm" variant="ghost" onClick={() => { if (window.confirm(t('Remove portal access for {name}? Their messages and requests stay.', { name: u.name }))) remove.mutate(u.id); }}>
+                      {t('Remove')}
+                    </Button>
+                  )}
                 </>
               )}
             </li>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
 import {
   type VoiceAction,
@@ -333,6 +334,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
     setDrafts(n.actions.map((a) => a.action));
     setPicked(n.actions.map(() => false));
   });
+  const mayDelete = useCanDelete('voice_notes');
   const remove = useVoiceMutation(async () => {
     await voiceApi.remove(note.id);
     return note;
@@ -453,9 +455,11 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
             <Pencil aria-hidden /> {t('Change the note')}
           </Button>
         )}
-        <Button variant="ghost" className="ms-auto text-critical" onClick={() => remove.mutate(undefined)} disabled={remove.isPending}>
-          <Trash2 aria-hidden /> {t('Delete note')}
-        </Button>
+        {mayDelete && (
+          <Button variant="ghost" className="ms-auto text-critical" onClick={() => remove.mutate(undefined)} disabled={remove.isPending}>
+            <Trash2 aria-hidden /> {t('Delete note')}
+          </Button>
+        )}
       </div>
       {anyApplied && <p className="text-xs text-muted-foreground">{t('Deleting this note does not remove what you already saved.')}</p>}
       {(apply.error || remove.error) && (

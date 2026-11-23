@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   BADGE_ICONS,
@@ -659,6 +660,7 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
   const t = useT();
   const [form, setForm] = useState<BadgeInput>(badge ? { name: badge.name, description: badge.description, icon: badge.icon, metric: badge.metric, threshold: badge.threshold, window: badge.window, active: badge.active } : EMPTY_BADGE);
   const save = useGamificationMutation((b: BadgeInput) => (badge ? gamificationApi.updateBadge(badge.id, b) : gamificationApi.createBadge(b)), onClose);
+  const mayDelete = useCanDelete('gamification');
   const remove = useGamificationMutation(() => gamificationApi.removeBadge(badge!.id), onClose);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const set = (p: Partial<BadgeInput>) => setForm((f) => ({ ...f, ...p }));
@@ -721,7 +723,7 @@ function BadgeDialog({ badge, onClose }: { badge: BadgeRow | null; onClose: () =
           </label>
           {(save.error || remove.error) && <p role="alert" className="text-sm text-critical">{(save.error ?? remove.error)!.message}</p>}
           <div className="flex flex-wrap justify-between gap-2">
-            {badge ? (
+            {badge && mayDelete ? (
               confirmRemove ? (
                 <Button type="button" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>
                   Delete badge and its {badge.awardedCount} {badge.awardedCount === 1 ? 'award' : 'awards'}

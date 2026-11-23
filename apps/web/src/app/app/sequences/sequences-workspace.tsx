@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { DEFAULT_EVENT_RULES, designedTemplateBody, EMAIL_BLOCK_LABELS, emailDesignSchema, starterEmailDesign, type EmailDesign, type EmailTemplateRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -272,6 +273,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
       onDone();
     },
   });
+  const mayDelete = useCanDelete('email_templates');
   const remove = useMutation({
     mutationFn: () => api(`/email-templates/${template!.id}`, { method: 'DELETE' }),
     onSuccess: async () => {
@@ -404,7 +406,7 @@ function TemplateForm({ template, categories, onDone }: { template: EmailTemplat
             <Button type="button" size="sm" variant="ghost" onClick={onDone}>
               {t('Cancel')}
             </Button>
-            {template && (
+            {template && mayDelete && (
               <Button type="button" size="sm" variant="ghost" className="text-critical" onClick={() => remove.mutate()} disabled={remove.isPending}>
                 {t('Delete')}
               </Button>

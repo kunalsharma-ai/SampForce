@@ -23,7 +23,7 @@ import { formatDate } from '@/lib/crm';
 import { relativeTime } from '@/lib/format';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
-import { useHasFeature } from '@/lib/features';
+import { useHasFeature, useCanDelete } from '@/lib/features';
 import { useLeadTransfers } from '@/lib/command-center';
 import { RequestTransferDialog } from '@/components/command-center/transfers';
 import { TRANSFER_STATUS_LABEL, TRANSFER_STATUS_TONE } from '@/components/command-center/cc-labels';
@@ -269,6 +269,7 @@ export function LinkContactDialog({ company, open, onOpenChange }: { company: Co
 export function CompanyBranches({ company }: { company: CompanyRow }) {
   const t = useT();
   const canWrite = useCan('companies:write') && !company.restricted;
+  const mayDelete = useCanDelete('account_management');
   const branches = useBranches(company.id);
   const { save, remove } = useBranchMutations(company.id);
   const [editing, setEditing] = React.useState<BranchValue | null>(null);
@@ -327,15 +328,17 @@ export function CompanyBranches({ company }: { company: CompanyRow }) {
                       <Button size="sm" variant="ghost" onClick={() => open(b)} aria-label={t('Edit {name}', { name: b.name })}>
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={remove.isPending}
-                        onClick={() => window.confirm(t('Remove the branch {name}?', { name: b.name })) && remove.mutate(b.id)}
-                        aria-label={t('Remove {value}', { value: b.name })}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {mayDelete && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={remove.isPending}
+                          onClick={() => window.confirm(t('Remove the branch {name}?', { name: b.name })) && remove.mutate(b.id)}
+                          aria-label={t('Remove {value}', { value: b.name })}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
@@ -537,6 +540,7 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
   const t = useT();
   const canWrite = useCan('companies:write') && !company.restricted;
   const files = useCompanyFiles(company.id);
+  const mayDelete = useCanDelete('account_management');
   const { upload, remove, rename } = useCompanyFileMutations(company.id);
   const [renaming, setRenaming] = React.useState<{ id: string; name: string } | null>(null);
   const saveName = async (e: React.FormEvent) => {
@@ -597,7 +601,7 @@ export function CompanyFiles({ company }: { company: CompanyRow }) {
                     <Pencil aria-hidden />
                   </Button>
                 )}
-                {canWrite && (
+                {canWrite && mayDelete && (
                   <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => window.confirm(t('Delete {name}?', { name: f.name })) && remove.mutate(f.id)} aria-label={t('Delete {name}', { name: f.name })}>
                     <Trash2 aria-hidden />
                   </Button>

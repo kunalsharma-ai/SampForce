@@ -11,6 +11,7 @@ import { type CrmEntity, ENTITY_LABEL, useCustomFields } from '@/lib/crm';
 import { CustomFieldValue, fieldLogic } from './custom-field-input';
 import { toFormValues } from '@/lib/crm-fields';
 import { type MessageKey, useT } from '@/lib/i18n';
+import { ENTITY_FEATURE, useCanDelete } from '@/lib/features';
 import { useCan } from '@/lib/session';
 import { useCompanyAction } from './company-actions';
 import { RecordFormDialog } from './record-form';
@@ -79,6 +80,7 @@ export function RecordHeader({
   bare?: boolean;
 }) {
   const canWrite = useCan(`${entity}:write` as 'leads:write');
+  const canDelete = useCanDelete(ENTITY_FEATURE[entity]);
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -105,7 +107,7 @@ export function RecordHeader({
               <Pencil aria-hidden /> {t('Edit')}
             </Button>
           )}
-          {canWrite && (
+          {canWrite && canDelete && (
             <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} aria-label={t.maybe(`Delete ${label.one.toLowerCase()}`)}>
               <Trash2 aria-hidden />
             </Button>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   TARGET_METRIC_LABEL,
@@ -56,6 +57,7 @@ export function TargetProgress({ row }: { row: TargetRow }) {
 export function TargetsBoard() {
   const t = useT();
   const view = useTargets();
+  const mayDelete = useCanDelete('sales_target_management');
   const { remove } = useTargetMutations();
   const [setting, setSetting] = useState(false);
   const [editing, setEditing] = useState<TargetRow | null>(null);
@@ -120,14 +122,16 @@ export function TargetsBoard() {
                             <Button size="icon" variant="ghost" aria-label={t('Change target')} onClick={() => setEditing(r)}>
                               <Pencil aria-hidden />
                             </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              aria-label={t('Remove target')}
-                              onClick={() => window.confirm(t('Remove this target? Parts handed down from it are removed too.')) && remove.mutate(r.id)}
-                            >
-                              <Trash2 aria-hidden />
-                            </Button>
+                            {mayDelete && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={t('Remove target')}
+                                onClick={() => window.confirm(t('Remove this target? Parts handed down from it are removed too.')) && remove.mutate(r.id)}
+                              >
+                                <Trash2 aria-hidden />
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>

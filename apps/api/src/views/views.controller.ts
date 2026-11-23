@@ -10,7 +10,8 @@ import {
   type TableEntity,
   z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequireAction, RequireFeature } from '../common/auth-context';
+import { RESOURCE_FEATURE } from '../workspaces/route-access';
 import { ZodPipe } from '../common/zod.pipe';
 import { BulkActionsService, ViewsService } from './views.service';
 import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
@@ -53,6 +54,12 @@ export class BulkActionsController {
 
   @Post()
   @HttpCode(200)
+  // The workspace must have the list's feature and Edit; a delete also needs its Delete action (HierarchyGuard).
+  @RequireFeature((req) => {
+    const entity = (req.body as { entity?: unknown } | undefined)?.entity;
+    return typeof entity === 'string' && (TABLE_ENTITIES as readonly string[]).includes(entity) ? (RESOURCE_FEATURE[entity] ?? null) : null;
+  })
+  @RequireAction('edit')
   // Deleting the selected rows is one destructive action: one password confirmation covers the whole selection.
   @ConfirmPassword({ when: (req) => (req.body as { action?: unknown } | undefined)?.action === 'delete' })
   run(@Auth() auth: AuthContext, @Body(new ZodPipe(bulkActionSchema)) body: BulkActionInput, @Meta() meta: RequestMeta) {

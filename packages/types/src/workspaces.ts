@@ -116,11 +116,14 @@ export function actionAllowed(grants: ActionGrants, feature: FeatureKey, action:
   return !narrowed || narrowed.includes(action);
 }
 
-/** Actions a new child gets unless its creator chooses: everything its parent has, minus what each level never needs. */
+/**
+ * Actions a new child gets unless its creator chooses: everything its parent has, minus what each level never needs.
+ * Delete is never on by default (workspace redesign W2): the workspace above turns it on where it is wanted.
+ */
 export function defaultChildActions(level: Exclude<WorkspaceLevel, 'SUPER'>, parent: ActionGrants): ActionGrants {
   const keep: Record<Exclude<WorkspaceLevel, 'SUPER'>, readonly WorkspaceAction[]> = {
-    MANAGER: ['view', 'create', 'edit', 'delete', 'export', 'assign', 'approve', 'manage', 'reports'],
-    EXECUTIVE: ['view', 'create', 'edit', 'delete', 'reports'],
+    MANAGER: ['view', 'create', 'edit', 'export', 'assign', 'approve', 'manage', 'reports'],
+    EXECUTIVE: ['view', 'create', 'edit', 'reports'],
   };
   const out: ActionGrants = {};
   for (const [key, list] of Object.entries(parent)) {
