@@ -85,3 +85,25 @@ preferences follow the operator across devices. The "Operator log" menu item is 
 - **Page.** `/operator/audit` is "Activity & audit log" with two tabs; an entry opens in a side panel with a
   before/after table. The activity feed refreshes every 30 seconds; live push arrives with notifications (C3b).
 - **Retention.** Entries are kept; the 7-year retention in the spec is a floor, and nothing deletes them.
+
+## C3b: Console notifications
+
+- **What reaches whom.** Ten types (`OPERATOR_NOTIFICATION_DEFS` in `@dealflow/types`): new client, new workspace,
+  subscription ending (14 and 3 days before, only when it does not renew by itself), payment failed, invoice overdue
+  (open 14 days after issue), new ticket, ticket past its response time (24 hours, 8 when high priority), provider
+  check failed, unusual sign-in and features changed. Each type belongs to one permission; an operator receives it only
+  while their role has that permission, so a Support Admin never sees billing.
+- **Where they come from.** The worker's `ConsoleNotificationSweep` reads the platform's own records since a cursor
+  kept in `PlatformSetting` (`console.notifications.cursor`), every `CONSOLE_NOTIFY_INTERVAL_MS` (default one minute).
+  A new deployment starts from now, so history is never sent out. Conditions that come due (ending, overdue, late) are
+  checked on every pass. Each notification has a dedupe key unique per operator, so a pass that sees an event twice,
+  or two workers, never deliver it twice.
+- **How.** `OperatorNotification` rows (`targetTenantId`, not `tenantId`, because the workspace guard treats any
+  `tenantId` field as workspace-scoped) and `OperatorNotificationPref` per operator and type: Console, email, both or
+  neither. Urgent and money types go by email by default; the rest only in the Console. Email goes to the operator's
+  sign-in address through the platform mailer, and only when one is configured.
+- **In the Console.** A bell in the top bar with the unread count and the latest eight (the alert chime plays for a new
+  urgent one when sounds are on), a Notifications menu item with the same count, and `/operator/notifications` with
+  All, Unread and Preferences. Opening a notification goes to what it is about and marks it read. Reading and choosing
+  change nothing on the platform, so those writes are marked `@OperatorNoAudit()`.
+- **Not yet.** Counts update by polling every 30 seconds, not over the support chat's socket.

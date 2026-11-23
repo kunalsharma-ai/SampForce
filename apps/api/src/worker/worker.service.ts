@@ -144,7 +144,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const pushes = await this.pushes.sendDue();
     // Console notifications once a minute: they read across every client, so not on every tick.
     let consoleNotifications = 0;
-    if (Date.now() - this.lastConsoleSweep >= 60_000) {
+    if (Date.now() - this.lastConsoleSweep >= this.env.CONSOLE_NOTIFY_INTERVAL_MS) {
       this.lastConsoleSweep = Date.now();
       consoleNotifications = await this.consoleNotices.sweep();
     }
