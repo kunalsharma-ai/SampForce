@@ -99,7 +99,7 @@ export class BillingService {
       const cap = ai?.monthlyCreditCap ?? null;
       const stripe = this.providers.get('STRIPE');
       return {
-        plan: { code: ent.planCode, name: PLAN_CATALOG.find((p) => p.code === ent.planCode)?.name ?? ent.planCode },
+        plan: { code: ent.planCode, name: PLAN_CATALOG.find((p) => p.code === ent.planCode)?.name ?? (await tx.plan.findUnique({ where: { code: ent.planCode }, select: { name: true } }))?.name ?? ent.planCode },
         appliedPlan: ent.appliedPlan,
         status: sub.status,
         interval: sub.billingInterval,

@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { defaultMobileConfig, type MobileAppConfig, type MobileConfigCenter, type MobileConfigResponse } from '@dealflow/types';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
+import { api, asTenant, inviteMember, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
 /**
  * The Mobile Configuration Center (ADR 0072, M2): the Super Workspace edits a draft, publishes versions and rolls
@@ -26,7 +26,8 @@ describe('mobile configuration', () => {
   beforeAll(async () => {
     app = await startApp();
     owner = await registerUser(app, 'Config Org');
-    member = await inviteMember(app, owner, 'member');
+    // An Executive Workspace (ADR 0071) with its own person: the level phones are configured for most often.
+    member = await workspacePerson(app, owner, 'EXECUTIVE', 'Field Exec');
     // Approved by the Console and switched on, as M1 tests through the screens.
     await asTenant(owner.tenantId, (tx) => tx.mobileAccess.create({ data: { tenantId: owner.tenantId, status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date(), activatedById: null } }));
     ownerToken = (await signIn(owner).expect(200)).body.accessToken;

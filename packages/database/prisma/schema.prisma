@@ -37,6 +37,11 @@ model Plan {
   annualMonthlyPriceCents Int?     @map("annual_monthly_price_cents")
   entitlements            Json
   isPublic                Boolean  @default(true) @map("is_public")
+  /// Created by the Console Admin (ADR 0071) rather than shipped; its code starts with "custom_".
+  custom                  Boolean  @default(false)
+  /// What the Console Admin sells the plan for and how (description, price, billing frequency, support level,
+  /// duration, renewal and upgrade settings). Shape: ConsolePlanTerms in @dealflow/types.
+  terms                   Json?
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -121,14 +126,13 @@ model UserSavedTheme {
   @@map("user_saved_themes")
 }
 
-/// A person's own navigation in one workspace: pinned pages and records, recent visits, sidebar order and hidden
-/// modules. The workspace guard limits documents to the current workspace AND the current user.
+/// A person's own navigation in one workspace: pinned pages and records, sidebar order and hidden modules.
+/// Recently visited pages are not recorded (2026-11-22); setup removes any old `recent` field. The workspace guard limits documents to the current workspace AND the current user.
 model WorkspaceNavigation {
   id              String   @id @default(uuid()) @map("_id")
   tenantId        String   @map("tenant_id")
   userId          String   @map("user_id")
   pinned          Json     @default("[]")
-  recent          Json     @default("[]")
   moduleOrder     String[] @default([]) @map("module_order")
   hiddenModules   String[] @default([]) @map("hidden_modules")
   /// Command Center widgets, sizes and filters (dashboardLayoutSchema); null means the default layout.
@@ -413,14 +417,18 @@ model Tenant {
   companyBranches        CompanyBranch[]
   leadOwnerChanges       LeadOwnerChange[]
   companyFiles           CompanyFile[]
+  companyLogos           CompanyLogo[]
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
+  supportTickets         SupportTicket[]
+  supportTicketMessages  SupportTicketMessage[]
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
   chatSignals            ChatSignal[]
+  chatPresence           ChatPresence[]
 
   @@map("tenants")
 }
@@ -467,6 +475,16 @@ model Subscription {
   pastDueSince           DateTime?          @map("past_due_since")
   /// Invoice-paid plans: when billing managers were last reminded to renew (once per period end).
   renewalRemindedAt      DateTime?          @map("renewal_reminded_at")
+  /// Workspace limits (ADR 0071) set by the Console Admin for this client; null = the plan's limit.
+  maxManagerWorkspaces   Int?               @map("max_manager_workspaces")
+  maxExecutiveWorkspaces Int?               @map("max_executive_workspaces")
+  /// Sales-led terms the Console Admin agreed with this client (ADR 0071): price for one billing period in minor
+  /// units, its currency, whether it has been paid, the term in months and whether it renews by itself.
+  priceCents             Int?               @map("price_cents")
+  currency               String?
+  paymentStatus          String?            @map("payment_status")
+  durationMonths         Int?               @map("duration_months")
+  autoRenew              Boolean            @default(true) @map("auto_renew")
   createdAt              DateTime           @default(now()) @map("created_at")
   updatedAt              DateTime           @updatedAt @map("updated_at")
 
@@ -519,6 +537,9 @@ model Membership {
   designationId      String?          @map("designation_id")
   departmentId       String?          @map("department_id")
   reportingManagerId String?          @map("reporting_manager_id")
+  /// The workspace (ADR 0071) this person works in: a Super, Manager or Executive Workspace of the organisation.
+  /// Null = the organisation's Super Workspace (everyone who joined before the hierarchy existed).
+  workspaceNodeId    String?          @map("workspace_node_id")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 
@@ -530,7 +551,76 @@ model Membership {
   @@unique([tenantId, userId])
   @@unique([tenantId, externalId])
   @@index([userId])
+  @@index([tenantId, workspaceNodeId])
   @@map("memberships")
+}
+
+/// The four-level workspace hierarchy (ADR 0071). The organisation is the tenant; inside it one SUPER workspace is the
+/// root, MANAGER workspaces hang under it and EXECUTIVE workspaces under a manager or the root. All of them share the
+/// organisation's CRM data; a workspace narrows what its people may see and do. A child's features and actions are
+/// always its own grant intersected with its parent's, recomputed on every request, so a revocation applies at once.
+model WorkspaceNode {
+  id                   String    @id @default(uuid()) @map("_id")
+  tenantId             String    @map("tenant_id")
+  /// SUPER, MANAGER or EXECUTIVE.
+  level                String
+  name                 String
+  /// The name lower-cased and trimmed: an organisation never has two workspaces of the same name.
+  nameKey              String    @map("name_key")
+  parentId             String?   @map("parent_id")
+  /// The designation shown with the workspace (Client Administrator, Sales Manager, Sales Executive by default).
+  designation          String
+  /// Feature keys the parent granted (the root ignores it: it gets everything the subscription includes).
+  features             String[]
+  /// Actions the parent granted, per module or feature key ({ "CRM": ["view", "create"] }). On the root this is the
+  /// ceiling the Console Admin sets for the client; null on the root = no ceiling.
+  actions              Json?
+  /// Root: whether the Console allows the Super Workspace to create Executive Workspaces. Manager: whether the Super
+  /// Workspace allows it to create Executive Workspaces under itself.
+  canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
+  /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
+  canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
+  /// executive, the other executives of the same team). Both sides need it.
+  canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
+  createdById          String?   @map("created_by_id")
+  archivedAt           DateTime? @map("archived_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, nameKey])
+  @@index([tenantId, parentId])
+  @@index([tenantId, level])
+  @@map("workspace_nodes")
+}
+
+/// A target set for a workspace (ADR 0071): a metric over a period, set by the Super Workspace or handed down by a
+/// manager from its own target. Achievement is counted from the records of the workspace's people and those below it.
+model WorkspaceTarget {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  workspaceNodeId String    @map("workspace_node_id")
+  /// LEADS, CALLS, DEALS_WON or REVENUE.
+  metric          String
+  /// DAILY, WEEKLY, MONTHLY, QUARTERLY or CUSTOM.
+  period          String
+  startsAt        DateTime  @map("starts_at")
+  /// The day after the last day (periods are [startsAt, endsAt)).
+  endsAt          DateTime  @map("ends_at")
+  amount          Float
+  note            String?
+  /// The target this one was split from, when a manager (or the Super Workspace) hands part of a target down.
+  parentTargetId  String?   @map("parent_target_id")
+  setById         String?   @map("set_by_id")
+  /// SUPER or MANAGER: which level set it.
+  setByLevel      String    @map("set_by_level")
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, workspaceNodeId])
+  @@index([tenantId, parentTargetId])
+  @@map("workspace_targets")
 }
 
 model Team {
@@ -667,6 +757,7 @@ model Company {
   branches     CompanyBranch[]
   ownerChanges LeadOwnerChange[]
   files        CompanyFile[]
+  logo         CompanyLogo?
   tasks        Task[]
   rfqs         Rfq[]
 
@@ -816,6 +907,40 @@ model CompanyFile {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
   @@map("company_files")
+}
+
+/// A company's logo (ADR 0070): found automatically from the company's website, or uploaded by someone. Kept apart
+/// from the company so lists never load image bytes. The document doubles as the worker's queue item: PENDING with
+/// a due nextRunAt means "look for a logo now".
+model CompanyLogo {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  companyId    String    @unique @map("company_id")
+  /// AUTO (found from the website) or UPLOAD (someone chose the picture; never replaced automatically).
+  source       String
+  /// PENDING (waiting for the worker), FOUND, NOT_FOUND (the site has no usable icon) or FAILED (gave up after retries).
+  status       String
+  /// The domain the automatic logo was looked up for; a change of website looks again.
+  domain       String?
+  contentType  String?   @map("content_type")
+  data         Bytes?
+  sizeBytes    Int?      @map("size_bytes")
+  /// Pixel size of the image (the larger side); null for SVG, which scales.
+  width        Int?
+  sourceUrl    String?   @map("source_url")
+  attempts     Int       @default(0)
+  nextRunAt    DateTime? @map("next_run_at")
+  lastError    String?   @map("last_error")
+  uploadedById String?   @map("uploaded_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId])
+  @@index([status, nextRunAt])
+  @@map("company_logos")
 }
 
 /// A request for quotation from a company lead (ADR 0060, Phase 3). Numbered RFQ-0001.. per workspace. Receiving an
@@ -1284,6 +1409,9 @@ model Task {
   /// Reminder bookkeeping (ADR 0062) so each reminder goes out once per due date.
   reminderSentAt    DateTime?    @map("reminder_sent_at")
   overdueNotifiedAt DateTime?    @map("overdue_notified_at")
+  /// Workspace hierarchy (ADR 0071): the workspace a task was handed down to, and the workspace it came from.
+  workspaceNodeId   String?      @map("workspace_node_id")
+  assignedByNodeId  String?      @map("assigned_by_node_id")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
   deletedAt         DateTime?    @map("deleted_at")
@@ -1298,7 +1426,37 @@ model Task {
   @@index([tenantId, assigneeId])
   @@index([tenantId, companyId, status])
   @@index([tenantId, followUpType, status, dueAt])
+  @@index([tenantId, workspaceNodeId, status])
   @@map("tasks")
+}
+
+/// A comment on a task handed down the workspace hierarchy (ADR 0071).
+model TaskComment {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  taskId    String   @map("task_id")
+  authorId  String?  @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, taskId, createdAt])
+  @@map("task_comments")
+}
+
+/// The full history of a handed-down task: who created, changed or commented on it, and what changed. Append-only.
+model TaskEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  taskId    String   @map("task_id")
+  actorId   String?  @map("actor_id")
+  /// created, updated or commented.
+  kind      String
+  /// [{ field, from, to }]
+  changes   Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, taskId, createdAt])
+  @@map("task_events")
 }
 
 // ───────────────────────────── Extensibility & onboarding ─────────────────────────────
@@ -1367,16 +1525,18 @@ model CustomField {
 
 /// Workspace invitation. Only the SHA-256 of the token is stored.
 model Invitation {
-  id          String    @id @default(uuid()) @map("_id")
-  tenantId    String    @map("tenant_id")
-  email       String
-  roleId      String    @map("role_id")
-  tokenHash   String    @unique @map("token_hash")
-  invitedById String    @map("invited_by_id")
-  expiresAt   DateTime  @map("expires_at")
-  acceptedAt  DateTime? @map("accepted_at")
-  revokedAt   DateTime? @map("revoked_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  email           String
+  roleId          String    @map("role_id")
+  tokenHash       String    @unique @map("token_hash")
+  invitedById     String    @map("invited_by_id")
+  /// The workspace (ADR 0071) the person joins when they accept. Null = the Super Workspace.
+  workspaceNodeId String?   @map("workspace_node_id")
+  expiresAt       DateTime  @map("expires_at")
+  acceptedAt      DateTime? @map("accepted_at")
+  revokedAt       DateTime? @map("revoked_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   role   Role   @relation(fields: [roleId], references: [id], onUpdate: NoAction)
@@ -4059,16 +4219,18 @@ model ChatConversation {
 
 /// One person in a conversation: a workspace user, or (support line) a super admin from the operator console.
 model ChatMember {
-  id             String         @id @default(uuid()) @map("_id")
-  tenantId       String         @map("tenant_id")
-  conversationId String         @map("conversation_id")
-  userId         String?        @map("user_id")
-  operatorId     String?        @map("operator_id")
-  role           ChatMemberRole @default(MEMBER)
+  id              String         @id @default(uuid()) @map("_id")
+  tenantId        String         @map("tenant_id")
+  conversationId  String         @map("conversation_id")
+  userId          String?        @map("user_id")
+  operatorId      String?        @map("operator_id")
+  role            ChatMemberRole @default(MEMBER)
   /// Everything up to this time has been read (read receipts and unread counts).
-  lastReadAt     DateTime?      @map("last_read_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  lastReadAt      DateTime?      @map("last_read_at")
+  /// Everything up to this time has reached one of this person's devices ("Delivered" ticks).
+  lastDeliveredAt DateTime?      @map("last_delivered_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -4144,6 +4306,7 @@ model ChatSignal {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([createdAt])
+  @@index([tenantId, createdAt])
   @@map("chat_signals")
 }
 
@@ -4238,4 +4401,113 @@ model MobileConfigVersion {
 
   @@unique([tenantId, version])
   @@map("mobile_config_versions")
+}
+
+// ───────────── Help Center support tickets (ADR 0073) ─────────────
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+/// Who is answering a ticket now. Every ticket goes to the Console today; workspace routing (ADR 0071 part 5) starts
+/// Executive tickets at their manager and escalates upwards.
+enum SupportHandlerLevel {
+  MANAGER
+  SUPER
+  CONSOLE
+}
+
+enum SupportAuthorKind {
+  /// The person who raised the ticket, or a colleague in the same workspace.
+  USER
+  /// A manager or Super Workspace administrator answering from above.
+  WORKSPACE
+  /// A SampForce operator in the Console.
+  OPERATOR
+}
+
+/// A query raised from Help ("Other: raise a query"), in the web app or the mobile app.
+model SupportTicket {
+  id                   String                @id @default(uuid()) @map("_id")
+  tenantId             String                @map("tenant_id")
+  /// Per organisation, for "#12" references.
+  number               Int
+  /// The raiser's workspace in the hierarchy; null = the Super Workspace.
+  workspaceNodeId      String?               @map("workspace_node_id")
+  raisedByUserId       String                @map("raised_by_user_id")
+  raisedByMembershipId String                @map("raised_by_membership_id")
+  subject              String
+  /// A Help Center category id, such as "deals" or "billing".
+  category             String
+  featureKey           String?               @map("feature_key")
+  /// The page the person was on when they asked.
+  pagePath             String?               @map("page_path")
+  /// "web" or "mobile".
+  source               String                @default("web")
+  priority             SupportTicketPriority @default(NORMAL)
+  status               SupportTicketStatus   @default(OPEN)
+  handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
+  handlerNodeId        String?               @map("handler_node_id")
+  /// The SampForce operator looking after a Console ticket.
+  assignedOperatorId   String?               @map("assigned_operator_id")
+  /// How it was resolved, written by whoever closes or answers it last.
+  resolutionNote       String?               @map("resolution_note")
+  escalatedAt          DateTime?             @map("escalated_at")
+  lastMessageAt        DateTime              @default(now()) @map("last_message_at")
+  answeredAt           DateTime?             @map("answered_at")
+  closedAt             DateTime?             @map("closed_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages SupportTicketMessage[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
+  @@index([status, lastMessageAt(sort: Desc)])
+  @@index([tenantId, handlerLevel, handlerNodeId, lastMessageAt(sort: Desc)])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id                 String            @id @default(uuid()) @map("_id")
+  tenantId           String            @map("tenant_id")
+  ticketId           String            @map("ticket_id")
+  authorKind         SupportAuthorKind @map("author_kind")
+  authorUserId       String?           @map("author_user_id")
+  authorMembershipId String?           @map("author_membership_id")
+  operatorId         String?           @map("operator_id")
+  body               String
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, ticketId, createdAt])
+  @@map("support_ticket_messages")
+}
+
+/// When a workspace user was last connected to team chat (online/offline dots). One per person and workspace.
+model ChatPresence {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  userId     String    @map("user_id")
+  /// Refreshed about every 30 seconds while the person has SampForce open on any device.
+  lastSeenAt DateTime  @map("last_seen_at")
+  /// Set when their last connection to this server closed; a later lastSeenAt means they came back.
+  offlineAt  DateTime? @map("offline_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, userId])
+  @@map("chat_presence")
 }

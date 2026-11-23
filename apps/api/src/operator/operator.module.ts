@@ -7,8 +7,9 @@ import { ApolloClient } from '../prospects/apollo';
 import { ConnectionTests } from './connection-tests';
 import { OperatorGuard, OperatorTokens } from './operator-auth';
 import { OperatorController } from './operator.controller';
+import { ConsoleService } from './console.service';
 import { OperatorService } from './operator.service';
 
 /** The platform operator console's API, a separate realm from workspace sign-in. */
-@Module({ imports: [AuthModule, BillingModule], controllers: [OperatorController], providers: [OperatorService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard] })
+@Module({ imports: [AuthModule, BillingModule], controllers: [OperatorController], providers: [OperatorService, ConsoleService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard] })
 export class OperatorModule {}

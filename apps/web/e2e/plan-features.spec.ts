@@ -56,9 +56,10 @@ test('a Free workspace sees what its plan leaves out, and gets it when the plan 
   await expect(ops.locator('[data-plan="free"][data-feature="sequences"]')).not.toContainText('✓');
   await expectNoA11yViolations(ops);
 
-  await ops.getByRole('link', { name: 'Workspaces' }).click();
-  await ops.getByLabel('Search workspaces').fill('Plan Locks Ltd');
+  await ops.getByRole('link', { name: 'Clients' }).click();
+  await ops.getByLabel('Search clients').fill('Plan Locks Ltd');
   await ops.getByRole('link', { name: 'Plan Locks Ltd' }).first().click();
+  await ops.getByRole('link', { name: 'Invoices and feature overrides' }).click();
   const features = ops.locator('[data-operator-features]');
   await features.getByLabel('Email sequences for this workspace').selectOption('on');
   await features.getByLabel('Reason for the feature changes (recorded in both audit logs)').fill('Pilot of sequences agreed with sales');

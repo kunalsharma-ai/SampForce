@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { CustomFieldEntity } from './custom-fields';
 import type { FeatureKey } from './features';
 import type { Permission } from './permissions';
+import { type ActionGrants, actionAllowed, type WorkspaceAction } from './workspaces';
 import { WORKSPACE_LEVELS_FOR_MOBILE, type MobileWorkspaceLevel } from './mobile';
 
 /*
@@ -20,7 +21,7 @@ export interface MobileModuleDef {
   key: MobileModuleKey;
   label: string;
   description: string;
-  /** Plan feature that must be in the plan (and, with ADR 0071, the person's workspace). */
+  /** Feature that must be in the plan and the person's workspace (ADR 0071); its action grants narrow the module. */
   feature: FeatureKey | null;
   /** Custom fields of this entity can be shown on the phone. */
   customFieldEntity: CustomFieldEntity | null;
@@ -34,15 +35,15 @@ export interface MobileModuleDef {
 
 export const MOBILE_MODULE_DEFS: MobileModuleDef[] = [
   { key: 'dashboard', label: 'Dashboard', description: 'The home screen with the cards you choose for each workspace level.', feature: null, customFieldEntity: null, records: false, permission: { read: 'dashboard:read', write: 'dashboard:read' }, required: true },
-  { key: 'companies', label: 'Leads and companies', description: 'Company leads with their status, owner and contact details.', feature: null, customFieldEntity: 'COMPANY', records: true, permission: { read: 'companies:read', write: 'companies:write' } },
-  { key: 'contacts', label: 'Contacts', description: 'Employees and points of contact at client companies.', feature: null, customFieldEntity: 'CONTACT', records: true, permission: { read: 'contacts:read', write: 'contacts:write' } },
-  { key: 'follow_ups', label: 'Follow-ups', description: 'Calls, meetings and reminders due with clients.', feature: null, customFieldEntity: 'FOLLOW_UP', records: true, permission: { read: 'activities:read', write: 'activities:write' } },
-  { key: 'tasks', label: 'Tasks', description: 'Tasks assigned to people, with priority and due date.', feature: null, customFieldEntity: null, records: true, permission: { read: 'activities:read', write: 'activities:write' } },
-  { key: 'deals', label: 'Sales pipeline', description: 'Deals by stage, with amount and expected close date.', feature: null, customFieldEntity: 'OPPORTUNITY', records: true, permission: { read: 'deals:read', write: 'deals:write' } },
-  { key: 'targets', label: 'Sales targets', description: 'Targets and how much of them is achieved.', feature: null, customFieldEntity: null, records: false, permission: { read: 'dashboard:read', write: 'dashboard:read' } },
+  { key: 'companies', label: 'Leads and companies', description: 'Company leads with their status, owner and contact details.', feature: 'account_management', customFieldEntity: 'COMPANY', records: true, permission: { read: 'companies:read', write: 'companies:write' } },
+  { key: 'contacts', label: 'Contacts', description: 'Employees and points of contact at client companies.', feature: 'contact_management', customFieldEntity: 'CONTACT', records: true, permission: { read: 'contacts:read', write: 'contacts:write' } },
+  { key: 'follow_ups', label: 'Follow-ups', description: 'Calls, meetings and reminders due with clients.', feature: 'follow_up_management', customFieldEntity: 'FOLLOW_UP', records: true, permission: { read: 'activities:read', write: 'activities:write' } },
+  { key: 'tasks', label: 'Tasks', description: 'Tasks assigned to people, with priority and due date.', feature: 'task_management', customFieldEntity: null, records: true, permission: { read: 'activities:read', write: 'activities:write' } },
+  { key: 'deals', label: 'Sales pipeline', description: 'Deals by stage, with amount and expected close date.', feature: 'opportunity_management', customFieldEntity: 'OPPORTUNITY', records: true, permission: { read: 'deals:read', write: 'deals:write' } },
+  { key: 'targets', label: 'Sales targets', description: 'Targets and how much of them is achieved.', feature: 'sales_target_management', customFieldEntity: null, records: false, permission: { read: 'dashboard:read', write: 'dashboard:read' } },
   { key: 'reports', label: 'Sales reports', description: 'Ready-made sales reports, read only.', feature: 'reports', customFieldEntity: null, records: false, permission: { read: 'reports:read', write: 'reports:read' } },
   { key: 'chat', label: 'Internal chat', description: 'The same team chat as on the web.', feature: 'team_chat', customFieldEntity: null, records: false, permission: null },
-  { key: 'notifications', label: 'Notifications', description: 'In-app and push notifications.', feature: null, customFieldEntity: null, records: false, permission: null },
+  { key: 'notifications', label: 'Notifications', description: 'In-app and push notifications.', feature: 'notifications', customFieldEntity: null, records: false, permission: null },
   { key: 'profile', label: 'Profile', description: 'The person’s own profile and photo.', feature: null, customFieldEntity: null, records: false, permission: null, required: true },
 ];
 export const MOBILE_MODULE_BY_KEY = Object.fromEntries(MOBILE_MODULE_DEFS.map((m) => [m.key, m])) as Record<MobileModuleKey, MobileModuleDef>;
@@ -365,8 +366,10 @@ export interface MobileResolvedConfig {
 
 export interface MobileAccessContext {
   level: MobileWorkspaceLevel;
-  /** Features of the person's plan (and, with ADR 0071, their workspace). */
+  /** Effective features of the person's workspace (the plan, narrowed down the hierarchy, ADR 0071). */
   features: readonly string[];
+  /** The workspace's action grants (ADR 0071). Left out by the web preview, which shows the configuration alone. */
+  actions?: ActionGrants;
   /** The person's role permissions. */
   permissions: readonly string[];
 }
@@ -383,8 +386,10 @@ export function resolveMobileConfig(config: MobileAppConfig, who: MobileAccessCo
     if (!m.enabled || !rule.view) continue;
     if (def.feature && !features.has(def.feature)) continue;
     if (def.permission && !perms.has(def.permission.read)) continue;
+    const granted = (action: WorkspaceAction) => !who.actions || !def.feature || actionAllowed(who.actions, def.feature as FeatureKey, action);
+    if (!granted('view')) continue;
     const write = !def.permission || perms.has(def.permission.write);
-    modules.push({ key: def.key, create: write && rule.create, edit: write && rule.edit, delete: write && rule.delete });
+    modules.push({ key: def.key, create: write && rule.create && granted('create'), edit: write && rule.edit && granted('edit'), delete: write && rule.delete && granted('delete') });
   }
   const open = new Map(modules.map((m) => [m.key, m]));
   const fields: MobileResolvedConfig['fields'] = {};

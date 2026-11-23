@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { FEATURE_KEYS } from './features';
 import { PERMISSIONS } from './permissions';
 import { MOBILE_DASHBOARD_CARD_DEFS, defaultMobileConfig, mobileAppConfigSchema, normalizeMobileConfig, resolveMobileConfig, type MobileAppConfig } from './mobile-config';
 
-const everything = { features: ['team_chat', 'reports'], permissions: [...PERMISSIONS] };
+const everything = { features: [...FEATURE_KEYS], permissions: [...PERMISSIONS] };
 const clone = (c: MobileAppConfig) => JSON.parse(JSON.stringify(c)) as MobileAppConfig;
 
 describe('mobile configuration (ADR 0072)', () => {
@@ -56,7 +57,7 @@ describe('mobile configuration (ADR 0072)', () => {
     expect(exec.more).toContain('chat');
 
     // No chat in the plan: no chat module, tab or chat switch. Read-only role: nothing can be changed.
-    const plain = resolveMobileConfig(d, { level: 'MANAGER', features: [], permissions: ['dashboard:read', 'companies:read'] });
+    const plain = resolveMobileConfig(d, { level: 'MANAGER', features: FEATURE_KEYS.filter((f) => f !== 'team_chat' && f !== 'reports'), permissions: ['dashboard:read', 'companies:read'] });
     expect(plain.modules.map((m) => m.key)).toEqual(['dashboard', 'companies', 'targets', 'notifications', 'profile']);
     expect(plain.modules.find((m) => m.key === 'companies')).toEqual({ key: 'companies', create: false, edit: false, delete: false });
     expect(plain.fields.companies?.website).toEqual({ edit: false, create: false, delete: false });
@@ -66,6 +67,16 @@ describe('mobile configuration (ADR 0072)', () => {
     expect(plain.dashboard.length).toBeGreaterThan(0);
     expect(plain.dashboard.every((c) => open.has(MOBILE_DASHBOARD_CARD_DEFS[c.card].module))).toBe(true);
     expect(plain.dashboard.map((c) => c.card)).not.toContain('my_tasks');
+  });
+
+  it('applies the workspace’s features and action grants (ADR 0071)', () => {
+    const d = defaultMobileConfig();
+    // A workspace without deals, and allowed only to view companies.
+    const r = resolveMobileConfig(d, { level: 'EXECUTIVE', features: FEATURE_KEYS.filter((f) => f !== 'opportunity_management'), permissions: [...PERMISSIONS], actions: { CRM: ['view'], Communication: ['view', 'create', 'edit'] } });
+    expect(r.modules.map((m) => m.key)).not.toContain('deals');
+    expect(r.modules.find((m) => m.key === 'companies')).toEqual({ key: 'companies', create: false, edit: false, delete: false });
+    expect(r.modules.find((m) => m.key === 'tasks')).toEqual({ key: 'tasks', create: true, edit: true, delete: false });
+    expect(r.fields.companies?.website).toEqual({ edit: false, create: false, delete: false });
   });
 
   it('turns notifications off as a whole', () => {

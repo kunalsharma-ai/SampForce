@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { Prisma, TenantTx } from '@dealflow/database';
 import {
   defaultMobileConfig,
-  levelFromDesignationTier,
   MOBILE_MODULE_BY_KEY,
   MOBILE_RECORD_MODULES,
   type MobileAppConfig,
@@ -12,7 +11,6 @@ import {
   type MobileConfigResponse,
   type MobileConfigVersionRow,
   type MobileRecordModule,
-  type MobileWorkspaceLevel,
   normalizeMobileConfig,
   resolveMobileConfig,
 } from '@dealflow/types';
@@ -20,6 +18,7 @@ import { AuditService } from '../audit/audit.service';
 import { entitlementsFor } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
+import { resolveWorkspaceAccess } from '../workspaces/access';
 
 /** Reads a stored configuration, filling in anything added since it was saved. */
 function readConfig(json: Prisma.JsonValue | null | undefined): MobileAppConfig {
@@ -27,12 +26,6 @@ function readConfig(json: Prisma.JsonValue | null | undefined): MobileAppConfig 
   return parsed.success ? normalizeMobileConfig(parsed.data) : defaultMobileConfig();
 }
 
-/** The level a person works at on the phone. Until the workspace hierarchy lands, the designation tier decides. */
-export async function mobileLevelOf(tx: TenantTx, auth: AuthContext): Promise<MobileWorkspaceLevel> {
-  const membership = await tx.membership.findUniqueOrThrow({ where: { id: auth.membershipId }, select: { designationId: true, role: { select: { key: true } } } });
-  const designation = membership.designationId ? await tx.designation.findUnique({ where: { id: membership.designationId }, select: { tier: true } }) : null;
-  return levelFromDesignationTier(designation?.tier, membership.role.key);
-}
 
 export async function publishedConfigVersion(tx: TenantTx, tenantId: string): Promise<number> {
   const row = await tx.mobileConfig.findUnique({ where: { tenantId }, select: { publishedVersion: true } });
@@ -120,8 +113,9 @@ export class MobileConfigService {
     const v = version ?? (await publishedConfigVersion(tx, auth.tenantId));
     const row = v ? await tx.mobileConfigVersion.findUnique({ where: { tenantId_version: { tenantId: auth.tenantId, version: v } }, select: { config: true } }) : null;
     const config = row ? readConfig(row.config) : defaultMobileConfig();
-    const [level, ent] = await Promise.all([mobileLevelOf(tx, auth), entitlementsFor(tx, auth.tenantId)]);
-    return resolveMobileConfig(config, { level, features: ent.features, permissions: auth.permissions });
+    // The person's workspace (ADR 0071) decides the level, and narrows the plan's features and the actions allowed.
+    const access = await resolveWorkspaceAccess(tx, auth.tenantId, auth.workspaceNodeId);
+    return resolveMobileConfig(config, { level: access.level, features: access.features, actions: access.actions, permissions: auth.permissions });
   }
 
   private async writeVersion(tx: TenantTx, auth: AuthContext, config: MobileAppConfig, note: string | null, restoredFrom: number | null): Promise<number> {

@@ -27,8 +27,8 @@ export default function OperatorTenantPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/operator" className="text-sm text-primary underline-offset-2 hover:underline">
-        ← All workspaces
+      <Link href={`/operator/clients/${d.id}`} className="text-sm text-primary underline-offset-2 hover:underline">
+        ← {d.name}: subscription and workspaces
       </Link>
       <PageHeader title={d.name} description={`${d.slug} · created ${formatDate(d.createdAt)} · ${d.members} active member${d.members === 1 ? '' : 's'}${d.isDemo ? ' · demo workspace' : ''}`} />
       <Card>

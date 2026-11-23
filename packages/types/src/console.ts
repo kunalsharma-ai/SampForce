@@ -1,0 +1,258 @@
+import { z } from 'zod';
+import { emailSchema } from './auth';
+import { FEATURE_KEYS, type FeatureKey, featureKeySchema } from './features';
+import { type ActionGrants, actionGrantsSchema, type WorkspaceLevel } from './workspaces';
+
+/**
+ * Console Admin (ADR 0071, part 2): the platform owner's client organisations, subscription plans and workspace
+ * limits. The Console is the existing operator console; these are its additions. Nothing here reads client CRM records.
+ */
+
+export const SUPPORT_LEVELS = ['STANDARD', 'PRIORITY', 'DEDICATED'] as const;
+export type SupportLevel = (typeof SUPPORT_LEVELS)[number];
+export const SUPPORT_LEVEL_LABEL: Record<SupportLevel, string> = { STANDARD: 'Standard', PRIORITY: 'Priority', DEDICATED: 'Dedicated' };
+
+/** Where a client stands with paying, set by the Console Admin for sales-led subscriptions. */
+export const PAYMENT_STATUSES = ['PAID', 'PENDING', 'OVERDUE', 'WAIVED'] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = { PAID: 'Paid', PENDING: 'Payment pending', OVERDUE: 'Overdue', WAIVED: 'No charge' };
+
+export const BILLING_FREQUENCIES = ['MONTH', 'YEAR'] as const;
+export type BillingFrequency = (typeof BILLING_FREQUENCIES)[number];
+
+/** Three-letter currency code, upper case. */
+const currencySchema = z.string().trim().regex(/^[A-Za-z]{3}$/, 'Use a three-letter currency code').transform((v) => v.toUpperCase());
+const cents = z.number().int().min(0).max(1_000_000_000_00);
+const limit = z.number().int().min(0).max(100_000_000);
+const reason = z.string().trim().min(5).max(500);
+const workspaceCap = z.number().int().min(0).max(100_000).nullable();
+
+/** The limits a plan sets. Empty (null) means no limit. */
+export const consolePlanLimitsSchema = z
+  .object({
+    maxUsers: limit.min(1).nullable(),
+    maxPipelines: limit.min(1).nullable(),
+    monthlyAiCredits: limit,
+    automationRunsPerMonth: limit,
+    maxManagerWorkspaces: workspaceCap,
+    maxExecutiveWorkspaces: workspaceCap,
+  })
+  .strict();
+
+/** The commercial side of a plan: what the Console Admin sells it for and how. */
+export const consolePlanTermsSchema = z
+  .object({
+    description: z.string().trim().max(1000).nullable(),
+    /** Price for one billing period, in the currency's minor units; null = priced per client. */
+    priceCents: cents.nullable(),
+    currency: currencySchema,
+    billingFrequency: z.enum(BILLING_FREQUENCIES),
+    supportLevel: z.enum(SUPPORT_LEVELS),
+    /** Months a subscription to the plan runs before renewal. */
+    durationMonths: z.number().int().min(1).max(120),
+    autoRenew: z.boolean(),
+    /** Plans a client on this one may be upgraded to; empty = any. */
+    upgradeTo: z.array(z.string().trim().min(1).max(60)).max(50),
+    /** Whether the Console still offers it for new clients. Clients already on it keep it. */
+    available: z.boolean(),
+  })
+  .strict();
+
+export const consolePlanCreateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(80),
+    features: z.array(featureKeySchema).max(FEATURE_KEYS.length),
+    limits: consolePlanLimitsSchema,
+    terms: consolePlanTermsSchema,
+    reason,
+  })
+  .strict();
+export type ConsolePlanCreateInput = z.infer<typeof consolePlanCreateSchema>;
+
+/** Editing a plan: anything left out stays as it is. Shipped plans keep their names. */
+export const consolePlanUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(80).optional(),
+    features: z.array(featureKeySchema).max(FEATURE_KEYS.length).optional(),
+    limits: consolePlanLimitsSchema.optional(),
+    terms: consolePlanTermsSchema.partial().optional(),
+    reason,
+  })
+  .strict();
+export type ConsolePlanUpdateInput = z.infer<typeof consolePlanUpdateSchema>;
+
+export interface ConsolePlanTerms {
+  description: string | null;
+  priceCents: number | null;
+  currency: string;
+  billingFrequency: BillingFrequency;
+  supportLevel: SupportLevel;
+  durationMonths: number;
+  autoRenew: boolean;
+  upgradeTo: string[];
+  available: boolean;
+}
+
+export interface ConsolePlanRow {
+  code: string;
+  name: string;
+  /** True for a plan the Console Admin created; false for a shipped plan. */
+  custom: boolean;
+  features: FeatureKey[];
+  limits: z.infer<typeof consolePlanLimitsSchema>;
+  terms: ConsolePlanTerms;
+  /** Client organisations on the plan now. */
+  clients: number;
+  updatedAt: string;
+}
+
+// ───────────── Client organisations ─────────────
+
+const subscriptionLimits = {
+  /** Null = the plan's limit. */
+  maxManagerWorkspaces: workspaceCap.optional(),
+  maxExecutiveWorkspaces: workspaceCap.optional(),
+};
+
+/** POST /operator/clients: a new client organisation, its Super Workspace and an invitation for its administrator. */
+export const consoleClientCreateSchema = z
+  .object({
+    organisation: z.object({ name: z.string().trim().min(2).max(120), currency: currencySchema.optional(), timezone: z.string().trim().min(1).max(64).optional() }).strict(),
+    administrator: z.object({ name: z.string().trim().min(1).max(120), email: emailSchema, designation: z.string().trim().min(2).max(80).optional() }).strict(),
+    planCode: z.string().trim().min(1).max(60),
+    seats: z.number().int().min(1).max(100_000),
+    billingFrequency: z.enum(BILLING_FREQUENCIES).optional(),
+    /** First day of the subscription (YYYY-MM-DD); today when left out. */
+    startsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    /** Months until renewal; the plan's duration when left out. */
+    durationMonths: z.number().int().min(1).max(120).optional(),
+    priceCents: cents.nullable().optional(),
+    currency: currencySchema.optional(),
+    paymentStatus: z.enum(PAYMENT_STATUSES).default('PENDING'),
+    autoRenew: z.boolean().optional(),
+    ...subscriptionLimits,
+    /** Whether the Super Workspace may create Executive Workspaces itself. */
+    superCanCreateExecutives: z.boolean().default(true),
+    reason: reason.optional(),
+  })
+  .strict();
+export type ConsoleClientCreateInput = z.input<typeof consoleClientCreateSchema>;
+
+export interface ConsoleClientCreated {
+  client: ConsoleClientDetail;
+  /** The administrator's invitation link, shown once: email it to them. */
+  inviteUrl: string;
+}
+
+/** PUT /operator/clients/:id/subscription: anything left out stays as it is. */
+export const consoleSubscriptionSchema = z
+  .object({
+    planCode: z.string().trim().min(1).max(60).optional(),
+    seats: z.number().int().min(1).max(100_000).optional(),
+    billingFrequency: z.enum(BILLING_FREQUENCIES).optional(),
+    /** Renewal date (YYYY-MM-DD). */
+    renewsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    durationMonths: z.number().int().min(1).max(120).optional(),
+    priceCents: cents.nullable().optional(),
+    currency: currencySchema.optional(),
+    paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+    autoRenew: z.boolean().optional(),
+    ...subscriptionLimits,
+    reason,
+  })
+  .strict();
+export type ConsoleSubscriptionInput = z.infer<typeof consoleSubscriptionSchema>;
+
+/** Activate, suspend or deactivate a client's subscription. Suspending keeps the data and refuses sign-in. */
+export const CLIENT_STATES = ['ACTIVE', 'SUSPENDED', 'DEACTIVATED'] as const;
+export type ClientState = (typeof CLIENT_STATES)[number];
+export const consoleClientStateSchema = z.object({ state: z.enum(CLIENT_STATES), reason }).strict();
+
+/** Renews the subscription for another term (the plan's duration unless given), or upgrades it at the same time. */
+export const consoleRenewSchema = z
+  .object({ months: z.number().int().min(1).max(120).optional(), planCode: z.string().trim().min(1).max(60).optional(), paymentStatus: z.enum(PAYMENT_STATUSES).optional(), reason })
+  .strict();
+export type ConsoleRenewInput = z.infer<typeof consoleRenewSchema>;
+
+/** The most a client's Super Workspace may do (its action ceiling) and whether it creates Executive Workspaces. */
+export const consoleAuthoritySchema = z
+  .object({ actions: actionGrantsSchema.nullable().optional(), canCreateExecutives: z.boolean().optional(), reason })
+  .strict();
+export type ConsoleAuthorityInput = z.infer<typeof consoleAuthoritySchema>;
+
+export interface ConsoleSubscription {
+  planCode: string;
+  planName: string;
+  status: 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID';
+  seats: number;
+  billingFrequency: BillingFrequency;
+  startedOn: string;
+  renewsOn: string | null;
+  durationMonths: number | null;
+  priceCents: number | null;
+  currency: string;
+  paymentStatus: PaymentStatus | null;
+  autoRenew: boolean;
+  /** What the client may create, after the Console's own setting for this client (null = no limit). */
+  limits: { managers: number | null; executives: number | null };
+  /** True where the limit was set for this client rather than taken from the plan. */
+  limitsSetForClient: { managers: boolean; executives: boolean };
+}
+
+export interface ConsoleClientRow {
+  id: string;
+  name: string;
+  state: ClientState;
+  createdAt: string;
+  people: number;
+  subscription: ConsoleSubscription | null;
+  usage: { managers: number; executives: number };
+  /** The administrator has not accepted the invitation yet. */
+  awaitingAdministrator: boolean;
+}
+
+export interface ConsoleWorkspaceRow {
+  id: string;
+  level: WorkspaceLevel;
+  name: string;
+  designation: string;
+  parentId: string | null;
+  people: number;
+  features: number;
+  canCreateExecutives: boolean;
+  archived: boolean;
+}
+
+export interface ConsoleHistoryRow {
+  at: string;
+  by: string | null;
+  action: string;
+  reason: string | null;
+  /** Short lines describing what changed, such as "Plan: Growth → Plan B". */
+  changes: string[];
+}
+
+export interface ConsoleClientDetail extends ConsoleClientRow {
+  /** The Super Workspace's ceiling: actions per module, null = every action. */
+  authority: { actions: ActionGrants | null; canCreateExecutives: boolean };
+  features: FeatureKey[];
+  workspaces: ConsoleWorkspaceRow[];
+  administrators: { name: string; email: string; designation: string | null }[];
+  pendingAdministrator: { email: string; expiresAt: string } | null;
+  history: ConsoleHistoryRow[];
+}
+
+/** GET /operator/overview: the Console Admin's dashboard. Platform figures only; no individual sales records. */
+export interface ConsoleOverview {
+  clients: { total: number; active: number; suspended: number; deactivated: number };
+  superWorkspaces: number;
+  subscriptions: { active: number; inactive: number; trialing: number };
+  plansSold: { code: string; name: string; clients: number }[];
+  /** Agreed subscription value per month, by currency (minor units). */
+  monthlyRecurring: { currency: string; cents: number }[];
+  /** Open invoices plus clients marked pending or overdue, by currency. */
+  outstanding: { currency: string; cents: number; clients: number }[];
+  workspaces: { managers: number; executives: number };
+  renewals: { id: string; name: string; renewsOn: string; planName: string; autoRenew: boolean }[];
+  needsAttention: { id: string; name: string; why: string }[];
+}

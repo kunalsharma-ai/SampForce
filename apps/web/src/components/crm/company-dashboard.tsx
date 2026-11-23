@@ -54,6 +54,7 @@ import { AddEmployeeDialog, LinkContactDialog } from './company-parts';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDateTime } from './follow-ups';
+import { CompanyLogoEditor } from './company-logo';
 import { StatusChip } from './status-chip';
 import { INTERACTION_LABEL } from './work-labels';
 
@@ -73,7 +74,8 @@ const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Pl
 ];
 
 /**
- * The company profile header (section 7.1): the company name is the largest thing on the page, with its flag,
+ * The company profile header (section 7.1): the company name is the largest thing on the page, with its logo (and a
+ * small country flag on the logo's corner),
  * status, lead number, business facts, contact points, the people responsible and the quick actions.
  */
 export function CompanyHero({ company: c, actions }: { company: CompanyRow; actions?: React.ReactNode }) {
@@ -109,13 +111,7 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
           {actions}
         </div>
         <div className="flex flex-wrap items-start gap-4 sm:gap-5">
-          <div className="flex size-20 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface shadow-md sm:size-24">
-            {c.country ? (
-              <span className={`fi fi-${c.country.toLowerCase()} rounded-md text-[3.25rem] shadow-sm sm:text-[4rem]`} role="img" aria-label={country ?? c.country} title={country ?? c.country} />
-            ) : (
-              <Building2 aria-hidden className="size-10 text-muted-foreground" />
-            )}
-          </div>
+          <CompanyLogoEditor company={c} />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               {c.leadNumber && <span className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}

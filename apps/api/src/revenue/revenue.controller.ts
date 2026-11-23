@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
 import { analyticsQuerySchema, CHURN_TREND_DAYS, type CustomerFollowUps, customerFollowUpsSchema, escalationInputSchema, escalationResolveSchema, exchangeRateInputSchema, forecastQuerySchema, salesTargetInputSchema, z } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AnalyticsService } from './analytics.service';
 import { SuccessService } from './success.service';
@@ -32,18 +32,21 @@ export class AnalyticsController {
   }
 
   @Get('targets')
+  @AlsoRequireFeature('sales_target_management')
   @RequirePermissions('dashboard:read')
   targets(@Auth() auth: AuthContext, @Query(new ZodPipe(forecastQuerySchema)) q: z.infer<typeof forecastQuerySchema>) {
     return this.analytics.targets(auth, q.period);
   }
 
   @Put('targets')
+  @AlsoRequireFeature('sales_target_management')
   @RequirePermissions('pipelines:manage')
   setTarget(@Auth() auth: AuthContext, @Body(new ZodPipe(salesTargetInputSchema)) body: z.infer<typeof salesTargetInputSchema>, @Meta() meta: RequestMeta) {
     return this.analytics.setTarget(auth, body, meta);
   }
 
   @Delete('targets/:id')
+  @AlsoRequireFeature('sales_target_management')
   @HttpCode(204)
   @RequirePermissions('pipelines:manage')
   removeTarget(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {

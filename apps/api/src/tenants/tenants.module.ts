@@ -5,5 +5,5 @@ import { TenantsController } from './tenants.controller';
 import { TeamsService } from './teams.service';
 import { TenantsService } from './tenants.service';
 
-@Module({ controllers: [TenantsController], providers: [TenantsService, InvitationsService, RolesService, TeamsService] })
+@Module({ controllers: [TenantsController], providers: [TenantsService, InvitationsService, RolesService, TeamsService], exports: [InvitationsService] })
 export class TenantsModule {}

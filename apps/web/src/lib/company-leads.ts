@@ -6,6 +6,7 @@ import type {
   CompanyFileRow,
   CompanyLeadInput,
   CompanyLeadResult,
+  CompanyLogoRef,
   EmployeeStats,
   LeadDraftInput,
   LeadDraftRow,
@@ -119,4 +120,18 @@ export function useEmployeeStats(contactId: string) {
 export function personLabel(p: Pick<PersonRef, 'name' | 'designation'> | null | undefined): string {
   if (!p) return '';
   return p.designation ? `${p.name} – ${p.designation}` : p.name;
+}
+
+/** A company's logo (ADR 0070): upload one (the image is the raw body), go back to the website's, or look again. */
+export function useCompanyLogoMutations(companyId: string) {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: ['companies'] });
+  return {
+    upload: useMutation({
+      mutationFn: (file: File) => api<CompanyLogoRef>(`/companies/${companyId}/logo`, { method: 'PUT', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } }),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({ mutationFn: () => api<{ logo: CompanyLogoRef | null }>(`/companies/${companyId}/logo`, { method: 'DELETE' }), onSuccess: refresh }),
+    lookAgain: useMutation({ mutationFn: () => api<CompanyLogoRef>(`/companies/${companyId}/logo/refresh`, { method: 'POST' }), onSuccess: refresh }),
+  };
 }

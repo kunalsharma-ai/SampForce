@@ -24,7 +24,11 @@ describe('authentication', () => {
     expect(me.body.user.email).toBe(u.email);
     expect(me.body.tenant).toMatchObject({ id: u.tenantId, name: 'Acme Research', plan: 'free', appliedPlan: 'free', isDemo: false });
     // A new workspace starts on Free, with Free's features only (ADR 0057).
-    expect(me.body.tenant.features).toEqual(['rfqs', 'lead_transfers', 'revenue_attribution', 'manager_dashboard', 'senior_dashboard', 'instructions', 'client_concerns', 'email_sync', 'team_chat', 'ai_assistant', 'automation', 'reports', 'sampbidx', 'sso_scim', 'mobile_app']);
+    // The core CRM modules (ADR 0071) are on every plan too, and the owner's Super Workspace gets them all.
+    expect(me.body.tenant.features).toEqual(expect.arrayContaining(['rfqs', 'lead_transfers', 'revenue_attribution', 'manager_dashboard', 'senior_dashboard', 'instructions', 'client_concerns', 'email_sync', 'team_chat', 'ai_assistant', 'automation', 'reports', 'sampbidx', 'sso_scim', 'lead_management', 'task_management', 'workspace_management']));
+    expect(me.body.tenant.features).not.toContain('excel_export');
+    expect([...me.body.tenant.features].sort()).toEqual([...me.body.tenant.planFeatures].sort());
+    expect(me.body.workspace).toMatchObject({ level: 'SUPER' });
     expect(me.body.role).toBe('owner');
     expect(me.body.permissions).toContain('billing:manage');
     expect(me.body.memberships).toHaveLength(1);

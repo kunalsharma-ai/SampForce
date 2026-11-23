@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PasswordService } from '../src/auth/password.service';
-import { api, appClient, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser } from './helpers';
+import { api, appClient, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
 const OP_SECRET = 'operator-secret-that-is-at-least-32-chars';
 
@@ -114,8 +114,9 @@ describe('mobile access', () => {
     expect(tokens.refreshToken.length).toBeGreaterThan(20);
     const me = (await bearer(tokens.accessToken).get('/mobile/session').expect(200)).body;
     expect(me).toMatchObject({ organisation: { id: owner.tenantId, name: 'Mobile Org' }, level: 'SUPER', device: { id: tokens.deviceId, platform: 'IOS' }, workspaces: [{ tenantId: owner.tenantId }] });
-    // Members without a designation work their own records: they get the Executive app.
-    const m = (await signIn(member).expect(200)).body;
+    // The level comes from the person's workspace (ADR 0071): an Executive Workspace gets the Executive app.
+    const exec = await workspacePerson(app, owner, 'EXECUTIVE', 'Field Exec');
+    const m = (await signIn(exec).expect(200)).body;
     expect((await bearer(m.accessToken).get('/mobile/session').expect(200)).body.level).toBe('EXECUTIVE');
   });
 

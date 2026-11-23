@@ -1,11 +1,12 @@
 import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { levelFromDesignationTier, type LoginInput, type MobileBlockReason, type MobileDeviceInfo, type MobileLoginResponse, type MobilePlatform, type MobileSession, type MobileTokens } from '@dealflow/types';
+import { type LoginInput, type MobileBlockReason, type MobileDeviceInfo, type MobileLoginResponse, type MobilePlatform, type MobileSession, type MobileTokens } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { AuthService, type SessionScope } from '../auth/auth.service';
 import { TokenService } from '../auth/token.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { mobileBlocked, mobileBlockReason } from './mobile-gate';
+import { workspaceLevelOf } from '../workspaces/access';
 import { publishedConfigVersion } from './mobile-config.service';
 
 const NO_SESSION = { code: 'NO_SESSION', message: 'Sign in to continue.' };
@@ -158,8 +159,8 @@ export class MobileAuthService {
       return {
         user,
         organisation: { id: tenant.id, name: tenant.name, brandColor: tenant.brandColor },
-        // Until the workspace hierarchy (ADR 0071) gives every person a workspace, the designation tier decides.
-        level: levelFromDesignationTier(designation?.tier, membership.role.key),
+        // The person's workspace in the hierarchy (ADR 0071); no workspace means the Super Workspace.
+        level: await workspaceLevelOf(tx, auth.tenantId, auth.membershipId),
         designation: designation?.name ?? null,
         role: membership.role.name,
         permissions: auth.permissions,

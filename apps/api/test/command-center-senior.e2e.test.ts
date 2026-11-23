@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { performanceStatus } from '@dealflow/types';
 import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
 type Slice = { key: string; amount: number; link: { kind: string; id: string } | null };
@@ -152,10 +153,14 @@ describe('senior management command center', () => {
     expect(ins('lowConversion').items.map((i: { id: string }) => i.id)).toEqual([a.userId]);
     expect(ins('repeatRfqs').items[0]).toMatchObject({ id: acme, value: 2 });
     expect(ins('revenueConcentration').items[0]).toMatchObject({ id: acme, value: 66.7 });
-    // Whether a team is behind depends on how much of the month has gone, so compare with the teams' own status.
-    type Mgr = { person: { id: string }; status: string };
-    const behind = [...new Set(d.departmentRows.flatMap((r: { managers: Mgr[] }) => r.managers).filter((m: Mgr) => m.status === 'BEHIND' || m.status === 'AT_RISK').map((m: Mgr) => m.person.id))];
-    expect(ins('teamsBehind').items.map((i: { id: string }) => i.id).sort()).toEqual([...behind].sort());
+    // Whether a team is behind depends on how much of the month has gone, so the expectation follows the date.
+    const now = new Date();
+    const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+    const monthEnd = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+    const elapsed = (now.getTime() - monthStart) / (monthEnd - monthStart);
+    const managers = d.departmentRows.flatMap((r: { managers: { person: { id: string }; achievement: number | null }[] }) => r.managers);
+    const behind = managers.filter((m: { achievement: number | null }) => ['BEHIND', 'AT_RISK'].includes(performanceStatus(m.achievement, elapsed, true)));
+    expect(ins('teamsBehind').items.map((i: { id: string }) => i.id).sort()).toEqual(behind.map((m: { person: { id: string } }) => m.person.id).sort());
     expect(ins('stuckNegotiation').count).toBe(0);
     // A concern on Acme shows until it is resolved.
     const concern = (await api(a).post('/client-concerns', { companyId: acme, category: 'PRICING', severity: 'HIGH', title: 'Too expensive' }).expect(201)).body;

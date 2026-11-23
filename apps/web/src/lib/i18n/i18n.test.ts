@@ -295,7 +295,6 @@ describe('page phrases', () => {
           ['../../components/prospects/prospects.tsx', /const FIELDS[\s\S]*?\];/, /\['\w+', '([^']+)'/g],
           ['../../components/visitors/visitors.tsx', /const SEGMENTS[\s\S]*?\];/, /label: '([^']+)'/g],
           ['../../app/app/pipelines/pipelines-manager.tsx', /const NEW_PIPELINE[\s\S]*?\};/, /name: '([^']+)'/g],
-          ['../../app/app/help/page.tsx', /const TOPICS[\s\S]*?\];/, /(?:q|a): '([^']+)'/g],
           ['../../../../api/src/finder/finder.service.ts', /[\s\S]*/, /notes\.push\('([^']+)'\)/g],
           ['../../../../api/src/prospects/prospects.service.ts', /[\s\S]*/, /(?:detail: |notice: |\? )'([A-Z][^']{20,})'/g],
         ].flatMap(([file, part, re]) => [...source(file as string).match(part as RegExp)![0].matchAll(re as RegExp)].map((m) => m[1]!)),

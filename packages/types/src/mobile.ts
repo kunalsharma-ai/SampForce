@@ -190,11 +190,3 @@ export interface MobileSession {
   configVersion: number;
 }
 
-/** The level a person's designation tier stands for, until the workspace hierarchy gives every person a node. */
-export function levelFromDesignationTier(tier: string | null | undefined, roleKey: string): MobileWorkspaceLevel {
-  if (tier === 'SENIOR') return 'SUPER';
-  if (tier === 'MANAGER') return 'MANAGER';
-  if (tier === 'EXECUTIVE') return 'EXECUTIVE';
-  // No designation: workspace owners and admins run the organisation, everyone else works their own records.
-  return roleKey === 'owner' || roleKey === 'admin' ? 'SUPER' : 'EXECUTIVE';
-}

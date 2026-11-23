@@ -16,7 +16,6 @@ export const fr: Messages = {
 
   'nav.main': 'Principale',
   'nav.favourites': 'Favoris',
-  'nav.recent': 'Récents',
   'nav.removeFavourite': 'Retirer {label} des favoris',
   'nav.removeFavouriteShort': 'Retirer des favoris',
   'nav.customize': 'Personnaliser',
@@ -40,6 +39,8 @@ export const fr: Messages = {
   'module.pipelines': 'Pipelines',
   'module.accounts': 'Comptes',
   'module.follow-ups': 'Relances',
+  'module.tasks': 'Tâches',
+  'module.targets': 'Objectifs',
   'module.rfqs': 'RFQ',
   'module.chat': 'Discussion d’équipe',
   'module.activities': 'Activités commerciales',

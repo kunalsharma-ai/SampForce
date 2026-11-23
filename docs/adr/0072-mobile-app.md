@@ -66,5 +66,7 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   record a phone route sends (`mobileReadable`) and refuses writes to fields they may not set or clear
   (`checkMobileWrite`, `MOBILE_FIELD_NOT_ALLOWED` with the fields in `details`) or record actions their level may not
   take (`MOBILE_ACTION_NOT_ALLOWED`). M4's record routes must use them; hiding a field in the app is never the control.
-- **Level.** Until ADR 0071 gives every person a workspace node, the level comes from the designation tier (senior =
-  Super, manager = Manager, otherwise Executive; owners and admins without a designation are Super).
+- **Level.** The person's workspace (ADR 0071) decides the level: a membership placed in a Manager or Executive
+  workspace works at that level, and one with no workspace node (the owner, admins) is Super. The workspace's features
+  and allowed actions narrow the configuration further, so a module the workspace may only view cannot be changed on
+  the phone either.

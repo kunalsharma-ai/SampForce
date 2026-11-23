@@ -1,4 +1,4 @@
-import { defaultMobileConfig, PERMISSIONS, resolveMobileConfig, type MobileAppConfig } from '@dealflow/types';
+import { defaultMobileConfig, FEATURE_KEYS, PERMISSIONS, resolveMobileConfig, type MobileAppConfig } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import { checkMobileDelete, checkMobileWrite, mobileReadable } from './field-policy';
 
@@ -11,7 +11,7 @@ const config = (() => {
   c.fields.companies['cf.visit_notes'] = { SUPER: { view: true, edit: true, create: true, delete: true }, MANAGER: { view: true, edit: true, create: true, delete: true }, EXECUTIVE: { view: true, edit: true, create: true, delete: true } };
   return c;
 })();
-const exec = resolveMobileConfig(config, { level: 'EXECUTIVE', features: [], permissions: [...PERMISSIONS] });
+const exec = resolveMobileConfig(config, { level: 'EXECUTIVE', features: [...FEATURE_KEYS], permissions: [...PERMISSIONS] });
 const code = (fn: () => void) => {
   try {
     fn();
@@ -48,9 +48,9 @@ describe('mobile field rules (ADR 0072)', () => {
 
   it('applies the record rules and refuses modules the person does not have', () => {
     expect(code(() => checkMobileDelete(exec, 'companies'))).toMatchObject({ code: 'MOBILE_ACTION_NOT_ALLOWED' });
-    const off = resolveMobileConfig(config, { level: 'EXECUTIVE', features: [], permissions: ['dashboard:read'] });
+    const off = resolveMobileConfig(config, { level: 'EXECUTIVE', features: [...FEATURE_KEYS], permissions: ['dashboard:read'] });
     expect(code(() => mobileReadable(off, 'companies', { id: 'c1' }))).toMatchObject({ code: 'MOBILE_MODULE_OFF' });
-    const readOnly = resolveMobileConfig(config, { level: 'SUPER', features: [], permissions: ['dashboard:read', 'companies:read'] });
+    const readOnly = resolveMobileConfig(config, { level: 'SUPER', features: [...FEATURE_KEYS], permissions: ['dashboard:read', 'companies:read'] });
     expect(code(() => checkMobileWrite(readOnly, 'companies', 'create', { name: 'X' }))).toMatchObject({ code: 'MOBILE_ACTION_NOT_ALLOWED' });
   });
 });

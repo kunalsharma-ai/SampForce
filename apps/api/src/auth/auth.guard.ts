@@ -102,6 +102,7 @@ export class AuthGuard implements CanActivate {
           permissions: membership.role.permissions,
           recordScope: membership.role.recordScope,
           viewOthersDetails: membership.role.viewOthersDetails,
+          workspaceNodeId: membership.workspaceNodeId ?? null,
           authMethod: claims.amr,
           ...(claims.stid ? { ssoTenantId: claims.stid } : {}),
           ...(restriction ? { restriction } : {}),
@@ -206,6 +207,7 @@ export class AuthGuard implements CanActivate {
       permissions: membership.role.permissions.filter((p) => scopes.has(p)),
       recordScope: membership.role.recordScope,
       viewOthersDetails: membership.role.viewOthersDetails,
+      workspaceNodeId: membership.workspaceNodeId ?? null,
       authMethod: 'password',
       via: 'api_key',
     };
@@ -243,6 +245,7 @@ export class AuthGuard implements CanActivate {
       permissions: membership.role.permissions.filter((p) => scopes.has(p)),
       recordScope: membership.role.recordScope,
       viewOthersDetails: membership.role.viewOthersDetails,
+      workspaceNodeId: membership.workspaceNodeId ?? null,
       authMethod: method,
       via: 'extension',
       ...(session.ssoTenantId ? { ssoTenantId: session.ssoTenantId } : {}),

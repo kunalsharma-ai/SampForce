@@ -1,6 +1,6 @@
 import { createParamDecorator, type ExecutionContext, SetMetadata } from '@nestjs/common';
 import type { Request } from 'express';
-import type { FeatureKey, Permission } from '@dealflow/types';
+import type { FeatureKey, Permission, WorkspaceAction } from '@dealflow/types';
 
 export interface AuthContext {
   userId: string;
@@ -13,6 +13,10 @@ export interface AuthContext {
   recordScope?: string;
   /** Whether the role sees details of visible records someone else owns. Missing means yes. */
   viewOthersDetails?: boolean;
+  /**
+   * The caller's workspace in the organisation's hierarchy (ADR 0071). Null or missing = the Super Workspace.
+   */
+  workspaceNodeId?: string | null;
   /** How this session signed in. */
   authMethod: 'password' | 'mfa' | 'sso';
   /** Set for single sign-on sessions, which can only act in this workspace. */
@@ -93,3 +97,25 @@ export const REQUIRED_FEATURE = 'dealflow:feature';
  */
 export type FeatureSelector = FeatureKey | ((req: AuthedRequest) => FeatureKey | null);
 export const RequireFeature = (feature: FeatureSelector) => SetMetadata(REQUIRED_FEATURE, feature);
+
+export const REQUIRED_ACTION = 'dealflow:action';
+/**
+ * The workspace action a route performs (ADR 0071), when its permission and HTTP method do not say it: assigning
+ * an owner, approving, exporting. HierarchyGuard checks it against the caller's workspace.
+ */
+export const RequireAction = (action: WorkspaceAction) => SetMetadata(REQUIRED_ACTION, action);
+
+export const OWN_HIERARCHY_RULES = 'dealflow:ownHierarchyRules';
+/**
+ * The route's service applies the hierarchy rules itself (workspace administration, whose refusals are more
+ * specific), so HierarchyGuard checks only the route's feature, not its action.
+ */
+export const OwnHierarchyRules = () => SetMetadata(OWN_HIERARCHY_RULES, true);
+
+export const ALSO_REQUIRED_FEATURES = 'dealflow:alsoFeatures';
+/**
+ * Further catalogue features (usually subfeatures, ADR 0071) a route needs on top of its @RequireFeature and the
+ * features its permissions belong to. Merged from the controller and the route; checked against the plan
+ * (FeatureGuard) and the caller's workspace (HierarchyGuard).
+ */
+export const AlsoRequireFeature = (...features: FeatureKey[]) => SetMetadata(ALSO_REQUIRED_FEATURES, features);
