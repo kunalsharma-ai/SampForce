@@ -361,6 +361,14 @@ model Tenant {
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
+  /// Closing the company (workspace redesign W7): who closed it and when. The status is PENDING_DELETION from then
+  /// on, so nobody can sign in; the Console can reopen it until eraseAfter, when the worker erases its data.
+  closedAt              DateTime?         @map("closed_at")
+  closedById            String?           @map("closed_by_id")
+  closeReason           String?           @map("close_reason")
+  eraseAfter            DateTime?         @map("erase_after")
+  /// Set once the worker has erased the company's data; the row stays (deletedAt set) as the record that it existed.
+  erasedAt              DateTime?         @map("erased_at")
 
   subscription           Subscription?
   navigation             WorkspaceNavigation[]

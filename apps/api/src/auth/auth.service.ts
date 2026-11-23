@@ -402,6 +402,13 @@ export class AuthService {
     if (!first) {
       const all = await this.listMemberships(userId);
       if (all.length > 0) throw new ForbiddenException(SSO_REQUIRED);
+      // The company was closed by its owner (W7): say so, and until when it can be reopened.
+      const closed = await this.prisma.run({ userId }, (tx) =>
+        tx.membership.findFirst({ where: { userId, status: 'ACTIVE', tenant: { status: 'PENDING_DELETION', deletedAt: null } }, include: { tenant: { select: { eraseAfter: true } } } }),
+      );
+      if (closed?.tenant.eraseAfter) {
+        throw new ForbiddenException({ code: 'COMPANY_CLOSED', message: `Your company closed its SampForce account. SampForce support can reopen it until ${closed.tenant.eraseAfter.toISOString().slice(0, 10)}.` });
+      }
       throw new ForbiddenException({
         code: 'NO_WORKSPACE',
         message: 'Your account is not a member of any active workspace.',

@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { Tr } from '@/lib/i18n';
 import { AppearanceSettings } from './appearance-settings';
+import { CloseCompanyCard } from './close-company';
 import { RegionalSettings } from './regional-settings';
 import { SettingsJump } from './settings-jump';
 import { WorkspaceSettings } from './workspace-settings';
@@ -127,6 +128,7 @@ export default function SettingsPage() {
         <WorkspaceSettings />
         <AppearanceSettings />
         <RegionalSettings />
+        <CloseCompanyCard />
       </section>
       {SECTIONS.map((s) => (
         <Card key={s.id} id={s.id} className="scroll-mt-20" data-settings-section={s.id}>
