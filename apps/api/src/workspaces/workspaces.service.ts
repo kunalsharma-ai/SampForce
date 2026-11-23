@@ -449,20 +449,20 @@ export class WorkspacesService {
       const org = await resolveOrganisation(tx, auth.tenantId);
       const target = this.authorityOver(auth, org, id, 'workspace_management', 'delete');
       if (nameKeyOf(input.confirmName) !== nameKeyOf(target.node.name)) {
-        throw new BadRequestException({ code: 'CONFIRM_NAME_MISMATCH', message: 'Type the workspace name exactly to delete it.', details: [{ path: 'confirmName', message: 'does not match' }] });
+        throw new BadRequestException({ code: 'CONFIRM_NAME_MISMATCH', message: 'Type the workspace name exactly to delete it.' });
       }
       const impact = await this.impactOf(tx, auth, org, target);
       let receiver: { id: string; name: string } | null = null;
       let handover: NodeAccess | null = null;
       if (input.handoverToId) {
         if (!impact.handoverOptions.some((o) => o.id === input.handoverToId)) {
-          throw new BadRequestException({ code: 'INVALID_HANDOVER', message: 'Choose one of the workspaces offered to receive the records.', details: [{ path: 'handoverToId', message: 'not allowed' }] });
+          throw new BadRequestException({ code: 'INVALID_HANDOVER', message: 'Choose one of the workspaces offered to receive the records.' });
         }
         handover = org.byId.get(input.handoverToId)!;
         receiver = await this.receiverOf(tx, auth, org, handover);
-        if (!receiver) throw new BadRequestException({ code: 'HANDOVER_EMPTY', message: 'That workspace has nobody in it yet to receive the records. Choose another one.', details: [{ path: 'handoverToId', message: 'empty' }] });
+        if (!receiver) throw new BadRequestException({ code: 'HANDOVER_EMPTY', message: 'That workspace has nobody in it yet to receive the records. Choose another one.' });
       } else if (impact.handoverRequired) {
-        throw new BadRequestException({ code: 'HANDOVER_REQUIRED', message: 'Choose the workspace that receives its records and workspaces.', details: [{ path: 'handoverToId', message: 'required' }] });
+        throw new BadRequestException({ code: 'HANDOVER_REQUIRED', message: 'Choose the workspace that receives its records and workspaces.' });
       }
 
       const people = impact.people.map((p) => p.userId);
