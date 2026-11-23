@@ -12,6 +12,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { CookieOptions, Request, Response } from 'express';
 import { jwtVerify, SignJWT } from 'jose';
+import { BUILT_IN_ROLE_DEFS, defaultRoleKey, expandPermissions, isBuiltInRole, type OperatorPermission as Permission } from '@dealflow/types';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 
@@ -31,6 +32,10 @@ export interface OperatorContext {
   email: string;
   name: string;
   role: 'ADMIN' | 'SUPPORT';
+  /** The Console role (ADR 0074): a built-in key or a custom role id, its name, and what it allows. */
+  consoleRole: string;
+  roleName: string;
+  permissions: Permission[];
 }
 
 type OperatorRequest = Request & { operator?: OperatorContext };
@@ -71,12 +76,31 @@ export class OperatorTokens {
   }
 }
 
-const OPERATOR_ROLES = 'dealflow:operatorRoles';
-/** Restricts an operator route to the listed operator roles (default: any active operator). */
-export const OperatorRoles = (...roles: OperatorContext['role'][]) => SetMetadata(OPERATOR_ROLES, roles);
+const OPERATOR_PERMISSION = 'dealflow:operatorPermission';
+const OPERATOR_ANY = 'dealflow:operatorAny';
+/** The permission a route needs (ADR 0074); with several, the operator needs all of them. Every operator route has one. */
+export const OperatorPermission = (...perms: Permission[]) => SetMetadata(OPERATOR_PERMISSION, perms);
+/** A route for any signed-in operator, whatever their role: their own profile, preferences, search and sign-out. */
+export const OperatorAny = () => SetMetadata(OPERATOR_ANY, true);
 const OPERATOR_PUBLIC = 'dealflow:operatorPublic';
 /** The login route: reachable without an operator session (but still 404 when the console is disabled). */
 export const OperatorPublic = () => SetMetadata(OPERATOR_PUBLIC, true);
+export const OPERATOR_ROUTE_METADATA = { permission: OPERATOR_PERMISSION, any: OPERATOR_ANY, public: OPERATOR_PUBLIC } as const;
+
+type OperatorRow = { id: string; email: string; name: string; role: 'ADMIN' | 'SUPPORT'; consoleRole: string | null };
+type RoleReader = Pick<PrismaService, 'operatorConsoleRole'>;
+
+/** An operator with their role resolved: built-in roles from code, custom ones from the database. */
+export async function operatorContext(prisma: RoleReader, op: OperatorRow): Promise<OperatorContext> {
+  const key = op.consoleRole ?? defaultRoleKey(op.role);
+  const base = { id: op.id, email: op.email, name: op.name, role: op.role, consoleRole: key };
+  if (isBuiltInRole(key)) return { ...base, roleName: BUILT_IN_ROLE_DEFS[key].name, permissions: BUILT_IN_ROLE_DEFS[key].permissions };
+  const custom = await prisma.operatorConsoleRole.findUnique({ where: { id: key } });
+  // A role that no longer exists grants nothing (roles in use cannot be deleted, so this is a safety net).
+  return { ...base, roleName: custom?.name ?? 'No role', permissions: custom ? expandPermissions(custom.permissions) : [] };
+}
+
+export const FORBIDDEN_FOR_ROLE = { code: 'FORBIDDEN', message: 'Your operator role does not allow this action.' };
 
 @Injectable()
 export class OperatorGuard implements CanActivate {
@@ -96,9 +120,11 @@ export class OperatorGuard implements CanActivate {
     // Operators are platform-level rows with no tenant, so this lookup needs no tenant context.
     const op = id ? await this.prisma.platformOperator.findUnique({ where: { id } }) : null;
     if (!op || op.status !== 'ACTIVE') throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to the operator console.' });
-    req.operator = { id: op.id, email: op.email, name: op.name, role: op.role };
-    const roles = this.reflector.getAllAndOverride<OperatorContext['role'][]>(OPERATOR_ROLES, targets);
-    if (roles?.length && !roles.includes(op.role)) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your operator role does not allow this action.' });
+    req.operator = await operatorContext(this.prisma, op);
+    if (this.reflector.getAllAndOverride<boolean>(OPERATOR_ANY, targets)) return true;
+    const needed = this.reflector.getAllAndOverride<Permission[]>(OPERATOR_PERMISSION, targets);
+    // A route without a permission is closed: the route test makes sure none ships that way.
+    if (!needed?.length || !needed.every((p) => req.operator!.permissions.includes(p))) throw new ForbiddenException(FORBIDDEN_FOR_ROLE);
     return true;
   }
 }

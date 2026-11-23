@@ -239,7 +239,7 @@ export function ConsoleTopBar({
               <span className="hidden text-start leading-tight xl:block">
                 <span className="block text-sm font-medium">{me.name}</span>
                 <span className="block text-[11px] text-muted-foreground">
-                  {me.role === 'ADMIN' ? 'Admin' : 'Support'}
+                  {me.roleName}
                 </span>
               </span>
             </button>
@@ -251,7 +251,7 @@ export function ConsoleTopBar({
                 {me.email}
               </span>
               <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                Platform staff · {me.role === 'ADMIN' ? 'Admin' : 'Support'}
+                Platform staff · {me.roleName}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

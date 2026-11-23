@@ -44,7 +44,7 @@ import {
   useSaveHelpCategory,
   useUploadHelpMedia,
 } from '@/lib/help-admin';
-import { useOperator } from '../../operator-shell';
+import { can, useOperator } from '../../operator-shell';
 
 /*
  * Help management in the Console (ADR 0073): write and publish answers, guides and announcements, edit or hide the
@@ -95,7 +95,7 @@ const LEVEL_LABEL: Record<(typeof HELP_LEVELS)[number], string> = {
 function HelpManager() {
   const me = useOperator();
   const [tab, setTab] = useState<Tab>('articles');
-  const admin = me.data?.role === 'ADMIN';
+  const admin = can(me.data, 'settings.manage');
   if (!me.data) return <Skeleton className="h-96" />;
   return (
     <div data-help-manage>

@@ -25,7 +25,7 @@ import {
 } from '@dealflow/types';
 import { AllowRestricted, Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard, OperatorRoles } from '../operator/operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorPermission } from '../operator/operator-auth';
 import { MobileAccessService } from './mobile-access.service';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileConfigService } from './mobile-config.service';
@@ -211,24 +211,26 @@ export class OperatorMobileController {
   constructor(private readonly access: MobileAccessService) {}
 
   @Get()
+  @OperatorPermission('clients.view')
   overview(@Operator() op: OperatorContext, @Req() req: Request) {
     return this.access.overview(op, ip(req));
   }
 
   @Get(':tenantId')
+  @OperatorPermission('clients.view')
   detail(@Operator() op: OperatorContext, @Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Req() req: Request) {
     return this.access.detail(op, tenantId, ip(req));
   }
 
   @Post(':tenantId/decision')
+  @OperatorPermission('mobile.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   decide(@Operator() op: OperatorContext, @Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Body(new ZodPipe(operatorMobileActionSchema)) body: OperatorMobileActionInput, @Req() req: Request) {
     return this.access.decide(op, tenantId, body.action, body.reason, ip(req));
   }
 
   @Put(':tenantId/limits')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('mobile.manage')
   limits(@Operator() op: OperatorContext, @Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Body(new ZodPipe(operatorMobileLimitsSchema)) body: OperatorMobileLimitsInput, @Req() req: Request) {
     return this.access.setLimits(op, tenantId, body.maxDevices, body.reason, ip(req));
   }

@@ -18,7 +18,7 @@ import {
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature } from '../common/auth-context';
 import { MobileModuleAccess } from '../mobile/mobile-module.guard';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard } from '../operator/operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorPermission } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ChatPresence } from './chat-presence';
 import { ChatSocketTickets } from './chat-socket';
@@ -183,6 +183,7 @@ export class ChatController {
 @Controller('operator/chat')
 @Public()
 @UseGuards(OperatorGuard)
+@OperatorPermission('support.handle')
 export class OperatorChatController {
   constructor(
     private readonly chat: ChatService,
