@@ -37,3 +37,14 @@ Refused and failed attempts must be in the audit log with their status.
 **Consequences.** One check per action: a bulk delete is one check. Scripts and integrations that deleted with an
 API key must now be run by a person. Typing the password again within 5 minutes is needed for a second delete, which
 is deliberate.
+
+## W2: Delete is a permission, off by default (2026-11-23)
+
+- `defaultChildActions` never includes `delete`: a new Manager or Executive Workspace cannot delete anything until the
+  workspace above ticks Delete in the Permission Center. Existing workspaces keep what they were given. The Super
+  Workspace keeps Delete unless the Console's ceiling takes it away.
+- `HierarchyGuard` adds a `delete` check, for every feature the route belongs to, on any route whose
+  `@ConfirmPassword` rule applies. So a bulk delete (a POST, now tied to its list's feature) and a configuration delete
+  (which asks for `manage`) need Delete too. Phone deletes name their module's feature for the same reason.
+- The web hides delete buttons with `useCanDelete(feature?)` (the page's own feature when none is given). The API
+  refuses anyway, with `ACTION_NOT_GRANTED`.
