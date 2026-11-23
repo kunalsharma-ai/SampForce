@@ -25,6 +25,7 @@ import { EmailAnalyticsService } from './analytics.service';
 import { SequenceRunner } from './sequence-runner.service';
 import { SequencesService } from './sequences.service';
 import { EmailVariablesService, TemplatesService } from './templates.service';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const enrollmentQuery = z.object({
@@ -55,6 +56,7 @@ export class EmailVariablesController {
     return this.variables.upsert(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':key')
   @HttpCode(204)
   @RequirePermissions('marketing:manage')
@@ -104,6 +106,7 @@ export class EmailTemplatesController {
     return this.templates.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('sequences:write')
@@ -159,6 +162,7 @@ export class SequencesController {
     return this.sequences.addSuppressions(auth, body.emails, meta);
   }
 
+  @NoPasswordConfirmation('Lets an address receive email again; nothing is deleted')
   @Post('suppressions/:email/remove')
   @HttpCode(204)
   @RequirePermissions('marketing:manage')

@@ -7,7 +7,7 @@ import { cursorPageQuerySchema } from './pagination';
  * the Super Workspace allows it; the Console Admin reads the platform log in the console.
  */
 
-export const AUDIT_CATEGORIES = ['workspaces', 'permissions', 'features', 'subscription', 'limits', 'targets', 'tasks', 'records', 'people', 'support'] as const;
+export const AUDIT_CATEGORIES = ['workspaces', 'permissions', 'features', 'subscription', 'limits', 'targets', 'tasks', 'records', 'people', 'support', 'security'] as const;
 export type AuditCategory = (typeof AUDIT_CATEGORIES)[number];
 
 export const AUDIT_CATEGORY_LABEL = {
@@ -21,6 +21,7 @@ export const AUDIT_CATEGORY_LABEL = {
   records: 'CRM records',
   people: 'People',
   support: 'Support queries',
+  security: 'Security and passwords',
 } as const satisfies Record<AuditCategory, string>;
 
 /**
@@ -38,12 +39,13 @@ export const AUDIT_CATEGORY_ACTIONS: Record<AuditCategory, readonly string[]> = 
   records: ['company.', 'contact.', 'lead.', 'deal.', 'activity.', 'quote.', 'contract.'],
   people: ['member.invited', 'member.joined', 'member.invitation_revoked', 'member.org_changed'],
   support: ['support_ticket.'],
+  security: ['security.', 'auth.password_', 'auth.mfa_', 'auth.sessions_'],
 };
 
 const isPrefix = (p: string) => p.endsWith('.') || p.endsWith('_');
 
 export function auditCategoryOf(action: string): AuditCategory | null {
-  const order: AuditCategory[] = ['features', 'limits', 'permissions', 'workspaces', 'subscription', 'targets', 'tasks', 'records', 'people', 'support'];
+  const order: AuditCategory[] = ['features', 'limits', 'permissions', 'workspaces', 'subscription', 'targets', 'tasks', 'records', 'people', 'support', 'security'];
   for (const c of order) if (AUDIT_CATEGORY_ACTIONS[c].some((p) => (isPrefix(p) ? action.startsWith(p) : action === p))) return c;
   return null;
 }
@@ -53,6 +55,10 @@ export function auditCategoryMatchers(c: AuditCategory): { exact: string[]; pref
   const all = AUDIT_CATEGORY_ACTIONS[c];
   return { exact: all.filter((p) => !isPrefix(p)), prefixes: all.filter(isPrefix) };
 }
+
+/** Whether an entry records a change that happened or an attempt that was turned down (no permission, wrong password). */
+export const AUDIT_OUTCOMES = ['DONE', 'REFUSED'] as const;
+export type AuditOutcome = (typeof AUDIT_OUTCOMES)[number];
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date like 2026-12-01');
 
@@ -64,6 +70,8 @@ export const auditLogQuerySchema = cursorPageQuerySchema.extend({
   /** First and last day, inclusive, in UTC. */
   from: day.optional(),
   to: day.optional(),
+  /** Only changes that happened (DONE) or only attempts the system turned down (REFUSED). */
+  outcome: z.enum(AUDIT_OUTCOMES).optional(),
 });
 export type AuditLogQuery = z.infer<typeof auditLogQuerySchema>;
 
@@ -72,6 +80,7 @@ export type AuditScope = 'ORGANISATION' | 'TEAM';
 export interface AuditLogRow {
   id: string;
   action: string;
+  outcome: AuditOutcome;
   category: AuditCategory | null;
   actorType: string;
   actorName: string | null;

@@ -23,6 +23,7 @@ import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ChatPresence } from './chat-presence';
 import { ChatSocketTickets } from './chat-socket';
 import { type ChatActor, ChatService } from './chat.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -123,6 +124,7 @@ export class ChatController {
     return this.chat.addMembers(auth, id, body.userIds, meta);
   }
 
+  @NoPasswordConfirmation('Leaving or tidying a conversation, or taking back your own message')
   @Delete('conversations/:id/members/:userId')
   @HttpCode(204)
   removeMember(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Param('userId', uuid) userId: string, @Meta() meta: RequestMeta) {
@@ -169,6 +171,7 @@ export class ChatController {
     return this.chat.edit(user(auth), id, body.body);
   }
 
+  @NoPasswordConfirmation('Leaving or tidying a conversation, or taking back your own message')
   @Delete('messages/:id')
   @HttpCode(204)
   remove(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
@@ -272,6 +275,7 @@ export class OperatorChatController {
     return this.chat.edit(this.op(op), id, body.body, await this.chat.tenantOfMessage(id));
   }
 
+  @NoPasswordConfirmation('Leaving or tidying a conversation, or taking back your own message')
   @Delete('messages/:id')
   @HttpCode(204)
   async remove(@Operator() op: OperatorContext, @Param('id', uuid) id: string) {

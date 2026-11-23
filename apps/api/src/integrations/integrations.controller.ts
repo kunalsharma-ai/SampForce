@@ -7,6 +7,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { CommunicationService } from './communication.service';
 import { InboxService } from './inbox.service';
 import { IntegrationsService } from './integrations.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const callbackQuery = z.object({ code: z.string().max(4000).optional(), state: z.string().max(4000).optional(), error: z.string().max(200).optional() });
 const emailQuery = z.object({
@@ -76,6 +77,7 @@ export class IntegrationsController {
     return this.integrations.syncForUser(auth, IntegrationsService.parseProvider(provider));
   }
 
+  @ConfirmPassword()
   @Delete(':provider')
   @HttpCode(204)
   @RequirePermissions('activities:write')

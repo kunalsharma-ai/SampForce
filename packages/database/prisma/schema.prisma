@@ -280,6 +280,35 @@ model MfaRecoveryCode {
   @@map("mfa_recovery_codes")
 }
 
+/// A one-time pass proving the person typed their password (or two-step code) moments ago. Every destructive route
+/// asks for one (password confirmation): it is bound to the session that asked, works once and lapses after five
+/// minutes. Only a SHA-256 hash of the pass is stored. `principalKind` is USER for workspace people, OPERATOR for the
+/// Console.
+model PasswordConfirmation {
+  id            String    @id @default(uuid()) @map("_id")
+  tokenHash     String    @unique @map("token_hash")
+  principalKind String    @map("principal_kind")
+  principalId   String    @map("principal_id")
+  sessionId     String?   @map("session_id")
+  expiresAt     DateTime  @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([principalKind, principalId, createdAt])
+  @@map("password_confirmations")
+}
+
+/// A wrong password (or code) typed to confirm a destructive action. Five within fifteen minutes pause the check.
+model PasswordCheckFailure {
+  id            String   @id @default(uuid()) @map("_id")
+  principalKind String   @map("principal_kind")
+  principalId   String   @map("principal_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([principalKind, principalId, createdAt])
+  @@map("password_check_failures")
+}
+
 // ───────────────────────────── Tenancy ─────────────────────────────
 
 enum TenantStatus {
@@ -691,6 +720,8 @@ model AuditLog {
   actorType   ActorType @default(USER) @map("actor_type")
   actorUserId String?   @map("actor_user_id")
   action      String
+  /// DONE for a change that happened; REFUSED for an attempt the system turned down (no permission, wrong password).
+  outcome     String    @default("DONE")
   entityType  String?   @map("entity_type")
   entityId    String?   @map("entity_id")
   metadata    Json      @default("{}")

@@ -126,6 +126,14 @@ export class ApiClient {
   delete(path: string): Promise<void> {
     return this.authed<void>('DELETE', path);
   }
+  /**
+   * Deletes after confirming the person's password (workspace redesign W1): the server checks it, hands back a one-time
+   * pass, and refuses the delete without one.
+   */
+  async deleteConfirmed(path: string, password: string): Promise<void> {
+    const pass = await this.authed<{ token: string }>('POST', '/auth/confirm-password', { password });
+    return this.authed<void>('DELETE', path, undefined, false, { 'x-password-confirmation': pass.token });
+  }
   /** Sends a file as the raw request body (a photo upload). */
   putFile<T>(path: string, data: Blob, contentType: string): Promise<T> {
     return this.authed<T>('PUT', path, new RawBody(data, contentType));
@@ -175,18 +183,18 @@ export class ApiClient {
     return stored;
   }
 
-  private async authed<T>(method: Method, path: string, body?: unknown, asBlob = false): Promise<T> {
+  private async authed<T>(method: Method, path: string, body?: unknown, asBlob = false, extra?: Record<string, string>): Promise<T> {
     let tokens = await this.opts.store.get();
     if (!tokens) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in again.');
     if (tokens.expiresAt - REFRESH_EARLY_MS <= this.now()) tokens = await this.refresh(tokens);
     if (!tokens) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in again.');
     try {
-      return await this.send<T>(method, path, body, tokens.accessToken, asBlob);
+      return await this.send<T>(method, path, body, tokens.accessToken, asBlob, extra);
     } catch (e) {
       if (!(e instanceof ApiError) || e.status !== 401) throw e;
       const fresh = await this.refresh(tokens);
       if (!fresh) throw e;
-      return this.send<T>(method, path, body, fresh.accessToken, asBlob);
+      return this.send<T>(method, path, body, fresh.accessToken, asBlob, extra);
     }
   }
 
@@ -216,8 +224,8 @@ export class ApiClient {
     return this.refreshing;
   }
 
-  private async send<T>(method: Method, path: string, body: unknown, accessToken: string | null, asBlob = false): Promise<T> {
-    const headers: Record<string, string> = { accept: asBlob ? '*/*' : 'application/json' };
+  private async send<T>(method: Method, path: string, body: unknown, accessToken: string | null, asBlob = false, extra?: Record<string, string>): Promise<T> {
+    const headers: Record<string, string> = { accept: asBlob ? '*/*' : 'application/json', ...extra };
     const language = this.opts.language?.();
     if (language) headers['accept-language'] = language;
     if (body instanceof RawBody) headers['content-type'] = body.type;

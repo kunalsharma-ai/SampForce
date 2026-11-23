@@ -18,6 +18,7 @@ import {
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CompanyWorkService } from './company-work.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -65,6 +66,7 @@ export class InteractionsController {
     return this.work.updateInteraction(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('activities:write')
@@ -163,6 +165,7 @@ export class RfqsController {
     return this.work.updateRfq(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('companies:write')

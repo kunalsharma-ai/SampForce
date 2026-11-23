@@ -117,7 +117,7 @@ describe('multi-column sorting and bulk actions', () => {
     const ada = (await api(owner).get(`/leads/${leads.Ada}`).expect(200)).body;
     expect(ada.lead ?? ada).toMatchObject({ status: 'CONTACTED', owner: { id: viewer.userId } });
 
-    const removed = await api(owner).post('/records/bulk', { entity: 'leads', ids: [leads.Cy], action: 'delete' }).expect(200);
+    const removed = await api(owner).postConfirmed('/records/bulk', { entity: 'leads', ids: [leads.Cy], action: 'delete' }).expect(200);
     expect(removed.body.updated).toBe(1);
     await api(owner).get(`/leads/${leads.Cy}`).expect(404);
 
@@ -137,10 +137,10 @@ describe('multi-column sorting and bulk actions', () => {
   });
 
   it('checks permissions and validates the action', async () => {
-    await api(viewer).post('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'delete' }).expect(403);
+    await api(viewer).postConfirmed('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'delete' }).expect(403);
     await api(owner).post('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'status', status: 'CONVERTED' }).expect(400);
     await api(owner).post('/records/bulk', { entity: 'deals', ids: [leads.Di], action: 'status', status: 'WON' }).expect(400);
     await api(owner).post('/records/bulk', { entity: 'leads', ids: [leads.Di], action: 'assign' }).expect(400);
-    await api(owner).post('/records/bulk', { entity: 'leads', ids: Array.from({ length: 101 }, () => leads.Di), action: 'delete' }).expect(400);
+    await api(owner).postConfirmed('/records/bulk', { entity: 'leads', ids: Array.from({ length: 101 }, () => leads.Di), action: 'delete' }).expect(400);
   });
 });

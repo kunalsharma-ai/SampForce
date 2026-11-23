@@ -2,6 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, 
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
+  type ConfirmPasswordInput,
+  confirmPasswordSchema,
+  type PasswordConfirmationIssued,
   type AcceptInvitationInput,
   acceptInvitationSchema,
   type InvitationPreview,
@@ -31,7 +34,8 @@ import {
   type SwitchTenantInput,
   switchTenantSchema,
 } from '@dealflow/types';
-import { AllowRestricted, Auth, type AuthContext, type AuthedRequest, Meta, Public, type RequestMeta } from '../common/auth-context';
+import { AllowRestricted, Auth, type AuthContext, type AuthedRequest, Meta, MobileAccess, Public, type RequestMeta } from '../common/auth-context';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { AuthService } from './auth.service';
@@ -156,6 +160,16 @@ export class AuthController {
     return { tenantId: tokens.tenantId };
   }
 
+  /** One-time pass for one destructive action, after the password (or a two-step code) is checked. */
+  // Wrong passwords are limited per person (five in fifteen minutes); this limit only stops floods.
+  @MobileAccess()
+  @Throttle({ default: { limit: Math.max(60, Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 0)), ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('confirm-password')
+  confirmPassword(@Auth() auth: AuthContext, @Body(new ZodPipe(confirmPasswordSchema)) body: ConfirmPasswordInput, @Meta() meta: RequestMeta): Promise<PasswordConfirmationIssued> {
+    return this.auth.confirmPassword(auth, body, meta);
+  }
+
   @AllowRestricted()
   @Get('me')
   me(@Auth() auth: AuthContext): Promise<MeResponse> {
@@ -245,6 +259,7 @@ export class AuthController {
 
   @AllowRestricted()
   @HttpCode(204)
+  @NoPasswordConfirmation('Signs a device out; it must stay quick')
   @Delete('sessions/:id')
   async revokeSession(@Auth() auth: AuthContext, @Param('id', ParseUUIDPipe) id: string, @Meta() meta: RequestMeta): Promise<void> {
     await this.auth.revokeSessions(auth, { id }, meta);

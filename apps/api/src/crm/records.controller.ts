@@ -25,6 +25,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { CompaniesService } from './companies.service';
 import { ContactsService } from './contacts.service';
 import { LeadsService } from './leads.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const mergeSchema = z.object({ duplicateId: z.string().uuid() });
@@ -66,6 +67,7 @@ export class LeadsController {
     return this.leads.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('leads:write')
@@ -145,6 +147,7 @@ export class ContactsController {
     return this.contacts.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('contacts:write')
@@ -191,6 +194,7 @@ export class CompaniesController {
     return this.companies.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('companies:write')

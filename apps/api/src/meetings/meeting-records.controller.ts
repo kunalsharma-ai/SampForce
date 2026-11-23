@@ -5,6 +5,7 @@ import { meetingRecordCreateSchema, type MeetingRecordCreate, meetingRecordUpdat
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { MeetingRecordsService } from './meeting-records.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const listQuery = z.object({ dealId: z.string().uuid().optional(), contactId: z.string().uuid().optional(), leadId: z.string().uuid().optional() });
 const uuid = new ParseUUIDPipe();
@@ -45,6 +46,7 @@ export class MeetingRecordsController {
     return this.meetings.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('activities:write')

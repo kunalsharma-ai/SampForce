@@ -25,6 +25,7 @@ import type { Request, Response } from 'express';
 import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ProspectsService } from './prospects.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -72,6 +73,7 @@ export class ProspectListsController {
     return this.prospects.updateList(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('prospects:write')
@@ -176,6 +178,7 @@ export class ProspectsController {
     return this.prospects.move(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Post('delete')
   @HttpCode(200)
   @RequirePermissions('prospects:write')

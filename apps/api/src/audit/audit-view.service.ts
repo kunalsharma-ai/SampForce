@@ -135,6 +135,8 @@ export class AuditViewService {
       and.push({ OR: [{ actorUserId: { in: [...new Set(members.map((m) => m.userId))] } }, { entityType: 'workspace', entityId: { in: ids } }] });
     }
     if (q.actorUserId) and.push({ actorUserId: q.actorUserId });
+    // Entries written before outcomes were recorded have none: they all happened.
+    if (q.outcome) and.push(q.outcome === 'REFUSED' ? { outcome: 'REFUSED' } : { outcome: { not: 'REFUSED' } });
     if (q.from) and.push({ createdAt: { gte: new Date(`${q.from}T00:00:00.000Z`) } });
     if (q.to) and.push({ createdAt: { lt: new Date(new Date(`${q.to}T00:00:00.000Z`).getTime() + 86_400_000) } });
     return { AND: and };
@@ -185,6 +187,7 @@ export class AuditViewService {
       return {
         id: r.id,
         action: r.action,
+        outcome: r.outcome === 'REFUSED' ? 'REFUSED' : 'DONE',
         category: auditCategoryOf(r.action),
         actorType: r.actorType,
         actorName,
