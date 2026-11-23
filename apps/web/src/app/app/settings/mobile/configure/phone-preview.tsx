@@ -1,6 +1,6 @@
 'use client';
 
-import { MOBILE_DASHBOARD_CARD_DEFS, MOBILE_MODULE_BY_KEY, type MobileAppConfig, type MobileModuleKey, type MobileWorkspaceLevel, PERMISSIONS, resolveMobileConfig } from '@dealflow/types';
+import { MOBILE_DASHBOARD_CARD_DEFS, MOBILE_MODULE_BY_KEY, type MobileAppConfig, type MobileModuleKey, type MobileWorkspaceLevel, PERMISSIONS, readableTextOn, resolveMobileConfig } from '@dealflow/types';
 import { BarChart3, Bell, Building2, CheckSquare, ClipboardList, Contact, FileBarChart, Handshake, LayoutDashboard, type LucideIcon, Menu, MessagesSquare, Target, UserRound } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { MOBILE_LEVEL_LABEL } from '@/lib/mobile';
@@ -18,16 +18,6 @@ export const MODULE_ICON: Record<MobileModuleKey, LucideIcon> = {
   notifications: Bell,
   profile: UserRound,
 };
-
-/** Black or white, whichever reads better on the colour the Super Workspace chose (WCAG relative luminance). */
-export function readableOn(hex: string): string {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  }) as [number, number, number];
-  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return (1.05 / (l + 0.05)) >= ((l + 0.05) / 0.05) ? '#FFFFFF' : '#000000';
-}
 
 const initials = (name: string) =>
   name
@@ -54,7 +44,7 @@ export function PhonePreview({ config, level, features }: { config: MobileAppCon
   return (
     <figure className="w-[264px] shrink-0">
       <div className="overflow-hidden rounded-[2rem] border-[6px] border-neutral-800 shadow-lg" style={{ background: bg, color: fg }}>
-        <div className="flex items-center gap-2 px-4 py-3" style={{ background: r.branding.primaryColor, color: readableOn(r.branding.primaryColor) }}>
+        <div className="flex items-center gap-2 px-4 py-3" style={{ background: r.branding.primaryColor, color: readableTextOn(r.branding.primaryColor) }}>
           {r.branding.logoDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- a data URL the Super Workspace uploaded
             <img src={r.branding.logoDataUrl} alt="" className="size-7 rounded bg-white object-contain p-0.5" />

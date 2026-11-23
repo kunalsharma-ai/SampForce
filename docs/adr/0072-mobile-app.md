@@ -70,3 +70,29 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   workspace works at that level, and one with no workspace node (the owner, admins) is Super. The workspace's features
   and allowed actions narrow the configuration further, so a module the workspace may only view cannot be changed on
   the phone either.
+
+## M3: the app foundation (2026-11-23)
+
+- **Stack.** Expo SDK 58 (React Native 0.88, Expo Router) in `apps/mobile`, sharing `@dealflow/types` with the API and
+  web. One official app identity: name SampForce, bundle and package id `com.sampledge.sampforce`. Organisation
+  branding (name, logo, colours, theme) applies after sign-in, from the published configuration.
+- **Sign-in and tokens.** `/mobile/auth/login`, `/mfa/verify`, `/refresh`, `/logout` and `/switch-workspace`. Tokens
+  live in the Keychain or Keystore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`, never backed up); a random install id keeps one
+  phone as one device row. One refresh at a time, so a rotated refresh token is never sent twice. A 401 on refresh
+  signs the phone out; a block (403 `MOBILE_ACCESS_BLOCKED`) keeps the tokens, so reinstating carries on.
+- **Server address.** Defaults to `extra.apiUrl` in `app.json`; organisations on their own server can change it at
+  sign-in. HTTPS only, except localhost and the Android emulator.
+- **Configuration.** The app keeps a copy of its resolved configuration keyed by organisation, person, level, role and
+  permissions, and asks `GET /mobile/config?known=N` only when `configVersion` in the session moves or the key changes.
+  Returning to the app reloads the session, so blocks and new versions show at once.
+- **Screens.** Bottom tabs in the order the Super Workspace chose, More for the rest, Help (`GET /help`) and the
+  person's support questions (`/support/tickets`, marked `@MobileAccess()`), Profile with organisation switching and
+  sign-out. No Recent list anywhere. Record modules say plainly that their screens arrive in the next update (M4 to M8)
+  and show what the person will be allowed to do there.
+- **Languages.** The app's own phrases are in `src/lib/phrases.ts` (es, fr, de, ar; shared phrases reuse the web's
+  translations); server messages arrive translated through `accept-language`.
+- **Tests.** Unit tests for the API client, configuration copy, session states and phrases (`pnpm --filter
+  @dealflow/mobile test`). `pnpm build` makes a web export that `apps/web/e2e/mobile-app.spec.ts` drives at phone size
+  against the real API. Native builds, the Keychain and store review cannot be tested in CI.
+- **Web packages and React Native.** `.pnpmfile.cjs` drops React Native as an optional peer of the 3D chart packages,
+  so the web app never resolves React Native.
