@@ -23,6 +23,7 @@ import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { SectionNotices } from '../notifications/section-notices';
+import { WelcomeOverlay } from '../sign-in/welcome-overlay';
 import { PasswordConfirmationProvider } from '../security/confirm-deletion-dialog';
 import { CustomizeMenuDialog } from './customize-menu';
 import { FeatureLocked } from './feature-locked';
@@ -124,6 +125,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {data && !data.restriction && <MobileBottomNav />}
         {data && <CustomizeMenuDialog />}
         <KeyboardShortcuts />
+        {/* The level's welcome, once, right after signing in (ADR 0075). */}
+        <WelcomeOverlay />
       </div>
     </PasswordConfirmationProvider>
   );

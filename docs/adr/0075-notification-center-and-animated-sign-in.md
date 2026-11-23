@@ -35,3 +35,16 @@ polled every 30 seconds, had no history, no sound, and nothing appeared on the d
 
 - Leave Management and HR sections from the request do not exist in SampForce, so they have no section yet.
 - The chime and browser notifications cannot be heard or seen in CI; the browser test replaces Web Audio with a counter.
+
+## Animated sign-in (N2)
+
+- `components/sign-in/`: one scene per level (`console`, `super`, `manager`, `executive`) behind the sign-in pages,
+  in the logo's red, deep red and amber. `AnimatedMark` reuses the logo's exact shapes (`LOGO_PARTS` in
+  `components/logo.tsx`): the two halves fly in and lock, a flash and a light sweep cross the mark, the spark pops.
+- The form is on an opaque card, usable from the first frame; the scene is `aria-hidden` and never takes clicks.
+  The card uses SampForce red for its buttons and links whatever theme is chosen (contrast checked in light and dark).
+- `/login` picks the scene from `?workspace=super|manager|executive`, else the level this device last opened
+  (`localStorage sampforce:last-level`), else Executive. After signing in, a ~1.7 s welcome for the workspace actually
+  opened plays once (sessionStorage flag set by the form), skippable by any key or click.
+- CSS and SVG only, transforms and stroke offsets. Under reduced motion every animation and delay collapses to its
+  final frame (checked: no running animations, axe clean).

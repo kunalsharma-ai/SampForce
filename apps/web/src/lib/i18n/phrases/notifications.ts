@@ -89,4 +89,28 @@ export const notifications = {
     'يحظر متصفحك إشعارات SampForce. اسمح بها في إعدادات الموقع في المتصفح، ثم فعّل هذا الخيار مجددًا.',
   ],
   'Could not save. Please try again.': ['No se pudo guardar. Inténtalo de nuevo.', 'Enregistrement impossible. Veuillez réessayer.', 'Speichern fehlgeschlagen. Bitte erneut versuchen.', 'تعذّر الحفظ. يُرجى المحاولة مرة أخرى.'],
+  // Sign-in scenes and the welcome after signing in
+  'Welcome back, {name}': ['Bienvenido de nuevo, {name}', 'Bon retour, {name}', 'Willkommen zurück, {name}', 'مرحبًا بعودتك، {name}'],
+  'Welcome to SampForce': ['Bienvenido a SampForce', 'Bienvenue sur SampForce', 'Willkommen bei SampForce', 'مرحبًا بك في SampForce'],
+  'Your whole company, in one place': ['Toda tu empresa, en un solo lugar', 'Toute votre entreprise, au même endroit', 'Ihr ganzes Unternehmen an einem Ort', 'شركتك كلها في مكان واحد'],
+  'Workspaces, teams, targets and every client relationship, from the top.': [
+    'Espacios de trabajo, equipos, objetivos y cada relación con clientes, desde arriba.',
+    'Espaces de travail, équipes, objectifs et chaque relation client, vus d’en haut.',
+    'Arbeitsbereiche, Teams, Ziele und jede Kundenbeziehung, von oben.',
+    'مساحات العمل والفرق والأهداف وكل علاقة مع العملاء، من القمة.',
+  ],
+  'Lead your team to the next win': ['Lleva a tu equipo a la próxima victoria', 'Menez votre équipe vers la prochaine victoire', 'Führen Sie Ihr Team zum nächsten Erfolg', 'قُد فريقك إلى الفوز التالي'],
+  'Assign work, track targets and coach your executives as it happens.': [
+    'Asigna trabajo, sigue los objetivos y guía a tus ejecutivos en el momento.',
+    'Attribuez le travail, suivez les objectifs et accompagnez vos commerciaux en direct.',
+    'Arbeit zuweisen, Ziele verfolgen und Ihre Mitarbeitenden direkt begleiten.',
+    'وزّع العمل وتابع الأهداف ووجّه مندوبيك لحظة بلحظة.',
+  ],
+  'Ready to close? Let’s sell.': ['¿Listo para cerrar? A vender.', 'Prêt à conclure ? Vendons.', 'Bereit zum Abschluss? Los geht’s.', 'مستعد لإتمام الصفقة؟ لنبدأ البيع.'],
+  'Your leads, follow-ups and deals, ready the moment you sign in.': [
+    'Tus leads, seguimientos y oportunidades, listos en cuanto inicias sesión.',
+    'Vos leads, relances et affaires, prêts dès la connexion.',
+    'Ihre Leads, Nachfassaktionen und Deals, bereit, sobald Sie sich anmelden.',
+    'عملاؤك المحتملون ومتابعاتك وصفقاتك جاهزة لحظة تسجيل الدخول.',
+  ],
 } as const satisfies PhraseTable;
