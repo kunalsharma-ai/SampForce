@@ -8,6 +8,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   LifeBuoy,
+  MapPin,
   type LucideIcon,
   MessagesSquare,
   PenSquare,
@@ -130,6 +131,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     items: [
       { key: 'providers', label: 'Providers', href: '/operator/providers', icon: Plug, permission: 'system.view' },
       { key: 'settings', label: 'Settings', href: '/operator/settings', icon: Settings, permission: 'system.view' },
+      { key: 'locations', label: 'Locations', href: '/operator/locations', icon: MapPin, permission: 'settings.manage' },
       { key: 'help', label: 'Help', href: '/operator/help', icon: HelpCircle, exact: true },
     ],
   },

@@ -11,6 +11,13 @@ const ACTIONS: Record<string, string> = {
   'client.state_changed': 'Changed a client’s status',
   'client.authority_changed': 'Changed Super Workspace permissions',
   'client.administrator_invited': 'Invited a client administrator',
+  'client.profile_updated': 'Changed a client’s company details',
+  'client.logo_set': 'Changed a client’s logo',
+  'client.logo_removed': 'Removed a client’s logo',
+  'location.city_added': 'Added a city',
+  'location.city_renamed': 'Renamed a city',
+  'location.city_removed': 'Removed an added city',
+  'location.city_rename_undone': 'Undid a city rename',
   'tenant.suspended': 'Suspended a client',
   'tenant.reactivated': 'Reactivated a client',
   'tenant.features_overridden': 'Changed a client’s features',
@@ -82,6 +89,7 @@ export const TARGET_LABEL: Record<string, string> = {
   help_media: 'Help media',
   help_feedback: 'Help feedback',
   audit_log: 'Audit log',
+  location: 'Location',
 };
 
 export const targetLabel = (type: string) => TARGET_LABEL[type] ?? type;

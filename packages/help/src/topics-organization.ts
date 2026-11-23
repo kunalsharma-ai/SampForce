@@ -1204,6 +1204,30 @@ export const organizationHelp = {
       'راجعها في بداية الدوام وفعّل البريد للأنواع التي لا يجب أن تفوتك بعيدًا عن الوحدة.',
     ],
   },
+  'page.operatorLocations': {
+    title: 'Locations',
+    what: [
+      'The countries, states and cities offered when a client’s location is set, with the cities operators added and the names they corrected.',
+      'Los países, estados y ciudades que se ofrecen al indicar la ubicación de un cliente, con las ciudades que añadieron los operadores y los nombres que corrigieron.',
+      'Les pays, régions et villes proposés pour l’adresse d’un client, avec les villes ajoutées par les opérateurs et les noms qu’ils ont corrigés.',
+      'Die Länder, Bundesländer und Städte für den Standort eines Kunden, mit den von Operatoren ergänzten Städten und korrigierten Namen.',
+      'الدول والولايات والمدن المعروضة عند تحديد موقع العميل، مع المدن التي أضافها المشغّلون والأسماء التي صحّحوها.',
+    ],
+    how: [
+      'Choose a country and search. Add a city that is missing, or use the pencil to rename one. Each change lists who made it, and undo puts the list back.',
+      'Elige un país y busca. Añade una ciudad que falte o usa el lápiz para cambiar su nombre. Cada cambio muestra quién lo hizo y deshacer restaura la lista.',
+      'Choisissez un pays et cherchez. Ajoutez une ville manquante ou utilisez le crayon pour la renommer. Chaque changement indique son auteur et annuler rétablit la liste.',
+      'Wählen Sie ein Land und suchen Sie. Ergänzen Sie eine fehlende Stadt oder benennen Sie sie mit dem Stift um. Jede Änderung zeigt, wer sie gemacht hat; Rückgängig stellt die Liste wieder her.',
+      'اختر دولة وابحث. أضف مدينة ناقصة أو استخدم القلم لإعادة تسميتها. يظهر لكل تغيير من قام به، والتراجع يعيد القائمة.',
+    ],
+    where: [
+      'Use it when a client’s city is not offered, or a name is spelt differently from how the client writes it.',
+      'Úsalo cuando la ciudad de un cliente no aparece o un nombre se escribe distinto a como lo escribe el cliente.',
+      'Utilisez-le quand la ville d’un client n’est pas proposée ou qu’un nom s’écrit autrement que chez le client.',
+      'Nutzen Sie es, wenn die Stadt eines Kunden fehlt oder ein Name anders geschrieben wird als beim Kunden.',
+      'استخدمه عندما لا تظهر مدينة العميل أو يُكتب الاسم بشكل مختلف عمّا يكتبه العميل.',
+    ],
+  },
   'page.operatorOperators': {
     title: 'Operators',
     what: [
