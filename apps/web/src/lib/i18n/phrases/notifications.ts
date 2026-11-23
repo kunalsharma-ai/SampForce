@@ -108,6 +108,8 @@ export const notifications = {
   'Ocean blue': ['Azul océano', 'Bleu océan', 'Ozeanblau', 'أزرق المحيط'],
   'Emerald': ['Esmeralda', 'Émeraude', 'Smaragd', 'زمردي'],
   'Sunset amber': ['Ámbar atardecer', 'Ambre couchant', 'Abendbernstein', 'كهرماني الغروب'],
+  'Show password': ['Mostrar contraseña', 'Afficher le mot de passe', 'Passwort anzeigen', 'إظهار كلمة المرور'],
+  'Hide password': ['Ocultar contraseña', 'Masquer le mot de passe', 'Passwort verbergen', 'إخفاء كلمة المرور'],
   'Welcome to SampForce': ['Bienvenido a SampForce', 'Bienvenue sur SampForce', 'Willkommen bei SampForce', 'مرحبًا بك في SampForce'],
   'Your whole company, in one place': ['Toda tu empresa, en un solo lugar', 'Toute votre entreprise, au même endroit', 'Ihr ganzes Unternehmen an einem Ort', 'شركتك كلها في مكان واحد'],
   'Workspaces, teams, targets and every client relationship, from the top.': [
