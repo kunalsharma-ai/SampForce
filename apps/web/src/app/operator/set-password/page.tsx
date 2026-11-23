@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, CardContent, CardHeader, Input } from '@dealflow/ui';
+import { Button, Card, CardContent, CardHeader } from '@dealflow/ui';
 import { OPERATOR_PASSWORD_MIN, type OperatorTokenInfo } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
+import { PasswordInput } from '@/components/forms/password-input';
 
 /**
  * Choosing an operator password from an invitation or reset link (ADR 0074). The token travels in the address's
@@ -70,10 +71,10 @@ export default function OperatorSetPassword() {
               }}
             >
               <Field id="sp-password" label="New password" hint={`At least ${OPERATOR_PASSWORD_MIN} characters, with letters and a number or symbol.`}>
-                <Input id="sp-password" type="password" autoComplete="new-password" minLength={OPERATOR_PASSWORD_MIN} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <PasswordInput id="sp-password" autoComplete="new-password" minLength={OPERATOR_PASSWORD_MIN} value={password} onChange={(e) => setPassword(e.target.value)} required />
               </Field>
               <Field id="sp-again" label="Type it again">
-                <Input id="sp-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required />
+                <PasswordInput id="sp-again" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required />
               </Field>
               {mismatch && (
                 <p role="alert" className="text-sm text-critical">

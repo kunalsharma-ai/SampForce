@@ -60,10 +60,10 @@ export function LogoOnRed({ className }: { className?: string }) {
       <LogoMark />
       <span className="leading-tight">
         <span className="block text-base font-semibold tracking-tight" translate="no">
-          <span className="text-slate-300">Samp</span>
-          <span className="bg-gradient-to-r from-[#FF8A8A] to-[#FFC857] bg-clip-text font-bold text-transparent">Force</span>
+          <span className="text-[color:var(--sfs-logo-a,#cbd5e1)]">Samp</span>
+          <span className="sfs-logo-force bg-gradient-to-r from-[#FF8A8A] to-[#FFC857] bg-clip-text font-bold text-transparent">Force</span>
         </span>
-        <span className="block text-[10px] uppercase tracking-[0.18em] text-white/80">by Sampledge</span>
+        <span className="block text-[10px] uppercase tracking-[0.18em] text-[color:var(--sfs-ink-mute,rgba(255,255,255,0.8))]">by Sampledge</span>
       </span>
     </span>
   );

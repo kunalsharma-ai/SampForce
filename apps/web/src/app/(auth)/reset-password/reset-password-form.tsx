@@ -78,10 +78,10 @@ export function ResetPasswordForm() {
         </div>
       ) : (
         <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <FloatingField id="password" label={t('New password')} error={form.formState.errors.password?.message}>
+          <FloatingField id="password" reveal label={t('New password')} error={form.formState.errors.password?.message}>
             <Input type="password" autoComplete="new-password" {...form.register('password')} />
           </FloatingField>
-          <FloatingField id="confirm" label={t('Type it again')} error={form.formState.errors.confirm?.message}>
+          <FloatingField id="confirm" reveal label={t('Type it again')} error={form.formState.errors.confirm?.message}>
             <Input type="password" autoComplete="new-password" {...form.register('confirm')} />
           </FloatingField>
           {error && (

@@ -37,17 +37,19 @@ test('Command Center ranks next best actions, deal health lists risky deals, and
   await expect(page.getByText('Your next best actions')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Send the security questionnaire' })).toBeVisible();
   await expect(page.getByText('Overdue by 2 days.')).toBeVisible();
-  await expect(page.getByText(/Health \d+\/100: .*Close date has passed/)).toBeVisible();
+  // The ranked list itself (the same risk may also be a notification on the home card).
+  const actions = page.locator('[data-next-actions]');
+  await expect(actions.getByText(/Health \d+\/100: .*Close date has passed/)).toBeVisible();
   await expect(page.getByText('This week')).toBeVisible();
   await expect(page.getByText(/1 open deal is critical/)).toBeVisible();
   await expectNoA11yViolations(page);
 
   // Turn the risky deal's suggestion into a task.
-  const item = page.locator('li').filter({ has: page.getByText(/Health \d+\/100/) });
+  const item = actions.locator('li').filter({ has: page.getByText(/Health \d+\/100/) });
   await item.getByRole('button', { name: 'Make it a task' }).click();
   await item.getByLabel('Task title').fill('Call Northbeam about the new date');
   await item.getByRole('button', { name: 'Create task' }).click();
-  await expect(page.getByText(/Health \d+\/100/)).toHaveCount(0);
+  await expect(actions.getByText(/Health \d+\/100/)).toHaveCount(0);
   await expect(page.getByText(/Last 30 days: you turned 1 suggestion into tasks, finished 0/)).toBeVisible();
 
   // Snooze the overdue task until tomorrow.
