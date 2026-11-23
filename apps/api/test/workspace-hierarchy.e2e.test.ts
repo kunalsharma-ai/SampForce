@@ -220,7 +220,8 @@ describe('workspace hierarchy', () => {
     const lead = await db.lead.findFirstOrThrow({ where: { tenantId: superAdmin.tenantId, fullName: 'Exec Lead' } });
     await api(manager2).get(`/leads/${lead.id}`).expect(200);
     await api(manager).get(`/leads/${lead.id}`).expect(404);
-    expect((await api(superAdmin).del(`/workspaces/${managerId}`).expect(409)).body.error.code).toBe('WORKSPACE_NOT_EMPTY');
+    // Deleting a workspace with people needs a receiving workspace for their records (W4).
+    expect((await api(superAdmin).del(`/workspaces/${managerId}`, { confirmName: 'North Team' }).expect(400)).body.error.code).toBe('HANDOVER_REQUIRED');
   });
 
   it('writes every hierarchy change to the audit log', async () => {

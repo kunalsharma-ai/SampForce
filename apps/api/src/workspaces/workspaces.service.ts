@@ -5,6 +5,8 @@ import {
   actionAllowed,
   type AssignWorkspaceMemberInput,
   type CreateWorkspaceInput,
+  type DeactivateWorkspaceInput,
+  type DeleteWorkspaceInput,
   DEFAULT_WORKSPACE_DESIGNATION,
   defaultChildActions,
   FEATURE_BY_KEY,
@@ -15,6 +17,8 @@ import {
   parseActionGrants,
   type UpdateWorkspaceInput,
   type WorkspaceAction,
+  type WorkspaceDeleted,
+  type WorkspaceImpact,
   WORKSPACE_ACTION_LABEL,
   WORKSPACE_LEVEL_LABEL,
   type WorkspaceIdentity,
@@ -39,6 +43,8 @@ export class HierarchyError extends ForbiddenException {
     super({ code, message });
   }
 }
+/** Not soft-deleted: on MongoDB a field never written is not null, so both are checked. */
+const NOT_DELETED = { OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }] };
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
 
 /**
@@ -324,20 +330,176 @@ export class WorkspacesService {
     await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.member_assigned', entityType: 'workspace', entityId: node.id, metadata: { userId, from: membership.workspaceNodeId, to: workspaceNodeId }, meta });
   }
 
-  /** Archives an empty workspace; its name and history stay. A workspace with people or workspaces under it is kept. */
-  archive(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+  // ───────────── Deactivating and deleting (W4) ─────────────
+
+  /**
+   * What deleting a workspace would touch, so the person sees it before confirming: who loses access, the records
+   * that move, the Executive Workspaces that move with them, and which workspaces may receive them.
+   */
+  impact(auth: AuthContext, id: string): Promise<WorkspaceImpact> {
     return this.prisma.run(auth, async (tx) => {
       const org = await resolveOrganisation(tx, auth.tenantId);
+      const target = this.authorityOver(auth, org, id, 'workspace_management', 'view');
+      return this.impactOf(tx, auth, org, target);
+    });
+  }
+
+  private async impactOf(tx: TenantTx, auth: AuthContext, org: Org, target: NodeAccess): Promise<WorkspaceImpact> {
+    const id = target.node.id;
+    const [members, invites, below] = await Promise.all([
+      tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE', workspaceNodeId: id }, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'asc' } }),
+      tx.invitation.count({ where: { tenantId: auth.tenantId, workspaceNodeId: id, acceptedAt: null, revokedAt: null } }),
+      tx.workspaceNode.findMany({ where: { tenantId: auth.tenantId, parentId: id, archivedAt: null }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    ]);
+    const people = members.map((m) => m.user.id);
+    const owned = { ownerId: { in: people }, ...NOT_DELETED };
+    const [companies, contacts, leads, deals, openTasks, belowPeople] = await Promise.all([
+      people.length ? tx.company.count({ where: { tenantId: auth.tenantId, ...owned } }) : 0,
+      people.length ? tx.contact.count({ where: { tenantId: auth.tenantId, ...owned } }) : 0,
+      people.length ? tx.lead.count({ where: { tenantId: auth.tenantId, ...owned } }) : 0,
+      people.length ? tx.opportunity.count({ where: { tenantId: auth.tenantId, ...owned } }) : 0,
+      tx.task.count({ where: { tenantId: auth.tenantId, status: 'OPEN', AND: [NOT_DELETED, { OR: [{ assigneeId: { in: people } }, { workspaceNodeId: id }] }] } }),
+      Promise.all(below.map((b) => tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE', workspaceNodeId: b.id } }))),
+    ]);
+    const records = { companies, contacts, leads, deals, openTasks };
+    const nodes = [...org.byId.values()].map((a) => a.node);
+    const excluded = branchIds(nodes, id);
+    const me = this.callerAccess(auth, org);
+    const candidates = [...org.byId.values()].filter(
+      (a) =>
+        !excluded.has(a.node.id) &&
+        !a.node.archivedAt &&
+        !a.node.deactivatedAt &&
+        (a.node.id === me.node.id || me.level === 'SUPER' || (me.level === 'MANAGER' && a.level === 'EXECUTIVE' && a.node.parentId === me.node.id)) &&
+        // An Executive Workspace cannot take over workspaces.
+        !(below.length && a.level === 'EXECUTIVE'),
+    );
+    const handoverOptions = await Promise.all(
+      candidates.map(async (a) => ({ id: a.node.id, name: a === org.root ? 'Super Workspace' : a.node.name, level: a.level, receiver: (await this.receiverOf(tx, auth, org, a))?.name ?? null })),
+    );
+    return {
+      id,
+      name: target.node.name,
+      level: target.level,
+      people: members.map((m) => ({ userId: m.user.id, name: m.user.name, email: m.user.email })),
+      pendingInvites: invites,
+      workspacesBelow: below.map((b, i) => ({ id: b.id, name: b.name, people: belowPeople[i] ?? 0 })),
+      records,
+      handoverOptions: handoverOptions.sort((a, b) => (a.level === b.level ? a.name.localeCompare(b.name) : a.level === 'SUPER' ? -1 : b.level === 'SUPER' ? 1 : a.level === 'MANAGER' ? -1 : 1)),
+      handoverRequired: below.length > 0 || Object.values(records).some((n) => n > 0),
+    };
+  }
+
+  /** The person who receives handed-over records in a workspace: the caller in their own, otherwise its first member. */
+  private async receiverOf(tx: TenantTx, auth: AuthContext, org: Org, a: NodeAccess): Promise<{ id: string; name: string } | null> {
+    const me = this.callerAccess(auth, org);
+    if (a.node.id === me.node.id) return tx.user.findUnique({ where: { id: auth.userId }, select: { id: true, name: true } });
+    if (a === org.root) {
+      const m = await tx.membership.findFirst({
+        where: { tenantId: auth.tenantId, status: 'ACTIVE', OR: [{ workspaceNodeId: null }, { workspaceNodeId: { isSet: false } }, ...(a.virtual ? [] : [{ workspaceNodeId: a.node.id }])] },
+        orderBy: { createdAt: 'asc' },
+        select: { userId: true },
+      });
+      return m ? tx.user.findUnique({ where: { id: m.userId }, select: { id: true, name: true } }) : null;
+    }
+    return this.headOf(tx, auth.tenantId, a.node.id);
+  }
+
+  /**
+   * Deactivates a Manager or Executive Workspace: its people, and everyone in the workspaces below it, are stopped on
+   * their next request until it is reactivated. Nothing else changes, so reactivating restores things exactly.
+   */
+  deactivate(auth: AuthContext, id: string, input: DeactivateWorkspaceInput, meta: RequestMeta): Promise<WorkspaceRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const target = this.authorityOver(auth, org, id, 'workspace_management', 'edit');
+      if (target.node.deactivatedAt) throw new ConflictException({ code: 'WORKSPACE_ALREADY_DEACTIVATED', message: 'This workspace is already deactivated.' });
+      await tx.workspaceNode.update({ where: { id }, data: { deactivatedAt: new Date(), deactivatedById: auth.userId, deactivationReason: input.reason } });
+      const below = [...branchIds([...org.byId.values()].map((a) => a.node), id)].filter((x) => x !== id).length;
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.deactivated', entityType: 'workspace', entityId: id,
+        metadata: { workspace: target.node.name, level: target.level, reason: input.reason, workspacesBelow: below }, meta,
+      });
+      const after = await resolveOrganisation(tx, auth.tenantId);
+      return this.rowOf(tx, auth, after, after.byId.get(id)!);
+    });
+  }
+
+  reactivate(auth: AuthContext, id: string, meta: RequestMeta): Promise<WorkspaceRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const target = this.authorityOver(auth, org, id, 'workspace_management', 'edit');
+      if (!target.node.deactivatedAt) throw new ConflictException({ code: 'WORKSPACE_NOT_DEACTIVATED', message: 'This workspace is not deactivated.' });
+      await tx.workspaceNode.update({ where: { id }, data: { deactivatedAt: null, deactivatedById: null, deactivationReason: null } });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.reactivated', entityType: 'workspace', entityId: id, metadata: { workspace: target.node.name, level: target.level }, meta });
+      const after = await resolveOrganisation(tx, auth.tenantId);
+      return this.rowOf(tx, auth, after, after.byId.get(id)!);
+    });
+  }
+
+  /**
+   * Deletes a Manager or Executive Workspace. Nothing in the CRM is erased: its people's records and open tasks go to
+   * the receiving workspace's person, a manager's Executive Workspaces move under the receiving workspace with their
+   * people, and its own people lose access to the organisation (their accounts and history stay). The person typed
+   * its name and their password (the guard checked the password).
+   */
+  delete(auth: AuthContext, id: string, input: DeleteWorkspaceInput, meta: RequestMeta): Promise<WorkspaceDeleted> {
+    return this.prisma.run(auth, async (tx) => {
+      await transactionLock(tx, `workspaces:${auth.tenantId}`);
+      const org = await resolveOrganisation(tx, auth.tenantId);
       const target = this.authorityOver(auth, org, id, 'workspace_management', 'delete');
-      const [people, children] = await Promise.all([
-        tx.membership.count({ where: { tenantId: auth.tenantId, status: 'ACTIVE', workspaceNodeId: id } }),
-        tx.workspaceNode.count({ where: { tenantId: auth.tenantId, parentId: id, archivedAt: null } }),
-      ]);
-      if (people || children) throw new ConflictException({ code: 'WORKSPACE_NOT_EMPTY', message: 'Move its people and workspaces elsewhere before archiving it.' });
+      if (nameKeyOf(input.confirmName) !== nameKeyOf(target.node.name)) {
+        throw new BadRequestException({ code: 'CONFIRM_NAME_MISMATCH', message: 'Type the workspace name exactly to delete it.', details: [{ path: 'confirmName', message: 'does not match' }] });
+      }
+      const impact = await this.impactOf(tx, auth, org, target);
+      let receiver: { id: string; name: string } | null = null;
+      let handover: NodeAccess | null = null;
+      if (input.handoverToId) {
+        if (!impact.handoverOptions.some((o) => o.id === input.handoverToId)) {
+          throw new BadRequestException({ code: 'INVALID_HANDOVER', message: 'Choose one of the workspaces offered to receive the records.', details: [{ path: 'handoverToId', message: 'not allowed' }] });
+        }
+        handover = org.byId.get(input.handoverToId)!;
+        receiver = await this.receiverOf(tx, auth, org, handover);
+        if (!receiver) throw new BadRequestException({ code: 'HANDOVER_EMPTY', message: 'That workspace has nobody in it yet to receive the records. Choose another one.', details: [{ path: 'handoverToId', message: 'empty' }] });
+      } else if (impact.handoverRequired) {
+        throw new BadRequestException({ code: 'HANDOVER_REQUIRED', message: 'Choose the workspace that receives its records and workspaces.', details: [{ path: 'handoverToId', message: 'required' }] });
+      }
+
+      const people = impact.people.map((p) => p.userId);
+      let recordsMoved = 0;
+      if (receiver && handover) {
+        const owned = { tenantId: auth.tenantId, ownerId: { in: people } };
+        const data = { ownerId: receiver.id };
+        if (people.length) {
+          const moved = await Promise.all([tx.company.updateMany({ where: owned, data }), tx.contact.updateMany({ where: owned, data }), tx.lead.updateMany({ where: owned, data }), tx.opportunity.updateMany({ where: owned, data })]);
+          recordsMoved += moved.reduce((n, r) => n + r.count, 0);
+        }
+        const handoverNode = handover.virtual ? null : handover.node.id;
+        const tasks = await tx.task.findMany({ where: { tenantId: auth.tenantId, status: 'OPEN', AND: [NOT_DELETED, { OR: [{ assigneeId: { in: people } }, { workspaceNodeId: id }] }] }, select: { id: true, assigneeId: true } });
+        for (const t of tasks) {
+          await tx.task.update({
+            where: { id: t.id },
+            data: { assigneeId: receiver.id, workspaceNodeId: handoverNode, reassignedFromId: t.assigneeId, reassignedAt: new Date() },
+          });
+        }
+        recordsMoved += tasks.length;
+        if (impact.workspacesBelow.length) {
+          const parentId = handover.virtual ? (await this.ensureRoot(tx, auth)).id : handover.node.id;
+          await tx.workspaceNode.updateMany({ where: { tenantId: auth.tenantId, id: { in: impact.workspacesBelow.map((w) => w.id) } }, data: { parentId } });
+        }
+      }
+
       const stamp = new Date();
+      if (people.length) await tx.membership.updateMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE', workspaceNodeId: id }, data: { status: 'SUSPENDED' } });
       await tx.workspaceNode.update({ where: { id }, data: { archivedAt: stamp, nameKey: `${target.node.nameKey ?? nameKeyOf(target.node.name)}#archived-${stamp.getTime()}` } });
       await tx.invitation.updateMany({ where: { tenantId: auth.tenantId, workspaceNodeId: id, acceptedAt: null, revokedAt: null }, data: { revokedAt: stamp } });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.archived', entityType: 'workspace', entityId: id, metadata: { name: target.node.name, level: target.level }, meta });
+      const result: WorkspaceDeleted = { name: target.node.name, handoverTo: handover ? (handover === org.root ? 'Super Workspace' : handover.node.name) : null, recordsMoved, workspacesMoved: impact.workspacesBelow.length, peopleRemoved: people.length };
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.deleted', entityType: 'workspace', entityId: id,
+        metadata: { workspace: target.node.name, level: target.level, handoverToId: handover?.node.id ?? null, receiverId: receiver?.id ?? null, records: impact.records, workspacesMoved: impact.workspacesBelow.map((w) => w.name), peopleRemoved: impact.people.map((p) => p.email) },
+        meta,
+      });
+      return result;
     });
   }
 
@@ -455,6 +617,8 @@ export class WorkspacesService {
       canViewAuditLog: a.node.canViewAuditLog,
       canChatWithPeers: a.node.canChatWithPeers,
       editable,
+      deactivatedAt: a.node.deactivatedAt?.toISOString() ?? null,
+      deactivationReason: a.node.deactivationReason ?? null,
       createdAt: a.node.createdAt.toISOString(),
     };
   }

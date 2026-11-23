@@ -196,6 +196,46 @@ export type MoveWorkspaceInput = z.infer<typeof moveWorkspaceSchema>;
 export const assignWorkspaceMemberSchema = z.object({ userId: z.string().uuid() }).strict();
 export type AssignWorkspaceMemberInput = z.infer<typeof assignWorkspaceMemberSchema>;
 
+/** Deactivating a Manager or Executive Workspace (W4): reversible, with a reason for the audit log. */
+export const deactivateWorkspaceSchema = z.object({ reason: z.string().trim().min(3).max(500) }).strict();
+export type DeactivateWorkspaceInput = z.infer<typeof deactivateWorkspaceSchema>;
+
+/**
+ * Deleting a Manager or Executive Workspace (W4): the person types its name, and names the workspace that receives
+ * its records (and, for a manager, its Executive Workspaces). Nothing in the CRM is erased.
+ */
+export const deleteWorkspaceSchema = z
+  .object({ confirmName: z.string().trim().min(1).max(120), handoverToId: z.string().uuid().nullable().optional() })
+  .strict();
+export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceSchema>;
+
+/** What deleting a workspace would touch, shown before anyone confirms (W4). */
+export interface WorkspaceImpact {
+  id: string;
+  name: string;
+  level: WorkspaceLevel;
+  /** People who lose access to the organisation when it is deleted. */
+  people: WorkspacePerson[];
+  pendingInvites: number;
+  /** Executive Workspaces below a manager: they move to the receiving workspace, with their people. */
+  workspacesBelow: { id: string; name: string; people: number }[];
+  /** Records owned by its people that move to the receiving workspace's person. */
+  records: { companies: number; contacts: number; leads: number; deals: number; openTasks: number };
+  /** Workspaces that may receive the records: the caller's own and the ones it manages, never this one or below. */
+  handoverOptions: { id: string; name: string; level: WorkspaceLevel; receiver: string | null }[];
+  /** Whether a receiving workspace must be chosen (there are records or workspaces to hand over). */
+  handoverRequired: boolean;
+}
+
+/** What a delete did, for the confirmation message. */
+export interface WorkspaceDeleted {
+  name: string;
+  handoverTo: string | null;
+  recordsMoved: number;
+  workspacesMoved: number;
+  peopleRemoved: number;
+}
+
 export interface WorkspacePerson {
   userId: string;
   name: string;
@@ -230,6 +270,9 @@ export interface WorkspaceRow {
   canChatWithPeers: boolean;
   /** Whether the caller may change what this workspace is granted (they are its parent level). */
   editable: boolean;
+  /** Set while the workspace is deactivated (W4): its people, and everyone below it, cannot work until reactivated. */
+  deactivatedAt: string | null;
+  deactivationReason: string | null;
   createdAt: string;
 }
 

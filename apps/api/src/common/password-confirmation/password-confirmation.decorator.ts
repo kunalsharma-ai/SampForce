@@ -7,6 +7,11 @@ export const NO_PASSWORD_CONFIRMATION = 'dealflow:noPasswordConfirmation';
 export interface ConfirmPasswordRule {
   /** Only when this holds, for a route that deletes on some requests only (a bulk action whose action is delete). */
   when?: (req: Request) => boolean;
+  /**
+   * False for a destructive step that erases nothing (deactivating a workspace): the password is still asked, but
+   * the workspace's Delete action is not required.
+   */
+  deletes?: boolean;
 }
 
 /**

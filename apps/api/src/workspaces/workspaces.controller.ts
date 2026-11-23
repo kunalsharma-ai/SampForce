@@ -4,6 +4,10 @@ import {
   assignWorkspaceMemberSchema,
   type CreateWorkspaceInput,
   createWorkspaceSchema,
+  type DeactivateWorkspaceInput,
+  deactivateWorkspaceSchema,
+  type DeleteWorkspaceInput,
+  deleteWorkspaceSchema,
   type MoveWorkspaceInput,
   moveWorkspaceSchema,
   type UpdateWorkspaceInput,
@@ -72,12 +76,39 @@ export class WorkspacesController {
     return this.workspaces.assignMember(auth, id, body, meta);
   }
 
-  @ConfirmPassword()
-  @Delete(':id')
-  @HttpCode(204)
+  /** What deleting it would touch (W4), shown before the person confirms. */
+  @Get(':id/impact')
   @RequireFeature('workspace_management')
   @OwnHierarchyRules()
-  archive(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
-    return this.workspaces.archive(auth, id, meta);
+  impact(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.workspaces.impact(auth, id);
+  }
+
+  /** Stops its people, and everyone below, until reactivated. Asks for the password; erases nothing. */
+  @ConfirmPassword({ deletes: false })
+  @Post(':id/deactivate')
+  @HttpCode(200)
+  @RequireFeature('workspace_management')
+  @OwnHierarchyRules()
+  deactivate(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(deactivateWorkspaceSchema)) body: DeactivateWorkspaceInput, @Meta() meta: RequestMeta) {
+    return this.workspaces.deactivate(auth, id, body, meta);
+  }
+
+  @Post(':id/reactivate')
+  @HttpCode(200)
+  @RequireFeature('workspace_management')
+  @OwnHierarchyRules()
+  reactivate(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.workspaces.reactivate(auth, id, meta);
+  }
+
+  /** Deletes it with a handover (W4): the typed name, the password and the receiving workspace. */
+  @ConfirmPassword()
+  @Delete(':id')
+  @HttpCode(200)
+  @RequireFeature('workspace_management')
+  @OwnHierarchyRules()
+  remove(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(deleteWorkspaceSchema)) body: DeleteWorkspaceInput, @Meta() meta: RequestMeta) {
+    return this.workspaces.delete(auth, id, body, meta);
   }
 }

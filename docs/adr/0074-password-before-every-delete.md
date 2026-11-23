@@ -63,3 +63,21 @@ is deliberate.
   `PUT /operator/workspace-rules/clients/:id`. Every operator reads; only ADMINs change, with a reason, written to the
   platform audit log (and the client's own log for a client change). Page: Console, Workspace rules; the client card
   is on the client profile. The Permission Center says when a rule keeps Delete or a module from a level.
+
+## W4: Deactivating and deleting Manager and Executive Workspaces (2026-11-23)
+
+- **Deactivate** (`POST /workspaces/:id/deactivate`, reason required) asks for the password but not the Delete action
+  (`@ConfirmPassword({ deletes: false })`), because it erases nothing. The workspace's people, and everyone in the
+  workspaces below it, get the restriction `workspace_deactivated` on their next request: the web shows a page that
+  says so, every other route answers 403 `WORKSPACE_DEACTIVATED`, and API keys and the extension stop working.
+  Grants are kept, so `POST /workspaces/:id/reactivate` restores things exactly. A deactivated workspace still counts
+  towards the plan's limit.
+- **Delete** (`DELETE /workspaces/:id` with `{ confirmName, handoverToId }`) needs the Delete action, the password and
+  the typed name. `GET /workspaces/:id/impact` shows first who loses access, the records that move and the Executive
+  Workspaces that move. Nothing in the CRM is erased: companies, contacts, leads and deals owned by its people, and
+  its open tasks, go to the receiving workspace's person (the caller in their own workspace, otherwise its first
+  member). A manager's Executive Workspaces move under the receiving workspace with their people. Its own people's
+  memberships are suspended (accounts and history stay), its invitations are withdrawn, and the node is archived so
+  audit entries keep its name. A receiving workspace is required whenever there is something to hand over.
+- Who may: the workspace above (the Super Workspace over all, a manager over its own executives), as for every other
+  hierarchy change.

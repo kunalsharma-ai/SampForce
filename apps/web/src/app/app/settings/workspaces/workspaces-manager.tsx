@@ -13,19 +13,22 @@ import {
   WORKSPACE_ACTIONS,
   WORKSPACE_LEVEL_LABEL,
   type WorkspaceAction,
+  type WorkspaceDeleted,
   type WorkspacePermissionsInput,
   type WorkspaceRow,
   type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { Copy, KeyRound, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { useMembers } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { useCanDelete } from '@/lib/features';
 import { useWorkspaceMutations, useWorkspaceTree } from '@/lib/workspaces';
+import { DeactivateWorkspaceDialog, DeleteWorkspaceDialog } from './workspace-lifecycle';
 
 type Creating = 'MANAGER' | 'EXECUTIVE';
 
@@ -36,8 +39,12 @@ type Creating = 'MANAGER' | 'EXECUTIVE';
 export function WorkspacesManager() {
   const t = useT();
   const tree = useWorkspaceTree();
-  const { archive } = useWorkspaceMutations();
+  const { reactivate } = useWorkspaceMutations();
+  const canDelete = useCanDelete('workspace_management');
   const [creating, setCreating] = useState<Creating | null>(null);
+  const [deactivating, setDeactivating] = useState<WorkspaceRow | null>(null);
+  const [deleting, setDeleting] = useState<WorkspaceRow | null>(null);
+  const [deleted, setDeleted] = useState<WorkspaceDeleted | null>(null);
   const [permissionsOf, setPermissionsOf] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -91,18 +98,24 @@ export function WorkspacesManager() {
         <CardContent>
           <ul className="space-y-2" aria-label={t('Workspace structure')} data-workspace-tree>
             {roots(data).map((w) => (
-              <Branch key={w.id} row={w} tree={data} depth={0} onPermissions={setPermissionsOf} onEdit={setEditing} onArchive={(r) => {
-                if (window.confirm(t('Archive {name}? Its pending invitations are withdrawn and it stops counting towards your limit.', { name: r.name }))) archive.mutate(r.id);
-              }} />
+              <Branch key={w.id} row={w} tree={data} depth={0} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
             ))}
           </ul>
-          <ErrorText error={archive.error} />
+          <ErrorText error={reactivate.error} />
+          <p role="status" className="mt-3 text-sm text-muted-foreground" data-workspace-deleted>
+            {deleted &&
+              (deleted.handoverTo
+                ? t('{name} was deleted. {records} records and {workspaces} workspaces went to {to}.', { name: deleted.name, records: deleted.recordsMoved, workspaces: deleted.workspacesMoved, to: deleted.handoverTo })
+                : t('{name} was deleted.', { name: deleted.name }))}
+          </p>
         </CardContent>
       </Card>
 
       {creating && <CreateDialog level={creating} tree={data} onClose={() => setCreating(null)} />}
       {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} rules={data.rules} onClose={() => setPermissionsOf(null)} />}
       {edited && <EditDialog row={edited} tree={data} onClose={() => setEditing(null)} />}
+      {deactivating && <DeactivateWorkspaceDialog row={deactivating} onClose={() => setDeactivating(null)} />}
+      {deleting && <DeleteWorkspaceDialog row={deleting} onClose={() => setDeleting(null)} onDeleted={setDeleted} />}
     </div>
   );
 }
@@ -133,7 +146,20 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
   );
 }
 
-function Branch({ row, tree, depth, onPermissions, onEdit, onArchive }: { row: WorkspaceRow; tree: WorkspaceTree; depth: number; onPermissions: (id: string) => void; onEdit: (id: string) => void; onArchive: (row: WorkspaceRow) => void }) {
+type BranchProps = {
+  row: WorkspaceRow;
+  tree: WorkspaceTree;
+  depth: number;
+  canDelete: boolean;
+  onPermissions: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDeactivate: (row: WorkspaceRow) => void;
+  onReactivate: (row: WorkspaceRow) => void;
+  onDelete: (row: WorkspaceRow) => void;
+};
+
+function Branch(props: BranchProps) {
+  const { row, tree, depth, canDelete, onPermissions, onEdit, onDeactivate, onReactivate, onDelete } = props;
   const t = useT();
   const children = tree.workspaces.filter((w) => w.parentId === row.id).sort((a, b) => (a.level === b.level ? a.name.localeCompare(b.name) : a.level === 'MANAGER' ? -1 : 1));
   const mine = row.id === tree.mine.id;
@@ -145,7 +171,9 @@ function Branch({ row, tree, depth, onPermissions, onEdit, onArchive }: { row: W
             {row.name}
             <Badge tone={row.level === 'SUPER' ? 'accent' : row.level === 'MANAGER' ? 'primary' : 'neutral'}>{t.maybe(WORKSPACE_LEVEL_LABEL[row.level])}</Badge>
             {mine && <Badge tone="success">{t('Yours')}</Badge>}
+            {row.deactivatedAt && <Badge tone="warning">{t('Deactivated')}</Badge>}
           </p>
+          {row.deactivatedAt && row.deactivationReason && <p className="text-xs text-warning" data-deactivation-reason>{t('Deactivated: {reason}', { reason: row.deactivationReason })}</p>}
           <p className="text-sm text-muted-foreground">{t.maybe(row.designation)}</p>
           <p className="text-xs text-muted-foreground">
             {row.people.length ? row.people.map((p) => p.name).join(', ') : row.pendingInvites.length ? t('Invited: {emails}', { emails: row.pendingInvites.join(', ') }) : t('Nobody in it yet')}
@@ -164,16 +192,29 @@ function Branch({ row, tree, depth, onPermissions, onEdit, onArchive }: { row: W
             <Button size="icon" variant="ghost" aria-label={t('Edit {name}', { name: row.name })} onClick={() => onEdit(row.id)}>
               <Pencil aria-hidden />
             </Button>
-            <Button size="icon" variant="ghost" aria-label={t('Archive {name}', { name: row.name })} disabled={children.length > 0 || row.people.length > 0} title={children.length || row.people.length ? t('Move its people and workspaces out first') : undefined} onClick={() => onArchive(row)}>
-              <Trash2 aria-hidden />
-            </Button>
+            {row.deactivatedAt ? (
+              <Button size="sm" variant="outline" onClick={() => onReactivate(row)}>
+                <Power className="size-4" aria-hidden />
+                {t('Reactivate')}
+                <span className="sr-only"> {row.name}</span>
+              </Button>
+            ) : (
+              <Button size="icon" variant="ghost" aria-label={t('Deactivate {name}', { name: row.name })} title={t('Deactivate')} onClick={() => onDeactivate(row)}>
+                <PowerOff aria-hidden />
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="icon" variant="ghost" aria-label={t('Delete {name}', { name: row.name })} title={t('Delete')} onClick={() => onDelete(row)}>
+                <Trash2 aria-hidden />
+              </Button>
+            )}
           </div>
         )}
       </div>
       {children.length > 0 && (
         <ul className="mt-2 space-y-2">
           {children.map((c) => (
-            <Branch key={c.id} row={c} tree={tree} depth={depth + 1} onPermissions={onPermissions} onEdit={onEdit} onArchive={onArchive} />
+            <Branch key={c.id} {...props} row={c} depth={depth + 1} />
           ))}
         </ul>
       )}

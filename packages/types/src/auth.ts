@@ -81,7 +81,7 @@ export interface MeResponse {
   authMethod: 'password' | 'mfa' | 'sso';
   mfaEnabled: boolean;
   /** The workspace's policy is not met yet: only setup screens work until it is. */
-  restriction?: 'mfa_enrolment' | 'sso_required';
+  restriction?: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated';
 }
 
 /*

@@ -652,6 +652,12 @@ model WorkspaceNode {
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
   createdById          String?   @map("created_by_id")
+  /// Set while deactivated (W4): its people, and everyone in the workspaces below it, cannot work until it is
+  /// reactivated. Grants are kept, so reactivating restores things exactly.
+  deactivatedAt        DateTime? @map("deactivated_at")
+  deactivatedById      String?   @map("deactivated_by_id")
+  deactivationReason   String?   @map("deactivation_reason")
+  /// Set when deleted (W4): the node stays, renamed out of the way, so history and audit entries keep their name.
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
