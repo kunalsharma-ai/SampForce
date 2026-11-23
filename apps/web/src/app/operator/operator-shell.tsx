@@ -20,6 +20,7 @@ import { ConsoleCommand } from '@/components/console/console-command';
 import { consolePagesFor, crumbsFor } from '@/components/console/console-nav';
 import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
 import { ConsoleTopBar } from '@/components/console/console-top-bar';
+import { useUnreadNotifications } from '@/components/console/notifications';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
 import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
@@ -93,7 +94,8 @@ function useBadgeCounts(me: OperatorMe | undefined) {
   const tickets = counts.data
     ? SUPPORT_WAITING_STATUSES.reduce((n, st) => n + counts.data[st], 0)
     : 0;
-  return { chat, tickets };
+  const notifications = useUnreadNotifications(!!me).data?.unread ?? 0;
+  return { chat, tickets, notifications };
 }
 
 /** Keeps the client's name, plan and status in view on every page inside that client (ADR 0074). */
@@ -175,7 +177,8 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   // A role without the overview (a support-only custom role) starts on the first page it may open.
   useEffect(() => {
     if (path === '/operator' && me.data && !can(me.data, 'clients.view')) {
-      const first = consolePagesFor(me.data.permissions)[0];
+      // Notifications is everyone's; a support-only role starts on its first working page instead.
+      const first = consolePagesFor(me.data.permissions).find((p) => p.href !== '/operator/notifications');
       if (first) router.replace(first.href);
     }
   }, [path, me.data, router]);

@@ -1,6 +1,7 @@
 import type { OperatorPermission } from '@dealflow/types';
 import {
   Activity,
+  Bell,
   KeyRound,
   Building2,
   CreditCard,
@@ -23,7 +24,7 @@ import {
  * pages still to come (Workspaces, Users, Features, Billing...) are added as each part ships, never as dead links.
  */
 
-export type ConsoleBadge = 'chat' | 'tickets';
+export type ConsoleBadge = 'chat' | 'tickets' | 'notifications';
 
 export interface ConsoleNavItem {
   key: string;
@@ -52,6 +53,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     label: 'Command',
     items: [
       { key: 'overview', label: 'Overview', href: '/operator', icon: LayoutDashboard, exact: true, permission: 'clients.view' },
+      { key: 'notifications', label: 'Notifications', href: '/operator/notifications', icon: Bell, badge: 'notifications' },
     ],
   },
   {

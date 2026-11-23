@@ -50,6 +50,8 @@ export const apiEnvSchema = z.object({
   /** Runs the background worker inside the API process (development and e2e only). */
   RUN_WORKER_IN_PROCESS: bool.default('false'),
   WORKER_POLL_MS: z.coerce.number().int().min(100).default(2000),
+  /** How often the worker turns platform events into Console notifications (ADR 0074, C3b). */
+  CONSOLE_NOTIFY_INTERVAL_MS: z.coerce.number().int().min(500).default(60_000),
   /** Port for Prometheus metrics and the worker's health check, on a listener separate from the public API. Unset = off. */
   METRICS_PORT: z.coerce.number().int().positive().optional(),
   /** Lets webhooks and adapters reach private network addresses. Test fixtures only; refused in production. */

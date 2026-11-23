@@ -1180,6 +1180,30 @@ export const organizationHelp = {
       'استخدمه في مراجعات أمان الأشخاص الذين يشغّلون SampForce ولمعرفة من غيّر ماذا ومتى.',
     ],
   },
+  'page.operatorNotifications': {
+    title: 'Notifications',
+    what: [
+      'What needs you across SampForce: new clients and workspaces, failed or overdue payments, subscriptions ending, new and late tickets, failed provider checks, unusual sign-ins and feature changes.',
+      'Lo que te necesita en SampForce: clientes y espacios nuevos, pagos fallidos o vencidos, suscripciones que terminan, tickets nuevos o atrasados, proveedores con fallos, accesos inusuales y cambios de funciones.',
+      'Ce qui vous attend dans SampForce : nouveaux clients et espaces, paiements échoués ou en retard, abonnements qui finissent, tickets nouveaux ou en retard, fournisseurs en échec, connexions inhabituelles.',
+      'Was Sie in SampForce braucht: neue Kunden und Workspaces, fehlgeschlagene oder überfällige Zahlungen, endende Abos, neue und verspätete Tickets, fehlerhafte Anbieter, ungewöhnliche Anmeldungen.',
+      'ما يحتاجك في SampForce: عملاء ومساحات عمل جدد، ومدفوعات فاشلة أو متأخرة، واشتراكات تنتهي، وتذاكر جديدة أو متأخرة، ومزوّدون فشل فحصهم، وعمليات دخول غير معتادة.',
+    ],
+    how: [
+      'Open a notification to go to what it is about; it is then marked read. Under Preferences, choose the Console, email, both or neither for each kind your role receives.',
+      'Abre una notificación para ir a lo que trata; queda marcada como leída. En Preferencias, elige la Consola, el correo, ambos o ninguno para cada tipo que recibe tu rol.',
+      'Ouvrez une notification pour aller à son objet ; elle est alors lue. Dans Préférences, choisissez la Console, l’e-mail, les deux ou aucun pour chaque type reçu par votre rôle.',
+      'Öffnen Sie eine Benachrichtigung, um zum Gegenstand zu gelangen; sie gilt dann als gelesen. Unter Einstellungen wählen Sie je Art Konsole, E-Mail, beides oder nichts.',
+      'افتح إشعارًا للانتقال إلى موضوعه، فيُعلَّم مقروءًا. في التفضيلات اختر الوحدة أو البريد أو كليهما أو لا شيء لكل نوع يتلقاه دورك.',
+    ],
+    where: [
+      'Check it at the start of a shift, and turn on email for the kinds you must not miss while away from the Console.',
+      'Revísala al empezar el turno y activa el correo para los tipos que no puedes perderte fuera de la Consola.',
+      'Consultez-la en début de service et activez l’e-mail pour les types à ne pas manquer hors de la Console.',
+      'Prüfen Sie sie zu Schichtbeginn und aktivieren Sie E-Mail für Arten, die Sie außerhalb der Konsole nicht verpassen dürfen.',
+      'راجعها في بداية الدوام وفعّل البريد للأنواع التي لا يجب أن تفوتك بعيدًا عن الوحدة.',
+    ],
+  },
   'page.operatorOperators': {
     title: 'Operators',
     what: [
