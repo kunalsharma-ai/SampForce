@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import {
   type ConsoleAuthorityInput,
   consoleAuthoritySchema,
@@ -26,7 +26,6 @@ import {
   type PlanCode,
   type OperatorPaymentInput,
   type OperatorPlanInput,
-  operatorLoginSchema,
   operatorPaymentSchema,
   operatorPlanSchema,
   operatorStatusSchema,
@@ -44,7 +43,7 @@ import {
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard, OperatorAny, OperatorPermission, OperatorPublic, OperatorTokens } from './operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorAny, OperatorPermission, OperatorTokens } from './operator-auth';
 import { ConsoleService } from './console.service';
 import { ConsoleShellService } from './console-shell.service';
 import { OperatorService } from './operator.service';

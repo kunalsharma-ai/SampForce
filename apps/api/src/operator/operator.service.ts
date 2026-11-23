@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
 import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, type PlatformAuditQuery, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
@@ -19,7 +19,7 @@ import { DEPLOYMENT_SETTINGS } from './deployment-settings';
 import { ConnectionTests } from './connection-tests';
 import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue';
 import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
-import { type OperatorContext, operatorContext } from './operator-auth';
+import type { OperatorContext } from './operator-auth';
 
 type ScanTx = Prisma.TransactionClient;
 
