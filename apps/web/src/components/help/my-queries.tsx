@@ -202,7 +202,7 @@ function Message({ message }: { message: SupportTicketMessageRow }) {
   return (
     <li className={`flex ${message.mine ? 'justify-end' : 'justify-start'}`} data-message-author={message.authorKind}>
       <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${message.mine ? 'bg-primary text-primary-foreground' : support ? 'border border-success/30 bg-success/10' : 'bg-muted'}`}>
-        <p className={`text-xs font-semibold ${message.mine ? 'text-primary-foreground/80' : support ? 'text-success' : 'text-muted-foreground'}`}>
+        <p className={`text-xs font-semibold ${message.mine ? 'text-primary-foreground' : support ? 'text-success' : 'text-muted-foreground'}`}>
           {support ? t('SampForce support') : (message.author?.name ?? '')}
           {message.authorKind === 'WORKSPACE' && !message.mine && <span className="font-normal"> · {t('answering')}</span>}
         </p>
