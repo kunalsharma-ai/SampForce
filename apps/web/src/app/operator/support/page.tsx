@@ -378,7 +378,7 @@ function TicketPane({ id }: { id: string }) {
                 inverted={m.authorKind === 'OPERATOR'}
               />
               <p
-                className={`mt-1 text-[11px] ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}
+                className={`mt-1 text-[11px] ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground' : 'text-muted-foreground'}`}
               >
                 {new Date(m.createdAt).toLocaleString(t.formatLocale, {
                   dateStyle: 'medium',

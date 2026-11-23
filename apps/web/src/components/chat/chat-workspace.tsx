@@ -889,7 +889,7 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
                 )}
               >
                 {m.body}
-                <span className={cn('ms-2 inline-flex translate-y-0.5 items-center gap-1 align-bottom text-[10px]', onlyEmoji ? 'text-muted-foreground' : mine ? 'text-primary-foreground/90' : 'text-muted-foreground')}>
+                <span className={cn('ms-2 inline-flex translate-y-0.5 items-center gap-1 align-bottom text-[10px]', onlyEmoji ? 'text-muted-foreground' : mine ? 'text-primary-foreground' : 'text-muted-foreground')}>
                   {m.editedAt && <span>{t('(edited)')}</span>}
                   <time dateTime={m.createdAt}>{time(m.createdAt)}</time>
                   {mine && status && <Ticks status={status} onPrimary={!onlyEmoji} />}
