@@ -269,6 +269,8 @@ export interface OperatorMe {
   email: string;
   name: string;
   role: 'ADMIN' | 'SUPPORT';
+  /** The operator's Console palette, colour mode, sidebar and sound (ADR 0074). */
+  preferences: import('./console-shell').ConsolePreferences;
 }
 
 export interface OperatorTenantRow {

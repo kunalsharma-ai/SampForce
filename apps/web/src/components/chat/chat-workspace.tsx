@@ -86,7 +86,7 @@ function tone(name: string): string {
 
 function Avatar({ name, operator, online, className }: { name: string; operator?: boolean; online?: boolean; className?: string }) {
   return (
-    <span aria-hidden className={cn('relative grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold shadow-sm ring-2 ring-surface', operator ? 'bg-warning text-black' : tone(name), className)}>
+    <span aria-hidden className={cn('relative grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold shadow-sm ring-2 ring-surface', operator ? 'bg-warning text-background' : tone(name), className)}>
       {initials(name) || '?'}
       {online !== undefined && <span className={cn('absolute -bottom-0.5 -end-0.5 size-3 rounded-full ring-2 ring-surface transition-colors', online ? 'bg-success' : 'bg-muted-foreground/50')} />}
     </span>
@@ -889,7 +889,7 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
                 )}
               >
                 {m.body}
-                <span className={cn('ms-2 inline-flex translate-y-0.5 items-center gap-1 align-bottom text-[10px]', onlyEmoji ? 'text-muted-foreground' : mine ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+                <span className={cn('ms-2 inline-flex translate-y-0.5 items-center gap-1 align-bottom text-[10px]', onlyEmoji ? 'text-muted-foreground' : mine ? 'text-primary-foreground/90' : 'text-muted-foreground')}>
                   {m.editedAt && <span>{t('(edited)')}</span>}
                   <time dateTime={m.createdAt}>{time(m.createdAt)}</time>
                   {mine && status && <Ticks status={status} onPrimary={!onlyEmoji} />}
