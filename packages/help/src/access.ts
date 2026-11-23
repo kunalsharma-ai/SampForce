@@ -100,8 +100,11 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorHelp': 'console-support',
   'page.operatorHelpManage': 'console-support',
   'page.operatorAudit': 'console-security',
+  'page.operatorNotifications': 'console-support',
   'page.operatorOperators': 'console-security',
   'page.operatorRoles': 'console-security',
+  'page.operatorAccount': 'console-security',
+  'page.operatorSecurity': 'console-security',
 };
 
 /** Pages with help but no guide entry: the Marketplace has not shipped, so the guide must not promise it. */

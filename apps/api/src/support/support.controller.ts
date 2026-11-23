@@ -126,7 +126,7 @@ export class OperatorSupportController {
 
   @Post(':id/attachments')
   async upload(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Req() req: Request) {
-    return this.support.operatorUpload(op, id, fileFrom(req, name, await readUpload(req)));
+    return this.support.operatorUpload(op, id, fileFrom(req, name, await readUpload(req)), req.ip ?? null);
   }
 
   @Get(':id/attachments/:fileId/download')

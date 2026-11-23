@@ -19,6 +19,8 @@ async function shot(page: Page, name: string) {
 }
 
 async function axe(page: Page) {
+  // Next sets the tab title again after a soft navigation; check the settled page.
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
     .analyze();
@@ -165,6 +167,6 @@ test('the Console shell: menu, palettes, sound and global search', async ({ brow
   await ops.setViewportSize({ width: 900, height: 900 });
   await ops.getByRole('button', { name: 'Open the menu' }).click();
   await ops.getByRole('dialog').getByRole('link', { name: 'Audit log' }).click();
-  await expect(ops.getByRole('heading', { level: 1, name: 'Platform audit log' })).toBeVisible();
+  await expect(ops.getByRole('heading', { level: 1, name: 'Activity & audit log' })).toBeVisible();
   await expect(ops.getByRole('dialog')).toBeHidden();
 });

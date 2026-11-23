@@ -12,6 +12,7 @@ import { AppModule } from './app.module';
 import { httpMetricsMiddleware } from './observability/metrics';
 import { buildOpenApiDocument } from './openapi/document';
 import { requestLanguageMiddleware } from './common/request-language';
+import { auditContextMiddleware } from './common/audit-context';
 
 export async function createApp(): Promise<INestApplication> {
   const env = loadApiEnv();
@@ -20,6 +21,7 @@ export async function createApp(): Promise<INestApplication> {
   app.setGlobalPrefix('api/v1');
   app.use(httpMetricsMiddleware);
   app.use(requestLanguageMiddleware);
+  app.use(auditContextMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   // Replaces Nest's default JSON parser so SCIM clients' application/scim+json bodies are parsed too.

@@ -7,10 +7,13 @@ import { OperatorMobileController } from '../mobile/mobile.controller';
 import { OperatorHelpController } from '../support/help-content.controller';
 import { OperatorSupportController } from '../support/support.controller';
 import { OperatorAdminController } from './operator-admin.controller';
+import { OperatorSecurityController } from './operator-security.controller';
 import { OPERATOR_ROUTE_METADATA, OperatorGuard } from './operator-auth';
 import { OperatorController } from './operator.controller';
+import { ConsoleAuditController } from './console-audit.controller';
+import { ConsoleNotificationsController } from './console-notifications.controller';
 
-const CONTROLLERS = [OperatorController, OperatorAdminController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
+const CONTROLLERS = [OperatorController, ConsoleAuditController, ConsoleNotificationsController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
 
 /** Every Console route says what it needs (ADR 0074): a permission, any signed-in operator, or no session at all. */
 describe('operator routes', () => {
@@ -41,7 +44,7 @@ describe('operator routes', () => {
 
   it('keeps the signed-out routes to sign-in and password links', () => {
     expect(routes.filter((r) => r.public).map((r) => r.route.split(' ')[0]).sort()).toEqual(
-      ['OperatorAdminController.forgot', 'OperatorAdminController.linkInfo', 'OperatorAdminController.setPassword', 'OperatorController.login', 'OperatorController.logout'].sort(),
+      ['OperatorAdminController.forgot', 'OperatorAdminController.linkInfo', 'OperatorAdminController.setPassword', 'OperatorSecurityController.login', 'OperatorSecurityController.loginMfa', 'OperatorSecurityController.logout'].sort(),
     );
   });
 });

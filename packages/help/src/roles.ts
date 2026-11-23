@@ -28,7 +28,7 @@ export const ROLE_GUIDES: Readonly<Record<HelpRole, RoleGuide>> = {
       'Kunden und Tarife anlegen, Anbieterschlüssel pflegen, Support-Tickets beantworten und die Hilfe aktuell halten.',
       'أعدّ العملاء وخططهم، وحافظ على مفاتيح المزوّدين، وأجب عن تذاكر الدعم، وحدّث المساعدة.',
     ],
-    pages: ['page.consoleOverview', 'page.operatorWorkspaces', 'page.operatorPlans', 'page.operatorProviders', 'page.operatorSupport', 'page.operatorHelpManage', 'page.operatorAudit', 'page.operatorOperators', 'page.operatorRoles'],
+    pages: ['page.consoleOverview', 'page.operatorNotifications', 'page.operatorWorkspaces', 'page.operatorPlans', 'page.operatorProviders', 'page.operatorSupport', 'page.operatorHelpManage', 'page.operatorAudit', 'page.operatorOperators', 'page.operatorRoles', 'page.operatorAccount', 'page.operatorSecurity'],
   },
   superAdmin: {
     role: 'superAdmin',

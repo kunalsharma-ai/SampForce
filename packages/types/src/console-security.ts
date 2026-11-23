@@ -221,3 +221,77 @@ export interface OperatorTokenInfo {
   name: string;
   expiresAt: string;
 }
+
+// ───── Sign-in security (ADR 0074): two-step verification, sessions, lockout, login history, policy ─────
+
+/** The sign-in answer: signed in, or a short-lived challenge for the second step. */
+export interface OperatorLoginResult {
+  mfaRequired?: true;
+  challenge?: string;
+  /** Signed in, but the policy asks for two-step verification first: only the account page opens until it is on. */
+  mfaSetupRequired?: boolean;
+}
+
+export const operatorMfaLoginSchema = z
+  .object({ challenge: z.string().min(10).max(2000), code: z.string().trim().min(6, 'Enter the 6-digit code').max(32), remember: z.boolean().optional() })
+  .strict();
+
+export interface OperatorSessionRow {
+  id: string;
+  operatorId: string;
+  operatorName: string;
+  operatorEmail: string;
+  ip: string | null;
+  /** A short description of the browser, e.g. "Chrome on macOS". */
+  device: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export const OPERATOR_LOGIN_OUTCOMES = ['success', 'wrong_password', 'wrong_code', 'locked', 'disabled'] as const;
+export type OperatorLoginOutcome = (typeof OPERATOR_LOGIN_OUTCOMES)[number];
+
+export interface OperatorLoginEventRow {
+  id: string;
+  operatorId: string | null;
+  operatorName: string | null;
+  email: string;
+  ip: string | null;
+  device: string;
+  outcome: OperatorLoginOutcome;
+  suspicious: boolean;
+  reason: string | null;
+  createdAt: string;
+}
+
+export const operatorLoginQuerySchema = z
+  .object({ suspicious: z.enum(['true', 'false']).optional(), limit: z.coerce.number().int().min(1).max(200).default(50) })
+  .strict();
+
+export interface ConsoleSecurityPolicy {
+  /** Every operator must turn on two-step verification before using the Console. */
+  requireMfa: boolean;
+  /** Minutes without activity before a session ends. */
+  idleMinutes: number;
+  /** Failed sign-ins in a row before sign-in pauses, and for how long. Fixed in code; shown for reference. */
+  lockoutAttempts: number;
+  lockoutMinutes: number;
+}
+
+export const consoleSecurityPolicyUpdateSchema = z
+  .object({ requireMfa: z.boolean(), idleMinutes: z.number().int().min(5).max(480) })
+  .partial()
+  .strict();
+export type ConsoleSecurityPolicyUpdate = z.infer<typeof consoleSecurityPolicyUpdateSchema>;
+
+export const DEFAULT_CONSOLE_SECURITY_POLICY: ConsoleSecurityPolicy = { requireMfa: false, idleMinutes: 60, lockoutAttempts: 5, lockoutMinutes: 15 };
+
+/** "Chrome on macOS" from a user agent; enough to recognise a device, never used for security decisions. */
+export function describeDevice(ua: string | null | undefined): string {
+  if (!ua) return 'Unknown device';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /curl|node|supertest|axios/i.test(ua) ? 'A script' : 'A browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : null;
+  return os ? `${browser} on ${os}` : browser;
+}

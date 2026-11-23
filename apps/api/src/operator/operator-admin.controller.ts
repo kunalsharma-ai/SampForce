@@ -18,9 +18,12 @@ import {
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { OperatorAdminService } from './operator-admin.service';
+import { OperatorSecurityService } from './operator-security.service';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPermission, OperatorPublic, OperatorTokens } from './operator-auth';
 
 const ip = (req: Request) => req.ip ?? null;
+/** Sign-in and password links: the same per-address limit as workspace sign-in (10 a minute unless configured). */
+const AUTH_LIMIT = { default: { limit: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10), ttl: 60_000 } };
 const roleId = z.string().trim().min(1).max(64);
 
 /** Operators, roles and password links of the Console (ADR 0074). `@Public()` only skips the workspace guard. */
@@ -30,6 +33,7 @@ const roleId = z.string().trim().min(1).max(64);
 export class OperatorAdminController {
   constructor(
     private readonly admin: OperatorAdminService,
+    private readonly security: OperatorSecurityService,
     private readonly tokens: OperatorTokens,
   ) {}
 
@@ -89,7 +93,7 @@ export class OperatorAdminController {
   @Post('password/forgot')
   @OperatorPublic()
   @HttpCode(204)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(AUTH_LIMIT)
   forgot(@Body(new ZodPipe(z.object({ email: emailSchema }).strict())) body: { email: string }, @Req() req: Request) {
     return this.admin.forgot(body.email, ip(req));
   }
@@ -101,14 +105,19 @@ export class OperatorAdminController {
     return this.admin.tokenInfo(q.token);
   }
 
-  /** Sets the password and signs the operator in. Links are 256-bit and single-use, so the limit only stops floods. */
+  /**
+   * Sets the password and signs the operator in, unless two-step verification is on: then the answer says to sign in
+   * with the new password and a code. Links are 256-bit and single-use, so the limit only stops floods.
+   */
   @Post('password')
   @OperatorPublic()
   @HttpCode(200)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async setPassword(@Body(new ZodPipe(operatorSetPasswordSchema)) body: OperatorSetPasswordInput, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const op = await this.admin.setPassword(body.token, body.password, ip(req));
-    this.tokens.cookie(res, await this.tokens.sign(op.id));
-    return op;
+    const done = await this.admin.setPassword(body.token, body.password, ip(req));
+    if (!done.signIn) return { signedIn: false };
+    const step = await this.security.signedIn(done.operatorId, false, { ip: ip(req), userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null });
+    this.tokens.cookie(res, await this.tokens.sign(step.operator.id, step.sessionId, step.seconds), step.seconds);
+    return { signedIn: true, ...step.operator, mfaSetupRequired: step.mfaSetupRequired };
   }
 }

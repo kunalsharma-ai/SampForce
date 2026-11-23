@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MobileModule } from '../mobile/mobile.module';
 import { OperatorGuard, OperatorTokens } from '../operator/operator-auth';
+import { OperatorSessions } from '../operator/operator-sessions';
 import { ChatBus } from './chat-bus';
 import { ChatPresence } from './chat-presence';
 import { ChatSocketServer, ChatSocketTickets } from './chat-socket';
@@ -11,7 +12,7 @@ import { ChatService } from './chat.service';
 @Module({
   imports: [MobileModule],
   controllers: [ChatController, OperatorChatController],
-  providers: [ChatService, ChatBus, ChatPresence, ChatSocketTickets, ChatSocketServer, OperatorTokens, OperatorGuard],
+  providers: [ChatService, ChatBus, ChatPresence, ChatSocketTickets, ChatSocketServer, OperatorTokens, OperatorGuard, OperatorSessions],
   exports: [ChatService, ChatBus],
 })
 export class ChatModule {}

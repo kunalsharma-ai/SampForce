@@ -49,7 +49,9 @@ function ItemLink({
         ? { 'data-chat-unread': count }
         : item.badge === 'tickets'
           ? { 'data-tickets-waiting': count }
-          : {})}
+          : item.badge === 'notifications'
+            ? { 'data-notifications-unread': count }
+            : {})}
       className={cn(
         'group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
         active
@@ -84,7 +86,7 @@ function ItemLink({
         <>
           <span className="relative flex-1 truncate">{item.label}</span>
           {item.badge && (
-            <CountBadge value={count} tone={item.badge === 'chat' ? 'critical' : 'warning'} />
+            <CountBadge value={count} tone={item.badge === 'tickets' ? 'warning' : 'critical'} />
           )}
         </>
       )}

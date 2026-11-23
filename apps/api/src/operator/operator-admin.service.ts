@@ -23,6 +23,8 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MailerService } from '../mail/mailer.service';
 import { type OperatorContext, operatorContext } from './operator-auth';
+import { OperatorSessions } from './operator-sessions';
+import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 /** An invited operator has no password until they open their link; `!` marks a hash that can never match. */
 const INVITED_HASH = '!invited';
@@ -48,6 +50,7 @@ export class OperatorAdminService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly mailer: MailerService,
+    private readonly sessions: OperatorSessions,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -213,6 +216,8 @@ export class OperatorAdminService {
       },
     });
     if (roleChanges) await this.log(actor.id, 'operator.role_changed', { operatorId: id, email: op.email, from: current.consoleRole, to: input.role }, ip);
+    // A switched-off operator's sessions end at once (the guard refuses them anyway; this keeps the session list true).
+    if (statusChanges && input.status === 'DISABLED') await this.sessions.revokeAll(id);
     if (statusChanges) await this.log(actor.id, input.status === 'DISABLED' ? 'operator.disabled' : 'operator.enabled', { operatorId: id, email: op.email }, ip);
     if (input.name !== undefined && input.name !== op.name) await this.log(actor.id, 'operator.renamed', { operatorId: id, from: op.name, to: input.name }, ip);
     return this.one(id);
@@ -276,8 +281,11 @@ export class OperatorAdminService {
     return { purpose: row.purpose === 'reset' ? 'reset' : 'invite', email: op.email, name: op.name, expiresAt: row.expiresAt.toISOString() };
   }
 
-  /** Sets the password from a link and returns the operator, who is then signed in. Each link works once. */
-  async setPassword(token: string, password: string, ip: string | null): Promise<OperatorContext> {
+  /**
+   * Sets the password from a link. Each link works once, and every open session of the operator ends. Returns whether
+   * the operator may be signed in at once: not when two-step verification is on, which the sign-in page then asks for.
+   */
+  async setPassword(token: string, password: string, ip: string | null): Promise<{ operatorId: string; signIn: boolean }> {
     const { row, op } = await this.liveToken(token);
     // Checked before the link is used up, so the person can try another password with the same link.
     if (op.passwordHash !== INVITED_HASH && (await this.passwords.verify(op.passwordHash, password))) {
@@ -287,11 +295,12 @@ export class OperatorAdminService {
     if (used.count !== 1) throw new BadRequestException(LINK_INVALID);
     const updated = await this.prisma.platformOperator.update({ where: { id: op.id }, data: { passwordHash: await this.passwords.hash(password), lastLoginAt: new Date() } });
     await this.prisma.operatorPasswordToken.deleteMany({ where: { operatorId: op.id, usedAt: null } });
-    await this.log(op.id, row.purpose === 'reset' ? 'operator.password_reset' : 'operator.joined', {}, ip);
-    return operatorContext(this.prisma, updated);
+    const ended = await this.sessions.revokeAll(op.id);
+    await this.log(op.id, row.purpose === 'reset' ? 'operator.password_reset' : 'operator.joined', ended ? { sessionsEnded: ended } : {}, ip);
+    return { operatorId: updated.id, signIn: !updated.mfaEnabledAt };
   }
 
-  private async log(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId: null, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async log(operatorId: string | null, action: string, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, metadata, ip, ...extra });
   }
 }
