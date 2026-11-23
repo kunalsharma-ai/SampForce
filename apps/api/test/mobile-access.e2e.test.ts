@@ -128,6 +128,17 @@ describe('mobile access', () => {
     await http().post('/api/v1/auth/refresh').set('origin', ORIGIN).set('cookie', `df_refresh=${tokens.refreshToken}`).expect(401);
   });
 
+  it('lets phones read Help and raise and answer support tickets', async () => {
+    const help = (await bearer(tokens.accessToken).get('/help').expect(200)).body as { language: string };
+    expect(help.language).toBe('en');
+    const ticket = (await bearer(tokens.accessToken).post('/support/tickets', { subject: 'Phone question', body: 'How do I log a visit from my phone?' }).expect(201)).body as { id: string };
+    await bearer(tokens.accessToken).post(`/support/tickets/${ticket.id}/messages`, { body: 'Adding a detail from the phone.' }).expect(201);
+    expect((await bearer(tokens.accessToken).get(`/support/tickets/${ticket.id}`).expect(200)).body.id).toBe(ticket.id);
+    // The web sees the same ticket.
+    const list = (await api(owner).get('/support/tickets').expect(200)).body as { rows?: { id: string }[] } | { id: string }[];
+    expect(JSON.stringify(list)).toContain(ticket.id);
+  });
+
   it('rotates the refresh token; a reused one ends the sessions', async () => {
     // Reuse ends every session of the person (web included), so this uses a person of its own.
     const rotator = await inviteMember(app, owner, 'admin');
