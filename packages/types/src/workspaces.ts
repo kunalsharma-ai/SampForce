@@ -178,6 +178,8 @@ export const workspacePermissionsSchema = z
     /** Manager Workspaces only, set by the Super Workspace. */
     canCreateExecutives: z.boolean().optional(),
     canViewOtherManagers: z.boolean().optional(),
+    /** Manager and Executive Workspaces, set by their parent: chat with workspaces of the same level. */
+    canChatWithPeers: z.boolean().optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'Change at least one permission');
@@ -218,6 +220,8 @@ export interface WorkspaceRow {
   restrictedFeatures: FeatureKey[];
   canCreateExecutives: boolean;
   canViewOtherManagers: boolean;
+  /** Managers: may chat with other managers. Executives: with the other executives of their team. */
+  canChatWithPeers: boolean;
   /** Whether the caller may change what this workspace is granted (they are its parent level). */
   editable: boolean;
   createdAt: string;

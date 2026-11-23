@@ -8,6 +8,9 @@ import { OnboardingChecklist } from '@/components/command-center/onboarding';
 import { ManagerDashboard } from '@/components/command-center/manager-dashboard';
 import { SeniorDashboard } from '@/components/command-center/senior-dashboard';
 import { PageHeader } from '@/components/page-header';
+import { YourTargets } from '@/components/workspace-work/targets';
+import { TasksForYou } from '@/components/workspace-work/tasks';
+import { useHasFeature } from '@/lib/features';
 import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan, useSession } from '@/lib/session';
@@ -33,6 +36,8 @@ export function CommandCenter() {
   const params = useSearchParams();
   const { data: session } = useSession();
   const canDashboard = useCan('dashboard:read');
+  const hasTasks = useHasFeature('task_management');
+  const hasTargets = useHasFeature('sales_target_management');
   const ctx = useCommandCenterContext(!!session && !session.restriction && canDashboard);
   if (!session || (canDashboard && ctx.isPending && !session.restriction))
     return <Skeleton className="h-96" aria-label={t('Loading')} />;
@@ -81,6 +86,13 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
+      {/* Work handed down the workspace hierarchy (ADR 0071) comes first, whatever the dashboard. */}
+      {(hasTasks || hasTargets) && (
+        <div className="mb-4 space-y-4">
+          {hasTasks && <TasksForYou />}
+          {hasTargets && <YourTargets />}
+        </div>
+      )}
       {view === 'senior' ? (
         <div className="space-y-2">
           <PageHeader

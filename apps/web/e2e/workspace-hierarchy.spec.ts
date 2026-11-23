@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
 import { FEATURE_KEYS } from '@dealflow/types';
 import { signUp } from './helpers';
@@ -56,5 +57,77 @@ test('shows the workspace in the header and refuses a module the workspace was n
   await shot(manager, '03-module-not-given-to-workspace');
   const direct = await manager.request.get('/api/v1/rfqs', { headers: ORIGIN });
   expect(direct.status()).toBe(403);
+  await ctx.close();
+});
+
+async function axe(page: Page) {
+  const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
+}
+
+/** Permission Center (ADR 0071, part 3): a parent hands down features and actions, and never more than it has. */
+test('the Permission Center hands features and actions down, and a manager cannot grant what it lacks', async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  await signUp(page, 'Frequent Research Panels');
+  await page.goto('/app/settings');
+  await page.getByRole('link', { name: /Workspaces/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'New Manager Workspace' }).click();
+  let dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Workspace name').fill('West India Sales');
+  await dialog.getByLabel('Designation').fill('Regional Sales Manager');
+  await dialog.getByLabel('Invite by email').fill(`meera.${Date.now()}@example.com`);
+  await dialog.getByRole('button', { name: 'Create workspace' }).click();
+  const link = dialog.getByLabel('Invitation link');
+  await expect(link).toHaveValue(/\/invite\//);
+  const token = (await link.inputValue()).split('/invite/')[1]!;
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('[data-workspace="West India Sales"]')).toContainText('Regional Sales Manager');
+  await expect(page.locator('[data-usage="Manager Workspaces"]')).toContainText('1');
+  await shot(page, '09-workspace-structure');
+  await axe(page);
+
+  // The Super Workspace takes RFQs and deleting in CRM away, and lets the manager build a team.
+  await page.getByRole('button', { name: 'Permissions West India Sales' }).click();
+  dialog = page.getByRole('dialog');
+  await dialog.getByRole('checkbox', { name: 'RFQs', exact: true }).uncheck();
+  await dialog.getByRole('checkbox', { name: 'Delete in CRM' }).uncheck();
+  await dialog.getByRole('checkbox', { name: 'May create Executive Workspaces in its team' }).check();
+  await shot(page, '10-permission-center');
+  await axe(page);
+  await dialog.getByRole('button', { name: 'Save permissions' }).click();
+  await expect(dialog.getByRole('status')).toHaveText('Saved. It applies on its next request.');
+  await dialog.getByRole('button', { name: 'Close' }).first().click();
+
+  const tree = await (await page.request.get('/api/v1/workspaces', { headers: ORIGIN })).json();
+  const west = tree.workspaces.find((w: { name: string }) => w.name === 'West India Sales');
+  expect(west.features).not.toContain('rfqs');
+  expect(west.actions.CRM).not.toContain('delete');
+  expect(west.canCreateExecutives).toBe(true);
+
+  // The manager signs in, builds a team, and can hand down only what West India Sales has.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: PREVIEW_DIR ? 2 : 1, reducedMotion: 'reduce' });
+  const manager = await ctx.newPage();
+  const accept = await manager.request.post('/api/v1/auth/invitations/accept', { data: { token, name: 'Meera Nair', password: 'a-long-password-1' }, headers: ORIGIN });
+  expect(accept.ok(), await accept.text()).toBe(true);
+  await manager.goto('/app/settings/workspaces');
+  await manager.getByRole('button', { name: 'New Executive Workspace' }).click();
+  dialog = manager.getByRole('dialog');
+  await dialog.getByLabel('Workspace name').fill('Priya Sharma');
+  await dialog.getByRole('button', { name: 'Create workspace' }).click();
+  await expect(manager.locator('[data-workspace="Priya Sharma"]')).toBeVisible();
+  await manager.getByRole('button', { name: 'Permissions Priya Sharma' }).click();
+  dialog = manager.getByRole('dialog');
+  await expect(dialog.getByRole('checkbox', { name: 'RFQs', exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('checkbox', { name: 'Delete in CRM' })).toHaveCount(0);
+  await expect(dialog.getByRole('checkbox', { name: 'May create Executive Workspaces in its team' })).toHaveCount(0);
+  await shot(manager, '11-manager-permission-center');
+  await axe(manager);
+
+  const priya = (await (await manager.request.get('/api/v1/workspaces', { headers: ORIGIN })).json()).workspaces.find((w: { name: string }) => w.name === 'Priya Sharma');
+  const grant = await manager.request.put(`/api/v1/workspaces/${priya.id}/permissions`, { data: { features: [...priya.features, 'rfqs'] }, headers: ORIGIN });
+  expect(grant.status()).toBe(403);
+  expect((await grant.json()).error.code).toBe('FEATURE_NOT_GRANTED');
   await ctx.close();
 });
