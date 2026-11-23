@@ -221,6 +221,29 @@ export async function eraseRecentPageHistory(prisma: PrismaClient, log: (line: s
   if (res.nModified) log(`removed recent page history from ${res.nModified} navigation documents`);
 }
 
+/**
+ * Support query statuses that came before the six-step flow (ADR 0073, 2026-11-22), and what each one became.
+ * IN_PROGRESS and CLOSED kept their names.
+ */
+export const LEGACY_SUPPORT_TICKET_STATUSES: Record<string, string> = { OPEN: 'SUBMITTED', ANSWERED: 'AWAITING_USER' };
+
+/**
+ * Moves support queries stored with an old status to the new one. Prisma cannot read a document whose status is no
+ * longer in the enum, so without this any list or report that touches an old query fails. Idempotent: once no
+ * document has an old status, it changes nothing.
+ */
+export async function upgradeSupportTicketStatuses(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const res = (await prisma.$runCommandRaw({
+    update: 'support_tickets',
+    updates: Object.entries(LEGACY_SUPPORT_TICKET_STATUSES).map(([from, to]) => ({
+      q: { status: from },
+      u: { $set: { status: to } },
+      multi: true,
+    })),
+  })) as { nModified?: number };
+  if (res.nModified) log(`moved ${res.nModified} support queries from old statuses to new ones`);
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
@@ -228,4 +251,5 @@ export async function setupDatabase(prisma: PrismaClient, log?: (line: string) =
   await upgradeCompanyCrm(prisma, log);
   await upgradeCommandCenter(prisma, log);
   await eraseRecentPageHistory(prisma, log);
+  await upgradeSupportTicketStatuses(prisma, log);
 }

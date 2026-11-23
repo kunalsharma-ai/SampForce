@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { upgradeSupportTicketStatuses } from '@dealflow/database';
 import { PasswordService } from '../src/auth/password.service';
 import { api, appClient, inviteMember, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
 
@@ -214,6 +215,24 @@ describe('help center content from the Console', () => {
     expect(r.resolutionHours.average).not.toBeNull();
     await support.get('/api/v1/operator/support/tickets/report?days=3').expect(400);
     await request(app.getHttpServer()).get('/api/v1/operator/support/tickets/report').expect(401);
+  });
+
+  it('set-up moves queries stored with the old statuses to the new ones, so the report still loads', async () => {
+    const raise = async (n: number) =>
+      (await api(owner).post('/support/tickets', { subject: `Old status ${n} ${tag}`, body: 'Stored before the six statuses.', category: 'deals' }).expect(201)).body;
+    const [open, answered, closed] = [await raise(1), await raise(2), await raise(3)];
+    const setRaw = (id: string, status: string) => db.$runCommandRaw({ update: 'support_tickets', updates: [{ q: { _id: id }, u: { $set: { status } } }] });
+    await setRaw(open.id, 'OPEN');
+    await setRaw(answered.id, 'ANSWERED');
+    await setRaw(closed.id, 'CLOSED');
+    await upgradeSupportTicketStatuses(db);
+    await upgradeSupportTicketStatuses(db); // idempotent
+    const status = async (id: string) => (await support.get(`/api/v1/operator/support/tickets/${id}`).expect(200)).body.status;
+    expect(await status(open.id)).toBe('SUBMITTED');
+    expect(await status(answered.id)).toBe('AWAITING_USER');
+    expect(await status(closed.id)).toBe('CLOSED');
+    const r = (await support.get('/api/v1/operator/support/tickets/report?days=7').expect(200)).body;
+    expect(r.byStatus.AWAITING_USER).toBeGreaterThanOrEqual(1);
   });
 
   it('lets the Console switch Help off for a client and the Super Workspace choose its options, never blocking support', async () => {
