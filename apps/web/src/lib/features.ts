@@ -1,6 +1,7 @@
 'use client';
 
-import { FEATURE_BY_KEY, type FeatureKey, featureForPath } from '@dealflow/types';
+import { usePathname } from 'next/navigation';
+import { actionAllowed, type ActionGrants, FEATURE_BY_KEY, type FeatureKey, featureForPath } from '@dealflow/types';
 import { useSession } from './session';
 
 /**
@@ -40,3 +41,26 @@ export function useWithheldByWorkspace(feature: FeatureKey): boolean {
   if (!data) return false;
   return data.tenant.planFeatures.includes(feature) && !data.tenant.features.includes(feature);
 }
+
+/**
+ * Whether the caller's workspace may delete in a feature (workspace redesign W2). Delete is a permission the workspace
+ * above turns on; it is off for every new Manager and Executive Workspace. Without a feature, the page's own feature is
+ * used. Delete buttons are hidden where this is false; the API refuses the delete anyway.
+ */
+export function useCanDelete(feature?: FeatureKey | null): boolean {
+  const { data } = useSession();
+  const pathname = usePathname();
+  if (!data) return false;
+  const f = feature ?? featureForPath(pathname ?? '');
+  const actions = data.workspace?.actions as ActionGrants | undefined;
+  if (!f || !actions) return true;
+  return actionAllowed(actions, f, 'delete');
+}
+
+/** The catalogue feature of each CRM list, the same mapping the API uses for its permissions. */
+export const ENTITY_FEATURE: Record<'leads' | 'contacts' | 'companies' | 'deals', FeatureKey> = {
+  leads: 'lead_management',
+  contacts: 'contact_management',
+  companies: 'account_management',
+  deals: 'opportunity_management',
+};

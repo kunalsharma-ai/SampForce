@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
 import {
   type ExecutionRow,
@@ -95,6 +96,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
     mutationFn: (status: 'ACTIVE' | 'PAUSED') => api<WorkflowRow>(`/workflows/${id}/status`, { method: 'PATCH', json: { status } }),
     onSuccess: () => invalidate(),
   });
+  const mayDelete = useCanDelete('automation');
   const remove = useMutation({
     mutationFn: () => api(`/workflows/${id}`, { method: 'DELETE' }),
     onSuccess: async () => {
@@ -141,7 +143,7 @@ export function WorkflowWorkspace({ id }: { id: string | null }) {
               <Pause aria-hidden /> {t('Pause')}
             </Button>
           )}
-          {wf && (
+          {wf && mayDelete && (
             <Button
               variant="ghost"
               aria-label={t('Delete workflow')}
