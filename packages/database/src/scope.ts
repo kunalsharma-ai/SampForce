@@ -123,6 +123,10 @@ const OPERATOR_READ = new Set([
   'ChatConversation',
   'ChatMember',
   'ChatMessage',
+  // Help Center support tickets (ADR 0073): the Console's ticket inbox. Questions people chose to send to SampForce,
+  // never CRM records. Replies and status changes run in the workspace's own context.
+  'SupportTicket',
+  'SupportTicketMessage',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */

@@ -413,10 +413,13 @@ model Tenant {
   sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
+  supportTickets         SupportTicket[]
+  supportTicketMessages  SupportTicketMessage[]
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
   chatSignals            ChatSignal[]
+  chatPresence           ChatPresence[]
 
   @@map("tenants")
 }
@@ -568,6 +571,9 @@ model WorkspaceNode {
   canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
   /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
   canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
+  /// executive, the other executives of the same team). Both sides need it.
+  canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
   createdById          String?   @map("created_by_id")
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -4169,16 +4175,18 @@ model ChatConversation {
 
 /// One person in a conversation: a workspace user, or (support line) a super admin from the operator console.
 model ChatMember {
-  id             String         @id @default(uuid()) @map("_id")
-  tenantId       String         @map("tenant_id")
-  conversationId String         @map("conversation_id")
-  userId         String?        @map("user_id")
-  operatorId     String?        @map("operator_id")
-  role           ChatMemberRole @default(MEMBER)
+  id              String         @id @default(uuid()) @map("_id")
+  tenantId        String         @map("tenant_id")
+  conversationId  String         @map("conversation_id")
+  userId          String?        @map("user_id")
+  operatorId      String?        @map("operator_id")
+  role            ChatMemberRole @default(MEMBER)
   /// Everything up to this time has been read (read receipts and unread counts).
-  lastReadAt     DateTime?      @map("last_read_at")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  lastReadAt      DateTime?      @map("last_read_at")
+  /// Everything up to this time has reached one of this person's devices ("Delivered" ticks).
+  lastDeliveredAt DateTime?      @map("last_delivered_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -4254,5 +4262,115 @@ model ChatSignal {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([createdAt])
+  @@index([tenantId, createdAt])
   @@map("chat_signals")
+}
+
+// ───────────── Help Center support tickets (ADR 0073) ─────────────
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+/// Who is answering a ticket now. Every ticket goes to the Console today; workspace routing (ADR 0071 part 5) starts
+/// Executive tickets at their manager and escalates upwards.
+enum SupportHandlerLevel {
+  MANAGER
+  SUPER
+  CONSOLE
+}
+
+enum SupportAuthorKind {
+  /// The person who raised the ticket, or a colleague in the same workspace.
+  USER
+  /// A manager or Super Workspace administrator answering from above.
+  WORKSPACE
+  /// A SampForce operator in the Console.
+  OPERATOR
+}
+
+/// A query raised from Help ("Other: raise a query"), in the web app or the mobile app.
+model SupportTicket {
+  id                   String                @id @default(uuid()) @map("_id")
+  tenantId             String                @map("tenant_id")
+  /// Per organisation, for "#12" references.
+  number               Int
+  /// The raiser's workspace in the hierarchy; null = the Super Workspace.
+  workspaceNodeId      String?               @map("workspace_node_id")
+  raisedByUserId       String                @map("raised_by_user_id")
+  raisedByMembershipId String                @map("raised_by_membership_id")
+  subject              String
+  /// A Help Center category id, such as "deals" or "billing".
+  category             String
+  featureKey           String?               @map("feature_key")
+  /// The page the person was on when they asked.
+  pagePath             String?               @map("page_path")
+  /// "web" or "mobile".
+  source               String                @default("web")
+  priority             SupportTicketPriority @default(NORMAL)
+  status               SupportTicketStatus   @default(OPEN)
+  handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
+  handlerNodeId        String?               @map("handler_node_id")
+  /// The SampForce operator looking after a Console ticket.
+  assignedOperatorId   String?               @map("assigned_operator_id")
+  /// How it was resolved, written by whoever closes or answers it last.
+  resolutionNote       String?               @map("resolution_note")
+  escalatedAt          DateTime?             @map("escalated_at")
+  lastMessageAt        DateTime              @default(now()) @map("last_message_at")
+  answeredAt           DateTime?             @map("answered_at")
+  closedAt             DateTime?             @map("closed_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages SupportTicketMessage[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
+  @@index([status, lastMessageAt(sort: Desc)])
+  @@index([tenantId, handlerLevel, handlerNodeId, lastMessageAt(sort: Desc)])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id                 String            @id @default(uuid()) @map("_id")
+  tenantId           String            @map("tenant_id")
+  ticketId           String            @map("ticket_id")
+  authorKind         SupportAuthorKind @map("author_kind")
+  authorUserId       String?           @map("author_user_id")
+  authorMembershipId String?           @map("author_membership_id")
+  operatorId         String?           @map("operator_id")
+  body               String
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, ticketId, createdAt])
+  @@map("support_ticket_messages")
+}
+
+/// When a workspace user was last connected to team chat (online/offline dots). One per person and workspace.
+model ChatPresence {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  userId     String    @map("user_id")
+  /// Refreshed about every 30 seconds while the person has SampForce open on any device.
+  lastSeenAt DateTime  @map("last_seen_at")
+  /// Set when their last connection to this server closed; a later lastSeenAt means they came back.
+  offlineAt  DateTime? @map("offline_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, userId])
+  @@map("chat_presence")
 }

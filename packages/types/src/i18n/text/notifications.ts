@@ -5,6 +5,25 @@ import type { TextTable } from '../catalogue';
  * language at hand) and translated when the person opens their notifications (ADR 0052).
  */
 export const notifications = {
+  // Help Center support tickets (ADR 0073)
+  'SampForce support replied to query #{number}': [
+    'El soporte de SampForce respondió a la consulta n.º {number}',
+    'Le support SampForce a répondu à la demande n° {number}',
+    'Der SampForce-Support hat auf Anfrage #{number} geantwortet',
+    'ردّ دعم SampForce على الاستفسار رقم {number}',
+  ],
+  // Tickets handled inside the organisation (ADR 0071 part 5)
+  'New query #{number}': ['Nueva consulta n.º {number}', 'Nouvelle demande n° {number}', 'Neue Anfrage #{number}', 'استفسار جديد رقم {number}'],
+  'New message on query #{number}': ['Nuevo mensaje en la consulta n.º {number}', 'Nouveau message sur la demande n° {number}', 'Neue Nachricht zu Anfrage #{number}', 'رسالة جديدة في الاستفسار رقم {number}'],
+  'Query #{number} was passed to you': ['La consulta n.º {number} se te ha pasado', 'La demande n° {number} vous a été transmise', 'Anfrage #{number} wurde an Sie weitergegeben', 'أُحيل إليك الاستفسار رقم {number}'],
+  'Your query #{number} has an answer': ['Tu consulta n.º {number} tiene respuesta', 'Votre demande n° {number} a une réponse', 'Ihre Anfrage #{number} wurde beantwortet', 'تلقّى استفسارك رقم {number} ردًا'],
+  'Your query #{number} was closed': ['Tu consulta n.º {number} se ha cerrado', 'Votre demande n° {number} a été fermée', 'Ihre Anfrage #{number} wurde geschlossen', 'أُغلق استفسارك رقم {number}'],
+  'SampForce support closed query #{number}': [
+    'El soporte de SampForce cerró la consulta n.º {number}',
+    'Le support SampForce a fermé la demande n° {number}',
+    'Der SampForce-Support hat Anfrage #{number} geschlossen',
+    'أغلق دعم SampForce الاستفسار رقم {number}',
+  ],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
