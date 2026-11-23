@@ -3,6 +3,7 @@
 import { cn } from '@dealflow/ui';
 import * as React from 'react';
 import { Tr } from '@/lib/i18n';
+import { RevealButton } from './password-input';
 
 /**
  * Field with a floating label: the label sits inside the input like a placeholder and moves up when the input has
@@ -14,15 +15,19 @@ export function FloatingField({
   label,
   error,
   hint,
+  reveal = false,
   children,
 }: {
   id: string;
   label: string;
   error?: string;
   hint?: string;
-  children: React.ReactElement<{ id?: string; className?: string; placeholder?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }>;
+  /** A password field: adds the eye button that shows or hides what was typed. */
+  reveal?: boolean;
+  children: React.ReactElement<{ id?: string; className?: string; placeholder?: string; type?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }>;
 }) {
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  const [shown, setShown] = React.useState(false);
   return (
     <div className="space-y-1.5">
       <div className="relative">
@@ -31,7 +36,8 @@ export function FloatingField({
           placeholder: ' ',
           'aria-invalid': !!error,
           'aria-describedby': describedBy,
-          className: cn(children.props.className, 'peer !h-12 px-3 pb-1.5 pt-5'),
+          className: cn(children.props.className, 'peer !h-12 px-3 pb-1.5 pt-5', reveal && '!pe-12'),
+          ...(reveal ? { type: shown ? 'text' : 'password' } : {}),
         })}
         <label
           htmlFor={id}
@@ -39,6 +45,7 @@ export function FloatingField({
         >
           {label}
         </label>
+        {reveal && <RevealButton shown={shown} onToggle={() => setShown((v) => !v)} />}
       </div>
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-xs text-critical">

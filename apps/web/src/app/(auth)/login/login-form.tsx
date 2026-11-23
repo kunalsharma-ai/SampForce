@@ -63,7 +63,7 @@ export function LoginForm() {
         <FloatingField id="email" label={t('Work email')} error={form.formState.errors.email?.message}>
           <Input type="email" autoComplete="email" {...form.register('email')} />
         </FloatingField>
-        <FloatingField id="password" label={t('Password')} error={form.formState.errors.password?.message}>
+        <FloatingField id="password" reveal label={t('Password')} error={form.formState.errors.password?.message}>
           <Input type="password" autoComplete="current-password" {...form.register('password')} />
         </FloatingField>
         <p className="-mt-2 text-end text-sm">

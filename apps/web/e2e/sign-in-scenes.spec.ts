@@ -33,6 +33,12 @@ test.describe('animated sign-in', () => {
       // Typing straight away works: the animation is only behind the form.
       await page.getByLabel('Work email').fill('someone@example.com');
       await page.getByLabel('Password').fill('not-the-password');
+      // The eye shows what was typed and hides it again; "Forgot your password?" is there too.
+      await page.getByRole('button', { name: 'Show password' }).click();
+      await expect(page.getByLabel('Password')).toHaveAttribute('type', 'text');
+      await page.getByRole('button', { name: 'Hide password' }).click();
+      await expect(page.getByLabel('Password')).toHaveAttribute('type', 'password');
+      await expect(page.getByRole('link', { name: 'Forgot your password?' })).toHaveAttribute('href', '/forgot-password');
       await expect(page.locator('main')).toHaveAttribute('data-sign-in-scene', level);
       await expect(page.locator(`[data-scene="${level}"]`)).toHaveCount(1);
       await expect(page.getByRole('heading', { name: headline })).toBeVisible();
