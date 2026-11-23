@@ -21,7 +21,7 @@ describe('platform audit entries (ADR 0074, C3)', () => {
     expect(targetOf({ operatorId: 'a', action: 'operator_role.updated', metadata: { roleId: 'r', name: 'Billing' } })).toEqual({ type: 'role', id: 'r', label: 'Billing' });
     expect(targetOf({ operatorId: 'a', action: 'support_ticket.answered', tenantId: 't', metadata: { ticketId: 'k' } })).toMatchObject({ type: 'ticket', id: 'k' });
     expect(targetOf({ operatorId: 'a', action: 'client.renewed', tenantId: 't' })).toEqual({ type: 'client', id: 't', label: null });
-    expect(targetOf({ operatorId: 'a', action: 'console.security_policy_changed' })).toMatchObject({ type: 'setting' });
+    expect(targetOf({ operatorId: 'a', action: 'console.security_policy_changed' })).toMatchObject({ type: 'setting', label: 'Security policy' });
   });
 
   it('keeps only the fields that changed', () => {

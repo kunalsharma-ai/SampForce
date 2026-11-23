@@ -165,6 +165,6 @@ test('the Console shell: menu, palettes, sound and global search', async ({ brow
   await ops.setViewportSize({ width: 900, height: 900 });
   await ops.getByRole('button', { name: 'Open the menu' }).click();
   await ops.getByRole('dialog').getByRole('link', { name: 'Audit log' }).click();
-  await expect(ops.getByRole('heading', { level: 1, name: 'Platform audit log' })).toBeVisible();
+  await expect(ops.getByRole('heading', { level: 1, name: 'Activity & audit log' })).toBeVisible();
   await expect(ops.getByRole('dialog')).toBeHidden();
 });

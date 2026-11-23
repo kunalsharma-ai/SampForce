@@ -116,7 +116,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     key: 'governance',
     label: 'Governance',
     items: [
-      { key: 'audit', label: 'Audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
+      { key: 'audit', label: 'Activity & audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
       { key: 'operators', label: 'Operators', href: '/operator/operators', icon: UserCog, permission: 'operators.manage' },
       { key: 'roles', label: 'Roles & permissions', href: '/operator/roles', icon: KeyRound, permission: 'operators.manage' },
       { key: 'security', label: 'Security', href: '/operator/security', icon: ShieldCheck, permission: 'security.manage' },

@@ -58,6 +58,13 @@ function bounded(value: unknown): unknown {
   return text && text.length > MAX_JSON ? { truncated: true, size: text.length } : value;
 }
 
+/** Names of the platform settings an entry can be about. */
+const SETTING_LABEL: Record<string, string> = {
+  'console.security_policy_changed': 'Security policy',
+  'settings.payment_instructions_updated': 'Payment instructions',
+  'help_settings.updated': 'Help Center settings',
+};
+
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : typeof v === 'number' ? String(v) : null);
 
 /** What an entry is about, from its action and the facts it records, for the entries that do not say. */
@@ -73,7 +80,7 @@ export function targetOf(e: PlatformAuditEntry): PlatformAuditTarget | null {
   if (area === 'help_media') return { type: 'help_media', id: str(m.mediaId), label: str(m.name) };
   if (area === 'help_feedback') return { type: 'help_feedback', id: str(m.feedbackId), label: null };
   if (area === 'support_ticket') return { type: 'ticket', id: str(m.ticketId), label: str(m.number) };
-  if (area === 'settings' || area === 'console' || (area === 'help_settings' && !e.tenantId)) return { type: 'setting', id: e.action, label: null };
+  if (area === 'settings' || area === 'console' || (area === 'help_settings' && !e.tenantId)) return { type: 'setting', id: e.action, label: SETTING_LABEL[e.action] ?? null };
   if (area === 'audit') return { type: 'audit_log', id: null, label: null };
   if (e.tenantId) return { type: 'client', id: e.tenantId, label: null };
   return null;
