@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@dealflow/database';
 import {
   type ConsolePreferences,
@@ -46,7 +46,12 @@ export class ConsoleShellService {
       where: { id: op.id },
       select: { preferences: true },
     });
-    if (!row) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Operator not found.' });
+    if (!row)
+      // The account was removed while signed in: the session is no longer valid.
+      throw new UnauthorizedException({
+        code: 'UNAUTHENTICATED',
+        message: 'Sign in to the operator console.',
+      });
     const next = normaliseConsolePreferences({
       ...normaliseConsolePreferences(row.preferences),
       ...input,
