@@ -80,6 +80,7 @@ model User {
   resetTokens        PasswordResetToken[]
   gamificationAwards GamificationAward[]
   preferences        UserPreference?
+  notificationPrefs  NotificationPreference?
   regional           UserRegionalSetting?
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
@@ -116,6 +117,21 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("user_preferences")
+}
+
+/// A person's own notification settings (ADR 0075): the chime, its volume, muted categories and browser or phone
+/// alerts. Follows the person across devices and workspaces.
+model NotificationPreference {
+  userId     String   @id @map("_id")
+  sound      Boolean  @default(true)
+  volume     Int      @default(40)
+  mutedSound String[] @map("muted_sound")
+  desktop    Boolean  @default(false)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("notification_preferences")
 }
 
 /// A person's language and regional formats. Per person, like UserPreference, so it follows them across workspaces.
@@ -1785,6 +1801,8 @@ model Notification {
   contactId      String?   @map("contact_id")
   /// The recipient is asked to do something (acknowledge, decide, resolve).
   actionRequired Boolean   @default(false) @map("action_required")
+  /// The section it comes from (ADR 0075: Leads, Tasks...), worked out when it is written; null for older rows.
+  section        String?
   readAt         DateTime? @map("read_at")
   createdAt      DateTime  @default(now()) @map("created_at")
 
@@ -1792,6 +1810,7 @@ model Notification {
 
   @@unique([userId, eventId, type])
   @@index([tenantId, userId, readAt, createdAt(sort: Desc)])
+  @@index([tenantId, userId, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
