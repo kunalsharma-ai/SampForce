@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FloatingField } from '@/components/forms/floating-field';
+import { SignInResult, useSignInResult } from '@/components/sign-in/sign-in-result';
 import { markWelcome } from '@/components/sign-in/welcome-overlay';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
@@ -23,7 +24,9 @@ export function LoginForm() {
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);
-  const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
+  // Checked as soon as a field is left, and again on every change after that.
+  const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), mode: 'onTouched', defaultValues: { email: '', password: '' } });
+  const result = useSignInResult();
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);
@@ -31,8 +34,10 @@ export function LoginForm() {
       const res = await api<LoginResponse>('/auth/login', { method: 'POST', json: values });
       if (res.mfaRequired && res.challenge) return setChallenge(res.challenge);
       markWelcome();
+      await result.success();
       router.replace(safeNext(params.get('next')));
     } catch (err) {
+      result.error();
       setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
     }
   });
@@ -54,7 +59,8 @@ export function LoginForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" {...result.attrs} onInput={result.reset}>
+      <SignInResult state={result.state === 'success' ? 'success' : 'idle'} round={result.round} />
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t('Sign in')}</h1>
         <p className="text-sm text-muted-foreground">{t('Welcome back to your revenue workspace.')}</p>
@@ -63,7 +69,7 @@ export function LoginForm() {
         <FloatingField id="email" label={t('Work email')} error={form.formState.errors.email?.message}>
           <Input type="email" autoComplete="email" {...form.register('email')} />
         </FloatingField>
-        <FloatingField id="password" label={t('Password')} error={form.formState.errors.password?.message}>
+        <FloatingField id="password" reveal label={t('Password')} error={form.formState.errors.password?.message}>
           <Input type="password" autoComplete="current-password" {...form.register('password')} />
         </FloatingField>
         <p className="-mt-2 text-end text-sm">
@@ -72,11 +78,14 @@ export function LoginForm() {
           </Link>
         </p>
         {error && (
-          <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
-            {error}
-          </p>
+          <>
+            {result.state === 'error' && <SignInResult state="error" round={result.round} />}
+            <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
+              {error}
+            </p>
+          </>
         )}
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || result.state === 'success'}>
           {form.formState.isSubmitting ? t('Signing in…') : t('Sign in')}
         </Button>
       </form>

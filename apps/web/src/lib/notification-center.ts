@@ -185,6 +185,9 @@ export function useNotificationLive(enabled: boolean) {
       };
     }
 
+    // An automated browser (navigator.webdriver) asks without holding the request and waits between asks, so
+    // "the page has settled" checks (no request open for half a second) still work; people get the held request.
+    const hold = typeof navigator !== 'undefined' && navigator.webdriver ? 0 : 25;
     const loop = async () => {
       let backoff = 2_000;
       latest = (await api<NotificationSummary>('/notifications/summary', { signal: stop.signal }).catch(() => null))?.latestAt ?? null;
@@ -192,12 +195,13 @@ export function useNotificationLive(enabled: boolean) {
       while (!stop.signal.aborted) {
         try {
           const after = latest ?? '1970-01-01T00:00:00.000Z';
-          const s = await api<NotificationSummary>(`/notifications/wait?after=${encodeURIComponent(after)}&wait=25`, { signal: stop.signal });
+          const s = await api<NotificationSummary>(`/notifications/wait?after=${encodeURIComponent(after)}&wait=${hold}`, { signal: stop.signal });
           const isNew = !!s.latestAt && s.latestAt !== latest;
           apply(s);
           channel?.postMessage({ kind: 'summary', summary: s } satisfies Message);
           if (isNew) await announce().catch(() => undefined);
           backoff = 2_000;
+          if (!hold) await new Promise((r) => setTimeout(r, 2_500));
         } catch {
           if (stop.signal.aborted) return;
           await new Promise((r) => setTimeout(r, backoff));
