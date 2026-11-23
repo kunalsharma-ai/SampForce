@@ -252,3 +252,63 @@ test('profile photos are set on the web and the phone and shown on both', async 
   await page.reload();
   await expect(page.getByRole('img', { name: 'No photo yet' })).toBeVisible();
 });
+
+test('chat on the phone: a new direct message, live replies and read marks', async ({ page, browser }) => {
+  test.setTimeout(150_000);
+  const owner = await signUp(page, `Chat Org ${Date.now().toString(36)}`);
+  await approveMobile(page);
+
+  // An Executive Workspace with a person who signs in on the phone.
+  const ws = await page.request.post('/api/v1/workspaces', { data: { level: 'EXECUTIVE', name: 'Field Desk', person: { inviteEmail: `field.${Date.now().toString(36)}@client.test` } }, headers: { origin: ORIGIN } });
+  expect(ws.status()).toBe(201);
+  const token = ((await ws.json()) as { inviteUrl: string }).inviteUrl.split('/invite/')[1]!;
+  const guest = await browser.newContext();
+  const accepted = await guest.request.post(`${API}/api/v1/auth/invitations/accept`, { data: { token, name: 'Priya Shah', password: 'a-long-password-1' }, headers: { origin: ORIGIN } });
+  expect(accepted.status()).toBe(200);
+  const priya = ((await (await guest.request.get(`${API}/api/v1/auth/me`)).json()) as { user: { email: string } }).user.email;
+
+  const phone = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: PREVIEW_DIR ? 3 : 1, reducedMotion: 'reduce', locale: 'en-GB' })).newPage();
+  await phone.goto(APP);
+  await phone.getByLabel('Email').fill(priya);
+  await phone.getByLabel('Password').fill('a-long-password-1');
+  await phone.getByRole('button', { name: 'Use another server' }).click();
+  await phone.getByLabel('Server address').fill(API);
+  await phone.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(phone.getByText(/^Good (morning|afternoon|evening), Priya$/)).toBeVisible();
+
+  // Chat lives under More for an Executive. Nothing yet; a new message lists who Priya may write to.
+  await phone.getByRole('tab', { name: /More/ }).click();
+  await phone.getByRole('button', { name: /^Internal chat/ }).click();
+  await expect(phone.getByText('No conversations yet.')).toBeVisible();
+  await phone.getByRole('button', { name: 'New message' }).click();
+  await expect(phone.getByRole('button', { name: 'Write to Test Person' })).toBeVisible();
+  await shot(phone, '24-app-chat-people');
+  await expectNoA11yViolations(phone);
+  await phone.getByRole('button', { name: 'Write to Test Person' }).click();
+  await expect(phone.getByText('No messages yet. Say hello.')).toBeVisible();
+  await phone.getByLabel('Write a message').fill('Reached the client site, starting the visit now.');
+  await phone.getByRole('button', { name: 'Send' }).click();
+  await expect(phone.getByText('Reached the client site, starting the visit now.')).toBeVisible();
+  await expect(phone.getByText(/^(Sent|Delivered)$/)).toBeVisible();
+
+  // The web has it; its reply reaches the phone without a refresh, and reading it there shows "Read" on the phone.
+  const convs = (await (await page.request.get('/api/v1/chat/conversations')).json()) as { id: string; title: string; unread: number }[];
+  const conv = convs.find((c) => c.title === 'Priya Shah')!;
+  expect(conv.unread).toBe(1);
+  const last = ((await (await page.request.get(`/api/v1/chat/conversations/${conv.id}/messages`)).json()) as { id: string; body: string; author: { id: string } }[]).at(-1)!;
+  expect(last.body).toBe('Reached the client site, starting the visit now.');
+  expect((await page.request.post(`/api/v1/chat/conversations/${conv.id}/read`, { data: { messageId: last.id }, headers: { origin: ORIGIN } })).status()).toBe(200);
+  await expect(phone.getByText('Read', { exact: true })).toBeVisible({ timeout: 15_000 });
+  const reply = await page.request.post(`/api/v1/chat/conversations/${conv.id}/messages`, { data: { clientId: crypto.randomUUID(), body: 'Great, send me the notes after.' }, headers: { origin: ORIGIN } });
+  expect(reply.status()).toBe(201);
+  await expect(phone.getByText('Great, send me the notes after.').last()).toBeVisible({ timeout: 15_000 });
+  await shot(phone, '25-app-chat-conversation');
+  await expectNoA11yViolations(phone);
+
+  // Back to the list: the conversation with its last message.
+  await phone.goto(`${APP}/chat`);
+  // Nothing left unread: the phone read the reply as it arrived.
+  await expect(phone.getByRole('button', { name: 'Test Person', exact: true })).toContainText('Great, send me the notes after.');
+  await shot(phone, '26-app-chat-list');
+  await expect.poll(async () => ((await (await guest.request.get(`${API}/api/v1/chat/conversations`)).json()) as { unread: number }[])[0]?.unread).toBe(0);
+});

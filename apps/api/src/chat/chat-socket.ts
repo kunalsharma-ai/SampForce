@@ -11,6 +11,8 @@ import { PrismaService } from '../common/prisma.service';
 import { ChatBus, type ChatListener } from './chat-bus';
 import { ChatPresence } from './chat-presence';
 import { ChatService } from './chat.service';
+import { mobileBlockReason } from '../mobile/mobile-gate';
+import { MobileConfigService } from '../mobile/mobile-config.service';
 
 export const USER_SOCKET_PATH = '/api/v1/chat/socket';
 export const OPERATOR_SOCKET_PATH = '/api/v1/operator/chat/socket';
@@ -88,6 +90,7 @@ export class ChatSocketServer implements OnApplicationBootstrap, OnModuleDestroy
     private readonly presence: ChatPresence,
     private readonly chat: ChatService,
     private readonly prisma: PrismaService,
+    private readonly mobileConfigs: MobileConfigService,
   ) {
     this.allowed = new Set(env.WEB_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean));
   }
@@ -133,14 +136,20 @@ export class ChatSocketServer implements OnApplicationBootstrap, OnModuleDestroy
         const op = await this.prisma.platformOperator.findUnique({ where: { id: who.operatorId }, select: { status: true } });
         return op?.status === 'ACTIVE';
       }
-      const session = await this.prisma.session.findUnique({ where: { id: who.sessionId }, select: { revokedAt: true, replacedById: true, expiresAt: true } });
+      const session = await this.prisma.session.findUnique({ where: { id: who.sessionId }, select: { revokedAt: true, replacedById: true, expiresAt: true, client: true, deviceId: true } });
       if (!session || session.expiresAt <= new Date() || (session.revokedAt && !session.replacedById)) return false;
       return await this.prisma.run({ tenantId: who.tenantId, userId: who.userId }, async (tx) => {
         const m = await tx.membership.findFirst({
           where: { tenantId: who.tenantId, userId: who.userId, status: 'ACTIVE', tenant: { status: 'ACTIVE', deletedAt: null }, user: { status: 'ACTIVE' } },
-          select: { id: true },
+          select: { id: true, workspaceNodeId: true, role: { select: { permissions: true } } },
         });
-        return !!m && (await hasFeature(tx, who.tenantId, 'team_chat'));
+        if (!m || !(await hasFeature(tx, who.tenantId, 'team_chat'))) return false;
+        if (session.client !== 'MOBILE') return true;
+        // A phone's socket closes when mobile access stops, the phone is signed out, or its configuration turns chat off.
+        if (await mobileBlockReason(tx, who.tenantId)) return false;
+        if (!session.deviceId || !(await tx.mobileDevice.findFirst({ where: { id: session.deviceId, signedOutAt: null }, select: { id: true } }))) return false;
+        const config = await this.mobileConfigs.resolvedFor(tx, { tenantId: who.tenantId, workspaceNodeId: m.workspaceNodeId ?? null, permissions: m.role.permissions });
+        return config.chat.enabled && config.modules.some((x) => x.key === 'chat');
       });
     } catch (err) {
       this.log.warn(`chat socket check failed: ${(err as Error).message}`);

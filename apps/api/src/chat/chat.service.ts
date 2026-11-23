@@ -37,6 +37,7 @@ import type { OperatorContext } from '../operator/operator-auth';
 import { type ChatAudience, ChatBus, type ChatListener } from './chat-bus';
 import { isOnline } from './chat-presence';
 import { ChatReach, chatNotAllowed } from './chat-reach';
+import { photoUrl } from '../profile-photos/profile-photos.service';
 
 /** A workspace user (in their workspace), or a super admin from the operator console acting in one workspace. */
 export type ChatActor = { kind: 'user'; auth: AuthContext } | { kind: 'operator'; op: OperatorContext };
@@ -90,11 +91,11 @@ export class ChatService {
     const u = [...new Set(userIds.filter((v): v is string => !!v))];
     const o = [...new Set(operatorIds.filter((v): v is string => !!v))];
     const [users, ops] = await Promise.all([
-      u.length ? tx.user.findMany({ where: { id: { in: u } }, select: { id: true, name: true } }) : [],
+      u.length ? tx.user.findMany({ where: { id: { in: u } }, select: { id: true, name: true, photo: { select: { updatedAt: true } } } }) : [],
       o.length ? tx.platformOperator.findMany({ where: { id: { in: o } }, select: { id: true, name: true } }) : [],
     ]);
     const map = new Map<string, ChatPerson>();
-    for (const x of users) map.set(`u:${x.id}`, { id: x.id, name: x.name, operator: false });
+    for (const x of users) map.set(`u:${x.id}`, { id: x.id, name: x.name, operator: false, photoUrl: photoUrl(x.id, x.photo?.updatedAt) });
     for (const x of ops) map.set(`o:${x.id}`, { id: x.id, name: x.name, operator: true });
     return map;
   }
@@ -303,7 +304,7 @@ export class ChatService {
   directory(auth: AuthContext): Promise<ChatDirectoryPerson[]> {
     return this.prisma.run(auth, async (tx) => {
       const [rows, presence] = await Promise.all([
-        tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE', user: { status: 'ACTIVE' } }, include: { user: { select: { id: true, name: true, email: true } }, role: { select: { name: true } } } }),
+        tx.membership.findMany({ where: { tenantId: auth.tenantId, status: 'ACTIVE', user: { status: 'ACTIVE' } }, include: { user: { select: { id: true, name: true, email: true, photo: { select: { updatedAt: true } } } }, role: { select: { name: true } } } }),
         tx.chatPresence.findMany({ where: { tenantId: auth.tenantId } }),
       ]);
       const seen = new Map(presence.map((p) => [p.userId, p]));
@@ -318,6 +319,7 @@ export class ChatService {
             id: r.user.id,
             name: r.user.name,
             operator: false,
+            photoUrl: photoUrl(r.user.id, r.user.photo?.updatedAt),
             email: r.user.email,
             role: r.role?.name ?? null,
             online: isOnline(p, now),

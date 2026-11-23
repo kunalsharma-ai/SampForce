@@ -50,8 +50,8 @@ export default function AppLayout() {
           options={{
             // Not a tab: reachable from More if the person may use it (the screen sends anyone else home).
             ...(tabs.includes(key) && allowed.has(key) ? {} : NOT_A_TAB),
-            // Record modules draw their own headers (list, record, form).
-            ...((MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(key) ? { headerShown: false } : {}),
+            // Record modules and chat draw their own headers (list, record, form).
+            ...((MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(key) || key === 'chat' ? { headerShown: false } : {}),
             title: tMaybe(MOBILE_MODULE_BY_KEY[key].label),
             tabBarIcon: ({ focused, color, size }) => <Ionicons aria-hidden name={focused ? MODULE_ICON[key].on : MODULE_ICON[key].off} color={color as string} size={size} />,
             ...(key === 'dashboard'

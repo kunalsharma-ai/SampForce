@@ -155,3 +155,25 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   sending. Chat (M7) uses the same URLs.
 - **Packages.** `expo-image-picker` (with photo and camera permission texts in `app.json`) and
   `expo-image-manipulator`.
+
+## M7: chat on the phone (2026-11-23)
+
+The phone uses the web's team chat (ADR 0069) as it is: the same conversations, people rules (ADR 0071 part 5),
+read and delivered marks and live events. There is no second chat back end.
+
+- **Access.** `ChatController` is marked `@MobileModuleAccess('chat')`: a phone token reaches it only while the
+  person's published Mobile Configuration has the chat module and the chat switch on, otherwise `MOBILE_MODULE_OFF`.
+  Web sessions are not checked by it. The guard (`mobile-module.guard.ts`) is reusable for other modules.
+- **Live.** The phone asks for a socket ticket and opens `wss://<server>/api/v1/chat/socket` (a native app sends no
+  Origin header, which the socket already allows). For a phone session the socket's periodic check also requires
+  mobile access to be live, the phone not signed out, and chat still on in its configuration, so switching chat off
+  closes open phone sockets. After two sockets that never open, the app uses the `/chat/events` catch-up route.
+  Events are handed to the screens once, by their `sid`.
+- **Screens.** Conversations (newest first, unread counts, the other person's photo), a conversation (grouped
+  bubbles, "Sending / Sent / Delivered / Read" under the person's last message, "is writing…", older messages on
+  scroll, a failed send can be tapped to try again with the same `clientId`), and New message (the people the
+  person may write to, with photos and who is online). Opening a conversation marks it read; loading the list marks
+  messages delivered.
+- **Photos.** `ChatPerson` carries `photoUrl` (M6), in members, authors and the people list.
+- **Left for later.** Sending attachments and editing or deleting messages stay on the web for now; the phone shows
+  attachment names, edits and deletions.

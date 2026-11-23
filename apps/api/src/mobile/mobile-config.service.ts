@@ -109,7 +109,7 @@ export class MobileConfigService {
   }
 
   /** What one person may use, by the published version. Shared with the field rules for phone requests. */
-  async resolvedFor(tx: TenantTx, auth: AuthContext, version?: number) {
+  async resolvedFor(tx: TenantTx, auth: Pick<AuthContext, 'tenantId' | 'workspaceNodeId' | 'permissions'>, version?: number) {
     const v = version ?? (await publishedConfigVersion(tx, auth.tenantId));
     const row = v ? await tx.mobileConfigVersion.findUnique({ where: { tenantId_version: { tenantId: auth.tenantId, version: v } }, select: { config: true } }) : null;
     const config = row ? readConfig(row.config) : defaultMobileConfig();
