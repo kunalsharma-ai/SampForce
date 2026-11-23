@@ -36,6 +36,8 @@ import {
   type ProviderKeysUpdateInput,
   providerKeysUpdateSchema,
   z,
+  type PlatformAuditQuery,
+  platformAuditQuerySchema,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -284,7 +286,7 @@ export class OperatorController {
   }
 
   @Get('audit-log')
-  auditLog(@Query(new ZodPipe(z.object({ tenantId: z.string().uuid().optional() }))) q: { tenantId?: string }) {
+  auditLog(@Query(new ZodPipe(platformAuditQuerySchema)) q: PlatformAuditQuery) {
     return this.ops.auditLog(q);
   }
 }

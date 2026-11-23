@@ -462,7 +462,11 @@ export class ConsoleService {
       }
       if (!changes.length) return;
       await tx.subscription.update({ where: { tenantId: id }, data });
-      await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });
+      // Workspace limits get an entry of their own in the client's log, so "who changed a limit" has one answer.
+      const limits = changes.filter((c) => c.startsWith('Manager Workspaces:') || c.startsWith('Executive Workspaces:'));
+      const rest = changes.filter((c) => !limits.includes(c));
+      if (rest.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: rest } });
+      if (limits.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.limits_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: limits } });
     });
     if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip);
     return this.client(null, id, ip);
