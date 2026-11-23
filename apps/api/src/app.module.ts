@@ -23,6 +23,7 @@ import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
 import { OperatorModule } from './operator/operator.module';
 import { MobileModule } from './mobile/mobile.module';
+import { MobileRecordsModule } from './mobile/records/mobile-records.module';
 import { PortalModule } from './portal/portal.module';
 import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
@@ -87,6 +88,7 @@ import { redactUrl } from './observability/redact';
     BillingModule,
     OperatorModule,
     MobileModule,
+    MobileRecordsModule,
     ReportsModule,
     IdentityModule,
     SequencesModule,

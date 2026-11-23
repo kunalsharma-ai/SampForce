@@ -123,4 +123,8 @@ export const mobile = {
   'Your workspace does not allow this in the mobile app.': ['Tu espacio de trabajo no permite esto en la aplicación móvil.', 'Votre espace de travail ne permet pas cela dans l’application mobile.', 'Ihr Arbeitsbereich erlaubt das in der Mobile App nicht.', 'لا تسمح مساحة عملك بهذا في تطبيق الجوال.'],
   'You cannot change some of these fields in the mobile app.': ['No puedes cambiar algunos de estos campos en la aplicación móvil.', 'Vous ne pouvez pas modifier certains de ces champs dans l’application mobile.', 'Einige dieser Felder können Sie in der Mobile App nicht ändern.', 'لا يمكنك تغيير بعض هذه الحقول في تطبيق الجوال.'],
   'That version does not exist.': ['Esa versión no existe.', 'Cette version n’existe pas.', 'Diese Version gibt es nicht.', 'هذا الإصدار غير موجود.'],
+  // Records on the phone (M4)
+  'Mark the follow-up done or cancel it.': ['Marca el seguimiento como hecho o cancélalo.', 'Marquez le suivi comme fait ou annulez-le.', 'Markieren Sie die Nachverfolgung als erledigt oder sagen Sie sie ab.', 'ضع علامة على المتابعة كمكتملة أو ألغها.'],
+  'Change at least one field': ['Cambia al menos un campo', 'Modifiez au moins un champ', 'Ändern Sie mindestens ein Feld', 'غيّر حقلًا واحدًا على الأقل'],
+  'Too many fields': ['Demasiados campos', 'Trop de champs', 'Zu viele Felder', 'عدد الحقول كبير جدًا'],
 } satisfies TextTable;

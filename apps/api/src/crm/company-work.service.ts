@@ -439,6 +439,16 @@ export class CompanyWorkService {
     });
   }
 
+  /** One follow-up: its assignee and manager may always read it; others need to see its company. */
+  followUp(auth: AuthContext, id: string, tz = 'UTC'): Promise<FollowUpRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const t = await tx.task.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, followUpType: { not: null } } });
+      if (!t?.companyId) throw notFound('Follow-up');
+      if (t.assigneeId !== auth.userId && t.managerId !== auth.userId) await this.visibleCompany(tx, auth, t.companyId);
+      return (await this.followUpRowsFor(tx, auth, [t], new Date(), tz))[0]!;
+    });
+  }
+
   createFollowUp(auth: AuthContext, input: FollowUpInput, meta: RequestMeta): Promise<FollowUpRow> {
     return this.prisma.run(auth, async (tx) => {
       const company = await this.editableCompany(tx, auth, input.companyId);
