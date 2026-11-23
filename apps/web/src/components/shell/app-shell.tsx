@@ -22,6 +22,7 @@ import { useLockedFeature } from '@/lib/features';
 import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
+import { SectionNotices } from '../notifications/section-notices';
 import { PasswordConfirmationProvider } from '../security/confirm-deletion-dialog';
 import { CustomizeMenuDialog } from './customize-menu';
 import { FeatureLocked } from './feature-locked';
@@ -112,6 +113,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
+                {/* The section's own unread notifications (ADR 0075), above the page they belong to. */}
+                <SectionNotices />
                 {children}
               </motion.div>
             )}

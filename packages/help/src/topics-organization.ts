@@ -2020,6 +2020,30 @@ export const organizationHelp = {
       'استخدمه لإغلاق المكتب أو تغيير السياسات أو أي أمر يجب أن يراه الفريق كله.',
     ],
   },
+  'page.notifications': {
+    title: 'Notifications',
+    what: [
+      'Every notification SampForce has sent you, newest first. The same ones as the bell, the home dashboard and the section they come from.',
+      'Todas las notificaciones que SampForce te ha enviado, de la más reciente a la más antigua. Las mismas que la campana, el inicio y la sección de origen.',
+      'Toutes les notifications que SampForce vous a envoyées, des plus récentes aux plus anciennes. Les mêmes que la cloche, l’accueil et leur section.',
+      'Alle Benachrichtigungen, die SampForce Ihnen gesendet hat, die neuesten zuerst. Dieselben wie in der Glocke, auf der Startseite und im Bereich.',
+      'كل الإشعارات التي أرسلها إليك SampForce، الأحدث أولًا. هي نفسها في الجرس والصفحة الرئيسية والقسم الذي جاءت منه.',
+    ],
+    how: [
+      'Filter by unread, action required or section, open one to go to its record, or mark it read or unread. Below, choose the sound, its volume and browser alerts.',
+      'Filtra por sin leer, acción requerida o sección, abre una para ir a su registro o márcala como leída o no leída. Abajo, elige el sonido, su volumen y las alertas.',
+      'Filtrez par non lues, action requise ou section, ouvrez-en une pour aller à sa fiche, ou marquez-la lue ou non lue. Plus bas, réglez le son et les alertes.',
+      'Nach ungelesen, Handlung erforderlich oder Bereich filtern, eine öffnen oder als gelesen oder ungelesen markieren. Darunter Ton, Lautstärke und Hinweise wählen.',
+      'صفِّ حسب غير المقروء أو الإجراء المطلوب أو القسم، وافتح إشعارًا للانتقال إلى سجله، أو علّمه كمقروء أو غير مقروء. وفي الأسفل اختر الصوت ومستواه وتنبيهات المتصفح.',
+    ],
+    where: [
+      'Use it to catch up after time away, or to find an older assignment or approval.',
+      'Úsalo para ponerte al día tras una ausencia o encontrar una asignación o aprobación antigua.',
+      'Utilisez-la pour rattraper votre retard ou retrouver une ancienne attribution ou approbation.',
+      'Nutzen Sie sie, um nach einer Pause aufzuholen oder eine ältere Zuweisung oder Freigabe zu finden.',
+      'استخدمها لمتابعة ما فاتك بعد غياب، أو للعثور على إسناد أو موافقة قديمة.',
+    ],
+  },
   'page.operatorMobile': {
     title: 'Mobile app',
     what: [
