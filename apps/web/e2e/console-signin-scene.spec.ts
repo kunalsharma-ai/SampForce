@@ -27,6 +27,7 @@ test.describe('Console animated sign-in', () => {
     await axe(page);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page.getByText('Email or password is incorrect.')).toBeVisible();
+    await expect(page.locator('[data-sign-in-cross]')).toBeVisible();
     await ctx.close();
   });
 

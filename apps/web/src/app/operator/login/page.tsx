@@ -17,6 +17,7 @@ import {
   WorkspaceBadge,
 } from '@/components/sign-in/sign-in-scene';
 import { SignInStylePicker, useSignInStyle } from '@/components/sign-in/sign-in-style';
+import { SignInResult, useSignInResult } from '@/components/sign-in/sign-in-result';
 import { markWelcome } from '@/components/sign-in/welcome-overlay';
 import { PasswordInput } from '@/components/forms/password-input';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -53,14 +54,16 @@ export default function OperatorLogin() {
   const [remember, setRemember] = useState(false);
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState('');
+  const result = useSignInResult();
 
   const done = async (r: OperatorLoginResult) => {
     if (r.mfaRequired && r.challenge) {
       setChallenge(r.challenge);
       return;
     }
-    await qc.invalidateQueries({ queryKey: ['operator'] });
     markWelcome();
+    await result.success();
+    await qc.invalidateQueries({ queryKey: ['operator'] });
     router.replace(r.mfaSetupRequired ? '/operator/account?setup=1' : '/operator');
   };
   const login = useMutation({
@@ -70,6 +73,7 @@ export default function OperatorLogin() {
         json: { email, password, remember },
       }),
     onSuccess: done,
+    onError: result.error,
   });
   const verify = useMutation({
     mutationFn: () =>
@@ -78,7 +82,10 @@ export default function OperatorLogin() {
         json: { challenge, code, remember },
       }),
     onSuccess: done,
-    onError: () => setCode(''),
+    onError: () => {
+      setCode('');
+      result.error();
+    },
   });
 
   return (
@@ -128,7 +135,17 @@ export default function OperatorLogin() {
 
         <section className="flex items-start justify-center px-4 pb-10 sm:px-6 lg:items-center lg:p-10">
           <div className="sfs-card-frame w-full max-w-md" data-card-variant="console">
-            <div className="sfs-card bg-background p-6 text-foreground sm:p-8">
+            <div
+              className="sfs-card bg-background p-6 text-foreground sm:p-8"
+              {...result.attrs}
+              onInput={result.reset}
+            >
+              <SignInResult
+                state={result.state === 'success' ? 'success' : 'idle'}
+                round={result.round}
+                translate={false}
+                opening="Opening the Console…"
+              />
               <div className="mb-6">
                 <WorkspaceBadge variant="console" translate={false} />
               </div>
@@ -158,6 +175,9 @@ export default function OperatorLogin() {
                         className="h-11 text-center font-mono text-lg tracking-[0.3em]"
                       />
                     </Field>
+                    {result.state === 'error' && verify.error && (
+                      <SignInResult state="error" round={result.round} translate={false} />
+                    )}
                     <ErrorText error={verify.error} />
                     <Button type="submit" className="h-11 w-full" disabled={verify.isPending}>
                       Verify
@@ -192,6 +212,7 @@ export default function OperatorLogin() {
                     <Field id="op-email" label="Email">
                       <Input
                         id="op-email"
+                        placeholder=" "
                         type="email"
                         autoComplete="username"
                         className="h-11"
@@ -226,6 +247,9 @@ export default function OperatorLogin() {
                         Forgot your password?
                       </Link>
                     </div>
+                    {result.state === 'error' && login.error && (
+                      <SignInResult state="error" round={result.round} translate={false} />
+                    )}
                     <ErrorText error={login.error} />
                     <Button type="submit" className="h-11 w-full" disabled={login.isPending}>
                       Sign in
