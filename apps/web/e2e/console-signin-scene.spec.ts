@@ -14,6 +14,9 @@ test.describe('Console animated sign-in', () => {
     await page.goto('/operator/login');
     await page.getByLabel('Email').fill('nobody@platform.test');
     await page.getByLabel('Password').fill('not-the-password');
+    await page.getByRole('button', { name: 'Show password' }).click();
+    await expect(page.getByLabel('Password')).toHaveAttribute('type', 'text');
+    await expect(page.getByRole('link', { name: 'Forgot your password?' })).toHaveAttribute('href', '/operator/forgot-password');
     await expect(page.locator('main')).toHaveAttribute('data-sign-in-scene', 'console');
     await expect(page.locator('[data-workspace-badge="console"]')).toContainText('SampForce Console');
     await expect(page.locator('[data-workspace-badge="console"]')).toContainText('Super Admin · Sampledge staff only');

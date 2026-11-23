@@ -18,6 +18,7 @@ import {
 } from '@/components/sign-in/sign-in-scene';
 import { SignInStylePicker, useSignInStyle } from '@/components/sign-in/sign-in-style';
 import { markWelcome } from '@/components/sign-in/welcome-overlay';
+import { PasswordInput } from '@/components/forms/password-input';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 
@@ -200,9 +201,8 @@ export default function OperatorLogin() {
                       />
                     </Field>
                     <Field id="op-password" label="Password">
-                      <Input
+                      <PasswordInput
                         id="op-password"
-                        type="password"
                         autoComplete="current-password"
                         className="h-11"
                         value={password}
