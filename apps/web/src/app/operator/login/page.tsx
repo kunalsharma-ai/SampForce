@@ -3,18 +3,20 @@
 import { Button, Input } from '@dealflow/ui';
 import type { OperatorLoginResult } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Activity, KeyRound, ShieldCheck } from 'lucide-react';
+import { Activity, KeyRound, Lock, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { LogoOnRed } from '@/components/logo';
 import {
-  AnimatedMark,
   RevealText,
   SCENE_COPY,
   SceneBackground,
+  SceneGreeting,
+  SceneStage,
   WorkspaceBadge,
 } from '@/components/sign-in/sign-in-scene';
+import { SignInStylePicker, useSignInStyle } from '@/components/sign-in/sign-in-style';
 import { markWelcome } from '@/components/sign-in/welcome-overlay';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -43,6 +45,7 @@ const POINTS = [
  */
 export default function OperatorLogin() {
   const router = useRouter();
+  const style = useSignInStyle();
   const qc = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,160 +82,166 @@ export default function OperatorLogin() {
 
   return (
     <main
-      className="sfs-root relative min-h-screen overflow-hidden bg-[#140405] text-white"
+      className="sfs-root relative min-h-screen overflow-hidden"
       data-sign-in-scene="console"
+      {...style.attrs}
     >
       <SceneBackground variant="console" />
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[1.15fr_1fr]">
         <section
           aria-label="SampForce Console"
-          className="flex flex-col gap-6 p-6 sm:p-10 lg:justify-between lg:p-12"
+          className="flex flex-col gap-5 p-6 sm:p-10 lg:gap-6 lg:p-12"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
             <LogoOnRed />
+            <SignInStylePicker style={style} translate={false} />
           </div>
-          <div className="sfs-hero-text flex flex-col gap-5 lg:max-w-xl">
-            <WorkspaceBadge variant="console" translate={false} />
-            <div className="flex items-center gap-5 lg:block">
-              <AnimatedMark className="size-20 shrink-0 sm:size-24 lg:mb-6 lg:size-40" />
-              <div className="min-w-0">
-                <h2 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-5xl">
-                  <RevealText text={SCENE_COPY.console.headline} />
-                </h2>
-                <p className="sfs-sub mt-3 max-w-md text-base text-white/90 lg:text-lg">
-                  {SCENE_COPY.console.sub}
-                </p>
-                <ul className="mt-8 hidden space-y-4 lg:block">
-                  {POINTS.map((p) => (
-                    <li key={p.title} className="flex gap-4">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/10 text-white ring-1 ring-white/15">
-                        <p.icon className="size-5" aria-hidden />
-                      </span>
-                      <span>
-                        <span className="block font-medium">{p.title}</span>
-                        <span className="block text-sm text-white/80">{p.text}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+          <div className="sfs-hero-text flex flex-col gap-3 lg:max-w-2xl">
+            <SceneGreeting variant="console" translate={false} />
+            <h2 className="text-[color:var(--sfs-ink)] text-3xl font-extrabold leading-[1.12] tracking-tight sm:text-4xl lg:text-[3.4rem]">
+              <RevealText text={SCENE_COPY.console.headline} />
+            </h2>
+            <p className="sfs-sub max-w-lg text-base text-[color:var(--sfs-ink-soft)] lg:text-lg">
+              {SCENE_COPY.console.sub}
+            </p>
+            <ul className="sfs-sub mt-1 hidden flex-wrap gap-2 lg:flex">
+              {POINTS.map((p) => (
+                <li
+                  key={p.title}
+                  title={p.text}
+                  className="inline-flex items-center gap-2 rounded-full bg-[color:var(--sfs-chip)] px-3 py-1.5 text-sm font-medium text-[color:var(--sfs-ink)] ring-1 ring-[color:var(--sfs-chip-ring)]"
+                >
+                  <p.icon className="size-4 text-[color:var(--sfs-gold)]" aria-hidden />
+                  {p.title}
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="hidden text-xs text-white/75 lg:block">
+          <div className="sfs-stage relative min-h-[150px] flex-1 sm:min-h-[220px] lg:min-h-[240px]">
+            <SceneStage variant="console" className="absolute inset-0 h-full w-full" />
+          </div>
+          <p className="hidden text-xs text-[color:var(--sfs-ink-mute)] lg:block">
             Platform staff only. Workspace accounts sign in at the main SampForce sign-in page.
           </p>
         </section>
 
         <section className="flex items-start justify-center px-4 pb-10 sm:px-6 lg:items-center lg:p-10">
-          <div
-            data-card-variant="console"
-            className="sfs-card w-full max-w-sm rounded-2xl bg-background p-6 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] ring-1 ring-white/10 sm:p-8"
-          >
-            {challenge ? (
-              <>
-                <h1 className="text-2xl font-semibold tracking-tight">Two-step verification</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Enter the 6-digit code from your authenticator app, or one of your recovery codes.
-                </p>
-                <form
-                  className="mt-8 space-y-5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    verify.mutate();
-                  }}
-                >
-                  <Field id="op-code" label="Authentication code">
-                    <Input
-                      id="op-code"
-                      autoComplete="one-time-code"
-                      inputMode="text"
-                      autoFocus
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      required
-                      className="h-11 text-center font-mono text-lg tracking-[0.3em]"
-                    />
-                  </Field>
-                  <ErrorText error={verify.error} />
-                  <Button type="submit" className="h-11 w-full" disabled={verify.isPending}>
-                    Verify
-                  </Button>
-                  <button
-                    type="button"
-                    className="w-full text-center text-sm text-primary underline-offset-2 hover:underline"
-                    onClick={() => {
-                      setChallenge(null);
-                      setCode('');
-                      setPassword('');
-                      verify.reset();
+          <div className="sfs-card-frame w-full max-w-md" data-card-variant="console">
+            <div className="sfs-card bg-background p-6 text-foreground sm:p-8">
+              <div className="mb-6">
+                <WorkspaceBadge variant="console" translate={false} />
+              </div>
+              {challenge ? (
+                <>
+                  <h1 className="text-2xl font-semibold tracking-tight">Two-step verification</h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Enter the 6-digit code from your authenticator app, or one of your recovery
+                    codes.
+                  </p>
+                  <form
+                    className="mt-8 space-y-5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      verify.mutate();
                     }}
                   >
-                    Back to sign-in
-                  </button>
-                </form>
-              </>
-            ) : (
-              <>
-                <h1 className="text-2xl font-semibold tracking-tight">Operator sign-in</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Sign in to the SampForce Console.
-                </p>
-                <form
-                  className="mt-8 space-y-5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    login.mutate();
-                  }}
-                >
-                  <Field id="op-email" label="Email">
-                    <Input
-                      id="op-email"
-                      type="email"
-                      autoComplete="username"
-                      className="h-11"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field id="op-password" label="Password">
-                    <Input
-                      id="op-password"
-                      type="password"
-                      autoComplete="current-password"
-                      className="h-11"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={remember}
-                        onChange={(e) => setRemember(e.target.checked)}
+                    <Field id="op-code" label="Authentication code">
+                      <Input
+                        id="op-code"
+                        autoComplete="one-time-code"
+                        inputMode="text"
+                        autoFocus
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        required
+                        className="h-11 text-center font-mono text-lg tracking-[0.3em]"
                       />
-                      Keep me signed in for 7 days
-                    </label>
-                    <Link
-                      href="/operator/forgot-password"
-                      className="text-primary underline-offset-2 hover:underline"
+                    </Field>
+                    <ErrorText error={verify.error} />
+                    <Button type="submit" className="h-11 w-full" disabled={verify.isPending}>
+                      Verify
+                    </Button>
+                    <button
+                      type="button"
+                      className="w-full text-center text-sm text-primary underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setChallenge(null);
+                        setCode('');
+                        setPassword('');
+                        verify.reset();
+                      }}
                     >
-                      Forgot your password?
-                    </Link>
-                  </div>
-                  <ErrorText error={login.error} />
-                  <Button type="submit" className="h-11 w-full" disabled={login.isPending}>
-                    Sign in
-                  </Button>
-                </form>
-                <p className="mt-8 text-xs text-muted-foreground">
-                  Workspace accounts cannot sign in here. A Super Admin adds operators from the
-                  Console.
-                </p>
-              </>
-            )}
+                      Back to sign-in
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-semibold tracking-tight">Operator sign-in</h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Sign in to the SampForce Console.
+                  </p>
+                  <form
+                    className="mt-8 space-y-5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      login.mutate();
+                    }}
+                  >
+                    <Field id="op-email" label="Email">
+                      <Input
+                        id="op-email"
+                        type="email"
+                        autoComplete="username"
+                        className="h-11"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </Field>
+                    <Field id="op-password" label="Password">
+                      <Input
+                        id="op-password"
+                        type="password"
+                        autoComplete="current-password"
+                        className="h-11"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </Field>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={remember}
+                          onChange={(e) => setRemember(e.target.checked)}
+                        />
+                        Keep me signed in for 7 days
+                      </label>
+                      <Link
+                        href="/operator/forgot-password"
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        Forgot your password?
+                      </Link>
+                    </div>
+                    <ErrorText error={login.error} />
+                    <Button type="submit" className="h-11 w-full" disabled={login.isPending}>
+                      Sign in
+                    </Button>
+                  </form>
+                  <p className="mt-8 text-xs text-muted-foreground">
+                    Workspace accounts cannot sign in here. A Super Admin adds operators from the
+                    Console.
+                  </p>
+                </>
+              )}
+              <p className="sfs-trust mt-6 flex items-center justify-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+                <Lock className="size-3.5" aria-hidden /> Secure, encrypted sign-in · every action
+                recorded
+              </p>
+            </div>
           </div>
         </section>
       </div>

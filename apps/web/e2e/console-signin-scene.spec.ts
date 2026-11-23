@@ -16,7 +16,10 @@ test.describe('Console animated sign-in', () => {
     await page.getByLabel('Password').fill('not-the-password');
     await expect(page.locator('main')).toHaveAttribute('data-sign-in-scene', 'console');
     await expect(page.locator('[data-workspace-badge="console"]')).toContainText('SampForce Console');
-    await expect(page.locator('[data-workspace-badge="console"]')).toContainText('Super Admin · Console Admin');
+    await expect(page.locator('[data-workspace-badge="console"]')).toContainText('Super Admin · Sampledge staff only');
+    await expect(page.locator('[data-scene-greeting="console"] strong')).toHaveText('SampForce Console');
+    await page.getByRole('button', { name: 'Switch to light mode' }).click();
+    await expect(page.locator('main')).toHaveAttribute('data-sfs-mode', 'light');
     await expect(page.getByRole('heading', { name: 'Welcome to the SampForce Console' })).toBeVisible();
     await axe(page);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
