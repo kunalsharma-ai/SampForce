@@ -1,11 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MOBILE_MODULE_BY_KEY, MOBILE_RECORD_MODULES_LIVE, type MobileModuleKey } from '@dealflow/types';
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { BrandMark, Loading } from '../../src/components/ui';
 import { t, tMaybe } from '../../src/lib/i18n';
 import { MODULE_ICON } from '../../src/lib/modules';
-import { useSession, useTheme } from '../../src/lib/session';
+import { onNotificationTap, refreshPush } from '../../src/lib/push';
+import { useController, useSession, useTheme } from '../../src/lib/session';
 
 /**
  * Keeps a screen out of the tab bar but reachable from More. (`href: null` would also make the route unreachable in
@@ -21,9 +23,21 @@ const MODULE_ROUTES: MobileModuleKey[] = ['dashboard', 'companies', 'contacts', 
  * the person's questions to support. Modules the person may not use have no tab
  * and no route. There is deliberately no "Recent" list anywhere in the app.
  */
+/** Keeps this phone's push token current, and opens the screen a tapped notification points to (ADR 0072, M8). */
+function usePushBridge(signedIn: boolean) {
+  const c = useController();
+  const router = useRouter();
+  useEffect(() => {
+    if (!signedIn) return;
+    void refreshPush(c.api).catch(() => undefined);
+    return onNotificationTap((route) => router.push((route ?? '/notifications') as never));
+  }, [c, router, signedIn]);
+}
+
 export default function AppLayout() {
   const s = useSession();
   const th = useTheme();
+  usePushBridge(s.status === 'signedIn');
   // While the stored session loads, wait here so a link into the app keeps its place.
   if (s.status === 'starting') return <Loading />;
   if (s.status !== 'signedIn') return <Redirect href="/" />;

@@ -21,6 +21,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.themeStudio': 'account',
   'page.workspaces': 'workspaces',
   'page.mobileAccess': 'mobile',
+  'page.announcements': 'workspaces',
   'page.mobileConfiguration': 'mobile',
   'page.team': 'workspaces',
   'page.administration': 'workspaces',

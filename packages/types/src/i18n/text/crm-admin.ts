@@ -41,6 +41,8 @@ export const crmAdmin = {
 export const crmAdminNotifications = {
   'Follow-up overdue: {title}': ['Seguimiento vencido: {title}', 'Relance en retard : {title}', 'Überfällige Nachverfolgung: {title}', 'متابعة متأخرة: {title}'],
   'Follow-up due soon: {title}': ['Seguimiento próximo: {title}', 'Relance bientôt due : {title}', 'Nachverfolgung bald fällig: {title}', 'متابعة مستحقة قريبًا: {title}'],
+  'Task overdue: {title}': ['Tarea vencida: {title}', 'Tâche en retard : {title}', 'Überfällige Aufgabe: {title}', 'مهمة متأخرة: {title}'],
+  'Task due soon: {title}': ['Tarea próxima: {title}', 'Tâche bientôt due : {title}', 'Aufgabe bald fällig: {title}', 'مهمة مستحقة قريبًا: {title}'],
   'RFQ deadline tomorrow: {rfq}': ['La RFQ vence mañana: {rfq}', 'Échéance de la RFQ demain : {rfq}', 'RFQ-Frist morgen: {rfq}', 'الموعد النهائي لطلب عرض السعر غدًا: {rfq}'],
   'RFQ deadline in {days} days: {rfq}': ['La RFQ vence en {days} días: {rfq}', 'Échéance de la RFQ dans {days} jours : {rfq}', 'RFQ-Frist in {days} Tagen: {rfq}', 'الموعد النهائي لطلب عرض السعر بعد {days} أيام: {rfq}'],
   'Enter a formula': ['Escribe una fórmula', 'Saisissez une formule', 'Geben Sie eine Formel ein', 'أدخل صيغة'],

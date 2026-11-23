@@ -1996,6 +1996,30 @@ export const organizationHelp = {
       'استخدمها عندما يحتاج فريقك الميداني إلى SampForce بعيدًا عن الحاسوب، أو عند فقدان هاتف.',
     ],
   },
+  'page.announcements': {
+    title: 'Announcements',
+    what: [
+      'Notices from your organisation to everyone in it. They show on this page and on the phone’s home screen, and arrive as a notification.',
+      'Avisos de tu organización para todos sus miembros. Aparecen en esta página y en la pantalla de inicio del teléfono, y llegan como notificación.',
+      'Des avis de votre organisation à tous ses membres. Ils s’affichent sur cette page et sur l’écran d’accueil du téléphone, et arrivent en notification.',
+      'Mitteilungen Ihrer Organisation an alle Mitglieder. Sie erscheinen auf dieser Seite und auf dem Startbildschirm des Telefons und kommen als Benachrichtigung.',
+      'إشعارات من مؤسستك إلى جميع أعضائها. تظهر في هذه الصفحة وعلى الشاشة الرئيسية للهاتف، وتصل كإشعار.',
+    ],
+    how: [
+      'Owners and administrators write a title and a message and post it. Everyone gets a notification; phones get one too where the Mobile Configuration allows announcements. Remove an announcement once it no longer applies.',
+      'Los propietarios y administradores escriben un título y un mensaje y lo publican. Todos reciben una notificación; los teléfonos también, si la configuración móvil permite anuncios. Quita un anuncio cuando ya no aplique.',
+      'Les propriétaires et administrateurs saisissent un titre et un message puis publient. Chacun reçoit une notification, et les téléphones aussi si la configuration mobile autorise les annonces. Retirez une annonce quand elle ne s’applique plus.',
+      'Inhaber und Administratoren geben Titel und Nachricht ein und veröffentlichen sie. Alle erhalten eine Benachrichtigung, Telefone ebenfalls, wenn die mobile Konfiguration Ankündigungen erlaubt. Entfernen Sie eine Ankündigung, wenn sie nicht mehr gilt.',
+      'يكتب المالكون والمسؤولون عنوانًا ورسالة وينشرونها. يتلقى الجميع إشعارًا، وتتلقاه الهواتف أيضًا إذا سمحت الإعدادات المحمولة بالإعلانات. احذف الإعلان عندما لا يعود ساريًا.',
+    ],
+    where: [
+      'Use it for office closures, policy changes or anything the whole team must see.',
+      'Úsalo para cierres de oficina, cambios de política o cualquier cosa que todo el equipo deba ver.',
+      'Utilisez-le pour une fermeture de bureau, un changement de règle ou tout ce que toute l’équipe doit voir.',
+      'Nutzen Sie es für Büroschließungen, Regeländerungen oder alles, was das ganze Team sehen muss.',
+      'استخدمه لإغلاق المكتب أو تغيير السياسات أو أي أمر يجب أن يراه الفريق كله.',
+    ],
+  },
   'page.operatorMobile': {
     title: 'Mobile app',
     what: [

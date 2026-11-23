@@ -59,5 +59,6 @@ export * from './mobile';
 export * from './mobile-config';
 export * from './mobile-records';
 export * from './mobile-dashboard';
+export * from './mobile-push';
 export * from './workspace-dashboard';
 export * from './audit';

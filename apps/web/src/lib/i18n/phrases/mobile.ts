@@ -200,4 +200,12 @@ export const mobile = {
   'Add a photo': ['Añadir una foto', 'Ajouter une photo', 'Foto hinzufügen', 'إضافة صورة'],
   'Remove photo': ['Quitar foto', 'Supprimer la photo', 'Foto entfernen', 'إزالة الصورة'],
   'That picture could not be read. Try a PNG or JPEG photo.': ['No se pudo leer esa imagen. Prueba con una foto PNG o JPEG.', 'Impossible de lire cette image. Essayez une photo PNG ou JPEG.', 'Dieses Bild konnte nicht gelesen werden. Versuchen Sie ein PNG- oder JPEG-Foto.', 'تعذّرت قراءة هذه الصورة. جرّب صورة PNG أو JPEG.'],
+  // Announcements (ADR 0072, M8).
+  'Post an announcement': ['Publicar un anuncio', 'Publier une annonce', 'Ankündigung veröffentlichen', 'نشر إعلان'],
+  'Everyone in the organisation gets it as a notification.': ['Todos en la organización lo reciben como notificación.', 'Toute l’organisation la reçoit en notification.', 'Alle in der Organisation erhalten sie als Benachrichtigung.', 'يتلقاه الجميع في المؤسسة كإشعار.'],
+  'Post announcement': ['Publicar anuncio', 'Publier l’annonce', 'Ankündigung veröffentlichen', 'نشر الإعلان'],
+  'No announcements yet.': ['Aún no hay anuncios.', 'Aucune annonce pour l’instant.', 'Noch keine Ankündigungen.', 'لا توجد إعلانات بعد.'],
+  'Remove "{title}"': ['Quitar «{title}»', 'Retirer « {title} »', '„{title}“ entfernen', 'إزالة «{title}»'],
+  "Notices to everyone in the organisation. They show here and on the phone's home screen, and arrive as a notification.": ['Avisos para todos en la organización. Aparecen aquí y en la pantalla de inicio del teléfono, y llegan como notificación.', 'Des avis pour toute l’organisation. Ils s’affichent ici et sur l’écran d’accueil du téléphone, et arrivent en notification.', 'Mitteilungen an alle in der Organisation. Sie erscheinen hier und auf dem Startbildschirm des Telefons und kommen als Benachrichtigung.', 'إشعارات لكل من في المؤسسة. تظهر هنا وعلى الشاشة الرئيسية للهاتف، وتصل كإشعار.'],
+  'Notices to everyone in the organisation, on the web and the phone.': ['Avisos para todos en la organización, en la web y en el teléfono.', 'Des avis pour toute l’organisation, sur le web et le téléphone.', 'Mitteilungen an alle in der Organisation, im Web und auf dem Telefon.', 'إشعارات لكل من في المؤسسة، على الويب والهاتف.'],
 } as const satisfies PhraseTable;

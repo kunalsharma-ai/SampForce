@@ -13,7 +13,7 @@ const BATCH = 200;
 const unset = (field: string) => [{ [field]: null }, { [field]: { isSet: false } }];
 
 /**
- * Follow-up and RFQ reminders (ADR 0062), driven by Settings → CRM configuration → Notifications: a reminder before a
+ * Follow-up, task and RFQ reminders (ADR 0062; tasks since ADR 0072 M8), driven by Settings → CRM configuration → Notifications: a reminder before a
  * follow-up is due, one alert when it becomes overdue (to the assignee and, if set, their manager), and a reminder
  * before an open RFQ's submission deadline. Each goes out once per due date or deadline: the claim is a conditional
  * update, so several workers never send the same reminder twice.
@@ -37,7 +37,7 @@ export class CrmRemindersService {
         where: {
           status: 'OPEN',
           deletedAt: null,
-          followUpType: { not: null },
+          // Follow-ups, and tasks with a due date (ADR 0072, M8: they reach phones as "due soon" and "overdue").
           dueAt: { not: null, lte: new Date(now.getTime() + 7 * DAY) },
           OR: [...unset('reminderSentAt'), { dueAt: { lt: now }, OR: unset('overdueNotifiedAt') }],
         },
@@ -60,13 +60,15 @@ export class CrmRemindersService {
               const { count } = await tx.task.updateMany({ where: { id: t.id, OR: unset('overdueNotifiedAt') }, data: { overdueNotifiedAt: now, reminderSentAt: t.reminderSentAt ?? now } });
               if (count && reminders.followUpOverdue && now.getTime() - due.getTime() <= OVERDUE_LOOKBACK) {
                 const to = [t.assigneeId, reminders.overdueNotifiesManager ? t.managerId : null];
-                await this.notifications.send(tx, tenantId, to, { type: 'followup.overdue', title: `Follow-up overdue: ${t.title}`, body: null, link: '/app/follow-ups?bucket=overdue', eventId: `overdue:${t.id}:${due.getTime()}` });
+                if (t.followUpType) await this.notifications.send(tx, tenantId, to, { type: 'followup.overdue', title: `Follow-up overdue: ${t.title}`, body: null, link: '/app/follow-ups?bucket=overdue', eventId: `overdue:${t.id}:${due.getTime()}` });
+                else await this.notifications.send(tx, tenantId, to, { type: 'task.overdue', title: `Task overdue: ${t.title}`, body: null, link: `/app/tasks?task=${t.id}`, eventId: `overdue:${t.id}:${due.getTime()}` });
                 n++;
               }
             } else if (due >= now && !t.reminderSentAt && reminders.followUpBeforeMinutes !== null && due.getTime() - now.getTime() <= reminders.followUpBeforeMinutes * MINUTE) {
               const { count } = await tx.task.updateMany({ where: { id: t.id, OR: unset('reminderSentAt') }, data: { reminderSentAt: now } });
               if (count) {
-                await this.notifications.send(tx, tenantId, [t.assigneeId], { type: 'followup.reminder', title: `Follow-up due soon: ${t.title}`, body: null, link: '/app/follow-ups?bucket=today', eventId: `due:${t.id}:${due.getTime()}` });
+                if (t.followUpType) await this.notifications.send(tx, tenantId, [t.assigneeId], { type: 'followup.reminder', title: `Follow-up due soon: ${t.title}`, body: null, link: '/app/follow-ups?bucket=today', eventId: `due:${t.id}:${due.getTime()}` });
+                else await this.notifications.send(tx, tenantId, [t.assigneeId], { type: 'task.due_soon', title: `Task due soon: ${t.title}`, body: null, link: `/app/tasks?task=${t.id}`, eventId: `due:${t.id}:${due.getTime()}` });
                 n++;
               }
             } else if (due >= now && !t.reminderSentAt && reminders.followUpBeforeMinutes === null) {

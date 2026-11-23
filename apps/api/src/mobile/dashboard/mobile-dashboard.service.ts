@@ -17,6 +17,7 @@ import {
 } from '@dealflow/types';
 import type { AuthContext } from '../../common/auth-context';
 import { PrismaService } from '../../common/prisma.service';
+import { AnnouncementsService } from '../../announcements/announcements.service';
 import { DealsService } from '../../crm/deals.service';
 import { TasksService } from '../../crm/tasks.service';
 import { WorkspaceDashboardService } from '../../workspace-work/dashboard.service';
@@ -51,6 +52,7 @@ export class MobileDashboardService {
     private readonly targetsService: TargetsService,
     private readonly tasks: TasksService,
     private readonly deals: DealsService,
+    private readonly announcements: AnnouncementsService,
   ) {}
 
   private config(auth: AuthContext): Promise<MobileResolvedConfig> {
@@ -64,12 +66,13 @@ export class MobileDashboardService {
     const can = (m: MobileDashboardCardData['opens']) => (m && config.modules.some((x) => x.key === m) ? m : null);
 
     // Only what the chosen cards need is loaded.
-    const [main, today, targetRows, myTasks, board] = await Promise.all([
+    const [main, today, targetRows, myTasks, board, notices] = await Promise.all([
       this.dashboards.dashboard(auth, period),
       wants('leads_today', 'todays_target') && period !== 'TODAY' ? this.dashboards.dashboard(auth, 'TODAY') : null,
       wants('todays_target') && config.level === 'MANAGER' ? this.targetsService.list(auth).then((v) => v.targets).catch(() => [] as TargetRow[]) : ([] as TargetRow[]),
       wants('my_tasks') ? this.tasks.list(auth, { scope: 'mine', status: 'OPEN' }, { withoutFollowUps: true }) : [],
       wants('pipeline_summary') ? this.deals.board(auth, undefined, 1).catch(() => null) : null,
+      wants('announcements') ? this.announcements.list(auth, 3) : [],
     ]);
     const day = today ?? main;
     const currency = main.currency;
@@ -77,7 +80,7 @@ export class MobileDashboardService {
 
     const cards: MobileDashboardCardData[] = [];
     for (const { card, showChart } of chosen) {
-      const out: MobileDashboardCardData = { card, showChart, stats: [], bars: [], targets: [], opens: null, empty: null };
+      const out: MobileDashboardCardData = { card, showChart, stats: [], bars: [], targets: [], notices: [], opens: null, empty: null };
       const def = MOBILE_DASHBOARD_CARD_DEFS[card];
       switch (card) {
         case 'todays_target': {
@@ -177,8 +180,9 @@ export class MobileDashboardService {
           break;
         }
         case 'announcements':
-          // SampForce has no announcements yet; they arrive with notifications (M8). The card says so plainly.
-          out.empty = 'Announcements from your organisation will show here.';
+          out.opens = can('notifications');
+          out.notices = notices.slice(0, 3).map((a) => ({ id: a.id, title: a.title, body: a.body, at: a.createdAt }));
+          if (!out.notices.length) out.empty = 'Announcements from your organisation will show here.';
           break;
       }
       if (def.levels.includes(config.level)) cards.push(out);

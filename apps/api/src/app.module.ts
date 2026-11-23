@@ -25,6 +25,7 @@ import { OperatorModule } from './operator/operator.module';
 import { MobileModule } from './mobile/mobile.module';
 import { MobileRecordsModule } from './mobile/records/mobile-records.module';
 import { ProfilePhotosModule } from './profile-photos/profile-photos.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { PortalModule } from './portal/portal.module';
 import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
@@ -91,6 +92,7 @@ import { redactUrl } from './observability/redact';
     MobileModule,
     MobileRecordsModule,
     ProfilePhotosModule,
+    AnnouncementsModule,
     ReportsModule,
     IdentityModule,
     SequencesModule,

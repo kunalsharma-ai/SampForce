@@ -177,3 +177,33 @@ read and delivered marks and live events. There is no second chat back end.
 - **Photos.** `ChatPerson` carries `photoUrl` (M6), in members, authors and the people list.
 - **Left for later.** Sending attachments and editing or deleting messages stay on the web for now; the phone shows
   attachment names, edits and deletions.
+
+## M8: push notifications and announcements (2026-11-23)
+
+- **One path for every notification.** `NotificationsService.send` (the web's bell) also queues a phone notification
+  when the web type has a phone type (`MOBILE_PUSH_TYPE_OF`: tasks and follow-ups assigned, due soon and overdue,
+  leads assigned, targets set, announcements, billing status). Chat messages queue one for the other members. The
+  queue (`MobilePush`, collection `mobile_pushes`) is written in the same transaction as the change, and only for
+  people who have a signed-in phone with a push token, so most events store nothing.
+- **Sending.** The worker sends due pushes through Expo's push service (`EXPO_PUSH_URL`), which passes them to Apple
+  and Google with the credentials kept in the Expo project. Each push is checked again when it goes: mobile access
+  live, the person still an active member, and their level's published Mobile Configuration sending that type (and
+  chat on, for chat). Otherwise it is SKIPPED with the reason. Network failures retry with back-off, five times. A
+  token Apple or Google reject (`DeviceNotRegistered`) is removed from the phone's row. Titles are translated into
+  the person's saved language. An optional `EXPO_ACCESS_TOKEN` (Console > Providers > Phone notifications) is sent
+  when the Expo project uses enhanced push security.
+- **The phone.** `GET/PUT/DELETE /mobile/push` (phone sessions only) read, set and clear this phone's token; a token
+  also on another row in the organisation (a shared phone) is let go. Profile has "Turn on notifications", which asks
+  the system for permission only when pressed. At start the app sends its current token again if notifications are
+  on. A tap opens the screen in `data.route` (`mobileRouteFor` maps the web link), or Notifications. The Notifications
+  screen shows the same list as the web's bell (`/notifications`, now open to phones while the configuration has the
+  notifications module), with mark as read.
+- **Task reminders.** The reminder sweep (ADR 0062) now also covers tasks with a due date (`task.due_soon`,
+  `task.overdue`), with the follow-up timing settings and categories.
+- **Announcements.** `Announcement` (collection `announcements`); `GET /announcements` for everyone (web and phone),
+  `POST` and `DELETE` for `tenant:manage`, audited. Posting notifies every active member (`announcement.posted`,
+  category "Important announcements"). The web page is `/app/announcements`, linked from Settings; the phone's
+  announcements card shows the latest three.
+- **Not testable here.** Real delivery needs the Expo project with the APNs key and the FCM service account, and a
+  real phone (simulators and the web build cannot get push tokens). The server side is tested against a stand-in of
+  Expo's push service.

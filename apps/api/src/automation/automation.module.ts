@@ -1,3 +1,4 @@
+import { MobileModule } from '../mobile/mobile.module';
 import { Module } from '@nestjs/common';
 import { AppsModule } from '../apps/apps.module';
 import { CrmModule } from '../crm/crm.module';
@@ -20,7 +21,7 @@ import { WorkflowsService } from './workflows.service';
 
 /** Phase 3: outbox relay, workflow engine, approvals, notifications, webhooks and mailbox integrations. */
 @Module({
-  imports: [CrmModule, AppsModule],
+  imports: [CrmModule, AppsModule, MobileModule],
   controllers: [WorkflowsController, ApprovalsController, NotificationsController, WebhooksController, IntegrationsController, CommunicationController, InboxController],
   providers: [
     AutomationRecords,

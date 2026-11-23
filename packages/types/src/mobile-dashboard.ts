@@ -42,8 +42,10 @@ export interface MobileDashboardCardData {
   /** Bars (performance, pipeline) or list lines (follow-ups, ranking). */
   bars: MobileFigure[];
   targets: MobileTargetFigure[];
+  /** Announcements, newest first (the announcements card). */
+  notices: { id: string; title: string; body: string; at: string }[];
   /** Where a tap goes on the phone, when the person can open it there. */
-  opens: 'companies' | 'follow_ups' | 'tasks' | 'targets' | 'deals' | null;
+  opens: 'companies' | 'follow_ups' | 'tasks' | 'targets' | 'deals' | 'notifications' | null;
   /** A plain sentence when the card has nothing to count yet (no target set, no pipeline); one of MOBILE_CARD_EMPTY. */
   empty: MobileCardEmpty | null;
 }

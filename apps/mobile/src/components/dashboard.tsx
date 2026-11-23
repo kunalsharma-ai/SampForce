@@ -112,6 +112,12 @@ export function DashboardCard({ data, title }: { data: MobileDashboardCardData; 
       </View>
       {data.stats.length ? <Stats stats={data.stats} /> : null}
       {data.bars.length ? <Bars bars={data.bars} chart={data.showChart} /> : null}
+      {data.notices.map((n) => (
+        <View key={n.id} style={{ gap: 2 }}>
+          <Text style={{ color: th.text, fontSize: 15, fontWeight: '600' }}>{n.title}</Text>
+          <Body muted>{n.body.length > 160 ? `${n.body.slice(0, 157)}…` : n.body}</Body>
+        </View>
+      ))}
       {data.targets.map((x) => (
         <TargetLine key={x.metric} target={x} chart={data.showChart} />
       ))}

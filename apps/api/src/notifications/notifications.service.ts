@@ -1,11 +1,12 @@
 import { createManySkipDuplicates } from '@dealflow/database';
 import { Injectable } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import { notificationCategoryOf, type NotificationRow } from '@dealflow/types';
+import { MOBILE_PUSH_TYPE_OF, mobileRouteFor, notificationCategoryOf, type NotificationRow } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localizeNotification } from '../common/request-language';
 import { personRefs } from '../crm/visibility';
+import { queueMobilePush } from '../mobile/push/push-queue';
 
 export interface NotificationDraft {
   type: string;
@@ -102,6 +103,9 @@ export class NotificationsService {
         contactId: n.contactId ?? null,
         actionRequired: n.actionRequired ?? false,
       })));
+    // The same notification on the person's phones, when it is one the phone app has (ADR 0072, M8).
+    const push = MOBILE_PUSH_TYPE_OF[n.type];
+    if (push) await queueMobilePush(tx, tenantId, users, { type: push, title: n.title, body: n.body ?? null, route: mobileRouteFor(n.link) });
   }
 
   /** Active members of the tenant whose role grants `permission`. */

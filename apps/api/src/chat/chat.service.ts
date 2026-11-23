@@ -37,6 +37,7 @@ import type { OperatorContext } from '../operator/operator-auth';
 import { type ChatAudience, ChatBus, type ChatListener } from './chat-bus';
 import { isOnline } from './chat-presence';
 import { ChatReach, chatNotAllowed } from './chat-reach';
+import { queueMobilePush } from '../mobile/push/push-queue';
 import { photoUrl } from '../profile-photos/profile-photos.service';
 
 /** A workspace user (in their workspace), or a super admin from the operator console acting in one workspace. */
@@ -520,6 +521,13 @@ export class ChatService {
       const mine = conv.members.find((m) => (actor.kind === 'user' ? m.userId === actor.auth.userId : m.operatorId === actor.op.id));
       if (mine) await tx.chatMember.update({ where: { id: mine.id }, data: { lastReadAt: msg.createdAt, lastDeliveredAt: msg.createdAt } });
       signals.push(await this.bus.record(tx, this.audience(conv), { type: 'message', conversationId: id, messageId: msg.id, authorId: personId(actor) }));
+      // The other members' phones (ADR 0072, M8): the sender's name, or the channel's, and the start of the message.
+      const others = conv.members.map((m) => m.userId).filter((u): u is string => !!u && (actor.kind !== 'user' || u !== actor.auth.userId));
+      if (others.length) {
+        const from = actor.kind === 'user' ? ((await tx.user.findUnique({ where: { id: actor.auth.userId }, select: { name: true } }))?.name ?? '') : 'SampForce support';
+        const title = conv.kind === 'CHANNEL' && conv.name ? `${from} in #${conv.name}` : from;
+        await queueMobilePush(tx, tid, others, { type: 'chat_message', title, body: preview || null, route: `/chat/${id}` });
+      }
       return (await this.messageRows(tx, actor, tid, [msg]))[0]!;
     });
   }

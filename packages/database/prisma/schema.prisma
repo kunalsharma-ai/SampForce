@@ -327,6 +327,8 @@ model Tenant {
   featureOverrides       TenantFeatureOverride[]
   mobileAccess           MobileAccess?
   mobileDevices          MobileDevice[]
+  mobilePushes           MobilePush[]
+  announcements          Announcement[]
   mobileConfig           MobileConfig?
   mobileConfigVersions   MobileConfigVersion[]
   territoryCountries     TerritoryCountry[]
@@ -4388,6 +4390,51 @@ model MobileDevice {
   @@unique([tenantId, userId, installId])
   @@index([tenantId, signedOutAt])
   @@map("mobile_devices")
+}
+
+/// ADR 0072 (M8): a push notification waiting to go to one person's phones through Expo's push service. Written in the
+/// same transaction as the event; the worker checks the person's Mobile Configuration and sends it.
+model MobilePush {
+  id            String    @id @default(uuid()) @map("_id")
+  tenantId      String    @map("tenant_id")
+  userId        String    @map("user_id")
+  /// One of MOBILE_NOTIFICATION_TYPES.
+  type          String
+  title         String
+  body          String?
+  /// Where a tap opens the app ("/companies/…"), or null for the notifications screen.
+  route         String?   @map("route")
+  /// PENDING, SENT, SKIPPED (no phone, or switched off) or FAILED.
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  /// How many phones it went to.
+  sentTo        Int       @default(0) @map("sent_to")
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  sentAt        DateTime? @map("sent_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status, nextAttemptAt])
+  @@index([tenantId, userId, createdAt])
+  @@map("mobile_pushes")
+}
+
+/// ADR 0072 (M8): a notice from the Super Workspace to everyone in the organisation, shown on the web and the phone
+/// and sent as a notification.
+model Announcement {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  title       String
+  body        String
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, createdAt])
+  @@map("announcements")
 }
 
 /// ADR 0072 (M2): the Super Workspace's Mobile Configuration Center. One draft per organisation; publishing copies it

@@ -117,6 +117,9 @@ export class ApiClient {
   post<T>(path: string, body?: unknown): Promise<T> {
     return this.authed<T>('POST', path, body);
   }
+  put<T>(path: string, body?: unknown): Promise<T> {
+    return this.authed<T>('PUT', path, body);
+  }
   patch<T>(path: string, body?: unknown): Promise<T> {
     return this.authed<T>('PATCH', path, body);
   }

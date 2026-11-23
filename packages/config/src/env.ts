@@ -113,6 +113,10 @@ export const apiEnvSchema = z.object({
   ZAPIER_INVITE_URL: z.string().url().optional().transform((v) => v || undefined),
   /** Meta Graph API for WhatsApp Business (Cloud API). Each workspace brings its own number and token; no operator secret. */
   WHATSAPP_API_BASE_URL: z.string().url().default('https://graph.facebook.com/v21.0'),
+  /** Expo's push service, which delivers the phone app's notifications to Apple and Google (ADR 0072, M8). */
+  EXPO_PUSH_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
+  /** Only needed when "Enhanced push security" is on in the Expo project. */
+  EXPO_ACCESS_TOKEN: z.string().optional().transform((v) => v || undefined),
   /** Twilio's REST API; tests point it at a local stand-in. */
   TWILIO_API_BASE_URL: z.string().url().default('https://api.twilio.com'),
   // DocuSign workspace app (Authorization Code Grant). The Connect HMAC key verifies envelope status events.

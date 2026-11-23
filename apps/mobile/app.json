@@ -31,6 +31,12 @@
           "photosPermission": "SampForce uses your photos so you can choose a profile picture.",
           "cameraPermission": "SampForce uses the camera so you can take a profile picture."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0E7490"
+        }
       ]
     ],
     "experiments": {

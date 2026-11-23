@@ -103,6 +103,8 @@ const WORKER_ALL = new Set([
   'DomainEvent',
   'GamificationSettings',
   'IntegrationConnection',
+  // Phone push notifications (ADR 0072, M8): the worker sends PENDING pushes across workspaces.
+  'MobilePush',
   'SequenceEnrollment',
   'WebhookDelivery',
   'WorkflowExecution',
