@@ -248,12 +248,16 @@ export class WorkspacesService {
         if (input.canCreateExecutives !== undefined) data.canCreateExecutives = input.canCreateExecutives;
         if (input.canViewOtherManagers !== undefined) data.canViewOtherManagers = input.canViewOtherManagers;
       }
+      if (input.canChatWithPeers !== undefined) {
+        if (target.level === 'SUPER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'This setting belongs to Manager and Executive Workspaces.' });
+        data.canChatWithPeers = input.canChatWithPeers;
+      }
       await tx.workspaceNode.update({ where: { id }, data });
       const added = (data.features as string[] | undefined)?.filter((f) => !before.features.includes(f)) ?? [];
       const removed = data.features ? before.features.filter((f) => !(data.features as string[]).includes(f)) : [];
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.permissions_changed', entityType: 'workspace', entityId: id,
-        metadata: { workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed, ...(input.actions ? { actionsFrom: before.actions, actionsTo: data.actions } : {}), ...(input.canCreateExecutives !== undefined ? { canCreateExecutives: input.canCreateExecutives } : {}), ...(input.canViewOtherManagers !== undefined ? { canViewOtherManagers: input.canViewOtherManagers } : {}) },
+        metadata: { workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed, ...(input.actions ? { actionsFrom: before.actions, actionsTo: data.actions } : {}), ...(input.canCreateExecutives !== undefined ? { canCreateExecutives: input.canCreateExecutives } : {}), ...(input.canViewOtherManagers !== undefined ? { canViewOtherManagers: input.canViewOtherManagers } : {}), ...(input.canChatWithPeers !== undefined ? { canChatWithPeers: input.canChatWithPeers } : {}) },
         meta,
       });
       const after = await resolveOrganisation(tx, auth.tenantId);
@@ -434,6 +438,7 @@ export class WorkspacesService {
       restrictedFeatures: parent ? parent.features.filter((f) => !a.features.includes(f)) : [],
       canCreateExecutives: a.node.canCreateExecutives,
       canViewOtherManagers: a.node.canViewOtherManagers,
+      canChatWithPeers: a.node.canChatWithPeers,
       editable,
       createdAt: a.node.createdAt.toISOString(),
     };

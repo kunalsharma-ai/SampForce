@@ -44,7 +44,7 @@ export class ChatBus implements OnModuleDestroy {
 
   /** Records the event in the caller's transaction; call `deliver` with the result after it commits. */
   async record(tx: TenantTx, audience: ChatAudience, event: ChatStreamEvent): Promise<{ audience: ChatAudience; event: ChatStreamEvent }> {
-    await tx.chatSignal.create({
+    const row = await tx.chatSignal.create({
       data: {
         tenantId: audience.tenantId,
         conversationId: audience.conversationId,
@@ -53,8 +53,15 @@ export class ChatBus implements OnModuleDestroy {
         userIds: [...new Set(audience.userIds)],
         operators: audience.operators,
       },
+      select: { id: true },
     });
-    return { audience, event };
+    return { audience, event: { ...event, sid: row.id } };
+  }
+
+  /** Records and delivers an event outside any other change (typing, presence, delivered). */
+  async emit(audience: ChatAudience, event: ChatStreamEvent): Promise<void> {
+    const s = await this.prisma.run({ tenantId: audience.tenantId }, (tx) => this.record(tx, audience, event));
+    this.deliver([s]);
   }
 
   /** Tells this server's listeners. */
@@ -119,7 +126,7 @@ export class ChatBus implements OnModuleDestroy {
       for (const r of rows) {
         fresh.add(r.id);
         if (this.seen.has(r.id)) continue;
-        this.fanOut({ tenantId: r.tenantId, conversationId: r.conversationId, userIds: r.userIds, operators: r.operators }, r.event as unknown as ChatStreamEvent);
+        this.fanOut({ tenantId: r.tenantId, conversationId: r.conversationId, userIds: r.userIds, operators: r.operators }, { ...(r.event as unknown as ChatStreamEvent), sid: r.id });
         if (r.createdAt > this.cursor) this.cursor = r.createdAt;
       }
       this.seen = fresh;

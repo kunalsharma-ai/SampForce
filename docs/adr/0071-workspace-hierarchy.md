@@ -95,3 +95,46 @@ feature or map to a resource, or they are only checked by role.
   refused with FEATURE_NOT_GRANTED or ACTION_NOT_GRANTED (covered by the browser test).
 - Editing renames, changes the designation, moves an Executive Workspace to another manager (Super Workspace only) and
   moves a member in. Archiving needs the workspace to be empty, withdraws its pending invitations and frees its slot.
+
+## Part 4: Targets and tasks
+
+- **Targets** (`WorkspaceTarget`, `/targets`, page `/app/targets`): a metric (leads generated, calls, deals won,
+  revenue) over a daily, weekly, monthly, quarterly or custom period, set for one workspace. The Super Workspace sets
+  targets for any workspace below it; a manager sets them for its own Executive Workspaces and splits a target it
+  received among them. Both need "assign" in Sales target management, so the Super Workspace can take that away.
+  Each target records who set it and from which level (`setByLevel`), so the page says "Set by the Super Workspace" or
+  "Handed down by the manager". Parts can never add up to more than the target they come from, and a target cannot
+  be lowered below what was handed down.
+- **Achievement is counted, not typed**: leads are companies the people created (as in the Command Center), calls are
+  logged calls, deals won and revenue come from credited revenue records in the organisation's currency. The people
+  counted are everyone in the target's workspace and below it, so an executive's new lead moves its own target and
+  its manager's (scenario 11).
+- **Tasks** (`/assigned-tasks`, page `/app/tasks`) are ordinary `Task` rows with `workspaceNodeId` and
+  `assignedByNodeId`, so they also show in My Work. New `TaskComment` and append-only `TaskEvent` keep comments and
+  the full history. The creator and the levels above may change a task; the assignee may change its status. The
+  assignee is notified on creation and every change, and the creator when it is finished or reopened (scenario 12).
+- Both appear at the top of every Command Center dashboard ("Tasks for you", "Your targets"): high-priority tasks are
+  bold with a strong edge and overdue ones are marked in the critical colour. There is no recent-activity list.
+- Calendar boundaries are UTC days for now; a per-organisation time zone can come with the dashboards in part 6.
+
+## Part 5: Chat rules and support tickets
+
+- **One chat, with rules by level** (on top of the real-time chat of ADR 0069; no second chat system). The server
+  decides who may talk (`ChatReach`) whenever a direct conversation is opened, people are put into a channel or a
+  direct message is sent; the people list only offers whom the caller may reach:
+  - people of the same workspace, and the Super Workspace with everyone;
+  - a manager with the executives of its own team;
+  - two managers only when the Super Workspace allows both (`canChatWithPeers` on each Manager Workspace);
+  - two executives only of the same team, and only when their parent allows both.
+  A channel takes members from whoever adds them. When a permission is withdrawn, an existing direct conversation
+  keeps its history but refuses new messages (CHAT_NOT_ALLOWED). The SampForce support line in chat is for the Super
+  Workspace's administrators only.
+- **Support tickets go up the hierarchy** (on top of the Help Center ticket core, ADR 0073): an executive's query goes
+  to its manager, a manager's (or an executive's straight under the Super Workspace) to the Super Workspace, and the
+  Super Workspace's to SampForce support (scenario 13). The workspace handling it answers (`WORKSPACE` messages), sets
+  its status and resolution note, or escalates it one level up (`POST /support/tickets/:id/escalate`). The handlers
+  are notified; `scope=handling` lists what waits on the caller.
+- **The Console only sees tickets that reached it.** Queries answered inside the organisation never leave it, which
+  keeps support conversations separate from internal ones. Operators assign a support representative
+  (`assignedOperatorId`, shown to the client) and write a resolution note; both are audited.
+- File attachments on tickets are not built yet; chat already carries files.

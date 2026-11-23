@@ -40,6 +40,8 @@ export const es: Messages = {
   'module.pipelines': 'Embudos',
   'module.accounts': 'Cuentas',
   'module.follow-ups': 'Seguimientos',
+  'module.tasks': 'Tareas',
+  'module.targets': 'Objetivos',
   'module.rfqs': 'RFQs',
   'module.chat': 'Chat del equipo',
   'module.activities': 'Actividades comerciales',

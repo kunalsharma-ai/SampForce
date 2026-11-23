@@ -123,10 +123,14 @@ const OPERATOR_READ = new Set([
   'ChatConversation',
   'ChatMember',
   'ChatMessage',
+  // Help Center support tickets (ADR 0073): the Console's ticket inbox. Questions people chose to send to SampForce,
+  // never CRM records. Replies and status changes run in the workspace's own context.
+  'SupportTicket',
+  'SupportTicketMessage',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['TaskEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';
