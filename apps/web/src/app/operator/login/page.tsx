@@ -2,6 +2,7 @@
 
 import { Button, Card, CardContent, CardHeader, Input } from '@dealflow/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -42,7 +43,10 @@ export default function OperatorLogin() {
           <Button type="submit" className="w-full" disabled={login.isPending}>
             Sign in
           </Button>
-          <p className="text-xs text-muted-foreground">Workspace accounts cannot sign in here. Operator accounts are created from the command line.</p>
+          <Link href="/operator/forgot-password" className="block text-center text-sm text-primary underline-offset-2 hover:underline">
+            Forgot your password?
+          </Link>
+          <p className="text-xs text-muted-foreground">Workspace accounts cannot sign in here. A Super Admin adds operators from the Console.</p>
         </form>
       </CardContent>
     </Card>

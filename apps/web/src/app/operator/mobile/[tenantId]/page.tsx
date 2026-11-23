@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/billing';
 import { MOBILE_BLOCK, MOBILE_STATUS, PLATFORM_LABEL } from '@/lib/mobile';
 import { fmtLocale } from '@/lib/i18n/locale';
-import { useOperator } from '../../operator-shell';
+import { can, useOperator } from '../../operator-shell';
 
 /** What the Console can do from each status, with what each step means for the client. */
 const ACTIONS: Record<MobileAccessStatus, { action: OperatorMobileAction; label: string; help: string; variant?: 'outline' | 'destructive' }[]> = {
@@ -53,7 +53,7 @@ export default function OperatorMobileTenantPage() {
   if (q.error) return <ErrorText error={q.error} />;
   const d = q.data;
   const s = d.state;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'mobile.manage');
   const name = overview.data?.rows.find((r) => r.tenantId === tenantId)?.name ?? 'Organisation';
 
   return (

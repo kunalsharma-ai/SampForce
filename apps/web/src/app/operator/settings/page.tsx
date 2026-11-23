@@ -8,7 +8,7 @@ import { Textarea } from '@/components/crm/select';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 const SOURCE: Record<OperatorSettings['paymentInstructionsSource'], string> = {
@@ -30,7 +30,7 @@ export default function OperatorSettingsPage() {
   if (!me.data || settings.isPending) return <Skeleton className="h-64" />;
   if (settings.error) return <ErrorText error={settings.error} />;
   const s = settings.data;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'settings.manage');
 
   return (
     <div className="space-y-6">

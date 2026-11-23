@@ -1180,6 +1180,54 @@ export const organizationHelp = {
       'استخدمه في مراجعات أمان الأشخاص الذين يشغّلون SampForce.',
     ],
   },
+  'page.operatorOperators': {
+    title: 'Operators',
+    what: [
+      'Everyone who can sign in to the Console, with their role, status, two-step verification and last sign-in.',
+      'Todas las personas que pueden entrar en la consola, con su rol, estado, verificación en dos pasos y último acceso.',
+      'Toutes les personnes qui peuvent se connecter à la console, avec leur rôle, leur statut, la validation en deux étapes et leur dernière connexion.',
+      'Alle, die sich bei der Konsole anmelden können, mit Rolle, Status, Bestätigung in zwei Schritten und letzter Anmeldung.',
+      'كل من يمكنه الدخول إلى وحدة التحكم، مع دوره وحالته والتحقق بخطوتين وآخر دخول.',
+    ],
+    how: [
+      'Add an operator to send a one-time link. Use the row menu to change a role, send a new link or switch an account off.',
+      'Añade un operador para enviarle un enlace de un solo uso. Usa el menú de la fila para cambiar el rol, enviar otro enlace o desactivar la cuenta.',
+      'Ajoutez un opérateur pour lui envoyer un lien à usage unique. Le menu de la ligne change le rôle, renvoie un lien ou désactive le compte.',
+      'Fügen Sie einen Operator hinzu, um einen Einmal-Link zu senden. Über das Zeilenmenü ändern Sie die Rolle, senden einen neuen Link oder schalten das Konto ab.',
+      'أضف مشغلًا لإرسال رابط يُستخدم مرة واحدة. استخدم قائمة الصف لتغيير الدور أو إرسال رابط جديد أو إيقاف الحساب.',
+    ],
+    where: [
+      'Use it when someone joins or leaves the team that runs SampForce.',
+      'Úsalo cuando alguien entra o sale del equipo que gestiona SampForce.',
+      'Utilisez-le quand quelqu’un rejoint ou quitte l’équipe qui exploite SampForce.',
+      'Nutzen Sie es, wenn jemand dem SampForce-Betriebsteam beitritt oder es verlässt.',
+      'استخدمه عندما ينضم شخص إلى فريق تشغيل SampForce أو يغادره.',
+    ],
+  },
+  'page.operatorRoles': {
+    title: 'Roles & permissions',
+    what: [
+      'The six built-in roles and your custom roles, and a matrix of the 22 permissions each one holds.',
+      'Los seis roles integrados y tus roles personalizados, con una matriz de los 22 permisos de cada uno.',
+      'Les six rôles intégrés et vos rôles personnalisés, avec une matrice des 22 autorisations de chacun.',
+      'Die sechs integrierten Rollen und Ihre eigenen Rollen, mit einer Matrix der 22 Berechtigungen jeder Rolle.',
+      'الأدوار الستة المدمجة وأدوارك المخصصة، مع جدول الصلاحيات الاثنتين والعشرين لكل دور.',
+    ],
+    how: [
+      'Create a role and tick its permissions; seeing comes with changing. Remove a custom role once nobody has it.',
+      'Crea un rol y marca sus permisos; ver viene incluido con cambiar. Elimina un rol personalizado cuando nadie lo tenga.',
+      'Créez un rôle et cochez ses autorisations ; voir est inclus avec modifier. Supprimez un rôle personnalisé quand personne ne l’a.',
+      'Legen Sie eine Rolle an und haken Sie Berechtigungen an; Ändern schließt Sehen ein. Entfernen Sie eigene Rollen, wenn niemand sie hat.',
+      'أنشئ دورًا وحدد صلاحياته؛ التعديل يشمل الاطلاع. احذف الدور المخصص عندما لا يملكه أحد.',
+    ],
+    where: [
+      'Use it to give each operator only what their job needs.',
+      'Úsalo para dar a cada operador solo lo que su trabajo necesita.',
+      'Utilisez-le pour ne donner à chaque opérateur que ce dont son travail a besoin.',
+      'Nutzen Sie es, um jedem Operator nur das zu geben, was seine Arbeit braucht.',
+      'استخدمه لمنح كل مشغل ما يحتاجه عمله فقط.',
+    ],
+  },
   'page.helpQueries': {
     title: 'My queries',
     what: [

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/billing';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 import { ConsolePlans } from './console-plans';
 
 type Limits = OperatorPlanRow['limits'];
@@ -26,7 +26,7 @@ export default function OperatorPlansPage() {
   const [editing, setEditing] = useState<PlanCode | null>(null);
   if (!me.data || plans.isPending) return <Skeleton className="h-96" />;
   if (plans.error) return <ErrorText error={plans.error} />;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'plans.manage');
   const rows = plans.data;
 
   return (
