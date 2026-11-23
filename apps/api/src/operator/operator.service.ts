@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
-import { FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
+import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AI_HEALTH_PREFIX, AI_PROVIDER_DEFS, type AiProviderKey, isAiProviderKey, providerOrder, readHealth } from '../ai/ai-providers';
 import { AuditService } from '../audit/audit.service';
@@ -156,7 +156,8 @@ export class OperatorService {
   async setPlanDefinition(op: OperatorContext, code: PlanCode, input: OperatorPlanDefinitionInput, ip: string | null): Promise<OperatorPlanRow[]> {
     const before = (await planDefinitions(this.prisma as unknown as TenantTx))[code];
     const features = normaliseFeatures(input.features);
-    const next = { ...input.limits, features };
+    // Workspace limits are kept unless this edit sets them; the catalogue version marks the list as complete.
+    const next = { maxManagerWorkspaces: before.maxManagerWorkspaces, maxExecutiveWorkspaces: before.maxExecutiveWorkspaces, ...input.limits, features, catalogVersion: FEATURE_CATALOG_VERSION };
     await this.prisma.plan.update({ where: { code }, data: { entitlements: next as unknown as Prisma.InputJsonValue } });
     const added = features.filter((f) => !before.features.includes(f));
     const removed = before.features.filter((f) => !features.includes(f));

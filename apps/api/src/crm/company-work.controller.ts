@@ -15,7 +15,7 @@ import {
   rfqUpdateSchema,
   type z,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequireFeature, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CompanyWorkService } from './company-work.service';
 
@@ -40,6 +40,7 @@ export class CompanyDashboardController {
   }
 
   @Get('interactions')
+  @AlsoRequireFeature('interactions')
   @RequirePermissions('companies:read', 'activities:read')
   interactions(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Query(new ZodPipe(interactionListQuerySchema)) q: z.output<typeof interactionListQuerySchema>) {
     return this.work.interactions(auth, id, q);
@@ -47,6 +48,7 @@ export class CompanyDashboardController {
 }
 
 @Controller('interactions')
+@AlsoRequireFeature('interactions')
 @ApiKeyAccess()
 export class InteractionsController {
   constructor(private readonly work: CompanyWorkService) {}
@@ -72,6 +74,7 @@ export class InteractionsController {
 }
 
 @Controller('follow-ups')
+@AlsoRequireFeature('follow_up_management')
 @ApiKeyAccess()
 export class FollowUpsController {
   constructor(private readonly work: CompanyWorkService) {}
@@ -108,6 +111,7 @@ export class FollowUpsController {
   }
 
   @Post(':id/reschedule')
+  @AlsoRequireFeature('follow_up_rescheduling')
   @HttpCode(200)
   @RequirePermissions('activities:write')
   reschedule(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(followUpRescheduleSchema)) body: z.output<typeof followUpRescheduleSchema>, @Meta() meta: RequestMeta) {

@@ -32,7 +32,7 @@ const PASSED_ON_ERRORS: Record<string, number> = {
   AppError: 0, AgentOutputError: 0, ProviderError: 0, BillingProviderError: 0, UnsafeTargetError: 0, TranscriptionError: 0,
   UnsafeZipError: 0, ReauthRequiredError: 0, InvalidSignatureError: 0, TransientProviderError: 0,
   // These take a machine-readable code first, then the message.
-  OidcError: 1, CardPaymentError: 1, DocusignError: 1, ZoomError: 1, TeamsError: 1, SlackError: 1, TwilioError: 1, WhatsappError: 1,
+  OidcError: 1, CardPaymentError: 1, DocusignError: 1, ZoomError: 1, TeamsError: 1, SlackError: 1, TwilioError: 1, WhatsappError: 1, HierarchyError: 1,
 };
 
 /** Functions that return a sentence for people (a failure reason, a provider error explained). */

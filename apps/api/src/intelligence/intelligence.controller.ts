@@ -11,7 +11,7 @@ import {
   timelineQuerySchema,
   type z,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealHealthService } from './deal-health.service';
 import { InsightsService } from './insights.service';
@@ -89,6 +89,7 @@ export class IntelligenceController {
   }
 
   @Get('timeline/:entity/:id')
+  @AlsoRequireFeature('record_timeline')
   @RequirePermissions('dashboard:read')
   getTimeline(
     @Auth() auth: AuthContext,
