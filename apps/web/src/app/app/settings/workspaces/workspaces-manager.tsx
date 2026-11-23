@@ -15,6 +15,7 @@ import {
   type WorkspaceAction,
   type WorkspacePermissionsInput,
   type WorkspaceRow,
+  type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
 import { Copy, KeyRound, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -100,7 +101,7 @@ export function WorkspacesManager() {
       </Card>
 
       {creating && <CreateDialog level={creating} tree={data} onClose={() => setCreating(null)} />}
-      {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} onClose={() => setPermissionsOf(null)} />}
+      {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} rules={data.rules} onClose={() => setPermissionsOf(null)} />}
       {edited && <EditDialog row={edited} tree={data} onClose={() => setEditing(null)} />}
     </div>
   );
@@ -198,7 +199,7 @@ function grantable(parent: readonly FeatureKey[]): { group: FeatureGroup; items:
   }).filter((g) => g.items.length > 0);
 }
 
-function PermissionCenter({ row, parent, callerLevel, onClose }: { row: WorkspaceRow; parent: WorkspaceRow; callerLevel: WorkspaceRow['level']; onClose: () => void }) {
+function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: WorkspaceRow; parent: WorkspaceRow; callerLevel: WorkspaceRow['level']; rules?: WorkspaceRules; onClose: () => void }) {
   const t = useT();
   const { permissions } = useWorkspaceMutations();
   const groups = useMemo(() => grantable(parent.features), [parent.features]);
@@ -211,6 +212,10 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
   const [saved, setSaved] = useState(false);
   const modules = FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0);
   const managerSettings = row.level === 'MANAGER' && callerLevel === 'SUPER';
+  // The Console's rules for this level (W3): what can never be given here, whatever is ticked.
+  const ruleBlocksDelete = !!rules && row.level !== 'SUPER' && !(row.level === 'MANAGER' ? rules.managerDelete : rules.executiveDelete);
+  const ruleModules = rules && row.level !== 'SUPER' ? (row.level === 'MANAGER' ? rules.managerModules : rules.executiveModules) : FEATURE_GROUPS;
+  const ruleBlockedModules = FEATURE_GROUPS.filter((g) => !ruleModules.includes(g));
 
   const toggleFeature = (key: FeatureKey, on: boolean) => {
     setSaved(false);
@@ -318,6 +323,16 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
               {t('Actions')}
             </h3>
             <p className="text-xs text-muted-foreground">{t('What it may do in each module. A dash means {parent} cannot do it either.', { parent: parent.name })}</p>
+            {ruleBlocksDelete && (
+              <p className="text-xs text-warning" data-rule-note="delete">
+                {t('Your SampForce plan does not let this level delete data, so Delete cannot be given here.')}
+              </p>
+            )}
+            {ruleBlockedModules.length > 0 && (
+              <p className="text-xs text-warning" data-rule-note="modules">
+                {t('Your SampForce plan keeps these modules from this level: {modules}.', { modules: ruleBlockedModules.map((g) => t.maybe(g)).join(', ') })}
+              </p>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm" data-action-matrix>
                 <thead>
@@ -339,7 +354,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
                         {t.maybe(g)}
                       </th>
                       {WORKSPACE_ACTIONS.map((a) => {
-                        const allowed = (parent.actions[g] ?? []).includes(a);
+                        const allowed = (parent.actions[g] ?? []).includes(a) && !(a === 'delete' && ruleBlocksDelete) && !ruleBlockedModules.includes(g);
                         return (
                           <td key={a} className="px-1 text-center">
                             {allowed ? (

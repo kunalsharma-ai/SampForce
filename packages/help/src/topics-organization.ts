@@ -2044,6 +2044,30 @@ export const organizationHelp = {
       'استخدمها عندما يطلب عميل التطبيق، أو عند ضرورة إيقاف حساب مؤقتًا، مثلًا بسبب فاتورة غير مدفوعة.',
     ],
   },
+  'page.operatorWorkspaceRules': {
+    title: 'Workspace rules',
+    what: [
+      'Limits for the Manager and Executive Workspaces of every client on a plan: whether they may delete, which modules they may use, and who must use two-step sign-in.',
+      'Límites para los espacios de Gerente y Ejecutivo de cada cliente de un plan: si pueden eliminar, qué módulos usan y quién debe usar el inicio de sesión en dos pasos.',
+      'Les limites des espaces Manager et Exécutif de chaque client d’une offre : suppression, modules autorisés et qui doit utiliser la connexion en deux étapes.',
+      'Grenzen für die Manager- und Executive-Arbeitsbereiche jedes Kunden eines Tarifs: ob sie löschen dürfen, welche Module sie nutzen und wer die Zwei-Schritt-Anmeldung braucht.',
+      'حدود مساحات عمل المديرين والتنفيذيين لكل عميل في الخطة: هل يمكنهم الحذف، وأي الوحدات يستخدمون، ومن يجب أن يستخدم تسجيل الدخول بخطوتين.',
+    ],
+    how: [
+      'Tick what each level may do for a plan, give a reason and save. A client’s Super Workspace then chooses within these limits. One client can differ from its plan on its profile.',
+      'Marca lo que puede hacer cada nivel en un plan, indica un motivo y guarda. El espacio Super del cliente elige dentro de estos límites. Un cliente puede diferir de su plan en su perfil.',
+      'Cochez ce que chaque niveau peut faire pour une offre, donnez un motif et enregistrez. L’espace Super du client choisit dans ces limites. Un client peut différer de son offre sur son profil.',
+      'Haken Sie für einen Tarif an, was jede Ebene darf, nennen Sie einen Grund und speichern Sie. Der Super-Arbeitsbereich wählt innerhalb dieser Grenzen. Abweichungen je Kunde im Profil.',
+      'حدّد ما يمكن لكل مستوى فعله في الخطة، واذكر سببًا واحفظ. تختار مساحة العمل الرئيسية للعميل ضمن هذه الحدود. ويمكن أن يختلف عميل عن خطته من ملفه.',
+    ],
+    where: [
+      'Use it when a plan should not let managers or executives delete data, or must require two-step sign-in.',
+      'Úsalo cuando un plan no deba permitir que gerentes o ejecutivos eliminen datos, o deba exigir el inicio de sesión en dos pasos.',
+      'Utilisez-la quand une offre ne doit pas laisser les managers ou exécutifs supprimer, ou doit exiger la connexion en deux étapes.',
+      'Nutzen Sie es, wenn ein Tarif Managern oder Executives das Löschen verbieten oder die Zwei-Schritt-Anmeldung verlangen soll.',
+      'استخدمها عندما يجب ألا تسمح خطة للمديرين أو التنفيذيين بالحذف، أو يجب أن تفرض تسجيل الدخول بخطوتين.',
+    ],
+  },
   'page.mobileConfiguration': {
     title: 'Mobile configuration',
     what: [

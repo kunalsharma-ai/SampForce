@@ -167,6 +167,7 @@ export const help = {
   'Contact by': ['Contactar por', 'Contact par', 'Kontakt per', 'التواصل عبر'],
   'In the app': ['En la aplicación', 'Dans l’application', 'In der App', 'داخل التطبيق'],
   'App version': ['Versión de la aplicación', 'Version de l’application', 'App-Version', 'إصدار التطبيق'],
+  'Workspace rules': ['Reglas de espacios de trabajo', 'Règles des espaces de travail', 'Regeln für Arbeitsbereiche', 'قواعد مساحات العمل'],
   'Mobile app': ['Aplicación móvil', 'Application mobile', 'Mobile App', 'تطبيق الجوال'],
   Web: ['Web', 'Web', 'Web', 'الويب'],
   'What kind of problem is it? (optional)': ['¿Qué tipo de problema es? (opcional)', 'De quel type de problème s’agit-il ? (facultatif)', 'Um welche Art von Problem geht es? (optional)', 'ما نوع المشكلة؟ (اختياري)'],
