@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { MOBILE_MODULE_BY_KEY, type MobileModuleKey } from '@dealflow/types';
+import { MOBILE_MODULE_BY_KEY, MOBILE_RECORD_MODULES_LIVE, type MobileModuleKey } from '@dealflow/types';
 import { Redirect, Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
 import { BrandMark, Loading } from '../../src/components/ui';
@@ -37,7 +37,7 @@ export default function AppLayout() {
         headerStyle: { backgroundColor: th.primary },
         headerTintColor: th.onPrimary,
         headerTitleStyle: { fontWeight: '600' },
-        tabBarActiveTintColor: th.primary,
+        tabBarActiveTintColor: th.primaryText,
         tabBarInactiveTintColor: th.muted,
         tabBarStyle: { backgroundColor: th.card, borderTopColor: th.border },
         sceneStyle: { backgroundColor: th.background },
@@ -50,6 +50,8 @@ export default function AppLayout() {
           options={{
             // Not a tab: reachable from More if the person may use it (the screen sends anyone else home).
             ...(tabs.includes(key) && allowed.has(key) ? {} : NOT_A_TAB),
+            // Record modules draw their own headers (list, record, form).
+            ...((MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(key) ? { headerShown: false } : {}),
             title: tMaybe(MOBILE_MODULE_BY_KEY[key].label),
             tabBarIcon: ({ focused, color, size }) => <Ionicons aria-hidden name={focused ? MODULE_ICON[key].on : MODULE_ICON[key].off} color={color as string} size={size} />,
             ...(key === 'dashboard'

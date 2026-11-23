@@ -164,6 +164,24 @@ describe('mobile records', () => {
     await phone(execToken).get(`/tasks/${fu.id}`).expect(404);
   });
 
+  it('shows the custom fields the configuration allows, and saves them', async () => {
+    await api(owner).post('/custom-fields', { entity: 'COMPANY', key: 'visit_notes', label: 'Visit notes', type: 'TEXT' }).expect(201);
+    await api(owner).post('/custom-fields', { entity: 'COMPANY', key: 'secret_score', label: 'Secret score', type: 'NUMBER' }).expect(201);
+    const all = { view: true, edit: true, create: true, delete: true };
+    await publish((c) => {
+      c.fields.companies['cf.visit_notes'] = { SUPER: all, MANAGER: all, EXECUTIVE: all };
+      c.fields.companies['cf.secret_score'] = { SUPER: all, MANAGER: all, EXECUTIVE: hidden };
+    });
+    const o = (await phone(execToken).get('/options').expect(200)).body as MobileRecordOptions;
+    expect(o.customFields.companies).toEqual([{ key: 'visit_notes', label: 'Visit notes', type: 'TEXT', options: [], edit: true }]);
+    const lead = (await phone(execToken).post('/companies', { name: 'Custom Co', customFields: { visit_notes: 'Gate code 42' } }).expect(201)).body as MobileRecord;
+    expect(lead.customFields).toEqual({ visit_notes: 'Gate code 42' });
+    expect((await phone(execToken).patch(`/companies/${lead.id}`, { customFields: { secret_score: 9 } }).expect(403)).body.error.code).toBe('MOBILE_FIELD_NOT_ALLOWED');
+    const ownerView = (await phone(ownerToken).get('/options').expect(200)).body as MobileRecordOptions;
+    expect(ownerView.customFields.companies?.map((f) => f.key).sort()).toEqual(['secret_score', 'visit_notes']);
+    await publish(() => {});
+  });
+
   it('keeps one person’s records from another workspace', async () => {
     const other = await registerUser(app, 'Other Org');
     const lead = (await api(other).post('/companies', { name: 'Elsewhere Ltd' }).expect(201)).body as { id: string };

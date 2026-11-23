@@ -30,6 +30,7 @@ import { CompanyWorkService } from '../../crm/company-work.service';
 import { ContactsService } from '../../crm/contacts.service';
 import { CrmAdminService } from '../../crm/crm-admin.service';
 import { CrmConfigService } from '../../crm/crm-config.service';
+import { CustomFieldsService } from '../../crm/custom-fields.service';
 import { TasksService } from '../../crm/tasks.service';
 import { checkMobileDelete, checkMobileWrite, mobileReadable, moduleOf } from '../field-policy';
 import { MobileConfigService } from '../mobile-config.service';
@@ -41,6 +42,8 @@ import { MobileConfigService } from '../mobile-config.service';
  */
 
 const PAGE_SIZE = 25;
+/** The custom field entity behind each module (tasks have none). */
+const CUSTOM_FIELD_ENTITY: Partial<Record<MobileLiveRecordModule, string>> = { companies: 'COMPANY', contacts: 'CONTACT', follow_ups: 'FOLLOW_UP' };
 const ref = (x: { id: string; name: string } | null | undefined) => (x ? { id: x.id, name: x.name } : null);
 
 /** Phone field name → the service's input name, where they differ. */
@@ -152,6 +155,7 @@ export class MobileRecordsService {
     private readonly crmConfig: CrmConfigService,
     private readonly crmAdmin: CrmAdminService,
     private readonly leads: CompanyLeadsService,
+    private readonly customFields: CustomFieldsService,
   ) {}
 
   private config(auth: AuthContext): Promise<MobileResolvedConfig> {
@@ -282,18 +286,29 @@ export class MobileRecordsService {
   }
 
   async options(auth: AuthContext): Promise<MobileRecordOptions> {
-    const [companyStatuses, contactStatuses, types, people] = await Promise.all([
+    const [config, companyStatuses, contactStatuses, types, people, defs] = await Promise.all([
+      this.config(auth),
       this.crmConfig.statuses(auth, 'COMPANY'),
       this.crmConfig.statuses(auth, 'EMPLOYEE'),
       this.crmAdmin.options(auth, 'FOLLOW_UP_TYPE'),
       this.leads.people(auth),
+      this.customFields.list(auth),
     ]);
+    const customFields: MobileRecordOptions['customFields'] = {};
+    for (const [module, entity] of Object.entries(CUSTOM_FIELD_ENTITY) as [MobileLiveRecordModule, string][]) {
+      const shown = config.fields[module];
+      if (!shown) continue;
+      customFields[module] = defs
+        .filter((d) => d.entity === entity && d.active && d.access.view && shown[`cf.${d.key}`])
+        .map((d) => ({ key: d.key, label: d.label, type: d.type, options: d.options, edit: d.access.edit && d.type !== 'FORMULA' && d.type !== 'FILE' }));
+    }
     const status = (s: { id: string; name: string; color: string; active?: boolean }) => ({ id: s.id, name: s.name, color: s.color });
     return {
       companyStatuses: companyStatuses.filter((s) => (s as { active?: boolean }).active !== false).map(status),
       contactStatuses: contactStatuses.filter((s) => (s as { active?: boolean }).active !== false).map(status),
       followUpTypes: types.filter((t) => t.active).map((t) => ({ key: t.value, label: t.label })),
       people: people.filter((p) => p.assignable).map((p) => ({ id: p.id, name: p.name })),
+      customFields,
     };
   }
 }

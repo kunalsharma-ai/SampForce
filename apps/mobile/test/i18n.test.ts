@@ -1,11 +1,12 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { MOBILE_DASHBOARD_CARD_DEFS, MOBILE_MODULE_DEFS } from '@dealflow/types';
+import { MOBILE_DASHBOARD_CARD_DEFS, MOBILE_FIELDS, MOBILE_MODULE_DEFS, MOBILE_RECORD_MODULES_LIVE } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import { HANDLER_LABEL, STATUS_LABEL } from '../src/lib/help-types';
 import { pickLanguage, setLanguage, t } from '../src/lib/i18n';
 import { greetingFor, LEVEL_LABEL } from '../src/lib/labels';
 import { PHRASES } from '../src/lib/phrases';
+import { PRIORITY_LABEL, RECORD_STATUS_LABEL } from '../src/lib/records';
 
 const ROOT = join(import.meta.dirname, '..');
 const files = (dir: string): string[] =>
@@ -31,6 +32,13 @@ describe('app phrases', () => {
       ...Object.values(STATUS_LABEL),
       ...Object.values(HANDLER_LABEL),
       ...[5, 13, 20].map(greetingFor),
+      // Record screens (M4): field names, priorities, statuses, date quick picks, follow-up lists.
+      ...MOBILE_RECORD_MODULES_LIVE.flatMap((m) => MOBILE_FIELDS[m].map((f) => f.label)),
+      ...Object.values(PRIORITY_LABEL),
+      ...Object.values(RECORD_STATUS_LABEL),
+      ...[...source.matchAll(/label: '([A-Z][^']+)'/g)].map((m) => m[1]!),
+      ...[...source.matchAll(/(?:today|upcoming|overdue|completed): '([A-Z][^']+)'/g)].map((m) => m[1]!),
+      ...[...source.matchAll(/(?:companies|contacts|follow_ups|tasks): '([A-Z][^']+)'/g)].map((m) => m[1]!),
       // Messages the app's own logic produces (api.ts, session-controller.ts).
       ...[...source.matchAll(/(?:error|message|super\(|NetworkError\(|Error\()[^'\n]*'([A-Z][^'\n]{8,}\.)'/g)].map((m) => m[1]!),
     ];

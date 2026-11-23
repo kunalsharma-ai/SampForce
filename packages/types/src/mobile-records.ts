@@ -60,10 +60,21 @@ export type MobileRecordWrite = z.infer<typeof mobileRecordWriteSchema>;
 
 export const mobileFollowUpCompleteSchema = z.object({ outcome: z.string().trim().max(500).optional() }).strict();
 
+/** A custom field the person may see on the phone; `edit` is what the web's own field access allows. */
+export interface MobileCustomFieldDef {
+  key: string;
+  label: string;
+  type: string;
+  options: string[];
+  edit: boolean;
+}
+
 /** Choices for the phone's pickers. */
 export interface MobileRecordOptions {
   companyStatuses: MobileStatusRef[];
   contactStatuses: MobileStatusRef[];
   followUpTypes: { key: string; label: string }[];
   people: MobileRef[];
+  /** Custom fields per module, only those this person's configuration shows. */
+  customFields: Partial<Record<MobileLiveRecordModule, MobileCustomFieldDef[]>>;
 }

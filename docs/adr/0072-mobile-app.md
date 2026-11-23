@@ -96,3 +96,29 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   against the real API. Native builds, the Keychain and store review cannot be tested in CI.
 - **Web packages and React Native.** `.pnpmfile.cjs` drops React Native as an optional peer of the 3D chart packages,
   so the web app never resolves React Native.
+
+## M4: records on the phone (2026-11-23)
+
+- **Routes.** `/mobile/records/options`, `GET /mobile/records/:module`, `GET|PATCH|DELETE /mobile/records/:module/:id`
+  and `POST /mobile/records/:module`, for `companies` (leads), `contacts`, `follow_ups` and `tasks`. Deals follow
+  separately. All are `@MobileAccess()`; anything else under `/mobile/records` is 404.
+- **The web's own services.** Every call goes through `CompaniesService`, `ContactsService`, `CompanyWorkService` and
+  `TasksService`, so visibility down the hierarchy, ownership, audit, numbering and notifications are exactly the
+  web's. The phone layer only renames fields (MOBILE_FIELDS names such as `owner`, `company`, `followUpType` to the
+  services' `ownerId`, `companyId`, `type`), validates with the CRM's own zod schemas (errors come back under the
+  phone's names), and applies the field rules: records are narrowed to the fields the person may see, and a write to
+  a field they may not set, or a clear without the delete rule, is refused with `MOBILE_FIELD_NOT_ALLOWED`. A module
+  that is off for the person answers `MOBILE_MODULE_OFF`, even for an empty list.
+- **Follow-ups and tasks.** Both live in the task table; the tasks list leaves follow-ups out and a follow-up id is not
+  a task. A follow-up's status changes only to `DONE` (with an outcome) or `CANCELED`, as on the web, and "delete"
+  cancels it. Lists are the person's own (`scope: mine`), follow-ups by the web's buckets in the phone's time zone.
+- **Custom fields.** `options` returns the custom fields the configuration shows for each module, with the web's own
+  field access deciding whether the person may edit them; formula and file fields are read only on the phone.
+- **Screens.** Each record module is a stack inside its tab: list (search, buckets or open/done, more on request,
+  refreshed whenever it comes back into view), record page (fields for the level, call / WhatsApp / email /
+  directions as the configuration allows, mark done, cancel, edit, delete with an inline confirmation, a lead's
+  contacts and quick add), and one form for add and edit that offers only the fields the person may set and sends
+  only what changed. Dates are typed (`2026-12-01 14:30`) or picked (later today, tomorrow, next week); a native
+  date picker can come with the store builds.
+- **Brand colour as text.** `primaryText` in the theme is the brand colour moved just far enough towards black (or
+  white in dark mode) to read on cards, used for the active tab, so any brand colour passes WCAG AA.

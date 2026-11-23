@@ -112,6 +112,9 @@ export class ApiClient {
   patch<T>(path: string, body?: unknown): Promise<T> {
     return this.authed<T>('PATCH', path, body);
   }
+  delete(path: string): Promise<void> {
+    return this.authed<void>('DELETE', path);
+  }
 
   async login(email: string, password: string, device: MobileDeviceInfo): Promise<MobileLoginResponse> {
     const res = await this.send<MobileLoginResponse>('POST', '/mobile/auth/login', { email, password, device }, null);
