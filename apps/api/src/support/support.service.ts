@@ -34,6 +34,7 @@ import { notFound } from '../crm/crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import type { OperatorContext } from '../operator/operator-auth';
 import { branchUserIds, levelOf, workspaceLevelOf } from '../workspaces/access';
+import { writePlatformAudit } from '../operator/platform-audit';
 
 type Ticket = Prisma.SupportTicketGetPayload<{ include: { messages: true } }>;
 type TicketMessage = Ticket['messages'][number];
@@ -464,7 +465,7 @@ export class SupportService {
         actionRequired: true,
       });
     });
-    await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.answered', targetTenantId: tenantId, metadata: { ticketId: id }, ip } });
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'support_ticket.answered', tenantId, metadata: { ticketId: id }, ip });
     return this.operatorGet(op, id);
   }
 
@@ -498,7 +499,7 @@ export class SupportService {
       if ('status' in data && input.status) await notifyRaiser(this.notifications, tx, tenantId, ticket, input.status);
       return Object.keys(data);
     });
-    if (changed) await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'support_ticket.updated', targetTenantId: tenantId, metadata: { ticketId: id, fields: changed }, ip } });
+    if (changed) await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'support_ticket.updated', tenantId, metadata: { ticketId: id, fields: changed }, ip });
     return this.operatorGet(op, id);
   }
 
@@ -521,10 +522,12 @@ export class SupportService {
     });
   }
 
-  async operatorUpload(op: OperatorContext, ticketId: string, file: { name: string; contentType: string; data: Buffer }): Promise<SupportAttachmentRow> {
+  async operatorUpload(op: OperatorContext, ticketId: string, file: { name: string; contentType: string; data: Buffer }, ip: string | null = null): Promise<SupportAttachmentRow> {
     checkFile(file);
     const tenantId = await this.tenantOf(ticketId);
-    return this.prisma.run({ tenantId }, (tx) => storeFile(tx, tenantId, ticketId, file, { operatorId: op.id }));
+    const stored = await this.prisma.run({ tenantId }, (tx) => storeFile(tx, tenantId, ticketId, file, { operatorId: op.id }));
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'support_ticket.attachment_added', tenantId, metadata: { ticketId, fileId: stored.id, name: file.name, size: file.data.length }, ip });
+    return stored;
   }
 
   async operatorDownload(op: OperatorContext, ticketId: string, fileId: string): Promise<{ name: string; contentType: string; data: Buffer }> {

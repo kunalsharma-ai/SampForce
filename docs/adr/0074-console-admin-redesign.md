@@ -57,3 +57,53 @@ preferences follow the operator across devices. The "Operator log" menu item is 
   address none of the last 20 sign-ins used, is flagged as unusual.
 - **Deviation from the spec:** two-step verification is not forced by default, so upgrading does not lock out
   operators who have no authenticator yet; Super Admins switch the policy on.
+
+## C3a: structured audit log and the activity feed
+
+- **One writer.** Every platform audit entry goes through `writePlatformAudit` (`apps/api/src/operator/platform-audit.ts`).
+  An entry now records what it is about (`targetType`, `targetId`, `targetLabel`: client, operator, role, plan,
+  provider, setting, ticket, support chat, help content), the changed values `before` and `after`, and the Console
+  `sessionId` and `userAgent` of the request (kept per request in `common/audit-context.ts`). Entries that already
+  logged `from`/`to` keep them as before/after. Keys that look like secrets (password, secret, token, hash, OTP,
+  recovery codes, API keys, sealed `...Enc` values) are replaced by `[removed]` at any depth; fingerprints and hints
+  stay. Values over 20 KB are cut. Updates and deletes stay refused by the database guard (`scope.ts`).
+- **Every Console write is audited.** Instead of a lint rule, `AuditRequiredInterceptor` (global) checks that a signed-in
+  operator's successful write wrote at least one entry. Under test a missing entry fails the request with
+  `UNAUDITED_WRITE`, so a new route cannot ship without one; in production it is logged. Writes that change nothing
+  on the platform say so with `@OperatorNoAudit()` (own preferences, chat read/typing/delivered marks, socket tickets).
+  Operator replies, edits, removals and files in client support chat, ticket attachments and starting two-step
+  verification setup are now recorded; message text is not copied into the log.
+- **Search and export.** `GET /operator/audit-log` filters by free text (action, target name or id, operator email or
+  name, client name), client, operator, action, target and dates. `GET /operator/audit-log/{id}` returns one entry.
+  `GET /operator/audit-log/export` returns the filtered log as CSV (up to 10,000 rows, cells that a spreadsheet would
+  run as formulas are prefixed with an apostrophe) and records the export.
+- **Activity feed.** `GET /operator/activity` merges operator actions (looking, searching and signing in are left
+  out) with platform records: clients joining, Manager and Executive Workspaces created, invoices issued and paid,
+  subscriptions going past due, tickets reaching SampForce support and unusual operator sign-ins. Each category needs
+  a permission (clients.view, workspaces.view, billing.view, support.handle, security.manage, audit.view), so a role
+  sees only what it may act on. It reads no CRM records. Indexes were added for these reads.
+- **Page.** `/operator/audit` is "Activity & audit log" with two tabs; an entry opens in a side panel with a
+  before/after table. The activity feed refreshes every 30 seconds; live push arrives with notifications (C3b).
+- **Retention.** Entries are kept; the 7-year retention in the spec is a floor, and nothing deletes them.
+
+## C3b: Console notifications
+
+- **What reaches whom.** Ten types (`OPERATOR_NOTIFICATION_DEFS` in `@dealflow/types`): new client, new workspace,
+  subscription ending (14 and 3 days before, only when it does not renew by itself), payment failed, invoice overdue
+  (open 14 days after issue), new ticket, ticket past its response time (24 hours, 8 when high priority), provider
+  check failed, unusual sign-in and features changed. Each type belongs to one permission; an operator receives it only
+  while their role has that permission, so a Support Admin never sees billing.
+- **Where they come from.** The worker's `ConsoleNotificationSweep` reads the platform's own records since a cursor
+  kept in `PlatformSetting` (`console.notifications.cursor`), every `CONSOLE_NOTIFY_INTERVAL_MS` (default one minute).
+  A new deployment starts from now, so history is never sent out. Conditions that come due (ending, overdue, late) are
+  checked on every pass. Each notification has a dedupe key unique per operator, so a pass that sees an event twice,
+  or two workers, never deliver it twice.
+- **How.** `OperatorNotification` rows (`targetTenantId`, not `tenantId`, because the workspace guard treats any
+  `tenantId` field as workspace-scoped) and `OperatorNotificationPref` per operator and type: Console, email, both or
+  neither. Urgent and money types go by email by default; the rest only in the Console. Email goes to the operator's
+  sign-in address through the platform mailer, and only when one is configured.
+- **In the Console.** A bell in the top bar with the unread count and the latest eight (the alert chime plays for a new
+  urgent one when sounds are on), a Notifications menu item with the same count, and `/operator/notifications` with
+  All, Unread and Preferences. Opening a notification goes to what it is about and marks it read. Reading and choosing
+  change nothing on the platform, so those writes are marked `@OperatorNoAudit()`.
+- **Not yet.** Counts update by polling every 30 seconds, not over the support chat's socket.

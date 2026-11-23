@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
@@ -48,6 +48,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
+import { AuditRequiredInterceptor } from './operator/audit-required.interceptor';
 
 @Module({
   imports: [
@@ -119,6 +120,8 @@ import { redactUrl } from './observability/redact';
     // After FeatureGuard: the caller's workspace must have the route's features and action (ADR 0071).
     { provide: APP_GUARD, useClass: HierarchyGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    // Console writes must write a platform audit entry (ADR 0074, C3).
+    { provide: APP_INTERCEPTOR, useClass: AuditRequiredInterceptor },
   ],
 })
 export class AppModule {}

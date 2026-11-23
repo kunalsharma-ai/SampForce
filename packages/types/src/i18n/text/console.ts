@@ -125,4 +125,6 @@ export const consoleAdmin = {
     'Ändern Sie Ihre Bestätigung in zwei Schritten auf Ihrer Kontoseite.',
     'استخدم صفحة حسابك لتغيير التحقق بخطوتين الخاص بك.',
   ],
+  'That audit entry was not found.': ['No se encontró esa entrada de auditoría.', 'Cette entrée du journal d’audit est introuvable.', 'Dieser Protokolleintrag wurde nicht gefunden.', 'لم يتم العثور على إدخال التدقيق هذا.'],
+  'Notification not found.': ['Notificación no encontrada.', 'Notification introuvable.', 'Benachrichtigung nicht gefunden.', 'لم يتم العثور على الإشعار.'],
 } satisfies TextTable;

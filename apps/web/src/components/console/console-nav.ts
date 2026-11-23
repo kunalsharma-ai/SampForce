@@ -1,6 +1,7 @@
 import type { OperatorPermission } from '@dealflow/types';
 import {
   Activity,
+  Bell,
   KeyRound,
   Building2,
   CreditCard,
@@ -23,7 +24,7 @@ import {
  * pages still to come (Workspaces, Users, Features, Billing...) are added as each part ships, never as dead links.
  */
 
-export type ConsoleBadge = 'chat' | 'tickets';
+export type ConsoleBadge = 'chat' | 'tickets' | 'notifications';
 
 export interface ConsoleNavItem {
   key: string;
@@ -52,6 +53,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     label: 'Command',
     items: [
       { key: 'overview', label: 'Overview', href: '/operator', icon: LayoutDashboard, exact: true, permission: 'clients.view' },
+      { key: 'notifications', label: 'Notifications', href: '/operator/notifications', icon: Bell, badge: 'notifications' },
     ],
   },
   {
@@ -116,7 +118,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     key: 'governance',
     label: 'Governance',
     items: [
-      { key: 'audit', label: 'Audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
+      { key: 'audit', label: 'Activity & audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
       { key: 'operators', label: 'Operators', href: '/operator/operators', icon: UserCog, permission: 'operators.manage' },
       { key: 'roles', label: 'Roles & permissions', href: '/operator/roles', icon: KeyRound, permission: 'operators.manage' },
       { key: 'security', label: 'Security', href: '/operator/security', icon: ShieldCheck, permission: 'security.manage' },

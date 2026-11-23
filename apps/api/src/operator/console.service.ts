@@ -39,6 +39,7 @@ import { PrismaService } from '../common/prisma.service';
 import { INVITATION_TTL_MS } from '../tenants/invitations.service';
 import { levelOf, nameKeyOf } from '../workspaces/access';
 import type { OperatorContext } from './operator-auth';
+import { changedFields, writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 const DAY = 86_400_000;
 type ClientCreate = z.output<typeof consoleClientCreateSchema>;
@@ -187,7 +188,7 @@ export class ConsoleService {
     await this.log(op.id, 'plan.definition_changed', null, {
       plan: code, reason: input.reason, added: features.filter((f) => !before.features.includes(f)), removed: before.features.filter((f) => !features.includes(f)),
       limits: { from: { ...before, features: undefined }, to: limits }, ...(input.terms ? { terms: input.terms } : {}), ...(input.name ? { name: { from: row.name, to: input.name } } : {}),
-    }, ip);
+    }, ip, { target: { type: 'plan', id: code, label: input.name ?? row.name }, ...changedFields({ name: row.name, ...before, terms: this.termsOf(row) } as Record<string, unknown>, { name: input.name ?? row.name, ...limits, features, terms }) });
     return this.plans();
   }
 
@@ -401,6 +402,7 @@ export class ConsoleService {
   async setSubscription(op: OperatorContext, id: string, input: ConsoleSubscriptionInput, ip: string | null): Promise<ConsoleClientDetail> {
     const plan = input.planCode ? await this.planFor(input.planCode) : null;
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       await transactionLock(tx, `workspaces:${id}`);
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
@@ -461,6 +463,7 @@ export class ConsoleService {
         note('Executive Workspaces', before.maxExecutiveWorkspaces ?? planLimit(defs[before.planCode]?.maxExecutiveWorkspaces), input.maxExecutiveWorkspaces ?? planLimit(defs[(data.planCode as string | undefined) ?? before.planCode]?.maxExecutiveWorkspaces));
       }
       if (!changes.length) return;
+      diff = changedFields(before as unknown as Record<string, unknown>, data as Record<string, unknown>);
       await tx.subscription.update({ where: { tenantId: id }, data });
       // Workspace limits get an entry of their own in the client's log, so "who changed a limit" has one answer.
       const limits = changes.filter((c) => c.startsWith('Manager Workspaces:') || c.startsWith('Executive Workspaces:'));
@@ -468,13 +471,14 @@ export class ConsoleService {
       if (rest.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: rest } });
       if (limits.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.limits_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: limits } });
     });
-    if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip);
+    if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
   /** Another term from the current renewal date (or today, if it has passed), optionally on a new plan. */
   async renew(op: OperatorContext, id: string, input: ConsoleRenewInput, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
       if (!before) throw new NotFoundException(NOT_FOUND);
@@ -486,6 +490,7 @@ export class ConsoleService {
       changes.push(`Renewed for ${months} months: ${day(from)} to ${day(end)}`);
       if (plan.row.code !== before.planCode) changes.push(`Plan: ${(await this.planRows()).find((r) => r.code === before.planCode)?.name ?? before.planCode} → ${plan.row.name}`);
       if (input.paymentStatus) changes.push(`Payment: ${before.paymentStatus ?? 'none'} → ${input.paymentStatus}`);
+      diff = changedFields(before as unknown as Record<string, unknown>, { planCode: plan.row.code, status: 'ACTIVE', currentPeriodStart: from, currentPeriodEnd: end, durationMonths: months, paymentStatus: input.paymentStatus });
       await tx.subscription.update({
         where: { tenantId: id },
         data: {
@@ -495,7 +500,7 @@ export class ConsoleService {
       });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_renewed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });
     });
-    await this.log(op.id, 'client.renewed', id, { reason: input.reason, changes }, ip);
+    await this.log(op.id, 'client.renewed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
@@ -505,11 +510,13 @@ export class ConsoleService {
    */
   async setState(op: OperatorContext, id: string, state: ClientState, reason: string, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let prevState: ClientState | null = null;
     await this.prisma.run({ tenantId: id }, async (tx) => {
       const t = await tx.tenant.findFirst({ where: { id, deletedAt: null }, include: { subscription: true } });
       if (!t) throw new NotFoundException(NOT_FOUND);
       if (t.status === 'PENDING_DELETION') throw new ForbiddenException({ code: 'PENDING_DELETION', message: 'This client is scheduled for deletion.' });
       const before = this.stateOf(t.status, t.subscription?.status ?? null);
+      prevState = before;
       if (before === state) return;
       changes.push(`Status: ${before} → ${state}`);
       await tx.tenant.update({ where: { id }, data: { status: state === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED' } });
@@ -521,7 +528,7 @@ export class ConsoleService {
     });
     if (changes.length) {
       // Sessions of a suspended client end at their next request: the workspace guard refuses a suspended tenant.
-      await this.log(op.id, 'client.state_changed', id, { reason, changes }, ip);
+      await this.log(op.id, 'client.state_changed', id, { reason, changes }, ip, { before: { state: prevState }, after: { state } });
     }
     return this.client(null, id, ip);
   }
@@ -529,6 +536,7 @@ export class ConsoleService {
   /** The Super Workspace's ceiling: which actions it may use in each module, and whether it creates Executive Workspaces. */
   async setAuthority(op: OperatorContext, id: string, input: ConsoleAuthorityInput, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       if (!(await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } }))) throw new NotFoundException(NOT_FOUND);
       await transactionLock(tx, `workspaces:${id}`);
@@ -548,10 +556,11 @@ export class ConsoleService {
         changes.push(`Super Workspace creates Executive Workspaces: ${root.canCreateExecutives ? 'yes' : 'no'} → ${input.canCreateExecutives ? 'yes' : 'no'}`);
       }
       if (!changes.length) return;
+      diff = changedFields({ actions: root.actions, canCreateExecutives: root.canCreateExecutives }, { actions: data.actions, canCreateExecutives: data.canCreateExecutives });
       await tx.workspaceNode.update({ where: { id: root.id }, data });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.permissions_changed', entityType: 'workspace', entityId: root.id, metadata: { operator: op.email, reason: input.reason, changes } });
     });
-    if (changes.length) await this.log(op.id, 'client.authority_changed', id, { reason: input.reason, changes }, ip);
+    if (changes.length) await this.log(op.id, 'client.authority_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
@@ -625,8 +634,8 @@ export class ConsoleService {
     };
   }
 
-  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, tenantId: targetTenantId, metadata, ip, ...extra });
   }
 }
 

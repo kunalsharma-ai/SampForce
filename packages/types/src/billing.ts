@@ -318,12 +318,20 @@ export interface PublicPricing {
 
 export interface PlatformAuditRow {
   id: string;
-  operator: { id: string; email: string } | null;
+  operator: { id: string; email: string; name: string } | null;
   action: string;
   targetTenantId: string | null;
   /** The client organisation the entry is about, by name. */
   client: { id: string; name: string | null } | null;
+  /** What the entry is about (ADR 0074, C3), with its name when it was written. */
+  target: { type: string; id: string | null; label: string | null } | null;
+  /** The changed fields before and after, secrets removed. Null when the entry records no change of values. */
+  before: unknown;
+  after: unknown;
   metadata: Record<string, unknown>;
+  ip: string | null;
+  sessionId: string | null;
+  userAgent: string | null;
   createdAt: string;
 }
 

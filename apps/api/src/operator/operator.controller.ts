@@ -38,12 +38,10 @@ import {
   type ProviderKeysUpdateInput,
   providerKeysUpdateSchema,
   z,
-  type PlatformAuditQuery,
-  platformAuditQuerySchema,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard, OperatorAny, OperatorPermission, OperatorTokens } from './operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorAny, OperatorNoAudit, OperatorPermission, OperatorTokens } from './operator-auth';
 import { ConsoleService } from './console.service';
 import { ConsoleShellService } from './console-shell.service';
 import { OperatorService } from './operator.service';
@@ -152,6 +150,8 @@ export class OperatorController {
 
   @Put('me/preferences')
   @OperatorAny()
+  // An operator's own theme and sound settings change nothing on the platform.
+  @OperatorNoAudit()
   setPreferences(@Operator() op: OperatorContext, @Body(new ZodPipe(consolePreferencesUpdateSchema)) body: ConsolePreferencesUpdate) {
     return this.shell.setPreferences(op, body);
   }
@@ -297,11 +297,5 @@ export class OperatorController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   checkProvider(@Operator() op: OperatorContext, @Param('key', new ZodPipe(z.enum(PROVIDER_CHECK_KEYS))) key: ProviderCheckKey, @Req() req: Request) {
     return this.ops.checkProvider(op, key, ip(req));
-  }
-
-  @Get('audit-log')
-  @OperatorPermission('audit.view')
-  auditLog(@Query(new ZodPipe(platformAuditQuerySchema)) q: PlatformAuditQuery) {
-    return this.ops.auditLog(q);
   }
 }

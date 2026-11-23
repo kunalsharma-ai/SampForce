@@ -7,6 +7,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import type { OperatorContext } from '../operator/operator-auth';
 import { blockReason, mobileAccessState } from './mobile-gate';
+import { writePlatformAudit, type PlatformAuditEntry } from '../operator/platform-audit';
 
 /** Which Console decision is allowed from which status, and where it leads. */
 const TRANSITIONS: Record<OperatorMobileAction, { from: MobileAccessStatus[]; to: MobileAccessStatus }> = {
@@ -211,7 +212,7 @@ export class MobileAccessService {
     return this.detail(op, tenantId, ip);
   }
 
-  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, tenantId: targetTenantId, metadata, ip, ...extra });
   }
 }

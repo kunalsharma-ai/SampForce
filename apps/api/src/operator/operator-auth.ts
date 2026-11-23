@@ -13,6 +13,7 @@ import { Reflector } from '@nestjs/core';
 import type { CookieOptions, Request, Response } from 'express';
 import { jwtVerify, SignJWT } from 'jose';
 import { BUILT_IN_ROLE_DEFS, defaultRoleKey, expandPermissions, isBuiltInRole, type OperatorPermission as Permission } from '@dealflow/types';
+import { auditContext } from '../common/audit-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { OPERATOR_SESSION_SECONDS, OperatorSessions } from './operator-sessions';
@@ -107,7 +108,13 @@ export const OperatorAny = () => SetMetadata(OPERATOR_ANY, true);
 const OPERATOR_PUBLIC = 'dealflow:operatorPublic';
 /** The login route: reachable without an operator session (but still 404 when the console is disabled). */
 export const OperatorPublic = () => SetMetadata(OPERATOR_PUBLIC, true);
-export const OPERATOR_ROUTE_METADATA = { permission: OPERATOR_PERMISSION, any: OPERATOR_ANY, public: OPERATOR_PUBLIC } as const;
+const OPERATOR_NO_AUDIT = 'dealflow:operatorNoAudit';
+/**
+ * A Console write that is not a change to the platform and so writes no platform audit entry (marking a
+ * notification read, saving one's own preferences). Every other write must record itself (AuditRequiredInterceptor).
+ */
+export const OperatorNoAudit = () => SetMetadata(OPERATOR_NO_AUDIT, true);
+export const OPERATOR_ROUTE_METADATA = { permission: OPERATOR_PERMISSION, any: OPERATOR_ANY, public: OPERATOR_PUBLIC, noAudit: OPERATOR_NO_AUDIT } as const;
 
 type OperatorRow = { id: string; email: string; name: string; role: 'ADMIN' | 'SUPPORT'; consoleRole: string | null };
 type RoleReader = Pick<PrismaService, 'operatorConsoleRole'>;
@@ -145,6 +152,8 @@ export class OperatorGuard implements CanActivate {
     const session = op && op.status === 'ACTIVE' ? await this.sessions.check(claims!.sid, op.id) : null;
     if (!op || !session) throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to the operator console.' });
     req.operator = { ...(await operatorContext(this.prisma, op)), sessionId: session.id, mfaSetupRequired: session.mfaSetupRequired };
+    const audit = auditContext();
+    if (audit) audit.sessionId = session.id;
     if (this.reflector.getAllAndOverride<boolean>(OPERATOR_ANY, targets)) return true;
     if (req.operator.mfaSetupRequired) throw new ForbiddenException({ code: 'MFA_SETUP_REQUIRED', message: 'Turn on two-step verification to use the Console.' });
     const needed = this.reflector.getAllAndOverride<Permission[]>(OPERATOR_PERMISSION, targets);

@@ -17,6 +17,7 @@ export const help = {
   'Roles & permissions': ['Roles y permisos', 'Rôles et autorisations', 'Rollen und Berechtigungen', 'الأدوار والصلاحيات'],
   Security: ['Seguridad', 'Sécurité', 'Sicherheit', 'الأمان'],
   'Account & security': ['Cuenta y seguridad', 'Compte et sécurité', 'Konto und Sicherheit', 'الحساب والأمان'],
+  'Activity & audit log': ['Actividad y registro de auditoría', 'Activité et journal d’audit', 'Aktivität und Prüfprotokoll', 'النشاط وسجل التدقيق'],
   // Help center feature guide
   'Feature guide': ['Guía de funciones', 'Guide des fonctions', 'Funktionsleitfaden', 'دليل الميزات'],
   'What every page and section is for, how to use it and when it helps. The same help opens from the i button next to each title.': [

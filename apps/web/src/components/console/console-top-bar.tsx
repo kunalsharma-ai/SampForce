@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Crumb } from './console-nav';
+import { NotificationBell } from './notifications';
 
 export function ConsoleBreadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
@@ -213,6 +214,7 @@ export function ConsoleTopBar({
         >
           <Search aria-hidden />
         </Button>
+        <NotificationBell sound={me.preferences.sound} />
         <Button
           variant="ghost"
           size="icon"
