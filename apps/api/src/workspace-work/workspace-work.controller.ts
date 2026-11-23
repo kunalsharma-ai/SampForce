@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   type AssignedTaskCreateInput,
   assignedTaskCreateSchema,
@@ -12,10 +12,13 @@ import {
   targetUpdateSchema,
   type TaskCommentInput,
   taskCommentSchema,
+  type WorkspaceDashboardQuery,
+  workspaceDashboardQuerySchema,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, OwnHierarchyRules, type RequestMeta, RequireFeature } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, OwnHierarchyRules, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AssignedTasksService } from './assigned-tasks.service';
+import { WorkspaceDashboardService } from './dashboard.service';
 import { TargetsService } from './targets.service';
 
 /**
@@ -100,5 +103,18 @@ export class AssignedTasksController {
   @OwnHierarchyRules()
   comment(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(taskCommentSchema)) body: TaskCommentInput, @Meta() meta: RequestMeta) {
     return this.tasks.comment(auth, id, body, meta);
+  }
+}
+
+/** The dashboard of the caller's workspace level (ADR 0071, part 6). */
+@Controller('workspace-dashboard')
+export class WorkspaceDashboardController {
+  constructor(private readonly dashboards: WorkspaceDashboardService) {}
+
+  @Get()
+  @RequirePermissions('dashboard:read')
+  @OwnHierarchyRules()
+  get(@Auth() auth: AuthContext, @Query(new ZodPipe(workspaceDashboardQuerySchema)) q: WorkspaceDashboardQuery) {
+    return this.dashboards.dashboard(auth, q.period ?? 'MONTH');
   }
 }

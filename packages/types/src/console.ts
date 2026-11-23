@@ -255,4 +255,6 @@ export interface ConsoleOverview {
   workspaces: { managers: number; executives: number };
   renewals: { id: string; name: string; renewsOn: string; planName: string; autoRenew: boolean }[];
   needsAttention: { id: string; name: string; why: string }[];
+  /** Support queries that reached the Console and wait on it, and how many clients raised them. */
+  support: { waiting: number; clients: number };
 }

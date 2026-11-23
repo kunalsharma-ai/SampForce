@@ -4,7 +4,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { Tr } from '@/lib/i18n';
-import { AuditLogTable } from './audit-log-table';
+import { AuditLogView } from '@/components/audit/audit-log-view';
+import { SuperOnly } from './super-only';
 import { SupportAccess } from './support-access';
 
 export const metadata: Metadata = { title: 'Administration' };
@@ -16,6 +17,7 @@ export default function AdministrationPage() {
         title="Administration"
         description="An append-only record of security-relevant and administrative events in this workspace."
       />
+      <SuperOnly>
       <Card className="mb-6">
         <CardContent className="p-0">
           <Link href="/app/administration/security" className="flex items-center gap-3 px-6 py-4 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
@@ -28,8 +30,9 @@ export default function AdministrationPage() {
           </Link>
         </CardContent>
       </Card>
+      </SuperOnly>
       <SupportAccess />
-      <AuditLogTable />
+      <AuditLogView />
     </div>
   );
 }

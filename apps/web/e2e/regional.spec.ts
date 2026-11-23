@@ -148,7 +148,7 @@ test('a language picked on the sign-up page carries over to the new account', as
   await page.getByLabel('Nombre de la organización').fill('Idioma SL');
   await page.getByRole('button', { name: 'Empieza gratis' }).click();
   await expect(page).toHaveURL(/\/app/);
-  await expect(page.getByRole('heading', { name: 'Panel de la alta dirección', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resumen de la organización', level: 1 })).toBeVisible();
 
   // The choice was saved to the account, so settings show it and the translated settings page passes axe.
   await page.goto('/app/settings');

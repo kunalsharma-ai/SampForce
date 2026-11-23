@@ -25,7 +25,8 @@ Center builds on them instead of writing a second set of help text.
 - **Support tickets.** The new `SupportTicket` and `SupportTicketMessage` models store:
   - A ticket number per organisation, the subject, topic, optional feature, priority, the page the person came from,
     and the source (web or mobile).
-  - The status: open, in progress, answered or closed.
+  - The status: Submitted, Under review, In progress, Awaiting user response, Resolved or Closed (see the full-spec
+    section below).
   - A handler level, which ADR 0071's part 5 uses to route tickets through the hierarchy.
 
   People raise tickets from "Other: raise a query" and follow them in My queries. A raiser can reply, close and reopen.
@@ -44,3 +45,67 @@ Center builds on them instead of writing a second set of help text.
 **Consequences.** A new feature needs its page guide in `@dealflow/help`, and FAQs where questions are likely. The
 package tests fail if any text is missing a language, or if a guide or category has no place. Guide titles returned by
 `GET /help` are English only, because title translations live in the web phrase tables.
+
+## Full Help & Support system (follow-up, 2026-11-22)
+
+Kunal's spec "Complete Help & Support System for All Workspaces" extended this decision as follows.
+
+- **Query tracking.**
+  - The six statuses are Submitted, Under review, In progress, Awaiting user response, Resolved and Closed.
+  - Status changes happen like this:
+    - Opening a submitted query in the Console or as its handler moves it to Under review.
+    - A handler's reply moves it to Awaiting user response.
+    - The raiser's reply moves it back to Under review.
+    - The raiser can mark a query Resolved or Closed, or reopen it.
+  - The raiser is notified of every status change.
+  - The query form adds:
+    - An "Other" topic with the person's own words.
+    - A related lead, contact, company or deal. A query raised from a record page links that record automatically.
+    - Up to five files of up to 10 MB each, stored as `SupportTicketAttachment`.
+    - A contact method (in the app, email or phone).
+    - The app version.
+  - The server captures the workspace, level, role and email itself.
+- **Console-written help.** Built-in help stays in `@dealflow/help`. The Console adds content stored in the database:
+  - `HelpArticle` holds Q&As, guides and announcements. English is required and the other languages fall back to
+    English. An article can target an audience, plan feature, workspace levels, roles and clients. It can also be
+    pinned and can have an https video link.
+  - `HelpArticleVersion` takes a snapshot on every save; restoring an old version saves it as a new version.
+  - `HelpCategoryEntry` holds topics and subtopics.
+  - `HelpMedia` holds pictures, video and PDFs. The first bytes of each upload are checked against its type. Images
+    and video are served inline with a sandbox CSP.
+  - An article with `builtinKey` (`faq:<id>` or `guide:<page id>`) replaces that built-in item. Archiving it hides the
+    built-in item.
+  - `GET /help/content` returns what the reader may see.
+  - The Console manages it all at `/operator/help/manage`: write, preview, publish, unpublish, archive, versions,
+    topics, files and feedback. The page is staff-only and written in English, like the other Console settings
+    pages. Every operator can read it; only administrators can write.
+- **Reader features.**
+  - "Was this helpful?" with an optional comment, stored as `HelpFeedback`: one answer per person and article, which
+    they can change. Totals are kept in `HelpArticleStat`, and the Console reviews comments.
+  - Views count toward Popular, using totals across everyone.
+  - Recently updated lists the Console's articles by update date, not personal history.
+  - "Last updated" appears everywhere. Built-in help uses `HELP_CONTENT_UPDATED`.
+  - Related articles come from the same topic.
+  - Search matches while typing, accepts parts of words, and groups results by topic. With no result, it suggests
+    guides.
+- **Guides.** Each page guide shows:
+  - "Who can use it": the plan feature, role permission and workspace levels, from `guideRequirements`.
+  - "If something goes wrong": troubleshooting steps and "Raise a query about this page".
+  - A start-here path for each role: Console Admin, Super Admin, Super, Manager and Executive (`ROLE_GUIDES`).
+
+  Every page's "i" button links to its full guide (`?guide=<page id>`). Detailed per-module troubleshooting beyond
+  these shared steps is written in the Console as articles, so it can follow the product without a release.
+- **Settings and restrictions.**
+  - `HelpSettings`, one per organisation, holds:
+    - The Console's per-client switch for answers and guides.
+    - The Super Workspace administrators' choices: whether to show the Help icon, whether to explain missing
+      features, and a note to show in Help.
+  - With Help off or the icon hidden, Help & support stays in the account menu, and raising and following queries
+    always works.
+  - `restrictedGuides` lists the pages a reader cannot use and why: their plan or workspace (ask the Super Workspace),
+    their role (ask an administrator) or their workspace level. They are never shown as available.
+- **Support reports.** `GET /operator/support/tickets/report` covers the last 7, 30, 90 or 365 days:
+  - Queries raised, and how many are still waiting.
+  - Counts by status, priority, topic, client, support person and source.
+  - Average and median time to first answer and to resolution.
+  - A per-day trend.

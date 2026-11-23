@@ -17,6 +17,8 @@ async function shot(page: Page, name: string, fullPage = false) {
 }
 
 async function axe(page: Page) {
+  // A pointer left over a button after a click would check its hover colour instead.
+  await page.mouse.move(0, 0);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
@@ -84,6 +86,12 @@ test('help at every level, a raised query and its answer from the Console', asyn
   await form.getByLabel('Feature (optional)').selectOption('data_export');
   await form.getByLabel('Details').fill('We need every open deal with its owner and stage in one file before Monday’s board meeting.');
   await form.getByText('High priority').click();
+  // A screenshot, a call back and what the app already knows.
+  await form.locator('#query-files').setInputFiles({ name: 'deals-board.png', mimeType: 'image/png', buffer: Buffer.from('a screenshot of the deals board') });
+  await expect(form.locator('[data-attached-file="deals-board.png"]')).toBeVisible();
+  await form.getByText('Phone', { exact: true }).click();
+  await form.getByLabel('Phone number').fill('+91 98765 43210');
+  await expect(form.locator('[data-query-context]')).toContainText('your workspace, role, email and app version');
   await expect(form.getByText('Sent with the page you came from: /app/deals')).toBeVisible();
   await axe(page);
   await shot(page, '06-raise-a-query');
@@ -94,7 +102,8 @@ test('help at every level, a raised query and its answer from the Console', asyn
   await expect(page).toHaveURL(/\/app\/help\/queries\?ticket=/);
   const thread = page.locator('[data-ticket-thread="1"]');
   await expect(thread).toContainText('Export deals to Excel for our board');
-  await expect(thread.locator('[data-ticket-status="OPEN"]')).toBeVisible();
+  await expect(thread.locator('[data-message-file="deals-board.png"]')).toBeVisible();
+  await expect(thread.locator('[data-ticket-status="SUBMITTED"]')).toBeVisible();
   await axe(page);
   await shot(page, '08-my-queries');
 
@@ -151,13 +160,29 @@ test('help at every level, a raised query and its answer from the Console', asyn
   const pane = ops.locator('[data-ticket-pane]');
   await expect(pane).toContainText(org);
   await expect(pane).toContainText('/app/deals');
+  await expect(pane).toContainText('+91 98765 43210');
+  await expect(pane.locator('[data-message-file="deals-board.png"]')).toBeVisible();
+  // Opening a new ticket marks it Under review.
+  await expect(pane.getByLabel('Ticket status')).toHaveValue('UNDER_REVIEW');
   await pane.getByLabel('Your answer').fill('Open Deals, choose the Table view, filter to open deals and choose Export. The file has the owner and stage columns.');
   await pane.getByRole('button', { name: 'Send answer' }).click();
-  await expect(pane.locator('[data-ticket-status="ANSWERED"]')).toHaveCount(0); // the pane uses a status picker
-  await expect(pane.getByLabel('Ticket status')).toHaveValue('ANSWERED');
+  await expect(pane.locator('[data-ticket-status="AWAITING_USER"]')).toHaveCount(0); // the pane uses a status picker
+  await expect(pane.getByLabel('Ticket status')).toHaveValue('AWAITING_USER');
   // Answered tickets leave the Open tab; they are found under Answered.
-  await ops.locator('[data-status-filter="ANSWERED"]').click();
+  await ops.locator('[data-status-filter="AWAITING_USER"]').click();
   await expect(ops.locator('[data-ticket]').filter({ hasText: org })).toBeVisible();
+
+  // Support reports: what was raised, by whom and how fast.
+  await ops.locator('[data-support-view="reports"]').click();
+  const report = ops.locator('[data-support-report]');
+  await expect(report.locator('[data-report-stat="raised"]')).not.toContainText(/^\D*0$/);
+  await expect(report.locator('[data-report-group="client"]')).toContainText(org);
+  await expect(report.locator('[data-report-group="topic"] [data-report-row="deals"]')).toBeVisible();
+  await report.locator('[data-report-days="7"]').click();
+  await expect(report.locator('[data-report-trend] li')).toHaveCount(7);
+  await axe(ops);
+  await shot(ops, '26-console-support-reports', true);
+  await ops.locator('[data-support-view="tickets"]').click();
   await axe(ops);
   await shot(ops, '11-console-support-tickets');
   await ops.getByRole('link', { name: 'Help', exact: true }).click();
@@ -172,12 +197,12 @@ test('help at every level, a raised query and its answer from the Console', asyn
   // ── The answer reaches the person who asked ──
   await page.reload();
   await expect(thread.locator('[data-message-author="OPERATOR"]')).toContainText('choose the Table view');
-  await expect(thread.locator('[data-ticket-status="ANSWERED"]')).toBeVisible();
+  await expect(thread.locator('[data-ticket-status="AWAITING_USER"]')).toBeVisible();
   await expect(thread.locator('[data-message-author="OPERATOR"]')).toContainText('SampForce support');
   await shot(page, '13-query-answered');
   await thread.getByLabel('Reply').fill('Thanks, that worked.');
   await thread.getByRole('button', { name: 'Send reply' }).click();
-  await expect(thread.locator('[data-ticket-status="OPEN"]')).toBeVisible();
+  await expect(thread.locator('[data-ticket-status="UNDER_REVIEW"]')).toBeVisible();
   await thread.getByRole('button', { name: 'Close query' }).click();
   await expect(thread.locator('[data-ticket-status="CLOSED"]')).toBeVisible();
 
