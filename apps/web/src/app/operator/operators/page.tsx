@@ -16,7 +16,7 @@ import {
 } from '@dealflow/ui';
 import type { ConsoleOperatorRow, OperatorInviteResult, OperatorRoleRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, KeyRound, Link2, MoreHorizontal, Plus, Power, ShieldCheck, UserCog } from 'lucide-react';
+import { Copy, KeyRound, Link2, LogOut, MoreHorizontal, Plus, Power, ShieldCheck, ShieldOff, UserCog } from 'lucide-react';
 import { useState } from 'react';
 import { ConsoleDenied, ConsoleEmpty, ConsoleError, ConsoleLoading } from '@/components/console/console-states';
 import { PageHeader } from '@/components/page-header';
@@ -64,6 +64,11 @@ export default function ConsoleOperatorsPage() {
       api<ConsoleOperatorRow>(`/operator/operators/${v.id}`, { method: 'PATCH', json: { status: v.status } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: KEY }),
   });
+  const security = useMutation({
+    mutationFn: (v: { id: string; action: 'mfa/reset' | 'sessions/end' }) => api(`/operator/operators/${v.id}/${v.action}`, { method: 'POST' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: KEY }),
+  });
+  const canSecurity = can(me.data, 'security.manage');
   const newLink = useMutation({
     mutationFn: (id: string) => api<OperatorInviteResult>(`/operator/operators/${id}/link`, { method: 'POST' }),
     onSuccess: (r) => {
@@ -110,7 +115,7 @@ export default function ConsoleOperatorsPage() {
           </Card>
         ))}
       </div>
-      <ErrorText error={setStatus.error ?? newLink.error} />
+      <ErrorText error={setStatus.error ?? newLink.error ?? security.error} />
       {list.error ? (
         <ConsoleError error={list.error} onRetry={() => void list.refetch()} />
       ) : list.isPending ? (
@@ -175,6 +180,16 @@ export default function ConsoleOperatorsPage() {
                             {o.status !== 'DISABLED' && (
                               <DropdownMenuItem onSelect={() => newLink.mutate(o.id)}>
                                 <Link2 aria-hidden /> {o.status === 'INVITED' ? 'New invitation link' : 'Password reset link'}
+                              </DropdownMenuItem>
+                            )}
+                            {canSecurity && o.mfaEnabled && (
+                              <DropdownMenuItem onSelect={() => security.mutate({ id: o.id, action: 'mfa/reset' })}>
+                                <ShieldOff aria-hidden /> Reset two-step verification
+                              </DropdownMenuItem>
+                            )}
+                            {canSecurity && o.status === 'ACTIVE' && (
+                              <DropdownMenuItem onSelect={() => security.mutate({ id: o.id, action: 'sessions/end' })}>
+                                <LogOut aria-hidden /> Sign out everywhere
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onSelect={() => setStatus.mutate({ id: o.id, status: o.status === 'DISABLED' ? 'ACTIVE' : 'DISABLED' })}>

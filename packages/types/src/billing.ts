@@ -275,6 +275,8 @@ export interface OperatorMe {
   roleName: string;
   /** Everything the operator may do; the Console hides what is not in this list. */
   permissions: import('./console-security').OperatorPermission[];
+  /** The security policy requires two-step verification and it is not on yet: only the account page opens. */
+  mfaSetupRequired?: boolean;
   /** The operator's Console palette, colour mode, sidebar and sound (ADR 0074). */
   preferences: import('./console-shell').ConsolePreferences;
 }

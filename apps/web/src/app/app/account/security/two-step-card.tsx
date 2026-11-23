@@ -17,10 +17,13 @@ function message(err: unknown): string {
   return err instanceof ApiError ? err.message : 'Could not reach SampForce. Check your connection.';
 }
 
-/** Two-step verification with an authenticator app: set up, recovery codes, turn off. */
-export function TwoStepCard() {
+/**
+ * Two-step verification with an authenticator app: set up, recovery codes, turn off. `base` points it at the Console
+ * operator's own endpoints (`/operator/me/mfa`, ADR 0074) instead of the workspace account's.
+ */
+export function TwoStepCard({ base = '/auth/mfa', onChanged }: { base?: string; onChanged?: () => void } = {}) {
   const t = useT();
-  const status = useMfaStatus();
+  const status = useMfaStatus(base);
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>({ kind: 'idle' });
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +40,12 @@ export function TwoStepCard() {
       setBusy(false);
     }
   };
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ['mfa'] }), qc.invalidateQueries({ queryKey: ['me'] }), qc.invalidateQueries({ queryKey: ['sessions'] })]);
+  const refresh = () => {
+    onChanged?.();
+    return base === '/auth/mfa'
+      ? Promise.all([qc.invalidateQueries({ queryKey: ['mfa'] }), qc.invalidateQueries({ queryKey: ['me'] }), qc.invalidateQueries({ queryKey: ['sessions'] })])
+      : qc.invalidateQueries({ queryKey: ['operator'] });
+  };
   const s = status.data;
 
   return (
@@ -74,7 +82,7 @@ export function TwoStepCard() {
             label={t('Continue')}
             intro={t('Confirm your password to start.')}
             onCancel={() => setStep({ kind: 'idle' })}
-            onSubmit={(password) => run(async () => setStep({ kind: 'scan', setup: await api<MfaSetupResponse>('/auth/mfa/setup', { method: 'POST', json: { password } }) }))}
+            onSubmit={(password) => run(async () => setStep({ kind: 'scan', setup: await api<MfaSetupResponse>(`${base}/setup`, { method: 'POST', json: { password } }) }))}
           />
         )}
         {step.kind === 'scan' && (
@@ -84,7 +92,7 @@ export function TwoStepCard() {
             onCancel={() => setStep({ kind: 'idle' })}
             onSubmit={(code) =>
               run(async () => {
-                const res = await api<MfaEnableResponse>('/auth/mfa/enable', { method: 'POST', json: { code } });
+                const res = await api<MfaEnableResponse>(`${base}/enable`, { method: 'POST', json: { code } });
                 setStep({ kind: 'codes', codes: res.recoveryCodes });
               })
             }
@@ -104,7 +112,7 @@ export function TwoStepCard() {
             intro={t('Enter a code from your authenticator app. Your old recovery codes stop working.')}
             label={t('Make new codes')}
             onCancel={() => setStep({ kind: 'idle' })}
-            onSubmit={(code) => run(async () => setStep({ kind: 'codes', codes: (await api<MfaEnableResponse>('/auth/mfa/recovery-codes', { method: 'POST', json: { code } })).recoveryCodes }))}
+            onSubmit={(code) => run(async () => setStep({ kind: 'codes', codes: (await api<MfaEnableResponse>(`${base}/recovery-codes`, { method: 'POST', json: { code } })).recoveryCodes }))}
           />
         )}
         {step.kind === 'disable' && (
@@ -113,7 +121,7 @@ export function TwoStepCard() {
             onCancel={() => setStep({ kind: 'idle' })}
             onSubmit={(password, code) =>
               run(async () => {
-                await api('/auth/mfa/disable', { method: 'POST', json: { password, code } });
+                await api(`${base}/disable`, { method: 'POST', json: { password, code } });
                 await refresh();
                 setStep({ kind: 'idle' });
               })

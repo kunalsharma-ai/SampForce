@@ -167,6 +167,11 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMenuOpen(false), [path]);
 
+  // When the policy requires two-step verification and it is not on yet, only the account page opens.
+  useEffect(() => {
+    if (me.data?.mfaSetupRequired && path !== '/operator/account') router.replace('/operator/account?setup=1');
+  }, [me.data?.mfaSetupRequired, path, router]);
+
   // A role without the overview (a support-only custom role) starts on the first page it may open.
   useEffect(() => {
     if (path === '/operator' && me.data && !can(me.data, 'clients.view')) {

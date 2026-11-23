@@ -1228,6 +1228,54 @@ export const organizationHelp = {
       'استخدمه لمنح كل مشغل ما يحتاجه عمله فقط.',
     ],
   },
+  'page.operatorAccount': {
+    title: 'Account & security',
+    what: [
+      'Your Console profile and role, two-step verification, the browsers you are signed in on and your recent sign-ins.',
+      'Tu perfil y rol en la consola, la verificación en dos pasos, los navegadores donde tienes sesión y tus accesos recientes.',
+      'Votre profil et votre rôle dans la console, la validation en deux étapes, les navigateurs connectés et vos connexions récentes.',
+      'Ihr Konsolenprofil und Ihre Rolle, die Bestätigung in zwei Schritten, Ihre angemeldeten Browser und letzten Anmeldungen.',
+      'ملفك ودورك في وحدة التحكم، والتحقق بخطوتين، والمتصفحات المسجّل دخولك فيها، وعمليات دخولك الأخيرة.',
+    ],
+    how: [
+      'Turn on two-step verification with an authenticator app and keep the recovery codes safe. Sign out a browser you no longer use.',
+      'Activa la verificación en dos pasos con una app de autenticación y guarda los códigos de recuperación. Cierra la sesión de un navegador que ya no uses.',
+      'Activez la validation en deux étapes avec une application d’authentification et gardez les codes de secours. Déconnectez un navigateur inutilisé.',
+      'Schalten Sie die Bestätigung in zwei Schritten mit einer Authenticator-App ein und bewahren Sie die Wiederherstellungscodes auf. Melden Sie unbenutzte Browser ab.',
+      'فعّل التحقق بخطوتين بتطبيق مصادقة واحفظ رموز الاسترداد. سجّل الخروج من متصفح لم تعد تستخدمه.',
+    ],
+    where: [
+      'Open it from your name in the top bar.',
+      'Ábrela desde tu nombre en la barra superior.',
+      'Ouvrez-la depuis votre nom dans la barre du haut.',
+      'Öffnen Sie sie über Ihren Namen in der oberen Leiste.',
+      'افتحها من اسمك في الشريط العلوي.',
+    ],
+  },
+  'page.operatorSecurity': {
+    title: 'Security',
+    what: [
+      'The Console sign-in policy, every open operator session, and every sign-in attempt with unusual ones flagged.',
+      'La política de acceso a la consola, cada sesión abierta de los operadores y cada intento de acceso, con los inusuales marcados.',
+      'La politique de connexion à la console, chaque session ouverte et chaque tentative de connexion, les inhabituelles signalées.',
+      'Die Anmelderichtlinie der Konsole, jede offene Sitzung und jeder Anmeldeversuch, ungewöhnliche markiert.',
+      'سياسة الدخول إلى وحدة التحكم، وكل جلسة مفتوحة، وكل محاولة دخول مع تمييز غير المعتادة.',
+    ],
+    how: [
+      'Require two-step verification for everyone, choose the idle time, sign out a session, and filter for unusual sign-ins.',
+      'Exige la verificación en dos pasos a todos, elige el tiempo de inactividad, cierra sesiones y filtra los accesos inusuales.',
+      'Exigez la validation en deux étapes, choisissez la durée d’inactivité, fermez une session et filtrez les connexions inhabituelles.',
+      'Verlangen Sie die Bestätigung in zwei Schritten, wählen Sie die Leerlaufzeit, beenden Sie Sitzungen und filtern Sie ungewöhnliche Anmeldungen.',
+      'اطلب التحقق بخطوتين من الجميع، واختر مدة الخمول، وأنهِ الجلسات، وصفِّ عمليات الدخول غير المعتادة.',
+    ],
+    where: [
+      'Check it after an alert, when someone leaves the team, or for regular security reviews.',
+      'Revísala tras una alerta, cuando alguien deja el equipo o en revisiones de seguridad.',
+      'Consultez-la après une alerte, au départ d’un membre de l’équipe ou lors des revues de sécurité.',
+      'Prüfen Sie sie nach einer Warnung, wenn jemand das Team verlässt, oder bei Sicherheitsprüfungen.',
+      'راجعها بعد تنبيه، أو عند مغادرة أحد الفريق، أو في مراجعات الأمان.',
+    ],
+  },
   'page.helpQueries': {
     title: 'My queries',
     what: [

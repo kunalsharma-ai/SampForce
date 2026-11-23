@@ -35,7 +35,8 @@ export class ConsoleShellService {
       where: { id: op.id },
       select: { preferences: true },
     });
-    return { ...op, preferences: normaliseConsolePreferences(row?.preferences) };
+    const { sessionId: _session, ...me } = op;
+    return { ...me, mfaSetupRequired: !!op.mfaSetupRequired, preferences: normaliseConsolePreferences(row?.preferences) };
   }
 
   async setPreferences(

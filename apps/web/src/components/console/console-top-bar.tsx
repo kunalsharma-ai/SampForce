@@ -27,6 +27,7 @@ import {
   Moon,
   Palette,
   Search,
+  ShieldCheck,
   Sun,
   Volume2,
   VolumeX,
@@ -255,6 +256,11 @@ export function ConsoleTopBar({
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/operator/account">
+                <ShieldCheck aria-hidden /> Account &amp; security
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onSignOut}>
               <LogOut aria-hidden /> Sign out
             </DropdownMenuItem>

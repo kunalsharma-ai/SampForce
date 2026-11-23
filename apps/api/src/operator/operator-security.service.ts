@@ -265,7 +265,9 @@ export class OperatorSecurityService {
     await this.prisma.platformOperator.update({ where: { id: op.id }, data: { mfaEnabledAt: new Date(), mfaLastStep: BigInt(step) } });
     await this.prisma.operatorRecoveryCode.deleteMany({ where: { operatorId: op.id } });
     await this.prisma.operatorRecoveryCode.createMany({ data: codes.map((c) => ({ operatorId: op.id, codeHash: hashCode(c) })) });
-    await this.audit(op.id, 'operator.mfa_enabled', {}, ip);
+    // As in workspaces: turning it on signs out the operator's other browsers, which signed in without a code.
+    const ended = await this.sessions.revokeAll(op.id, op.sessionId);
+    await this.audit(op.id, 'operator.mfa_enabled', ended ? { sessionsEnded: ended } : {}, ip);
     return { recoveryCodes: codes };
   }
 

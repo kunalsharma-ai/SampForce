@@ -33,3 +33,27 @@ health. The full specification, the audit of the Console as it was, and the ten-
 
 **Consequences.** The Console looks and navigates like the new design from C1, with today's features inside. Operator
 preferences follow the operator across devices. The "Operator log" menu item is now "Audit log".
+
+## C2: roles, permissions and sign-in security
+
+- **Permissions on every route.** 22 permissions (`OPERATOR_PERMISSIONS` in `@dealflow/types`) and six built-in roles
+  (Super Admin, Finance, Support, Sales, Operations, Read-only) plus custom roles (`operator_console_roles`). Each
+  operator route carries `@OperatorPermission(...)` or `@OperatorAny()`; `operator-routes.test.ts` fails on a route
+  with neither. An edit permission brings its view permission. The legacy `ADMIN`/`SUPPORT` field stays in step
+  (Super Admin = ADMIN), so the CLI and the last-admin guard keep working; operators made before C2 get Super Admin or
+  Support Admin. Support Admins no longer see billing or the audit log, as the spec's matrix sets out.
+- **No escalation.** Nobody can grant a permission they lack, change their own role or status, or remove the last
+  active Super Admin.
+- **Operators join by link.** A Super Admin adds an operator; a one-time link (72 hours, hash stored) is emailed, or
+  shown to copy when email is not set up. Reset links last an hour. Setting a password ends every open session.
+- **Sessions are rows.** The cookie names an `operator_sessions` row the guard checks on every request: it can be
+  listed, ended by its operator or a Super Admin, and ends after the policy's idle time (default 60 minutes). "Keep me
+  signed in" lasts 7 days instead of 8 hours. Sign-out ends the row, so a copied cookie stops working.
+- **Two-step verification** (TOTP, recovery codes, the same code as workspaces) is optional unless the security policy
+  requires it; an operator without it can then open only their account page. Requiring it needs it on for the person
+  asking. A Super Admin can reset a lost authenticator, which ends that operator's sessions.
+- **Lockout and history.** Five failures in a row pause sign-in for 15 minutes with the same answer as a wrong
+  password. Every attempt goes to `operator_login_events`; a success after three failures in an hour, or from an
+  address none of the last 20 sign-ins used, is flagged as unusual.
+- **Deviation from the spec:** two-step verification is not forced by default, so upgrading does not lock out
+  operators who have no authenticator yet; Super Admins switch the policy on.
