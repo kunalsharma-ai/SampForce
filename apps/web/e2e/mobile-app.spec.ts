@@ -179,4 +179,28 @@ test('the app adds and edits leads, contacts, follow-ups and tasks', async ({ pa
   await phone.getByLabel('Search leads and companies').fill('Harb');
   await expect(phone.getByRole('button', { name: /Harbour Labs/ })).toBeVisible();
   await shot(phone, '19-app-leads');
+
+  // Home: the cards now carry figures counted from the same records (one lead today, one deal in the pipeline).
+  // A Manager Workspace with a monthly lead target, for the targets screen.
+  const team = await page.request.post('/api/v1/workspaces', { data: { level: 'MANAGER', name: 'North Team', person: { inviteEmail: `north.${Date.now().toString(36)}@client.test` } }, headers: { origin: ORIGIN } });
+  expect(team.status()).toBe(201);
+  const today = new Date().toISOString().slice(0, 10);
+  expect((await page.request.post('/api/v1/targets', { data: { workspaceId: ((await team.json()) as { id: string }).id, metric: 'LEADS', period: 'MONTHLY', startsOn: today.slice(0, 8) + '01', amount: 4 }, headers: { origin: ORIGIN } })).status()).toBe(201);
+  await phone.getByRole('tab', { name: /Dashboard/ }).click();
+  const leadsToday = phone.getByRole('button', { name: 'Leads today' });
+  await expect(leadsToday).toContainText('1');
+  await expect(phone.getByRole('button', { name: 'Targets and achievement' })).toContainText('0 / 4');
+  await shot(phone, '20-app-home-figures');
+  await expectNoA11yViolations(phone);
+  // A tap opens the leads.
+  await leadsToday.click();
+  await expect(phone.getByRole('button', { name: /Harbour Labs/ })).toBeVisible();
+
+  // Sales targets from More.
+  await phone.goto(`${APP}/targets`);
+  await expect(phone.getByText('Targets are set on the web.')).toBeVisible();
+  await expect(phone.getByText('North Team · Monthly')).toBeVisible();
+  await expect(phone.getByText(/0 \/ 4 · 0%/)).toBeVisible();
+  await shot(phone, '21-app-targets');
+  await expectNoA11yViolations(phone);
 });

@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { MOBILE_DASHBOARD_CARD_DEFS, MOBILE_FIELDS, MOBILE_MODULE_DEFS, MOBILE_RECORD_MODULES_LIVE } from '@dealflow/types';
+import { MOBILE_CARD_EMPTY, MOBILE_DASHBOARD_CARD_DEFS, MOBILE_FIELDS, MOBILE_STAT_LABELS, TARGET_METRIC_LABEL, TARGET_PERIOD_LABEL, WORKSPACE_DASHBOARD_PERIOD_LABEL, MOBILE_MODULE_DEFS, MOBILE_RECORD_MODULES_LIVE } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import { HANDLER_LABEL, STATUS_LABEL } from '../src/lib/help-types';
 import { pickLanguage, setLanguage, t } from '../src/lib/i18n';
@@ -32,6 +32,12 @@ describe('app phrases', () => {
       ...Object.values(STATUS_LABEL),
       ...Object.values(HANDLER_LABEL),
       ...[5, 13, 20].map(greetingFor),
+      // Home screen figures and targets (M5).
+      ...MOBILE_STAT_LABELS,
+      ...MOBILE_CARD_EMPTY,
+      ...Object.values(TARGET_METRIC_LABEL),
+      ...Object.values(TARGET_PERIOD_LABEL),
+      ...Object.values(WORKSPACE_DASHBOARD_PERIOD_LABEL),
       // Record screens (M4): field names, priorities, statuses, date quick picks, follow-up lists.
       ...MOBILE_RECORD_MODULES_LIVE.flatMap((m) => MOBILE_FIELDS[m].map((f) => f.label)),
       ...Object.values(PRIORITY_LABEL),

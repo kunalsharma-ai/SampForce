@@ -122,3 +122,19 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   date picker can come with the store builds.
 - **Brand colour as text.** `primaryText` in the theme is the brand colour moved just far enough towards black (or
   white in dark mode) to read on cards, used for the active tab, so any brand colour passes WCAG AA.
+
+## M5: home screen figures and targets (2026-11-23)
+
+- **Routes.** `GET /mobile/dashboard?period=TODAY|WEEK|MONTH|QUARTER` and `GET /mobile/targets`, both `@MobileAccess()`.
+- **Same numbers as the web.** The dashboard reuses the web's level dashboard (ADR 0071 part 6: organisation,
+  team or day), the targets page and the CRM task and pipeline lists, so every figure matches what the web shows.
+  Only the cards the configuration chose for the person's level are built, and only what they need is loaded.
+- **Cards.** Each card carries headline numbers, bars or a short list, and target progress. A card that has nothing
+  to count says so in one plain sentence (no target set, no pipeline). Tapping a card opens the module behind it when
+  the person has that module. Deal amounts on the pipeline card follow the deals `amount` field rule, so Executives
+  see counts only by default. `showChart` decides whether the bars are drawn.
+- **Announcements.** SampForce has no announcements feature yet; the card says where they will appear. They come with
+  notifications (M8).
+- **Targets screen.** Read only, with achievement per target; targets are still set on the web.
+- **Reloading.** `useApi().reload` is now stable, so screens reload whenever they come back into view without
+  looping.
