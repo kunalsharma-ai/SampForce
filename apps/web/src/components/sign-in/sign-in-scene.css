@@ -265,7 +265,7 @@
 @keyframes sfs-stage-in { from { transform: translateY(30px) scale(0.92); } to { transform: none; } }
 .sfs-burst { animation: sfs-burst 1.6s cubic-bezier(0.2, 0.7, 0.3, 1) 0.5s both; }
 .sfs-burst-2 { animation-delay: 0.8s; }
-@keyframes sfs-burst { from { transform: scale(0.3); border-width: 6px; } to { transform: scale(2.4); border-width: 0; } }
+@keyframes sfs-burst { from { transform: scale(0.4); border-width: 6px; } to { transform: scale(1.05); border-width: 0; } }
 
 /* ── Light or dark, and the colour palette (the picker on every sign-in page) ── */
 .sfs-root[data-sfs-palette='rose'] { --sfs-hue: -42deg; --sfs-p-l: 322 72% 38%; --sfs-p-d: 322 85% 74%; }
