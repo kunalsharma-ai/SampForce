@@ -1,4 +1,6 @@
 import type { MobilePushStatus } from '@dealflow/types';
+import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { Avatar, Body, Button, Card, ErrorNote, Row, Screen, SectionLabel, Title } from '../../src/components/ui';
@@ -7,6 +9,9 @@ import { pushSupported, turnOffPush, turnOnPush } from '../../src/lib/push';
 import { t, tMaybe } from '../../src/lib/i18n';
 import { LEVEL_LABEL } from '../../src/lib/labels';
 import { useApi, useController, useSignedIn } from '../../src/lib/session';
+
+/** The app's privacy notice (app.json extra.privacyUrl), also linked from the store listings. */
+const PRIVACY_URL = (Constants.expoConfig?.extra as { privacyUrl?: string } | undefined)?.privacyUrl ?? null;
 
 /** Who is signed in, where, and on which phone; switching organisation and signing out. */
 export default function Profile() {
@@ -99,6 +104,11 @@ export default function Profile() {
         </>
       ) : null}
       {error ? <ErrorNote message={tMaybe(error)} /> : null}
+      {PRIVACY_URL ? (
+        <Card>
+          <Row icon="shield-checkmark-outline" label={t('Privacy policy')} onPress={() => void Linking.openURL(PRIVACY_URL)} last />
+        </Card>
+      ) : null}
       <Button kind="danger" label={t('Sign out')} onPress={() => void c.signOut()} />
     </Screen>
   );

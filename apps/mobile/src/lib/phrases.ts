@@ -296,4 +296,6 @@ export const PHRASES: Readonly<Record<string, readonly [string, string, string, 
   'Notifications arrive in the iPhone and Android app.': ['Las notificaciones llegan a la aplicación de iPhone y Android.', 'Les notifications arrivent dans l’application iPhone et Android.', 'Benachrichtigungen kommen in der iPhone- und Android-App an.', 'تصل الإشعارات إلى تطبيق iPhone وAndroid.'],
   'Allow notifications for SampForce in your phone’s settings.': ['Permite las notificaciones de SampForce en los ajustes del teléfono.', 'Autorisez les notifications de SampForce dans les réglages du téléphone.', 'Erlauben Sie Benachrichtigungen für SampForce in den Einstellungen Ihres Telefons.', 'اسمح بإشعارات SampForce في إعدادات هاتفك.'],
   'This build of the app cannot receive notifications yet.': ['Esta versión de la aplicación aún no puede recibir notificaciones.', 'Cette version de l’application ne peut pas encore recevoir de notifications.', 'Diese App-Version kann noch keine Benachrichtigungen empfangen.', 'لا يمكن لهذا الإصدار من التطبيق استلام الإشعارات بعد.'],
+  // Store preparation (M9).
+  'Privacy policy': ['Política de privacidad', 'Politique de confidentialité', 'Datenschutzerklärung', 'سياسة الخصوصية'],
 };

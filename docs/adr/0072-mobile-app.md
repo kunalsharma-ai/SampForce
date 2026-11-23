@@ -207,3 +207,24 @@ read and delivered marks and live events. There is no second chat back end.
 - **Not testable here.** Real delivery needs the Expo project with the APNs key and the FCM service account, and a
   real phone (simulators and the web build cannot get push tokens). The server side is tested against a stand-in of
   Expo's push service.
+
+## M9: ready for the App Store and Google Play (2026-11-23)
+
+- **One identity.** Name SampForce, bundle id and package `com.sampledge.sampforce`, phones only (`supportsTablet:
+  false`, so no iPad screenshots or review), `ITSAppUsesNonExemptEncryption: false` (HTTPS only, so no export
+  paperwork for each build).
+- **Icons and splash.** `scripts/make-store-assets.mjs` renders the web's `icon.svg` into the App Store icon (1024,
+  no transparency, as Apple requires), the Android adaptive icon foreground, the splash image and the white Android
+  notification icon. Run it again after the logo changes.
+- **Permissions.** Only the camera and photos (profile picture, with the reason shown) and notifications. The
+  microphone, location, storage and draw-over-apps permissions that libraries add are blocked on Android. The iOS
+  privacy manifest declares the system APIs React Native and Expo use, and no tracking.
+- **Privacy.** A public page `/app-privacy` on the web says what the app uses, where it goes and how to remove it;
+  the app links it from Profile (`extra.privacyUrl`). The app makes no accounts, so account deletion is the
+  organisation removing the person (Apple's rule applies to apps that create accounts).
+- **Builds.** `eas.json`: `preview` (internal, Android APK for testers) and `production` (store builds, build
+  numbers kept by EAS and raised on each build); `eas submit` sends the Android build to the internal track as a draft.
+- **Checked before a build.** `test/store.test.ts` reads `app.json`, `eas.json` and the PNG headers, so a missing
+  icon, a transparent App Store icon or a missing permission reason fails in tests rather than in store review.
+- **Left for the owner.** Apple and Google developer accounts, `eas init` (the project id that push needs), the APNs
+  key and FCM service account in Expo, store screenshots from a real build, the listing, and a reviewer sign-in.
