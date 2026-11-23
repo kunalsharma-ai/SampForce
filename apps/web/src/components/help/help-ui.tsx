@@ -26,6 +26,15 @@ import {
   ShieldCheck,
   Smartphone,
   UserRoundCog,
+  Kanban,
+  Gauge,
+  ListChecks,
+  FileText,
+  Sparkles,
+  ChartColumn,
+  Languages,
+  Server,
+  Cpu,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 
@@ -53,6 +62,15 @@ const ICONS: Record<string, LucideIcon> = {
   'key-round': KeyRound,
   'shield-check': ShieldCheck,
   'book-open': BookOpen,
+  kanban: Kanban,
+  gauge: Gauge,
+  'list-checks': ListChecks,
+  'file-text': FileText,
+  sparkles: Sparkles,
+  'chart-column': ChartColumn,
+  languages: Languages,
+  server: Server,
+  cpu: Cpu,
 };
 
 /** The icon names the Console may pick for a topic. */

@@ -2008,8 +2008,6 @@ export const organizationHelp = {
     how: [
       'Owners and administrators write a title and a message and post it. Everyone gets a notification; phones get one too where the Mobile Configuration allows announcements. Remove an announcement once it no longer applies.',
       'Los propietarios y administradores escriben un título y un mensaje y lo publican. Todos reciben una notificación; los teléfonos también, si la configuración móvil permite anuncios. Quita un anuncio cuando ya no aplique.',
-      'Les propriétaires et administrateurs saisissent un titre et un message puis publient. Chacun reçoit une notification, et les téléphones aussi si la configuration mobile autorise les annonces. Retirez une annonce qui ne s’applique plus.',
-      'Inhaber und Administratoren geben Titel und Nachricht ein und veröffentlichen sie. Alle erhalten eine Benachrichtigung, Telefone ebenfalls, wenn die mobile Konfiguration Ankündigungen erlaubt. Veraltete Ankündigungen können Sie entfernen.',
       'Les propriétaires et administrateurs saisissent un titre et un message puis publient. Chacun reçoit une notification, et les téléphones aussi si la configuration mobile autorise les annonces. Retirez-la quand elle ne s’applique plus.',
       'Inhaber und Administratoren geben Titel und Nachricht ein und veröffentlichen sie. Alle erhalten eine Benachrichtigung, Telefone ebenfalls, wenn die mobile Konfiguration Ankündigungen erlaubt. Entfernen Sie sie, wenn sie nicht mehr gilt.',
       'يكتب المالكون والمسؤولون عنوانًا ورسالة وينشرونها. يتلقى الجميع إشعارًا، وتتلقاه الهواتف أيضًا إذا سمحت الإعدادات المحمولة بالإعلانات. احذف الإعلان عندما لا يعود ساريًا.',

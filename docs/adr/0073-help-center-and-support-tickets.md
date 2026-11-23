@@ -109,3 +109,19 @@ Kunal's spec "Complete Help & Support System for All Workspaces" extended this d
   - Counts by status, priority, topic, client, support person and source.
   - Average and median time to first answer and to resolution.
   - A per-day trend.
+
+## Help & support button and Explore SampForce (2026-11-23)
+
+- Every workspace top bar and the Console top bar has a labelled **Help & support** button. It opens a side panel that
+  answers as you type (answers open in place; guides and features link into the Help Center), with links to the Help
+  Center, Explore SampForce, the FAQs, the feature guide, My queries and "Other: raise a query". In the Console it links
+  to Help, Manage Help content (admins) and the support tickets. A Super Workspace that hides the Help menu hides the
+  button; Help & support stays in the account menu.
+- **Explore SampForce** (`packages/help/src/product.ts`) describes every part of the product (13 feature briefs) and
+  its facilities (security, mobile app, languages, help and support, hosting, AI providers) in all five languages. Each
+  brief names the catalogue features it covers; a test fails if a catalogue feature is described by no brief. Readers
+  see whether each part is in their plan, partly or not, and the plans on offer come from the live catalogue.
+  A part the plan leaves out is shown only while the Super Workspace explains missing features.
+- The Console writes briefs as articles of kind `FEATURE` and may edit or hide a built-in brief (`feature:<id>`), with
+  the same drafts, versions, audiences, feedback and statistics as FAQs and guides. GET /help returns `briefs` for the
+  mobile app.

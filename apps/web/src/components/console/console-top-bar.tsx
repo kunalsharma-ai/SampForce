@@ -32,7 +32,10 @@ import {
   VolumeX,
 } from 'lucide-react';
 import Link from 'next/link';
+import { HelpSupportButton } from '@/components/help/help-panel';
 import type { Crumb } from './console-nav';
+
+const CONSOLE_READER = { audience: 'console' } as const;
 
 export function ConsoleBreadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
@@ -212,6 +215,7 @@ export function ConsoleTopBar({
         >
           <Search aria-hidden />
         </Button>
+        <HelpSupportButton reader={CONSOLE_READER} canManage={me.role === 'ADMIN'} />
         <Button
           variant="ghost"
           size="icon"
