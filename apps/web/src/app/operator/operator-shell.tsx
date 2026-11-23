@@ -1,48 +1,126 @@
 'use client';
 
-import { Badge, Button } from '@dealflow/ui';
-import { type OperatorMe, SUPPORT_WAITING_STATUSES } from '@dealflow/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Badge, Dialog, DialogContent, DialogTitle } from '@dealflow/ui';
+import {
+  type ConsoleClientDetail,
+  type ConsolePreferencesUpdate,
+  normaliseConsolePreferences,
+  type OperatorMe,
+  SUPPORT_WAITING_STATUSES,
+} from '@dealflow/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { ChatNotices } from '@/components/chat/chat-notices';
+import { ConsoleCommand } from '@/components/console/console-command';
+import { crumbsFor } from '@/components/console/console-nav';
+import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
+import { ConsoleTopBar } from '@/components/console/console-top-bar';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
-import { ChatNotices } from '@/components/chat/chat-notices';
 import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
+import { isDarkNow, useConsolePaint } from '@/lib/console-appearance';
+import { playConsoleSound } from '@/lib/console-sound';
 import { useOperatorTicketCounts } from '@/lib/support';
-import * as React from 'react';
+import { StateBadge } from './console-ui';
+
+const ME_KEY = ['operator', 'me'] as const;
 
 export function useOperator(enabled = true) {
-  return useQuery({ enabled, queryKey: ['operator', 'me'], queryFn: () => api<OperatorMe>('/operator/me'), retry: false });
+  return useQuery({
+    enabled,
+    queryKey: ME_KEY,
+    queryFn: () => api<OperatorMe>('/operator/me'),
+    retry: false,
+  });
 }
 
-/** Support chat in the console menu, with its unread count; keeps the live connection open on every console page. */
-function OperatorChatLink({ active }: { active: boolean }) {
-  const me = useOperator();
-  const realm = React.useMemo(() => (me.data ? operatorRealm(me.data.id) : null), [me.data]);
+/** Saves a palette, mode, sidebar or sound change for the operator, showing it at once (ADR 0074). */
+function usePreferenceSaver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: ['operator', 'preferences'],
+    mutationFn: (p: ConsolePreferencesUpdate) =>
+      api('/operator/me/preferences', { method: 'PUT', json: p }),
+    onMutate: (p) => {
+      const before = qc.getQueryData<OperatorMe>(ME_KEY);
+      if (before)
+        qc.setQueryData<OperatorMe>(ME_KEY, {
+          ...before,
+          preferences: normaliseConsolePreferences({ ...before.preferences, ...p }),
+        });
+      return { before };
+    },
+    onError: (_e, _p, ctx) => {
+      if (ctx?.before) qc.setQueryData(ME_KEY, ctx.before);
+    },
+  });
+}
+
+/** Plays the operator's feedback sounds, when they are on, as Console changes save or fail. */
+function useMutationSounds(on: boolean) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!on) return;
+    return qc.getMutationCache().subscribe((event) => {
+      if (event.type !== 'updated' || event.mutation.options.mutationKey?.[1] === 'preferences')
+        return;
+      if (event.action.type === 'success') playConsoleSound('success');
+      if (event.action.type === 'error') playConsoleSound('error');
+    });
+  }, [on, qc]);
+}
+
+/** Chat unread and tickets waiting, for the menu badges; keeps the support chat connection open on every page. */
+function useBadgeCounts(me: OperatorMe | undefined) {
+  const realm = React.useMemo(() => (me ? operatorRealm(me.id) : null), [me]);
   useChatLive(realm);
-  const unread = useChatUnread(realm).data?.total ?? 0;
-  return (
-    <>
-      <ChatNotices />
-      <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
-        Support chat
-        {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
-      </Link>
-    </>
-  );
+  const chat = useChatUnread(realm).data?.total ?? 0;
+  const counts = useOperatorTicketCounts(!!me);
+  const tickets = counts.data
+    ? SUPPORT_WAITING_STATUSES.reduce((n, st) => n + counts.data[st], 0)
+    : 0;
+  return { chat, tickets };
 }
 
-/** Support tickets raised from Help in every client's workspaces, with how many wait for an answer (ADR 0073). */
-function OperatorTicketsLink({ active }: { active: boolean }) {
-  const counts = useOperatorTicketCounts();
-  const waiting = counts.data ? SUPPORT_WAITING_STATUSES.reduce((n, st) => n + counts.data[st], 0) : 0;
+/** Keeps the client's name, plan and status in view on every page inside that client (ADR 0074). */
+function ClientContextBar({ id }: { id: string }) {
+  const client = useQuery({
+    queryKey: ['operator', 'client', id],
+    queryFn: () => api<ConsoleClientDetail>(`/operator/clients/${id}`),
+  });
+  if (!client.data) return null;
+  const c = client.data;
+  const initials = c.name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   return (
-    <Link href="/operator/support" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-tickets-waiting={waiting}>
-      Support tickets
-      {waiting > 0 && <span className="ms-1 rounded-full bg-warning px-1.5 text-[11px] font-semibold text-background">{waiting}</span>}
-    </Link>
+    <div
+      className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-surface/60 px-4 py-2 text-sm sm:px-6"
+      data-client-context={c.id}
+    >
+      <span
+        className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-primary/25 to-accent/25 text-[11px] font-semibold text-primary"
+        aria-hidden
+      >
+        {initials}
+      </span>
+      <Link href={`/operator/clients/${c.id}`} className="font-medium hover:underline">
+        {c.name}
+      </Link>
+      <StateBadge state={c.state} />
+      {c.subscription && <span className="text-muted-foreground">{c.subscription.planName}</span>}
+      <span className="text-muted-foreground tabular">
+        {c.people} {c.people === 1 ? 'person' : 'people'} · {c.usage.managers} manager ·{' '}
+        {c.usage.executives} executive workspaces
+      </span>
+    </div>
   );
 }
 
@@ -52,10 +130,31 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
   const onLogin = path === '/operator/login';
   const me = useOperator(!onLogin);
+  const save = usePreferenceSaver();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const prefs = me.data?.preferences ?? null;
+  useConsolePaint(prefs);
+  useMutationSounds(!!prefs?.sound);
+  const counts = useBadgeCounts(me.data);
 
   useEffect(() => {
-    if (!onLogin && me.error instanceof ApiError && me.error.status === 401) router.replace('/operator/login');
+    if (!onLogin && me.error instanceof ApiError && me.error.status === 401)
+      router.replace('/operator/login');
   }, [me.error, onLogin, router]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && me.data) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [me.data]);
+
+  useEffect(() => setMenuOpen(false), [path]);
 
   const signOut = async () => {
     await api('/operator/logout', { method: 'POST' }).catch(() => undefined);
@@ -63,62 +162,90 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
     router.replace('/operator/login');
   };
 
-  return (
-    <div className="min-h-screen">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
-          <Logo compact />
-          <span className="font-semibold">Console Admin</span>
-          <Badge tone="warning">Platform staff</Badge>
-          {me.data && (
-            <nav aria-label="Operator" className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-              <Link href="/operator" className={path === '/operator' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Overview
-              </Link>
-              <Link href="/operator/clients" className={path.startsWith('/operator/clients') || path.startsWith('/operator/tenants') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Clients
-              </Link>
-              <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Plans
-              </Link>
-              <Link href="/operator/mobile" className={path.startsWith('/operator/mobile') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Mobile app
-              </Link>
-              <OperatorChatLink active={path === '/operator/chat'} />
-              <OperatorTicketsLink active={path === '/operator/support'} />
-              <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Operator log
-              </Link>
-              <Link href="/operator/providers" className={path === '/operator/providers' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Providers
-              </Link>
-              <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Settings
-              </Link>
-              <Link href="/operator/help" className={path.startsWith('/operator/help') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Help
-              </Link>
-            </nav>
-          )}
-          {me.data && (
-            <div className="ms-auto flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground">
-                {me.data.name} · {me.data.role === 'ADMIN' ? 'Admin' : 'Support'}
-              </span>
-              <Button size="sm" variant="outline" onClick={signOut}>
-                Sign out
-              </Button>
-            </div>
-          )}
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        {me.error instanceof ApiError && me.error.status === 404 ? (
-          <p className="text-sm text-muted-foreground">The operator console is not enabled on this deployment.</p>
-        ) : (
-          children
-        )}
+  const clientId = /^\/operator\/clients\/([^/]+)/.exec(path)?.[1] ?? null;
+  // The same query the client page and the client bar use, so the breadcrumb shows the client's name once it loads.
+  const clientName = useQuery({
+    enabled: !!clientId && !!me.data,
+    queryKey: ['operator', 'client', clientId],
+    queryFn: () => api<ConsoleClientDetail>(`/operator/clients/${clientId}`),
+  }).data?.name;
+  const crumbs = crumbsFor(
+    path,
+    clientId && clientName ? { [`/operator/clients/${clientId}`]: clientName } : {},
+  );
+
+  if (onLogin) return <div className="min-h-screen bg-background">{children}</div>;
+
+  if (me.error instanceof ApiError && me.error.status === 404)
+    return (
+      <main className="grid min-h-screen place-items-center bg-background p-6">
+        <p className="text-sm text-muted-foreground">
+          The operator console is not enabled on this deployment.
+        </p>
       </main>
+    );
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <ChatNotices />
+      {me.data && (
+        <ConsoleSidebar
+          collapsed={me.data.preferences.sidebarCollapsed}
+          counts={counts}
+          onToggle={() => save.mutate({ sidebarCollapsed: !me.data!.preferences.sidebarCollapsed })}
+        />
+      )}
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent side="left" className="flex w-[280px] flex-col p-0 pt-4">
+          <DialogTitle className="flex items-center gap-2 px-4 pb-4 text-sm font-semibold">
+            <Logo compact /> SampForce Console
+          </DialogTitle>
+          {me.data && (
+            <ConsoleSidebarNav
+              collapsed={false}
+              counts={counts}
+              onNavigate={() => setMenuOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {me.data ? (
+          <ConsoleTopBar
+            me={me.data}
+            crumbs={crumbs}
+            onSearch={() => setSearchOpen(true)}
+            onMenu={() => setMenuOpen(true)}
+            onPreferences={(p) => save.mutate(p)}
+            onSignOut={signOut}
+          />
+        ) : (
+          <header className="flex h-16 items-center gap-3 border-b border-border/70 px-6">
+            <Logo compact />
+            <span className="font-semibold">SampForce Console</span>
+            <Badge tone="warning">Platform staff</Badge>
+          </header>
+        )}
+        {clientId && me.data && <ClientContextBar id={clientId} />}
+        <motion.main
+          key={path}
+          initial={{ y: 6 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.15 }}
+          className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8"
+        >
+          {children}
+        </motion.main>
+      </div>
+      {me.data && (
+        <ConsoleCommand
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          dark={isDarkNow(me.data.preferences.mode)}
+          sound={me.data.preferences.sound}
+          onPreferences={(p) => save.mutate(p)}
+        />
+      )}
     </div>
   );
 }

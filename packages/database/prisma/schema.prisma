@@ -2655,6 +2655,8 @@ model PlatformOperator {
   role         OperatorRole   @default(SUPPORT)
   status       OperatorStatus @default(ACTIVE)
   lastLoginAt  DateTime?      @map("last_login_at")
+  /// Console palette, colour mode, sidebar and sound (ADR 0074, ConsolePreferences in @dealflow/types); null = defaults.
+  preferences  Json?
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
