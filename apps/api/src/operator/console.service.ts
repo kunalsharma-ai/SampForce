@@ -255,7 +255,8 @@ export class ConsoleService {
     }
   }
 
-  private async rows(where: Prisma.TenantWhereInput): Promise<ConsoleClientRow[]> {
+  /** Clients matching `where`, newest first, with their subscription, usage and logo. */
+  async rows(where: Prisma.TenantWhereInput, take = 500): Promise<ConsoleClientRow[]> {
     await this.ensureCustomerNumbers();
     const [plans, defs] = await Promise.all([this.planRows(), planDefinitions(this.prisma as unknown as TenantTx)]);
     const byCode = new Map(plans.map((p) => [p.code, p]));
@@ -264,7 +265,7 @@ export class ConsoleService {
         where: { deletedAt: null, ...where },
         include: { subscription: true, _count: { select: { memberships: { where: { status: 'ACTIVE' } } } } },
         orderBy: { createdAt: 'desc' },
-        take: 500,
+        take,
       });
       const ids = tenants.map((t) => t.id);
       const [nodes, owners, logos] = await Promise.all([
@@ -285,14 +286,30 @@ export class ConsoleService {
     });
   }
 
+  /**
+   * What the clients search matches: the name, legal name or slug, the customer ID ("SF-000123", "SF123" or "123")
+   * and the email of an administrator.
+   */
+  async searchWhere(search: string | undefined): Promise<Prisma.TenantWhereInput> {
+    const q = search?.trim();
+    if (!q) return {};
+    const number = /^(?:SF-?)?0*(\d{1,9})$/i.exec(q)?.[1];
+    const byEmail = q.includes('@')
+      ? await this.prisma.run({ operatorScan: true }, async (tx) => {
+          const users = await tx.user.findMany({ where: { email: { contains: q.toLowerCase(), mode: 'insensitive' } }, select: { id: true }, take: 50 });
+          if (!users.length) return [];
+          const m = await tx.membership.findMany({ where: { userId: { in: users.map((u) => u.id) }, role: { key: 'owner' } }, select: { tenantId: true }, take: 200 });
+          return [...new Set(m.map((x) => x.tenantId))];
+        })
+      : [];
+    const text = { contains: q, mode: 'insensitive' as const };
+    return {
+      OR: [{ name: text }, { slug: text }, { legalName: text }, ...(number ? [{ customerNumber: Number(number) }] : []), ...(byEmail.length ? [{ id: { in: byEmail } }] : [])],
+    };
+  }
+
   async clients(op: OperatorContext, search: string | undefined, ip: string | null): Promise<ConsoleClientRow[]> {
-    // "SF-000123", "SF123" or "123" also finds the client by its customer ID.
-    const number = search ? /^(?:SF-?)?0*(\d{1,9})$/i.exec(search.trim())?.[1] : undefined;
-    const rows = await this.rows(
-      search
-        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { slug: { contains: search, mode: 'insensitive' } }, { legalName: { contains: search, mode: 'insensitive' } }, ...(number ? [{ customerNumber: Number(number) }] : [])] }
-        : {},
-    );
+    const rows = await this.rows(await this.searchWhere(search));
     await this.log(op.id, 'clients.listed', null, { search: search ?? null, results: rows.length }, ip);
     return rows;
   }

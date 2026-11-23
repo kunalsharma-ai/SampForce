@@ -360,3 +360,73 @@ export const consoleCityQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
+
+// ───────────── Clients list: filters, sort, paging, bulk actions (ADR 0074, C4b) ─────────────
+
+export const CONSOLE_CLIENT_SORTS = ['name', 'customerId', 'country', 'plan', 'payment', 'state', 'people', 'managers', 'executives', 'created', 'renews'] as const;
+export type ConsoleClientSort = (typeof CONSOLE_CLIENT_SORTS)[number];
+export const CONSOLE_CLIENT_PAGE_SIZES = [25, 50, 100] as const;
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), z.enum(values).optional());
+
+/** GET /operator/clients/page and /operator/clients/export: every filter is optional and they combine. */
+export const consoleClientListQuerySchema = z.object({
+  /** Name, legal name, slug, customer ID ("SF-000123", "123") or an administrator's email. */
+  search: z.string().trim().max(100).optional(),
+  state: optionalEnum(CLIENT_STATES),
+  plan: z.string().trim().max(60).optional(),
+  billing: optionalEnum(BILLING_FREQUENCIES),
+  country: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()).optional().or(z.literal('').transform(() => undefined)),
+  /** A payment status, or NONE for clients without one. */
+  payment: optionalEnum([...PAYMENT_STATUSES, 'NONE'] as const),
+  createdFrom: isoDay.optional().or(z.literal('').transform(() => undefined)),
+  createdTo: isoDay.optional().or(z.literal('').transform(() => undefined)),
+  sort: z.enum(CONSOLE_CLIENT_SORTS).default('created'),
+  dir: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  perPage: z.coerce.number().int().refine((n) => (CONSOLE_CLIENT_PAGE_SIZES as readonly number[]).includes(n), 'Choose 25, 50 or 100 per page.').default(25),
+});
+export type ConsoleClientListQuery = z.infer<typeof consoleClientListQuerySchema>;
+
+export interface ConsoleClientPage {
+  items: ConsoleClientRow[];
+  total: number;
+  page: number;
+  perPage: number;
+}
+
+export const CONSOLE_BULK_ACTIONS = ['state', 'extend', 'feature', 'notify'] as const;
+export type ConsoleBulkAction = (typeof CONSOLE_BULK_ACTIONS)[number];
+/** Typed by the operator before a bulk action that takes access away. */
+export const BULK_CONFIRM_WORD = 'CONFIRM';
+
+/**
+ * POST /operator/clients/bulk: one action over up to 200 clients. Suspending or deactivating needs `confirm` set to
+ * CONFIRM. Each client is changed (and audited) on its own; one more entry records the run.
+ */
+export const consoleClientBulkSchema = z
+  .discriminatedUnion('action', [
+    z.object({ action: z.literal('state'), ids: z.array(z.string().uuid()).min(1).max(200), state: z.enum(CLIENT_STATES), reason, confirm: z.string().optional() }).strict(),
+    z.object({ action: z.literal('extend'), ids: z.array(z.string().uuid()).min(1).max(200), days: z.number().int().min(1).max(366), reason }).strict(),
+    z.object({ action: z.literal('feature'), ids: z.array(z.string().uuid()).min(1).max(200), feature: featureKeySchema, enabled: z.boolean().nullable(), reason }).strict(),
+    z
+      .object({ action: z.literal('notify'), ids: z.array(z.string().uuid()).min(1).max(200), subject: z.string().trim().min(3).max(150), message: z.string().trim().min(10).max(5000) })
+      .strict(),
+  ])
+  .superRefine((v, ctx) => {
+    if (v.action === 'state' && v.state !== 'ACTIVE' && v.confirm !== BULK_CONFIRM_WORD) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['confirm'], message: 'Type CONFIRM to change these clients.' });
+    }
+  });
+export type ConsoleClientBulkInput = z.infer<typeof consoleClientBulkSchema>;
+
+export interface ConsoleClientBulkResult {
+  action: ConsoleBulkAction;
+  /** Clients the action changed (or emailed). */
+  done: { id: string; name: string }[];
+  /** Clients it left as they were, with why: already in that state, no subscription, no administrator… */
+  skipped: { id: string; name: string; reason: string }[];
+  failed: { id: string; name: string; reason: string }[];
+}

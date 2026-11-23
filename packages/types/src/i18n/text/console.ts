@@ -132,6 +132,8 @@ export const consoleAdmin = {
   'Use an image between 32 and 4096 pixels wide.': ['Usa una imagen de entre 32 y 4096 píxeles de ancho.', 'Utilisez une image de 32 à 4096 pixels de large.', 'Verwenden Sie ein Bild zwischen 32 und 4096 Pixel Breite.', 'استخدم صورة يتراوح عرضها بين 32 و4096 بكسل.'],
   'This client has no logo.': ['Este cliente no tiene logotipo.', 'Ce client n’a pas de logo.', 'Dieser Kunde hat kein Logo.', 'ليس لهذا العميل شعار.'],
   'Choose a state or province from the list.': ['Elige un estado o provincia de la lista.', 'Choisissez un État ou une province dans la liste.', 'Wählen Sie ein Bundesland oder eine Provinz aus der Liste.', 'اختر ولاية أو مقاطعة من القائمة.'],
+  'Type CONFIRM to change these clients.': ['Escribe CONFIRM para cambiar estos clientes.', 'Saisissez CONFIRM pour modifier ces clients.', 'Geben Sie CONFIRM ein, um diese Kunden zu ändern.', 'اكتب CONFIRM لتغيير هؤلاء العملاء.'],
+  'Choose 25, 50 or 100 per page.': ['Elige 25, 50 o 100 por página.', 'Choisissez 25, 50 ou 100 par page.', 'Wählen Sie 25, 50 oder 100 pro Seite.', 'اختر 25 أو 50 أو 100 في الصفحة.'],
   'That city is already in the list.': ['Esa ciudad ya está en la lista.', 'Cette ville est déjà dans la liste.', 'Diese Stadt ist bereits in der Liste.', 'هذه المدينة موجودة بالفعل في القائمة.'],
   'That city is not in the list.': ['Esa ciudad no está en la lista.', 'Cette ville n’est pas dans la liste.', 'Diese Stadt ist nicht in der Liste.', 'هذه المدينة غير موجودة في القائمة.'],
   'That change was not found.': ['No se encontró ese cambio.', 'Cette modification est introuvable.', 'Diese Änderung wurde nicht gefunden.', 'لم يتم العثور على هذا التغيير.'],
