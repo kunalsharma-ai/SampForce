@@ -22,6 +22,7 @@ import {
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CrmAdminService } from './crm-admin.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const kindParam = new ZodPipe(z.enum(OPTION_LIST_KINDS));
 const valueParam = new ZodPipe(z.string().regex(/^[A-Z][A-Z0-9_]{0,59}$/));
@@ -59,6 +60,7 @@ export class CrmAdminController {
     return this.admin.updateOption(auth, kind, value, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('options/:kind/:value')
   @HttpCode(204)
   @RequirePermissions('crm:configure')
@@ -96,6 +98,7 @@ export class CrmAdminController {
     return this.admin.addRate(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('currency/rates/:currency')
   @RequirePermissions('crm:configure')
   removeRate(@Auth() auth: AuthContext, @Param('currency', currencyParam) currency: string, @Meta() meta: RequestMeta) {

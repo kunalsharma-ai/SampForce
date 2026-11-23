@@ -1,6 +1,19 @@
 import { cn } from '@dealflow/ui';
 import { useId } from 'react';
 
+/** The mark's shapes, shared with the animated sign-in mark (ADR 0075) so the two can never drift apart. */
+export const LOGO_PARTS = {
+  streaks: [
+    { x: 1, y: 19, width: 10, height: 3.4 },
+    { x: -2, y: 27.5, width: 8, height: 3.4 },
+    { x: 2, y: 47, width: 9, height: 3.4 },
+  ],
+  upper: '41,2 13,37.5 31.5,37.5 36.5,27',
+  lower: '33,27 53,27 24,62 29.5,37.5',
+  joined: '41,2 13,37.5 29.5,37.5 24,62 53,27 36.5,27',
+  spark: 'M55 4C55.6 7.4 55.6 7.4 59 8C55.6 8.6 55.6 8.6 55 12C54.4 8.6 54.4 8.6 51 8C54.4 7.4 54.4 7.4 55 4Z',
+} as const;
+
 /**
  * SampForce mark: a two-part lightning bolt with speed streaks and a spark (Sampledge brand artwork, ADR 0055).
  * Static here; the animated original is in public/brand/sampforce-icon.svg for marketing use.
@@ -28,15 +41,31 @@ export function LogoMark({ className }: { className?: string }) {
           <stop offset=".55" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect x="1" y="19" width="10" height="3.4" rx="1.7" fill={`url(#${a})`} />
-      <rect x="-2" y="27.5" width="8" height="3.4" rx="1.7" fill={`url(#${a})`} />
-      <rect x="2" y="47" width="9" height="3.4" rx="1.7" fill={`url(#${b})`} />
-      <polygon points="41,2 13,37.5 31.5,37.5 36.5,27" fill={`url(#${a})`} />
-      <polygon points="41,2 13,37.5 31.5,37.5 36.5,27" fill={`url(#${h})`} />
-      <polygon points="33,27 53,27 24,62 29.5,37.5" fill={`url(#${b})`} />
-      <polygon points="33,27 53,27 24,62 29.5,37.5" fill={`url(#${h})`} opacity=".5" />
-      <path d="M55 4C55.6 7.4 55.6 7.4 59 8C55.6 8.6 55.6 8.6 55 12C54.4 8.6 54.4 8.6 51 8C54.4 7.4 54.4 7.4 55 4Z" fill="#FFC857" />
+      {LOGO_PARTS.streaks.map((s, i) => (
+        <rect key={i} {...s} rx="1.7" fill={`url(#${i === 2 ? b : a})`} />
+      ))}
+      <polygon points={LOGO_PARTS.upper} fill={`url(#${a})`} />
+      <polygon points={LOGO_PARTS.upper} fill={`url(#${h})`} />
+      <polygon points={LOGO_PARTS.lower} fill={`url(#${b})`} />
+      <polygon points={LOGO_PARTS.lower} fill={`url(#${h})`} opacity=".5" />
+      <path d={LOGO_PARTS.spark} fill="#FFC857" />
     </svg>
+  );
+}
+
+/** The wordmark as it sits on SampForce red (the sign-in scenes): the logo's own dark-theme colours. */
+export function LogoOnRed({ className }: { className?: string }) {
+  return (
+    <span className={cn('inline-flex items-center gap-2', className)}>
+      <LogoMark />
+      <span className="leading-tight">
+        <span className="block text-base font-semibold tracking-tight" translate="no">
+          <span className="text-slate-300">Samp</span>
+          <span className="bg-gradient-to-r from-[#FF8A8A] to-[#FFC857] bg-clip-text font-bold text-transparent">Force</span>
+        </span>
+        <span className="block text-[10px] uppercase tracking-[0.18em] text-white/80">by Sampledge</span>
+      </span>
+    </span>
   );
 }
 

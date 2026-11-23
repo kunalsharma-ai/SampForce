@@ -17,6 +17,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { authEvents } from '../observability/metrics';
 import { SecurityService } from './security.service';
 import { SSO_STATE_TTL_MS, SsoFailure, SsoService } from './sso.service';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 
 const SSO_COOKIE = 'df_sso';
 const SSO_COOKIE_PATH = '/api/v1/auth/sso';
@@ -93,6 +94,7 @@ export class SecurityController {
     return this.security.saveSso(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('sso')
   @HttpCode(204)
   @RequirePermissions('tenant:manage')
@@ -107,6 +109,7 @@ export class SecurityController {
     return this.security.createScimToken(auth, body.name, meta);
   }
 
+  @NoPasswordConfirmation('Revokes a directory token; withdrawing access must stay quick')
   @Delete('scim-tokens/:id')
   @HttpCode(204)
   @RequirePermissions('tenant:manage')

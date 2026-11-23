@@ -10,6 +10,8 @@ export interface AuditEntry {
   actorUserId: string | null;
   actorType?: 'USER' | 'SYSTEM' | 'AI_AGENT' | 'PLATFORM_ADMIN';
   action: string;
+  /** REFUSED for an attempt the system turned down (no permission, wrong password); DONE otherwise. */
+  outcome?: 'DONE' | 'REFUSED';
   entityType?: string;
   entityId?: string;
   metadata?: Record<string, unknown>;
@@ -32,6 +34,7 @@ export class AuditService {
         actorUserId: entry.actorUserId,
         actorType: scope ? 'SYSTEM' : (entry.actorType ?? 'USER'),
         action: entry.action,
+        outcome: entry.outcome ?? 'DONE',
         entityType: entry.entityType ?? null,
         entityId: entry.entityId ?? null,
         metadata: metadata as Prisma.InputJsonValue,
@@ -40,7 +43,7 @@ export class AuditService {
         requestId: entry.meta?.requestId || null,
       },
     });
-    const types = domainEventsFor(entry.action, entry.metadata);
+    const types = entry.outcome === 'REFUSED' ? [] : domainEventsFor(entry.action, entry.metadata);
     if (types.length > 0) {
       await tx.domainEvent.createMany({
         data: types.map((type) => ({

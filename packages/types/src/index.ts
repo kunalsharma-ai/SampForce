@@ -66,3 +66,4 @@ export * from './workspace-dashboard';
 export * from './audit';
 export * from './console-activity';
 export * from './console-notifications';
+export * from './notification-center';

@@ -3,6 +3,7 @@ import { type DomainEventType, webhookInputSchema, z } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { WebhooksService } from './webhooks.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const updateSchema = webhookInputSchema.partial().extend({ active: z.boolean().optional() });
 
@@ -34,6 +35,7 @@ export class WebhooksController {
     return this.webhooks.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('integrations:manage')

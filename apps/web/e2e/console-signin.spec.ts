@@ -63,6 +63,9 @@ test('Console sign-in: new sign-in page, two-step verification, sessions and the
   await ops.getByLabel('Password').fill(password);
   await ops.getByLabel('Keep me signed in for 7 days').check();
   await ops.getByRole('button', { name: 'Sign in' }).click();
+  // The Console's own welcome (ADR 0075) shows once, then steps aside.
+  await expect(ops.locator('[data-welcome="console"]').getByRole('status')).toHaveText('Welcome back, Noor');
+  await expect(ops.locator('[data-welcome]')).toHaveCount(0, { timeout: 5000 });
   await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
   // A second browser, to sign out from the first.

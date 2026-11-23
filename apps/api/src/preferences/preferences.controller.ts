@@ -15,6 +15,7 @@ import { AllowRestricted, Auth, type AuthContext, Meta, type RequestMeta, Requir
 import { ZodPipe } from '../common/zod.pipe';
 import { NavigationService } from './navigation.service';
 import { PreferencesService } from './preferences.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 
@@ -38,6 +39,7 @@ export class PreferencesController {
     return this.prefs.save(auth, body);
   }
 
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
   @Delete('preferences/appearance')
   reset(@Auth() auth: AuthContext) {
     return this.prefs.reset(auth);
@@ -55,6 +57,7 @@ export class PreferencesController {
     return this.prefs.saveRegional(auth, body);
   }
 
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
   @Delete('regional')
   resetRegional(@Auth() auth: AuthContext) {
     return this.prefs.resetRegional(auth);
@@ -70,6 +73,7 @@ export class PreferencesController {
     return this.prefs.saveTheme(auth, body);
   }
 
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
   @Delete('themes/:id')
   @HttpCode(204)
   deleteTheme(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
@@ -98,6 +102,7 @@ export class PreferencesController {
     return this.nav.saveDashboardLayout(auth, body);
   }
 
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
   @Delete('dashboard-layout')
   resetDashboardLayout(@Auth() auth: AuthContext) {
     return this.nav.saveDashboardLayout(auth, null);
@@ -115,6 +120,7 @@ export class WorkspaceAppearanceController {
     return this.prefs.setWorkspaceDefault(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
   @Delete()
   @RequirePermissions('tenant:manage')
   clear(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {

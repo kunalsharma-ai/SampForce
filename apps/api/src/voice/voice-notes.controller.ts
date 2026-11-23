@@ -18,6 +18,7 @@ import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, Req
 import { ZodPipe } from '../common/zod.pipe';
 import { MeetingRecordsService } from '../meetings/meeting-records.service';
 import { VoiceNotesService } from './voice-notes.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const listQuery = z.object({ type: z.enum(VOICE_RECORD_TYPES).optional(), id: z.string().uuid().optional() });
 const uuid = new ParseUUIDPipe();
@@ -62,6 +63,7 @@ export class VoiceNotesController {
     return this.voice.update(auth, id, body);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('activities:write')

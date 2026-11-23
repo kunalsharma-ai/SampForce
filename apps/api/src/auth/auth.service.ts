@@ -23,13 +23,14 @@ import {
   type SessionSummary,
 } from '@dealflow/types';
 import { entitlementsFor, ssoEnforcedNow } from '../billing/entitlements';
+import { PasswordConfirmationService } from '../common/password-confirmation';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
 import { inLanguage, requestLanguage, tr } from '../common/request-language';
-import { type LanguageCode, languageCodeSchema } from '@dealflow/types';
+import { type ConfirmPasswordInput, type LanguageCode, languageCodeSchema, type PasswordConfirmationIssued } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { resolveWorkspaceAccess } from '../workspaces/access';
@@ -89,7 +90,35 @@ export class AuthService {
     private readonly mfa: MfaService,
     private readonly mailer: MailerService,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly confirmations: PasswordConfirmationService,
   ) {}
+
+  // ───── Password confirmation before destructive actions ─────
+
+  /**
+   * Checks the caller's password (or, for a single sign-on account, a two-step code) and issues a one-time pass for
+   * one destructive action in this session. A wrong answer is counted and logged as a refused attempt; five within
+   * fifteen minutes pause the check.
+   */
+  async confirmPassword(auth: AuthContext, input: ConfirmPasswordInput, meta: RequestMeta): Promise<PasswordConfirmationIssued> {
+    const principal = { kind: 'USER' as const, id: auth.userId, sessionId: auth.sessionId };
+    await this.confirmations.assertNotPaused(principal);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, select: { id: true, passwordHash: true } });
+    let ok = input.password ? await this.passwords.verify(user.passwordHash, input.password) : false;
+    if (!ok && input.code) ok = await this.mfa.verifySecondFactor(user.id, input.code);
+    if (!ok) {
+      await this.confirmations.recordFailure(principal);
+      await this.prisma.run({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+        this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'security.password_check_failed', outcome: 'REFUSED', entityType: 'user', entityId: auth.userId, meta }),
+      );
+      throw new BadRequestException({
+        code: 'PASSWORD_INCORRECT',
+        message: input.password ? 'That password is not right.' : 'That code is not right.',
+        details: [{ path: input.password ? 'password' : 'code', message: input.password ? 'That password is not right.' : 'That code is not right.' }],
+      });
+    }
+    return this.confirmations.issue(principal);
+  }
 
   // ───── Password reset ─────
 

@@ -6,6 +6,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { CompaniesService } from './companies.service';
 import { CompanyLeadsService } from './company-leads.service';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -55,6 +56,7 @@ export class CompanyLeadsController {
     return this.leads.saveDraft(auth, id, body);
   }
 
+  @NoPasswordConfirmation('Discards your own unsaved draft')
   @Delete('drafts/:id')
   @AlsoRequireFeature('lead_drafts')
   @HttpCode(204)
@@ -94,6 +96,7 @@ export class CompanyLeadPartsController {
     return this.leads.saveBranch(auth, id, branchId, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('branches/:branchId')
   @AlsoRequireFeature('company_branches')
   @HttpCode(204)
@@ -153,6 +156,7 @@ export class CompanyFilesController {
     return this.leads.renameFile(auth, id, body.name, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('companies:write')

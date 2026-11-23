@@ -83,3 +83,29 @@ export interface MeResponse {
   /** The workspace's policy is not met yet: only setup screens work until it is. */
   restriction?: 'mfa_enrolment' | 'sso_required';
 }
+
+/*
+ * Password confirmation before destructive actions. Deleting anything that matters asks for the person's password
+ * (or two-step code) first: POST /auth/confirm-password answers with a one-time pass, sent back in this header with
+ * the delete. The pass works once, for this session only, and lapses after five minutes. The server refuses a
+ * destructive request without one, whatever the interface shows.
+ */
+export const PASSWORD_CONFIRMATION_HEADER = 'x-password-confirmation';
+/** The error code of a destructive request that needs (a new) password confirmation. */
+export const PASSWORD_CONFIRMATION_REQUIRED = 'PASSWORD_CONFIRMATION_REQUIRED';
+/** Minutes a confirmation pass stays valid. */
+export const PASSWORD_CONFIRMATION_MINUTES = 5;
+
+export const confirmPasswordSchema = z
+  .object({
+    password: z.string().max(200).optional(),
+    /** A two-step code or recovery code, for accounts that sign in with single sign-on. */
+    code: z.string().trim().max(40).optional(),
+  })
+  .refine((v) => !!v.password || !!v.code, { message: 'Enter your password', path: ['password'] });
+export type ConfirmPasswordInput = z.infer<typeof confirmPasswordSchema>;
+
+export interface PasswordConfirmationIssued {
+  token: string;
+  expiresAt: string;
+}

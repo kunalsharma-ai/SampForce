@@ -21,6 +21,7 @@ import { InvitationsService } from './invitations.service';
 import { RolesService } from './roles.service';
 import { TeamsService } from './teams.service';
 import { TenantsService } from './tenants.service';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 
 @Controller('tenants/current')
 export class TenantsController {
@@ -49,6 +50,7 @@ export class TenantsController {
     return this.teams.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('teams/:id')
   @HttpCode(204)
   @RequirePermissions('members:manage')
@@ -113,6 +115,7 @@ export class TenantsController {
     return this.tenants.setMemberOrg(auth, membershipId, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('roles/:id')
   @AlsoRequireFeature('permission_management')
   @HttpCode(204)
@@ -144,6 +147,7 @@ export class TenantsController {
     return this.invitations.create(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Cancels an invitation; withdrawing access must stay quick')
   @Delete('invitations/:id')
   @HttpCode(204)
   @RequirePermissions('members:manage')
