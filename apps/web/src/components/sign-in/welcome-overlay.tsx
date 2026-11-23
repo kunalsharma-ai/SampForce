@@ -1,7 +1,7 @@
 'use client';
 
 import type { WorkspaceLevel } from '@dealflow/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { LAST_LEVEL_KEY } from './auth-shell';
@@ -16,6 +16,15 @@ export function markWelcome() {
     sessionStorage.setItem(WELCOME_KEY, '1');
   } catch {
     // No storage, no welcome: signing in still works.
+  }
+}
+
+/** Whether a welcome is waiting, without using it up. */
+function welcomePending(): boolean {
+  try {
+    return sessionStorage.getItem(WELCOME_KEY) === '1';
+  } catch {
+    return false;
   }
 }
 
@@ -51,8 +60,20 @@ export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant
     }
   }, []);
 
+  // While the signed-in person is still loading, a plain cover in the scene's colours stands in for the welcome, so the
+  // app's loading placeholders never flash between the green tick and the welcome. Measured before the first paint.
+  const [pending, setPending] = useState(false);
+  useLayoutEffect(() => {
+    if (!welcomePending()) return;
+    setPending(true);
+    // Never hide the page for long if the person cannot be loaded (an error shows behind it instead).
+    const timer = setTimeout(() => setPending(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (name === null) return;
+    setPending(false);
     onShown?.();
     if (takeWelcome()) setState('on');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per person, not per render of the callback
@@ -76,6 +97,12 @@ export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant
     return () => clearTimeout(timer);
   }, [state]);
 
+  if (pending && name === null)
+    return (
+      <div className="sfs-root fixed inset-0 z-[200] overflow-hidden bg-[#140405]" data-sfs-palette={palette} data-welcome-pending="" aria-hidden>
+        <SceneBackground variant={variant} />
+      </div>
+    );
   if (state === 'off' || name === null) return null;
   const first = name.split(' ')[0] || name;
   const copy = SCENE_COPY[variant];
