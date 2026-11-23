@@ -3,7 +3,7 @@
 import { Badge, Card, Skeleton } from '@dealflow/ui';
 import type { ConsoleOverview } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Building2, CalendarClock, CreditCard, Layers, Users } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarClock, CreditCard, Layers, LifeBuoy, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageHeader } from '@/components/page-header';
@@ -33,7 +33,7 @@ export default function ConsoleOverviewPage() {
         <Tile icon={CreditCard} label="Active subscriptions" value={d.subscriptions.active} detail={`${d.subscriptions.trialing} on trial · ${d.subscriptions.inactive} inactive`} />
         <Tile icon={Users} label="Manager / Executive Workspaces" value={`${d.workspaces.managers} / ${d.workspaces.executives}`} detail="Across all clients" />
       </section>
-      <section aria-label="Revenue" className="grid gap-3 sm:grid-cols-2">
+      <section aria-label="Revenue and support" className="grid gap-3 sm:grid-cols-3">
         <Card className="p-4">
           <h2 className="text-sm text-muted-foreground">Subscription revenue per month</h2>
           <p className="mt-1 text-2xl font-semibold tabular" data-overview="mrr">{money(d.monthlyRecurring)}</p>
@@ -46,6 +46,7 @@ export default function ConsoleOverviewPage() {
             {d.outstanding.reduce((a, r) => a + r.clients, 0)} client{d.outstanding.reduce((a, r) => a + r.clients, 0) === 1 ? '' : 's'}: open invoices and subscriptions marked pending or overdue.
           </p>
         </Card>
+        <Tile icon={LifeBuoy} label="Support queries waiting" value={d.support.waiting} detail={`From ${d.support.clients} client${d.support.clients === 1 ? '' : 's'}; queries answered inside a client never reach you`} href="/operator/support" />
       </section>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4">

@@ -242,11 +242,12 @@ export class WorkspacesService {
       const before = { features: target.node.features, actions: parseActionGrants(target.node.actions), canCreateExecutives: target.node.canCreateExecutives, canViewOtherManagers: target.node.canViewOtherManagers };
       if (input.features) data.features = this.grantableFeatures(parent, input.features);
       if (input.actions) data.actions = this.grantableActions(parent, input.actions) as Prisma.InputJsonValue;
-      if (input.canCreateExecutives !== undefined || input.canViewOtherManagers !== undefined) {
+      if (input.canCreateExecutives !== undefined || input.canViewOtherManagers !== undefined || input.canViewAuditLog !== undefined) {
         if (target.level !== 'MANAGER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'These settings belong to Manager Workspaces.' });
         if (this.callerAccess(auth, org).level !== 'SUPER') throw new HierarchyError('SELF_GRANT_FORBIDDEN', 'Only the Super Workspace changes what a Manager Workspace may create or see.');
         if (input.canCreateExecutives !== undefined) data.canCreateExecutives = input.canCreateExecutives;
         if (input.canViewOtherManagers !== undefined) data.canViewOtherManagers = input.canViewOtherManagers;
+        if (input.canViewAuditLog !== undefined) data.canViewAuditLog = input.canViewAuditLog;
       }
       if (input.canChatWithPeers !== undefined) {
         if (target.level === 'SUPER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'This setting belongs to Manager and Executive Workspaces.' });
@@ -257,9 +258,21 @@ export class WorkspacesService {
       const removed = data.features ? before.features.filter((f) => !(data.features as string[]).includes(f)) : [];
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.permissions_changed', entityType: 'workspace', entityId: id,
-        metadata: { workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed, ...(input.actions ? { actionsFrom: before.actions, actionsTo: data.actions } : {}), ...(input.canCreateExecutives !== undefined ? { canCreateExecutives: input.canCreateExecutives } : {}), ...(input.canViewOtherManagers !== undefined ? { canViewOtherManagers: input.canViewOtherManagers } : {}), ...(input.canChatWithPeers !== undefined ? { canChatWithPeers: input.canChatWithPeers } : {}) },
+        // Only what actually changed, so the audit log reads as the change someone made, not the whole form.
+        metadata: {
+          workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed,
+          ...(input.actions && grantsKey(before.actions) !== grantsKey(data.actions) ? { actionsFrom: before.actions, actionsTo: data.actions } : {}),
+          ...flagChanges(target.node, input),
+        },
         meta,
       });
+      // Switching a feature on or off is also its own entry, so the audit log can answer "who turned this off?".
+      if (added.length || removed.length) {
+        await this.audit.record(tx, {
+          tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.features_changed', entityType: 'workspace', entityId: id,
+          metadata: { workspace: target.node.name, featuresEnabled: added, featuresDisabled: removed }, meta,
+        });
+      }
       const after = await resolveOrganisation(tx, auth.tenantId);
       return this.rowOf(tx, auth, after, after.byId.get(id)!);
     });
@@ -438,9 +451,26 @@ export class WorkspacesService {
       restrictedFeatures: parent ? parent.features.filter((f) => !a.features.includes(f)) : [],
       canCreateExecutives: a.node.canCreateExecutives,
       canViewOtherManagers: a.node.canViewOtherManagers,
+      canViewAuditLog: a.node.canViewAuditLog,
       canChatWithPeers: a.node.canChatWithPeers,
       editable,
       createdAt: a.node.createdAt.toISOString(),
     };
   }
+}
+
+/** The yes/no settings a permission change really changed, with their new values. */
+function flagChanges(node: StoredNode, input: WorkspacePermissionsInput): Partial<Record<'canCreateExecutives' | 'canViewOtherManagers' | 'canViewAuditLog' | 'canChatWithPeers', boolean>> {
+  const out: Partial<Record<'canCreateExecutives' | 'canViewOtherManagers' | 'canViewAuditLog' | 'canChatWithPeers', boolean>> = {};
+  for (const k of ['canCreateExecutives', 'canViewOtherManagers', 'canViewAuditLog', 'canChatWithPeers'] as const) if (input[k] !== undefined && input[k] !== node[k]) out[k] = input[k];
+  return out;
+}
+
+/** Action grants written the same way whatever their order, to tell whether they changed. */
+function grantsKey(grants: unknown): string {
+  const entries = Object.entries((grants ?? {}) as Record<string, string[] | undefined>)
+    .map(([k, v]) => [k, [...(v ?? [])].sort()] as const)
+    .filter(([, v]) => v.length)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
 }
