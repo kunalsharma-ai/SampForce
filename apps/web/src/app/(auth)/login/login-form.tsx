@@ -66,6 +66,11 @@ export function LoginForm() {
             {t('Forgot your password?')}
           </Link>
         </p>
+        {params.get('closed') && !error && (
+          <p role="status" className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm" data-company-closed>
+            {t('Your company was closed and everyone was signed out. SampForce support can reopen it until {date}.', { date: params.get('closed')! })}
+          </p>
+        )}
         {error && (
           <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">
             {error}

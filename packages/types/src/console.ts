@@ -209,6 +209,8 @@ export interface ConsoleClientRow {
   usage: { managers: number; executives: number };
   /** The administrator has not accepted the invitation yet. */
   awaitingAdministrator: boolean;
+  /** Set while the client has closed its company (W7): nobody signs in, and the data is erased after eraseAfter. */
+  closure: { closedAt: string; eraseAfter: string; closedBy: string | null; reason: string | null } | null;
 }
 
 export interface ConsoleWorkspaceRow {

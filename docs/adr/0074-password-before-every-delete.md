@@ -115,3 +115,26 @@ is deliberate.
   person gets an email. Single sign-on accounts have no password to change (400 `PASSWORD_NOT_SET`); API keys and
   the extension cannot call it. The form is on Account security, linked from Password & Authentication next to the
   existing reset-by-email flow.
+
+## W7: Closing the company, with 30 days to reopen (2026-11-23)
+
+- Only an **owner in the Super Workspace** may close the company (403 `COMPANY_CLOSE_FORBIDDEN` otherwise; API keys
+  and the extension never can). Settings, then Workspace, then Close company shows every workspace with its people
+  and the data counts (`GET /tenants/current/close-impact`), then asks for the typed company name and the password,
+  then a second confirmation. `POST /tenants/current/close` takes `{ confirmName, reason?, understood: true }` with
+  the password pass (`@ConfirmPassword({ deletes: false })`: closing is an owner's right, not a workspace's Delete).
+- Closing sets the tenant to `PENDING_DELETION` with `closedAt`, `closedById`, `closeReason` and `eraseAfter`
+  (closedAt + 30 days). Every access check already refuses a tenant that is not ACTIVE (cookies, API keys, the
+  extension, the chat socket, automation and sequences), so sign-in stops for everyone at once; the company's
+  sessions are also revoked. Signing in afterwards answers 403 `COMPANY_CLOSED` with the date until which it can be
+  reopened. The owner gets an email; the tenant audit log records `tenant.closed`, the platform log
+  `client.closed_by_owner`.
+- The Console shows such a client as **Closing** with who closed it, the reason and the erase date, and an ADMIN can
+  reopen it (`POST /operator/clients/:id/reopen` with a reason) until `eraseAfter` (409 `REOPEN_TOO_LATE` after).
+  Reopening restores everything: nothing was removed while it was closing.
+- After `eraseAfter` the worker's sweep erases the company: every collection with a workspace field is emptied of its
+  documents by `tenant_id` (the audit log included), people who belong to no other organisation are anonymised
+  (email freed, name, phone and password removed, signed out; the account row stays because other records may point
+  at it), and the tenant row stays with `deletedAt` and `erasedAt` as the record that the client existed. The
+  platform audit log keeps `client.erased` with the counts. People who also belong to another organisation keep
+  their account.

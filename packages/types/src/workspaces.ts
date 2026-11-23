@@ -348,3 +348,35 @@ export interface WorkspaceIdentity {
   parent: { id: string; name: string; level: WorkspaceLevel } | null;
   actions: ActionGrants;
 }
+
+// ───────────── Closing the company (workspace redesign W7) ─────────────
+
+/** Days the Console can reopen a closed company before its data is erased. */
+export const COMPANY_REOPEN_DAYS = 30;
+
+/** POST /tenants/current/close: the typed company name, an optional reason and the second confirmation. */
+export const closeCompanySchema = z.object({
+  confirmName: z.string().trim().min(1).max(200),
+  reason: z.string().trim().max(500).optional(),
+  understood: z.literal(true),
+});
+export type CloseCompanyInput = z.infer<typeof closeCompanySchema>;
+
+/** GET /tenants/current/close-impact: everything closing the company stops. */
+export interface CompanyCloseImpact {
+  name: string;
+  workspaces: { id: string; name: string; level: WorkspaceLevel; people: number }[];
+  people: number;
+  records: { companies: number; contacts: number; leads: number; deals: number; openTasks: number };
+  /** The date the data is erased if the company is closed now and not reopened. */
+  eraseAfter: string;
+}
+
+export interface CompanyClosed {
+  name: string;
+  eraseAfter: string;
+}
+
+/** POST /operator/clients/:id/reopen. */
+export const reopenCompanySchema = z.object({ reason: z.string().trim().min(3).max(500) });
+export type ReopenCompanyInput = z.infer<typeof reopenCompanySchema>;
