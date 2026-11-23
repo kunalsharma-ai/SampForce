@@ -17,6 +17,7 @@ import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { OPERATOR_COOKIE, Operator, OperatorAny, type OperatorContext, OperatorGuard, OperatorPermission, OperatorPublic, OperatorTokens } from './operator-auth';
 import { OperatorSecurityService, type SignInMeta, type SignInStep } from './operator-security.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation/password-confirmation.decorator';
 
 const ip = (req: Request) => req.ip ?? null;
 /** Sign-in and password links: the same per-address limit as workspace sign-in (10 a minute unless configured). */
@@ -115,6 +116,7 @@ export class OperatorSecurityController {
 
   /** Ends one of the operator's own sessions; with security.manage, anyone's. */
   @Delete('me/sessions/:id')
+  @NoPasswordConfirmation('Signing out a device must stay quick and loses nothing')
   @OperatorAny()
   @HttpCode(204)
   endSession(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Req() req: Request) {

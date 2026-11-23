@@ -20,6 +20,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { OperatorAdminService } from './operator-admin.service';
 import { OperatorSecurityService } from './operator-security.service';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPermission, OperatorPublic, OperatorTokens } from './operator-auth';
+import { NoPasswordConfirmation } from '../common/password-confirmation/password-confirmation.decorator';
 
 const ip = (req: Request) => req.ip ?? null;
 /** Sign-in and password links: the same per-address limit as workspace sign-in (10 a minute unless configured). */
@@ -82,6 +83,7 @@ export class OperatorAdminController {
   }
 
   @Delete('roles/:id')
+  @NoPasswordConfirmation('Only an unused custom role can be deleted; its permissions are kept in the audit entry')
   @OperatorPermission('operators.manage')
   @HttpCode(204)
   deleteRole(@Operator() op: OperatorContext, @Param('id', new ZodPipe(roleId)) id: string, @Req() req: Request) {
