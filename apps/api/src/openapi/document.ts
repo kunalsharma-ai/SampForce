@@ -933,7 +933,10 @@ export function buildOpenApiDocument(): object {
     summary: 'Operator console: run a no-cost connection test for a provider and store the result; logged (ADMIN, 10 a minute)',
     request: { params: z.object({ key: z.enum(PROVIDER_CHECK_KEYS) }) },
     responses: { 200: ok('Provider row with the new check'), 400: json(error, 'Key not set, or not a checkable provider'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled') } });
-  op('get', '/audit-log', 'platform audit log');
+  op('get', '/audit-log', 'platform audit log, newest first: search (q), client, operator, action, target, dates; each entry says what it is about, the values before and after (secrets removed) and the session it came from (audit.view)');
+  op('get', '/audit-log/export', 'the filtered platform audit log as CSV, up to 10,000 rows; the export is itself an audit entry (audit.view)');
+  op('get', '/audit-log/{id}', 'one platform audit entry (audit.view)');
+  op('get', '/activity', 'the Console activity feed: operator actions, clients joining, new workspaces, invoices, failed payments, tickets reaching SampForce and unusual sign-ins, only the kinds the role may act on (clients.view)');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.
   action('get', '/reports', 'Reports', 'Saved reports the caller may see: their own and shared ones (reports:read)');
