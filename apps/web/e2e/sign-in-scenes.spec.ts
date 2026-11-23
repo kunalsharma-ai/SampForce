@@ -23,10 +23,10 @@ async function axe(page: Page) {
  * welcome after signing in matches the workspace really opened, and the next sign-in remembers it.
  */
 test.describe('animated sign-in', () => {
-  for (const [level, headline] of [
-    ['super', 'Your whole company, in one place'],
-    ['manager', 'Lead your team to the next win'],
-    ['executive', 'Ready to close? Let’s sell.'],
+  for (const [level, headline, name] of [
+    ['super', 'Your whole company, in one place', 'Super Workspace'],
+    ['manager', 'Lead your team to the next win', 'Manager Workspace'],
+    ['executive', 'Ready to close? Let’s sell.', 'Executive Workspace'],
   ] as const) {
     test(`the ${level} scene shows its own welcome and never blocks the form`, async ({ page }) => {
       await page.goto(`/login?workspace=${level}`);
@@ -36,9 +36,12 @@ test.describe('animated sign-in', () => {
       await expect(page.locator('main')).toHaveAttribute('data-sign-in-scene', level);
       await expect(page.locator(`[data-scene="${level}"]`)).toHaveCount(1);
       await expect(page.getByRole('heading', { name: headline })).toBeVisible();
+      // The workspace is named on the page, and written across the scene.
+      await expect(page.locator(`[data-workspace-badge="${level}"]`)).toContainText(`You’re signing in to${name}`);
+      await expect(page.locator(`[data-watermark="${level.toUpperCase()}"]`)).toHaveCount(1);
       await expect(page.locator('[data-scene]')).toHaveAttribute('aria-hidden', 'true');
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-      await expect(page.getByRole('alert')).toBeVisible();
+      await expect(page.getByText('The email or password is incorrect.')).toBeVisible();
       if (PREVIEW_DIR) {
         await page.waitForTimeout(2500);
         await page.screenshot({ path: `${PREVIEW_DIR}/login-${level}.png` });
