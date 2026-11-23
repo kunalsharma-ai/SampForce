@@ -90,7 +90,7 @@ test('operator console: sign-in, workspace list, support access and an audited o
   await ops.getByRole('button', { name: 'Apply' }).click();
   await expect(ops.getByText(/business · 12 seats · managed manually/)).toBeVisible();
 
-  await ops.getByRole('link', { name: 'Operator log' }).click();
+  await ops.getByRole('link', { name: 'Audit log' }).click();
   await expect(ops.getByText('tenant.plan_overridden').first()).toBeVisible();
 
   await page.goto('/app/billing');
@@ -203,7 +203,7 @@ test('operator providers page: masked keys, saving a key applies it without a re
   await expect(slack.getByText(/Slack accepted the client ID and secret/)).toBeVisible();
 
   // Every change is in the operator log, by fingerprint and last four characters only.
-  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Operator log' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Audit log' }).click();
   await expect(ops.getByText('provider_key.set').first()).toBeVisible();
   await expect(ops.getByText('provider_key.cleared').first()).toBeVisible();
   await expect(ops.locator('body')).not.toContainText('a-wrong-slack-secret');

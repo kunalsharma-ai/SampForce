@@ -367,7 +367,7 @@ function TicketPane({ id }: { id: string }) {
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${m.authorKind === 'OPERATOR' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
             >
               <p
-                className={`text-xs font-semibold ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
+                className={`text-xs font-semibold ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground' : 'text-muted-foreground'}`}
               >
                 {m.author?.name}
               </p>
@@ -378,7 +378,7 @@ function TicketPane({ id }: { id: string }) {
                 inverted={m.authorKind === 'OPERATOR'}
               />
               <p
-                className={`mt-1 text-[11px] ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}
+                className={`mt-1 text-[11px] ${m.authorKind === 'OPERATOR' ? 'text-primary-foreground' : 'text-muted-foreground'}`}
               >
                 {new Date(m.createdAt).toLocaleString(t.formatLocale, {
                   dateStyle: 'medium',

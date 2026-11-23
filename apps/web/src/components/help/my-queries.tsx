@@ -202,13 +202,13 @@ function Message({ message }: { message: SupportTicketMessageRow }) {
   return (
     <li className={`flex ${message.mine ? 'justify-end' : 'justify-start'}`} data-message-author={message.authorKind}>
       <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${message.mine ? 'bg-primary text-primary-foreground' : support ? 'border border-success/30 bg-success/10' : 'bg-muted'}`}>
-        <p className={`text-xs font-semibold ${message.mine ? 'text-primary-foreground/80' : support ? 'text-success' : 'text-muted-foreground'}`}>
+        <p className={`text-xs font-semibold ${message.mine ? 'text-primary-foreground' : support ? 'text-success' : 'text-muted-foreground'}`}>
           {support ? t('SampForce support') : (message.author?.name ?? '')}
           {message.authorKind === 'WORKSPACE' && !message.mine && <span className="font-normal"> · {t('answering')}</span>}
         </p>
         <p className="mt-0.5 whitespace-pre-wrap">{message.body}</p>
         <MessageFiles files={message.attachments} inverted={message.mine} />
-        <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+        <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
           {new Date(message.createdAt).toLocaleString(t.formatLocale, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       </div>

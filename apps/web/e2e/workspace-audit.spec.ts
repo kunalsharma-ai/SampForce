@@ -126,7 +126,7 @@ test('the Super Workspace reads its audit log, lets a manager read the team’s,
   await shot(manager, '26-manager-team-audit-log', '[data-audit-log]');
 
   // ── The Console Admin reads the platform log for this client ──
-  await ops.getByRole('link', { name: 'Operator log' }).click();
+  await ops.getByRole('link', { name: 'Audit log' }).click();
   await expect(ops.getByRole('heading', { level: 1, name: 'Platform audit log' })).toBeVisible();
   await ops.getByLabel('Client').selectOption({ label: org });
   const entry = ops.locator('[data-platform-entry="client.subscription_changed"]').first();

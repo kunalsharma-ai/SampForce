@@ -6,6 +6,9 @@ import {
   consoleAuthoritySchema,
   consoleClientCreateSchema,
   consoleClientStateSchema,
+  type ConsolePreferencesUpdate,
+  consolePreferencesUpdateSchema,
+  consoleSearchQuerySchema,
   type ConsolePlanCreateInput,
   consolePlanCreateSchema,
   type ConsolePlanUpdateInput,
@@ -43,6 +46,7 @@ import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPublic, OperatorRoles, OperatorTokens } from './operator-auth';
 import { ConsoleService } from './console.service';
+import { ConsoleShellService } from './console-shell.service';
 import { OperatorService } from './operator.service';
 
 const ip = (req: Request) => req.ip ?? null;
@@ -56,6 +60,7 @@ export class OperatorController {
     private readonly ops: OperatorService,
     private readonly tokens: OperatorTokens,
     private readonly console: ConsoleService,
+    private readonly shell: ConsoleShellService,
   ) {}
 
   // ───── Console Admin (ADR 0071): platform overview, client organisations, plans and workspace limits ─────
@@ -152,9 +157,22 @@ export class OperatorController {
     this.tokens.cookie(res, null);
   }
 
+  /** The signed-in operator with their Console palette, colour mode, sidebar and sound (ADR 0074). */
   @Get('me')
   me(@Operator() op: OperatorContext) {
-    return op;
+    return this.shell.me(op);
+  }
+
+  @Put('me/preferences')
+  setPreferences(@Operator() op: OperatorContext, @Body(new ZodPipe(consolePreferencesUpdateSchema)) body: ConsolePreferencesUpdate) {
+    return this.shell.setPreferences(op, body);
+  }
+
+  /** Global search (Ctrl/⌘ K): clients, people, workspaces, invoices, tickets and plans by name, email or number. */
+  @Get('search')
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  search(@Operator() op: OperatorContext, @Query(new ZodPipe(consoleSearchQuerySchema)) q: { q: string }, @Req() req: Request) {
+    return this.shell.search(op, q.q, ip(req));
   }
 
   @Get('tenants')
