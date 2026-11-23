@@ -199,9 +199,81 @@ export interface ConsoleSubscription {
   limitsSetForClient: { managers: boolean; executives: boolean };
 }
 
+/** The client's readable number: 123 becomes "SF-000123". */
+export function customerIdOf(n: number | null | undefined): string | null {
+  return typeof n === 'number' && n > 0 ? `SF-${String(n).padStart(6, '0')}` : null;
+}
+
+const optionalText = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable();
+
+/** PATCH /operator/clients/:id/profile: the client's company details. Empty text clears a field. */
+export const consoleClientProfileSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    legalName: optionalText(160),
+    website: z
+      .string()
+      .trim()
+      .max(200)
+      .transform((v) => (v && !/^https?:\/\//i.test(v) ? `https://${v}` : v) || null)
+      .refine((v) => v === null || /^https?:\/\/[^\s/$.?#][^\s]*\.[^\s]{2,}$/i.test(v), 'Use a web address such as example.com')
+      .nullable(),
+    industry: optionalText(80),
+    countryCode: z
+      .string()
+      .trim()
+      .regex(/^([A-Za-z]{2})?$/, 'Use a two-letter country code')
+      .transform((v) => v.toUpperCase() || null)
+      .nullable(),
+    regionCode: optionalText(10),
+    city: optionalText(120),
+    addressLine1: optionalText(200),
+    addressLine2: optionalText(200),
+    postalCode: optionalText(20),
+    contactName: optionalText(120),
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .transform((v) => v.toLowerCase() || null)
+      .refine((v) => v === null || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Use an email address such as name@example.com')
+      .nullable(),
+    contactPhone: z
+      .string()
+      .trim()
+      .max(40)
+      .refine((v) => v === '' || /^\+?[0-9 ()./-]{6,}$/.test(v), 'Use digits, spaces and an optional + only')
+      .transform((v) => v || null)
+      .nullable(),
+  })
+  .strict();
+export type ConsoleClientProfileInput = z.infer<typeof consoleClientProfileSchema>;
+
+/** The client's company details as the Console keeps them. */
+export interface ConsoleClientProfile {
+  legalName: string | null;
+  website: string | null;
+  industry: string | null;
+  countryCode: string | null;
+  regionCode: string | null;
+  city: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  postalCode: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+}
+
 export interface ConsoleClientRow {
   id: string;
   name: string;
+  /** "SF-000123"; given to every client in the order they joined. */
+  customerId: string | null;
+  countryCode: string | null;
+  city: string | null;
+  /** Versioned address of the client's logo, or null without one. */
+  logoUrl: string | null;
   state: ClientState;
   createdAt: string;
   people: number;
@@ -233,6 +305,7 @@ export interface ConsoleHistoryRow {
 }
 
 export interface ConsoleClientDetail extends ConsoleClientRow {
+  profile: ConsoleClientProfile;
   /** The Super Workspace's ceiling: actions per module, null = every action. */
   authority: { actions: ActionGrants | null; canCreateExecutives: boolean };
   features: FeatureKey[];
@@ -258,3 +331,32 @@ export interface ConsoleOverview {
   /** Support queries that reached the Console and wait on it, and how many clients raised them. */
   support: { waiting: number; clients: number };
 }
+
+// ───────────── Locations (ADR 0074, C4) ─────────────
+
+/** A city on the Locations page: from the shipped list, added by an operator, or renamed by one. */
+export interface ConsoleCityRow {
+  name: string;
+  region: string | null;
+  /** Set for a city an operator added or renamed; the id removes that change. */
+  edit: { id: string; kind: 'added' | 'renamed'; originalName: string | null; by: string | null; at: string } | null;
+}
+
+const placeName = z.string().trim().min(1).max(120);
+const regionCode = z.string().trim().max(10).transform((v) => v || null).nullable();
+
+/** POST /operator/locations/cities: add a city the list does not have. */
+export const consoleCityAddSchema = z.object({ countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()), regionCode, name: placeName }).strict();
+export type ConsoleCityAddInput = z.infer<typeof consoleCityAddSchema>;
+
+/** POST /operator/locations/cities/rename: give a listed city another name. */
+export const consoleCityRenameSchema = z
+  .object({ countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()), regionCode, originalName: placeName, name: placeName })
+  .strict();
+export type ConsoleCityRenameInput = z.infer<typeof consoleCityRenameSchema>;
+
+export const consoleCityQuerySchema = z.object({
+  region: z.string().trim().max(10).optional(),
+  q: z.string().trim().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
