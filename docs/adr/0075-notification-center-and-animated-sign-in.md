@@ -41,6 +41,13 @@ polled every 30 seconds, had no history, no sound, and nothing appeared on the d
 - `components/sign-in/`: one scene per level (`console`, `super`, `manager`, `executive`) behind the sign-in pages,
   in the logo's red, deep red and amber. `AnimatedMark` reuses the logo's exact shapes (`LOGO_PARTS` in
   `components/logo.tsx`): the two halves fly in and lock, a flash and a light sweep cross the mark, the spark pops.
+- Each level is its own world so nobody mistakes one for another (redesigned on Kunal's request, 2026-11-24):
+  Console is a black command center (3D grid floor, security radar with a lock, scan line, falling data, HUD lines);
+  Super is a crimson galaxy (the company as a crowned sun, workspaces orbiting on tilted orbits, stars, comets);
+  Manager is a sunrise over a honeycomb of the team lighting up in waves, a team-target gauge and a heartbeat line;
+  Executive is bright red speed (rushing lines, the SampForce bolt launching with a flame, deal cards popping, a
+  climbing chart with confetti). A "You're signing in to …" badge names the level, its name runs across the scene
+  as a giant outline (drawn by CSS from an attribute, so it is decoration), and the card has the level's own stripe.
 - The form is on an opaque card, usable from the first frame; the scene is `aria-hidden` and never takes clicks.
   The card uses SampForce red for its buttons and links whatever theme is chosen (contrast checked in light and dark).
 - `/login` picks the scene from `?workspace=super|manager|executive`, else the level this device last opened

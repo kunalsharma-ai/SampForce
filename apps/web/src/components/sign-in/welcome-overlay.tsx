@@ -7,7 +7,7 @@ import { useSession } from '@/lib/session';
 import { LAST_LEVEL_KEY } from './auth-shell';
 import { AnimatedMark, SCENE_COPY, SceneBackground, type SceneVariant } from './sign-in-scene';
 
-/** Set by the sign-in form; the welcome shows once, right after signing in, never on a reload. */
+/** Set by the sign-in forms; the welcome shows once, right after signing in, never on a reload. */
 export const WELCOME_KEY = 'sampforce:welcome';
 
 export function markWelcome() {
@@ -18,30 +18,33 @@ export function markWelcome() {
   }
 }
 
+/** True once, when the page opened right after a sign-in form marked it. */
+function takeWelcome(): boolean {
+  try {
+    if (sessionStorage.getItem(WELCOME_KEY) !== '1') return false;
+    sessionStorage.removeItem(WELCOME_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const VARIANT: Record<WorkspaceLevel, Exclude<SceneVariant, 'console'>> = { SUPER: 'super', MANAGER: 'manager', EXECUTIVE: 'executive' };
 
 /**
- * The welcome after signing in (ADR 0075): about a second and a half of the workspace's own scene over the app while
- * it loads, then it steps aside. Any key or click skips it. It also remembers the level for the next sign-in page.
+ * The welcome after signing in (ADR 0075): about a second and a half of the level's own scene over the app while it
+ * loads, then it steps aside. Any key or click skips it. `name` is null until the signed-in person is known.
  */
-export function WelcomeOverlay() {
+export function WelcomeScene({ variant, name, onShown }: { variant: SceneVariant; name: string | null; onShown?: () => void }) {
   const t = useT();
-  const { data } = useSession();
   const [state, setState] = useState<'off' | 'on' | 'leaving'>('off');
-  const level: WorkspaceLevel = data?.workspace?.level ?? 'SUPER';
-  const variant = VARIANT[level];
 
   useEffect(() => {
-    if (!data) return;
-    try {
-      localStorage.setItem(LAST_LEVEL_KEY, variant);
-      if (sessionStorage.getItem(WELCOME_KEY) !== '1') return;
-      sessionStorage.removeItem(WELCOME_KEY);
-    } catch {
-      return;
-    }
-    setState('on');
-  }, [data, variant]);
+    if (name === null) return;
+    onShown?.();
+    if (takeWelcome()) setState('on');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per person, not per render of the callback
+  }, [name]);
 
   useEffect(() => {
     if (state !== 'on') return;
@@ -61,8 +64,8 @@ export function WelcomeOverlay() {
     return () => clearTimeout(timer);
   }, [state]);
 
-  if (state === 'off' || !data) return null;
-  const first = data.user.name.split(' ')[0] ?? data.user.name;
+  if (state === 'off' || name === null) return null;
+  const first = name.split(' ')[0] || name;
   const copy = SCENE_COPY[variant];
   return (
     <div
@@ -80,5 +83,24 @@ export function WelcomeOverlay() {
         <p className="sfs-sub mt-3 max-w-md text-base text-white/85">{t.maybe(copy.sub)}</p>
       </div>
     </div>
+  );
+}
+
+/** The workspace welcome: the scene of the level really opened. It also remembers the level for the next sign-in. */
+export function WelcomeOverlay() {
+  const { data } = useSession();
+  const variant = VARIANT[data?.workspace?.level ?? 'SUPER'];
+  return (
+    <WelcomeScene
+      variant={variant}
+      name={data ? data.user.name : null}
+      onShown={() => {
+        try {
+          localStorage.setItem(LAST_LEVEL_KEY, variant);
+        } catch {
+          // Storage may be blocked; the default scene is fine.
+        }
+      }}
+    />
   );
 }

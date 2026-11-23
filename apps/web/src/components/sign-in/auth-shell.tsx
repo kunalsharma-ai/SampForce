@@ -4,8 +4,8 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AuthLanguage } from '@/components/auth-language';
 import { LogoOnRed } from '@/components/logo';
-import { Tr } from '@/lib/i18n';
-import { AnimatedMark, SCENE_COPY, SceneBackground, type SceneVariant } from './sign-in-scene';
+import { Tr, useT } from '@/lib/i18n';
+import { AnimatedMark, RevealText, SCENE_COPY, SceneBackground, type SceneVariant, WorkspaceBadge } from './sign-in-scene';
 
 /** The level this device last signed in to, so the next sign-in opens on its scene. */
 export const LAST_LEVEL_KEY = 'sampforce:last-level';
@@ -28,6 +28,7 @@ export function pickScene(param: string | null): Exclude<SceneVariant, 'console'
  * welcome, and the form sits on an opaque card that is usable from the first frame.
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
+  const t = useT();
   const params = useSearchParams();
   const pathname = usePathname();
   const [variant, setVariant] = useState<Exclude<SceneVariant, 'console'> | null>(null);
@@ -42,26 +43,26 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[1.15fr_1fr]">
         <section className="flex flex-col gap-6 p-6 sm:p-10 lg:justify-between lg:p-12">
           <LogoOnRed />
-          {copy && (
-            <div className="flex items-center gap-5 lg:block lg:max-w-xl">
-              <AnimatedMark key={variant} className="size-20 shrink-0 sm:size-24 lg:mb-8 lg:size-44" />
-              <div className="min-w-0">
-                <p className="sfs-headline text-xs font-semibold uppercase tracking-[0.22em] text-[#ffc857]">
-                  <Tr text={copy.eyebrow} />
-                </p>
-                <h2 className="sfs-headline mt-2 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-5xl">
-                  <Tr text={isLogin ? copy.headline : 'Welcome to SampForce'} />
-                </h2>
-                <p className="sfs-sub mt-3 hidden max-w-md text-base text-white/85 sm:block lg:text-lg">
-                  <Tr text={copy.sub} />
-                </p>
+          {copy && variant && (
+            <div className="sfs-hero-text flex flex-col gap-5 lg:max-w-xl">
+              <WorkspaceBadge key={`badge-${variant}`} variant={variant} />
+              <div className="flex items-center gap-5 lg:block">
+                <AnimatedMark key={variant} className="size-20 shrink-0 sm:size-24 lg:mb-6 lg:size-40" />
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-5xl">
+                    <RevealText key={variant} text={t.maybe(isLogin ? copy.headline : 'Welcome to SampForce')} />
+                  </h2>
+                  <p className="sfs-sub mt-3 hidden max-w-md text-base text-white/90 sm:block lg:text-lg">
+                    <Tr text={copy.sub} />
+                  </p>
+                </div>
               </div>
             </div>
           )}
           <p className="hidden text-xs text-white/70 lg:block">© {new Date().getFullYear()} Sampledge</p>
         </section>
         <section className="flex items-start justify-center px-4 pb-10 sm:px-6 lg:items-center lg:p-10">
-          <div className="sfs-card w-full max-w-sm space-y-6 rounded-2xl bg-background p-6 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] ring-1 ring-white/10 sm:p-8">
+          <div data-card-variant={variant ?? undefined} className="sfs-card w-full max-w-sm space-y-6 rounded-2xl bg-background p-6 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] ring-1 ring-white/10 sm:p-8">
             <div className="flex justify-end">
               <AuthLanguage />
             </div>

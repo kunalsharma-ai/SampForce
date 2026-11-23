@@ -91,6 +91,10 @@ export const notifications = {
   'Could not save. Please try again.': ['No se pudo guardar. Inténtalo de nuevo.', 'Enregistrement impossible. Veuillez réessayer.', 'Speichern fehlgeschlagen. Bitte erneut versuchen.', 'تعذّر الحفظ. يُرجى المحاولة مرة أخرى.'],
   // Sign-in scenes and the welcome after signing in
   'Welcome back, {name}': ['Bienvenido de nuevo, {name}', 'Bon retour, {name}', 'Willkommen zurück, {name}', 'مرحبًا بعودتك، {name}'],
+  'You’re signing in to': ['Estás iniciando sesión en', 'Vous vous connectez à', 'Sie melden sich an bei', 'أنت تسجّل الدخول إلى'],
+  'For owners and admins': ['Para propietarios y administradores', 'Pour les propriétaires et administrateurs', 'Für Inhaber und Administratoren', 'للمالكين والمسؤولين'],
+  'For team leads': ['Para líderes de equipo', 'Pour les responsables d’équipe', 'Für Teamleitungen', 'لقادة الفرق'],
+  'For sales executives': ['Para ejecutivos de ventas', 'Pour les commerciaux', 'Für Vertriebsmitarbeitende', 'لمندوبي المبيعات'],
   'Welcome to SampForce': ['Bienvenido a SampForce', 'Bienvenue sur SampForce', 'Willkommen bei SampForce', 'مرحبًا بك في SampForce'],
   'Your whole company, in one place': ['Toda tu empresa, en un solo lugar', 'Toute votre entreprise, au même endroit', 'Ihr ganzes Unternehmen an einem Ort', 'شركتك كلها في مكان واحد'],
   'Workspaces, teams, targets and every client relationship, from the top.': [
