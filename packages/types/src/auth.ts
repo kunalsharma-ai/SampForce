@@ -49,6 +49,8 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
+  /** The person's profile photo (ADR 0072, M6), versioned so it can be cached; null without one. */
+  photoUrl: string | null;
 }
 
 export interface MeResponse {

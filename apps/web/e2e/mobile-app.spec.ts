@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { approveMobile, signUp } from './helpers';
@@ -203,4 +205,50 @@ test('the app adds and edits leads, contacts, follow-ups and tasks', async ({ pa
   await expect(phone.getByText(/0 \/ 4 · 0%/)).toBeVisible();
   await shot(phone, '21-app-targets');
   await expectNoA11yViolations(phone);
+});
+
+/**
+ * Profile photos (ADR 0072, M6): one set on the web shows in the account menu and on the phone; the phone replaces it
+ * with a picture chosen there, and the web shows the new one.
+ */
+test('profile photos are set on the web and the phone and shown on both', async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  const owner = await signUp(page, `Photo Org ${Date.now().toString(36)}`);
+  await approveMobile(page);
+  const picture = readFileSync(join(__dirname, '../src/app/apple-icon.png'));
+
+  // The web: Account security has the photo; the account menu shows it once set.
+  await page.goto('/app/account/security');
+  await expect(page.getByRole('img', { name: 'No photo yet' })).toBeVisible();
+  await page.getByLabel('Choose a photo').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: picture });
+  await expect(page.getByRole('img', { name: 'Your photo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Account menu' }).locator('img')).toBeVisible();
+  const first = ((await (await page.request.get('/api/v1/auth/me')).json()) as { user: { photoUrl: string } }).user.photoUrl;
+  expect(first).toMatch(/\/people\/.+\/photo\?v=/);
+  await shot(page, '22-web-profile-photo');
+
+  // The phone shows it on the home screen and the profile, and can choose another.
+  const phone = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: PREVIEW_DIR ? 3 : 1, reducedMotion: 'reduce', locale: 'en-GB' })).newPage();
+  await phone.goto(APP);
+  await phone.getByLabel('Email').fill(owner.email);
+  await phone.getByLabel('Password').fill(owner.password);
+  await phone.getByRole('button', { name: 'Use another server' }).click();
+  await phone.getByLabel('Server address').fill(API);
+  await phone.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(phone.getByText(/^Good (morning|afternoon|evening), Test$/)).toBeVisible();
+  await phone.getByRole('tab', { name: /Profile/ }).click();
+  await expect(phone.getByRole('img', { name: 'Your photo' })).toBeVisible();
+  const chooser = phone.waitForEvent('filechooser');
+  await phone.getByRole('button', { name: 'Change photo' }).click();
+  await (await chooser).setFiles({ name: 'phone.png', mimeType: 'image/png', buffer: picture });
+  await expect.poll(async () => ((await (await page.request.get('/api/v1/auth/me')).json()) as { user: { photoUrl: string } }).user.photoUrl).not.toBe(first);
+  await expect(phone.getByRole('img', { name: 'Your photo' })).toBeVisible();
+  await shot(phone, '23-app-profile-photo');
+  await expectNoA11yViolations(phone);
+
+  // Removing it on the phone goes back to initials everywhere.
+  await phone.getByRole('button', { name: 'Remove photo' }).click();
+  await expect(phone.getByRole('img', { name: 'No photo yet' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('img', { name: 'No photo yet' })).toBeVisible();
 });

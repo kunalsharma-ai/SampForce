@@ -177,7 +177,7 @@ export type MobileWorkspaceLevel = (typeof WORKSPACE_LEVELS_FOR_MOBILE)[number];
 
 /** Who is signed in on the phone, and in which organisation. */
 export interface MobileSession {
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; photoUrl: string | null };
   organisation: { id: string; name: string; brandColor: string | null };
   level: MobileWorkspaceLevel;
   designation: string | null;

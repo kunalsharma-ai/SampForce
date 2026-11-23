@@ -190,4 +190,14 @@ export const mobile = {
   Directions: ['Cómo llegar', 'Itinéraire', 'Route', 'الاتجاهات'],
   'Decide how the app looks and what each workspace level sees and may do, preview it, and publish it to phones.': ['Decide cómo se ve la aplicación y qué ve y puede hacer cada nivel, revísalo y publícalo en los teléfonos.', 'Décidez de l’aspect de l’application et de ce que chaque niveau voit et peut faire, prévisualisez-la et publiez-la sur les téléphones.', 'Legen Sie fest, wie die App aussieht und was jede Ebene sieht und tun darf, sehen Sie sie in der Vorschau an und veröffentlichen Sie sie auf den Telefonen.', 'حدّد شكل التطبيق وما يراه كل مستوى وما يمكنه فعله، ثم عاينه وانشره على الهواتف.'],
   'Open the Configuration Center': ['Abrir el Centro de configuración', 'Ouvrir le centre de configuration', 'Konfigurationszentrum öffnen', 'فتح مركز الإعداد'],
+  // Profile photos (M6)
+  'Profile photo': ['Foto de perfil', 'Photo de profil', 'Profilfoto', 'صورة الملف الشخصي'],
+  'People in your organisation see it in the account menu, in team chat and in the SampForce app.': ['Las personas de tu organización la ven en el menú de la cuenta, en el chat del equipo y en la aplicación SampForce.', 'Les personnes de votre organisation la voient dans le menu du compte, dans le chat d’équipe et dans l’application SampForce.', 'Personen in Ihrer Organisation sehen es im Kontomenü, im Team-Chat und in der SampForce-App.', 'يراها أعضاء مؤسستك في قائمة الحساب وفي دردشة الفريق وفي تطبيق SampForce.'],
+  'Your photo': ['Tu foto', 'Votre photo', 'Ihr Foto', 'صورتك'],
+  'No photo yet': ['Aún sin foto', 'Pas encore de photo', 'Noch kein Foto', 'لا توجد صورة بعد'],
+  'Choose a photo': ['Elegir una foto', 'Choisir une photo', 'Foto auswählen', 'اختيار صورة'],
+  'Change photo': ['Cambiar foto', 'Changer de photo', 'Foto ändern', 'تغيير الصورة'],
+  'Add a photo': ['Añadir una foto', 'Ajouter une photo', 'Foto hinzufügen', 'إضافة صورة'],
+  'Remove photo': ['Quitar foto', 'Supprimer la photo', 'Foto entfernen', 'إزالة الصورة'],
+  'That picture could not be read. Try a PNG or JPEG photo.': ['No se pudo leer esa imagen. Prueba con una foto PNG o JPEG.', 'Impossible de lire cette image. Essayez une photo PNG ou JPEG.', 'Dieses Bild konnte nicht gelesen werden. Versuchen Sie ein PNG- oder JPEG-Foto.', 'تعذّرت قراءة هذه الصورة. جرّب صورة PNG أو JPEG.'],
 } as const satisfies PhraseTable;

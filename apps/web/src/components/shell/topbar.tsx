@@ -196,9 +196,14 @@ export function Topbar() {
             <button
               type="button"
               aria-label={t('top.account')}
-              className="ms-1 grid size-9 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-background"
+              className="ms-1 grid size-9 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-background"
             >
-              {initials ?? '…'}
+              {data?.user.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a private, signed-in image that Next cannot optimise
+                <img src={data.user.photoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                (initials ?? '…')
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">

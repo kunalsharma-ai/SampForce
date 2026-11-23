@@ -9,15 +9,33 @@
     "ios": {
       "bundleIdentifier": "com.sampledge.sampforce",
       "supportsTablet": true,
-      "config": { "usesNonExemptEncryption": false }
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sampledge.sampforce",
       "allowBackup": false
     },
-    "web": { "output": "single", "bundler": "metro" },
-    "plugins": ["expo-router", "expo-secure-store", "expo-localization"],
-    "experiments": { "typedRoutes": false },
+    "web": {
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SampForce uses your photos so you can choose a profile picture.",
+          "cameraPermission": "SampForce uses the camera so you can take a profile picture."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
       "apiUrl": "https://app.sampforce.com"
     }

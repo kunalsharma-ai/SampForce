@@ -1,3 +1,4 @@
+import { photoUrl } from '../profile-photos/profile-photos.service';
 import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { type LoginInput, type MobileBlockReason, type MobileDeviceInfo, type MobileLoginResponse, type MobilePlatform, type MobileSession, type MobileTokens } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -146,7 +147,7 @@ export class MobileAuthService {
   /** Who is signed in on the phone. Also records that the phone was seen. */
   async session(auth: AuthContext): Promise<MobileSession> {
     const [user, live] = await Promise.all([
-      this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, select: { id: true, name: true, email: true } }),
+      this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, select: { id: true, name: true, email: true, photo: { select: { updatedAt: true } } } }),
       this.liveWorkspaces(auth.userId, { authMethod: auth.authMethod, ...(auth.ssoTenantId ? { ssoTenantId: auth.ssoTenantId } : {}) }),
     ]);
     return this.prisma.run(auth, async (tx) => {
@@ -157,7 +158,7 @@ export class MobileAuthService {
       ]);
       const designation = membership.designationId ? await tx.designation.findUnique({ where: { id: membership.designationId }, select: { name: true, tier: true } }) : null;
       return {
-        user,
+        user: { id: user.id, name: user.name, email: user.email, photoUrl: photoUrl(user.id, user.photo?.updatedAt) },
         organisation: { id: tenant.id, name: tenant.name, brandColor: tenant.brandColor },
         // The person's workspace in the hierarchy (ADR 0071); no workspace means the Super Workspace.
         level: await workspaceLevelOf(tx, auth.tenantId, auth.membershipId),

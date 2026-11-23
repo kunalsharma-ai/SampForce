@@ -3,7 +3,8 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { DashboardCard } from '../../src/components/dashboard';
 import { Chips } from '../../src/components/records';
-import { Body, Card, ErrorNote, Loading, Screen, Title } from '../../src/components/ui';
+import { View } from 'react-native';
+import { Avatar, Body, Card, ErrorNote, Loading, Screen, Title } from '../../src/components/ui';
 import { t, tMaybe } from '../../src/lib/i18n';
 import { greetingFor, LEVEL_LABEL } from '../../src/lib/labels';
 import { useApi, useController, useSignedIn } from '../../src/lib/session';
@@ -33,10 +34,15 @@ export default function Dashboard() {
   const cards = (data.data?.cards ?? []).filter((x) => s.config.dashboard.some((d) => d.card === x.card));
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Title>{t(greetingFor(new Date().getHours()), { name: first })}</Title>
-      <Body muted>
-        {s.session.organisation.name} · {tMaybe(LEVEL_LABEL[s.session.level])}
-      </Body>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Avatar name={s.session.user.name} photoUrl={s.session.user.photoUrl} size={48} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Title>{t(greetingFor(new Date().getHours()), { name: first })}</Title>
+          <Body muted>
+            {s.session.organisation.name} · {tMaybe(LEVEL_LABEL[s.session.level])}
+          </Body>
+        </View>
+      </View>
       {s.config.dashboard.length === 0 ? (
         <Card>
           <Body muted>{t('Your administrator has not chosen any cards for your home screen.')}</Body>

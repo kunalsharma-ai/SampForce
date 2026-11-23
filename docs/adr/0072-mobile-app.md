@@ -138,3 +138,20 @@ checks (ADR 0071) are applied on top of this, never instead of it.
 - **Targets screen.** Read only, with achievement per target; targets are still set on the web.
 - **Reloading.** `useApi().reload` is now stable, so screens reload whenever they come back into view without
   looping.
+
+## M6: profile photos (2026-11-23)
+
+- **Storage.** `UserPhoto` (collection `user_photos`), one per person and kept apart from the user so lists never
+  load image bytes. The same photo is used in every organisation the person belongs to.
+- **Routes.** `PUT /me/photo` (the image is the raw body: PNG, JPEG or WebP, 64 to 4096 pixels, up to 1 MB, checked
+  by its bytes, not its name or header), `DELETE /me/photo`, and `GET /people/:id/photo`. All work from the web and
+  the phone. A photo is served only to the person and to active members of the caller's organisation, with
+  `nosniff`, a sandboxing CSP and a long private cache (the URL carries a version). Setting and removing are audited.
+- **Hiding photos.** When the organisation's Mobile Configuration turns profile pictures off, phones get 404 for
+  other people's photos (and show initials); the person's own photo and the web are not affected.
+- **Where it shows.** `/auth/me` and `/mobile/session` carry `photoUrl`. The web shows it in the account menu and
+  lets the person set it on Account security; the phone shows it on the home screen and Profile, where it can be
+  chosen from the library or taken with the camera. Both crop the centre square and shrink to 512 pixels JPEG before
+  sending. Chat (M7) uses the same URLs.
+- **Packages.** `expo-image-picker` (with photo and camera permission texts in `app.json`) and
+  `expo-image-manipulator`.

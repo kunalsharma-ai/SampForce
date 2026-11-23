@@ -1,3 +1,4 @@
+import { photoUrl } from '../profile-photos/profile-photos.service';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
@@ -454,7 +455,7 @@ export class AuthService {
 
   async me(auth: AuthContext): Promise<MeResponse> {
     const [user, tenant, memberships, ent, access] = await Promise.all([
-      this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId } }),
+      this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, include: { photo: { select: { updatedAt: true } } } }),
       this.prisma.run(auth, (tx) =>
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, include: { subscription: true } }),
       ),
@@ -463,7 +464,7 @@ export class AuthService {
       this.prisma.run(auth, (tx) => resolveWorkspaceAccess(tx, auth.tenantId, auth.workspaceNodeId)),
     ]);
     return {
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, photoUrl: photoUrl(user.id, user.photo?.updatedAt) },
       tenant: {
         id: tenant.id,
         name: tenant.name,

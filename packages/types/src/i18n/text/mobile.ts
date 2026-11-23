@@ -127,4 +127,8 @@ export const mobile = {
   'Mark the follow-up done or cancel it.': ['Marca el seguimiento como hecho o cancélalo.', 'Marquez le suivi comme fait ou annulez-le.', 'Markieren Sie die Nachverfolgung als erledigt oder sagen Sie sie ab.', 'ضع علامة على المتابعة كمكتملة أو ألغها.'],
   'Change at least one field': ['Cambia al menos un campo', 'Modifiez au moins un champ', 'Ändern Sie mindestens ein Feld', 'غيّر حقلًا واحدًا على الأقل'],
   'Too many fields': ['Demasiados campos', 'Trop de champs', 'Zu viele Felder', 'عدد الحقول كبير جدًا'],
+  // Profile photos (M6)
+  'Photos can be up to 1 MB.': ['Las fotos pueden ocupar hasta 1 MB.', 'Les photos peuvent faire jusqu’à 1 Mo.', 'Fotos dürfen bis zu 1 MB groß sein.', 'يمكن أن يصل حجم الصورة إلى 1 ميغابايت.'],
+  'Use a photo between 64 and 4096 pixels wide.': ['Usa una foto de entre 64 y 4096 píxeles de ancho.', 'Utilisez une photo de 64 à 4096 pixels de large.', 'Verwenden Sie ein Foto mit 64 bis 4096 Pixeln Breite.', 'استخدم صورة بعرض بين 64 و4096 بكسل.'],
+  'This person has no photo.': ['Esta persona no tiene foto.', 'Cette personne n’a pas de photo.', 'Diese Person hat kein Foto.', 'لا توجد صورة لهذا الشخص.'],
 } satisfies TextTable;

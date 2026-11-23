@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Body, Button, Card, ErrorNote, Row, Screen, SectionLabel, Title } from '../../src/components/ui';
+import { Platform, View } from 'react-native';
+import { Avatar, Body, Button, Card, ErrorNote, Row, Screen, SectionLabel, Title } from '../../src/components/ui';
+import { choosePhoto } from '../../src/lib/photos';
 import { t, tMaybe } from '../../src/lib/i18n';
 import { LEVEL_LABEL } from '../../src/lib/labels';
 import { useController, useSignedIn } from '../../src/lib/session';
@@ -23,10 +25,32 @@ export default function Profile() {
       setBusy(null);
     }
   };
+  // Choosing, taking or removing the person's own photo; the session then carries the new one everywhere.
+  const photo = async (kind: 'library' | 'camera' | 'remove') => {
+    setBusy(kind);
+    setError(null);
+    try {
+      if (kind === 'remove') await c.api.delete('/me/photo');
+      else if (!(await choosePhoto(c.api, kind))) return;
+      await c.reload();
+    } catch (e) {
+      if (!c.report(e)) setError(e instanceof Error ? e.message : t('Something went wrong. Try again.'));
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <Screen>
-      <Title>{user.name}</Title>
-      <Body muted>{user.email}</Body>
+      <View style={{ alignItems: 'center', gap: 8 }}>
+        <Avatar name={user.name} photoUrl={user.photoUrl} size={96} label={user.photoUrl ? t('Your photo') : t('No photo yet')} />
+        <Title>{user.name}</Title>
+        <Body muted>{user.email}</Body>
+      </View>
+      <View style={{ gap: 8 }}>
+        <Button kind="secondary" label={user.photoUrl ? t('Change photo') : t('Add a photo')} busy={busy === 'library'} disabled={!!busy} onPress={() => void photo('library')} />
+        {Platform.OS !== 'web' ? <Button kind="secondary" label={t('Take a photo')} busy={busy === 'camera'} disabled={!!busy} onPress={() => void photo('camera')} /> : null}
+        {user.photoUrl ? <Button kind="secondary" label={t('Remove photo')} busy={busy === 'remove'} disabled={!!busy} onPress={() => void photo('remove')} /> : null}
+      </View>
       <Card>
         <Row icon="business-outline" label={organisation.name} detail={t('Organisation')} />
         <Row icon="layers-outline" label={tMaybe(LEVEL_LABEL[level])} detail={designation ? `${t('Level')} · ${designation}` : t('Level')} />

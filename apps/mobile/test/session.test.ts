@@ -7,7 +7,7 @@ import { type Call, device, fakeFetch, MemoryKv, MemoryTokens, tokens } from './
 const config = resolveMobileConfig(defaultMobileConfig(), { level: 'EXECUTIVE', features: [...FEATURE_KEYS], permissions: [...PERMISSIONS] });
 
 const session = (over: Partial<MobileSession> = {}): MobileSession => ({
-  user: { id: 'u1', name: 'Field Exec', email: 'exec@example.com' },
+  user: { id: 'u1', name: 'Field Exec', email: 'exec@example.com', photoUrl: null },
   organisation: { id: 'tenant-1', name: 'Config Org', brandColor: null },
   level: 'EXECUTIVE',
   designation: null,

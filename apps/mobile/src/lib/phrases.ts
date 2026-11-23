@@ -253,4 +253,13 @@ export const PHRASES: Readonly<Record<string, readonly [string, string, string, 
   'This quarter': ['Este trimestre', 'Ce trimestre', 'Dieses Quartal', 'هذا الربع'],
   'This week': ['Esta semana', 'Cette semaine', 'Diese Woche', 'هذا الأسبوع'],
   'Weekly': ['Semanal', 'Hebdomadaire', 'Wöchentlich', 'أسبوعي'],
+  // Profile photos (M6)
+  'Your photo': ['Tu foto', 'Votre photo', 'Ihr Foto', 'صورتك'],
+  'No photo yet': ['Aún sin foto', 'Pas encore de photo', 'Noch kein Foto', 'لا توجد صورة بعد'],
+  'Change photo': ['Cambiar foto', 'Changer de photo', 'Foto ändern', 'تغيير الصورة'],
+  'Add a photo': ['Añadir una foto', 'Ajouter une photo', 'Foto hinzufügen', 'إضافة صورة'],
+  'Take a photo': ['Hacer una foto', 'Prendre une photo', 'Foto aufnehmen', 'التقاط صورة'],
+  'Remove photo': ['Quitar foto', 'Supprimer la photo', 'Foto entfernen', 'إزالة الصورة'],
+  'Allow SampForce to use your photos in your phone’s settings.': ['Permite que SampForce use tus fotos en los ajustes del teléfono.', 'Autorisez SampForce à utiliser vos photos dans les réglages du téléphone.', 'Erlauben Sie SampForce in den Telefoneinstellungen, Ihre Fotos zu verwenden.', 'اسمح لـ SampForce باستخدام صورك من إعدادات هاتفك.'],
+  'Could not read the photo.': ['No se pudo leer la foto.', 'Impossible de lire la photo.', 'Das Foto konnte nicht gelesen werden.', 'تعذّرت قراءة الصورة.'],
 };

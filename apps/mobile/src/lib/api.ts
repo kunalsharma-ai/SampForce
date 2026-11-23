@@ -88,6 +88,14 @@ export interface ApiClientOptions {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+/** A request body sent as is, with its own content type. */
+class RawBody {
+  constructor(
+    readonly data: Blob,
+    readonly type: string,
+  ) {}
+}
+
 export class ApiClient {
   private refreshing: Promise<StoredTokens | null> | null = null;
   private readonly fetchImpl: typeof fetch;
@@ -114,6 +122,14 @@ export class ApiClient {
   }
   delete(path: string): Promise<void> {
     return this.authed<void>('DELETE', path);
+  }
+  /** Sends a file as the raw request body (a photo upload). */
+  putFile<T>(path: string, data: Blob, contentType: string): Promise<T> {
+    return this.authed<T>('PUT', path, new RawBody(data, contentType));
+  }
+  /** A signed-in file download (a photo), as a Blob. */
+  getFile(path: string): Promise<Blob> {
+    return this.authed<Blob>('GET', path, undefined, true);
   }
 
   async login(email: string, password: string, device: MobileDeviceInfo): Promise<MobileLoginResponse> {
@@ -156,18 +172,18 @@ export class ApiClient {
     return stored;
   }
 
-  private async authed<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  private async authed<T>(method: Method, path: string, body?: unknown, asBlob = false): Promise<T> {
     let tokens = await this.opts.store.get();
     if (!tokens) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in again.');
     if (tokens.expiresAt - REFRESH_EARLY_MS <= this.now()) tokens = await this.refresh(tokens);
     if (!tokens) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in again.');
     try {
-      return await this.send<T>(method, path, body, tokens.accessToken);
+      return await this.send<T>(method, path, body, tokens.accessToken, asBlob);
     } catch (e) {
       if (!(e instanceof ApiError) || e.status !== 401) throw e;
       const fresh = await this.refresh(tokens);
       if (!fresh) throw e;
-      return this.send<T>(method, path, body, fresh.accessToken);
+      return this.send<T>(method, path, body, fresh.accessToken, asBlob);
     }
   }
 
@@ -197,19 +213,21 @@ export class ApiClient {
     return this.refreshing;
   }
 
-  private async send<T>(method: Method, path: string, body: unknown, accessToken: string | null): Promise<T> {
-    const headers: Record<string, string> = { accept: 'application/json' };
+  private async send<T>(method: Method, path: string, body: unknown, accessToken: string | null, asBlob = false): Promise<T> {
+    const headers: Record<string, string> = { accept: asBlob ? '*/*' : 'application/json' };
     const language = this.opts.language?.();
     if (language) headers['accept-language'] = language;
-    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (body instanceof RawBody) headers['content-type'] = body.type;
+    else if (body !== undefined) headers['content-type'] = 'application/json';
     if (accessToken) headers.authorization = `Bearer ${accessToken}`;
     let res: Response;
     try {
-      res = await this.fetchImpl(`${this.opts.server}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      res = await this.fetchImpl(`${this.opts.server}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : body instanceof RawBody ? body.data : JSON.stringify(body) });
     } catch {
       throw new NetworkError();
     }
     if (res.status === 204) return undefined as T;
+    if (asBlob && res.ok) return (await res.blob()) as T;
     const text = await res.text();
     let json: unknown = null;
     try {
