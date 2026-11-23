@@ -92,8 +92,10 @@ describe('offline payment', () => {
     expect((await sub()).planCode).toBe('free');
   });
 
-  it('lists open invoices to operators; only admins record a payment, which starts the plan', async () => {
-    const open = (await op(support).get('/invoices/open').expect(200)).body as { id: string; tenant: { id: string } }[];
+  it('lists open invoices to operators who see billing; only admins record a payment, which starts the plan', async () => {
+    // Support Admins do not see billing (ADR 0074 permissions); Super Admins do.
+    await op(support).get('/invoices/open').expect(403);
+    const open = (await op(admin).get('/invoices/open').expect(200)).body as { id: string; tenant: { id: string } }[];
     const inv = open.find((i) => i.tenant.id === owner.tenantId)!;
     expect(inv).toBeTruthy();
     await op(support).post(`/tenants/${owner.tenantId}/invoices/${inv.id}/paid`, { reference: 'UTR123' }).expect(403);

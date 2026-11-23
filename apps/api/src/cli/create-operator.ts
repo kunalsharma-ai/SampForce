@@ -8,14 +8,17 @@
  *   docker compose run --rm api node dist/cli/create-operator.js   (production image)
  */
 import { PrismaClient } from '@dealflow/database';
-import { emailSchema, passwordSchema } from '@dealflow/types';
+import { emailSchema, isBuiltInRole, legacyOperatorRole, passwordSchema } from '@dealflow/types';
 import { PasswordService } from '../auth/password.service';
 
 async function main(): Promise<void> {
   const email = emailSchema.parse(process.env.OPERATOR_EMAIL);
   const password = passwordSchema.parse(process.env.OPERATOR_PASSWORD);
   const name = (process.env.OPERATOR_NAME ?? '').trim() || email;
-  const role = process.env.OPERATOR_ROLE === 'ADMIN' ? 'ADMIN' : 'SUPPORT';
+  // ADMIN or SUPPORT, or one of the Console's built-in roles (ADR 0074): super_admin, finance, support, sales, operations, read_only.
+  const wanted = (process.env.OPERATOR_ROLE ?? '').trim();
+  const consoleRole = isBuiltInRole(wanted) ? wanted : null;
+  const role = consoleRole ? legacyOperatorRole(consoleRole) : wanted === 'ADMIN' ? 'ADMIN' : 'SUPPORT';
   const prisma = new PrismaClient();
   try {
     const existing = await prisma.platformOperator.findUnique({ where: { email } });
@@ -24,9 +27,9 @@ async function main(): Promise<void> {
       if (others === 0) throw new Error(`${email} is the last active ADMIN; set OPERATOR_ROLE=ADMIN to reset its password.`);
     }
     const passwordHash = await new PasswordService().hash(password);
-    const op = await prisma.platformOperator.upsert({ where: { email }, create: { email, name, passwordHash, role }, update: { name, passwordHash, role, status: 'ACTIVE' } });
-    await prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'operator.provisioned', metadata: { role, via: 'cli' } } });
-    console.warn(`Operator ${email} (${role}) is ready.`);
+    const op = await prisma.platformOperator.upsert({ where: { email }, create: { email, name, passwordHash, role, consoleRole }, update: { name, passwordHash, role, consoleRole, status: 'ACTIVE' } });
+    await prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'operator.provisioned', metadata: { role, consoleRole, via: 'cli' } } });
+    console.warn(`Operator ${email} (${consoleRole ?? role}) is ready.`);
   } finally {
     await prisma.$disconnect();
   }

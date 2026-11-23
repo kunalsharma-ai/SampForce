@@ -269,6 +269,11 @@ export interface OperatorMe {
   email: string;
   name: string;
   role: 'ADMIN' | 'SUPPORT';
+  /** The Console role (ADR 0074): a built-in key such as `super_admin`, or a custom role's id. */
+  consoleRole: string;
+  roleName: string;
+  /** Everything the operator may do; the Console hides what is not in this list. */
+  permissions: import('./console-security').OperatorPermission[];
   /** The operator's Console palette, colour mode, sidebar and sound (ADR 0074). */
   preferences: import('./console-shell').ConsolePreferences;
 }

@@ -2621,7 +2621,10 @@ model PlatformOperator {
   email        String         @unique
   name         String
   passwordHash String         @map("password_hash")
+  /// Kept in step with consoleRole: ADMIN for Super Admins, SUPPORT for every other role (the CLI and last-admin guard use it).
   role         OperatorRole   @default(SUPPORT)
+  /// The Console role (ADR 0074): a built-in key (super_admin, finance, support, sales, operations, read_only) or an OperatorConsoleRole id. Null = from `role`.
+  consoleRole  String?        @map("console_role")
   status       OperatorStatus @default(ACTIVE)
   lastLoginAt  DateTime?      @map("last_login_at")
   /// Console palette, colour mode, sidebar and sound (ADR 0074, ConsolePreferences in @dealflow/types); null = defaults.
@@ -2631,7 +2634,34 @@ model PlatformOperator {
 
   auditLogs PlatformAuditLog[]
 
+  @@index([consoleRole])
   @@map("platform_operators")
+}
+
+/// A custom Console role (ADR 0074): a name and any set of operator permissions. The six built-in roles live in code.
+model OperatorConsoleRole {
+  id          String   @id @default(uuid()) @map("_id")
+  name        String   @unique
+  description String   @default("")
+  permissions String[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("operator_console_roles")
+}
+
+/// One-time links to choose an operator password: an invitation (72 hours) or a reset (1 hour). Only a hash is kept.
+model OperatorPasswordToken {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  purpose    String
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([operatorId])
+  @@map("operator_password_tokens")
 }
 
 /// Append-only log of everything operators do. The application role may insert and read, never change.
