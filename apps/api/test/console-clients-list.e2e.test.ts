@@ -106,7 +106,7 @@ describe('Console clients list and bulk actions', () => {
   it('exports what the filters show as CSV', async () => {
     const res = await op(admin).get(`/clients/export?search=${encodeURIComponent(tag)}&sort=name&dir=asc`).expect(200);
     expect(res.headers['content-type']).toContain('text/csv');
-    const lines = (res.text as string).replace(/^﻿/, '').trim().split('\r\n');
+    const lines = (res.text as string).replace(/^\uFEFF/, '').trim().split('\r\n');
     expect(lines[0]).toContain('"Customer ID","Client","Status","Country"');
     expect(lines).toHaveLength(4);
     expect(lines[1]).toContain(`Alpha Mills ${tag}`);
