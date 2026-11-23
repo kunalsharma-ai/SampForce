@@ -102,9 +102,12 @@ describe('Console notifications', () => {
     expect(mail.some((m) => m.subject === `SampForce Console: Payment failed: ${org}` && m.text.includes(`https://app.dealflow.test/operator/clients/${owner.tenantId}`))).toBe(true);
     expect(mail.some((m) => m.subject.includes('New client'))).toBe(false);
 
-    // A second look at the same events sends nothing new.
-    const count = (await mine(admin)).items.length;
-    const sent = smtp.messages.length;
+    // A second look at the same events sends nothing new. Other test files add clients at the same time, so count
+    // only this client's notifications and mail.
+    const about = async () => (await mine(admin)).items.filter((n) => n.client?.id === owner.tenantId).length;
+    const mailed = () => smtp.messages.filter((m) => m.subject.includes(org)).length;
+    const count = await about();
+    const sent = mailed();
     const db2 = appClient();
     try {
       await db2.platformSetting.update({ where: { key: NOTIFICATION_CURSOR_KEY }, data: { value: new Date(Date.now() - 60_000).toISOString() } });
@@ -112,8 +115,8 @@ describe('Console notifications', () => {
       await db2.$disconnect();
     }
     await sweep.sweep();
-    expect((await mine(admin)).items.length).toBe(count);
-    expect(smtp.messages.length).toBe(sent);
+    expect(await about()).toBe(count);
+    expect(mailed()).toBe(sent);
   });
 
   it('marks notifications read, one or all, and counts what is unread', async () => {
