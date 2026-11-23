@@ -16,7 +16,6 @@ export const de: Messages = {
 
   'nav.main': 'Hauptmenü',
   'nav.favourites': 'Favoriten',
-  'nav.recent': 'Zuletzt besucht',
   'nav.removeFavourite': '{label} aus den Favoriten entfernen',
   'nav.removeFavouriteShort': 'Aus den Favoriten entfernen',
   'nav.customize': 'Anpassen',

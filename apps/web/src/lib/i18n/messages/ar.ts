@@ -17,7 +17,6 @@ export const ar: Messages = {
 
   'nav.main': 'القائمة الرئيسية',
   'nav.favourites': 'المفضلة',
-  'nav.recent': 'الأخيرة',
   'nav.removeFavourite': 'إزالة {label} من المفضلة',
   'nav.removeFavouriteShort': 'إزالة من المفضلة',
   'nav.customize': 'تخصيص',

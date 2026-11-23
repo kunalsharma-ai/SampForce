@@ -37,7 +37,7 @@ test('signs up and shows Command Center KPIs from the API', async ({ page }) => 
 
 test('every sidebar entry leads to a working page', async ({ page }) => {
   await signUp(page);
-  // Module sections only: Favourites and Recent repeat some of the same links.
+  // Module sections only: Favourites repeats some of the same links.
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');
   for (const label of SIDEBAR) {
     await nav.getByRole('link', { name: new RegExp(`^${label.replace(/[&]/g, '\\&')}`) }).click();

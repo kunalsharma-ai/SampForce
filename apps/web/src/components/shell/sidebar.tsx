@@ -2,7 +2,7 @@
 
 import { featureForPath, type NavItem } from '@dealflow/types';
 import { Badge, cn, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
-import { ChevronsLeft, Clock, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
+import { ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,13 +15,12 @@ import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
-const RECENT_SHOWN = 5;
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/app' ? pathname === '/app' : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** The icon for a pinned or recent item: its module's icon when it is a module page, else one per record kind. */
+/** The icon for a pinned item: its module's icon when it is a module page, else one per record kind. */
 function itemIcon(item: NavItem) {
   const mod = MODULES.find((m) => moduleHref(m) === item.href.split('?')[0]);
   if (mod) return mod.icon;
@@ -115,7 +114,6 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const { nav } = useNavigation();
   const pins = useTogglePin();
   const modules = orderedModules(nav);
-  const recent = nav.recent.filter((r) => r.href !== pathname).slice(0, RECENT_SHOWN);
   const t = useT();
   const features = useFeatures();
 
@@ -131,20 +129,6 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
               <li key={p.href} className="group/row flex items-center gap-1">
                 <NavLink href={p.href} label={p.label} icon={itemIcon(p)} active={pathname === p.href} collapsed={collapsed} onNavigate={onNavigate} />
                 {!collapsed && <UnpinButton item={p} onToggle={pins.toggle} />}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {!collapsed && recent.length > 0 && (
-        <section aria-labelledby={`${idPrefix}-recent`} data-nav-section="recent">
-          <GroupHeading collapsed={collapsed} id={`${idPrefix}-recent`}>
-            {t('nav.recent')}
-          </GroupHeading>
-          <ul className="space-y-0.5">
-            {recent.map((r) => (
-              <li key={r.href} className="group/row flex items-center gap-1">
-                <NavLink href={r.href} label={r.label} icon={Clock} active={false} collapsed={collapsed} onNavigate={onNavigate} />
               </li>
             ))}
           </ul>

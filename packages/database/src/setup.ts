@@ -209,10 +209,23 @@ export async function seedReferenceData(prisma: PrismaClient): Promise<void> {
   }
 }
 
+/**
+ * Recently visited pages are no longer kept (2026-11-22). Removes the history stored before then from every
+ * workspace member's navigation document. Idempotent: once no document has the field, it changes nothing.
+ */
+export async function eraseRecentPageHistory(prisma: PrismaClient, log: (line: string) => void = () => {}): Promise<void> {
+  const res = (await prisma.$runCommandRaw({
+    update: 'workspace_navigation',
+    updates: [{ q: { recent: { $exists: true } }, u: { $unset: { recent: '' } }, multi: true }],
+  })) as { nModified?: number };
+  if (res.nModified) log(`removed recent page history from ${res.nModified} navigation documents`);
+}
+
 /** Runs every set-up step with an unguarded client. */
 export async function setupDatabase(prisma: PrismaClient, log?: (line: string) => void): Promise<void> {
   await syncIndexes(prisma, log);
   await seedReferenceData(prisma);
   await upgradeCompanyCrm(prisma, log);
   await upgradeCommandCenter(prisma, log);
+  await eraseRecentPageHistory(prisma, log);
 }

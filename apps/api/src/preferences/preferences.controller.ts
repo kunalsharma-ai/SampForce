@@ -1,12 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import {
   type Appearance,
   appearanceSchema,
   type DashboardLayout,
   dashboardLayoutSchema,
-  type NavItem,
-  navItemSchema,
   type Regional,
   regionalSchema,
   type SavedThemeInput,
@@ -79,7 +76,7 @@ export class PreferencesController {
     return this.prefs.deleteTheme(auth, id);
   }
 
-  /** Pinned pages and records, recent visits and sidebar layout in the current workspace. */
+  /** Pinned pages and records and sidebar layout in the current workspace. Visited pages are not recorded. */
   @Get('navigation')
   navigation(@Auth() auth: AuthContext) {
     return this.nav.get(auth);
@@ -88,13 +85,6 @@ export class PreferencesController {
   @Patch('navigation')
   updateNavigation(@Auth() auth: AuthContext, @Body(new ZodPipe(updateNavigationSchema)) body: UpdateNavigationInput) {
     return this.nav.update(auth, body);
-  }
-
-  @Post('navigation/visits')
-  @HttpCode(200)
-  @Throttle({ default: { limit: 120, ttl: 60_000 } })
-  visit(@Auth() auth: AuthContext, @Body(new ZodPipe(navItemSchema)) body: NavItem) {
-    return this.nav.visit(auth, body);
   }
 
   /** The person's Command Center layout in this workspace (widgets, sizes, filters). */
@@ -111,11 +101,6 @@ export class PreferencesController {
   @Delete('dashboard-layout')
   resetDashboardLayout(@Auth() auth: AuthContext) {
     return this.nav.saveDashboardLayout(auth, null);
-  }
-
-  @Delete('navigation/visits')
-  clearVisits(@Auth() auth: AuthContext) {
-    return this.nav.clearRecent(auth);
   }
 }
 
