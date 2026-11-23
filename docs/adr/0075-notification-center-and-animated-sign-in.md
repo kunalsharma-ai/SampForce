@@ -41,13 +41,20 @@ polled every 30 seconds, had no history, no sound, and nothing appeared on the d
 - `components/sign-in/`: one scene per level (`console`, `super`, `manager`, `executive`) behind the sign-in pages,
   in the logo's red, deep red and amber. `AnimatedMark` reuses the logo's exact shapes (`LOGO_PARTS` in
   `components/logo.tsx`): the two halves fly in and lock, a flash and a light sweep cross the mark, the spark pops.
-- Each level is its own world so nobody mistakes one for another (redesigned on Kunal's request, 2026-11-24):
-  Console is a black command center (3D grid floor, security radar with a lock, scan line, falling data, HUD lines);
-  Super is a crimson galaxy (the company as a crowned sun, workspaces orbiting on tilted orbits, stars, comets);
-  Manager is a sunrise over a honeycomb of the team lighting up in waves, a team-target gauge and a heartbeat line;
-  Executive is bright red speed (rushing lines, the SampForce bolt launching with a flame, deal cards popping, a
-  climbing chart with confetti). A "You're signing in to …" badge names the level, its name runs across the scene
-  as a giant outline (drawn by CSS from an attribute, so it is decoration), and the card has the level's own stripe.
+- Each level is its own world so nobody mistakes one for another (redesigned twice on Kunal's request, 2026-11-24).
+  The page greets the person ("Good evening 👋 Welcome to **Manager Workspace**", by this device's clock) and
+  names the level in bold again on the sign-in box. Each level's main animation runs on its own stage beside the
+  words, never under them; the full-screen backdrop stays quiet. Console (Sampledge staff only): a command center
+  with a 3D grid floor and a security radar round a lock. Super: a crimson galaxy, the company as a crowned sun with
+  workspaces orbiting it. Manager: a sunrise, the team's honeycomb lighting up in waves, a team-target gauge, a
+  heartbeat line. Executive: bright red speed, the SampForce bolt launching, deal cards popping, a confetti peak.
+- The sign-in box has a light running round its edge, the level's emblem with a turning ring, fields with icons and a
+  glowing focus, a sign-in button with light sweeping across it, and a "secure, encrypted sign-in" line.
+- A small bar on every sign-in page switches light or dark and picks a palette (SampForce red, Royal rose, Ocean
+  blue, Emerald, Sunset amber), remembered on this device only (`localStorage sampforce:sign-in-style`). The card
+  carries its own colour tokens for the chosen mode and palette, whatever the app's theme. Palettes other than red
+  recolour the artwork with a hue rotation (none is applied for red). In light mode the animation sits on a dark
+  glass screen so its light lines stay visible.
 - The form is on an opaque card, usable from the first frame; the scene is `aria-hidden` and never takes clicks.
   The card uses SampForce red for its buttons and links whatever theme is chosen (contrast checked in light and dark).
 - `/login` picks the scene from `?workspace=super|manager|executive`, else the level this device last opened

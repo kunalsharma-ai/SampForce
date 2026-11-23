@@ -36,9 +36,10 @@ test.describe('animated sign-in', () => {
       await expect(page.locator('main')).toHaveAttribute('data-sign-in-scene', level);
       await expect(page.locator(`[data-scene="${level}"]`)).toHaveCount(1);
       await expect(page.getByRole('heading', { name: headline })).toBeVisible();
-      // The workspace is named on the page, and written across the scene.
+      // The workspace is greeted and named in bold, in the greeting and on the sign-in box; its animation has a stage.
+      await expect(page.locator(`[data-scene-greeting="${level}"] strong`)).toHaveText(name);
       await expect(page.locator(`[data-workspace-badge="${level}"]`)).toContainText(`You’re signing in to${name}`);
-      await expect(page.locator(`[data-watermark="${level.toUpperCase()}"]`)).toHaveCount(1);
+      await expect(page.locator(`[data-scene-stage="${level}"]`)).toHaveCount(1);
       await expect(page.locator('[data-scene]')).toHaveAttribute('aria-hidden', 'true');
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       await expect(page.getByText('The email or password is incorrect.')).toBeVisible();
@@ -54,9 +55,32 @@ test.describe('animated sign-in', () => {
     const page = await ctx.newPage();
     await page.goto('/login?workspace=manager');
     await expect(page.getByRole('heading', { name: 'Lead your team to the next win' })).toBeVisible();
-    const running = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length);
-    expect(running).toBe(0);
+    // Every animation ends at once on its still frame (within a moment of the page appearing).
+    await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length), { timeout: 2000 }).toBe(0);
     await axe(page);
+    await ctx.close();
+  });
+
+  test('anyone can switch the sign-in page to light or dark and pick a palette, remembered on this device', async ({ browser }) => {
+    const ctx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto('/login?workspace=super');
+    const main = page.locator('main');
+    await expect(main).toHaveAttribute('data-sfs-mode', 'dark');
+    await page.getByRole('button', { name: 'Switch to light mode' }).click();
+    await expect(main).toHaveAttribute('data-sfs-mode', 'light');
+    await page.getByRole('radio', { name: 'Ocean blue' }).click();
+    await expect(page.getByRole('radio', { name: 'Ocean blue' })).toHaveAttribute('aria-checked', 'true');
+    await expect(main).toHaveAttribute('data-sfs-palette', 'ocean');
+    // The form still works in the new look, and the page passes accessibility checks in it.
+    await page.getByLabel('Work email').fill('someone@example.com');
+    await axe(page);
+    await page.reload();
+    await expect(main).toHaveAttribute('data-sfs-mode', 'light');
+    await expect(main).toHaveAttribute('data-sfs-palette', 'ocean');
+    await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+    await page.getByRole('radio', { name: 'SampForce red' }).click();
+    await expect(main).toHaveAttribute('data-sfs-mode', 'dark');
     await ctx.close();
   });
 

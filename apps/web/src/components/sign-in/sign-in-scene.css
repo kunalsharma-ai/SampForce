@@ -5,6 +5,18 @@
  */
 
 .sfs-root {
+  --sfs-hue: 0deg;
+  --sfs-p-l: 0 74% 42%;
+  --sfs-p-d: 0 91% 71%;
+  --sfs-ink: #ffffff;
+  --sfs-ink-soft: rgba(255, 255, 255, 0.9);
+  --sfs-ink-mute: rgba(255, 255, 255, 0.78);
+  --sfs-gold: #ffd98a;
+  --sfs-chip: rgba(255, 255, 255, 0.1);
+  --sfs-chip-ring: rgba(255, 255, 255, 0.22);
+  --sfs-logo-a: #cbd5e1;
+  background-color: #140405;
+  color: var(--sfs-ink);
   --r: #e02424;
   --r-deep: #7f1d1d;
   --r-night: #1c0607;
@@ -29,23 +41,12 @@
 .sfs-sub { animation: sfs-reveal 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.7s both; }
 
 /* ── Shared: the workspace name, the badge, words rising, the hero's soft shadow ── */
-.sfs-watermark-row { font-size: clamp(120px, 26vh, 250px); line-height: 1; white-space: nowrap; }
-.sfs-watermark { display: inline-block; animation: sfs-marquee 60s linear infinite; }
-.sfs-watermark::before {
-  content: attr(data-text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  color: transparent;
-  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.1);
-}
 .sfs-badge { animation: sfs-badge-in 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) 0.15s both; }
-.sfs-badge-icon { animation: sfs-icon-pop 0.7s cubic-bezier(0.3, 1.8, 0.5, 1) 0.5s both; }
 .sfs-badge-shine {
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
   animation: sfs-shine 3.8s ease-in-out 1.2s infinite;
 }
-.sfs-word-wrap { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+.sfs-word-wrap { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.16em; margin-bottom: -0.08em; }
 .sfs-word { display: inline-block; animation: sfs-word-up 0.75s cubic-bezier(0.2, 1, 0.3, 1) both; }
 .sfs-hero-text { text-shadow: 0 2px 18px rgba(10, 0, 2, 0.65); }
 .sfs-node { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-pop 0.6s cubic-bezier(0.3, 1.8, 0.5, 1) both; }
@@ -65,7 +66,7 @@
   background-size: 70px 70px;
   animation: sfs-floor 1.4s linear infinite;
 }
-.sfs-scan { background: linear-gradient(to bottom, transparent, rgba(255, 59, 59, 0.16) 70%, rgba(255, 120, 120, 0.45) 98%, transparent); animation: sfs-scan 5.5s linear infinite; }
+.sfs-scan { animation: sfs-scan 4.5s linear infinite; }
 .sfs-rain { animation: sfs-rain 10s linear infinite; }
 .sfs-blip { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-blip 5s ease-out infinite; }
 .sfs-hex-spin { animation: sfs-spin 20s linear infinite; transform-origin: 0 0; }
@@ -118,13 +119,12 @@
 @keyframes sfs-draw { to { stroke-dashoffset: 0; } }
 @keyframes sfs-draw-long { to { stroke-dashoffset: 0; } }
 @keyframes sfs-pop { from { transform: scale(0); } to { transform: none; } }
-@keyframes sfs-marquee { to { transform: translateX(-50%); } }
-@keyframes sfs-badge-in { from { transform: translateY(14px) scale(0.92); clip-path: inset(0 100% 0 0 round 16px); } to { transform: none; clip-path: inset(0 0 0 0 round 16px); } }
+@keyframes sfs-badge-in { from { transform: translateY(10px); clip-path: inset(0 100% 0 0); } to { transform: none; clip-path: inset(0 -20px 0 0); } }
 @keyframes sfs-icon-pop { from { transform: scale(0) rotate(-120deg); } to { transform: none; } }
 @keyframes sfs-shine { 0% { transform: translateX(0) skewX(-20deg); } 45%, 100% { transform: translateX(520%) skewX(-20deg); } }
 @keyframes sfs-word-up { from { transform: translateY(110%) rotate(4deg); } to { transform: none; } }
 @keyframes sfs-floor { to { background-position: 0 70px; } }
-@keyframes sfs-scan { from { transform: translateY(-120px); } to { transform: translateY(110vh); } }
+@keyframes sfs-scan { from { transform: translateY(-90px); } to { transform: translateY(600px); } }
 @keyframes sfs-rain { from { transform: translateY(-340px); } to { transform: translateY(960px); } }
 @keyframes sfs-blip { 0% { transform: scale(0.2); stroke-opacity: 0; } 8% { stroke-opacity: 1; } 40%, 100% { transform: scale(2.6); stroke-opacity: 0; } }
 @keyframes sfs-throb { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
@@ -159,31 +159,194 @@
 [data-motion='off'] .sfs-root *,
 [data-motion='minimal'] .sfs-root * { animation-delay: 0s !important; }
 
-/* The sign-in card speaks SampForce red whatever theme is chosen, with readable contrast in light and dark. */
-.sfs-card {
-  --primary: 0 72% 51%;
-  --primary-foreground: 0 0% 100%;
-  --ring: 0 72% 51%;
+/* ── The sign-in card: an animated light running round its edge, the level's emblem, lively fields ── */
+.sfs-card-frame {
+  --c1: #e02424;
+  --c2: #ffc857;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: 2px;
+  box-shadow: 0 34px 90px -24px rgba(0, 0, 0, 0.75), 0 0 70px -18px var(--c1);
+  animation: sfs-card-in 0.8s cubic-bezier(0.2, 1.1, 0.3, 1) 0.1s both;
 }
-.dark .sfs-card {
-  --primary: 0 91% 71%;
-  --primary-foreground: 0 60% 6%;
-  --ring: 0 91% 71%;
+.sfs-card-frame::before {
+  content: '';
+  position: absolute;
+  inset: -70%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, rgba(255, 255, 255, 0.12) 0 50%, var(--c1) 66%, var(--c2) 76%, #fff 80%, rgba(255, 255, 255, 0.12) 92%);
+  animation: sfs-spin 5s linear infinite;
 }
-
-/* Each level's card wears its own stripe along the top. */
-.sfs-card { position: relative; overflow: hidden; }
+.sfs-card-frame[data-card-variant='console'] { --c1: #ff3b3b; --c2: #ff9a9a; }
+.sfs-card-frame[data-card-variant='super'] { --c1: #ffc857; --c2: #fff3c4; }
+.sfs-card-frame[data-card-variant='manager'] { --c1: #ff7a45; --c2: #ffe08a; }
+.sfs-card-frame[data-card-variant='executive'] { --c1: #ffffff; --c2: #ffc857; }
+.sfs-card { position: relative; overflow: hidden; border-radius: 24px; }
 .sfs-card::before {
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
-  height: 5px;
-  background: linear-gradient(90deg, #e02424, #ffc857, #e02424);
-  background-size: 200% 100%;
-  animation: sfs-stripe 4s linear infinite;
+  height: 150px;
+  pointer-events: none;
+  background: radial-gradient(120% 100% at 0% 0%, hsl(var(--primary) / 0.1), transparent 70%);
 }
-.sfs-card[data-card-variant='console']::before { background-image: linear-gradient(90deg, #111, #e02424, #ff6b6b, #e02424, #111); }
-.sfs-card[data-card-variant='super']::before { background-image: linear-gradient(90deg, #7f1d1d, #ffc857, #fff3c4, #ffc857, #7f1d1d); }
-.sfs-card[data-card-variant='manager']::before { background-image: linear-gradient(90deg, #e02424, #ff9a4d, #ffe08a, #ff9a4d, #e02424); }
-.sfs-card[data-card-variant='executive']::before { background-image: linear-gradient(90deg, #e02424, #fff, #e02424, #ffc857, #e02424); }
-@keyframes sfs-stripe { to { background-position: 200% 0; } }
+.sfs-card > * { position: relative; }
+
+/* The emblem: a gradient tile with the level's icon, a dashed ring turning round it, a soft pulse. */
+.sfs-emblem-core {
+  background: linear-gradient(135deg, #ff5a5a, #e02424 50%, #7f1d1d);
+  box-shadow: 0 10px 26px -8px rgba(224, 36, 36, 0.85);
+  animation: sfs-icon-pop 0.7s cubic-bezier(0.3, 1.8, 0.5, 1) 0.35s both, sfs-throb 2.8s ease-in-out 1.2s infinite;
+}
+[data-workspace-badge='console'] .sfs-emblem-core { background: linear-gradient(135deg, #3f3f46, #111 55%, #000); box-shadow: 0 10px 26px -8px rgba(255, 59, 59, 0.9), inset 0 0 0 2px #ff3b3b; }
+[data-workspace-badge='super'] .sfs-emblem-core { background: linear-gradient(135deg, #ffd98a, #e0a020 40%, #b91c1c); }
+[data-workspace-badge='manager'] .sfs-emblem-core { background: linear-gradient(135deg, #ffb07a, #ff6a3d 45%, #c41c1c); }
+.sfs-emblem-ring { color: hsl(var(--primary)); animation: sfs-spin 12s linear infinite; }
+.sfs-badge-shine {
+  background: linear-gradient(100deg, transparent, hsl(var(--primary) / 0.14), transparent);
+  animation: sfs-shine 4s ease-in-out 1.4s infinite;
+}
+
+/* Fields with their own icon, a glowing focus ring, and a sign-in button with light sweeping across it. */
+.sfs-card input[type='email'],
+.sfs-card input[type='password'] {
+  height: 2.9rem;
+  border-radius: 0.85rem;
+  padding-inline-start: 2.6rem;
+  background-repeat: no-repeat;
+  background-position: 0.85rem 50%;
+  background-size: 1.1rem;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+.sfs-card input[type='email'] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='4' width='20' height='16' rx='2'/%3E%3Cpath d='m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'/%3E%3C/svg%3E"); }
+.sfs-card input[type='password'] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E"); }
+[dir='rtl'] .sfs-card input[type='email'],
+[dir='rtl'] .sfs-card input[type='password'] { background-position: calc(100% - 0.85rem) 50%; }
+.sfs-card input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2); }
+.sfs-card button[type='submit'] {
+  position: relative;
+  overflow: hidden;
+  height: 3rem;
+  border-radius: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background-color: #c81e1e;
+  background-image: linear-gradient(110deg, #a3161b 0%, #e02424 45%, #a3161b 100%);
+  background-size: 200% 100%;
+  box-shadow: 0 14px 30px -12px rgba(224, 36, 36, 0.9);
+  animation: sfs-btn-flow 5s linear infinite;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sfs-card button[type='submit']:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 18px 34px -12px rgba(224, 36, 36, 1); }
+.sfs-card button[type='submit']::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: sfs-btn-shine 3.2s ease-in-out 1.5s infinite;
+}
+.sfs-trust { animation: sfs-reveal 0.8s ease-out 0.9s both; }
+
+/* Greeting: the hand waves, the words slide in. */
+.sfs-greet { animation: sfs-reveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+.sfs-wave { transform-origin: 70% 80%; animation: sfs-wave 1.8s ease-in-out 0.8s 2 both; }
+.sfs-crown { transform-box: fill-box; transform-origin: 50% 100%; animation: sfs-pop 0.7s cubic-bezier(0.3, 1.8, 0.5, 1) 0.6s both; }
+.sfs-speed-field { -webkit-mask-image: linear-gradient(100deg, transparent 25%, #000 60%); mask-image: linear-gradient(100deg, transparent 25%, #000 60%); }
+.sfs-stage { animation: sfs-stage-in 1s cubic-bezier(0.2, 1, 0.3, 1) 0.2s both; }
+
+@keyframes sfs-card-in { from { transform: translateY(28px) scale(0.96); } to { transform: none; } }
+@keyframes sfs-btn-flow { to { background-position: -200% 0; } }
+@keyframes sfs-btn-shine { 0% { transform: translateX(0) skewX(-20deg); } 40%, 100% { transform: translateX(600%) skewX(-20deg); } }
+@keyframes sfs-wave { 0%, 100% { transform: rotate(0); } 15%, 45% { transform: rotate(18deg); } 30%, 60% { transform: rotate(-10deg); } }
+@keyframes sfs-stage-in { from { transform: translateY(30px) scale(0.92); } to { transform: none; } }
+.sfs-burst { animation: sfs-burst 1.6s cubic-bezier(0.2, 0.7, 0.3, 1) 0.5s both; }
+.sfs-burst-2 { animation-delay: 0.8s; }
+@keyframes sfs-burst { from { transform: scale(0.3); border-width: 6px; } to { transform: scale(2.4); border-width: 0; } }
+
+/* ── Light or dark, and the colour palette (the picker on every sign-in page) ── */
+.sfs-root[data-sfs-palette='rose'] { --sfs-hue: -42deg; --sfs-p-l: 322 72% 38%; --sfs-p-d: 322 85% 74%; }
+.sfs-root[data-sfs-palette='ocean'] { --sfs-hue: 205deg; --sfs-p-l: 212 82% 38%; --sfs-p-d: 205 90% 70%; }
+.sfs-root[data-sfs-palette='emerald'] { --sfs-hue: 140deg; --sfs-p-l: 152 75% 26%; --sfs-p-d: 150 60% 55%; }
+.sfs-root[data-sfs-palette='sunset'] { --sfs-hue: 26deg; --sfs-p-l: 22 90% 34%; --sfs-p-d: 32 95% 62%; }
+/* Only a palette other than SampForce red recolours the artwork, so the default draws with no filter at all. */
+.sfs-root[data-sfs-palette]:not([data-sfs-palette='red']) .sfs-tint,
+.sfs-root[data-sfs-palette]:not([data-sfs-palette='red']) .sfs-emblem-core,
+.sfs-root[data-sfs-palette]:not([data-sfs-palette='red']) .sfs-card button[type='submit'],
+.sfs-root[data-sfs-palette]:not([data-sfs-palette='red']) .sfs-card-frame::before,
+.sfs-root[data-sfs-palette]:not([data-sfs-palette='red']) .sfs-logo-force { filter: hue-rotate(var(--sfs-hue)); }
+
+/* The card follows the page's own mode, whatever the app's theme is. */
+.sfs-card {
+  --background: 230 40% 7%;
+  --foreground: 0 0% 98%;
+  --surface: 230 35% 11%;
+  --muted: 230 25% 14%;
+  --muted-foreground: 225 20% 74%;
+  --border: 230 20% 22%;
+  --input: 230 20% 30%;
+  --popover: 230 35% 11%;
+  --popover-foreground: 0 0% 98%;
+  --primary: var(--sfs-p-d);
+  --ring: var(--sfs-p-d);
+  --primary-foreground: 0 60% 6%;
+  --critical: 351 100% 69%;
+  color-scheme: dark;
+}
+.sfs-root[data-sfs-mode='light'] .sfs-card {
+  --background: 0 0% 100%;
+  --foreground: 228 45% 10%;
+  --surface: 0 0% 100%;
+  --muted: 225 30% 95%;
+  --muted-foreground: 225 18% 36%;
+  --border: 226 25% 87%;
+  --input: 226 22% 78%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 228 45% 10%;
+  --primary: var(--sfs-p-l);
+  --ring: var(--sfs-p-l);
+  --primary-foreground: 0 0% 100%;
+  --critical: 351 75% 40%;
+  color-scheme: light;
+}
+
+/* Light mode: soft daylight backdrops, dark words, and each animation on its own dark glass screen. */
+.sfs-root[data-sfs-mode='light'] {
+  --sfs-ink: #1c0607;
+  --sfs-ink-soft: #3d1a1c;
+  --sfs-ink-mute: #5b3436;
+  --sfs-gold: #9a3412;
+  --sfs-chip: rgba(255, 255, 255, 0.75);
+  --sfs-chip-ring: rgba(127, 29, 29, 0.2);
+  --sfs-logo-a: #334155;
+  background-color: #fff4f2;
+}
+.sfs-root[data-sfs-mode='light'] .sfs-hero-text { text-shadow: none; }
+.sfs-root[data-sfs-mode='light'] .sfs-logo-force { background-image: linear-gradient(90deg, #e02424, #b45309); }
+.sfs-root[data-sfs-mode='light'] [data-scene='console'] .sfs-bg-base { background: radial-gradient(90% 75% at 35% 70%, #ffffff 0%, #fdeaea 50%, #f6d3d3 100%); }
+.sfs-root[data-sfs-mode='light'] [data-scene='super'] .sfs-bg-base { background: radial-gradient(85% 75% at 35% 65%, #fffaf0 0%, #fde4e6 50%, #f4c7d0 100%); }
+.sfs-root[data-sfs-mode='light'] [data-scene='manager'] .sfs-bg-base { background: linear-gradient(165deg, #fff8f2 0%, #ffe6da 45%, #ffcdbd 100%); }
+.sfs-root[data-sfs-mode='light'] [data-scene='executive'] .sfs-bg-base { background: linear-gradient(125deg, #fff6f6 0%, #ffe3e3 45%, #ffc9c9 100%); }
+.sfs-root[data-sfs-mode='light'] .sfs-stage {
+  border-radius: 28px;
+  background: radial-gradient(120% 120% at 30% 20%, #3b0a10 0%, #1a0507 60%, #0b0204 100%);
+  box-shadow: 0 30px 60px -28px rgba(127, 29, 29, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+/* The picker: a small frosted bar with a sun or moon and the palette swatches. */
+.sfs-picker { background: var(--sfs-chip); box-shadow: inset 0 0 0 1px var(--sfs-chip-ring); backdrop-filter: blur(10px); color: var(--sfs-ink); }
+.sfs-picker-mode { background: rgba(255, 255, 255, 0.12); transition: transform 0.2s; }
+.sfs-picker-mode:hover { transform: rotate(20deg) scale(1.08); }
+.sfs-root[data-sfs-mode='light'] .sfs-picker-mode { background: rgba(28, 6, 7, 0.08); }
+.sfs-picker-sep { background: var(--sfs-chip-ring); }
+.sfs-swatch { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6); transition: transform 0.2s, box-shadow 0.2s; }
+.sfs-swatch:hover { transform: scale(1.15); }
+.sfs-swatch-on { box-shadow: 0 0 0 2px var(--sfs-ink), inset 0 0 0 2px rgba(255, 255, 255, 0.85); transform: scale(1.1); }
+.sfs-picker button:focus-visible { outline: 2px solid var(--sfs-ink); outline-offset: 2px; }
+/* Floating labels start after the field's icon. */
+.sfs-card input[type='email'] ~ label,
+.sfs-card input[type='password'] ~ label { inset-inline-start: 2.6rem; }
