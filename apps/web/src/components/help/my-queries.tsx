@@ -208,7 +208,7 @@ function Message({ message }: { message: SupportTicketMessageRow }) {
         </p>
         <p className="mt-0.5 whitespace-pre-wrap">{message.body}</p>
         <MessageFiles files={message.attachments} inverted={message.mine} />
-        <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+        <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
           {new Date(message.createdAt).toLocaleString(t.formatLocale, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       </div>
