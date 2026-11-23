@@ -2,6 +2,8 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@ast
 import {
   chatConversationInputSchema,
   chatConversationUpdateSchema,
+  chatDeliveredSchema,
+  chatEventsQuerySchema,
   chatLinkQuerySchema,
   chatMembersInputSchema,
   chatMessageEditSchema,
@@ -233,7 +235,6 @@ import {
   appearanceSchema,
   regionalSchema,
   savedThemeInputSchema,
-  navItemSchema,
   updateNavigationSchema,
   bulkActionSchema,
   savedViewInputSchema,
@@ -398,7 +399,12 @@ export function buildOpenApiDocument(): object {
   // Team chat (ADR 0064). Signed-in sessions only (no API keys); plan feature team_chat.
   const chatTag = 'Team chat';
   const convParams = { params: idParam };
-  r.registerPath({ method: 'get', path: '/chat/stream', tags: [chatTag], summary: 'Live events as Server-Sent Events (text/event-stream): message, message_changed, read and conversation, naming what to re-read', security: secured, responses: { 200: ok('Event stream'), ...errors } });
+  // Live delivery (ADR 0069): a WebSocket at /api/v1/chat/socket?ticket=..., or the catch-up route below.
+  action('post', '/chat/socket-ticket', chatTag, 'A one-minute ticket for opening the live WebSocket at /api/v1/chat/socket?ticket=…; it sends message, message_changed, read, delivered, conversation, typing and presence events naming what to re-read');
+  r.registerPath({ method: 'get', path: '/chat/events', tags: [chatTag], summary: 'Live events without a WebSocket: those after `cursor`, answered at once or after up to `wait` seconds; the first call answers ready', security: secured, request: { query: chatEventsQuerySchema }, responses: { 200: ok('Events and the next cursor'), ...errors } });
+  action('get', '/chat/presence', chatTag, 'Who in the workspace is online now, and when the others were last seen');
+  action('post', '/chat/delivered', chatTag, 'Messages so far reached this device: moves your Delivered receipt in one conversation or all', chatDeliveredSchema);
+  action('post', '/chat/conversations/{id}/typing', chatTag, 'Tell the conversation you are typing (shown for a few seconds)');
   action('get', '/chat/unread', chatTag, 'Unread messages across your conversations');
   action('get', '/chat/people', chatTag, 'People of the workspace to message');
   r.registerPath({ method: 'get', path: '/chat/link-options', tags: [chatTag], summary: 'Companies, RFQs and deals you can see, to link a message or channel to', security: secured, request: { query: chatLinkQuerySchema }, responses: { 200: ok('Options'), ...errors } });
@@ -1013,10 +1019,8 @@ export function buildOpenApiDocument(): object {
   action('delete', '/me/themes/{id}', 'Appearance', 'Delete a saved theme');
   action('put', '/tenants/current/appearance', 'Appearance', 'Set the workspace default appearance (tenant:manage, audited)', appearanceSchema);
   action('delete', '/tenants/current/appearance', 'Appearance', 'Remove the workspace default appearance (tenant:manage, audited)');
-  action('get', '/me/navigation', 'Navigation', 'The person’s favourites, recent pages and sidebar layout in the current workspace');
+  action('get', '/me/navigation', 'Navigation', 'The person’s favourites and sidebar layout in the current workspace');
   action('patch', '/me/navigation', 'Navigation', 'Update favourites (at most 20), module order or hidden modules (Settings cannot be hidden)', updateNavigationSchema);
-  action('post', '/me/navigation/visits', 'Navigation', 'Record a page visit at the front of the recent list (at most 15 kept)', navItemSchema);
-  action('delete', '/me/navigation/visits', 'Navigation', 'Clear the recent list');
   action('get', '/views', 'Table views', 'Saved views for one list (?entity=leads|contacts|companies|deals): your own and those shared in the workspace');
   action('post', '/views', 'Table views', 'Save a view of a list (at most 30 per list; NAME_TAKEN if you already use the name)', savedViewInputSchema);
   action('patch', '/views/{id}', 'Table views', 'Rename, share or update a view you created', savedViewUpdateSchema);

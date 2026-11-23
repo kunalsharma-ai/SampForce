@@ -3,7 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Main' });
-const section = (page: Page, name: 'favourites' | 'recent' | 'modules') => sidebar(page).locator(`[data-nav-section="${name}"]`);
+const section = (page: Page, name: 'favourites' | 'modules') => sidebar(page).locator(`[data-nav-section="${name}"]`);
 
 async function signIn(page: Page, email: string, password: string) {
   await page.goto('/login');
@@ -13,7 +13,7 @@ async function signIn(page: Page, email: string, password: string) {
   await expect(page).toHaveURL(/\/app/);
 }
 
-test('favourites and recent pages are saved to the account and show in the sidebar and search', async ({ page, browser }) => {
+test('favourites are saved to the account and show in the sidebar and search; visited pages are never recorded', async ({ page, browser }) => {
   const { email, password } = await signUp(page, 'Fav Org');
   await expect(section(page, 'favourites')).toHaveCount(0);
 
@@ -23,19 +23,24 @@ test('favourites and recent pages are saved to the account and show in the sideb
   await expect(section(page, 'favourites').getByRole('link', { name: 'Deals' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove this page from favourites' })).toHaveAttribute('aria-pressed', 'true');
 
-  // Visit a page; after it renders it becomes a recent item, labelled by its heading.
+  // Visiting pages leaves no history: nothing is sent to the server and the sidebar has no Recent section.
+  const visits: string[] = [];
+  page.on('request', (r) => r.url().includes('/me/navigation/visits') && visits.push(r.url()));
   await page.goto('/app/quotes');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  const visit = page.waitForResponse((r) => r.url().endsWith('/me/navigation/visits') && r.request().method() === 'POST');
-  await visit;
+  await page.waitForTimeout(2_000); // longer than the old 1.5 s recording delay
   await page.goto('/app/leads');
-  await expect(section(page, 'recent').getByRole('link', { name: /Quotes/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.waitForTimeout(2_000);
+  expect(visits).toEqual([]);
+  await expect(sidebar(page).locator('[data-nav-section="recent"]')).toHaveCount(0);
+  await expect(sidebar(page).getByRole('heading', { name: 'Recent', exact: true })).toHaveCount(0);
 
-  // Search shows favourites and recent pages first.
+  // Search shows favourites first, and no Recent group.
   await page.keyboard.press('Control+k');
   const palette = page.getByRole('dialog');
   await expect(palette.getByRole('group', { name: 'Favourites' }).getByRole('option', { name: 'Deals' })).toBeVisible();
-  await expect(palette.getByRole('group', { name: 'Recent' })).toContainText('Quotes');
+  await expect(palette.getByRole('group', { name: 'Recent' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
   // Another browser has nothing local: it gets the same favourites from the account.

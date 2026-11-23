@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appPathSchema, MAX_RECENT, navKindForPath, pushRecent, updateNavigationSchema } from './navigation';
+import { appPathSchema, navKindForPath, updateNavigationSchema } from './navigation';
 
 describe('navigation', () => {
   it('accepts only SampForce paths', () => {
@@ -19,16 +19,9 @@ describe('navigation', () => {
     expect(navKindForPath('/app/settings/appearance')).toBe('page');
   });
 
-  it('keeps recent visits unique, newest first and capped', () => {
-    let list: ReturnType<typeof pushRecent> = [];
-    for (let i = 0; i < 20; i++) list = pushRecent(list, { href: `/app/p${i % 17}`, label: `P${i}`, kind: 'page' }, new Date(2026, 0, 1, 0, i));
-    expect(list).toHaveLength(MAX_RECENT);
-    expect(list[0]!.href).toBe('/app/p2');
-    expect(new Set(list.map((r) => r.href)).size).toBe(MAX_RECENT);
-  });
-
   it('rejects empty and unknown updates', () => {
     expect(updateNavigationSchema.safeParse({}).success).toBe(false);
+    // Recent pages are not kept, so a client cannot store them through the update either.
     expect(updateNavigationSchema.safeParse({ recent: [] }).success).toBe(false);
     expect(updateNavigationSchema.safeParse({ moduleOrder: ['leads', 'DROP TABLE'] }).success).toBe(false);
   });

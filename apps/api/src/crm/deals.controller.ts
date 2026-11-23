@@ -15,7 +15,7 @@ import {
   territoryUpdateSchema,
   z,
 } from '@dealflow/types';
-import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
+import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { DealsService } from './deals.service';
 import { PipelinesService } from './pipelines.service';
@@ -50,6 +50,7 @@ export class DealsController {
   }
 
   @Get('board')
+  @AlsoRequireFeature('deal_board')
   @RequirePermissions('deals:read')
   board(@Auth() auth: AuthContext, @Query(new ZodPipe(boardQuerySchema)) q: z.infer<typeof boardQuerySchema>) {
     return this.deals.board(auth, q.pipelineId, q.perStage);
@@ -81,6 +82,7 @@ export class DealsController {
   }
 
   @Post('bulk-update')
+  @AlsoRequireFeature('deal_bulk_update')
   @HttpCode(200)
   @RequirePermissions('deals:write')
   bulk(@Auth() auth: AuthContext, @Body(new ZodPipe(bulkDealUpdateSchema)) body: z.infer<typeof bulkDealUpdateSchema>, @Meta() meta: RequestMeta) {
@@ -94,6 +96,7 @@ export class DealsController {
   }
 
   @Get(':id/history')
+  @AlsoRequireFeature('deal_history')
   @RequirePermissions('deals:read')
   history(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
     return this.deals.history(auth, id);
@@ -113,6 +116,7 @@ export class DealsController {
   }
 
   @Post(':id/clone')
+  @AlsoRequireFeature('deal_cloning')
   @RequirePermissions('deals:write')
   clone(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {
     return this.deals.clone(auth, id, meta);

@@ -1,17 +1,15 @@
 'use client';
 
-import { type NavigationState, type NavItem, navKindForPath, type UpdateNavigationInput } from '@dealflow/types';
+import { type NavigationState, type NavItem, type UpdateNavigationInput } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
 import { api } from './api';
 import { type ModuleDef, MODULES } from './navigation';
 import { useSession } from './session';
 
-/** Pins, recent pages and sidebar layout are per person and per workspace, so the key carries the workspace. */
+/** Pins and sidebar layout are per person and per workspace, so the key carries the workspace. */
 export const navigationKey = (tenantId: string | undefined) => ['navigation', tenantId ?? 'none'] as const;
 
-const EMPTY: NavigationState = { pinned: [], recent: [], moduleOrder: [], hiddenModules: [] };
+const EMPTY: NavigationState = { pinned: [], moduleOrder: [], hiddenModules: [] };
 
 export function useNavigation() {
   const { data: me } = useSession();
@@ -54,42 +52,6 @@ export function useTogglePin() {
     },
     pending: update.isPending,
   };
-}
-
-export function useClearRecent() {
-  const qc = useQueryClient();
-  const { data: me } = useSession();
-  return useMutation({
-    mutationFn: () => api<NavigationState>('/me/navigation/visits', { method: 'DELETE' }),
-    onSuccess: (data) => qc.setQueryData(navigationKey(me?.tenant.id), data),
-  });
-}
-
-/** A readable label for the page: its first heading once it has rendered, else the document title. */
-function pageLabel(): string | null {
-  const h1 = document.querySelector('main h1')?.textContent?.trim();
-  const title = document.title.replace(/\s*[·|–-]\s*SampForce.*$/i, '').trim();
-  const label = h1 || title;
-  return label ? label.slice(0, 120) : null;
-}
-
-/** Records each page the person opens, after it has rendered, so "Recent" shows record names rather than ids. */
-export function useRecordVisits(enabled: boolean) {
-  const pathname = usePathname();
-  const qc = useQueryClient();
-  const { data: me } = useSession();
-  useEffect(() => {
-    if (!enabled || !pathname.startsWith('/app')) return;
-    const t = setTimeout(() => {
-      const label = pageLabel();
-      if (!label) return;
-      const item: NavItem = { href: pathname, label, kind: navKindForPath(pathname) };
-      void api<NavigationState>('/me/navigation/visits', { method: 'POST', json: item })
-        .then((data) => qc.setQueryData(navigationKey(me?.tenant.id), data))
-        .catch(() => undefined); // History is a convenience; a failed write must never disturb the page.
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [enabled, pathname, qc, me?.tenant.id]);
 }
 
 /** Modules in the person's order, with hidden ones removed. Modules they never placed keep the default order after. */

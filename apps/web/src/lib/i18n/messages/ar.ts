@@ -17,7 +17,6 @@ export const ar: Messages = {
 
   'nav.main': 'القائمة الرئيسية',
   'nav.favourites': 'المفضلة',
-  'nav.recent': 'الأخيرة',
   'nav.removeFavourite': 'إزالة {label} من المفضلة',
   'nav.removeFavouriteShort': 'إزالة من المفضلة',
   'nav.customize': 'تخصيص',
@@ -41,6 +40,8 @@ export const ar: Messages = {
   'module.pipelines': 'مسارات المبيعات',
   'module.accounts': 'الحسابات',
   'module.follow-ups': 'المتابعات',
+  'module.tasks': 'المهام',
+  'module.targets': 'الأهداف',
   'module.rfqs': 'طلبات عروض الأسعار',
   'module.chat': 'دردشة الفريق',
   'module.activities': 'أنشطة المبيعات',

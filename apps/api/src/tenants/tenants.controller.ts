@@ -15,7 +15,7 @@ import {
   type RoleVisibilityInput,
   roleVisibilitySchema,
 } from '@dealflow/types';
-import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { InvitationsService } from './invitations.service';
 import { RolesService } from './roles.service';
@@ -79,24 +79,28 @@ export class TenantsController {
   }
 
   @Get('roles')
+  @AlsoRequireFeature('permission_management')
   @RequirePermissions('members:read')
   roles(@Auth() auth: AuthContext) {
     return this.roleService.list(auth);
   }
 
   @Post('roles')
+  @AlsoRequireFeature('permission_management')
   @RequirePermissions('members:manage')
   createRole(@Auth() auth: AuthContext, @Body(new ZodPipe(roleInputSchema)) body: RoleInput, @Meta() meta: RequestMeta) {
     return this.roleService.create(auth, body, meta);
   }
 
   @Put('roles/:id')
+  @AlsoRequireFeature('permission_management')
   @RequirePermissions('members:manage')
   updateRole(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(roleInputSchema)) body: RoleInput, @Meta() meta: RequestMeta) {
     return this.roleService.update(auth, id, body, meta);
   }
 
   @Put('roles/:id/visibility')
+  @AlsoRequireFeature('permission_management')
   @RequirePermissions('members:manage')
   setRoleVisibility(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(roleVisibilitySchema)) body: RoleVisibilityInput, @Meta() meta: RequestMeta) {
     return this.roleService.setVisibility(auth, id, body, meta);
@@ -110,6 +114,7 @@ export class TenantsController {
   }
 
   @Delete('roles/:id')
+  @AlsoRequireFeature('permission_management')
   @HttpCode(204)
   @RequirePermissions('members:manage')
   deleteRole(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {

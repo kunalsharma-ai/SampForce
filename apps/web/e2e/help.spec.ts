@@ -64,8 +64,11 @@ test('every page title has an i button that explains the page, by mouse and by k
   // A click outside closes it.
   await button.click();
   await expect(tip).toBeVisible();
-  await page.mouse.click(5, 300);
-  await expect(tip).toBeHidden();
+  // The popover listens for outside clicks a moment after it opens, so a click that lands first is tried again.
+  await expect(async () => {
+    await page.mouse.click(5, 300);
+    await expect(tip).toBeHidden({ timeout: 1000 });
+  }).toPass();
 });
 
 test('section headings have their own i buttons, and a record page explains itself', async ({ page }) => {
@@ -128,15 +131,18 @@ test('the Help center lists every feature and searches the same help text', asyn
   await expect(guide.getByRole('heading', { name: 'Feature guide' })).toBeVisible();
   expect(await guide.locator('[data-help-guide]').count()).toBeGreaterThan(50);
 
-  await guide.getByRole('searchbox', { name: 'Search features' }).fill('price books');
-  await expect(guide.locator('[data-help-guide="page.quotes"]')).toBeVisible();
-  await expect(guide.locator('[data-help-guide="page.deals"]')).toHaveCount(0);
-  await expect(guide.locator('[data-help-guide="page.quotes"]').getByRole('heading', { name: 'Price books' })).toBeVisible();
-  await guide.locator('[data-help-guide="page.quotes"]').getByRole('link', { name: 'Open page' }).click();
+  // One search covers answers and guides; a guide opens with its sections and a link to the page.
+  await page.getByRole('searchbox', { name: 'Search help' }).fill('price books');
+  const results = page.locator('[data-help-results]');
+  await results.locator('[data-help-guide="page.quotes"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Quotes & Proposals' });
+  await expect(dialog.getByRole('heading', { name: 'Price books' })).toBeVisible();
+  await expect(results.locator('[data-help-guide="page.deals"]')).toHaveCount(0);
+  await dialog.getByRole('link', { name: 'Open page' }).click();
   await expect(page).toHaveURL(/\/app\/quotes$/);
 
   await page.goto('/app/help');
-  await page.locator('#guide').getByRole('searchbox', { name: 'Search features' }).fill('zzzz-nothing');
-  await expect(page.locator('#guide').getByText('No feature matches “zzzz-nothing”.').first()).toBeAttached();
+  await page.getByRole('searchbox', { name: 'Search help' }).fill('zzzz-nothing');
+  await expect(page.locator('[data-help-no-results]')).toContainText('Nothing matches “zzzz-nothing” yet.');
   await axe(page);
 });

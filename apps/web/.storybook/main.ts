@@ -21,6 +21,7 @@ const config: StorybookConfig = {
         '@': fileURLToPath(new URL('../src', import.meta.url)),
         // The shared types package ships CommonJS for the API; Vite reads its TypeScript source directly instead.
         '@dealflow/types': fileURLToPath(new URL('../../../packages/types/src/index.ts', import.meta.url)),
+        '@dealflow/help': fileURLToPath(new URL('../../../packages/help/src/index.ts', import.meta.url)),
       },
     };
     return cfg;

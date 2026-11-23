@@ -1,4 +1,4 @@
-import { defaultPlanFeatures, type FeatureKey, normaliseFeatures } from './features';
+import { defaultPlanFeatures, FEATURE_CATALOG_VERSION, FEATURES, type FeatureKey, normaliseFeatures } from './features';
 
 /**
  * Proposed launch plan catalogue (see docs/PRICING_STRATEGY.md). These are proposals, not
@@ -12,6 +12,9 @@ export interface PlanLimits {
   maxPipelines: number | null;
   monthlyAiCredits: number;
   automationRunsPerMonth: number;
+  /** Workspace limits (ADR 0071): Manager and Executive Workspaces an organisation may create; null = no limit. */
+  maxManagerWorkspaces: number | null;
+  maxExecutiveWorkspaces: number | null;
 }
 
 export interface PlanEntitlements extends PlanLimits {
@@ -20,13 +23,13 @@ export interface PlanEntitlements extends PlanLimits {
 }
 
 const LIMITS: Record<PlanCode, PlanLimits> = {
-  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500 },
-  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000 },
-  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000 },
-  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000 },
-  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000 },
-  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000 },
-  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000 },
+  free: { maxUsers: 2, maxPipelines: 1, monthlyAiCredits: 50, automationRunsPerMonth: 500, maxManagerWorkspaces: 1, maxExecutiveWorkspaces: 2 },
+  launch: { maxUsers: null, maxPipelines: 3, monthlyAiCredits: 200, automationRunsPerMonth: 2_000, maxManagerWorkspaces: 3, maxExecutiveWorkspaces: 10 },
+  growth: { maxUsers: null, maxPipelines: 10, monthlyAiCredits: 500, automationRunsPerMonth: 10_000, maxManagerWorkspaces: 10, maxExecutiveWorkspaces: 50 },
+  professional: { maxUsers: null, maxPipelines: 25, monthlyAiCredits: 1_000, automationRunsPerMonth: 50_000, maxManagerWorkspaces: 25, maxExecutiveWorkspaces: 150 },
+  business: { maxUsers: null, maxPipelines: 50, monthlyAiCredits: 2_000, automationRunsPerMonth: 150_000, maxManagerWorkspaces: null, maxExecutiveWorkspaces: null },
+  enterprise: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 500_000, maxManagerWorkspaces: null, maxExecutiveWorkspaces: null },
+  enterprise_plus: { maxUsers: null, maxPipelines: null, monthlyAiCredits: 3_000, automationRunsPerMonth: 1_000_000, maxManagerWorkspaces: null, maxExecutiveWorkspaces: null },
 };
 
 /**
@@ -38,8 +41,35 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, PlanEntitlements> = Object.from
 ) as Record<PlanCode, PlanEntitlements>;
 
 /** Reads a stored `plans.entitlements` value, filling anything missing or malformed from the shipped definition. */
-export function parsePlanEntitlements(code: PlanCode, stored: unknown): PlanEntitlements {
-  const d = PLAN_ENTITLEMENTS[code];
+const workspaceCap = (v: unknown, fallback: number | null) => (v === null ? null : typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
+
+/**
+ * A stored feature list. Keys added to the catalogue after the list was saved (FeatureDef.since) are included when
+ * the plan includes them by default, so a new release never takes a module away from a plan nobody has edited since.
+ */
+function storedFeatures(code: string, list: unknown[], version: unknown): FeatureKey[] {
+  const saved = typeof version === 'number' ? version : 1;
+  const keys = list.filter((f): f is string => typeof f === 'string');
+  if (saved < FEATURE_CATALOG_VERSION) {
+    const defaults = new Set(isPlanCode(code) ? defaultPlanFeatures(code) : []);
+    for (const f of FEATURES) if ((f.since ?? 1) > saved && defaults.has(f.key)) keys.push(f.key);
+  }
+  return normaliseFeatures(keys);
+}
+
+/** True for the shipped plans; anything else is a plan the Console Admin created (ADR 0071). */
+export function isPlanCode(code: string): code is PlanCode {
+  return (PLAN_CODES as readonly string[]).includes(code);
+}
+
+/** Plans the Console Admin creates have codes with this prefix, so they never clash with a shipped plan. */
+export const CUSTOM_PLAN_PREFIX = 'custom_';
+
+/** What a Console-made plan falls back to for anything missing from its stored definition: Free's limits, no features. */
+const CUSTOM_PLAN_DEFAULTS: PlanEntitlements = { ...LIMITS.free, features: [] };
+
+export function parsePlanEntitlements(code: string, stored: unknown): PlanEntitlements {
+  const d = isPlanCode(code) ? PLAN_ENTITLEMENTS[code] : CUSTOM_PLAN_DEFAULTS;
   const s = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
   const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : fallback);
   const cap = (v: unknown, fallback: number | null) => (v === null ? null : typeof v === 'number' && Number.isInteger(v) && v >= 1 ? v : fallback);
@@ -48,7 +78,9 @@ export function parsePlanEntitlements(code: PlanCode, stored: unknown): PlanEnti
     maxPipelines: 'maxPipelines' in s ? cap(s.maxPipelines, d.maxPipelines) : d.maxPipelines,
     monthlyAiCredits: num(s.monthlyAiCredits, d.monthlyAiCredits),
     automationRunsPerMonth: num(s.automationRunsPerMonth, d.automationRunsPerMonth),
-    features: Array.isArray(s.features) ? normaliseFeatures(s.features.filter((f): f is string => typeof f === 'string')) : d.features,
+    features: Array.isArray(s.features) ? storedFeatures(code, s.features, s.catalogVersion) : d.features,
+    maxManagerWorkspaces: 'maxManagerWorkspaces' in s ? workspaceCap(s.maxManagerWorkspaces, d.maxManagerWorkspaces) : d.maxManagerWorkspaces,
+    maxExecutiveWorkspaces: 'maxExecutiveWorkspaces' in s ? workspaceCap(s.maxExecutiveWorkspaces, d.maxExecutiveWorkspaces) : d.maxExecutiveWorkspaces,
   };
 }
 

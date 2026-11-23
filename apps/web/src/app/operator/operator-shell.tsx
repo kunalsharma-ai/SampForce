@@ -8,7 +8,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
-import { operatorRealm, useChatBackground, useChatUnread } from '@/lib/chat';
+import { ChatNotices } from '@/components/chat/chat-notices';
+import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
+import { useOperatorTicketCounts } from '@/lib/support';
 import * as React from 'react';
 
 export function useOperator(enabled = true) {
@@ -19,12 +21,27 @@ export function useOperator(enabled = true) {
 function OperatorChatLink({ active }: { active: boolean }) {
   const me = useOperator();
   const realm = React.useMemo(() => (me.data ? operatorRealm(me.data.id) : null), [me.data]);
-  useChatBackground(realm);
+  useChatLive(realm);
   const unread = useChatUnread(realm).data?.total ?? 0;
   return (
-    <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
-      Support chat
-      {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
+    <>
+      <ChatNotices />
+      <Link href="/operator/chat" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-chat-unread={unread}>
+        Support chat
+        {unread > 0 && <span className="ms-1 rounded-full bg-critical px-1.5 text-[11px] font-semibold text-background">{unread}</span>}
+      </Link>
+    </>
+  );
+}
+
+/** Support tickets raised from Help in every client's workspaces, with how many wait for an answer (ADR 0073). */
+function OperatorTicketsLink({ active }: { active: boolean }) {
+  const counts = useOperatorTicketCounts();
+  const waiting = (counts.data?.open ?? 0) + (counts.data?.inProgress ?? 0);
+  return (
+    <Link href="/operator/support" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-tickets-waiting={waiting}>
+      Support tickets
+      {waiting > 0 && <span className="ms-1 rounded-full bg-warning px-1.5 text-[11px] font-semibold text-background">{waiting}</span>}
     </Link>
   );
 }
@@ -51,17 +68,21 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <Logo compact />
-          <span className="font-semibold">Operator console</span>
+          <span className="font-semibold">Console Admin</span>
           <Badge tone="warning">Platform staff</Badge>
           {me.data && (
-            <nav aria-label="Operator" className="flex gap-3 text-sm">
+            <nav aria-label="Operator" className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
               <Link href="/operator" className={path === '/operator' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
-                Workspaces
+                Overview
+              </Link>
+              <Link href="/operator/clients" className={path.startsWith('/operator/clients') || path.startsWith('/operator/tenants') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Clients
               </Link>
               <Link href="/operator/plans" className={path === '/operator/plans' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Plans
               </Link>
               <OperatorChatLink active={path === '/operator/chat'} />
+              <OperatorTicketsLink active={path === '/operator/support'} />
               <Link href="/operator/audit" className={path === '/operator/audit' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Operator log
               </Link>
@@ -70,6 +91,9 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Settings
+              </Link>
+              <Link href="/operator/help" className={path === '/operator/help' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+                Help
               </Link>
             </nav>
           )}

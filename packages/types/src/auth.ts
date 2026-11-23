@@ -1,5 +1,4 @@
 import type { FeatureKey } from './features';
-import type { PlanCode } from './plan-codes';
 import { z } from 'zod';
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(254);
@@ -61,13 +60,20 @@ export interface MeResponse {
     plan: string;
     isDemo: boolean;
     brandColor: string | null;
-    /** Features the workspace's plan includes now (ADR 0057); pages for anything else show the upgrade page. */
+    /**
+     * Features the caller's workspace may use now: the plan's (ADR 0057), narrowed by the workspace hierarchy
+     * (ADR 0071). Pages for anything else are locked.
+     */
     features: FeatureKey[];
+    /** Features the organisation's plan includes: a feature here but not in `features` was withheld by a parent workspace. */
+    planFeatures: FeatureKey[];
     /** The plan whose features apply (Free while a paid plan is unpaid or canceled). */
-    appliedPlan: PlanCode;
+    appliedPlan: string;
   };
   role: string;
   permissions: string[];
+  /** The caller's place in the workspace hierarchy (ADR 0071). */
+  workspace: { id: string; level: 'SUPER' | 'MANAGER' | 'EXECUTIVE'; name: string; designation: string; actions: Partial<Record<string, string[]>> };
   memberships: MembershipSummary[];
   /** How this session signed in. */
   authMethod: 'password' | 'mfa' | 'sso';

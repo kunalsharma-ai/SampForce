@@ -117,15 +117,22 @@ const OPERATOR_READ = new Set([
   'Invoice',
   'SupportGrant',
   'TenantFeatureOverride',
+  // Workspace hierarchy (ADR 0071): the Console shows each client's workspace structure and counts across clients.
+  // These are names and levels only, never CRM records.
+  'WorkspaceNode',
   // Team chat (ADR 0064): the console lists every workspace's support line with its unread count. Replying runs in
   // the workspace's own context.
   'ChatConversation',
   'ChatMember',
   'ChatMessage',
+  // Help Center support tickets (ADR 0073): the Console's ticket inbox. Questions people chose to send to SampForce,
+  // never CRM records. Replies and status changes run in the workspace's own context.
+  'SupportTicket',
+  'SupportTicketMessage',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */
-const NO_UPDATE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
+const NO_UPDATE = new Set(['TaskEvent', 'AuditLog', 'AiUsage', 'PlatformAuditLog', 'DealStageEvent', 'ForecastSnapshot', 'FormSubmission']);
 const NO_DELETE = new Set(['AuditLog', 'AiUsage', 'PlatformAuditLog', 'DomainEvent', 'Tenant']);
 
 const NONE = '__no_workspace__';

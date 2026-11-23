@@ -9,13 +9,14 @@ import { features } from './text/features';
 import { notifications } from './text/notifications';
 import { stored } from './text/stored';
 import { validation } from './text/validation';
+import { workspaces } from './text/workspaces';
 
 export { pickLanguage, placeholdersOf, TextCatalogue, type TextRow, type TextTable, type TextVars } from './catalogue';
 
 /** Every table of text the server writes, by area. A phrase lives in one table (i18n.test.ts checks for repeats). */
-export const SERVER_TEXT_TABLES = { validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, notifications, composed, crmAdmin, crmAdminNotifications } as const;
+export const SERVER_TEXT_TABLES = { validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, notifications, composed, crmAdmin, crmAdminNotifications, workspaces } as const;
 
-const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, crmAdmin];
+const broad = [validation, errorsAccess, errorsRecords, errorsWork, errorsProviders, features, stored, crmAdmin, workspaces];
 
 /**
  * The server's text in Spanish, French, German and Arabic, for translating finished English text: the API's error and

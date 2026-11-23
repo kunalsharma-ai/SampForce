@@ -20,7 +20,6 @@ import {
   Bot,
   CalendarDays,
   Check,
-  CircleHelp,
   Keyboard,
   ListTodo,
   LogOut,
@@ -49,8 +48,10 @@ import { CopilotPanel } from './copilot-panel';
 import { VoiceNoteButton } from '../voice/voice-note';
 import { ChatButton } from './chat-button';
 import { NotificationsMenu } from './notifications-menu';
+import { WorkspaceBadge, WorkspaceIdentityBlock } from './workspace-badge';
 import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
+import { HelpMenu } from './help-menu';
 
 const QUICK_CREATE: { kind: QuickCreateKind; permission: Permission }[] = [
   { kind: 'leads', permission: 'leads:write' },
@@ -88,6 +89,7 @@ export function Topbar() {
   const copilotOpen = useCopilot((s) => s.open);
   const setCopilotOpen = useCopilot((s) => s.setOpen);
   const hasAi = useHasFeature('ai_assistant');
+  const hasNotifications = useHasFeature('notifications');
   const [navOpen, setNavOpen] = useState(false);
   const t = useT();
 
@@ -127,6 +129,7 @@ export function Topbar() {
       </button>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
       <FavouriteButton />
+      <WorkspaceBadge />
 
       <div className="ms-auto flex items-center gap-1">
         {hasAi && (
@@ -161,7 +164,7 @@ export function Topbar() {
         </span>
 
         <ChatButton />
-        <NotificationsMenu />
+        {hasNotifications && <NotificationsMenu />}
         <span data-secondary="" className="contents">
           <ThemeSwitcher />
         </span>
@@ -185,7 +188,7 @@ export function Topbar() {
         <IconLink href="/app/activities" label={t('top.tasks')} icon={ListTodo} />
         <IconLink href="/app/meetings" label={t('top.calendar')} icon={CalendarDays} />
         <IconLink href="/app/integrations" label={t('top.integrations')} icon={Plug} />
-        <IconLink href="/app/help" label={t('top.help')} icon={CircleHelp} />
+        <HelpMenu onShortcuts={() => setShortcutsOpen(true)} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -204,6 +207,8 @@ export function Topbar() {
                   <p className="truncate text-sm font-medium">{data.user.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{data.user.email}</p>
                 </div>
+                <DropdownMenuSeparator />
+                <WorkspaceIdentityBlock />
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>{t('top.workspaces')}</DropdownMenuLabel>
                 {data.memberships.map((m) => (

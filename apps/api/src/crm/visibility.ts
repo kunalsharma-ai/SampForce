@@ -1,6 +1,7 @@
 import type { Prisma, TenantTx } from '@dealflow/database';
 import type { PersonRef, RecordScope } from '@dealflow/types';
 import type { AuthContext } from '../common/auth-context';
+import { branchUserIds } from '../workspaces/access';
 
 /**
  * Record visibility (ADR 0060). Each role says which company leads, employees and inbound leads its people see:
@@ -42,9 +43,30 @@ export async function reportingTree(tx: TenantTx, tenantId: string, userId: stri
 export async function visibility(tx: TenantTx, auth: AuthContext): Promise<Visibility> {
   const scope = scopeOf(auth);
   const details = auth.viewOthersDetails ?? true;
-  if (scope === 'ALL') return { all: true, userIds: [auth.userId], details, me: auth.userId };
-  const team = scope === 'TEAM' ? await reportingTree(tx, auth.tenantId, auth.userId) : [];
-  return { all: false, userIds: [auth.userId, ...team], details, me: auth.userId };
+  const branch = await workspaceBranch(tx, auth);
+  if (!branch) {
+    if (scope === 'ALL') return { all: true, userIds: [auth.userId], details, me: auth.userId };
+    const team = scope === 'TEAM' ? await reportingTree(tx, auth.tenantId, auth.userId) : [];
+    return { all: false, userIds: [auth.userId, ...team], details, me: auth.userId };
+  }
+  // In a Manager or Executive Workspace (ADR 0071) the workspace's branch is the team: a manager sees their own
+  // workspace and the Executive Workspaces below it, whatever the reporting lines say; OWN still means their own.
+  const people = scope === 'OWN' ? [] : branch.filter((id) => id !== auth.userId);
+  return { all: false, userIds: [auth.userId, ...people], details, me: auth.userId };
+}
+
+/**
+ * The people whose records a Manager or Executive Workspace sees (ADR 0071): an Executive Workspace only its own
+ * person, a Manager Workspace everyone in it and in the Executive Workspaces below it. Null for the Super Workspace,
+ * which the role's scope alone decides.
+ */
+async function workspaceBranch(tx: TenantTx, auth: AuthContext): Promise<string[] | null> {
+  if (!auth.workspaceNodeId) return null;
+  const node = await tx.workspaceNode.findFirst({ where: { tenantId: auth.tenantId, id: auth.workspaceNodeId }, select: { level: true, parentId: true, archivedAt: true } });
+  if (!node || node.archivedAt) return [];
+  if (node.level === 'SUPER' && !node.parentId) return null;
+  if (node.level === 'EXECUTIVE') return [];
+  return branchUserIds(tx, auth.tenantId, auth.workspaceNodeId);
 }
 
 const unset = (field: string) => [{ [field]: null }, { [field]: { isSet: false } }];

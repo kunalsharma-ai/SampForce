@@ -1,7 +1,20 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
+  type ConsoleAuthorityInput,
+  consoleAuthoritySchema,
+  consoleClientCreateSchema,
+  consoleClientStateSchema,
+  type ConsolePlanCreateInput,
+  consolePlanCreateSchema,
+  type ConsolePlanUpdateInput,
+  consolePlanUpdateSchema,
+  type ConsoleRenewInput,
+  consoleRenewSchema,
+  type ConsoleSubscriptionInput,
+  consoleSubscriptionSchema,
+  emailSchema,
   type OperatorFeatureOverridesInput,
   operatorFeatureOverridesSchema,
   type OperatorPlanDefinitionInput,
@@ -27,6 +40,7 @@ import {
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPublic, OperatorRoles, OperatorTokens } from './operator-auth';
+import { ConsoleService } from './console.service';
 import { OperatorService } from './operator.service';
 
 const ip = (req: Request) => req.ip ?? null;
@@ -39,7 +53,85 @@ export class OperatorController {
   constructor(
     private readonly ops: OperatorService,
     private readonly tokens: OperatorTokens,
+    private readonly console: ConsoleService,
   ) {}
+
+  // ───── Console Admin (ADR 0071): platform overview, client organisations, plans and workspace limits ─────
+
+  /** Platform figures for the Console dashboard. No individual sales records. */
+  @Get('overview')
+  overview() {
+    return this.console.overview();
+  }
+
+  @Get('clients')
+  clients(@Operator() op: OperatorContext, @Query(new ZodPipe(z.object({ search: z.string().trim().max(100).optional() }))) q: { search?: string }, @Req() req: Request) {
+    return this.console.clients(op, q.search, ip(req));
+  }
+
+  /** A new client organisation with its Super Workspace, subscription and an invitation for its administrator. */
+  @Post('clients')
+  @OperatorRoles('ADMIN')
+  createClient(@Operator() op: OperatorContext, @Body(new ZodPipe(consoleClientCreateSchema)) body: z.output<typeof consoleClientCreateSchema>, @Req() req: Request) {
+    return this.console.createClient(op, body, ip(req));
+  }
+
+  @Get('clients/:id')
+  client(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Req() req: Request) {
+    return this.console.client(op, id, ip(req));
+  }
+
+  @Put('clients/:id/subscription')
+  @OperatorRoles('ADMIN')
+  subscription(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleSubscriptionSchema)) body: ConsoleSubscriptionInput, @Req() req: Request) {
+    return this.console.setSubscription(op, id, body, ip(req));
+  }
+
+  @Post('clients/:id/renew')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  renew(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleRenewSchema)) body: ConsoleRenewInput, @Req() req: Request) {
+    return this.console.renew(op, id, body, ip(req));
+  }
+
+  @Post('clients/:id/state')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  clientState(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleClientStateSchema)) body: z.infer<typeof consoleClientStateSchema>, @Req() req: Request) {
+    return this.console.setState(op, id, body.state, body.reason, ip(req));
+  }
+
+  @Put('clients/:id/authority')
+  @OperatorRoles('ADMIN')
+  authority(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleAuthoritySchema)) body: ConsoleAuthorityInput, @Req() req: Request) {
+    return this.console.setAuthority(op, id, body, ip(req));
+  }
+
+  /** A new invitation link for the client's administrator (the earlier one stops working). */
+  @Post('clients/:id/administrator-invitation')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  inviteAdministrator(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(z.object({ email: emailSchema.optional() }).strict())) body: { email?: string }, @Req() req: Request) {
+    return this.console.resendAdministrator(op, id, body.email, ip(req));
+  }
+
+  /** Every plan, shipped and Console-made, with its features, limits and commercial terms. */
+  @Get('console-plans')
+  consolePlans() {
+    return this.console.plans();
+  }
+
+  @Post('console-plans')
+  @OperatorRoles('ADMIN')
+  createPlan(@Operator() op: OperatorContext, @Body(new ZodPipe(consolePlanCreateSchema)) body: ConsolePlanCreateInput, @Req() req: Request) {
+    return this.console.createPlan(op, body, ip(req));
+  }
+
+  @Patch('console-plans/:code')
+  @OperatorRoles('ADMIN')
+  updatePlan(@Operator() op: OperatorContext, @Param('code', new ZodPipe(z.string().regex(/^[a-z0-9_]{1,60}$/))) code: string, @Body(new ZodPipe(consolePlanUpdateSchema)) body: ConsolePlanUpdateInput, @Req() req: Request) {
+    return this.console.updatePlan(op, code, body, ip(req));
+  }
 
   @Post('login')
   @OperatorPublic()
