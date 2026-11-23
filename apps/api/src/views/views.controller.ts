@@ -13,6 +13,7 @@ import {
 import { Auth, type AuthContext, Meta, type RequestMeta } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { BulkActionsService, ViewsService } from './views.service';
+import { ConfirmPassword, NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const entityQuery = z.object({ entity: z.enum(TABLE_ENTITIES) }).strict();
@@ -37,6 +38,7 @@ export class ViewsController {
     return this.views.update(auth, id, body);
   }
 
+  @NoPasswordConfirmation('Your own saved view')
   @Delete(':id')
   @HttpCode(204)
   remove(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
@@ -51,6 +53,8 @@ export class BulkActionsController {
 
   @Post()
   @HttpCode(200)
+  // Deleting the selected rows is one destructive action: one password confirmation covers the whole selection.
+  @ConfirmPassword({ when: (req) => (req.body as { action?: unknown } | undefined)?.action === 'delete' })
   run(@Auth() auth: AuthContext, @Body(new ZodPipe(bulkActionSchema)) body: BulkActionInput, @Meta() meta: RequestMeta) {
     return this.bulk.run(auth, body, meta);
   }

@@ -3,6 +3,7 @@ import { badgeInputSchema, competitionInputSchema, gamificationSettingsSchema, l
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { GamificationService } from './gamification.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -67,6 +68,7 @@ export class GamificationController {
     return this.gamification.updateBadge(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('badges/:id')
   @HttpCode(204)
   @RequirePermissions('gamification:manage')

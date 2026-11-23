@@ -336,6 +336,7 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [password, setPassword] = useState('');
   const [completing, setCompleting] = useState(false);
   const [outcome, setOutcome] = useState('');
 
@@ -375,7 +376,7 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
   const patch = (body: Record<string, unknown>) => act('status', async () => setRecord(await c.api.patch<MobileRecord>(`${BASE}/${module}/${id}`, body)));
   const remove = () =>
     act('delete', async () => {
-      await c.api.delete(`${BASE}/${module}/${id}`);
+      await c.api.deleteConfirmed(`${BASE}/${module}/${id}`, password);
       router.back();
     });
 
@@ -439,8 +440,16 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
         confirmDelete ? (
           <Card>
             <Body>{t('Delete this record? This cannot be undone on the phone.')}</Body>
-            <Button kind="danger" label={t('Yes, delete')} busy={busy === 'delete'} onPress={() => void remove()} />
-            <Button kind="secondary" label={t('Keep it')} onPress={() => setConfirmDelete(false)} />
+            <Field label={t('Your password')} hint={t('Deleting needs your password.')} value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete="current-password" textContentType="password" />
+            <Button kind="danger" label={t('Yes, delete')} busy={busy === 'delete'} disabled={!password} onPress={() => void remove()} />
+            <Button
+              kind="secondary"
+              label={t('Keep it')}
+              onPress={() => {
+                setConfirmDelete(false);
+                setPassword('');
+              }}
+            />
           </Card>
         ) : (
           <Button kind="danger" label={t('Delete')} onPress={() => setConfirmDelete(true)} />

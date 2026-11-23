@@ -1,4 +1,5 @@
-import type { ApiErrorBody } from '@dealflow/types';
+import { type ApiErrorBody, PASSWORD_CONFIRMATION_HEADER, PASSWORD_CONFIRMATION_REQUIRED } from '@dealflow/types';
+import { passwordConfirmationAsker } from './password-confirmation';
 import { useRegional } from '@/stores/regional';
 
 /**
@@ -58,6 +59,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   const body = (await res.json().catch(() => null)) as unknown;
   if (!res.ok) {
     const err = (body as ApiErrorBody | null)?.error;
+    // A destructive request needs the person's password first: ask, then send it again with the one-time pass.
+    const ask = passwordConfirmationAsker();
+    if (res.status === 403 && err?.code === PASSWORD_CONFIRMATION_REQUIRED && ask) {
+      const pass = await ask({ method: (init.method ?? 'GET').toUpperCase(), path, message: err.message });
+      if (!pass) throw new ApiError(0, 'CONFIRMATION_CANCELLED', 'Nothing was deleted.');
+      return api<T>(path, { ...init, headers: { ...headers, [PASSWORD_CONFIRMATION_HEADER]: pass } }, retry);
+    }
     throw new ApiError(
       res.status,
       err?.code ?? 'ERROR',

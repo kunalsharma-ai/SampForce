@@ -4,6 +4,7 @@ import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, Req
 import { ZodPipe } from '../common/zod.pipe';
 import { ApprovalsService } from './approvals.service';
 import { WorkflowsService } from './workflows.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const statusBody = z.object({ status: z.enum(['ACTIVE', 'PAUSED']) });
@@ -75,6 +76,7 @@ export class WorkflowsController {
     return this.workflows.versions(auth, id);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('automation:manage')

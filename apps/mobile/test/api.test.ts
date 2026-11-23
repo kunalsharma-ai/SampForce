@@ -119,4 +119,14 @@ describe('api client', () => {
     await api.logout();
     expect(store.value).toBeNull();
   });
+
+  it('confirms the password before a delete and sends the one-time pass with it', async () => {
+    const store = new MemoryTokens();
+    await store.set({ ...tokens(1), expiresAt: Date.now() + 900_000 });
+    const f = fakeFetch({ 'POST /auth/confirm-password': () => ({ status: 200, body: { token: 'pass-9', expiresAt: '2026-11-23T13:00:00.000Z' } }), 'DELETE /mobile/records/leads/l1': () => ({ status: 204 }) });
+    const api = new ApiClient({ server: SERVER, store, fetch: f.impl });
+    await api.deleteConfirmed('/mobile/records/leads/l1', 'my-password-1');
+    expect(f.calls[0]).toMatchObject({ method: 'POST', path: '/auth/confirm-password', body: { password: 'my-password-1' } });
+    expect(f.calls[1]).toMatchObject({ method: 'DELETE', path: '/mobile/records/leads/l1', confirmation: 'pass-9' });
+  });
 });

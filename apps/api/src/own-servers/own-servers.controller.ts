@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { OwnServersService } from './own-servers.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const kindPipe = new ZodPipe(z.enum(OWN_AI_KINDS));
 
@@ -25,6 +26,7 @@ export class OwnServersController {
     return this.own.saveAi(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('ai')
   @HttpCode(200)
   removeAi(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {
@@ -49,6 +51,7 @@ export class OwnServersController {
     return this.own.saveEmail(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('email')
   @HttpCode(200)
   removeEmail(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {

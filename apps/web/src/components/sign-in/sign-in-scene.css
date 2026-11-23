@@ -1,0 +1,107 @@
+/*
+ * Animated sign-in scenes (ADR 0075). Transforms and stroke offsets only, on decorative layers hidden from assistive
+ * technology. Under reduced motion (the system setting, or SampForce's Motion setting) the global rule in
+ * packages/ui/src/tokens.css ends every animation at once, so each scene settles on its final, still frame.
+ */
+
+.sfs-root {
+  --r: #e02424;
+  --r-deep: #7f1d1d;
+  --r-night: #1c0607;
+  --amber: #ffc857;
+}
+
+/* ── Shared: the logo intro ── */
+.sfs-logo-a { animation: sfs-from-left 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) 0.1s both; }
+.sfs-logo-b { animation: sfs-from-right 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) 0.22s both; }
+.sfs-streak { animation: sfs-streak-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.sfs-streak-1 { animation-delay: 0.55s; }
+.sfs-streak-2 { animation-delay: 0.65s; }
+.sfs-streak-3 { animation-delay: 0.75s; }
+.sfs-flash { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-flash 1s ease-out 0.75s both; }
+.sfs-spark { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-spark-in 0.8s cubic-bezier(0.3, 1.8, 0.5, 1) 1s both, sfs-twinkle 3.2s ease-in-out 2s infinite; }
+.sfs-float { animation: sfs-float 7s ease-in-out 1.6s infinite; }
+.sfs-glow { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-glow-in 1.4s ease-out both, sfs-breathe 6s ease-in-out 1.4s infinite; }
+.sfs-sweep { animation: sfs-sweep 1.6s cubic-bezier(0.6, 0, 0.3, 1) 1s both; }
+.sfs-drift-a { animation: sfs-drift 26s ease-in-out infinite; }
+.sfs-drift-b { animation: sfs-drift 32s ease-in-out -11s infinite reverse; }
+.sfs-headline { animation: sfs-reveal 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.45s both; }
+.sfs-sub { animation: sfs-reveal 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.7s both; }
+
+/* ── Console: radar rings, orbiting clients, a perspective grid ── */
+.sfs-radar { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-radar 4.2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+.sfs-radar-2 { animation-delay: -1.4s; }
+.sfs-radar-3 { animation-delay: -2.8s; }
+.sfs-orbit { transform-origin: 400px 450px; animation: sfs-spin 38s linear infinite; }
+.sfs-orbit-rev { transform-origin: 400px 450px; animation: sfs-spin 54s linear infinite reverse; }
+.sfs-grid { animation: sfs-grid 3.5s linear infinite; }
+.sfs-beam { transform-origin: 400px 450px; animation: sfs-spin 9s linear infinite; }
+
+/* ── Super: the company tree drawing itself, light columns rising ── */
+.sfs-branch { stroke-dasharray: 420; stroke-dashoffset: 420; animation: sfs-draw 1.6s cubic-bezier(0.6, 0, 0.3, 1) both; }
+.sfs-node { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-pop 0.6s cubic-bezier(0.3, 1.8, 0.5, 1) both; }
+.sfs-column { animation: sfs-rise 7s linear infinite; }
+.sfs-pulse-line { stroke-dasharray: 10 400; animation: sfs-pulse-line 3.6s linear infinite; }
+
+/* ── Manager: team orbits, syncing arcs ── */
+.sfs-team-1 { transform-origin: 400px 450px; animation: sfs-spin 22s linear infinite; }
+.sfs-team-2 { transform-origin: 400px 450px; animation: sfs-spin 30s linear infinite reverse; }
+.sfs-team-3 { transform-origin: 400px 450px; animation: sfs-spin 40s linear infinite; }
+.sfs-sync { stroke-dasharray: 60 600; animation: sfs-sync 4.8s ease-in-out infinite; }
+
+/* ── Executive: speed streaks, a climbing chart, a spark trail ── */
+.sfs-speed { animation: sfs-speed 2.2s cubic-bezier(0.5, 0, 0.6, 1) infinite; }
+.sfs-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: sfs-bar 1.2s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.sfs-trend { stroke-dasharray: 900; stroke-dashoffset: 900; animation: sfs-draw-long 1.8s cubic-bezier(0.6, 0, 0.3, 1) 0.6s both; }
+.sfs-trail { transform-box: fill-box; transform-origin: 50% 50%; animation: sfs-trail 2.8s ease-in-out infinite; }
+
+@keyframes sfs-from-left { from { transform: translate(-26px, 10px) rotate(-6deg); } to { transform: none; } }
+@keyframes sfs-from-right { from { transform: translate(26px, -10px) rotate(6deg); } to { transform: none; } }
+@keyframes sfs-streak-in { from { transform: translateX(-22px) scaleX(0.2); } to { transform: none; } }
+@keyframes sfs-flash { 0% { transform: scale(0.9); fill-opacity: 0; } 25% { fill-opacity: 0.9; } 100% { transform: scale(1.08); fill-opacity: 0; } }
+@keyframes sfs-spark-in { from { transform: scale(0) rotate(-90deg); } to { transform: none; } }
+@keyframes sfs-twinkle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.35) rotate(45deg); } }
+@keyframes sfs-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes sfs-glow-in { from { transform: scale(0.3); } to { transform: none; } }
+@keyframes sfs-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes sfs-sweep { from { transform: translateX(-90px) skewX(-20deg); } to { transform: translateX(110px) skewX(-20deg); } }
+@keyframes sfs-drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(60px, -40px); } }
+@keyframes sfs-reveal { from { clip-path: inset(0 100% 0 0); transform: translateY(8px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+@keyframes sfs-radar { 0% { transform: scale(0.2); stroke-opacity: 0.8; } 100% { transform: scale(2.4); stroke-opacity: 0; } }
+@keyframes sfs-spin { to { transform: rotate(360deg); } }
+@keyframes sfs-grid { from { transform: translateY(0); } to { transform: translateY(60px); } }
+@keyframes sfs-draw { to { stroke-dashoffset: 0; } }
+@keyframes sfs-draw-long { to { stroke-dashoffset: 0; } }
+@keyframes sfs-pop { from { transform: scale(0); } to { transform: none; } }
+@keyframes sfs-rise { from { transform: translateY(260px); } to { transform: translateY(-1100px); } }
+@keyframes sfs-pulse-line { from { stroke-dashoffset: 410; } to { stroke-dashoffset: 0; } }
+@keyframes sfs-sync { 0%, 100% { stroke-dashoffset: 660; } 50% { stroke-dashoffset: 0; } }
+@keyframes sfs-speed { from { transform: translateX(-700px); } to { transform: translateX(1900px); } }
+@keyframes sfs-bar { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes sfs-trail { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(14px, -10px) scale(1.25); } }
+
+/* The welcome after signing in: the card lifts in, the overlay steps aside. */
+.sfs-welcome-card { animation: sfs-lift 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.sfs-welcome-leave { animation: sfs-leave 0.45s cubic-bezier(0.6, 0, 0.8, 0.4) both; }
+@keyframes sfs-lift { from { transform: translateY(24px) scale(0.96); } to { transform: none; } }
+@keyframes sfs-leave { to { transform: translateY(-100%); } }
+
+/* Reduced motion: no waiting on delays either, so every scene is at its final frame at once. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .sfs-root *,
+  :root:not([data-motion='full']) .sfs-root { animation-delay: 0s !important; }
+}
+[data-motion='off'] .sfs-root *,
+[data-motion='minimal'] .sfs-root * { animation-delay: 0s !important; }
+
+/* The sign-in card speaks SampForce red whatever theme is chosen, with readable contrast in light and dark. */
+.sfs-card {
+  --primary: 0 72% 51%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 0 72% 51%;
+}
+.dark .sfs-card {
+  --primary: 0 91% 71%;
+  --primary-foreground: 0 60% 6%;
+  --ring: 0 91% 71%;
+}

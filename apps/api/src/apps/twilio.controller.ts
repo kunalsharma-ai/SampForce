@@ -7,6 +7,7 @@ import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissi
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { TwilioService } from './twilio.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 
@@ -55,6 +56,7 @@ export class TwilioController {
     return this.twilio.recordConsent(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Withdrawing consent must stay quick')
   @Delete('consents/:contactId')
   @HttpCode(200)
   @RequirePermissions('contacts:write')

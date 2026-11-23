@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { defaultMobileConfig, type MobileAppConfig, type MobileRecord, type MobileRecordOptions, type MobileRecordPage } from '@dealflow/types';
+import { defaultMobileConfig, PASSWORD_CONFIRMATION_HEADER, type MobileAppConfig, type MobileRecord, type MobileRecordOptions, type MobileRecordPage } from '@dealflow/types';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
@@ -24,7 +24,12 @@ describe('mobile records', () => {
     get: (url: string) => http().get(`/api/v1/mobile/records${url}`).set('authorization', `Bearer ${token}`),
     post: (url: string, body: object) => http().post(`/api/v1/mobile/records${url}`).set('authorization', `Bearer ${token}`).send(body),
     patch: (url: string, body: object) => http().patch(`/api/v1/mobile/records${url}`).set('authorization', `Bearer ${token}`).send(body),
-    del: (url: string) => http().delete(`/api/v1/mobile/records${url}`).set('authorization', `Bearer ${token}`),
+    /** Deletes the way the app does: confirms the password (the phone asks for it) and sends the one-time pass. */
+    del: async (url: string, status: number) => {
+      const password = token === ownerToken ? owner.password : exec.password;
+      const pass = await http().post('/api/v1/auth/confirm-password').set('authorization', `Bearer ${token}`).send({ password }).expect(200);
+      return http().delete(`/api/v1/mobile/records${url}`).set('authorization', `Bearer ${token}`).set(PASSWORD_CONFIRMATION_HEADER, pass.body.token).expect(status);
+    },
   });
   const publish = async (change: (c: MobileAppConfig) => void) => {
     const draft = JSON.parse(JSON.stringify(defaultMobileConfig())) as MobileAppConfig;
@@ -102,8 +107,8 @@ describe('mobile records', () => {
   it('lets only levels with the delete rule delete, and switches modules off', async () => {
     const lead = (await phone(execToken).post('/companies', { name: 'Short Lived' }).expect(201)).body as MobileRecord;
     // Executives cannot delete by default.
-    expect((await phone(execToken).del(`/companies/${lead.id}`).expect(403)).body.error.code).toBe('MOBILE_ACTION_NOT_ALLOWED');
-    await phone(ownerToken).del(`/companies/${lead.id}`).expect(204);
+    expect((await phone(execToken).del(`/companies/${lead.id}`, 403)).body.error.code).toBe('MOBILE_ACTION_NOT_ALLOWED');
+    await phone(ownerToken).del(`/companies/${lead.id}`, 204);
     await phone(ownerToken).get(`/companies/${lead.id}`).expect(404);
 
     await publish((c) => {
@@ -156,9 +161,9 @@ describe('mobile records', () => {
     await phone(execToken).patch(`/tasks/${t.id}`, { status: 'DONE' }).expect(200);
     expect(((await phone(execToken).get('/tasks?status=DONE').expect(200)).body as MobileRecordPage).items.map((x) => x.id)).toContain(t.id);
     expect(((await phone(execToken).get('/tasks?q=brochure').expect(200)).body as MobileRecordPage).items).toEqual([]);
-    await phone(execToken).del(`/tasks/${t.id}`).expect(403);
+    await phone(execToken).del(`/tasks/${t.id}`, 403);
     const own = (await phone(ownerToken).post('/tasks', { title: 'Owner task' }).expect(201)).body as MobileRecord;
-    await phone(ownerToken).del(`/tasks/${own.id}`).expect(204);
+    await phone(ownerToken).del(`/tasks/${own.id}`, 204);
     // A follow-up is not a task.
     const fu = ((await phone(execToken).get('/follow_ups?bucket=completed').expect(200)).body as MobileRecordPage).items[0]!;
     await phone(execToken).get(`/tasks/${fu.id}`).expect(404);

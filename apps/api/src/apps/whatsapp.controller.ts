@@ -7,6 +7,7 @@ import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequirePermissi
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError } from './apps.service';
 import { WhatsappService } from './whatsapp.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 
@@ -53,6 +54,7 @@ export class WhatsappController {
     return this.whatsapp.recordConsent(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Withdrawing consent must stay quick')
   @Delete('consents/:contactId')
   @HttpCode(200)
   @RequirePermissions('contacts:write')

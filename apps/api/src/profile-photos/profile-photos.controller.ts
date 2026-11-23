@@ -2,6 +2,7 @@ import { Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Put, Req, Res 
 import type { Request, Response } from 'express';
 import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta } from '../common/auth-context';
 import { ProfilePhotosService, readPhotoUpload } from './profile-photos.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 /** Profile photos (ADR 0072, M6), from the web and the phone. */
 @MobileAccess()
@@ -15,6 +16,7 @@ export class ProfilePhotosController {
     return this.photos.set(auth, await readPhotoUpload(req), meta);
   }
 
+  @NoPasswordConfirmation('Your own profile photo; nothing else is lost')
   @Delete('me/photo')
   @HttpCode(204)
   async remove(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {

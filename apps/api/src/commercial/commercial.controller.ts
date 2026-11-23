@@ -31,6 +31,7 @@ import { ContractsService } from './contracts.service';
 import { ProposalsService } from './proposals.service';
 import { renderQuotePdf } from './quote-pdf';
 import { QuotesService } from './quotes.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const priceBody = z.object({ unitPrice: z.coerce.number().min(0).max(1e12).nullable() });
@@ -188,6 +189,7 @@ export class QuotesController {
     return this.quotes.transition(auth, id, body.action, { updateDealAmount: body.updateDealAmount }, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('quotes:write')

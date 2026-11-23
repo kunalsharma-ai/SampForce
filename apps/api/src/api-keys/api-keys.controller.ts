@@ -6,6 +6,7 @@ import type { z } from 'zod';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ApiKeysService } from './api-keys.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 
@@ -35,6 +36,7 @@ export class ApiKeysController {
     return this.keys.create(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Revokes a key; withdrawing access must stay quick')
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('integrations:manage')
@@ -61,6 +63,7 @@ export class ZapierController {
     return this.keys.subscribe(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Zapier unsubscribing: a machine with a key, which cannot type a password')
   @Delete('hooks/:id')
   @HttpCode(204)
   unsubscribe(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Meta() meta: RequestMeta) {

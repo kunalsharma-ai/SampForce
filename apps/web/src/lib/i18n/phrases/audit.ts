@@ -70,4 +70,16 @@ export const audit = {
   'Joined the organisation': ['Se unió a la organización', 'A rejoint l’organisation', 'Ist der Organisation beigetreten', 'انضم إلى المؤسسة'],
   'Raised a support query': ['Abrió una consulta de soporte', 'A ouvert une demande d’assistance', 'Hat eine Supportanfrage gestellt', 'فتح استفسار دعم'],
   'Passed a support query up': ['Pasó una consulta de soporte al nivel superior', 'A transmis une demande d’assistance au niveau supérieur', 'Hat eine Supportanfrage weitergegeben', 'رفع استفسار دعم إلى المستوى الأعلى'],
+  // Results and security (workspace redesign W1)
+  Refused: ['Rechazado', 'Refusé', 'Abgelehnt', 'مرفوض'],
+  'Refused attempts': ['Intentos rechazados', 'Tentatives refusées', 'Abgelehnte Versuche', 'المحاولات المرفوضة'],
+  'Done and refused': ['Hechos y rechazados', 'Effectués et refusés', 'Erledigt und abgelehnt', 'المنفذة والمرفوضة'],
+  'Security and passwords': ['Seguridad y contraseñas', 'Sécurité et mots de passe', 'Sicherheit und Passwörter', 'الأمان وكلمات المرور'],
+  'Tried to delete without confirming the password': ['Intentó eliminar sin confirmar la contraseña', 'A tenté de supprimer sans confirmer le mot de passe', 'Versuchte zu löschen, ohne das Passwort zu bestätigen', 'حاول الحذف دون تأكيد كلمة المرور'],
+  'Typed a wrong password to confirm a delete': ['Escribió una contraseña incorrecta para confirmar una eliminación', 'A saisi un mauvais mot de passe pour confirmer une suppression', 'Gab ein falsches Passwort ein, um ein Löschen zu bestätigen', 'أدخل كلمة مرور خاطئة لتأكيد الحذف'],
+  'Asked for a password reset link': ['Pidió un enlace para restablecer la contraseña', 'A demandé un lien de réinitialisation du mot de passe', 'Forderte einen Link zum Zurücksetzen des Passworts an', 'طلب رابط إعادة تعيين كلمة المرور'],
+  'Reset their password': ['Restableció su contraseña', 'A réinitialisé son mot de passe', 'Setzte das eigene Passwort zurück', 'أعاد تعيين كلمة المرور'],
+  'Turned on two-step sign-in': ['Activó el inicio de sesión en dos pasos', 'A activé la connexion en deux étapes', 'Aktivierte die Anmeldung in zwei Schritten', 'فعّل تسجيل الدخول بخطوتين'],
+  'Turned off two-step sign-in': ['Desactivó el inicio de sesión en dos pasos', 'A désactivé la connexion en deux étapes', 'Deaktivierte die Anmeldung in zwei Schritten', 'أوقف تسجيل الدخول بخطوتين'],
+  'Signed out their other devices': ['Cerró sesión en sus otros dispositivos', 'S’est déconnecté de ses autres appareils', 'Meldete sich auf den anderen Geräten ab', 'سجّل الخروج من أجهزته الأخرى'],
 } as const satisfies PhraseTable;

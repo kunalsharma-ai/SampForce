@@ -17,6 +17,7 @@ import {
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { CrmConfigService } from './crm-config.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const kindQuery = z.object({ kind: z.enum(CRM_STATUS_KINDS) });
@@ -49,6 +50,7 @@ export class CrmConfigController {
     return this.config.updateStatus(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('statuses/:id')
   @HttpCode(204)
   @RequirePermissions('crm:configure')
@@ -73,6 +75,7 @@ export class CrmConfigController {
     return this.config.saveDepartment(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('departments/:id')
   @HttpCode(204)
   @RequirePermissions('crm:configure')
@@ -97,6 +100,7 @@ export class CrmConfigController {
     return this.config.saveDesignation(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('designations/:id')
   @HttpCode(204)
   @RequirePermissions('crm:configure')

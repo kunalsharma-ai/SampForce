@@ -10,6 +10,7 @@ import {
 import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta } from '../../common/auth-context';
 import { ZodPipe } from '../../common/zod.pipe';
 import { MobileRecordsService } from './mobile-records.service';
+import { ConfirmPassword } from '../../common/password-confirmation';
 
 const moduleParam = (m: string): MobileLiveRecordModule => {
   if (!(MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(m)) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
@@ -50,6 +51,7 @@ export class MobileRecordsController {
     return this.records.update(auth, moduleParam(module), id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':module/:id')
   @HttpCode(204)
   async remove(@Auth() auth: AuthContext, @Param('module') module: string, @Param('id', ParseUUIDPipe) id: string, @Meta() meta: RequestMeta) {
