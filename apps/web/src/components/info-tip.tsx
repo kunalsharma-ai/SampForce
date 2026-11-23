@@ -1,7 +1,8 @@
 'use client';
 
 import { cn, Popover, PopoverContent, PopoverTrigger } from '@dealflow/ui';
-import { Info } from 'lucide-react';
+import { BookOpen, Info } from 'lucide-react';
+import Link from 'next/link';
 import { useId } from 'react';
 import { type HelpId, helpText, helpTopic } from '@/lib/help';
 import { useT } from '@/lib/i18n';
@@ -14,7 +15,7 @@ import { useT } from '@/lib/i18n';
  * about comes from the `title`, read as its description ("What is this?, button, About Deals") and shown on hover.
  * Keeping the feature name out of the accessible name keeps label lookups such as "Language" unambiguous.
  */
-export function InfoTip({ topic, className, defaultOpen }: { topic: HelpId; className?: string; defaultOpen?: boolean }) {
+export function InfoTip({ topic, className, defaultOpen, guideHref }: { topic: HelpId; className?: string; defaultOpen?: boolean; guideHref?: string }) {
   const t = useT();
   const titleId = useId();
   const h = helpTopic(topic);
@@ -53,6 +54,11 @@ export function InfoTip({ topic, className, defaultOpen }: { topic: HelpId; clas
             </div>
           ))}
         </dl>
+        {guideHref && (
+          <Link href={guideHref} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline" data-full-guide={topic}>
+            <BookOpen className="size-4" aria-hidden /> {t('Open the full guide')}
+          </Link>
+        )}
       </PopoverContent>
     </Popover>
   );

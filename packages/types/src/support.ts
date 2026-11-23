@@ -8,8 +8,24 @@ import { featureKeySchema } from './features';
  * it answers or escalates it one level up.
  */
 
-export const SUPPORT_TICKET_STATUSES = ['OPEN', 'IN_PROGRESS', 'ANSWERED', 'CLOSED'] as const;
+/**
+ * Submitted: new, nobody has looked yet. Under review: read by support, or the raiser answered. In progress: being
+ * worked on. Awaiting user: support answered or asked something. Resolved: solved, can still be reopened by writing.
+ * Closed: finished.
+ */
+export const SUPPORT_TICKET_STATUSES = ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS', 'AWAITING_USER', 'RESOLVED', 'CLOSED'] as const;
 export type SupportTicketStatus = (typeof SUPPORT_TICKET_STATUSES)[number];
+/** The statuses the person who raised a query may set: mark it resolved, close it, or open it again. */
+export const SUPPORT_RAISER_STATUSES: readonly SupportTicketStatus[] = ['RESOLVED', 'CLOSED', 'SUBMITTED'];
+/** Statuses that still need someone on the support side. */
+export const SUPPORT_WAITING_STATUSES: readonly SupportTicketStatus[] = ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS'];
+export const SUPPORT_CONTACT_METHODS = ['IN_APP', 'EMAIL', 'PHONE'] as const;
+export type SupportContactMethod = (typeof SUPPORT_CONTACT_METHODS)[number];
+/** Records a query can be about; the server checks the record exists in the workspace and stores its name. */
+export const SUPPORT_RECORD_TYPES = ['lead', 'contact', 'company', 'deal'] as const;
+export type SupportRecordType = (typeof SUPPORT_RECORD_TYPES)[number];
+export const SUPPORT_ATTACHMENTS_MAX = 5;
+export const SUPPORT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const SUPPORT_TICKET_PRIORITIES = ['LOW', 'NORMAL', 'HIGH'] as const;
 export type SupportTicketPriority = (typeof SUPPORT_TICKET_PRIORITIES)[number];
 export const SUPPORT_HANDLER_LEVELS = ['MANAGER', 'SUPER', 'CONSOLE'] as const;
@@ -36,16 +52,37 @@ export const supportTicketCreateSchema = z.object({
     .regex(/^\/[\w\-/.[\]]*$/)
     .nullable()
     .optional(),
+  /** With category "other": the person's own name for the kind of problem. */
+  categoryOther: z.string().trim().max(80).nullable().optional(),
+  relatedRecord: z.object({ type: z.enum(SUPPORT_RECORD_TYPES), id: z.string().uuid() }).nullable().optional(),
+  contactMethod: z.enum(SUPPORT_CONTACT_METHODS).default('IN_APP'),
+  /** Only with contactMethod PHONE. */
+  contactPhone: z
+    .string()
+    .trim()
+    .max(40)
+    .regex(/^[+\d][\d\s\-().]{5,}$/)
+    .nullable()
+    .optional(),
+  /** The app's version, sent by the web or mobile app. */
+  appVersion: z.string().trim().max(40).nullable().optional(),
+  /** Files uploaded first with POST /support/attachments. */
+  attachmentIds: z.array(z.string().uuid()).max(SUPPORT_ATTACHMENTS_MAX).default([]),
+}).superRefine((v, ctx) => {
+  if (v.contactMethod === 'PHONE' && !v.contactPhone) ctx.addIssue({ code: 'custom', path: ['contactPhone'], message: 'Give a phone number to be called on.' });
 });
 export type SupportTicketCreateInput = z.input<typeof supportTicketCreateSchema>;
 
-export const supportMessageSchema = z.object({ body: z.string().trim().min(1).max(SUPPORT_BODY_MAX) });
+export const supportMessageSchema = z.object({
+  body: z.string().trim().min(1).max(SUPPORT_BODY_MAX),
+  attachmentIds: z.array(z.string().uuid()).max(SUPPORT_ATTACHMENTS_MAX).default([]),
+});
 export type SupportMessageInput = z.input<typeof supportMessageSchema>;
 
 export const SUPPORT_NOTE_MAX = 2000;
 const resolutionNote = z.string().trim().max(SUPPORT_NOTE_MAX).nullable().optional();
 
-/** The raiser may only close or reopen; whoever handles the ticket sets any status and the resolution note. */
+/** The raiser may only resolve, close or reopen (SUPPORT_RAISER_STATUSES); whoever handles the ticket sets any status and the resolution note. */
 export const supportStatusSchema = z.object({ status: z.enum(SUPPORT_TICKET_STATUSES), resolutionNote });
 
 /** Passes a ticket one level up the hierarchy, with an optional note for the next handler. */
@@ -85,7 +122,23 @@ export interface SupportTicketMessageRow {
   author: SupportPerson | null;
   mine: boolean;
   body: string;
+  attachments: SupportAttachmentRow[];
   createdAt: string;
+}
+
+export interface SupportAttachmentRow {
+  id: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+}
+
+/** Captured by the server when the query is raised, so nobody types what the app already knows. */
+export interface SupportTicketContext {
+  workspaceName: string;
+  workspaceLevel: string;
+  roleName: string;
+  email: string;
 }
 
 export interface SupportTicketRow {
@@ -109,6 +162,13 @@ export interface SupportTicketRow {
   escalatedAt: string | null;
   source: string;
   pagePath: string | null;
+  categoryOther: string | null;
+  relatedRecord: { type: SupportRecordType; id: string; label: string } | null;
+  contactMethod: SupportContactMethod;
+  contactPhone: string | null;
+  appVersion: string | null;
+  context: SupportTicketContext | null;
+  resolvedAt: string | null;
   raisedBy: SupportPerson | null;
   /** True when the reader raised it. */
   mine: boolean;
@@ -135,9 +195,26 @@ export interface OperatorSupportTicketDetail extends OperatorSupportTicketRow {
   messages: SupportTicketMessageRow[];
 }
 
-export interface SupportCounts {
+export type SupportCounts = Record<SupportTicketStatus, number>;
+
+export const SUPPORT_REPORT_DAYS = [7, 30, 90, 365] as const;
+export const supportReportQuerySchema = z.object({ days: z.coerce.number().int().refine((d) => (SUPPORT_REPORT_DAYS as readonly number[]).includes(d)).default(30) });
+
+/** The Console's support report: queries raised in the last `days`, how fast they were answered and closed. */
+export interface SupportReport {
+  days: number;
+  raised: number;
+  /** Still waiting for support now, of those raised in the period. */
   open: number;
-  inProgress: number;
-  answered: number;
-  closed: number;
+  byStatus: Record<SupportTicketStatus, number>;
+  byPriority: Record<SupportTicketPriority, number>;
+  byCategory: { category: string; count: number }[];
+  bySource: { source: string; count: number }[];
+  byClient: { tenantId: string; name: string; count: number }[];
+  byOperator: { operatorId: string | null; name: string; assigned: number; resolved: number }[];
+  /** Hours from raising to the first answer, and to resolved or closed; null with nothing to measure. */
+  firstAnswerHours: { average: number | null; median: number | null };
+  resolutionHours: { average: number | null; median: number | null };
+  /** Raised per day, oldest first, for the trend chart. */
+  perDay: { date: string; count: number }[];
 }

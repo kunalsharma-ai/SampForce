@@ -1,8 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 
 /**
- * Signs up a new workspace. The owner opens on the senior management dashboard (ADR 0063); the analytics layout is
- * at /app?view=analytics. It starts on Free like any real sign-up; unless `plan` says otherwise it is then moved to
+ * Signs up a new workspace. The owner opens on the Super Workspace's organisation overview (ADR 0071 part 6); the
+ * senior management dashboard is at /app?view=senior and the analytics layout at /app?view=analytics. It starts on Free like any real sign-up; unless `plan` says otherwise it is then moved to
  * Enterprise Plus, so specs can reach every feature (ADR 0057). Pass `{ plan: 'free' }` to test the Free plan itself.
  */
 export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus' }: { plan?: string } = {}) {
@@ -15,11 +15,11 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
   await page.getByLabel('Organization name').fill(org);
   await page.getByRole('button', { name: 'Start free' }).click();
   await expect(page).toHaveURL(/\/app/);
-  await expect(page.getByRole('heading', { name: 'Senior management dashboard', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
   if (plan !== 'free') {
     await setPlan(page, plan);
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Senior management dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
   }
   return { email, password: 'correcthorse1' };
 }

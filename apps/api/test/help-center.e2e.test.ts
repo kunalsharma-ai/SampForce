@@ -126,7 +126,7 @@ describe('help center and support tickets', () => {
           .expect(201)
       ).body;
       // An executive's query goes to its manager first (ADR 0071 part 5).
-      expect(t).toMatchObject({ number: 1, status: 'OPEN', handlerLevel: 'MANAGER', handler: { level: 'MANAGER', name: 'North Team' }, priority: 'HIGH', category: 'data', featureKey: 'rfqs', pagePath: '/app/rfqs', source: 'web', mine: true, canReply: true, messageCount: 1 });
+      expect(t).toMatchObject({ number: 1, status: 'SUBMITTED', handlerLevel: 'MANAGER', handler: { level: 'MANAGER', name: 'North Team' }, priority: 'HIGH', category: 'data', featureKey: 'rfqs', pagePath: '/app/rfqs', source: 'web', mine: true, canReply: true, messageCount: 1 });
       expect(t.raisedBy.name).toBe('Amit Executive');
       expect(t.messages).toEqual([expect.objectContaining({ authorKind: 'USER', mine: true, body: 'I need last month’s RFQs in Excel for a client.' })]);
       ticketId = t.id;
@@ -173,7 +173,7 @@ describe('help center and support tickets', () => {
       await api(manager).post(`/support/tickets/${ticketId}/escalate`, {}).expect(200);
       expect((await api(owner).post(`/support/tickets/${ticketId}/escalate`, {}).expect(200)).body).toMatchObject({ handlerLevel: 'CONSOLE', canEscalate: false });
       const counts = (await opGet('/counts').expect(200)).body;
-      expect(counts.open).toBeGreaterThanOrEqual(3);
+      expect(counts.SUBMITTED).toBeGreaterThanOrEqual(3);
       const list = (await opGet(`?tenantId=${owner.tenantId}`).expect(200)).body as { id: string; tenant: { name: string }; workspace: { level: string; name: string } }[];
       const row = list.find((t) => t.id === ticketId)!;
       expect(row.tenant.name).toBe('Help Client');
@@ -182,32 +182,32 @@ describe('help center and support tickets', () => {
       expect(((await opGet('?q=export').expect(200)).body as { id: string }[]).map((t) => t.id)).toContain(ticketId);
 
       const answered = (await opPost(`/${ticketId}/messages`, { body: 'Open RFQs, filter by last month and choose Export.' }).expect(201)).body;
-      expect(answered.status).toBe('ANSWERED');
+      expect(answered.status).toBe('AWAITING_USER');
       expect(answered.messages.at(-1)).toMatchObject({ authorKind: 'OPERATOR', mine: true, author: { name: 'Priya (Support)' } });
 
       // The person sees one support desk, not the operator's name, and gets a notification in their language.
       const seen = (await api(executive).get(`/support/tickets/${ticketId}`).expect(200)).body;
-      expect(seen.status).toBe('ANSWERED');
+      expect(seen.status).toBe('AWAITING_USER');
       expect(seen.messages.at(-1)).toMatchObject({ authorKind: 'OPERATOR', mine: false, author: { id: 'support', name: 'SampForce support' } });
       expect(seen.lastAuthorKind).toBe('OPERATOR');
       const notes = (await executive.agent.get('/api/v1/notifications').set('accept-language', 'de').expect(200)).body.items as { type: string; title: string; link: string }[];
       expect(notes.find((n) => n.type === 'support.reply')).toMatchObject({ title: 'Der SampForce-Support hat auf Anfrage #1 geantwortet', link: `/app/help/queries?ticket=${ticketId}` });
 
       const back = (await api(executive).post(`/support/tickets/${ticketId}/messages`, { body: 'Thanks, one more thing: can it include IR?' }).expect(201)).body;
-      expect(back).toMatchObject({ status: 'OPEN', messageCount: 3 });
+      expect(back).toMatchObject({ status: 'UNDER_REVIEW', messageCount: 3 });
       const log = await db.platformAuditLog.findFirst({ where: { action: 'support_ticket.answered', targetTenantId: owner.tenantId } });
       expect(log?.metadata).toMatchObject({ ticketId });
       expect(await db.auditLog.count({ where: { tenantId: owner.tenantId, action: 'support_ticket.answered', entityId: ticketId } })).toBe(1);
     });
 
     it('lets the raiser close or reopen, and only the Console set other statuses', async () => {
-      await api(executive).patch(`/support/tickets/${ticketId}`, { status: 'ANSWERED' }).expect(403);
+      await api(executive).patch(`/support/tickets/${ticketId}`, { status: 'IN_PROGRESS' }).expect(403);
       expect((await api(executive).patch(`/support/tickets/${ticketId}`, { status: 'CLOSED' }).expect(200)).body.status).toBe('CLOSED');
-      expect((await api(executive).patch(`/support/tickets/${ticketId}`, { status: 'OPEN' }).expect(200)).body.status).toBe('OPEN');
+      expect((await api(executive).patch(`/support/tickets/${ticketId}`, { status: 'SUBMITTED' }).expect(200)).body.status).toBe('SUBMITTED');
       expect((await opPatch(`/${ticketId}`, { status: 'IN_PROGRESS' }).expect(200)).body.status).toBe('IN_PROGRESS');
       expect((await opPatch(`/${ticketId}`, { status: 'CLOSED' }).expect(200)).body.status).toBe('CLOSED');
       const notes = (await api(executive).get('/notifications').expect(200)).body.items as { type: string }[];
-      expect(notes.some((n) => n.type === 'support.closed')).toBe(true);
+      expect(notes.some((n) => n.type === 'support.status')).toBe(true);
       expect(await db.auditLog.count({ where: { tenantId: owner.tenantId, action: 'support_ticket.status_changed', entityId: ticketId } })).toBe(4);
     });
 
@@ -215,6 +215,93 @@ describe('help center and support tickets', () => {
       await request(app.getHttpServer()).get('/api/v1/operator/support/tickets').expect(401);
       await owner.agent.get('/api/v1/operator/support/tickets').expect(401);
       await opGet(`/${randomUUID()}`).expect(404);
+    });
+  });
+
+  describe('the full query form, files and statuses', () => {
+    const upload = (who: TestUser, name: string, data: string, type = 'image/png') =>
+      who.agent.post(`/api/v1/support/attachments?name=${encodeURIComponent(name)}`).set('origin', ORIGIN).set('content-type', type).send(Buffer.from(data));
+
+    it('captures what the app knows, the record it is about and an Other category, with a screenshot', async () => {
+      const company = (await api(owner).post('/companies', { name: 'Tata Steel' }).expect(201)).body.id as string;
+      const shot = (await upload(owner, 'board.png', 'png-bytes').expect(201)).body;
+      expect(shot).toMatchObject({ name: 'board.png', contentType: 'image/png', sizeBytes: 9 });
+      // Before it is sent, nobody else can open it, and it cannot be sent by someone else.
+      await api(member).get(`/support/attachments/${shot.id}/download`).expect(404);
+      await api(member).post('/support/tickets', { subject: 'Not mine', body: 'Using a file I did not upload.', attachmentIds: [shot.id] }).expect(400);
+
+      // Phone contact needs a number, and the record must exist in this workspace.
+      await api(owner).post('/support/tickets', { subject: 'Call me', body: 'Please phone me back.', contactMethod: 'PHONE' }).expect(400);
+      await api(owner).post('/support/tickets', { subject: 'Wrong record', body: 'About a record elsewhere.', relatedRecord: { type: 'company', id: randomUUID() } }).expect(400);
+
+      const t = (
+        await api(owner)
+          .post('/support/tickets', {
+            subject: 'Logo upload keeps failing',
+            body: 'Every time I add the logo the page says the file is too big.',
+            category: 'other',
+            categoryOther: 'Branding',
+            relatedRecord: { type: 'company', id: company },
+            contactMethod: 'PHONE',
+            contactPhone: '+91 98765 43210',
+            appVersion: 'web 0.1.0',
+            pagePath: `/app/companies/${company}`,
+            attachmentIds: [shot.id],
+          })
+          .expect(201)
+      ).body;
+      expect(t).toMatchObject({
+        status: 'SUBMITTED',
+        categoryOther: 'Branding',
+        relatedRecord: { type: 'company', id: company, label: 'Tata Steel' },
+        contactMethod: 'PHONE',
+        contactPhone: '+91 98765 43210',
+        appVersion: 'web 0.1.0',
+        context: { workspaceName: 'Super Workspace', workspaceLevel: 'SUPER', roleName: expect.any(String), email: owner.email },
+      });
+      expect(t.messages[0].attachments).toEqual([expect.objectContaining({ id: shot.id, name: 'board.png' })]);
+      const file = await owner.agent.get(`/api/v1/support/attachments/${shot.id}/download`).buffer(true).expect(200);
+      expect(Buffer.from(file.body).toString()).toBe('png-bytes');
+      // Sent files cannot be sent again, and a teammate who cannot see the ticket cannot open them.
+      await api(owner).post(`/support/tickets/${t.id}/messages`, { body: 'Again', attachmentIds: [shot.id] }).expect(400);
+      await api(member).get(`/support/attachments/${shot.id}/download`).expect(404);
+
+      // The Console sees it all, opens the file, answers with a file of its own.
+      const seen = (await opGet(`/${t.id}`).expect(200)).body;
+      expect(seen).toMatchObject({ categoryOther: 'Branding', relatedRecord: { label: 'Tata Steel' }, context: { email: owner.email } });
+      await ops.get(`/api/v1/operator/support/tickets/${t.id}/attachments/${shot.id}/download`).expect(200);
+      const reply = (
+        await ops.post(`/api/v1/operator/support/tickets/${t.id}/attachments?name=steps.pdf`).set('origin', ORIGIN).set('content-type', 'application/pdf').send(Buffer.from('%PDF-steps')).expect(201)
+      ).body;
+      const answered = (await opPost(`/${t.id}/messages`, { body: 'Logos can be up to 2 MB; here are the steps to shrink one.', attachmentIds: [reply.id] }).expect(201)).body;
+      expect(answered.status).toBe('AWAITING_USER');
+      expect(answered.messages.at(-1).attachments).toEqual([expect.objectContaining({ name: 'steps.pdf' })]);
+      const mine = (await api(owner).get(`/support/tickets/${t.id}`).expect(200)).body;
+      const steps = mine.messages.at(-1).attachments[0];
+      expect(Buffer.from((await owner.agent.get(`/api/v1/support/attachments/${steps.id}/download`).buffer(true).expect(200)).body).toString()).toBe('%PDF-steps');
+    });
+
+    it('walks through all six statuses and tells the raiser each time', async () => {
+      const t = (await api(member).post('/support/tickets', { subject: 'Targets do not add up', body: 'Team target shows a different total.' }).expect(201)).body;
+      for (const status of ['UNDER_REVIEW', 'IN_PROGRESS'] as const) expect((await opPatch(`/${t.id}`, { status }).expect(200)).body.status).toBe(status);
+      expect((await opPost(`/${t.id}/messages`, { body: 'Which month do you look at?' }).expect(201)).body.status).toBe('AWAITING_USER');
+      // The raiser answers: back under review.
+      expect((await api(member).post(`/support/tickets/${t.id}/messages`, { body: 'October.' }).expect(201)).body.status).toBe('UNDER_REVIEW');
+      const resolved = (await opPatch(`/${t.id}`, { status: 'RESOLVED', resolutionNote: 'Targets now count only active members.' }).expect(200)).body;
+      expect(resolved).toMatchObject({ status: 'RESOLVED', resolvedAt: expect.any(String) });
+      // The raiser may close or reopen, never set support's statuses.
+      await api(member).patch(`/support/tickets/${t.id}`, { status: 'IN_PROGRESS' }).expect(403);
+      expect((await api(member).patch(`/support/tickets/${t.id}`, { status: 'CLOSED' }).expect(200)).body).toMatchObject({ status: 'CLOSED', resolvedAt: expect.any(String) });
+      expect((await api(member).patch(`/support/tickets/${t.id}`, { status: 'SUBMITTED' }).expect(200)).body).toMatchObject({ status: 'SUBMITTED', resolvedAt: null });
+      expect((await api(member).patch(`/support/tickets/${t.id}`, { status: 'RESOLVED' }).expect(200)).body.status).toBe('RESOLVED');
+
+      const notes = (await member.agent.get('/api/v1/notifications').set('accept-language', 'fr').expect(200)).body.items as { type: string; title: string }[];
+      const titles = notes.filter((n) => n.type === 'support.status').map((n) => n.title);
+      expect(titles).toEqual(
+        expect.arrayContaining([`Votre demande n° ${t.number} est en cours d’examen`, `Votre demande n° ${t.number} est en cours de traitement`, `Votre demande n° ${t.number} est résolue`]),
+      );
+      const counts = (await opGet('/counts').expect(200)).body;
+      expect(Object.keys(counts).sort()).toEqual(['AWAITING_USER', 'CLOSED', 'IN_PROGRESS', 'RESOLVED', 'SUBMITTED', 'UNDER_REVIEW']);
     });
   });
 });

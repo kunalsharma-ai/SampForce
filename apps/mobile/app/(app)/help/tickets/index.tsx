@@ -22,7 +22,7 @@ export default function Tickets() {
           {data.map((r, i) => (
             <Row
               key={r.id}
-              icon={r.status === 'ANSWERED' ? 'chatbox' : r.status === 'CLOSED' ? 'checkmark-circle-outline' : 'chatbox-outline'}
+              icon={r.status === 'AWAITING_USER' ? 'chatbox' : r.status === 'RESOLVED' || r.status === 'CLOSED' ? 'checkmark-circle-outline' : 'chatbox-outline'}
               label={`#${r.number} ${r.subject}`}
               detail={`${tMaybe(STATUS_LABEL[r.status] ?? r.status)} · ${r.handler.level === 'CONSOLE' ? tMaybe(HANDLER_LABEL.CONSOLE!) : r.handler.name}${r.lastAuthorKind && r.lastAuthorKind !== 'USER' ? ` · ${t('New reply')}` : ''}`}
               onPress={() => router.push(`/help/tickets/${r.id}`)}

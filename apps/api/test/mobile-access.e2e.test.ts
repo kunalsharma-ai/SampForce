@@ -131,6 +131,11 @@ describe('mobile access', () => {
   it('lets phones read Help and raise and answer support tickets', async () => {
     const help = (await bearer(tokens.accessToken).get('/help').expect(200)).body as { language: string };
     expect(help.language).toBe('en');
+    // The Help Center's own content and settings, and attachments for a question, are open to phones too.
+    await bearer(tokens.accessToken).get('/help/settings').expect(200);
+    await bearer(tokens.accessToken).get('/help/content').expect(200);
+    const shot = await http().post('/api/v1/support/attachments?name=screen.png').set('authorization', `Bearer ${tokens.accessToken}`).set('content-type', 'image/png').send(Buffer.from('\x89PNG\r\n\x1a\nphone')).expect(201);
+    expect(shot.body.id).toEqual(expect.any(String));
     const ticket = (await bearer(tokens.accessToken).post('/support/tickets', { subject: 'Phone question', body: 'How do I log a visit from my phone?' }).expect(201)).body as { id: string };
     await bearer(tokens.accessToken).post(`/support/tickets/${ticket.id}/messages`, { body: 'Adding a detail from the phone.' }).expect(201);
     expect((await bearer(tokens.accessToken).get(`/support/tickets/${ticket.id}`).expect(200)).body.id).toBe(ticket.id);

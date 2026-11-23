@@ -462,7 +462,11 @@ export class ConsoleService {
       }
       if (!changes.length) return;
       await tx.subscription.update({ where: { tenantId: id }, data });
-      await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });
+      // Workspace limits get an entry of their own in the client's log, so "who changed a limit" has one answer.
+      const limits = changes.filter((c) => c.startsWith('Manager Workspaces:') || c.startsWith('Executive Workspaces:'));
+      const rest = changes.filter((c) => !limits.includes(c));
+      if (rest.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: rest } });
+      if (limits.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.limits_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: limits } });
     });
     if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip);
     return this.client(null, id, ip);
@@ -586,6 +590,11 @@ export class ConsoleService {
       .filter((r) => r.state === 'ACTIVE' && r.subscription!.renewsOn && new Date(`${r.subscription!.renewsOn}T00:00:00Z`).getTime() <= soon && r.subscription!.status !== 'CANCELED')
       .sort((a, b) => a.subscription!.renewsOn!.localeCompare(b.subscription!.renewsOn!))
       .map((r) => ({ id: r.id, name: r.name, renewsOn: r.subscription!.renewsOn!, planName: r.subscription!.planName, autoRenew: r.subscription!.autoRenew }));
+    // Queries that reached SampForce support and wait on it (ADR 0071 part 5): only tickets the client passed up.
+    const waiting = await this.prisma.run({ operatorScan: true }, (tx) =>
+      tx.supportTicket.groupBy({ by: ['tenantId'], where: { handlerLevel: 'CONSOLE', status: { in: ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS'] } }, _count: { _all: true } }),
+    );
+    const waitingBy = new Map(waiting.map((w) => [w.tenantId, w._count._all]));
     const attention: ConsoleOverview['needsAttention'] = [];
     for (const r of rows) {
       const s = r.subscription;
@@ -595,6 +604,7 @@ export class ConsoleService {
       else if (r.awaitingAdministrator && r.state === 'ACTIVE') attention.push({ id: r.id, name: r.name, why: 'Administrator has not joined yet' });
       else if (s && ((s.limits.managers !== null && r.usage.managers > s.limits.managers) || (s.limits.executives !== null && r.usage.executives > s.limits.executives)))
         attention.push({ id: r.id, name: r.name, why: 'More workspaces than the subscription allows' });
+      else if (waitingBy.get(r.id)) attention.push({ id: r.id, name: r.name, why: `${waitingBy.get(r.id)} support ${waitingBy.get(r.id) === 1 ? 'query' : 'queries'} waiting` });
     }
     return {
       clients: { total: rows.length, active: rows.filter((r) => r.state === 'ACTIVE').length, suspended: rows.filter((r) => r.state === 'SUSPENDED').length, deactivated: rows.filter((r) => r.state === 'DEACTIVATED').length },
@@ -610,6 +620,7 @@ export class ConsoleService {
       outstanding: [...owed.entries()].map(([currency, o]) => ({ currency, cents: o.cents, clients: o.clients.size })),
       workspaces: { managers: rows.reduce((a, r) => a + r.usage.managers, 0), executives: rows.reduce((a, r) => a + r.usage.executives, 0) },
       renewals: renewals.slice(0, 20),
+      support: { waiting: [...waitingBy.values()].reduce((a, n) => a + n, 0), clients: waitingBy.size },
       needsAttention: attention.slice(0, 50),
     };
   }

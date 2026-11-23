@@ -1,3 +1,5 @@
+import type { SupportTicketStatus } from '@dealflow/types';
+
 /** What GET /help sends (apps/api/src/support/help.controller.ts), already narrowed to the person and translated. */
 export interface HelpResponse {
   language: string;
@@ -8,10 +10,12 @@ export interface HelpResponse {
   results: { kind: 'faq' | 'guide'; id: string }[] | null;
 }
 
-export const STATUS_LABEL: Record<string, string> = {
-  OPEN: 'Open',
+export const STATUS_LABEL: Record<SupportTicketStatus, string> = {
+  SUBMITTED: 'Submitted',
+  UNDER_REVIEW: 'Under review',
   IN_PROGRESS: 'In progress',
-  ANSWERED: 'Answered',
+  AWAITING_USER: 'Waiting for you',
+  RESOLVED: 'Resolved',
   CLOSED: 'Closed',
 };
 

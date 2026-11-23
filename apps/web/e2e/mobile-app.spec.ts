@@ -69,7 +69,7 @@ test('the app signs in, follows the published configuration, and raises a questi
   await phone.getByLabel('Your question').fill('Where do I add notes after a client visit?');
   await phone.getByRole('button', { name: 'Send' }).click();
   await expect(phone.getByText('Where do I add notes after a client visit?')).toBeVisible();
-  await expect(phone.getByText(/^#\d+ · Open/)).toBeVisible();
+  await expect(phone.getByText(/^#\d+ · Submitted/)).toBeVisible();
   await shot(phone, '14-app-question');
   // The web sees the same ticket, marked as raised from the phone.
   const tickets = (await (await page.request.get('/api/v1/support/tickets')).json()) as { subject: string; source: string }[];

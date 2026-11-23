@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button } from '@dealflow/ui';
-import type { OperatorMe } from '@dealflow/types';
+import { type OperatorMe, SUPPORT_WAITING_STATUSES } from '@dealflow/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -37,7 +37,7 @@ function OperatorChatLink({ active }: { active: boolean }) {
 /** Support tickets raised from Help in every client's workspaces, with how many wait for an answer (ADR 0073). */
 function OperatorTicketsLink({ active }: { active: boolean }) {
   const counts = useOperatorTicketCounts();
-  const waiting = (counts.data?.open ?? 0) + (counts.data?.inProgress ?? 0);
+  const waiting = counts.data ? SUPPORT_WAITING_STATUSES.reduce((n, st) => n + counts.data[st], 0) : 0;
   return (
     <Link href="/operator/support" className={active ? 'font-medium' : 'text-muted-foreground hover:text-foreground'} data-tickets-waiting={waiting}>
       Support tickets
@@ -95,7 +95,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
               <Link href="/operator/settings" className={path === '/operator/settings' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Settings
               </Link>
-              <Link href="/operator/help" className={path === '/operator/help' ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
+              <Link href="/operator/help" className={path.startsWith('/operator/help') ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}>
                 Help
               </Link>
             </nav>

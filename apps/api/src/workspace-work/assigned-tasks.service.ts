@@ -145,7 +145,7 @@ export class AssignedTasksService {
 
       const updated = await tx.task.update({ where: { id }, data });
       await tx.taskEvent.create({ data: { tenantId: auth.tenantId, taskId: id, actorId: auth.userId, kind: 'updated', changes } });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.updated', entityType: 'task', entityId: id, metadata: { title: updated.title, changes }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: status === 'DONE' && task.status !== 'DONE' ? 'task.completed' : 'task.updated', entityType: 'task', entityId: id, metadata: { title: updated.title, changes }, meta });
       const node = org.byId.get(task.workspaceNodeId!);
       const workers = task.assigneeId ? [task.assigneeId] : node ? (await peopleIn(tx, auth.tenantId, node, org)).map((p) => p.id) : [];
       const onlyStatus = changes.every((c) => c.field === 'status');

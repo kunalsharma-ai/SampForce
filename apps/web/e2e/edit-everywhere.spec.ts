@@ -167,7 +167,7 @@ test('a manager edits a sent instruction and a requester edits a pending transfe
   await post(page.request, '/instructions', { toUserId: rahul.userId, message: 'Call Crest today', companyId: lead.company.id, priority: 'NORMAL' });
   await post(page.request, '/lead-transfers', { companyId: lead.company.id, toUserId: rahul.userId, reason: 'HIGH_VALUE', remarks: 'Rahul knows the buyer' });
 
-  await page.goto('/app');
+  await page.goto('/app?view=manager');
   await expect(page.getByRole('heading', { name: 'Manager dashboard', level: 1 })).toBeVisible();
 
   // ─── Instruction ───

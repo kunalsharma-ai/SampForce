@@ -2,7 +2,6 @@ import type { PhraseTable } from './types';
 
 /** The mobile app (ADR 0072): the Super Workspace's Mobile app settings. */
 export const mobile = {
-  'Mobile app': ['Aplicación móvil', 'Application mobile', 'Mobile App', 'تطبيق الجوال'],
   'Let your people use SampForce on iPhone and Android, with the same accounts, data and permissions as the web.': [
     'Permite que tu equipo use SampForce en iPhone y Android, con las mismas cuentas, datos y permisos que en la web.',
     'Permettez à votre équipe d’utiliser SampForce sur iPhone et Android, avec les mêmes comptes, données et autorisations que sur le web.',
@@ -159,7 +158,6 @@ export const mobile = {
   'Tasks assigned to people, with priority and due date.': ['Tareas asignadas a personas, con prioridad y fecha de vencimiento.', 'Tâches attribuées, avec priorité et échéance.', 'Zugewiesene Aufgaben mit Priorität und Fälligkeit.', 'المهام المسندة للأشخاص مع الأولوية وتاريخ الاستحقاق.'],
   'Sales pipeline': ['Embudo de ventas', 'Pipeline commercial', 'Vertriebspipeline', 'مسار المبيعات'],
   'Deals by stage, with amount and expected close date.': ['Operaciones por etapa, con importe y fecha de cierre prevista.', 'Affaires par étape, avec montant et date de clôture prévue.', 'Deals nach Phase mit Betrag und erwartetem Abschlussdatum.', 'الصفقات حسب المرحلة مع المبلغ وتاريخ الإغلاق المتوقع.'],
-  'Sales targets': ['Objetivos de ventas', 'Objectifs de vente', 'Verkaufsziele', 'أهداف المبيعات'],
   'Targets and how much of them is achieved.': ['Objetivos y cuánto se ha logrado.', 'Objectifs et part atteinte.', 'Ziele und wie viel davon erreicht ist.', 'الأهداف ومقدار ما تحقق منها.'],
   'Sales reports': ['Informes de ventas', 'Rapports de ventes', 'Verkaufsberichte', 'تقارير المبيعات'],
   'Ready-made sales reports, read only.': ['Informes de ventas listos, solo lectura.', 'Rapports de ventes prêts à l’emploi, en lecture seule.', 'Fertige Verkaufsberichte, nur lesen.', 'تقارير مبيعات جاهزة، للقراءة فقط.'],
@@ -178,7 +176,6 @@ export const mobile = {
   'Open tasks assigned to me.': ['Tareas abiertas asignadas a mí.', 'Tâches ouvertes qui me sont attribuées.', 'Mir zugewiesene offene Aufgaben.', 'المهام المفتوحة المسندة إليّ.'],
   'Leads, calls and won deals this month.': ['Clientes potenciales, llamadas y operaciones ganadas este mes.', 'Prospects, appels et affaires gagnées ce mois-ci.', 'Leads, Anrufe und gewonnene Deals in diesem Monat.', 'العملاء المحتملون والمكالمات والصفقات الرابحة هذا الشهر.'],
   'The team’s leads, follow-ups and wins.': ['Clientes potenciales, seguimientos y éxitos del equipo.', 'Prospects, relances et succès de l’équipe.', 'Leads, Nachfassaktionen und Abschlüsse des Teams.', 'العملاء المحتملون والمتابعات والنجاحات للفريق.'],
-  'Executive ranking': ['Clasificación de ejecutivos', 'Classement des commerciaux', 'Mitarbeiter-Rangliste', 'ترتيب التنفيذيين'],
   'Executives ranked by achievement.': ['Ejecutivos ordenados por logro.', 'Commerciaux classés selon leurs résultats.', 'Mitarbeiter nach Zielerreichung sortiert.', 'التنفيذيون مرتبون حسب الإنجاز.'],
   'Team tasks': ['Tareas del equipo', 'Tâches de l’équipe', 'Team-Aufgaben', 'مهام الفريق'],
   'Open and overdue tasks of the team.': ['Tareas abiertas y vencidas del equipo.', 'Tâches ouvertes et en retard de l’équipe.', 'Offene und überfällige Aufgaben des Teams.', 'مهام الفريق المفتوحة والمتأخرة.'],
@@ -189,7 +186,6 @@ export const mobile = {
   'Targets and achievement': ['Objetivos y logro', 'Objectifs et réalisation', 'Ziele und Erreichung', 'الأهداف والإنجاز'],
   'Targets set and how much is achieved.': ['Objetivos fijados y cuánto se ha logrado.', 'Objectifs fixés et part atteinte.', 'Gesetzte Ziele und wie viel erreicht ist.', 'الأهداف المحددة ومقدار ما تحقق.'],
   'Open deals by stage.': ['Operaciones abiertas por etapa.', 'Affaires ouvertes par étape.', 'Offene Deals nach Phase.', 'الصفقات المفتوحة حسب المرحلة.'],
-  'Announcements': ['Anuncios', 'Annonces', 'Ankündigungen', 'الإعلانات'],
   'Important notices from the organisation.': ['Avisos importantes de la organización.', 'Avis importants de l’organisation.', 'Wichtige Hinweise der Organisation.', 'إشعارات مهمة من المؤسسة.'],
   Directions: ['Cómo llegar', 'Itinéraire', 'Route', 'الاتجاهات'],
   'Decide how the app looks and what each workspace level sees and may do, preview it, and publish it to phones.': ['Decide cómo se ve la aplicación y qué ve y puede hacer cada nivel, revísalo y publícalo en los teléfonos.', 'Décidez de l’aspect de l’application et de ce que chaque niveau voit et peut faire, prévisualisez-la et publiez-la sur les téléphones.', 'Legen Sie fest, wie die App aussieht und was jede Ebene sieht und tun darf, sehen Sie sie in der Vorschau an und veröffentlichen Sie sie auf den Telefonen.', 'حدّد شكل التطبيق وما يراه كل مستوى وما يمكنه فعله، ثم عاينه وانشره على الهواتف.'],

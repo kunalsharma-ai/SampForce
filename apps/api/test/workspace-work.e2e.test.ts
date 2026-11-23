@@ -140,6 +140,6 @@ describe('targets and tasks down the hierarchy', () => {
 
     // The history is append-only and the change is in the audit log.
     const audit = await db.auditLog.findMany({ where: { tenantId: superAdmin.tenantId, entityId: created.id } });
-    expect(audit.map((a) => a.action).sort()).toEqual(['task.assigned', 'task.commented', 'task.updated']);
+    expect(audit.map((a) => a.action).sort()).toEqual(['task.assigned', 'task.commented', 'task.completed']);
   });
 });

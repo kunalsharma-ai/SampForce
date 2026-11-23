@@ -65,10 +65,10 @@ export default function Ticket() {
         </>
       ) : null}
       {ticket.mine ? (
-        ticket.status === 'CLOSED' ? (
-          <Button kind="secondary" label={t('Reopen')} busy={busy === 'status'} onPress={() => act('status', () => c.api.patch(`/support/tickets/${ticket.id}`, { status: 'OPEN' }))} />
+        ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? (
+          <Button kind="secondary" label={t('Reopen')} busy={busy === 'status'} onPress={() => act('status', () => c.api.patch(`/support/tickets/${ticket.id}`, { status: 'SUBMITTED' }))} />
         ) : (
-          <Button kind="secondary" label={t('Close: my question is answered')} busy={busy === 'status'} onPress={() => act('status', () => c.api.patch(`/support/tickets/${ticket.id}`, { status: 'CLOSED' }))} />
+          <Button kind="secondary" label={t('Close: my question is answered')} busy={busy === 'status'} onPress={() => act('status', () => c.api.patch(`/support/tickets/${ticket.id}`, { status: 'RESOLVED' }))} />
         )
       ) : null}
     </Screen>

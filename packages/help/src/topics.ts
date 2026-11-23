@@ -105,6 +105,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/operator/chat': 'page.operatorChat',
   '/operator/support': 'page.operatorSupport',
   '/operator/help': 'page.operatorHelp',
+  '/operator/help/manage': 'page.operatorHelpManage',
   '/operator/settings': 'page.operatorSettings',
 };
 

@@ -23,7 +23,7 @@ test('validates the sign-up form before calling the API', async ({ page }) => {
 
 test('signs up and shows Command Center KPIs from the API', async ({ page }) => {
   await signUp(page);
-  // The owner opens on the senior management dashboard; the analytics layout is one tab away.
+  // The owner opens on the organisation overview; the analytics layout is one tab away.
   await page.getByRole('tab', { name: 'Analytics' }).click();
   await expect(page.getByTestId('kpi-totalLeads')).toContainText('0');
   await expect(page.getByTestId('kpi-aiAssistedActivities')).toContainText('0');

@@ -141,6 +141,7 @@ export const errorsProviders = {
   'The URL points to a private or reserved network address': ['La URL apunta a una dirección de red privada o reservada', 'L’URL pointe vers une adresse réseau privée ou réservée', 'Die URL zeigt auf eine private oder reservierte Netzwerkadresse', 'يشير الرابط إلى عنوان شبكة خاص أو محجوز'],
   'The host name does not resolve': ['El nombre de host no se resuelve', 'Le nom d’hôte ne se résout pas', 'Der Hostname lässt sich nicht auflösen', 'تعذر تحليل اسم المضيف'],
   'URLs must not contain credentials': ['Las URL no deben contener credenciales', 'Les URL ne doivent pas contenir d’identifiants', 'URLs dürfen keine Zugangsdaten enthalten', 'يجب ألا تحتوي الروابط على بيانات اعتماد'],
+  'Use an https:// address.': ['Usa una dirección https://.', 'Utilisez une adresse https://.', 'Verwenden Sie eine https://-Adresse.', 'استخدم عنوان https://‎.'],
   'Use an https:// URL': ['Usa una URL https://', 'Utilisez une URL https://', 'Verwenden Sie eine https://-URL', 'استخدم رابط https://‎'],
   'Invalid URL': ['URL no válida', 'URL non valide', 'Ungültige URL', 'رابط غير صالح'],
 
