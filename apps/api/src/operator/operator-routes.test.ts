@@ -16,9 +16,9 @@ const CONTROLLERS = [OperatorController, OperatorAdminController, OperatorChatCo
 describe('operator routes', () => {
   const routes = CONTROLLERS.flatMap((c) =>
     Object.getOwnPropertyNames(c.prototype)
-      .filter((m) => m !== 'constructor' && Reflect.getMetadata(METHOD_METADATA, c.prototype[m]) !== undefined)
+      .filter((m) => m !== 'constructor' && Reflect.getMetadata(METHOD_METADATA, (c.prototype as unknown as Record<string, object>)[m]!) !== undefined)
       .map((m) => {
-        const fn = c.prototype[m] as object;
+        const fn = (c.prototype as unknown as Record<string, object>)[m]!;
         const read = (key: string) => Reflect.getMetadata(key, fn) ?? Reflect.getMetadata(key, c);
         return { route: `${c.name}.${m} ${Reflect.getMetadata(PATH_METADATA, fn)}`, permission: read(OPERATOR_ROUTE_METADATA.permission) as string[] | undefined, any: read(OPERATOR_ROUTE_METADATA.any), public: read(OPERATOR_ROUTE_METADATA.public) };
       }),
