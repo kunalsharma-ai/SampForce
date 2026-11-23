@@ -35,6 +35,19 @@ export const passwordResetSchema = z.object({
 });
 export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
 
+/** Changing the password while signed in: the current one, then the new one (W6). */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password').max(200),
+    newPassword: passwordSchema,
+  })
+  .refine((v) => v.currentPassword !== v.newPassword, { path: ['newPassword'], message: 'Choose a password you have not used here' });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+/** How many other devices were signed out. */
+export interface PasswordChanged {
+  signedOut: number;
+}
+
 export const switchTenantSchema = z.object({ tenantId: z.string().uuid() });
 export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;
 

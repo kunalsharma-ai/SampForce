@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
 import { FEATURE_KEYS } from '@dealflow/types';
-import { signUp } from './helpers';
+import { signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for phase previews). */
@@ -78,7 +78,7 @@ test('the Permission Center hands features and actions down, and a manager canno
   test.setTimeout(150_000);
   await signUp(page, 'Frequent Research Panels');
   await page.goto('/app/settings');
-  await page.getByRole('link', { name: /Workspaces/ }).click();
+  await page.getByRole('link', { name: /^Workspaces/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
 
   await page.getByRole('button', { name: 'New Manager Workspace' }).click();
@@ -100,7 +100,7 @@ test('the Permission Center hands features and actions down, and a manager canno
   await axe(page);
 
   // The Super Workspace takes RFQs and deleting in CRM away, and lets the manager build a team.
-  await page.getByRole('button', { name: 'Permissions West India Sales' }).click();
+  await workspaceAction(page, 'West India Sales', 'Permissions');
   dialog = page.getByRole('dialog');
   await dialog.getByRole('checkbox', { name: 'RFQs', exact: true }).uncheck();
   await dialog.getByRole('checkbox', { name: 'Delete in CRM' }).uncheck();
@@ -130,7 +130,7 @@ test('the Permission Center hands features and actions down, and a manager canno
   await finishWizard(dialog);
   await dialog.getByRole('button', { name: 'Done' }).click();
   await expect(manager.locator('[data-workspace="Priya Sharma"]')).toBeVisible();
-  await manager.getByRole('button', { name: 'Permissions Priya Sharma' }).click();
+  await workspaceAction(manager, 'Priya Sharma', 'Permissions');
   dialog = manager.getByRole('dialog');
   await expect(dialog.getByRole('checkbox', { name: 'RFQs', exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('checkbox', { name: 'Delete in CRM' })).toHaveCount(0);

@@ -20,6 +20,7 @@ import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
 import { MobilePushService } from '../mobile/push/mobile-push.service';
+import { CompanyClosureService } from '../tenants/company-closure.service';
 
 export interface WorkerTick {
   events: number;
@@ -45,6 +46,8 @@ export interface WorkerTick {
   logos: number;
   /** Phone notifications sent through Expo (ADR 0072, M8). */
   pushes: number;
+  /** Closed companies whose 30 days passed, erased (workspace redesign W7). */
+  erasures: number;
 }
 
 /**
@@ -79,6 +82,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
     private readonly pushes: MobilePushService,
+    private readonly closures: CompanyClosureService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -136,7 +140,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const logos = await this.logos.runDue();
     // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
     const pushes = await this.pushes.sendDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes };
+    const erasures = await this.closures.eraseDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type Browser, expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -45,7 +45,7 @@ test('deactivates, reactivates and deletes a Manager Workspace with a handover',
 
   // Deactivate: a reason, then the password.
   await page.goto('/app/settings/workspaces');
-  await page.getByRole('button', { name: 'Deactivate North Team' }).click();
+  await workspaceAction(page, 'North Team', 'Deactivate');
   const form = page.getByRole('dialog', { name: 'Deactivate North Team' });
   await form.getByLabel('Reason').fill('Team on leave until March');
   await form.getByRole('button', { name: 'Continue' }).click();
@@ -62,13 +62,13 @@ test('deactivates, reactivates and deletes a Manager Workspace with a handover',
   await north.page.goto('/app');
   await expect(north.page.getByText('Your workspace is deactivated')).toBeVisible();
   await shot(north.page, '10-manager-sees-deactivated');
-  await page.getByRole('button', { name: 'Reactivate North Team' }).click();
+  await workspaceAction(page, 'North Team', 'Reactivate');
   await expect(row.getByText('Deactivated', { exact: true })).toHaveCount(0);
   await north.page.reload();
   await expect(north.page.getByText('Your workspace is deactivated')).toHaveCount(0);
 
   // Delete: what it touches and who receives it, then the typed name and the password.
-  await page.getByRole('button', { name: 'Delete North Team' }).click();
+  await workspaceAction(page, 'North Team', 'Delete');
   const impact = page.getByRole('dialog', { name: 'Delete North Team' });
   await expect(impact.locator('[data-impact-people]')).toContainText('Rahul Sharma');
   await expect(impact.locator('[data-impact-records]')).toHaveText('1 companies, 0 contacts, 2 leads, 0 deals and 0 open tasks');
