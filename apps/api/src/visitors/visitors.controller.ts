@@ -7,6 +7,7 @@ import { CrossSite } from '../common/origin.guard';
 import { ZodPipe } from '../common/zod.pipe';
 import { TRACKER_SCRIPT } from './tracker-script';
 import { VisitorsService } from './visitors.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const listQuery = z.object({ segment: z.enum(['all', 'identified', 'anonymous', 'high_intent']).default('all'), search: z.string().trim().max(100).optional() });
@@ -61,6 +62,7 @@ export class VisitorsController {
     return this.visitors.detail(auth, id);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('visitors:manage')

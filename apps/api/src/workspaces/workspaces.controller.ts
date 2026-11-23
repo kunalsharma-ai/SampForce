@@ -14,6 +14,7 @@ import {
 import { Auth, type AuthContext, Meta, OwnHierarchyRules, type RequestMeta, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { WorkspacesService } from './workspaces.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 /**
  * The organisation's workspace hierarchy (ADR 0071). Who may do what depends on the caller's workspace level, so the
@@ -71,6 +72,7 @@ export class WorkspacesController {
     return this.workspaces.assignMember(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequireFeature('workspace_management')

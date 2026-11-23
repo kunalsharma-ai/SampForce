@@ -22,6 +22,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { Public } from '../common/auth-context';
 import { SCIM_ERROR, SCIM_USER, ScimError, ScimService } from './scim.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const SCIM_JSON = 'application/scim+json';
 
@@ -125,6 +126,7 @@ export class ScimController {
     return this.scim.patch(tenantId, tokenId, id, body);
   }
 
+  @NoPasswordConfirmation('Directory sync: a machine with a token, which cannot type a password')
   @Delete('Users/:id')
   @HttpCode(204)
   async remove(@Req() req: ScimRequest, @Param('id') id: string) {

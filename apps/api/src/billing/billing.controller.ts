@@ -17,6 +17,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { BillingService } from './billing.service';
 import { WorkspaceService } from './workspace.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 @Controller('billing')
 export class BillingController {
@@ -144,6 +145,7 @@ export class WorkspaceController {
     return this.workspace.grantSupport(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Withdraws SampForce support access; it must stay quick')
   @Delete('support-access/:id')
   @HttpCode(204)
   @RequirePermissions('tenant:manage')

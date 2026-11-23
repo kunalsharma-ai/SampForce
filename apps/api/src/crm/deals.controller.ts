@@ -20,6 +20,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { DealsService } from './deals.service';
 import { PipelinesService } from './pipelines.service';
 import { TerritoriesService } from './territories.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const boardQuerySchema = z.object({
@@ -122,6 +123,7 @@ export class DealsController {
     return this.deals.clone(auth, id, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('deals:write')
@@ -160,6 +162,7 @@ export class PipelinesController {
     return this.pipelines.setDefault(auth, id, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('pipelines:manage')
@@ -193,6 +196,7 @@ export class TerritoriesController {
     return this.territories.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('tenant:manage')

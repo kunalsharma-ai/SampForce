@@ -6,6 +6,7 @@ import { Auth, type AuthContext, type AuthedRequest, Meta, type RequestMeta, Req
 import { API_ENV, type ApiEnv } from '../common/env';
 import { ZodPipe } from '../common/zod.pipe';
 import { AppError, AppsService } from './apps.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 /** The plan feature each workspace app belongs to (ADR 0057). */
 const appFeature = (req: AuthedRequest): FeatureKey | null => {
@@ -57,6 +58,7 @@ export class AppsController {
     }
   }
 
+  @ConfirmPassword()
   @Delete(':app')
   @HttpCode(204)
   @RequirePermissions('integrations:manage')
@@ -112,6 +114,7 @@ export class AppsController {
     return this.wrap(() => this.apps.teamsAddChannel(auth, body, meta));
   }
 
+  @ConfirmPassword()
   @Delete('teams/channels/:id')
   @RequirePermissions('integrations:manage')
   teamsRemove(@Auth() auth: AuthContext, @Param('id', new ZodPipe(teamsChannelId)) id: string, @Meta() meta: RequestMeta) {

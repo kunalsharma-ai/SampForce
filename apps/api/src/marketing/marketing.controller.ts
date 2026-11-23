@@ -16,6 +16,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { CampaignsService } from './campaigns.service';
 import { FormsService } from './forms.service';
 import { SegmentsService } from './segments.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const previewBody = z.object({ entity: z.enum(['lead', 'contact']), rules: segmentRulesSchema });
@@ -44,6 +45,7 @@ export class SegmentsController {
     return this.segments.save(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('marketing:manage')

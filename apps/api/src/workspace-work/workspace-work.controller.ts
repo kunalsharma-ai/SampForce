@@ -20,6 +20,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { AssignedTasksService } from './assigned-tasks.service';
 import { WorkspaceDashboardService } from './dashboard.service';
 import { TargetsService } from './targets.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 /**
  * Targets and tasks handed down the workspace hierarchy (ADR 0071, part 4). Who may hand what to whom depends on the
@@ -57,6 +58,7 @@ export class TargetsController {
     return this.targets.distribute(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequireFeature('sales_target_management')
