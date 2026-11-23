@@ -55,3 +55,12 @@ polled every 30 seconds, had no history, no sound, and nothing appeared on the d
   opened plays once (sessionStorage flag set by the form), skippable by any key or click.
 - CSS and SVG only, transforms and stroke offsets. Under reduced motion every animation and delay collapses to its
   final frame (checked: no running animations, axe clean).
+
+## The Console (N3)
+
+- `/operator/login` uses the `console` scene and the "You're signing in to SampForce Console · Super Admin · Console
+  Admin" badge. The form, its labels, the MFA step and the error text are unchanged, so the Console specs still apply.
+- After a form sign-in the Console shows its own welcome (`WelcomeScene variant="console"`), once, like the workspaces.
+- The Console bell keeps its exports, data attributes and accessible name, and gains the shared swing, halo and badge
+  pop when the count rises (never on first load). While the Console is in the background and the browser allows it,
+  a new notification also shows as a browser notification; the bell offers to ask for that permission once.

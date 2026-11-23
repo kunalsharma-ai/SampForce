@@ -27,6 +27,7 @@ import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
 import { isDarkNow, useConsolePaint } from '@/lib/console-appearance';
 import { playConsoleSound } from '@/lib/console-sound';
 import { useOperatorTicketCounts } from '@/lib/support';
+import { WelcomeScene } from '@/components/sign-in/welcome-overlay';
 import { StateBadge } from './console-ui';
 
 const ME_KEY = ['operator', 'me'] as const;
@@ -215,6 +216,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       <ChatNotices />
+      <WelcomeScene variant="console" name={me.data ? me.data.name || me.data.email : null} />
       {me.data && (
         <ConsoleSidebar
           collapsed={me.data.preferences.sidebarCollapsed}
