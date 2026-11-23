@@ -15,6 +15,8 @@ async function shot(page: Page, name: string) {
 }
 
 async function axe(page: Page) {
+  // Next sets the tab title again after a soft navigation (a tab change); check the settled page.
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
