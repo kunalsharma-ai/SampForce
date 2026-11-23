@@ -9,6 +9,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/billing';
 import { useOperator } from '../operator-shell';
+import { ConsolePlans } from './console-plans';
 
 type Limits = OperatorPlanRow['limits'];
 const LIMITS: { key: keyof Limits; label: string; unlimited: boolean }[] = [
@@ -32,8 +33,10 @@ export default function OperatorPlansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Plans"
-        description="What each plan includes. A change applies to every workspace on that plan on its next request, and shows on the public pricing page. Nothing a workspace created is deleted when a feature is removed; it becomes read-only until the feature is back."
+        description="What each plan includes and costs. A change applies to every client on that plan on its next request, and shipped plans show on the public pricing page. Nothing a client created is deleted when a feature is removed; it becomes read-only until the feature is back."
       />
+      <ConsolePlans admin={admin} />
+      <h2 className="pt-2 text-lg font-semibold">Shipped plans, feature by feature</h2>
       <Card>
         <CardContent className="overflow-x-auto pt-6">
           <table className="w-full min-w-[720px] text-sm" data-operator-plans="">

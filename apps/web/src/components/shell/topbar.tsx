@@ -20,7 +20,6 @@ import {
   Bot,
   CalendarDays,
   Check,
-  CircleHelp,
   Keyboard,
   ListTodo,
   LogOut,
@@ -52,6 +51,7 @@ import { NotificationsMenu } from './notifications-menu';
 import { WorkspaceBadge, WorkspaceIdentityBlock } from './workspace-badge';
 import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
+import { HelpMenu } from './help-menu';
 
 const QUICK_CREATE: { kind: QuickCreateKind; permission: Permission }[] = [
   { kind: 'leads', permission: 'leads:write' },
@@ -188,7 +188,7 @@ export function Topbar() {
         <IconLink href="/app/activities" label={t('top.tasks')} icon={ListTodo} />
         <IconLink href="/app/meetings" label={t('top.calendar')} icon={CalendarDays} />
         <IconLink href="/app/integrations" label={t('top.integrations')} icon={Plug} />
-        <IconLink href="/app/help" label={t('top.help')} icon={CircleHelp} />
+        <HelpMenu onShortcuts={() => setShortcutsOpen(true)} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

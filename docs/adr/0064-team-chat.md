@@ -1,6 +1,6 @@
 # ADR 0064: Team chat and the support line, served by SampForce itself
 
-- Status: Accepted
+- Status: Accepted (live delivery replaced by ADR 0069)
 - Date: 2026-11-16
 
 ## Context

@@ -2,6 +2,8 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV31 } from '@ast
 import {
   chatConversationInputSchema,
   chatConversationUpdateSchema,
+  chatDeliveredSchema,
+  chatEventsQuerySchema,
   chatLinkQuerySchema,
   chatMembersInputSchema,
   chatMessageEditSchema,
@@ -393,7 +395,12 @@ export function buildOpenApiDocument(): object {
   // Team chat (ADR 0064). Signed-in sessions only (no API keys); plan feature team_chat.
   const chatTag = 'Team chat';
   const convParams = { params: idParam };
-  r.registerPath({ method: 'get', path: '/chat/stream', tags: [chatTag], summary: 'Live events as Server-Sent Events (text/event-stream): message, message_changed, read and conversation, naming what to re-read', security: secured, responses: { 200: ok('Event stream'), ...errors } });
+  // Live delivery (ADR 0069): a WebSocket at /api/v1/chat/socket?ticket=..., or the catch-up route below.
+  action('post', '/chat/socket-ticket', chatTag, 'A one-minute ticket for opening the live WebSocket at /api/v1/chat/socket?ticket=…; it sends message, message_changed, read, delivered, conversation, typing and presence events naming what to re-read');
+  r.registerPath({ method: 'get', path: '/chat/events', tags: [chatTag], summary: 'Live events without a WebSocket: those after `cursor`, answered at once or after up to `wait` seconds; the first call answers ready', security: secured, request: { query: chatEventsQuerySchema }, responses: { 200: ok('Events and the next cursor'), ...errors } });
+  action('get', '/chat/presence', chatTag, 'Who in the workspace is online now, and when the others were last seen');
+  action('post', '/chat/delivered', chatTag, 'Messages so far reached this device: moves your Delivered receipt in one conversation or all', chatDeliveredSchema);
+  action('post', '/chat/conversations/{id}/typing', chatTag, 'Tell the conversation you are typing (shown for a few seconds)');
   action('get', '/chat/unread', chatTag, 'Unread messages across your conversations');
   action('get', '/chat/people', chatTag, 'People of the workspace to message');
   r.registerPath({ method: 'get', path: '/chat/link-options', tags: [chatTag], summary: 'Companies, RFQs and deals you can see, to link a message or channel to', security: secured, request: { query: chatLinkQuerySchema }, responses: { 200: ok('Options'), ...errors } });

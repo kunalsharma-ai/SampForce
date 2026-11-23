@@ -14,6 +14,7 @@ export const errorsRecords = {
   'Workflow not found.': ['No se encontró el flujo de trabajo.', 'Workflow introuvable.', 'Workflow nicht gefunden.', 'لم يُعثر على سير العمل.'],
   'Segment not found.': ['No se encontró el segmento.', 'Segment introuvable.', 'Segment nicht gefunden.', 'لم يُعثر على الشريحة.'],
   'Report not found.': ['No se encontró el informe.', 'Rapport introuvable.', 'Bericht nicht gefunden.', 'لم يُعثر على التقرير.'],
+  'Support ticket not found.': ['No se encontró el ticket de soporte.', 'Ticket de support introuvable.', 'Support-Ticket nicht gefunden.', 'لم يُعثر على تذكرة الدعم.'],
   'Conversation not found.': ['No se encontró la conversación.', 'Conversation introuvable.', 'Unterhaltung nicht gefunden.', 'لم يُعثر على المحادثة.'],
   'Task not found.': ['No se encontró la tarea.', 'Tâche introuvable.', 'Aufgabe nicht gefunden.', 'لم يُعثر على المهمة.'],
   'Portal user not found.': ['No se encontró el usuario del portal.', 'Utilisateur du portail introuvable.', 'Portalbenutzer nicht gefunden.', 'لم يُعثر على مستخدم البوابة.'],

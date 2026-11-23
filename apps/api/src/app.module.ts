@@ -16,6 +16,7 @@ import { PreferencesModule } from './preferences/preferences.module';
 import { ViewsModule } from './views/views.module';
 import { CommonModule } from './common/common.module';
 import { ChatModule } from './chat/chat.module';
+import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
@@ -40,6 +41,7 @@ import { OwnServersModule } from './own-servers/own-servers.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { HierarchyGuard } from './workspaces/hierarchy.guard';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { WorkspaceWorkModule } from './workspace-work/workspace-work.module';
 import { WorkerModule } from './worker/worker.module';
 import { redactUrl } from './observability/redact';
 
@@ -69,10 +71,12 @@ import { redactUrl } from './observability/redact';
     AuthModule,
     TenantsModule,
     WorkspacesModule,
+    WorkspaceWorkModule,
     DashboardModule,
     CommandCenterModule,
     CrmModule,
     ChatModule,
+    SupportModule,
     AutomationModule,
     AiModule,
     OwnServersModule,

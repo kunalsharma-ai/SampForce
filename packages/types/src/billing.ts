@@ -21,10 +21,10 @@ export type SubscriptionState = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' 
 export const TRIAL_SEATS = 10;
 
 export interface EffectiveEntitlements {
-  /** The plan on the subscription, even when its allowances are not in force. */
-  planCode: PlanCode;
+  /** The plan on the subscription, even when its allowances are not in force. A shipped plan or a Console-made one. */
+  planCode: string;
   /** The plan whose allowances apply: Free while a subscription is unpaid or canceled. */
-  appliedPlan: PlanCode;
+  appliedPlan: string;
   entitlements: PlanEntitlements;
   /** Members (plus pending invitations) allowed; null means no limit. */
   seatLimit: number | null;
@@ -36,7 +36,8 @@ export interface EffectiveEntitlements {
 
 /** Live plan definitions (the `plans` table) and this workspace's feature overrides. Missing plans use the shipped ones. */
 export interface EntitlementSources {
-  plans?: Partial<Record<PlanCode, PlanEntitlements>>;
+  /** Shipped plans by code, plus plans the Console Admin created (ADR 0071). */
+  plans?: Partial<Record<string, PlanEntitlements>>;
   overrides?: readonly FeatureOverride[];
 }
 
@@ -47,10 +48,11 @@ export interface EntitlementSources {
  * only new usage above the Free allowances is refused.
  */
 export function effectiveEntitlements(sub: { planCode: string; status: SubscriptionState; seats: number } | null, sources: EntitlementSources = {}): EffectiveEntitlements {
-  const planCode = (sub && sub.planCode in PLAN_ENTITLEMENTS ? sub.planCode : 'free') as PlanCode;
+  const known = (code: string) => code in PLAN_ENTITLEMENTS || !!sources.plans?.[code];
+  const planCode = sub && known(sub.planCode) ? sub.planCode : 'free';
   const restricted = !!sub && planCode !== 'free' && (sub.status === 'UNPAID' || sub.status === 'CANCELED');
-  const appliedPlan: PlanCode = restricted ? 'free' : planCode;
-  const entitlements = sources.plans?.[appliedPlan] ?? PLAN_ENTITLEMENTS[appliedPlan];
+  const appliedPlan = restricted ? 'free' : planCode;
+  const entitlements = sources.plans?.[appliedPlan] ?? PLAN_ENTITLEMENTS[appliedPlan as PlanCode];
   const seatLimit = entitlements.maxUsers ?? (sub?.status === 'TRIALING' ? Math.max(sub.seats, TRIAL_SEATS) : Math.max(1, sub?.seats ?? 1));
   // A subfeature never works without its feature (ADR 0071).
   const features = withParents(applyFeatureOverrides(entitlements.features, sources.overrides ?? []));
@@ -148,8 +150,9 @@ export interface CatalogPlan {
 }
 
 export interface BillingOverview {
-  plan: { code: PlanCode; name: string };
-  appliedPlan: PlanCode;
+  /** A shipped plan or one the Console Admin made for this client (ADR 0071). */
+  plan: { code: string; name: string };
+  appliedPlan: string;
   status: SubscriptionState;
   interval: Interval;
   seats: number;

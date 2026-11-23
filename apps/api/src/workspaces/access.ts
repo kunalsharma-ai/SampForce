@@ -30,6 +30,7 @@ export interface StoredNode {
   actions: unknown;
   canCreateExecutives: boolean;
   canViewOtherManagers: boolean;
+  canChatWithPeers: boolean;
   archivedAt: Date | null;
   createdAt: Date;
 }
@@ -47,6 +48,9 @@ export interface NodeAccess {
 
 /** The parts of a transaction access needs (an operator scan has them too). */
 type Reader = Pick<TenantTx, 'workspaceNode' | 'plan' | 'subscription' | 'tenantFeatureOverride'>;
+
+/** How workspace names are compared: case and repeated spaces do not make a name different. */
+export const nameKeyOf = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export function levelOf(value: string): WorkspaceLevel {
   return (WORKSPACE_LEVELS as readonly string[]).includes(value) ? (value as WorkspaceLevel) : 'EXECUTIVE';
@@ -66,6 +70,7 @@ function virtualRoot(tenantId: string): StoredNode {
     actions: null,
     canCreateExecutives: true,
     canViewOtherManagers: false,
+    canChatWithPeers: false,
     archivedAt: null,
     createdAt: new Date(0),
   };

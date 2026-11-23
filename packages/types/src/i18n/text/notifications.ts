@@ -5,6 +5,25 @@ import type { TextTable } from '../catalogue';
  * language at hand) and translated when the person opens their notifications (ADR 0052).
  */
 export const notifications = {
+  // Help Center support tickets (ADR 0073)
+  'SampForce support replied to query #{number}': [
+    'El soporte de SampForce respondió a la consulta n.º {number}',
+    'Le support SampForce a répondu à la demande n° {number}',
+    'Der SampForce-Support hat auf Anfrage #{number} geantwortet',
+    'ردّ دعم SampForce على الاستفسار رقم {number}',
+  ],
+  // Tickets handled inside the organisation (ADR 0071 part 5)
+  'New query #{number}': ['Nueva consulta n.º {number}', 'Nouvelle demande n° {number}', 'Neue Anfrage #{number}', 'استفسار جديد رقم {number}'],
+  'New message on query #{number}': ['Nuevo mensaje en la consulta n.º {number}', 'Nouveau message sur la demande n° {number}', 'Neue Nachricht zu Anfrage #{number}', 'رسالة جديدة في الاستفسار رقم {number}'],
+  'Query #{number} was passed to you': ['La consulta n.º {number} se te ha pasado', 'La demande n° {number} vous a été transmise', 'Anfrage #{number} wurde an Sie weitergegeben', 'أُحيل إليك الاستفسار رقم {number}'],
+  'Your query #{number} has an answer': ['Tu consulta n.º {number} tiene respuesta', 'Votre demande n° {number} a une réponse', 'Ihre Anfrage #{number} wurde beantwortet', 'تلقّى استفسارك رقم {number} ردًا'],
+  'Your query #{number} was closed': ['Tu consulta n.º {number} se ha cerrado', 'Votre demande n° {number} a été fermée', 'Ihre Anfrage #{number} wurde geschlossen', 'أُغلق استفسارك رقم {number}'],
+  'SampForce support closed query #{number}': [
+    'El soporte de SampForce cerró la consulta n.º {number}',
+    'Le support SampForce a fermé la demande n° {number}',
+    'Der SampForce-Support hat Anfrage #{number} geschlossen',
+    'أغلق دعم SampForce الاستفسار رقم {number}',
+  ],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
@@ -220,4 +239,12 @@ export const notifications = {
   'Remark updated by {name}': ['Observación actualizada por {name}', 'Remarque modifiée par {name}', 'Bemerkung geändert von {name}', 'عدّل {name} الملاحظة'],
   'Lead transfer request updated: {lead}': ['Solicitud de traspaso de lead actualizada: {lead}', 'Demande de transfert de prospect modifiée : {lead}', 'Anfrage zur Lead-Übergabe geändert: {lead}', 'عُدّل طلب نقل العميل المحتمل: {lead}'],
   'Updated by {name}.': ['Actualizado por {name}.', 'Modifié par {name}.', 'Geändert von {name}.', 'عدّله {name}.'],
+  // Targets and tasks (ADR 0071, part 4)
+  'You have a new target': ['Tienes un nuevo objetivo', 'Vous avez un nouvel objectif', 'Sie haben ein neues Ziel', 'لديك هدف جديد'],
+  'New task: {title}': ['Nueva tarea: {title}', 'Nouvelle tâche : {title}', 'Neue Aufgabe: {title}', 'مهمة جديدة: {title}'],
+  'Task changed: {title}': ['Tarea modificada: {title}', 'Tâche modifiée : {title}', 'Aufgabe geändert: {title}', 'تم تغيير المهمة: {title}'],
+  'Task completed: {title}': ['Tarea completada: {title}', 'Tâche terminée : {title}', 'Aufgabe erledigt: {title}', 'اكتملت المهمة: {title}'],
+  'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
+  'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
+  '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
 } satisfies TextTable;

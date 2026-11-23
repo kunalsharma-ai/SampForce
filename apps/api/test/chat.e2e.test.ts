@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { WebSocket } from 'ws';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PasswordService } from '../src/auth/password.service';
 import { api, appClient, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser } from './helpers';
@@ -15,41 +16,49 @@ async function cookiesOf(app: INestApplication, path: string, body: object): Pro
   return (res.headers['set-cookie'] as unknown as string[]).map((c) => c.split(';')[0]).join('; ');
 }
 
-/** Reads Server-Sent Events from a running server until `want` matches one, or times out. */
-async function nextEvent(port: number, path: string, cookie: string, act: () => Promise<unknown>, want: (e: Record<string, unknown>) => boolean, ms = 6000): Promise<Record<string, unknown>> {
-  const ac = new AbortController();
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1${path}`, { headers: { cookie }, signal: ac.signal });
-  expect(res.status).toBe(200);
-  expect(res.headers.get('content-type')).toMatch(/text\/event-stream/);
-  const reader = res.body!.getReader();
-  const decoder = new TextDecoder();
-  let buf = '';
-  let acted = false;
-  const timer = setTimeout(() => ac.abort(), ms);
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) throw new Error('stream ended');
-      buf += decoder.decode(value, { stream: true });
-      let i: number;
-      while ((i = buf.indexOf('\n\n')) >= 0) {
-        const chunk = buf.slice(0, i);
-        buf = buf.slice(i + 2);
-        const data = chunk.split('\n').find((l) => l.startsWith('data: '));
-        if (!data) continue;
-        const e = JSON.parse(data.slice(6)) as Record<string, unknown>;
-        if (e.type === 'ready' && !acted) {
-          acted = true;
-          await act();
-          continue;
-        }
-        if (want(e)) return e;
-      }
+type Ev = Record<string, unknown>;
+
+/** A live chat WebSocket opened the way the browser does: ticket over the API, then the socket. */
+async function openSocket(port: number, realm: 'user' | 'operator', cookie: string, origin = ORIGIN): Promise<{ ws: WebSocket; events: Ev[]; next: (want: (e: Ev) => boolean, ms?: number) => Promise<Ev>; closed: Promise<number> }> {
+  const base = realm === 'user' ? '/chat' : '/operator/chat';
+  const t = await fetch(`http://127.0.0.1:${port}/api/v1${base}/socket-ticket`, { method: 'POST', headers: { cookie, origin: ORIGIN } });
+  expect(t.status).toBe(200);
+  const { ticket, path } = (await t.json()) as { ticket: string; path: string };
+  const ws = new WebSocket(`ws://127.0.0.1:${port}${path}?ticket=${encodeURIComponent(ticket)}`, { headers: { origin } });
+  const events: Ev[] = [];
+  const waiters: { want: (e: Ev) => boolean; resolve: (e: Ev) => void }[] = [];
+  ws.on('message', (raw) => {
+    const e = JSON.parse(String(raw)) as Ev;
+    events.push(e);
+    for (const w of [...waiters]) if (w.want(e)) {
+      waiters.splice(waiters.indexOf(w), 1);
+      w.resolve(e);
     }
-  } finally {
-    clearTimeout(timer);
-    ac.abort();
-  }
+  });
+  const closed = new Promise<number>((resolve) => ws.on('close', (code) => resolve(code)));
+  await new Promise<void>((resolve, reject) => {
+    ws.once('open', () => resolve());
+    ws.once('error', reject);
+  });
+  const next = (want: (e: Ev) => boolean, ms = 6000) =>
+    new Promise<Ev>((resolve, reject) => {
+      const had = events.find(want);
+      if (had) return resolve(had);
+      const timer = setTimeout(() => reject(new Error(`no matching event; got ${JSON.stringify(events)}`)), ms);
+      waiters.push({ want, resolve: (e) => (clearTimeout(timer), resolve(e)) });
+    });
+  await next((e) => e.type === 'ready');
+  return { ws, events, next, closed };
+}
+
+/** Status of a WebSocket upgrade that the server refuses. */
+function refusedWith(url: string, origin = ORIGIN): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url, { headers: { origin } });
+    ws.on('unexpected-response', (_req, res) => resolve(res.statusCode ?? 0));
+    ws.on('open', () => reject(new Error('socket opened')));
+    ws.on('error', () => undefined);
+  });
 }
 
 /** Team chat (ADR 0064): direct messages, channels, the support line with super admins, files, search and live delivery. */
@@ -295,38 +304,148 @@ describe('team chat', () => {
     await api(outsider).get('/chat/conversations').expect(200);
   });
 
-  it('delivers live events on the stream, from this server and from another server', async () => {
+  it('delivers live events over the WebSocket, from this server and from another server', async () => {
     const server = app.getHttpServer();
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const port = (server.address() as AddressInfo).port;
     const analystCookie = await cookiesOf(app, '/auth/login', { email: analyst.email, password: analyst.password });
 
-    const e = await nextEvent(port, '/chat/stream', analystCookie, () => api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Live!' }).expect(201), (x) => x.type === 'message');
+    const live = await openSocket(port, 'user', analystCookie);
+    await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Live!' }).expect(201);
+    const e = await live.next((x) => x.type === 'message');
     expect(e).toMatchObject({ type: 'message', conversationId: channelId, authorId: ownerId });
-    // The stream names what changed; it carries no message text.
+    expect(e.sid).toEqual(expect.any(String));
+    // Events name what changed; they carry no message text.
     expect(JSON.stringify(e)).not.toContain('Live!');
-    const r = await nextEvent(port, '/chat/stream', analystCookie, () => api(rep).post(`/chat/conversations/${channelId}/read`, {}).expect(200), (x) => x.type === 'read');
-    expect(r).toMatchObject({ conversationId: channelId, personId: rep.userId });
-    // People outside the workspace get nothing about it: an outsider's stream only opens.
-    await request(server).get('/api/v1/chat/stream').expect(401);
+    await api(rep).post(`/chat/conversations/${channelId}/read`, {}).expect(200);
+    expect(await live.next((x) => x.type === 'read')).toMatchObject({ conversationId: channelId, personId: rep.userId });
+
+    // Typing travels both ways: from a socket to the others, and from the catch-up route for browsers without one.
+    const repCookie = await cookiesOf(app, '/auth/login', { email: rep.email, password: rep.password });
+    const repLive = await openSocket(port, 'user', repCookie);
+    repLive.ws.send(JSON.stringify({ type: 'typing', conversationId: channelId }));
+    expect(await live.next((x) => x.type === 'typing')).toMatchObject({ conversationId: channelId, personId: rep.userId, name: expect.any(String) });
+    await api(owner).post(`/chat/conversations/${channelId}/typing`, {}).expect(204);
+    expect(await live.next((x) => x.type === 'typing' && x.personId === ownerId)).toMatchObject({ conversationId: channelId });
+    // Not in the conversation, no typing.
+    await api(outsider).post(`/chat/conversations/${channelId}/typing`, {}).expect(404);
+    // A malformed frame is ignored; the socket stays open and still answers.
+    repLive.ws.send('not json');
+    repLive.ws.send(JSON.stringify({ type: 'ping' }));
+    await repLive.next((x) => x.type === 'pong');
+
+    // Presence: the analyst is online while a socket is open.
+    const presence = (await api(owner).get('/chat/presence').expect(200)).body as { userId: string; online: boolean }[];
+    expect(presence.find((p) => p.userId === analyst.userId)?.online).toBe(true);
+    expect(presence.find((p) => p.userId === ownerId)?.online).toBe(false);
+
+    // Refused: no ticket, a forged ticket, a ticket for the other realm, and a page from another site.
+    expect(await refusedWith(`ws://127.0.0.1:${port}/api/v1/chat/socket`)).toBe(401);
+    expect(await refusedWith(`ws://127.0.0.1:${port}/api/v1/chat/socket?ticket=eyJhbGciOiJIUzI1NiJ9.e30.x`)).toBe(401);
+    const t = (await api(owner).post('/chat/socket-ticket', {}).expect(200)).body as { ticket: string };
+    expect(await refusedWith(`ws://127.0.0.1:${port}/api/v1/operator/chat/socket?ticket=${t.ticket}`)).toBe(401);
+    expect(await refusedWith(`ws://127.0.0.1:${port}/api/v1/chat/socket?ticket=${t.ticket}`, 'https://evil.example')).toBe(403);
+    // Tickets come only from signed-in sessions.
+    await request(server).post('/api/v1/chat/socket-ticket').set('origin', ORIGIN).expect(401);
+
+    repLive.ws.close();
+    live.ws.close();
 
     // A second API server (as in a cluster) relays what the first one wrote.
-    process.env.CHAT_RELAY_MS = '200';
     const other = await startApp();
     const otherServer = other.getHttpServer();
     await new Promise<void>((resolve) => otherServer.listen(0, '127.0.0.1', resolve));
     const otherPort = (otherServer.address() as AddressInfo).port;
     try {
-      const relayed = await nextEvent(otherPort, '/chat/stream', analystCookie, () => api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Via the first server' }).expect(201), (x) => x.type === 'message' && x.authorId === rep.userId);
-      expect(relayed).toMatchObject({ conversationId: channelId });
-      // Super admins get support line events on their own stream.
+      const far = await openSocket(otherPort, 'user', analystCookie);
+      await api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Via the first server' }).expect(201);
+      expect(await far.next((x) => x.type === 'message' && x.authorId === rep.userId && x.conversationId === channelId)).toMatchObject({ conversationId: channelId });
+      far.ws.close();
+      // Super admins get support line events on their own socket.
       const opCookie = await cookiesOf(app, '/operator/login', { email: opsEmail, password: opsPassword });
       const supportId = (await api(owner).get('/chat/conversations').expect(200)).body.find((c: { kind: string }) => c.kind === 'SUPPORT').id;
-      const forOps = await nextEvent(otherPort, '/operator/chat/stream', opCookie, () => api(owner).post(`/chat/conversations/${supportId}/messages`, { clientId: cid(), body: 'Anyone there?' }).expect(201), (x) => x.type === 'message');
-      expect(forOps).toMatchObject({ conversationId: supportId });
+      const opLive = await openSocket(otherPort, 'operator', opCookie);
+      await api(owner).post(`/chat/conversations/${supportId}/messages`, { clientId: cid(), body: 'Anyone there?' }).expect(201);
+      expect(await opLive.next((x) => x.type === 'message')).toMatchObject({ conversationId: supportId });
+      // A workspace ticket does not open the operator socket, nor the other way round.
+      const opTicket = (await (await fetch(`http://127.0.0.1:${otherPort}/api/v1/operator/chat/socket-ticket`, { method: 'POST', headers: { cookie: opCookie, origin: ORIGIN } })).json()) as { ticket: string };
+      expect(await refusedWith(`ws://127.0.0.1:${otherPort}/api/v1/chat/socket?ticket=${opTicket.ticket}`)).toBe(401);
+      opLive.ws.close();
     } finally {
       await other.close();
-      delete process.env.CHAT_RELAY_MS;
     }
+  });
+
+  it('closes a live socket when its session signs out', async () => {
+    const server = app.getHttpServer();
+    const port = (server.address() as AddressInfo).port;
+    const cookie = await cookiesOf(app, '/auth/login', { email: rep.email, password: rep.password });
+    const live = await openSocket(port, 'user', cookie);
+    await fetch(`http://127.0.0.1:${port}/api/v1/auth/logout`, { method: 'POST', headers: { cookie, origin: ORIGIN } });
+    // CHAT_SOCKET_RECHECK_MS is shortened for the tests.
+    expect(await live.closed).toBe(4401);
+  });
+
+  it('catches up without a WebSocket: events after a cursor, each once, held until one arrives', async () => {
+    const first = (await api(analyst).get('/chat/events').expect(200)).body as { events: Ev[]; cursor: string };
+    // The first call says "re-read everything".
+    expect(first.events).toEqual([{ type: 'ready' }]);
+    // Something already waiting is answered at once.
+    await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Catch up' }).expect(201);
+    const a = (await api(analyst).get(`/chat/events?cursor=${encodeURIComponent(first.cursor)}&wait=0`).expect(200)).body as { events: Ev[]; cursor: string };
+    const msg = a.events.find((e) => e.type === 'message' && e.authorId === ownerId);
+    expect(msg).toMatchObject({ conversationId: channelId, authorId: ownerId, sid: expect.any(String) });
+    // Asked again with the ids it has, it gets nothing twice.
+    const seen = a.events.map((e) => e.sid).join(',');
+    const b = (await api(analyst).get(`/chat/events?cursor=${encodeURIComponent(a.cursor)}&seen=${seen}&wait=0`).expect(200)).body as { events: Ev[]; cursor: string };
+    expect(b.events.filter((e) => e.sid === msg!.sid)).toEqual([]);
+    // A held request answers as soon as something happens.
+    // A held request answers as soon as something happens (other events, such as someone going offline, may come first).
+    const seenIds = new Set([...a.events, ...b.events].map((e) => e.sid as string));
+    let cursor = b.cursor;
+    const started = Date.now();
+    setTimeout(() => void api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'While you wait' }).expect(201).then(() => undefined), 500);
+    let got = false;
+    for (let i = 0; i < 5 && !got; i++) {
+      const c = (await api(analyst).get(`/chat/events?cursor=${encodeURIComponent(cursor)}&seen=${[...seenIds].join(',')}&wait=20`).expect(200)).body as { events: Ev[]; cursor: string };
+      for (const e of c.events) seenIds.add(e.sid as string);
+      cursor = c.cursor;
+      got = c.events.some((e) => e.type === 'message' && e.authorId === rep.userId);
+    }
+    expect(got).toBe(true);
+    expect(Date.now() - started).toBeLessThan(10_000);
+    // Outsiders see nothing of this workspace.
+    const out = (await api(outsider).get(`/chat/events?cursor=${encodeURIComponent(a.cursor)}&wait=0`).expect(200)).body as { events: Ev[] };
+    expect(out.events.filter((e) => e.conversationId === channelId)).toEqual([]);
+    // An old cursor (the browser was away for long) means "re-read everything".
+    const stale = (await api(analyst).get(`/chat/events?cursor=${encodeURIComponent(new Date(Date.now() - 600_000).toISOString())}&wait=0`).expect(200)).body as { events: Ev[] };
+    expect(stale.events).toEqual([{ type: 'ready' }]);
+  });
+
+  it('shows sent, delivered and read for each person', async () => {
+    const dm = (await api(owner).post('/chat/conversations', { kind: 'DIRECT', userId: analyst.userId }).expect(201)).body as { id: string };
+    await api(owner).post(`/chat/conversations/${dm.id}/messages`, { clientId: cid(), body: 'Ticks?' }).expect(201);
+    const member = async (who: TestUser, id: string) => ((await api(who).get(`/chat/conversations/${dm.id}`).expect(200)).body as { members: { person: { id: string }; lastReadAt: string | null; lastDeliveredAt: string | null }[] }).members.find((m) => m.person.id === id)!;
+    const sentAt = (await member(owner, ownerId)).lastDeliveredAt!;
+    // Sent: the analyst's devices have not fetched it yet.
+    const before = await member(owner, analyst.userId);
+    expect(before.lastDeliveredAt === null || before.lastDeliveredAt < sentAt).toBe(true);
+    // Delivered: the analyst's browser says it arrived (on connect, or when the event comes in).
+    expect((await api(analyst).post('/chat/delivered', {}).expect(200)).body.updated).toBeGreaterThanOrEqual(1);
+    expect((await member(owner, analyst.userId)).lastDeliveredAt).toBe(sentAt);
+    expect((await member(owner, analyst.userId)).lastReadAt === null || (await member(owner, analyst.userId)).lastReadAt! < sentAt).toBe(true);
+    // Saying it again changes nothing and tells nobody.
+    expect((await api(analyst).post('/chat/delivered', { conversationId: dm.id }).expect(200)).body.updated).toBe(0);
+    // Read.
+    await api(analyst).post(`/chat/conversations/${dm.id}/read`, {}).expect(200);
+    expect((await member(owner, analyst.userId)).lastReadAt).toBe(sentAt);
+  });
+
+  it("lists the workspace's people with email, role and presence for the people picker", async () => {
+    const people = (await api(rep).get('/chat/people').expect(200)).body as { id: string; email: string; role: string; online: boolean }[];
+    expect(people.map((p) => p.id)).toEqual(expect.arrayContaining([ownerId, rep.userId, analyst.userId]));
+    expect(people.find((p) => p.id === ownerId)).toMatchObject({ email: owner.email, role: expect.any(String), online: expect.any(Boolean) });
+    // Never anyone from another workspace.
+    expect(people.some((p) => p.email === outsider.email)).toBe(false);
   });
 });

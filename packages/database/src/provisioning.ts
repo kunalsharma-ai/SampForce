@@ -27,7 +27,8 @@ export interface ProvisionTenantInput {
   tenantId: string;
   name: string;
   slug: string;
-  ownerUserId: string;
+  /** The owner. The Console Admin creates a client before its administrator has an account (ADR 0071), so it may be left out. */
+  ownerUserId?: string;
   planCode?: string;
   isDemo?: boolean;
   /**
@@ -66,9 +67,9 @@ export async function provisionTenant(tx: TenantTx, input: ProvisionTenantInput)
     roles.set(key, role.id);
   }
 
-  const membership = await tx.membership.create({
-    data: { tenantId: tenant.id, userId: input.ownerUserId, roleId: roles.get('owner')! },
-  });
+  const membership = input.ownerUserId
+    ? await tx.membership.create({ data: { tenantId: tenant.id, userId: input.ownerUserId, roleId: roles.get('owner')! } })
+    : null;
 
   const pipeline = await tx.pipeline.create({
     data: { tenantId: tenant.id, name: say('Sales Pipeline'), isDefault: true },

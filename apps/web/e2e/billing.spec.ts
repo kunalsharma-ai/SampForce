@@ -75,9 +75,11 @@ test('operator console: sign-in, workspace list, support access and an audited o
   await ops.getByLabel('Email').fill(email);
   await ops.getByLabel('Password').fill('operator-password-1');
   await ops.getByRole('button', { name: 'Sign in' }).click();
-  await expect(ops.getByRole('heading', { level: 1, name: 'Workspaces' })).toBeVisible();
-  await ops.getByLabel('Search workspaces').fill('Operated Workspace');
+  await expect(ops.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Clients' }).click();
+  await ops.getByLabel('Search clients').fill('Operated Workspace');
   await ops.getByRole('link', { name: 'Operated Workspace' }).first().click();
+  await ops.getByRole('link', { name: 'Invoices and feature overrides' }).click();
   await expect(ops.getByText('Granted by the workspace until')).toBeVisible();
   await expect(ops.getByText('Investigating an import problem').or(ops.getByText('support_access.granted'))).toBeVisible();
   await expectNoA11yViolations(ops);
@@ -127,7 +129,7 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   const number = (await page.locator('#open-invoice-heading').textContent())!.match(/DF-\d{6}/)![0];
   await expectNoA11yViolations(page);
 
-  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Workspaces' }).click();
+  await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Clients' }).click();
   await expect(ops.getByRole('heading', { name: /Waiting for payment/ })).toBeVisible();
   await ops.getByRole('listitem').filter({ hasText: number }).getByRole('link', { name: workspace }).click();
   await ops.getByLabel('Bank or transfer reference').fill('UTR-E2E-1');

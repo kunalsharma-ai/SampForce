@@ -1,10 +1,23 @@
 'use client';
 
-import type { ChatAttachmentRow, ChatConversationRow, ChatLinkOption, ChatMessageRow, ChatPerson, ChatSearchHit, ChatStreamEvent } from '@dealflow/types';
-import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  CHAT_TYPING_REPEAT_MS,
+  CHAT_TYPING_SHOW_MS,
+  type ChatAttachmentRow,
+  type ChatConversationRow,
+  type ChatDirectoryPerson,
+  type ChatEventsPage,
+  type ChatLinkOption,
+  type ChatMessageRow,
+  type ChatPresenceRow,
+  type ChatSearchHit,
+  type ChatSocketTicket,
+  type ChatStreamEvent,
+} from '@dealflow/types';
+import { type InfiniteData, type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { create } from 'zustand';
-import { api, ApiError, languageHeader, refreshSession } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { type OutboxItem, outboxList, outboxPut, outboxRemove } from './outbox';
 
 export type { OutboxItem } from './outbox';
@@ -34,53 +47,120 @@ const key = (r: ChatRealm, ...parts: unknown[]) => ['chat', r.owner, ...parts];
 // ─── Connection ───
 
 export type ChatConnection = 'connecting' | 'live' | 'offline';
+/** How live events arrive: a WebSocket, or held requests when a gateway does not pass WebSockets on. */
+export type ChatTransport = 'websocket' | 'polling';
 
 interface ConnectionState {
   state: ChatConnection;
-  set: (s: ChatConnection) => void;
+  transport: ChatTransport | null;
+  /** When the connection last dropped, for "Reconnecting…" rather than "Offline" on a short blip. */
+  since: number;
+  set: (s: ChatConnection, transport?: ChatTransport | null) => void;
 }
-export const useChatConnection = create<ConnectionState>((set) => ({ state: 'connecting', set: (state) => set({ state }) }));
+export const useChatConnection = create<ConnectionState>((set) => ({
+  state: 'connecting',
+  transport: null,
+  since: Date.now(),
+  set: (state, transport) => set((cur) => ({ state, transport: transport === undefined ? cur.transport : transport, since: cur.state === state ? cur.since : Date.now() })),
+}));
 
-function invalidateFor(qc: QueryClient, r: ChatRealm, e: ChatStreamEvent): void {
-  if (e.type === 'ready') {
-    void qc.invalidateQueries({ queryKey: key(r) });
-    return;
-  }
-  void qc.invalidateQueries({ queryKey: key(r, 'conversations') });
-  void qc.invalidateQueries({ queryKey: key(r, 'unread') });
-  void qc.invalidateQueries({ queryKey: key(r, 'conversation', e.conversationId) });
-  if (e.type === 'message' || e.type === 'message_changed') void qc.invalidateQueries({ queryKey: key(r, 'messages', e.conversationId) });
+/** Who is typing where: conversation id → person id → name and when it stops showing. */
+interface TypingState {
+  typing: Record<string, Record<string, { name: string; until: number }>>;
+  add: (conversationId: string, personId: string, name: string) => void;
+  clear: (conversationId: string, personId: string) => void;
+  prune: () => void;
+}
+export const useTypingStore = create<TypingState>((set, get) => ({
+  typing: {},
+  add: (c, p, name) => set((s) => ({ typing: { ...s.typing, [c]: { ...s.typing[c], [p]: { name, until: Date.now() + CHAT_TYPING_SHOW_MS } } } })),
+  clear: (c, p) =>
+    set((s) => {
+      if (!s.typing[c]?.[p]) return s;
+      const next = { ...s.typing[c] };
+      delete next[p];
+      return { typing: { ...s.typing, [c]: next } };
+    }),
+  prune: () => {
+    const now = Date.now();
+    const cur = get().typing;
+    let changed = false;
+    const out: TypingState['typing'] = {};
+    for (const [c, people] of Object.entries(cur)) {
+      const keep = Object.fromEntries(Object.entries(people).filter(([, v]) => v.until > now));
+      if (Object.keys(keep).length !== Object.keys(people).length) changed = true;
+      if (Object.keys(keep).length) out[c] = keep;
+    }
+    if (changed) set({ typing: out });
+  },
+}));
+
+/** Names of the people typing in a conversation now. */
+export function useTyping(conversationId: string | null): string[] {
+  const people = useTypingStore((s) => (conversationId ? s.typing[conversationId] : undefined));
+  return React.useMemo(() => Object.values(people ?? {}).map((p) => p.name), [people]);
+}
+
+/** Which conversation the person is looking at, so a message there is not announced as a notification. */
+interface ViewState {
+  openId: string | null;
+  setOpen: (id: string | null) => void;
+}
+export const useChatView = create<ViewState>((set) => ({ openId: null, setOpen: (openId) => set({ openId }) }));
+
+/** A new message from someone else, shown as a pop-up when it is not the conversation on screen. */
+export interface ChatNotice {
+  id: string;
+  conversationId: string;
+  title: string;
+  preview: string;
+  href: string;
+}
+interface NoticeState {
+  notices: ChatNotice[];
+  push: (n: ChatNotice) => void;
+  dismiss: (id: string) => void;
+}
+export const useChatNotices = create<NoticeState>((set) => ({
+  notices: [],
+  push: (n) => set((s) => ({ notices: [...s.notices.filter((x) => x.conversationId !== n.conversationId), n].slice(-3) })),
+  dismiss: (id) => set((s) => ({ notices: s.notices.filter((n) => n.id !== id) })),
+}));
+
+/** Sends "typing" on the open connection, or over HTTP when events arrive by polling. Set by useChatLive. */
+let sendTypingNow: ((conversationId: string) => void) | null = null;
+const lastTyping = new Map<string, number>();
+export function announceTyping(conversationId: string): void {
+  const last = lastTyping.get(conversationId) ?? 0;
+  if (Date.now() - last < CHAT_TYPING_REPEAT_MS) return;
+  lastTyping.set(conversationId, Date.now());
+  sendTypingNow?.(conversationId);
+}
+export function stoppedTyping(conversationId: string): void {
+  lastTyping.delete(conversationId);
+}
+
+/** How long a WebSocket may take to say "ready" before this browser tries again or falls back to polling. */
+const OPEN_TIMEOUT_MS = 8000;
+/** The browser pings this often; no frame at all for twice as long means the connection is dead. */
+const PING_MS = 20_000;
+/** After falling back to polling, try the WebSocket again this often (the gateway may have been fixed). */
+const RETRY_SOCKET_MS = 5 * 60_000;
+
+function socketUrl(path: string, ticket: string): string {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}${path}?ticket=${encodeURIComponent(ticket)}`;
 }
 
 /**
- * On every page: sends the outbox when the browser comes back online and every few seconds while anything waits,
- * and re-reads the unread count now and then. Short requests only, so pages still settle (no open stream here).
- */
-export function useChatBackground(realm: ChatRealm | null): void {
-  const qc = useQueryClient();
-  const owner = realm?.owner;
-  React.useEffect(() => {
-    if (!realm) return;
-    const flush = () => void flushOutbox(qc, realm);
-    const online = () => {
-      flush();
-      void qc.invalidateQueries({ queryKey: key(realm, 'unread') });
-    };
-    window.addEventListener('online', online);
-    flush();
-    const retry = setInterval(flush, 8000);
-    return () => {
-      clearInterval(retry);
-      window.removeEventListener('online', online);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [owner, qc]);
-}
-
-/**
- * Keeps one live stream open to the SampForce server while a chat page is open, reconnecting with a short back-off.
- * On every (re)connect the chat queries are re-read and the outbox is sent, so nothing written or received while
- * disconnected is lost. Other pages use useChatBackground instead.
+ * Keeps one live connection to the SampForce server for as long as the app is open, on every page (ADR 0069).
+ *
+ * It opens a WebSocket first. If a gateway between the browser and SampForce does not pass WebSockets on (the
+ * socket fails twice before it is ready), it switches to held requests (`/chat/events`), which work through any
+ * proxy, and tries the WebSocket again every five minutes. Lost connections are noticed within 40 seconds by
+ * heartbeats and reconnected with a short back-off; on every (re)connect the chat is re-read, the outbox is sent and
+ * delivery is confirmed, so nothing written or received while disconnected is lost. Events are de-duplicated by
+ * their id, so one heard twice (socket and catch-up, two servers) is acted on once.
  */
 export function useChatLive(realm: ChatRealm | null): void {
   const qc = useQueryClient();
@@ -89,66 +169,275 @@ export function useChatLive(realm: ChatRealm | null): void {
   React.useEffect(() => {
     if (!realm) return;
     let stopped = false;
-    let ctrl: AbortController | null = null;
+    let mode: ChatTransport = 'websocket';
+    let socketFailures = 0;
     let wait = 1000;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let socket: WebSocket | null = null;
+    let poll: AbortController | null = null;
+    let backToSocket: ReturnType<typeof setTimeout> | null = null;
+    let cursor: string | undefined;
+    const seen = new Map<string, number>();
+    const deliveredFor = new Set<string>();
+    let deliveredTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const remember = (sid: string | undefined): boolean => {
+      if (!sid) return true;
+      const now = Date.now();
+      if (seen.has(sid)) return false;
+      seen.set(sid, now);
+      if (seen.size > 400) for (const [k, t] of seen) if (now - t > 60_000) seen.delete(k);
+      return true;
+    };
+    const recentSeen = () => {
+      const now = Date.now();
+      return [...seen.entries()].filter(([, t]) => now - t < 30_000).map(([k]) => k).slice(-100);
+    };
+
+    /** Tells the server this device has the messages, batched so a burst sends one request. */
+    const confirmDelivered = (conversationId: string | null) => {
+      deliveredFor.add(conversationId ?? '*');
+      if (deliveredTimer) return;
+      deliveredTimer = setTimeout(() => {
+        deliveredTimer = null;
+        const ids = [...deliveredFor];
+        deliveredFor.clear();
+        if (realm.kind === 'user') {
+          if (ids.includes('*')) void api(`/chat/delivered`, { method: 'POST', json: {} }).catch(() => undefined);
+          else for (const id of ids) void api(`/chat/delivered`, { method: 'POST', json: { conversationId: id } }).catch(() => undefined);
+        } else {
+          for (const id of ids.filter((x) => x !== '*')) void api(`/operator/chat/conversations/${id}/delivered`, { method: 'POST' }).catch(() => undefined);
+        }
+      }, 250);
+    };
+
+    const notify = async (conversationId: string) => {
+      const view = useChatView.getState();
+      const onScreen = view.openId === conversationId && document.visibilityState === 'visible';
+      if (onScreen) return;
+      let rows: ChatConversationRow[] | undefined;
+      try {
+        rows = await qc.fetchQuery({ queryKey: key(realm, 'conversations', false), queryFn: () => api<ChatConversationRow[]>(`${realm.base}/conversations`), staleTime: 0 });
+      } catch {
+        return;
+      }
+      const c = rows?.find((r) => r.id === conversationId);
+      if (!c || c.unread === 0) return;
+      const title = realm.kind === 'operator' ? c.workspace : c.title;
+      const preview = c.lastMessagePreview ?? '';
+      const href = `${realm.kind === 'user' ? '/app/chat' : '/operator/chat'}?c=${c.id}`;
+      useChatNotices.getState().push({ id: `${c.id}:${c.lastMessageAt}`, conversationId: c.id, title, preview, href });
+      if (document.visibilityState !== 'visible' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          const n = new Notification(title, { body: preview, tag: `sampforce-chat-${c.id}` });
+          n.onclick = () => {
+            window.focus();
+            window.location.href = href;
+          };
+        } catch {
+          // Some browsers only show notifications from a service worker; the in-page pop-up still shows.
+        }
+      }
+    };
+
+    const handle = (e: ChatStreamEvent) => {
+      if (!remember(e.sid)) return;
+      switch (e.type) {
+        case 'ready':
+          void qc.invalidateQueries({ queryKey: key(realm) });
+          void flushOutbox(qc, realm);
+          confirmDelivered(null);
+          return;
+        case 'message':
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversations') });
+          void qc.invalidateQueries({ queryKey: key(realm, 'unread') });
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversation', e.conversationId) });
+          void qc.invalidateQueries({ queryKey: key(realm, 'messages', e.conversationId) });
+          if (e.authorId && e.authorId !== realm.selfId) {
+            useTypingStore.getState().clear(e.conversationId, e.authorId);
+            confirmDelivered(e.conversationId);
+            void notify(e.conversationId);
+          }
+          return;
+        case 'message_changed':
+          void qc.invalidateQueries({ queryKey: key(realm, 'messages', e.conversationId) });
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversations') });
+          return;
+        case 'read':
+        case 'delivered':
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversation', e.conversationId) });
+          if (e.personId === realm.selfId) {
+            void qc.invalidateQueries({ queryKey: key(realm, 'conversations') });
+            void qc.invalidateQueries({ queryKey: key(realm, 'unread') });
+          }
+          return;
+        case 'conversation':
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversations') });
+          void qc.invalidateQueries({ queryKey: key(realm, 'conversation', e.conversationId) });
+          void qc.invalidateQueries({ queryKey: key(realm, 'unread') });
+          return;
+        case 'typing':
+          if (e.personId !== realm.selfId) useTypingStore.getState().add(e.conversationId, e.personId, e.name);
+          return;
+        case 'presence':
+          void qc.invalidateQueries({ queryKey: ['chat-presence'] });
+          void qc.invalidateQueries({ queryKey: ['chat-people'] });
+      }
+    };
+
+    const schedule = (ms: number) => {
+      if (stopped) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void connect(), ms);
+    };
+    const dropped = () => {
+      if (stopped) return;
+      setState(navigator.onLine === false ? 'offline' : 'connecting');
+      wait = Math.min(wait * 2, 15_000);
+      schedule(wait);
+    };
+
+    const openSocket = async () => {
+      let ticket: ChatSocketTicket;
+      try {
+        ticket = await api<ChatSocketTicket>(`${realm.base}/socket-ticket`, { method: 'POST' });
+      } catch (err) {
+        // A refusal (signed out, chat not in the plan) is not a network problem: wait longer.
+        if (err instanceof ApiError && err.status < 500) wait = 30_000;
+        return dropped();
+      }
+      if (stopped) return;
+      const ws = new WebSocket(socketUrl(ticket.path, ticket.ticket));
+      socket = ws;
+      let ready = false;
+      let lastFrame = Date.now();
+      const opening = setTimeout(() => {
+        if (!ready) ws.close();
+      }, OPEN_TIMEOUT_MS);
+      const beat = setInterval(() => {
+        if (Date.now() - lastFrame > PING_MS * 2) return ws.close();
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+      }, PING_MS);
+      ws.onmessage = (m) => {
+        lastFrame = Date.now();
+        let e: ChatStreamEvent | { type: 'pong' };
+        try {
+          e = JSON.parse(String(m.data)) as ChatStreamEvent | { type: 'pong' };
+        } catch {
+          return;
+        }
+        if (e.type === 'pong') return;
+        if (e.type === 'ready') {
+          ready = true;
+          socketFailures = 0;
+          wait = 1000;
+          setState('live', 'websocket');
+        }
+        handle(e);
+      };
+      ws.onclose = (ev) => {
+        clearTimeout(opening);
+        clearInterval(beat);
+        // Replaced by a fresh connection (the network came back): that one carries on.
+        if (socket !== ws) return;
+        socket = null;
+        if (stopped) return;
+        if (!ready) {
+          socketFailures++;
+          // Twice in a row without getting through: the way to the server does not carry WebSockets.
+          if (socketFailures >= 2 && navigator.onLine !== false) {
+            mode = 'polling';
+            if (backToSocket) clearTimeout(backToSocket);
+            backToSocket = setTimeout(() => {
+              mode = 'websocket';
+              socketFailures = 0;
+              poll?.abort();
+            }, RETRY_SOCKET_MS);
+            return schedule(50);
+          }
+        }
+        // 4401: the session ended; the next ticket request refreshes it or fails.
+        if (ready && ev.code !== 4401) wait = 500;
+        dropped();
+      };
+    };
+
+    const runPolling = async () => {
+      poll = new AbortController();
+      const signal = poll.signal;
+      cursor = undefined;
+      try {
+        while (!stopped && mode === 'polling') {
+          const params = new URLSearchParams({ wait: '25' });
+          if (cursor) params.set('cursor', cursor);
+          const s = recentSeen();
+          if (s.length) params.set('seen', s.join(','));
+          const page = await api<ChatEventsPage>(`${realm.base}/events?${params}`, { signal });
+          if (useChatConnection.getState().state !== 'live' || useChatConnection.getState().transport !== 'polling') setState('live', 'polling');
+          wait = 1000;
+          cursor = page.cursor;
+          for (const e of page.events) handle(e);
+        }
+        if (!stopped) schedule(50);
+      } catch {
+        if (stopped) return;
+        if (mode !== 'polling') return schedule(50);
+        // Aborted on purpose (the network came back): whoever aborted has already scheduled the next try.
+        if (signal.aborted) return;
+        dropped();
+      } finally {
+        poll = null;
+      }
+    };
 
     const connect = async () => {
       if (stopped) return;
-      ctrl = new AbortController();
-      setState('connecting');
-      try {
-        let res = await fetch(`/api/v1${realm.base}/stream`, { credentials: 'include', headers: languageHeader(), signal: ctrl.signal });
-        if (res.status === 401 && realm.kind === 'user' && (await refreshSession())) res = await fetch(`/api/v1${realm.base}/stream`, { credentials: 'include', headers: languageHeader(), signal: ctrl.signal });
-        if (!res.ok || !res.body) throw new Error(`stream ${res.status}`);
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = '';
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          let i: number;
-          while ((i = buf.indexOf('\n\n')) >= 0) {
-            const chunk = buf.slice(0, i);
-            buf = buf.slice(i + 2);
-            const data = chunk.split('\n').find((l) => l.startsWith('data: '));
-            if (!data) continue;
-            const e = JSON.parse(data.slice(6)) as ChatStreamEvent;
-            if (e.type === 'ready') {
-              wait = 1000;
-              setState('live');
-              void flushOutbox(qc, realm);
-            }
-            invalidateFor(qc, realm, e);
-          }
-        }
-        // The server closes streams every few minutes; reconnect at once.
-        wait = 250;
-      } catch {
-        if (stopped) return;
-        setState('offline');
-        wait = Math.min(wait * 2, 10_000);
-      }
-      if (!stopped) timer = setTimeout(() => void connect(), wait);
+      if (useChatConnection.getState().state !== 'live') setState(navigator.onLine === false ? 'offline' : 'connecting');
+      if (mode === 'websocket') await openSocket();
+      else await runPolling();
+    };
+
+    sendTypingNow = (conversationId) => {
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'typing', conversationId }));
+      else void api(`${realm.base}/conversations/${conversationId}/typing`, { method: 'POST' }).catch(() => undefined);
     };
 
     const online = () => {
-      if (timer) clearTimeout(timer);
-      ctrl?.abort();
       wait = 250;
-      timer = setTimeout(() => void connect(), 50);
+      void flushOutbox(qc, realm);
+      // After a network change an old socket may look open but be dead: start afresh now rather than after the
+      // heartbeat or the back-off notices.
+      const old = socket;
+      socket = null;
+      old?.close();
+      poll?.abort();
+      schedule(50);
     };
     const offline = () => setState('offline');
+    const visible = () => {
+      if (document.visibilityState === 'visible' && useChatConnection.getState().state !== 'live') online();
+    };
+    const prune = setInterval(() => useTypingStore.getState().prune(), 1000);
+    // The outbox is also retried every few seconds while anything waits, whatever the connection says.
+    const retry = setInterval(() => void flushOutbox(qc, realm), 8000);
     window.addEventListener('online', online);
     window.addEventListener('offline', offline);
+    document.addEventListener('visibilitychange', visible);
+    void flushOutbox(qc, realm);
     void connect();
     return () => {
       stopped = true;
-      ctrl?.abort();
+      sendTypingNow = null;
+      socket?.close();
+      poll?.abort();
       if (timer) clearTimeout(timer);
+      if (backToSocket) clearTimeout(backToSocket);
+      if (deliveredTimer) clearTimeout(deliveredTimer);
+      clearInterval(prune);
+      clearInterval(retry);
       window.removeEventListener('online', online);
       window.removeEventListener('offline', offline);
+      document.removeEventListener('visibilitychange', visible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner, qc, setState]);
@@ -161,7 +450,8 @@ export function useConversations(realm: ChatRealm | null, archived = false) {
     enabled: !!realm,
     queryKey: realm ? key(realm, 'conversations', archived) : ['chat', 'none'],
     queryFn: () => api<ChatConversationRow[]>(`${realm!.base}/conversations${archived ? '?archived=true' : ''}`),
-    refetchInterval: 60_000,
+    // Live events keep it fresh; this is only a safety net.
+    refetchInterval: 120_000,
   });
 }
 
@@ -169,16 +459,45 @@ export function useConversation(realm: ChatRealm, id: string | null) {
   return useQuery({ enabled: !!id, queryKey: key(realm, 'conversation', id), queryFn: () => api<ChatConversationRow>(`${realm.base}/conversations/${id}`) });
 }
 
+export const MESSAGE_PAGE = 50;
+
+/** Messages, newest page first in `pages`; scrolling up loads older pages. */
 export function useMessages(realm: ChatRealm, id: string | null) {
-  return useQuery({ enabled: !!id, queryKey: key(realm, 'messages', id), queryFn: () => api<ChatMessageRow[]>(`${realm.base}/conversations/${id}/messages?limit=100`) });
+  return useInfiniteQuery({
+    enabled: !!id,
+    queryKey: key(realm, 'messages', id),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => api<ChatMessageRow[]>(`${realm.base}/conversations/${id}/messages?limit=${MESSAGE_PAGE}${pageParam ? `&before=${pageParam}` : ''}`),
+    getNextPageParam: (page) => (page.length === MESSAGE_PAGE ? page[0]!.id : undefined),
+  });
+}
+
+/** All loaded messages, oldest first. */
+export function flattenMessages(data: InfiniteData<ChatMessageRow[]> | undefined): ChatMessageRow[] {
+  if (!data) return [];
+  const out: ChatMessageRow[] = [];
+  const ids = new Set<string>();
+  for (const page of [...data.pages].reverse())
+    for (const m of page) {
+      if (ids.has(m.id)) continue;
+      ids.add(m.id);
+      out.push(m);
+    }
+  return out;
 }
 
 export function useChatUnread(realm: ChatRealm | null) {
-  return useQuery({ enabled: !!realm, queryKey: realm ? key(realm, 'unread') : ['chat', 'none-unread'], queryFn: () => api<{ total: number; conversations: number }>(`${realm!.base}/unread`), refetchInterval: 20_000 });
+  return useQuery({ enabled: !!realm, queryKey: realm ? key(realm, 'unread') : ['chat', 'none-unread'], queryFn: () => api<{ total: number; conversations: number }>(`${realm!.base}/unread`), refetchInterval: 60_000 });
 }
 
 export function useChatPeople(enabled: boolean) {
-  return useQuery({ enabled, queryKey: ['chat-people'], queryFn: () => api<ChatPerson[]>('/chat/people'), staleTime: 60_000 });
+  return useQuery({ enabled, queryKey: ['chat-people'], queryFn: () => api<ChatDirectoryPerson[]>('/chat/people'), staleTime: 30_000 });
+}
+
+/** Who is online, refreshed by presence events and every minute. */
+export function useChatPresence(enabled: boolean) {
+  const q = useQuery({ enabled, queryKey: ['chat-presence'], queryFn: () => api<ChatPresenceRow[]>('/chat/presence'), refetchInterval: 60_000, staleTime: 15_000 });
+  return React.useMemo(() => new Map((q.data ?? []).map((p) => [p.userId, p])), [q.data]);
 }
 
 export function useChatSearch(q: string) {
@@ -266,9 +585,14 @@ export async function flushOutbox(qc: QueryClient, realm: ChatRealm): Promise<vo
           }
           attachmentIds.push(f.attachmentId);
         }
-        await api<ChatMessageRow>(`${realm.base}/conversations/${item.conversationId}/messages`, {
+        const stored = await api<ChatMessageRow>(`${realm.base}/conversations/${item.conversationId}/messages`, {
           method: 'POST',
           json: { clientId: item.clientId, body: item.body, writtenAt: item.writtenAt, link: item.link ? { type: item.link.type, id: item.link.id } : null, attachmentIds },
+        });
+        // Show the stored message straight away, then drop the outbox copy, so the bubble never blinks.
+        qc.setQueryData<InfiniteData<ChatMessageRow[]>>(key(realm, 'messages', item.conversationId), (d) => {
+          if (!d?.pages.length || d.pages.some((p) => p.some((m) => m.id === stored.id))) return d;
+          return { ...d, pages: [[...d.pages[0]!, stored], ...d.pages.slice(1)] };
         });
         await outboxRemove(item.clientId);
         void qc.invalidateQueries({ queryKey: key(realm, 'messages', item.conversationId) });
