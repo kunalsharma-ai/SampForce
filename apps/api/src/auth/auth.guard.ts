@@ -23,7 +23,7 @@ import { featureNotIncluded, hasFeature, ssoEnforcedNow } from '../billing/entit
 import { PrismaService } from '../common/prisma.service';
 import { ACCESS_COOKIE } from './cookies';
 import { TokenService } from './token.service';
-import { levelOf } from '../workspaces/access';
+import { deactivatedAbove, levelOf } from '../workspaces/access';
 import { workspaceRulesFor } from '../workspaces/workspace-rules';
 
 /**
@@ -90,7 +90,8 @@ export class AuthGuard implements CanActivate {
         const { tenant } = membership;
         const ssoRequired = tenant.ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, claims.tid, true));
         const mfaRequired = claims.amr === 'password' && (tenant.requireMfa || (await this.mfaRequiredByConsole(claims.tid, claims.sub, membership.workspaceNodeId ?? null)));
-        const restriction = ssoRequired ? 'sso_required' : mfaRequired ? 'mfa_enrolment' : undefined;
+        const deactivated = await this.workspaceDeactivated(claims.tid, claims.sub, membership.workspaceNodeId ?? null);
+        const restriction = deactivated ? 'workspace_deactivated' : ssoRequired ? 'sso_required' : mfaRequired ? 'mfa_enrolment' : undefined;
         req.auth = {
           userId: claims.sub,
           tenantId: claims.tid,
@@ -124,7 +125,9 @@ export class AuthGuard implements CanActivate {
       !this.reflector.getAllAndOverride<boolean>(ALLOW_RESTRICTED, targets)
     ) {
       throw new ForbiddenException(
-        req.auth.restriction === 'sso_required'
+        req.auth.restriction === 'workspace_deactivated'
+          ? { code: 'WORKSPACE_DEACTIVATED', message: 'Your workspace has been deactivated. Ask the workspace above yours to reactivate it.' }
+          : req.auth.restriction === 'sso_required'
           ? {
               code: 'SSO_REQUIRED',
               message:
@@ -190,6 +193,7 @@ export class AuthGuard implements CanActivate {
       }),
     );
     if (!membership) return undefined;
+    if (await this.workspaceDeactivated(row.tenantId, row.createdById, membership.workspaceNodeId ?? null)) return undefined;
     // API keys work only while the plan includes API access (ADR 0057); the key itself is kept.
     if (!(await this.prisma.run({ tenantId: row.tenantId }, (tx) => hasFeature(tx, row.tenantId, 'api_access')))) throw featureNotIncluded('api_access');
     if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > 60_000) {
@@ -212,6 +216,12 @@ export class AuthGuard implements CanActivate {
   }
 
   /** A browser extension connection: a session of its own, limited to the extension scopes. */
+  /** Whether the person's workspace, or one above it, is deactivated or deleted (W4). */
+  private async workspaceDeactivated(tenantId: string, userId: string, nodeId: string | null): Promise<boolean> {
+    if (!nodeId) return false;
+    return !!(await this.prisma.run({ tenantId, userId }, (tx) => deactivatedAbove(tx, tenantId, nodeId)));
+  }
+
   /** The Console's rule (W3) that the people of this workspace level must use two-step sign-in. */
   private async mfaRequiredByConsole(tenantId: string, userId: string, nodeId: string | null): Promise<boolean> {
     return this.prisma.run({ tenantId, userId }, async (tx) => {
@@ -235,6 +245,7 @@ export class AuthGuard implements CanActivate {
       }),
     );
     if (!membership) return undefined;
+    if (await this.workspaceDeactivated(session.activeTenantId, session.userId, membership.workspaceNodeId ?? null)) return undefined;
     const method = (['password', 'mfa', 'sso'].includes(session.authMethod) ? session.authMethod : 'password') as AuthContext['authMethod'];
     const { tenant } = membership;
     const ssoRequired = tenant.ssoEnforced && method !== 'sso' && membership.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, session.activeTenantId, true));

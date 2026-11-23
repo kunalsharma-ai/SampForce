@@ -3,6 +3,8 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
   type ConsoleAuthorityInput,
+  type ReopenCompanyInput,
+  reopenCompanySchema,
   consoleAuthoritySchema,
   consoleClientCreateSchema,
   consoleClientStateSchema,
@@ -40,6 +42,7 @@ import {
   platformAuditQuerySchema,
 } from '@dealflow/types';
 import { Public } from '../common/auth-context';
+import { CompanyClosureService } from '../tenants/company-closure.service';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPublic, OperatorRoles, OperatorTokens } from './operator-auth';
 import { ConsoleService } from './console.service';
@@ -56,6 +59,7 @@ export class OperatorController {
     private readonly ops: OperatorService,
     private readonly tokens: OperatorTokens,
     private readonly console: ConsoleService,
+    private readonly closures: CompanyClosureService,
   ) {}
 
   // ───── Console Admin (ADR 0071): platform overview, client organisations, plans and workspace limits ─────
@@ -101,6 +105,15 @@ export class OperatorController {
   @OperatorRoles('ADMIN')
   clientState(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(consoleClientStateSchema)) body: z.infer<typeof consoleClientStateSchema>, @Req() req: Request) {
     return this.console.setState(op, id, body.state, body.reason, ip(req));
+  }
+
+  /** Reopens a company its owner closed, within the 30 days before its data is erased (workspace redesign W7). */
+  @Post('clients/:id/reopen')
+  @HttpCode(200)
+  @OperatorRoles('ADMIN')
+  async reopen(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(reopenCompanySchema)) body: ReopenCompanyInput, @Req() req: Request) {
+    await this.closures.reopen(op, id, body.reason, ip(req));
+    return this.console.client(op, id, ip(req));
   }
 
   @Put('clients/:id/authority')

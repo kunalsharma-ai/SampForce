@@ -14,12 +14,13 @@ import { CompanyLogosService } from '../crm/company-logos.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MobileModule } from '../mobile/mobile.module';
+import { CompanyClosureService } from '../tenants/company-closure.service';
 import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
   imports: [AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule],
-  providers: [WorkerService, CrmRemindersService, CompanyLogosService, NotificationsService],
+  providers: [WorkerService, CrmRemindersService, CompanyLogosService, NotificationsService, CompanyClosureService],
   exports: [WorkerService],
 })
 export class WorkerModule {}

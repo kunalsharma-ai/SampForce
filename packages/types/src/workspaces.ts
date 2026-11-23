@@ -144,11 +144,23 @@ export function intersectFeatures(parent: readonly FeatureKey[], own: readonly s
 // ───────────── API shapes ─────────────
 
 const name = z.string().trim().min(2).max(80);
+
+/** Whose records a Manager Workspace sees (W5): its whole team, or only its own people's. */
+export const WORKSPACE_ACCESS_LEVELS = ['TEAM', 'OWN'] as const;
+export type WorkspaceAccessLevel = (typeof WORKSPACE_ACCESS_LEVELS)[number];
 const designation = z.string().trim().min(2).max(80);
 
 /** Fill a new workspace: invite someone by email, or move a member of the organisation into it. */
 export const workspacePersonSchema = z.union([
-  z.object({ inviteEmail: z.string().trim().toLowerCase().email().max(254), roleKey: z.string().trim().min(2).max(64).optional() }).strict(),
+  z
+    .object({
+      inviteEmail: z.string().trim().toLowerCase().email().max(254),
+      roleKey: z.string().trim().min(2).max(64).optional(),
+      /** The person's name and work phone (W5 wizard): the name pre-fills their accept page. */
+      name: z.string().trim().min(2).max(120).optional(),
+      phone: z.string().trim().regex(/^\+?[0-9 ()-]{6,24}$/, 'Enter a phone number with digits only, and an optional + at the start').optional(),
+    })
+    .strict(),
   z.object({ userId: z.string().uuid() }).strict(),
 ]);
 
@@ -163,12 +175,27 @@ export const createWorkspaceSchema = z
     features: z.array(featureKeySchema).max(FEATURE_KEYS.length).optional(),
     actions: actionGrantsSchema.optional(),
     person: workspacePersonSchema.optional(),
+    /** Wizard details (W5). */
+    department: z.string().trim().min(1).max(80).optional(),
+    description: z.string().trim().max(500).optional(),
+    /** Manager Workspaces: whose records it sees. TEAM (default) = its own and its executives'; OWN = its own only. */
+    accessLevel: z.enum(WORKSPACE_ACCESS_LEVELS).optional(),
+    /** DEACTIVATED creates it switched off, so it can be prepared before its person starts. */
+    status: z.enum(['ACTIVE', 'DEACTIVATED']).optional(),
+    /** Manager Workspaces (Super Workspace only): existing Executive Workspaces to move under it. */
+    executiveIds: z.array(z.string().uuid()).max(100).optional(),
   })
   .strict();
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 
 export const updateWorkspaceSchema = z
-  .object({ name: name.optional(), designation: designation.optional() })
+  .object({
+    name: name.optional(),
+    designation: designation.optional(),
+    department: z.string().trim().max(80).optional(),
+    description: z.string().trim().max(500).optional(),
+    accessLevel: z.enum(WORKSPACE_ACCESS_LEVELS).optional(),
+  })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'Change at least one thing');
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
@@ -195,6 +222,59 @@ export type MoveWorkspaceInput = z.infer<typeof moveWorkspaceSchema>;
 
 export const assignWorkspaceMemberSchema = z.object({ userId: z.string().uuid() }).strict();
 export type AssignWorkspaceMemberInput = z.infer<typeof assignWorkspaceMemberSchema>;
+
+/**
+ * Whether an email can be given a new workspace (W5, spec section 3): one email holds one role in an organisation.
+ * Checked as the person types and again when the workspace is created.
+ */
+export const workspaceEmailCheckSchema = z.object({ email: z.string().trim().toLowerCase().email().max(254) }).strict();
+
+export interface WorkspaceEmailCheck {
+  available: boolean;
+  /** EMAIL_IN_WORKSPACE (already works here) or EMAIL_INVITED (a pending invitation elsewhere). */
+  code?: 'EMAIL_IN_WORKSPACE' | 'EMAIL_INVITED';
+  message?: string;
+}
+
+/** Deactivating a Manager or Executive Workspace (W4): reversible, with a reason for the audit log. */
+export const deactivateWorkspaceSchema = z.object({ reason: z.string().trim().min(3).max(500) }).strict();
+export type DeactivateWorkspaceInput = z.infer<typeof deactivateWorkspaceSchema>;
+
+/**
+ * Deleting a Manager or Executive Workspace (W4): the person types its name, and names the workspace that receives
+ * its records (and, for a manager, its Executive Workspaces). Nothing in the CRM is erased.
+ */
+export const deleteWorkspaceSchema = z
+  .object({ confirmName: z.string().trim().min(1).max(120), handoverToId: z.string().uuid().nullable().optional() })
+  .strict();
+export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceSchema>;
+
+/** What deleting a workspace would touch, shown before anyone confirms (W4). */
+export interface WorkspaceImpact {
+  id: string;
+  name: string;
+  level: WorkspaceLevel;
+  /** People who lose access to the organisation when it is deleted. */
+  people: WorkspacePerson[];
+  pendingInvites: number;
+  /** Executive Workspaces below a manager: they move to the receiving workspace, with their people. */
+  workspacesBelow: { id: string; name: string; people: number }[];
+  /** Records owned by its people that move to the receiving workspace's person. */
+  records: { companies: number; contacts: number; leads: number; deals: number; openTasks: number };
+  /** Workspaces that may receive the records: the caller's own and the ones it manages, never this one or below. */
+  handoverOptions: { id: string; name: string; level: WorkspaceLevel; receiver: string | null }[];
+  /** Whether a receiving workspace must be chosen (there are records or workspaces to hand over). */
+  handoverRequired: boolean;
+}
+
+/** What a delete did, for the confirmation message. */
+export interface WorkspaceDeleted {
+  name: string;
+  handoverTo: string | null;
+  recordsMoved: number;
+  workspacesMoved: number;
+  peopleRemoved: number;
+}
 
 export interface WorkspacePerson {
   userId: string;
@@ -230,6 +310,13 @@ export interface WorkspaceRow {
   canChatWithPeers: boolean;
   /** Whether the caller may change what this workspace is granted (they are its parent level). */
   editable: boolean;
+  department: string | null;
+  description: string | null;
+  /** Managers: TEAM sees its executives' records too, OWN only its own people's. */
+  accessLevel: WorkspaceAccessLevel;
+  /** Set while the workspace is deactivated (W4): its people, and everyone below it, cannot work until reactivated. */
+  deactivatedAt: string | null;
+  deactivationReason: string | null;
   createdAt: string;
 }
 
@@ -261,3 +348,35 @@ export interface WorkspaceIdentity {
   parent: { id: string; name: string; level: WorkspaceLevel } | null;
   actions: ActionGrants;
 }
+
+// ───────────── Closing the company (workspace redesign W7) ─────────────
+
+/** Days the Console can reopen a closed company before its data is erased. */
+export const COMPANY_REOPEN_DAYS = 30;
+
+/** POST /tenants/current/close: the typed company name, an optional reason and the second confirmation. */
+export const closeCompanySchema = z.object({
+  confirmName: z.string().trim().min(1).max(200),
+  reason: z.string().trim().max(500).optional(),
+  understood: z.literal(true),
+});
+export type CloseCompanyInput = z.infer<typeof closeCompanySchema>;
+
+/** GET /tenants/current/close-impact: everything closing the company stops. */
+export interface CompanyCloseImpact {
+  name: string;
+  workspaces: { id: string; name: string; level: WorkspaceLevel; people: number }[];
+  people: number;
+  records: { companies: number; contacts: number; leads: number; deals: number; openTasks: number };
+  /** The date the data is erased if the company is closed now and not reopened. */
+  eraseAfter: string;
+}
+
+export interface CompanyClosed {
+  name: string;
+  eraseAfter: string;
+}
+
+/** POST /operator/clients/:id/reopen. */
+export const reopenCompanySchema = z.object({ reason: z.string().trim().min(3).max(500) });
+export type ReopenCompanyInput = z.infer<typeof reopenCompanySchema>;

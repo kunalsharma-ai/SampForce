@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { autoConfirmDeletion, signUp } from './helpers';
+import { autoConfirmDeletion, signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -44,7 +44,7 @@ test('a new Manager Workspace cannot delete until the Super Workspace turns Dele
 
   // The Permission Center shows Delete off by default; the Super Workspace turns it on.
   await page.goto('/app/settings/workspaces');
-  await page.getByRole('button', { name: 'Permissions North Sales' }).click();
+  await workspaceAction(page, 'North Sales', 'Permissions');
   const dialog = page.getByRole('dialog');
   const deleteInCrm = dialog.getByRole('checkbox', { name: 'Delete in CRM' });
   await expect(deleteInCrm).not.toBeChecked();

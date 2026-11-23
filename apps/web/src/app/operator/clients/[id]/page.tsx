@@ -52,7 +52,7 @@ import {
 import { useOperator } from '../../operator-shell';
 import { ClientWorkspaceRulesCard } from '../../workspace-rules/rules-editor';
 
-type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | null;
+type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | 'reopen' | null;
 
 /** One client organisation in the Console (ADR 0071): its subscription, limits, authority, workspaces and history. */
 export default function ConsoleClientPage() {
@@ -88,8 +88,13 @@ export default function ConsoleClientPage() {
         description={`Client since ${formatDate(c.createdAt)} · ${c.people} ${c.people === 1 ? 'person' : 'people'}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StateBadge state={c.state} />
-            {admin && (
+            {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
+            {admin && c.closure && (
+              <Button size="sm" onClick={() => setOpen('reopen')}>
+                Reopen company
+              </Button>
+            )}
+            {admin && !c.closure && (
               <>
                 <Button variant="outline" size="sm" onClick={() => setOpen('renew')}>
                   Renew or upgrade
@@ -123,6 +128,18 @@ export default function ConsoleClientPage() {
           </div>
         }
       />
+
+      {c.closure && (
+        <div role="note" className="rounded-lg border border-critical/40 bg-critical/5 p-4 text-sm" data-client-closing>
+          <p className="font-medium">
+            Closed by its owner on {formatDate(c.closure.closedAt)}
+            {c.closure.closedBy ? ` (${c.closure.closedBy})` : ''}. Its data is erased on {formatDate(c.closure.eraseAfter)}.
+          </p>
+          <p className="text-muted-foreground">
+            {c.closure.reason ? `Reason given: ${c.closure.reason}. ` : ''}Nobody in the client can sign in. Reopening before that date restores everything.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-5 lg:col-span-2" aria-labelledby="sub-h">
@@ -236,6 +253,7 @@ export default function ConsoleClientPage() {
       {open === 'renew' && <RenewDialog client={c} onClose={() => setOpen(null)} />}
       {open === 'state' && <StateDialog client={c} to={nextState} onClose={() => setOpen(null)} />}
       {open === 'invite' && <InviteDialog client={c} onClose={() => setOpen(null)} />}
+      {open === 'reopen' && <ReopenDialog client={c} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -689,6 +707,38 @@ function StateDialog({
   );
 }
 
+/** Reopens a company its owner closed (workspace redesign W7): sign-in works again, with everything in it. */
+function ReopenDialog({ client, onClose }: { client: ConsoleClientDetail; onClose: () => void }) {
+  const [reason, setReason] = useState('');
+  const save = useSave(client.id, onClose);
+  const m = useMutation({
+    mutationFn: () => api<ConsoleClientDetail>(`/operator/clients/${client.id}/reopen`, { method: 'POST', json: { reason } }),
+    onSuccess: save,
+  });
+  return (
+    <Shell title="Reopen company" description={`Everyone in ${client.name} can sign in again, and nothing is erased. Possible until ${client.closure ? formatDate(client.closure.eraseAfter) : ''}.`} onClose={onClose}>
+      <form
+        className="mt-4 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          m.mutate();
+        }}
+      >
+        <ReasonField id="reopen-reason" value={reason} onChange={setReason} />
+        <ErrorText error={m.error} />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={m.isPending}>
+            Reopen company
+          </Button>
+        </div>
+      </form>
+    </Shell>
+  );
+}
+
 function InviteDialog({ client, onClose }: { client: ConsoleClientDetail; onClose: () => void }) {
   const [email, setEmail] = useState(client.pendingAdministrator?.email ?? '');
   const qc = useQueryClient();
@@ -873,6 +923,10 @@ const ACTION_LABEL: Record<string, string> = {
   'tenant.features_overridden': 'Features overridden',
   'tenant.suspended': 'Suspended',
   'tenant.reactivated': 'Reactivated',
+  'client.reopened': 'Reopened',
+  'client.closed_by_owner': 'Closed by its owner',
+  'tenant.closed': 'Closed by its owner',
+  'tenant.reopened': 'Reopened',
   'tenant.offline_payment_recorded': 'Payment recorded',
 };
 

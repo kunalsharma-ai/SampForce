@@ -70,6 +70,8 @@ model User {
   id               String     @id @default(uuid()) @map("_id")
   email            String     @unique
   name             String
+  /// Work phone (W5), from the workspace invitation or the profile.
+  phone            String?
   passwordHash     String     @map("password_hash")
   status           UserStatus @default(ACTIVE)
   emailVerifiedAt  DateTime?  @map("email_verified_at")
@@ -359,6 +361,14 @@ model Tenant {
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
+  /// Closing the company (workspace redesign W7): who closed it and when. The status is PENDING_DELETION from then
+  /// on, so nobody can sign in; the Console can reopen it until eraseAfter, when the worker erases its data.
+  closedAt              DateTime?         @map("closed_at")
+  closedById            String?           @map("closed_by_id")
+  closeReason           String?           @map("close_reason")
+  eraseAfter            DateTime?         @map("erase_after")
+  /// Set once the worker has erased the company's data; the row stays (deletedAt set) as the record that it existed.
+  erasedAt              DateTime?         @map("erased_at")
 
   subscription           Subscription?
   navigation             WorkspaceNavigation[]
@@ -652,6 +662,17 @@ model WorkspaceNode {
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
   createdById          String?   @map("created_by_id")
+  /// Wizard details (W5): the team or department, a short description, and for a Manager Workspace whose records it
+  /// sees: TEAM (its own and its executives'; null means TEAM) or OWN (only its own people's).
+  department           String?
+  description          String?
+  accessLevel          String?   @map("access_level")
+  /// Set while deactivated (W4): its people, and everyone in the workspaces below it, cannot work until it is
+  /// reactivated. Grants are kept, so reactivating restores things exactly.
+  deactivatedAt        DateTime? @map("deactivated_at")
+  deactivatedById      String?   @map("deactivated_by_id")
+  deactivationReason   String?   @map("deactivation_reason")
+  /// Set when deleted (W4): the node stays, renamed out of the way, so history and audit entries keep their name.
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
@@ -1603,6 +1624,10 @@ model Invitation {
   invitedById     String    @map("invited_by_id")
   /// The workspace (ADR 0071) the person joins when they accept. Null = the Super Workspace.
   workspaceNodeId String?   @map("workspace_node_id")
+  /// The invitee's name and phone as the inviter typed them (W5): the name pre-fills the accept page, the phone is
+  /// copied to the account when it has none.
+  name            String?
+  phone           String?
   expiresAt       DateTime  @map("expires_at")
   acceptedAt      DateTime? @map("accepted_at")
   revokedAt       DateTime? @map("revoked_at")

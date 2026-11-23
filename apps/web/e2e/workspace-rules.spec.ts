@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { FEATURE_KEYS } from '@dealflow/types';
-import { E2E_DATABASE_URL, setPlan, signUp } from './helpers';
+import { E2E_DATABASE_URL, setPlan, signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -76,7 +76,7 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
 
   // The client's Permission Center says why Delete cannot be given, and the manager has lost it.
   await page.goto('/app/settings/workspaces');
-  await page.getByRole('button', { name: 'Permissions North Field Team' }).click();
+  await workspaceAction(page, 'North Field Team', 'Permissions');
   const dialog = page.getByRole('dialog');
   await expect(dialog.locator('[data-rule-note="delete"]')).toHaveText('Your SampForce plan does not let this level delete data, so Delete cannot be given here.');
   await expect(dialog.getByRole('checkbox', { name: 'Delete in CRM' })).toHaveCount(0);
@@ -99,7 +99,7 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
   await axe(ops);
 
   await page.reload();
-  await page.getByRole('button', { name: 'Permissions North Field Team' }).click();
+  await workspaceAction(page, 'North Field Team', 'Permissions');
   await expect(page.getByRole('dialog').getByRole('checkbox', { name: 'Delete in CRM' })).toBeVisible();
   await expect(page.getByRole('dialog').locator('[data-rule-note="delete"]')).toHaveCount(0);
 });
