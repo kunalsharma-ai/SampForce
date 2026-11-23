@@ -141,3 +141,19 @@ preferences follow the operator across devices. The "Operator log" menu item is 
 - **Timeline.** The client page shows the activity feed for that client, newest first, ten at a time, with the
   category chips. It is the existing activity feed (C3a) filtered by client, so it has no separate store.
 - Left for later: saved filters beyond the address, a column chooser, health (C5) and mobile seats (C9) columns.
+
+## C5a: client health score
+
+- **Signals and scoring.** Seven signals, each measured from data the platform already stores and scored 0 to 1:
+  - sign-ins: people with a session in the client in the last 14 days, out of its active people;
+  - workspace use: Manager and Executive Workspaces against their limits;
+  - feature adoption: which of contacts, companies, deals, activities, tasks and RFQs had a record created in the last 30 days;
+  - mobile use: phone seats seen in the last 14 days;
+  - payment status;
+  - support load: open tickets, with a penalty for those older than 48 hours;
+  - subscription status.
+- **Signals that don't apply.** A signal that does not apply is left out and the remaining weights are scaled to 100, rather than counted as zero. Examples: mobile access off, no workspace limits, no payment status. The client page shows each signal's points, its maximum and the raw figure.
+- **Weights and bands.** Weights and band thresholds live in `PlatformSetting` key `console.health`, edited in Settings → Health score (`settings.manage`). The defaults follow the spec: 20/15/15/10/20/10/10, Healthy from 70, At risk from 40.
+- **When clients are measured.** The worker measures each client once per UTC day, in batches of 25 on the Console sweep's once-a-minute pace. A client is measured again when it was last measured before today, or before the weights last changed. It writes `ClientHealthDaily` (one row per client and day, with the signals) and the latest score on the tenant (`healthScore`, `healthBand`, `healthAt`), so the list can filter and sort on it with an index.
+- **Measure now.** An operator can measure a client on demand from its page. Each measurement and each change of weights is a platform audit entry with before and after.
+- **Advisory only.** The score never blocks anything.

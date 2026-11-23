@@ -36,6 +36,8 @@ const SORT_KEY: Record<ConsoleClientSort, (r: ConsoleClientRow) => string | numb
   executives: (r) => r.usage.executives,
   created: (r) => r.createdAt,
   renews: (r) => r.subscription?.renewsOn ?? '',
+  // Clients not measured yet sort below every measured one.
+  health: (r) => r.health?.score ?? -1,
 };
 
 /**
@@ -56,6 +58,7 @@ export class ConsoleClientsListService {
   private async filtered(q: Omit<ConsoleClientListQuery, 'page' | 'perPage'>): Promise<ConsoleClientRow[]> {
     const and: Prisma.TenantWhereInput[] = [await this.console.searchWhere(q.search)];
     if (q.country) and.push({ countryCode: q.country });
+    if (q.health) and.push(q.health === 'NONE' ? { healthBand: null } : { healthBand: q.health });
     if (q.plan) and.push({ subscription: { is: { planCode: q.plan } } });
     if (q.billing) and.push({ subscription: { is: { billingInterval: q.billing } } });
     if (q.createdFrom || q.createdTo) {
@@ -102,7 +105,7 @@ export class ConsoleClientsListService {
       lines.push(
         [
           r.customerId, r.name, r.state, r.countryCode ? (geoCountry(r.countryCode)?.name ?? r.countryCode) : null, r.city, s?.planName ?? null, s?.billingFrequency ?? null,
-          s?.paymentStatus ?? null, s?.renewsOn ?? null, r.usage.managers, s?.limits.managers ?? null, r.usage.executives, s?.limits.executives ?? null, r.people, s?.seats ?? null, r.createdAt.slice(0, 10),
+          s?.paymentStatus ?? null, s?.renewsOn ?? null, r.usage.managers, s?.limits.managers ?? null, r.usage.executives, s?.limits.executives ?? null, r.people, s?.seats ?? null, r.createdAt.slice(0, 10), r.health?.score ?? null,
         ].map(cell).join(','),
       );
     }
@@ -199,10 +202,10 @@ export class ConsoleClientsListService {
   }
 }
 
-const CSV_HEADER = ['Customer ID', 'Client', 'Status', 'Country', 'City', 'Plan', 'Billing', 'Payment', 'Renews', 'Managers', 'Manager limit', 'Executives', 'Executive limit', 'People', 'Seats', 'Created'];
+const CSV_HEADER = ['Customer ID', 'Client', 'Status', 'Country', 'City', 'Plan', 'Billing', 'Payment', 'Renews', 'Managers', 'Manager limit', 'Executives', 'Executive limit', 'People', 'Seats', 'Created', 'Health'];
 
 function filtersOf(q: Partial<ConsoleClientListQuery>): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const k of ['state', 'plan', 'billing', 'country', 'payment', 'createdFrom', 'createdTo'] as const) if (q[k]) out[k] = String(q[k]);
+  for (const k of ['state', 'plan', 'billing', 'country', 'payment', 'health', 'createdFrom', 'createdTo'] as const) if (q[k]) out[k] = String(q[k]);
   return out;
 }

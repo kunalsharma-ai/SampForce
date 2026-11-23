@@ -22,6 +22,7 @@ import {
   geoCountry,
   type OperatorOpenInvoice,
   PAYMENT_STATUS_LABEL,
+  HEALTH_BANDS,
   PAYMENT_STATUSES,
   type PaymentStatus,
   PLAN_CATALOG,
@@ -49,6 +50,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api, downloadFile } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
+import { HEALTH_BAND_LABEL, HealthPill } from '@/components/console/client-health';
 import { PaymentBadge, price, selectClass, StateBadge, toCents, toLimit } from '../console-ui';
 import { can, useOperator } from '../operator-shell';
 
@@ -59,6 +61,7 @@ const FILTERS = [
   'billing',
   'country',
   'payment',
+  'health',
   'createdFrom',
   'createdTo',
 ] as const;
@@ -69,6 +72,7 @@ const COLUMNS: { key: ConsoleClientSort; label: string; end?: boolean }[] = [
   { key: 'country', label: 'Country' },
   { key: 'plan', label: 'Plan' },
   { key: 'payment', label: 'Payment' },
+  { key: 'health', label: 'Health' },
   { key: 'renews', label: 'Renews' },
   { key: 'managers', label: 'Managers', end: true },
   { key: 'executives', label: 'Executives', end: true },
@@ -123,7 +127,9 @@ function ClientsList() {
   const [search, setSearch] = useState(f('search'));
 
   const setParams = (next: Record<string, string | number | null>, keepPage = false) => {
-    const p = new URLSearchParams(params.toString());
+    // From the address bar, not this render's params: a debounced search runs later and must keep a filter chosen
+    // in the meantime.
+    const p = new URLSearchParams(window.location.search);
     for (const [k, v] of Object.entries(next)) {
       if (v === null || v === '') p.delete(k);
       else p.set(k, String(v));
@@ -271,6 +277,16 @@ function ClientsList() {
           options={[
             ...PAYMENT_STATUSES.map((p) => [p, PAYMENT_STATUS_LABEL[p]] as [string, string]),
             ['NONE', 'No payment status'],
+          ]}
+        />
+        <FilterSelect
+          id="op-health"
+          label="Health"
+          value={f('health')}
+          onChange={(v) => setParams({ health: v })}
+          options={[
+            ...HEALTH_BANDS.map((b) => [b, HEALTH_BAND_LABEL[b]] as [string, string]),
+            ['NONE', 'Not measured'],
           ]}
         />
         <div className="w-48">
@@ -460,6 +476,9 @@ function ClientsList() {
                   </td>
                   <td className="p-3">
                     <PaymentBadge status={s?.paymentStatus ?? null} />
+                  </td>
+                  <td className="p-3">
+                    <HealthPill health={c.health} />
                   </td>
                   <td className="p-3 tabular">{s?.renewsOn ? formatDate(s.renewsOn) : '—'}</td>
                   <td className="p-3 text-end">
