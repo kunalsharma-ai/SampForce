@@ -16,6 +16,8 @@ async function shot(page: Page, name: string) {
 }
 
 async function axe(page: Page) {
+  // Next sets the tab title again after a soft navigation (a tab or the entry drawer); check the settled page.
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
@@ -49,8 +51,12 @@ test('Console audit log: before and after, search, CSV export and the activity f
   // ── A change to record: the idle time on the Security page ──
   const nav = ops.getByRole('navigation', { name: 'Operator' });
   await nav.getByRole('link', { name: 'Security' }).click();
-  await ops.getByLabel('End a session after').selectOption({ label: '2 hours idle' });
-  await expect(ops.getByLabel('End a session after')).toBeEnabled();
+  // The policy is shared by every test (and a retry), so change it from whatever it is now.
+  const idleSelect = ops.getByLabel('End a session after');
+  const was = await idleSelect.inputValue();
+  const now = was === '120' ? '60' : '120';
+  await idleSelect.selectOption(now);
+  await expect(idleSelect).toBeEnabled();
 
   // ── The audit log: search, what it was about, before and after ──
   await nav.getByRole('link', { name: 'Activity & audit log' }).click();
@@ -71,8 +77,8 @@ test('Console audit log: before and after, search, CSV export and the activity f
   await expect(drawer.getByRole('heading', { name: 'Changed the security policy' })).toBeVisible();
   const idle = drawer.locator('[data-diff-field="idleMinutes"]');
   await expect(idle).toHaveAttribute('data-changed', 'yes');
-  await expect(idle.locator('del')).toHaveText('60');
-  await expect(idle.locator('ins')).toHaveText('120');
+  await expect(idle.locator('del')).toHaveText(was);
+  await expect(idle.locator('ins')).toHaveText(now);
   await expect(drawer).toContainText('Iris Audit');
   await expect(ops).toHaveURL(/entry=/);
   await axe(ops);
