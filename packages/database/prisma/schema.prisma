@@ -2647,6 +2647,9 @@ model PlatformOperator {
 
   auditLogs PlatformAuditLog[]
 
+  notifications     OperatorNotification[]
+  notificationPrefs OperatorNotificationPref[]
+
   @@index([consoleRole])
   @@map("platform_operators")
 }
@@ -2752,6 +2755,46 @@ model PlatformAuditLog {
   @@index([operatorId, createdAt])
   @@index([targetType, targetId, createdAt])
   @@map("platform_audit_logs")
+}
+
+/// A Console notification for one operator (ADR 0074, C3b), written by the worker's notification sweep.
+model OperatorNotification {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  type       String
+  title      String
+  body       String?
+  link       String?
+  /// The client it is about. Named like platform_audit_logs so the workspace guard does not treat the row as a workspace's.
+  targetTenantId String? @map("target_tenant_id")
+  /// One notification per operator per event: the sweep may see an event twice.
+  dedupeKey  String    @map("dedupe_key")
+  /// False when the operator chose email only: the row only keeps the event from being sent twice.
+  inApp      Boolean   @default(true) @map("in_app")
+  emailedAt  DateTime? @map("emailed_at")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([operatorId, dedupeKey])
+  @@index([operatorId, inApp, createdAt])
+  @@index([operatorId, inApp, readAt])
+  @@map("operator_notifications")
+}
+
+/// How one operator wants one type of Console notification: in the Console, by email, both or neither.
+model OperatorNotificationPref {
+  id         String  @id @default(uuid()) @map("_id")
+  operatorId String  @map("operator_id")
+  type       String
+  inApp      Boolean @map("in_app")
+  email      Boolean
+
+  operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([operatorId, type])
+  @@map("operator_notification_prefs")
 }
 
 /// Deployment-wide settings that platform admins edit in the operator console (not per workspace).

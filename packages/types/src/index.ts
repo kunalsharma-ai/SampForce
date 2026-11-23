@@ -65,3 +65,4 @@ export * from './mobile-push';
 export * from './workspace-dashboard';
 export * from './audit';
 export * from './console-activity';
+export * from './console-notifications';

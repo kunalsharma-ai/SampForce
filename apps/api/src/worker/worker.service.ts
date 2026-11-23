@@ -20,6 +20,7 @@ import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
 import { MobilePushService } from '../mobile/push/mobile-push.service';
+import { ConsoleNotificationSweep } from '../operator/console-notifications.service';
 
 export interface WorkerTick {
   events: number;
@@ -45,6 +46,8 @@ export interface WorkerTick {
   logos: number;
   /** Phone notifications sent through Expo (ADR 0072, M8). */
   pushes: number;
+  /** Console notifications delivered to operators (ADR 0074, C3b). */
+  consoleNotifications: number;
 }
 
 /**
@@ -79,6 +82,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
     private readonly pushes: MobilePushService,
+    private readonly consoleNotices: ConsoleNotificationSweep,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -117,6 +121,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   }
 
   /** One pass over every queue. Relays first so new events start their workflows in the same tick. */
+  private lastConsoleSweep = 0;
+
   async tick(): Promise<WorkerTick> {
     const events = await this.relay.relayBatch();
     const executions = await this.executor.runDue();
@@ -136,7 +142,13 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const logos = await this.logos.runDue();
     // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
     const pushes = await this.pushes.sendDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes };
+    // Console notifications once a minute: they read across every client, so not on every tick.
+    let consoleNotifications = 0;
+    if (Date.now() - this.lastConsoleSweep >= 60_000) {
+      this.lastConsoleSweep = Date.now();
+      consoleNotifications = await this.consoleNotices.sweep();
+    }
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, consoleNotifications };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
