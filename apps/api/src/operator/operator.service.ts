@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
-import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
+import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, type PlatformAuditQuery, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
 import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AI_HEALTH_PREFIX, AI_PROVIDER_DEFS, type AiProviderKey, isAiProviderKey, providerOrder, readHealth } from '../ai/ai-providers';
 import { AuditService } from '../audit/audit.service';
@@ -284,14 +284,29 @@ export class OperatorService {
     return this.tenant(op, id, ip);
   }
 
-  async auditLog(q: { tenantId?: string }): Promise<PlatformAuditRow[]> {
+  /** The platform log (ADR 0071, part 7): newest first, filtered by client, operator or action, a page at a time. */
+  async auditLog(q: PlatformAuditQuery): Promise<PlatformAuditRow[]> {
     const rows = await this.prisma.platformAuditLog.findMany({
-      where: q.tenantId ? { targetTenantId: q.tenantId } : {},
+      where: {
+        ...(q.tenantId ? { targetTenantId: q.tenantId } : {}),
+        ...(q.operatorId ? { operatorId: q.operatorId } : {}),
+        ...(q.action ? { action: { contains: q.action, mode: 'insensitive' as const } } : {}),
+        ...(q.before ? { createdAt: { lt: new Date(q.before) } } : {}),
+      },
       include: { operator: { select: { id: true, email: true } } },
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: q.limit,
     });
-    return rows.map((r) => ({ id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId, metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString() }));
+    const tenantIds = [...new Set(rows.map((r) => r.targetTenantId).filter((v): v is string => !!v))];
+    const tenants = tenantIds.length
+      ? await this.prisma.run({ operatorScan: true }, (tx) => tx.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } }))
+      : [];
+    const names = new Map(tenants.map((t) => [t.id, t.name]));
+    return rows.map((r) => ({
+      id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId,
+      client: r.targetTenantId ? { id: r.targetTenantId, name: names.get(r.targetTenantId) ?? null } : null,
+      metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString(),
+    }));
   }
 
   // ───── Provider setup: keys entered here (stored in the database), and a no-cost connection test for each ─────

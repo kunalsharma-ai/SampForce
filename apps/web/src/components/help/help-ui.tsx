@@ -3,6 +3,7 @@
 import type { SupportTicketPriority, SupportTicketStatus } from '@dealflow/types';
 import { Badge } from '@dealflow/ui';
 import {
+  BookOpen,
   Bot,
   Building,
   Building2,
@@ -51,7 +52,11 @@ const ICONS: Record<string, LucideIcon> = {
   layers: Layers,
   'key-round': KeyRound,
   'shield-check': ShieldCheck,
+  'book-open': BookOpen,
 };
+
+/** The icon names the Console may pick for a topic. */
+export const HELP_ICON_NAMES = Object.keys(ICONS);
 
 export function categoryIcon(name: string): LucideIcon {
   return ICONS[name] ?? LifeBuoy;
@@ -74,18 +79,22 @@ export function ToneIcon({ icon, tone, size = 'md' }: { icon: string; tone: numb
 }
 
 const STATUS_TONE: Record<SupportTicketStatus, 'primary' | 'warning' | 'success' | 'neutral'> = {
-  OPEN: 'warning',
+  SUBMITTED: 'warning',
+  UNDER_REVIEW: 'primary',
   IN_PROGRESS: 'primary',
-  ANSWERED: 'success',
+  AWAITING_USER: 'success',
+  RESOLVED: 'success',
   CLOSED: 'neutral',
 };
 
 export function useStatusLabel() {
   const t = useT();
   const labels: Record<SupportTicketStatus, string> = {
-    OPEN: t('Open query'),
+    SUBMITTED: t('Submitted'),
+    UNDER_REVIEW: t('Under review'),
     IN_PROGRESS: t('In progress'),
-    ANSWERED: t('Answered'),
+    AWAITING_USER: t('Awaiting response'),
+    RESOLVED: t('Resolved'),
     CLOSED: t('Closed query'),
   };
   return (s: SupportTicketStatus) => labels[s];

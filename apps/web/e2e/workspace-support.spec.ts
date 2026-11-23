@@ -63,7 +63,7 @@ test('a query climbs from executive to SampForce support, and chat rules are set
   const panel = thread.locator('[data-handler-panel]');
   await panel.getByLabel('Your answer').fill('It sits under Quotes, Templates. Does that help?');
   await panel.getByRole('button', { name: 'Send answer' }).click();
-  await expect(thread.locator('[data-ticket-status="ANSWERED"]')).toBeVisible();
+  await expect(thread.locator('[data-ticket-status="AWAITING_USER"]')).toBeVisible();
   await axe(manager);
   await shot(manager, '15-manager-answers-query');
   await panel.getByLabel('Pass it to the Super Workspace').fill('Looks like a permission gap for my team.');
@@ -99,7 +99,7 @@ test('a query climbs from executive to SampForce support, and chat rules are set
   await expect(pane.getByLabel('Support representative')).toHaveValue(/.+/);
   await pane.getByLabel('Your answer').fill('We switched on Quotes templates for North India Sales. Please try again.');
   await pane.getByRole('button', { name: 'Send answer' }).click();
-  await expect(pane.getByLabel('Ticket status')).toHaveValue('ANSWERED');
+  await expect(pane.getByLabel('Ticket status')).toHaveValue('AWAITING_USER');
   await pane.getByLabel('Resolution note').fill('Quotes templates granted to the North India Sales team.');
   await pane.getByRole('button', { name: 'Save', exact: true }).click();
   await pane.getByLabel('Ticket status').selectOption('CLOSED');

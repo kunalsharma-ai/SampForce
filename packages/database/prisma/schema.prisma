@@ -415,6 +415,9 @@ model Tenant {
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
   supportTicketMessages  SupportTicketMessage[]
+  supportFiles           SupportTicketAttachment[]
+  helpFeedback           HelpFeedback[]
+  helpSettings           HelpSettings?
   chatMembers            ChatMember[]
   chatMessages           ChatMessage[]
   chatAttachments        ChatAttachment[]
@@ -571,6 +574,8 @@ model WorkspaceNode {
   canCreateExecutives  Boolean   @default(false) @map("can_create_executives")
   /// Manager: whether it may see the sales reports of the other Manager Workspaces (never their records).
   canViewOtherManagers Boolean   @default(false) @map("can_view_other_managers")
+  /// Manager: whether the Super Workspace lets it read the audit log of its own team (never anyone else's).
+  canViewAuditLog      Boolean   @default(false) @map("can_view_audit_log")
   /// Manager or Executive: whether its parent lets it chat with workspaces of the same level (other managers; for an
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
@@ -4304,9 +4309,11 @@ model ChatSignal {
 // ───────────── Help Center support tickets (ADR 0073) ─────────────
 
 enum SupportTicketStatus {
-  OPEN
+  SUBMITTED
+  UNDER_REVIEW
   IN_PROGRESS
-  ANSWERED
+  AWAITING_USER
+  RESOLVED
   CLOSED
 }
 
@@ -4352,7 +4359,7 @@ model SupportTicket {
   /// "web" or "mobile".
   source               String                @default("web")
   priority             SupportTicketPriority @default(NORMAL)
-  status               SupportTicketStatus   @default(OPEN)
+  status               SupportTicketStatus   @default(SUBMITTED)
   handlerLevel         SupportHandlerLevel   @default(CONSOLE) @map("handler_level")
   handlerNodeId        String?               @map("handler_node_id")
   /// The SampForce operator looking after a Console ticket.
@@ -4363,6 +4370,19 @@ model SupportTicket {
   lastMessageAt        DateTime              @default(now()) @map("last_message_at")
   answeredAt           DateTime?             @map("answered_at")
   closedAt             DateTime?             @map("closed_at")
+  resolvedAt           DateTime?             @map("resolved_at")
+  /// With category "other": the raiser's own name for the kind of problem.
+  categoryOther        String?               @map("category_other")
+  /// lead, contact, company or deal; the label is the record's name when the query was raised.
+  relatedRecordType    String?               @map("related_record_type")
+  relatedRecordId      String?               @map("related_record_id")
+  relatedRecordLabel   String?               @map("related_record_label")
+  /// IN_APP, EMAIL or PHONE.
+  contactMethod        String                @default("IN_APP") @map("contact_method")
+  contactPhone         String?               @map("contact_phone")
+  appVersion           String?               @map("app_version")
+  /// Captured by the server when raised: workspace name and level, role name, email.
+  context              Json?
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
 
@@ -4394,6 +4414,27 @@ model SupportTicketMessage {
   @@map("support_ticket_messages")
 }
 
+/// Screenshots and files on a support ticket's messages (ADR 0073). Uploaded first, then sent with a message.
+model SupportTicketAttachment {
+  id                   String   @id @default(uuid()) @map("_id")
+  tenantId             String   @map("tenant_id")
+  ticketId             String?  @map("ticket_id")
+  messageId            String?  @map("message_id")
+  uploadedByUserId     String?  @map("uploaded_by_user_id")
+  uploadedByOperatorId String?  @map("uploaded_by_operator_id")
+  name                 String
+  contentType          String   @map("content_type")
+  sizeBytes            Int      @map("size_bytes")
+  data                 Bytes
+  sha256               String
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, ticketId, messageId])
+  @@map("support_ticket_attachments")
+}
+
 /// When a workspace user was last connected to team chat (online/offline dots). One per person and workspace.
 model ChatPresence {
   id         String    @id @default(uuid()) @map("_id")
@@ -4408,4 +4449,152 @@ model ChatPresence {
 
   @@unique([tenantId, userId])
   @@map("chat_presence")
+}
+
+// ── Help Center content managed in the Console (ADR 0073) ──────────────────────────────────────────────────────────
+// Built-in help lives in packages/help; the Console adds articles, edits or hides built-in ones, and reads feedback.
+
+enum HelpArticleKind {
+  FAQ
+  GUIDE
+  ANNOUNCEMENT
+}
+
+enum HelpArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// A help article the Console writes, or its edit of a built-in answer or guide (builtinKey "faq:…" or "guide:…").
+/// Text fields hold { en, es?, fr?, de?, ar? }; a missing language falls back to English.
+model HelpArticle {
+  id                  String            @id @default(uuid()) @map("_id")
+  kind                HelpArticleKind
+  builtinKey          String?           @unique @map("builtin_key")
+  /// "workspace" or "console".
+  audience            String            @default("workspace")
+  categoryId          String            @map("category_id")
+  title               Json
+  /// The short answer (FAQs) or what it is for (guides).
+  summary             Json
+  /// The full article: paragraphs, "1." steps, "-" points, "## " headings and media:<id> images.
+  body                Json
+  featureKey          String?           @map("feature_key")
+  /// Empty = every level. SUPER, MANAGER, EXECUTIVE.
+  levels              String[]
+  /// Empty = every role. Role keys, such as owner, admin, member.
+  roleKeys            String[]          @map("role_keys")
+  /// Empty = every client. Otherwise only these organisations see it.
+  tenantIds           String[]          @map("tenant_ids")
+  videoUrl            String?           @map("video_url")
+  /// Shown first: an announcement banner, or an important article at the top of its topic.
+  pinned              Boolean           @default(false)
+  status              HelpArticleStatus @default(DRAFT)
+  version             Int               @default(1)
+  publishedAt         DateTime?         @map("published_at")
+  createdByOperatorId String?           @map("created_by_operator_id")
+  updatedByOperatorId String?           @map("updated_by_operator_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  @@index([status, audience])
+  @@map("help_articles")
+}
+
+/// Each saved version of an article, so the Console can see what changed and restore an earlier one.
+model HelpArticleVersion {
+  id         String   @id @default(uuid()) @map("_id")
+  articleId  String   @map("article_id")
+  version    Int
+  snapshot   Json
+  operatorId String?  @map("operator_id")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([articleId, version])
+  @@map("help_article_versions")
+}
+
+/// Topics and subtopics the Console adds next to the built-in ones.
+model HelpCategoryEntry {
+  id          String    @id @map("_id")
+  parentId    String?   @map("parent_id")
+  audience    String    @default("workspace")
+  title       Json
+  description Json
+  icon        String    @default("book-open")
+  tone        Int       @default(1)
+  sortOrder   Int       @default(100) @map("sort_order")
+  archivedAt  DateTime? @map("archived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("help_categories")
+}
+
+/// Images, screenshots and files used in help articles. Public to signed-in readers once an article uses them.
+model HelpMedia {
+  id          String   @id @default(uuid()) @map("_id")
+  name        String
+  contentType String   @map("content_type")
+  sizeBytes   Int      @map("size_bytes")
+  data        Bytes
+  sha256      String
+  operatorId  String?  @map("operator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("help_media")
+}
+
+/// How often each article is read and found helpful, across everyone. No one's own reading history is kept.
+model HelpArticleStat {
+  id         String   @id @default(uuid()) @map("_id")
+  articleKey String   @unique @map("article_key")
+  views      Int      @default(0)
+  helpful    Int      @default(0)
+  notHelpful Int      @default(0) @map("not_helpful")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("help_article_stats")
+}
+
+/// "Was this helpful?" at the end of an article, one answer per person and article, with an optional comment.
+model HelpFeedback {
+  id         String    @id @default(uuid()) @map("_id")
+  tenantId   String    @map("tenant_id")
+  userId     String    @map("user_id")
+  articleKey String    @map("article_key")
+  helpful    Boolean
+  comment    String?
+  /// Set when the Console has read it and acted.
+  reviewedAt DateTime? @map("reviewed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, userId, articleKey])
+  @@index([articleKey, createdAt(sort: Desc)])
+  @@map("help_feedback")
+}
+
+/// Help & Support settings of one organisation (ADR 0073): what the Console allows and what the Super Workspace chose.
+/// Raising and following queries is never switched off by these.
+model HelpSettings {
+  id                 String   @id @default(uuid()) @map("_id")
+  tenantId           String   @unique @map("tenant_id")
+  /// Set by the Console: the Help Center's answers and guides for this client.
+  helpEnabled        Boolean  @default(true) @map("help_enabled")
+  /// Set by the Super Workspace: the Help icon in the top bar.
+  menuVisible        Boolean  @default(true) @map("menu_visible")
+  /// Set by the Super Workspace: list features people cannot use, with why and who can grant them.
+  explainRestricted  Boolean  @default(true) @map("explain_restricted")
+  /// Set by the Super Workspace: a note shown in Help, such as who to ask inside the company first.
+  supportNote        String?  @map("support_note")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("help_settings")
 }
