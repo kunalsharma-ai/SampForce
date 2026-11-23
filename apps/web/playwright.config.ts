@@ -136,7 +136,8 @@ export default defineConfig({
         NODE_ENV: 'test',
         DATABASE_URL: databaseUrl,
         JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? 'e2e-secret-that-is-at-least-32-characters',
-        WEB_ORIGINS: 'http://localhost:3000',
+        // The second origin is the mobile app's web export (apps/mobile), served below for mobile-app.spec.ts.
+        WEB_ORIGINS: 'http://localhost:3000,http://localhost:8090',
         LOG_LEVEL: 'warn',
         AUTH_RATE_LIMIT_PER_MINUTE: '1000',
         // The worker runs inside the API for e2e so workflows, webhooks and notifications progress.
@@ -186,6 +187,14 @@ export default defineConfig({
         // SMS uses each workspace's own Twilio credentials; this sends its REST calls to the stand-in above.
         TWILIO_API_BASE_URL: 'http://127.0.0.1:4960',
       },
+    },
+    {
+      // The mobile app's web export (pnpm build in apps/mobile), for mobile-app.spec.ts.
+      command: 'node scripts/serve-web.mjs',
+      cwd: '../mobile',
+      url: 'http://127.0.0.1:8090/health',
+      reuseExistingServer: !process.env.CI,
+      env: { MOBILE_WEB_PORT: '8090' },
     },
     {
       command: 'pnpm start',

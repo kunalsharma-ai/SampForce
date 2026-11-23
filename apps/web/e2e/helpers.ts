@@ -52,6 +52,12 @@ export async function seedInboundEmail(page: Page, email: { from: string; subjec
   await fixture({ action: 'inboundEmail', tenantId: me.tenant.id, userId: me.user.id, ...email });
 }
 
+/** Approves the signed-in workspace for the mobile app and switches it on (ADR 0072). */
+export async function approveMobile(page: Page) {
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  await fixture({ action: 'mobileApproved', tenantId: me.tenant.id });
+}
+
 /** Inserts a calendar meeting as if it had been synced from Google Calendar. */
 export async function seedMeeting(page: Page, m: { title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }) {
   const me = await (await page.request.get('/api/v1/auth/me')).json();

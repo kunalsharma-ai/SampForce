@@ -272,6 +272,21 @@ export class AuthService {
     return this.firstWorkspace(userId, { authMethod: 'mfa' }, meta, 'extension');
   }
 
+  /**
+   * The phone app (ADR 0072) signs in with the same password, lockout and second-factor rules; MobileAuthService
+   * then picks the organisation where mobile access is live and starts a mobile session.
+   */
+  async mobileCheckPassword(input: LoginInput, meta: RequestMeta): Promise<{ userId: string; scope: SessionScope } | MfaChallenge> {
+    const user = await this.checkPassword(input, meta);
+    if (user.mfaEnabledAt) return { mfaRequired: true, challenge: await this.tokens.signMfaChallenge(user.id) };
+    await this.mfa.clearFailures(user.id);
+    return { userId: user.id, scope: { authMethod: 'password' } };
+  }
+
+  async mobileCheckSecondFactor(challenge: string, code: string, meta: RequestMeta): Promise<{ userId: string; scope: SessionScope }> {
+    return { userId: await this.checkSecondFactor(challenge, code, meta), scope: { authMethod: 'mfa' } };
+  }
+
   private async checkPassword(input: LoginInput, meta: RequestMeta) {
     const user = await this.prisma.user.findUnique({ where: { email: input.email } });
     const locked = !!user && this.mfa.isLocked(user);
@@ -334,13 +349,14 @@ export class AuthService {
   }
 
   /** Rotates the refresh token. Reuse of an already-rotated token revokes every session of the user. */
-  async refresh(refreshToken: string | undefined, meta: RequestMeta): Promise<IssuedTokens> {
+  async refresh(refreshToken: string | undefined, meta: RequestMeta, client: 'MOBILE' | null = null): Promise<IssuedTokens> {
     if (!refreshToken) throw new UnauthorizedException({ code: 'NO_SESSION', message: 'Sign in to continue.' });
     const session = await this.prisma.session.findUnique({
       where: { refreshTokenHash: TokenService.hashRefresh(refreshToken) },
       include: { user: true },
     });
-    if (!session) throw new UnauthorizedException({ code: 'NO_SESSION', message: 'Sign in to continue.' });
+    // A phone's refresh token only refreshes through the phone's route, and a web one only through the cookie (ADR 0072).
+    if (!session || (session.client ?? null) !== client) throw new UnauthorizedException({ code: 'NO_SESSION', message: 'Sign in to continue.' });
 
     if (session.revokedAt && !session.replacedById) {
       // Signed out (or ended by a security change): not a sign of theft, just no longer valid.
@@ -380,6 +396,9 @@ export class AuthService {
           expiresAt: session.expiresAt,
           authMethod: session.authMethod,
           ssoTenantId: session.ssoTenantId,
+          // A phone's session stays a phone's session (ADR 0072).
+          client: session.client,
+          deviceId: session.deviceId,
         },
       });
       // Conditional update guards against two concurrent refreshes both succeeding.
@@ -408,6 +427,7 @@ export class AuthService {
     }
     if (auth) {
       await this.prisma.session.updateMany({ where: { id: auth.sessionId, revokedAt: null }, data: { revokedAt: new Date() } });
+      if (auth.deviceId) await this.prisma.run(auth, (tx) => tx.mobileDevice.updateMany({ where: { id: auth.deviceId, signedOutAt: null }, data: { signedOutAt: new Date() } }));
       await this.prisma.run(auth, (tx) =>
         this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'auth.logout', meta }),
       );
@@ -618,7 +638,12 @@ export class AuthService {
   /** Signs out one device, or every device except this one. Access tokens already issued lapse within their short lifetime. */
   async revokeSessions(auth: AuthContext, which: { id: string } | 'others', meta: RequestMeta): Promise<number> {
     const where = which === 'others' ? { userId: auth.userId, revokedAt: null, id: { not: auth.sessionId } } : { userId: auth.userId, revokedAt: null, id: which.id };
+    const phones = await this.prisma.session.findMany({ where: { ...where, client: 'MOBILE' }, select: { deviceId: true, activeTenantId: true } });
     const { count } = await this.prisma.session.updateMany({ where, data: { revokedAt: new Date() } });
+    // A phone signed out from the web shows as signed out in the organisation's device list too.
+    for (const p of phones) {
+      if (p.deviceId) await this.prisma.run({ tenantId: p.activeTenantId, userId: auth.userId }, (tx) => tx.mobileDevice.updateMany({ where: { id: p.deviceId!, signedOutAt: null }, data: { signedOutAt: new Date() } }));
+    }
     if (which !== 'others' && count === 0) throw new NotFoundException({ code: 'NOT_FOUND', message: 'That session has already ended.' });
     await this.prisma.run(auth, (tx) =>
       this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'auth.sessions_revoked', metadata: { count, scope: which === 'others' ? 'others' : 'one' }, meta }),

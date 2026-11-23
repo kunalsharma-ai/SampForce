@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { HELP_ARTICLE_KEY, helpArticleInputSchema, helpArticleListQuerySchema, helpCategoryInputSchema, helpFeedbackSchema, helpSettingsInputSchema, helpViewSchema, operatorHelpSettingsSchema } from '@dealflow/types';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { Auth, type AuthContext, Public } from '../common/auth-context';
+import { Auth, type AuthContext, MobileAccess, Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorRoles } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
@@ -17,7 +17,8 @@ const feedbackQuerySchema = z.object({
   open: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
 });
 
-/** What a workspace reader's Help Center adds to the built-in help, and "Was this helpful?" (ADR 0073). */
+/** What a workspace reader's Help Center adds to the built-in help, and "Was this helpful?" (ADR 0073). Phones use the same routes. */
+@MobileAccess()
 @Controller('help')
 export class HelpContentController {
   constructor(private readonly content: HelpContentService) {}

@@ -104,6 +104,8 @@ export const FEATURE_KEYS = [
   'sales_target_management',
   'audit_log',
   'crm_configuration',
+  // ADR 0072
+  'mobile_app',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -215,6 +217,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'sales_target_management', group: 'Administration', label: 'Sales target management', description: 'Set and distribute sales targets.', defaultFrom: 'free', paths: ['/app/targets'], since: 2 },
   { key: 'audit_log', group: 'Administration', label: 'Audit log', description: 'Who changed what, and when.', defaultFrom: 'free', paths: [], since: 2 },
   { key: 'crm_configuration', group: 'Administration', label: 'CRM configuration', description: 'Statuses, departments, designations, lead numbering and other CRM settings.', defaultFrom: 'free', paths: ['/app/settings/crm'], since: 2 },
+  { key: 'mobile_app', group: 'Apps', label: 'Mobile app', description: 'The SampForce app for iPhone and Android, once the Console Admin approves it and the Super Workspace switches it on.', defaultFrom: 'free', paths: ['/app/settings/mobile'], since: 2 },
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */

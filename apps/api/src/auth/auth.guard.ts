@@ -15,8 +15,10 @@ import {
   EXTENSION_ACCESS,
   type AuthedRequest,
   IS_PUBLIC,
+  MOBILE_ACCESS,
   REQUIRED_PERMISSIONS,
 } from '../common/auth-context';
+import { mobileBlocked, mobileBlockReason } from '../mobile/mobile-gate';
 import { featureNotIncluded, hasFeature, ssoEnforcedNow } from '../billing/entitlements';
 import { PrismaService } from '../common/prisma.service';
 import { ACCESS_COOKIE } from './cookies';
@@ -58,7 +60,7 @@ export class AuthGuard implements CanActivate {
         // access tokens minted from it simply expire on schedule.
         this.prisma.session.findUnique({
           where: { id: claims.sid },
-          select: { revokedAt: true, replacedById: true, expiresAt: true },
+          select: { revokedAt: true, replacedById: true, expiresAt: true, client: true, deviceId: true },
         }),
         this.prisma.run({ tenantId: claims.tid, userId: claims.sub }, (tx) =>
           tx.membership.findFirst({
@@ -104,6 +106,7 @@ export class AuthGuard implements CanActivate {
           authMethod: claims.amr,
           ...(claims.stid ? { ssoTenantId: claims.stid } : {}),
           ...(restriction ? { restriction } : {}),
+          ...(session!.client === 'MOBILE' ? { via: 'mobile' as const, ...(session!.deviceId ? { deviceId: session!.deviceId } : {}) } : {}),
         };
       }
     }
@@ -138,6 +141,22 @@ export class AuthGuard implements CanActivate {
 
     if (req.auth.via === 'extension' && !this.reflector.getAllAndOverride<boolean>(EXTENSION_ACCESS, targets)) {
       throw new ForbiddenException({ code: 'EXTENSION_NOT_ALLOWED', message: 'The browser extension cannot do this. Use SampForce in your browser.' });
+    }
+
+    if (req.auth.via === 'mobile') {
+      // The phone app reaches only routes built for it, and only while the organisation's mobile access is live: a
+      // Console suspension or the Super Workspace switching mobile off stops phones on their next request (ADR 0072).
+      if (!this.reflector.getAllAndOverride<boolean>(MOBILE_ACCESS, targets)) {
+        throw new ForbiddenException({ code: 'MOBILE_NOT_ALLOWED', message: 'The mobile app cannot do this. Use SampForce in your browser.' });
+      }
+      const auth = req.auth;
+      const [reason, device] = await this.prisma.run({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+        Promise.all([mobileBlockReason(tx, auth.tenantId), auth.deviceId ? tx.mobileDevice.findFirst({ where: { id: auth.deviceId, signedOutAt: null }, select: { id: true } }) : null]),
+      );
+      if (reason) throw mobileBlocked(reason);
+      // A phone that was signed out (by the person, an admin or mobile being switched off) stops at once, including
+      // access tokens minted before its session was rotated.
+      if (!device) throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to continue.' });
     }
 
     if (req.auth.via === 'api_key' && !this.reflector.getAllAndOverride<boolean>(API_KEY_ACCESS, targets)) {

@@ -97,3 +97,17 @@ export function countCollection(tx: import('@dealflow/database').TenantTx, colle
   const delegate = (tx as unknown as Record<string, { count(args: object): Promise<number> }>)[model.name.charAt(0).toLowerCase() + model.name.slice(1)]!;
   return delegate.count({ where });
 }
+
+/**
+ * Creates a Manager or Executive Workspace (ADR 0071) under `creator`'s workspace with a new person, and signs that
+ * person in. People without a workspace work at Super level, so tests of a lower level go through here.
+ */
+export async function workspacePerson(app: INestApplication, creator: TestUser, level: 'MANAGER' | 'EXECUTIVE', name: string): Promise<TestUser & { userId: string; workspaceId: string }> {
+  const ws = (await api(creator).post('/workspaces', { level, name, person: { inviteEmail: `${level.toLowerCase()}.${randomUUID().slice(0, 8)}@client.test` } }).expect(201)).body as { id: string; inviteUrl: string };
+  const token = ws.inviteUrl.split('/invite/')[1]!;
+  const agent = request.agent(app.getHttpServer());
+  const password = 'a-long-password-1';
+  await agent.post('/api/v1/auth/invitations/accept').set('origin', ORIGIN).send({ token, name, password }).expect(200);
+  const me = (await agent.get('/api/v1/auth/me').expect(200)).body as { user: { id: string; email: string }; tenant: { id: string } };
+  return { agent, email: me.user.email, password, tenantId: me.tenant.id, userId: me.user.id, workspaceId: ws.id };
+}

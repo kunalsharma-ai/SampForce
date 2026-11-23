@@ -125,6 +125,10 @@ const OPERATOR_READ = new Set([
   'ChatConversation',
   'ChatMember',
   'ChatMessage',
+  // Mobile app (ADR 0072): the Console's overview of every organisation's mobile access and phones. Decisions are
+  // written in the organisation's own context.
+  'MobileAccess',
+  'MobileDevice',
   // Help Center support tickets (ADR 0073): the Console's ticket inbox. Questions people chose to send to SampForce,
   // never CRM records. Replies and status changes run in the workspace's own context.
   'SupportTicket',

@@ -190,6 +190,9 @@ export const SHIPPED_FEATURES: { key: string; plans: string[] }[] = [
   { key: 'sampbidx', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
   // ADR 0064: team chat and the support line to super admins come with every plan unless an operator says otherwise.
   { key: 'team_chat', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
+  // ADR 0072: the mobile app is on every plan, but no organisation gets it until the Console Admin approves it; the
+  // console can take it off a plan to sell it with some plans only.
+  { key: 'mobile_app', plans: ['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus'] },
 ];
 
 export async function seedReferenceData(prisma: PrismaClient): Promise<void> {

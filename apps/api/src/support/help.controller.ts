@@ -12,7 +12,7 @@ import {
 } from '@dealflow/help';
 import type { LanguageCode } from '@dealflow/types';
 import { z } from 'zod';
-import { Auth, type AuthContext } from '../common/auth-context';
+import { Auth, type AuthContext, MobileAccess } from '../common/auth-context';
 import { requestLanguage } from '../common/request-language';
 import { ZodPipe } from '../common/zod.pipe';
 import { HelpContentService } from './help-content.service';
@@ -24,6 +24,7 @@ const helpQuerySchema = z.object({ q: z.string().trim().max(120).optional() });
  * already narrowed to what their plan, workspace level and role let them use. The mobile app reads this; the web app
  * applies the same rules from @dealflow/help with the session it already has.
  */
+@MobileAccess()
 @Controller('help')
 export class HelpController {
   constructor(private readonly content: HelpContentService) {}

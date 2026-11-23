@@ -22,6 +22,7 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
 import { OperatorModule } from './operator/operator.module';
+import { MobileModule } from './mobile/mobile.module';
 import { PortalModule } from './portal/portal.module';
 import { IdentityModule } from './identity/identity.module';
 import { ReportsModule } from './reports/reports.module';
@@ -85,6 +86,7 @@ import { redactUrl } from './observability/redact';
     RevenueModule,
     BillingModule,
     OperatorModule,
+    MobileModule,
     ReportsModule,
     IdentityModule,
     SequencesModule,

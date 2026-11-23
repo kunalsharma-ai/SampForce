@@ -12,7 +12,7 @@ import {
 } from '@dealflow/types';
 import type { Request, Response } from 'express';
 import type { z } from 'zod';
-import { Auth, type AuthContext, Meta, Public, type RequestMeta } from '../common/auth-context';
+import { Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
@@ -20,7 +20,8 @@ import { SupportService } from './support.service';
 
 const uuid = new ParseUUIDPipe();
 
-/** Queries raised from Help ("Other: raise a query") by anyone in the workspace (ADR 0073). */
+/** Queries raised from Help ("Other: raise a query") by anyone in the workspace (ADR 0073). Phones use the same routes. */
+@MobileAccess()
 @Controller('support/tickets')
 export class SupportController {
   constructor(private readonly support: SupportService) {}
@@ -61,7 +62,8 @@ export class SupportController {
   }
 }
 
-/** Screenshots and files for a new query or a reply: uploaded as the raw body, then sent by id with the message. */
+/** Screenshots and files for a new query or a reply: uploaded as the raw body, then sent by id with the message. Phones too. */
+@MobileAccess()
 @Controller('support/attachments')
 export class SupportAttachmentsController {
   constructor(private readonly support: SupportService) {}

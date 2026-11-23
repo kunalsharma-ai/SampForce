@@ -16,7 +16,8 @@ import { storeEmail } from '../src/integrations/threading';
 type Fixture =
   | { action: 'setPlan'; tenantId: string; planCode: string }
   | { action: 'inboundEmail'; tenantId: string; userId: string; from: string; subject: string; body: string; contactId?: string }
-  | { action: 'meeting'; tenantId: string; userId: string; title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string };
+  | { action: 'meeting'; tenantId: string; userId: string; title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }
+  | { action: 'mobileApproved'; tenantId: string };
 
 const MAILBOX = 'me@seller.test';
 
@@ -59,6 +60,16 @@ async function main(): Promise<void> {
           },
         });
       });
+    } else if (f.action === 'mobileApproved') {
+      // As if the Console approved mobile access and the Super Workspace switched it on (tested through the screens
+      // in mobile-access.spec.ts), so app tests start from a working organisation.
+      await withDbContext(prisma, { tenantId: f.tenantId }, (tx) =>
+        tx.mobileAccess.upsert({
+          where: { tenantId: f.tenantId },
+          create: { tenantId: f.tenantId, status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date(), activatedById: null },
+          update: { status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date() },
+        }),
+      );
     } else {
       throw new Error(`Unknown fixture ${(f as { action?: string }).action}`);
     }
