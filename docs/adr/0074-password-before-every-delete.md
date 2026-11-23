@@ -96,3 +96,22 @@ is deliberate.
   or `EMAIL_INVITED` (a pending invitation elsewhere). The team page's invitation no longer replaces a pending
   invitation into another workspace silently; it refuses with `EMAIL_INVITED`. Re-inviting into the same workspace
   still replaces the link. One person can still belong to two separate client organisations.
+
+## W6: The hierarchy tree, Settings in nine sections and changing the password (2026-11-23)
+
+- **Hierarchy tree.** The Workspaces page draws the company, its one Super Workspace, the Manager Workspaces and
+  their Executive Workspaces as a tree with connector lines. Each card shows the person (name and email, or the
+  pending invitation), a status (Active, Invited, Empty, Deactivated), plan-limit use (the Super Workspace shows both
+  limits, a manager the executives in its team) and an Actions menu (Edit, Permissions, Deactivate or Reactivate,
+  Delete when the Delete action is granted). A banner tells the Super Workspace why there is only one.
+- **Settings in nine sections**, each with one sentence on what it is for: Workspace (the existing forms, inline),
+  Users & Workspaces, Roles & Permissions, Security, Password & Authentication, Data Management, Notifications,
+  Integrations and Audit Logs. The sections lead to the pages that already exist, so every old link keeps working;
+  the Team page's roles card and the Workspaces structure card gained anchors (`#roles`, `#structure`).
+- **Changing the password while signed in**: `POST /auth/password` with `{ currentPassword, newPassword }`. A wrong
+  current password counts towards the same five-in-fifteen-minutes pause as the password check and is audited as
+  `auth.password_change_failed` (REFUSED). On success every other session is revoked (this one stays), outstanding
+  reset links stop working, `auth.password_changed` is recorded in each organisation the person belongs to, and the
+  person gets an email. Single sign-on accounts have no password to change (400 `PASSWORD_NOT_SET`); API keys and
+  the extension cannot call it. The form is on Account security, linked from Password & Authentication next to the
+  existing reset-by-email flow.

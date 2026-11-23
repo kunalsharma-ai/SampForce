@@ -1,6 +1,25 @@
 'use client';
 
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Skeleton,
+} from '@dealflow/ui';
 import {
   type ActionGrants,
   FEATURE_BY_KEY,
@@ -18,7 +37,7 @@ import {
   type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Building2, ChevronDown, Crown, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -90,15 +109,30 @@ export function WorkspacesManager() {
         </CardContent>
       </Card>
 
-      <Card>
+      {data.mine.level === 'SUPER' && (
+        <div className="flex gap-3 rounded-lg border border-accent/40 bg-accent/5 p-4 text-sm" role="note" data-super-banner>
+          <Crown className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden />
+          <div>
+            <p className="font-medium">{t('{company} has one Super Workspace, and it is yours.', { company: data.organization.name })}</p>
+            <p className="text-muted-foreground">{t('It holds the company’s settings, billing and every workspace below it. There is only ever one, so it cannot be created again, deactivated or deleted; closing the company is the only way to end it.')}</p>
+          </div>
+        </div>
+      )}
+
+      <Card id="structure" className="scroll-mt-20">
         <CardHeader>
           <CardTitle>{t('Workspace structure')}</CardTitle>
-          <CardDescription>{t('Who reports to whom. Open Permissions on a workspace below yours to choose what it may use and do.')}</CardDescription>
+          <CardDescription>{t('Who reports to whom. Use Actions on a workspace below yours to edit it, choose what it may use and do, deactivate or delete it.')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2" aria-label={t('Workspace structure')} data-workspace-tree>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium" data-company-node>
+            <Building2 className="size-4 text-muted-foreground" aria-hidden />
+            <span className="sr-only">{t('Company')}: </span>
+            {data.organization.name}
+          </div>
+          <ul className="ms-5 mt-3 space-y-3 border-s border-border ps-5" aria-label={t('Workspace structure')} data-workspace-tree>
             {roots(data).map((w) => (
-              <Branch key={w.id} row={w} tree={data} depth={0} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
+              <Branch key={w.id} row={w} tree={data} depth={1} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
             ))}
           </ul>
           <ErrorText error={reactivate.error} />
@@ -163,56 +197,93 @@ function Branch(props: BranchProps) {
   const t = useT();
   const children = tree.workspaces.filter((w) => w.parentId === row.id).sort((a, b) => (a.level === b.level ? a.name.localeCompare(b.name) : a.level === 'MANAGER' ? -1 : 1));
   const mine = row.id === tree.mine.id;
+  const status = row.deactivatedAt
+    ? { tone: 'warning' as const, label: t('Deactivated') }
+    : row.people.length
+      ? { tone: 'success' as const, label: t('Active') }
+      : row.pendingInvites.length
+        ? { tone: 'primary' as const, label: t('Invited') }
+        : { tone: 'neutral' as const, label: t('Empty') };
+  const executives = tree.workspaces.filter((w) => w.parentId === row.id && w.level === 'EXECUTIVE').length;
   return (
-    <li>
-      <div className="flex flex-wrap items-start gap-3 rounded-md border border-border p-3" style={{ marginInlineStart: `${depth * 1.5}rem` }} data-workspace={row.name}>
+    // Connector lines: each child hangs off the vertical line of the list it is in (see the ul below).
+    <li className={depth > 0 ? 'relative before:absolute before:-start-5 before:top-7 before:w-5 before:border-t before:border-border' : undefined}>
+      <div className={`flex flex-wrap items-start gap-3 rounded-lg border bg-card p-3 shadow-sm ${row.level === 'SUPER' ? 'border-accent/50' : 'border-border'}`} data-workspace={row.name} data-level={row.level}>
         <div className="min-w-0 flex-1 space-y-1">
           <p className="flex flex-wrap items-center gap-2 font-medium">
             {row.name}
             <Badge tone={row.level === 'SUPER' ? 'accent' : row.level === 'MANAGER' ? 'primary' : 'neutral'}>{t.maybe(WORKSPACE_LEVEL_LABEL[row.level])}</Badge>
+            <Badge tone={status.tone} data-workspace-status>
+              {status.label}
+            </Badge>
             {mine && <Badge tone="success">{t('Yours')}</Badge>}
-            {row.deactivatedAt && <Badge tone="warning">{t('Deactivated')}</Badge>}
           </p>
           {row.deactivatedAt && row.deactivationReason && <p className="text-xs text-warning" data-deactivation-reason>{t('Deactivated: {reason}', { reason: row.deactivationReason })}</p>}
-          <p className="text-sm text-muted-foreground">{t.maybe(row.designation)}</p>
-          <p className="text-xs text-muted-foreground">
-            {row.people.length ? row.people.map((p) => p.name).join(', ') : row.pendingInvites.length ? t('Invited: {emails}', { emails: row.pendingInvites.join(', ') }) : t('Nobody in it yet')}
+          <p className="text-sm text-muted-foreground">
+            {t.maybe(row.designation)}
+            {row.department && <> · {row.department}</>}
+          </p>
+          <p className="text-sm" data-workspace-person>
+            {row.people.length ? row.people.map((p) => `${p.name} (${p.email})`).join(', ') : row.pendingInvites.length ? t('Invited: {emails}', { emails: row.pendingInvites.join(', ') }) : t('Nobody in it yet')}
+          </p>
+          <p className="text-xs text-muted-foreground" data-workspace-usage>
+            {row.level === 'SUPER' ? (
+              <>
+                {limitText(t, t('Manager Workspaces'), tree.usage.managers)} · {limitText(t, t('Executive Workspaces'), tree.usage.executives)}
+              </>
+            ) : row.level === 'MANAGER' ? (
+              t('Executive Workspaces in its team: {count}', { count: executives })
+            ) : (
+              t('Counts towards the Executive Workspaces limit')
+            )}
             {' · '}
             {t('Features: {count}', { count: row.features.length })}
             {row.restrictedFeatures.length > 0 && <> · {t('Not given: {count}', { count: row.restrictedFeatures.length })}</>}
           </p>
         </div>
         {row.editable && (
-          <div className="flex flex-wrap gap-1">
-            <Button size="sm" variant="outline" onClick={() => onPermissions(row.id)}>
-              <KeyRound className="size-4" aria-hidden />
-              {t('Permissions')}
-              <span className="sr-only"> {row.name}</span>
-            </Button>
-            <Button size="icon" variant="ghost" aria-label={t('Edit {name}', { name: row.name })} onClick={() => onEdit(row.id)}>
-              <Pencil aria-hidden />
-            </Button>
-            {row.deactivatedAt ? (
-              <Button size="sm" variant="outline" onClick={() => onReactivate(row)}>
-                <Power className="size-4" aria-hidden />
-                {t('Reactivate')}
-                <span className="sr-only"> {row.name}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" aria-label={t('Actions for {name}', { name: row.name })}>
+                {t('Actions')}
+                <ChevronDown className="size-4" aria-hidden />
               </Button>
-            ) : (
-              <Button size="icon" variant="ghost" aria-label={t('Deactivate {name}', { name: row.name })} title={t('Deactivate')} onClick={() => onDeactivate(row)}>
-                <PowerOff aria-hidden />
-              </Button>
-            )}
-            {canDelete && (
-              <Button size="icon" variant="ghost" aria-label={t('Delete {name}', { name: row.name })} title={t('Delete')} onClick={() => onDelete(row)}>
-                <Trash2 aria-hidden />
-              </Button>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEdit(row.id)}>
+                <Pencil aria-hidden />
+                {t('Edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onPermissions(row.id)}>
+                <KeyRound aria-hidden />
+                {t('Permissions')}
+              </DropdownMenuItem>
+              {row.deactivatedAt ? (
+                <DropdownMenuItem onSelect={() => onReactivate(row)}>
+                  <Power aria-hidden />
+                  {t('Reactivate')}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onSelect={() => onDeactivate(row)}>
+                  <PowerOff aria-hidden />
+                  {t('Deactivate')}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-critical focus:text-critical" onSelect={() => onDelete(row)}>
+                    <Trash2 aria-hidden />
+                    {t('Delete')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
       {children.length > 0 && (
-        <ul className="mt-2 space-y-2">
+        <ul className="ms-5 mt-3 space-y-3 border-s border-border ps-5">
           {children.map((c) => (
             <Branch key={c.id} {...props} row={c} depth={depth + 1} />
           ))}
@@ -220,6 +291,10 @@ function Branch(props: BranchProps) {
       )}
     </li>
   );
+}
+
+function limitText(t: ReturnType<typeof useT>, label: string, u: { used: number; max: number | null }): string {
+  return u.max === null ? t('{label}: {used}, no limit', { label, used: u.used }) : t('{label}: {used} of {max}', { label, used: u.used, max: u.max });
 }
 
 // ───────────── Permission Center ─────────────

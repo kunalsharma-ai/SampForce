@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, type Browser, expect, type Page, test } from '@playwright/test';
-import { E2E_DATABASE_URL, signUp } from './helpers';
+import { E2E_DATABASE_URL, signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for phase previews). */
@@ -119,7 +119,7 @@ test('a query climbs from executive to SampForce support, and chat rules are set
 
   // ── Chat rules: the Super Workspace lets this manager chat with other managers ──
   await page.goto('/app/settings/workspaces');
-  await page.getByRole('button', { name: 'Permissions North India Sales' }).click();
+  await workspaceAction(page, 'North India Sales', 'Permissions');
   const dialog = page.getByRole('dialog');
   const chat = dialog.locator('[data-chat-setting]');
   await chat.getByLabel('May chat with other Manager Workspaces').check();
