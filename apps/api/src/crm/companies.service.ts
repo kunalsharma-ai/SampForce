@@ -1,12 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, notFound, orderBy, paging } from './crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CustomFieldsService } from './custom-fields.service';
+import { CompanyLogosService } from './company-logos.service';
 import { canSeeDetails, companyScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
 const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country', 'leadSeq', 'statusChangedAt'] as const;
@@ -35,6 +36,8 @@ interface RowContext {
   v: Visibility;
   /** Custom field values the caller may see (ADR 0062). */
   cf: (values: unknown) => Record<string, unknown>;
+  /** Logo references by company id (ADR 0070). */
+  logos: Map<string, CompanyLogoRef>;
 }
 
 @Injectable()
@@ -44,7 +47,15 @@ export class CompaniesService {
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
     private readonly notifications: NotificationsService,
+    private readonly logos: CompanyLogosService,
   ) {}
+
+  /** The row context, with logo references; companies with a website that were never looked up are queued. */
+  private async context(tx: TenantTx, auth: AuthContext, rows: CompanyWith[], v: Visibility): Promise<RowContext> {
+    const ctx = await rowContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'COMPANY'), await this.logos.refsIn(tx, auth.tenantId, rows.map((r) => r.id)));
+    this.logos.backfill(auth.tenantId, rows, ctx.logos);
+    return ctx;
+  }
 
   list(auth: AuthContext, q: ListQuery, f: CompanyFilters = {}): Promise<Page<CompanyRow>> {
     return this.prisma.run(auth, async (tx) => {
@@ -84,7 +95,7 @@ export class CompaniesService {
         tx.company.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.company.count({ where }),
       ]);
-      const ctx = await rowContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'COMPANY'));
+      const ctx = await this.context(tx, auth, rows, v);
       return { items: rows.map((r) => toRow(r, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
   }
@@ -94,7 +105,7 @@ export class CompaniesService {
       const v = await visibility(tx, auth);
       const row = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
       if (!row) throw notFound('Company');
-      return toRow(row, await rowContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'COMPANY')));
+      return toRow(row, await this.context(tx, auth, [row], v));
     });
   }
 
@@ -130,6 +141,8 @@ export class CompaniesService {
       },
     });
     await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', row.id, customFields);
+    // The logo is found from the website by the worker (ADR 0070).
+    if (row.domain) await this.logos.domainChangedIn(tx, auth.tenantId, row.id, row.domain);
     await assignLeadNumbers(tx, auth.tenantId);
     const numbered = await tx.company.findUniqueOrThrow({ where: { id: row.id }, select: { leadNumber: true } });
     await this.audit.record(tx, {
@@ -143,7 +156,7 @@ export class CompaniesService {
   /** The company as the caller sees it, inside their transaction. */
   async rowIn(tx: TenantTx, auth: AuthContext, id: string): Promise<CompanyRow> {
     const row = await tx.company.findUniqueOrThrow({ where: { id }, include });
-    return toRow(row, await rowContext(tx, auth.tenantId, [row], await visibility(tx, auth), await this.fields.reader(tx, auth, 'COMPANY')));
+    return toRow(row, await this.context(tx, auth, [row], await visibility(tx, auth)));
   }
 
   /**
@@ -208,6 +221,7 @@ export class CompaniesService {
         include,
       });
       if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', id, customFields);
+      if (row.domain !== before.domain) await this.logos.domainChangedIn(tx, auth.tenantId, id, row.domain);
       const changes = diff(before, input);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.updated', entityType: 'company', entityId: id,
@@ -226,7 +240,7 @@ export class CompaniesService {
         });
         await this.recordOwnerChange(tx, auth, row, before.ownerId, input.ownerId ?? null, extra?.reason ?? 'REASSIGNED', extra?.note ?? null);
       }
-      return toRow(row, await rowContext(tx, auth.tenantId, [row], v, await this.fields.reader(tx, auth, 'COMPANY')));
+      return toRow(row, await this.context(tx, auth, [row], v));
     });
   }
 
@@ -377,7 +391,7 @@ export async function statusRefs(tx: TenantTx, tenantId: string, ids: (string | 
   return new Map(rows.map((r) => [r.id, r]));
 }
 
-async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGetPayload<object>[], v: Visibility, cf: RowContext['cf']): Promise<RowContext> {
+async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGetPayload<object>[], v: Visibility, cf: RowContext['cf'], logos: RowContext['logos']): Promise<RowContext> {
   const depIds = [...new Set(rows.map((r) => r.departmentId).filter((d): d is string => !!d))];
   const teamIds = [...new Set(rows.map((r) => r.teamId).filter((d): d is string => !!d))];
   const [people, statuses, departments, teams] = await Promise.all([
@@ -386,7 +400,7 @@ async function rowContext(tx: TenantTx, tenantId: string, rows: Prisma.CompanyGe
     depIds.length ? tx.department.findMany({ where: { tenantId, id: { in: depIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
     teamIds.length ? tx.team.findMany({ where: { tenantId, id: { in: teamIds } }, select: { id: true, name: true } }) : Promise.resolve([]),
   ]);
-  return { people, statuses, departments: new Map(departments.map((d) => [d.id, d.name])), teams: new Map(teams.map((d) => [d.id, d.name])), v, cf };
+  return { people, statuses, departments: new Map(departments.map((d) => [d.id, d.name])), teams: new Map(teams.map((d) => [d.id, d.name])), v, cf, logos };
 }
 
 function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
@@ -397,6 +411,7 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
   return {
     id: r.id,
     name: r.name,
+    logo: ctx.logos.get(r.id) ?? null,
     domain: hide(r.domain, null),
     industry: r.industry,
     country: r.country,

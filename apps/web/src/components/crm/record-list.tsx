@@ -19,6 +19,7 @@ import { CustomFieldFilters } from './custom-field-filter';
 import { CompanyContactsCell } from './company-contacts-cell';
 
 import { RecordFormDialog } from './record-form';
+import { CompanyLogo } from './company-logo';
 import { CountryFlag, StatusChip } from './status-chip';
 import { Select } from './select';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
@@ -54,7 +55,7 @@ const COLUMNS = {
   ] satisfies TableColumn<ContactRow>[],
   companies: [
     // The first column links to the record, so the name comes first.
-    { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, size: 200 },
+    { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, icon: (r) => <CompanyLogo company={r} size="xs" />, size: 220 },
     { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
     { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
     {

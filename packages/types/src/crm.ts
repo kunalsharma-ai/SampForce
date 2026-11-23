@@ -161,9 +161,23 @@ export const companyInputSchema = z.object({
 export const companyUpdateSchema = companyInputSchema.partial();
 export type CompanyInput = z.infer<typeof companyInputSchema>;
 
+/** A company's logo as the app shows it (ADR 0070). */
+export interface CompanyLogoRef {
+  /** Same-origin URL of the image; changes whenever the logo does, so it can be cached. Null while none is found. */
+  url: string | null;
+  /** AUTO (found from the website) or UPLOAD (chosen by someone). */
+  source: 'AUTO' | 'UPLOAD';
+  /** PENDING (still looking), FOUND, NOT_FOUND or FAILED. */
+  status: 'PENDING' | 'FOUND' | 'NOT_FOUND' | 'FAILED';
+  /** Pixel size of the image's larger side; null for SVG. Small icons are shown at a size that keeps them sharp. */
+  width: number | null;
+}
+
 export interface CompanyRow {
   id: string;
   name: string;
+  /** Null when no logo has been looked for (no website) and none was uploaded. */
+  logo: CompanyLogoRef | null;
   domain: string | null;
   industry: string | null;
   country: string | null;

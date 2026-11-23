@@ -371,6 +371,11 @@ export function buildOpenApiDocument(): object {
   action('get', '/company-files/{id}/download', 'Company leads', 'Download a company file (companies:read)');
   action('patch', '/company-files/{id}', 'Company leads', 'Rename a company file (companies:write)', companyFileRenameSchema);
   action('delete', '/company-files/{id}', 'Company leads', 'Delete a company file (companies:write)');
+  // Company logos (ADR 0070)
+  action('get', '/companies/{id}/logo', 'Company leads', 'The company logo image, found from its website or uploaded (companies:read)');
+  r.registerPath({ method: 'put', path: '/companies/{id}/logo', tags: ['Company leads'], summary: 'Upload a logo as the raw request body: PNG, JPEG, WebP, GIF, ICO or SVG, up to 1 MB. It is never replaced automatically (companies:write)', security: secured, request: { params: z.object({ id: z.string().uuid() }) }, responses: { 200: ok('Logo'), ...notFound, ...errors } });
+  action('delete', '/companies/{id}/logo', 'Company leads', 'Remove an uploaded logo; the website logo is looked up again (companies:write)');
+  action('post', '/companies/{id}/logo/refresh', 'Company leads', 'Look the logo up on the company website again (companies:write)');
   action('get', '/companies/{id}/dashboard', 'Company dashboard', 'Key numbers counted from CRM records: employees, emails, calls, meetings, follow-ups, RFQs and business, by currency (companies:read)');
   action('get', '/companies/{id}/employees', 'Company dashboard', 'The employee directory with emails sent, responses, last update and next follow-up (companies:read, contacts:read)');
   r.registerPath({ method: 'get', path: '/companies/{id}/interactions', tags: ['Company dashboard'], summary: 'Logged interactions and synced emails, newest first, marked LOGGED or SYNCED (companies:read, activities:read)', security: secured, request: { params: z.object({ id: z.string().uuid() }), query: interactionListQuerySchema }, responses: { 200: ok('Interactions'), ...notFound, ...errors } });

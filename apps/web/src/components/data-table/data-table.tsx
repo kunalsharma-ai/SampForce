@@ -203,7 +203,9 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                       className="block truncate font-medium text-foreground underline-offset-2 hover:underline"
                     >
                       {head?.text ? (
-                        <Highlight text={head.text(r.original) ?? '—'} query={q} />
+                        <WithIcon icon={head.icon?.(r.original)}>
+                          <Highlight text={head.text(r.original) ?? '—'} query={q} />
+                        </WithIcon>
                       ) : (
                         head?.cell(r.original, q)
                       )}
@@ -382,7 +384,9 @@ export function DataTable<T extends { id: string }>(p: Props<T>) {
                       }
                       const col = meta.col!;
                       const content = col.text ? (
-                        <Highlight text={col.text(r.original) ?? '—'} query={q} />
+                        <WithIcon icon={col.icon?.(r.original)}>
+                          <Highlight text={col.text(r.original) ?? '—'} query={q} />
+                        </WithIcon>
                       ) : (
                         col.cell(r.original, q)
                       );
@@ -516,5 +520,16 @@ function ResizeHandle({
         active && 'opacity-100',
       )}
     />
+  );
+}
+
+/** A column's icon (a company logo) before its text, kept on one line with it. */
+function WithIcon({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  if (!icon) return <>{children}</>;
+  return (
+    <span className="inline-flex max-w-full items-center gap-2 align-middle">
+      {icon}
+      <span className="truncate">{children}</span>
+    </span>
   );
 }

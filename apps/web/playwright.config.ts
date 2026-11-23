@@ -48,6 +48,14 @@ export default defineConfig({
       env: { FINDER_FIXTURE_PORT: '4300' },
     },
     {
+      // Local stand-in for company websites with made-up logos, for company logo look-ups (ADR 0070).
+      command: 'npx tsx test/fixtures/logo-fixture.ts',
+      cwd: '../api',
+      url: 'http://127.0.0.1:4310/health',
+      reuseExistingServer: !process.env.CI,
+      env: { LOGO_FIXTURE_PORT: '4310' },
+    },
+    {
       // Local stand-in for the Slack Web API and its consent screen, so the Slack app connects end to end.
       command: 'npx tsx test/fixtures/slack-fixture.ts',
       cwd: '../api',
@@ -146,6 +154,8 @@ export default defineConfig({
         MISTRAL_API_BASE_URL: 'http://127.0.0.1:4110',
         // The email finder reads made-up company sites from the stand-in above, never the internet.
         FINDER_FIXTURE_URL: 'http://127.0.0.1:4300',
+        // Company logos are looked up on made-up company sites from the stand-in above, never the internet.
+        LOGO_FIXTURE_URL: 'http://127.0.0.1:4310',
         // Enables the operator console; e2e creates its own operator account.
         OPERATOR_JWT_SECRET: 'e2e-operator-secret-at-least-32-characters',
         // Email goes to the stand-in above, never to a real mail server.
