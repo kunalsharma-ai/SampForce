@@ -15,6 +15,7 @@ import { ZodPipe } from '../common/zod.pipe';
 import { GeoService } from '../geo/geo.service';
 import { ConsoleClientsProfileService, readLogoUpload } from './console-clients-profile.service';
 import { Operator, OperatorAny, type OperatorContext, OperatorGuard, OperatorPermission } from './operator-auth';
+import { NoPasswordConfirmation } from '../common/password-confirmation/password-confirmation.decorator';
 
 const ip = (req: Request) => req.ip ?? null;
 
@@ -42,6 +43,7 @@ export class ConsoleClientsProfileController {
   }
 
   @Delete('clients/:id/logo')
+  @NoPasswordConfirmation('A logo is replaceable and the removal is audited; the client falls back to its initials')
   @OperatorPermission('clients.edit')
   removeLogo(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Req() req: Request) {
     return this.profiles.removeLogo(op, id, ip(req));
@@ -93,6 +95,7 @@ export class ConsoleClientsProfileController {
   }
 
   @Delete('locations/cities/:id')
+  @NoPasswordConfirmation('Undoes an operator\'s own city change back to the shipped list; audited and can be made again')
   @OperatorPermission('settings.manage')
   undoCity(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Req() req: Request) {
     return this.profiles.undoCity(op, id, ip(req));

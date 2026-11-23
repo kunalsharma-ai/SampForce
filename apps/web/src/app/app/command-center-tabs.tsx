@@ -7,6 +7,7 @@ import { ExecutiveDashboard } from '@/components/command-center/executive-dashbo
 import { OnboardingChecklist } from '@/components/command-center/onboarding';
 import { ManagerDashboard } from '@/components/command-center/manager-dashboard';
 import { SeniorDashboard } from '@/components/command-center/senior-dashboard';
+import { HomeNotifications } from '@/components/notifications/home-notifications';
 import { PageHeader } from '@/components/page-header';
 import { YourTargets } from '@/components/workspace-work/targets';
 import { TasksForYou } from '@/components/workspace-work/tasks';
@@ -43,6 +44,7 @@ export function CommandCenter() {
   const canDashboard = useCan('dashboard:read');
   const hasTasks = useHasFeature('task_management');
   const hasTargets = useHasFeature('sales_target_management');
+  const hasNotifications = useHasFeature('notifications');
   const ctx = useCommandCenterContext(!!session && !session.restriction && canDashboard);
   if (!session || (canDashboard && ctx.isPending && !session.restriction))
     return <Skeleton className="h-96" aria-label={t('Loading')} />;
@@ -98,8 +100,10 @@ export function CommandCenter() {
       {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
       {view === 'workspace' && level === 'SUPER' && <OnboardingChecklist />}
       {view === 'workspace' && <LevelDashboard level={level} />}
-      {(hasTasks || hasTargets) && (
+      {(hasTasks || hasTargets || hasNotifications) && (
         <div className={view === 'workspace' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
+          {/* The home dashboard's way to notifications (ADR 0075). */}
+          {hasNotifications && <HomeNotifications />}
           {hasTasks && <TasksForYou />}
           {hasTargets && <YourTargets />}
         </div>

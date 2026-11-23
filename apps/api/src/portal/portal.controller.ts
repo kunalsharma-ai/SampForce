@@ -35,6 +35,7 @@ import { type CompanyPortal, PortalAdminService } from './portal-admin.service';
 import { PORTAL_COOKIE, PORTAL_COOKIE_PATH, PortalAuthService, type PortalContext } from './portal-auth.service';
 import { DocumentLinks, fileFrom, readUpload, sendFile } from './portal-documents';
 import { PortalService } from './portal.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe({ version: '4' });
 const authLimit = { default: { limit: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10), ttl: 60_000 } };
@@ -257,6 +258,7 @@ export class PortalAdminController {
     return this.admin.resendInvite(auth, id, meta);
   }
 
+  @ConfirmPassword()
   @Delete('users/:id')
   @HttpCode(204)
   @RequirePermissions('companies:write')
@@ -282,6 +284,7 @@ export class PortalAdminController {
     return this.admin.upload(auth, id, fileFrom(req, name, await readUpload(req)), meta);
   }
 
+  @ConfirmPassword()
   @Delete('documents/:id')
   @HttpCode(204)
   @RequirePermissions('companies:write')

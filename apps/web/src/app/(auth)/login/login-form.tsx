@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FloatingField } from '@/components/forms/floating-field';
+import { markWelcome } from '@/components/sign-in/welcome-overlay';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 
@@ -29,6 +30,7 @@ export function LoginForm() {
     try {
       const res = await api<LoginResponse>('/auth/login', { method: 'POST', json: values });
       if (res.mfaRequired && res.challenge) return setChallenge(res.challenge);
+      markWelcome();
       router.replace(safeNext(params.get('next')));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('Could not reach SampForce. Check your connection.'));
@@ -39,7 +41,10 @@ export function LoginForm() {
     return (
       <SecondFactor
         challenge={challenge}
-        onDone={() => router.replace(safeNext(params.get('next')))}
+        onDone={() => {
+          markWelcome();
+          router.replace(safeNext(params.get('next')));
+        }}
         onRestart={() => {
           setChallenge(null);
           form.setValue('password', '');

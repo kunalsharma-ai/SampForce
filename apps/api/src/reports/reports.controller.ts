@@ -5,6 +5,7 @@ import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, Req
 import { ZodPipe } from '../common/zod.pipe';
 import { ImmersiveService } from './immersive.service';
 import { ReportsService } from './reports.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const runSchema = z.object({ definition: reportDefinitionSchema });
@@ -63,6 +64,7 @@ export class ReportsController {
     return this.reports.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('reports:write')
@@ -100,6 +102,7 @@ export class DashboardsController {
     return this.reports.updateDashboard(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('reports:write')

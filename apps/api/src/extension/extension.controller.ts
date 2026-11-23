@@ -11,6 +11,7 @@ import {
 import { Auth, type AuthContext, ExtensionAccess, Meta, type RequestMeta, RequirePermissions, RequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ExtensionService } from './extension.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 /** Connections are managed from the web app only; an extension token cannot create or list them. */
 @Controller('extension/connections')
@@ -29,6 +30,7 @@ export class ExtensionConnectionsController {
     return this.extension.createToken(auth, body.name, meta);
   }
 
+  @NoPasswordConfirmation('Withdraws the browser extension’s access; it must stay quick')
   @Delete(':id')
   @HttpCode(204)
   remove(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {

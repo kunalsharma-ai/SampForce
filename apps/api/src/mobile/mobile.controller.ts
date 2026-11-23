@@ -30,6 +30,7 @@ import { MobileAccessService } from './mobile-access.service';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileConfigService } from './mobile-config.service';
 import { MobilePushService } from './push/mobile-push.service';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 
 const AUTH_LIMIT = { default: { limit: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10), ttl: 60_000 } };
 
@@ -104,6 +105,7 @@ export class MobileSessionController {
   }
 
   @MobileAccess()
+  @NoPasswordConfirmation('Signs a phone out or discards phone set-up; it must stay quick')
   @Delete('push')
   unregisterPush(@Auth() auth: AuthContext) {
     return this.push.unregister(auth);
@@ -143,6 +145,7 @@ export class MobileConfigController {
     return this.config.saveDraft(auth, body, meta);
   }
 
+  @NoPasswordConfirmation('Signs a phone out or discards phone set-up; it must stay quick')
   @Delete('draft')
   @RequirePermissions('tenant:manage')
   discard(@Auth() auth: AuthContext, @Meta() meta: RequestMeta) {
@@ -194,6 +197,7 @@ export class MobileAccessController {
     return this.access.devices(auth);
   }
 
+  @NoPasswordConfirmation('Signs a phone out or discards phone set-up; it must stay quick')
   @Delete('devices/:id')
   @RequirePermissions('tenant:manage')
   signOut(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {

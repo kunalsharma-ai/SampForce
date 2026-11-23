@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
-import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABEL, type AuditCategory, type AuditLogFilters, type AuditLogPage, type AuditLogRow } from '@dealflow/types';
+import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABEL, type AuditCategory, type AuditLogFilters, type AuditLogPage, type AuditLogRow, type AuditOutcome } from '@dealflow/types';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { Select } from '@/components/crm/select';
@@ -61,6 +61,13 @@ const ACTION_LABEL: Record<string, string> = {
   'member.joined': 'Joined the organisation',
   'support_ticket.raised': 'Raised a support query',
   'support_ticket.escalated': 'Passed a support query up',
+  'security.delete_refused': 'Tried to delete without confirming the password',
+  'security.password_check_failed': 'Typed a wrong password to confirm a delete',
+  'auth.password_reset_requested': 'Asked for a password reset link',
+  'auth.password_reset': 'Reset their password',
+  'auth.mfa_enabled': 'Turned on two-step sign-in',
+  'auth.mfa_disabled': 'Turned off two-step sign-in',
+  'auth.sessions_revoked': 'Signed out their other devices',
 };
 
 const RECORD_LABEL: Record<string, string> = {
@@ -77,6 +84,7 @@ const RECORD_LABEL: Record<string, string> = {
   role: 'Role',
   invitation: 'Invitation',
   membership: 'Member',
+  user: 'Person',
 };
 
 const LEVEL_LABEL: Record<string, string> = { SUPER: 'Super Workspace', MANAGER: 'Manager Workspace', EXECUTIVE: 'Executive Workspace' };
@@ -89,8 +97,11 @@ interface Filters {
   actorUserId: string;
   from: string;
   to: string;
+  outcome: AuditOutcome | '';
 }
-const NO_FILTERS: Filters = { category: '', workspaceId: '', actorUserId: '', from: '', to: '' };
+const NO_FILTERS: Filters = { category: '', workspaceId: '', actorUserId: '', from: '', to: '', outcome: '' };
+
+const OUTCOME_LABEL: Record<AuditOutcome, string> = { DONE: 'Done', REFUSED: 'Refused' };
 
 function queryOf(f: Filters, cursor: string | null): string {
   const p = new URLSearchParams({ limit: '25' });
@@ -139,7 +150,7 @@ export function AuditLogView() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" role="group" aria-label={t('Filter the audit log')}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6" role="group" aria-label={t('Filter the audit log')}>
           <div className="space-y-1 text-sm">
             <label htmlFor={`${id}-1`} className="block font-medium">{t('Kind of change')}</label>
             <Select id={`${id}-1`} value={f.category} onChange={(e) => set({ category: e.target.value as AuditCategory | '' })}>
@@ -175,6 +186,14 @@ export function AuditLogView() {
             <label htmlFor={`${id}-5`} className="block font-medium">{t('To')}</label>
             <Input id={`${id}-5`} type="date" value={f.to} min={f.from || undefined} onChange={(e) => set({ to: e.target.value })} />
           </div>
+          <div className="space-y-1 text-sm">
+            <label htmlFor={`${id}-6`} className="block font-medium">{t('Result')}</label>
+            <Select id={`${id}-6`} value={f.outcome} onChange={(e) => set({ outcome: e.target.value as AuditOutcome | '' })}>
+              <option value="">{t('Done and refused')}</option>
+              <option value="DONE">{t('Done')}</option>
+              <option value="REFUSED">{t('Refused attempts')}</option>
+            </Select>
+          </div>
         </div>
         {filtered && (
           <Button variant="outline" size="sm" onClick={() => setF(NO_FILTERS)}>
@@ -195,7 +214,8 @@ export function AuditLogView() {
                   <th scope="col" className="py-2 pe-3 text-start font-medium">{t('When')}</th>
                   <th scope="col" className="py-2 pe-3 text-start font-medium">{t('Who')}</th>
                   <th scope="col" className="py-2 pe-3 text-start font-medium">{t('What')}</th>
-                  <th scope="col" className="py-2 text-start font-medium">{t('Record')}</th>
+                  <th scope="col" className="py-2 pe-3 text-start font-medium">{t('Record')}</th>
+                  <th scope="col" className="py-2 text-start font-medium">{t('Result')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,7 +241,7 @@ function AuditRow({ row: r }: { row: AuditLogRow }) {
   const when = new Date(r.createdAt);
   const label = ACTION_LABEL[r.action];
   return (
-    <tr className="border-t border-border align-top" data-audit-entry={r.action}>
+    <tr className="border-t border-border align-top" data-audit-entry={r.action} data-audit-outcome={r.outcome}>
       <td className="py-2.5 pe-3 tabular text-muted-foreground">
         <time dateTime={r.createdAt}>
           <span className="block">{when.toLocaleDateString(fmtLocale(), { dateStyle: 'medium' })}</span>
@@ -252,7 +272,7 @@ function AuditRow({ row: r }: { row: AuditLogRow }) {
           </ul>
         )}
       </td>
-      <td className="py-2.5" data-audit-record>
+      <td className="py-2.5 pe-3" data-audit-record>
         {r.record ? (
           <>
             <span className="block">{r.record.label ? t.maybe(r.record.label) : '—'}</span>
@@ -261,6 +281,9 @@ function AuditRow({ row: r }: { row: AuditLogRow }) {
         ) : (
           '—'
         )}
+      </td>
+      <td className="py-2.5">
+        <Badge tone={r.outcome === 'REFUSED' ? 'critical' : 'neutral'}>{t.maybe(OUTCOME_LABEL[r.outcome])}</Badge>
       </td>
     </tr>
   );

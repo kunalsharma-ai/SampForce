@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useFeatures } from '@/lib/features';
+import { useNotificationSummary } from '@/lib/notification-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { type ModuleDef, moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
 import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav';
@@ -116,6 +117,8 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const modules = orderedModules(nav);
   const t = useT();
   const features = useFeatures();
+  // Unread notifications per section (ADR 0075), next to the section they come from.
+  const bySection = useNotificationSummary(features.ready && features.has('notifications')).data?.bySection;
 
   return (
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
@@ -162,6 +165,15 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
                           <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
                             {phaseLabel(m.phase, true)}
                           </Badge>
+                        ) : !locked && bySection && (bySection as Record<string, number | undefined>)[m.slug] ? (
+                          <span
+                            className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                            data-nav-unread={m.slug}
+                            title={t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}
+                          >
+                            <span aria-hidden>{(bySection as Record<string, number>)[m.slug]! > 99 ? '99+' : (bySection as Record<string, number>)[m.slug]}</span>
+                            <span className="sr-only">{t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}</span>
+                          </span>
                         ) : locked ? (
                           <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
                             <Lock className="size-3.5" aria-hidden />

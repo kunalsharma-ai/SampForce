@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createPrismaClient, Prisma, PrismaClient } from '@dealflow/database';
-import type { PlanCode } from '@dealflow/types';
+import { PASSWORD_CONFIRMATION_HEADER, type PlanCode } from '@dealflow/types';
 import { createApp } from '../src/bootstrap';
 
 export const ORIGIN = 'http://localhost:3000';
@@ -63,8 +63,56 @@ export function api(user: TestUser) {
     post: (url: string, body?: object) => a.post(`/api/v1${url}`).set('origin', ORIGIN).send(body ?? {}),
     patch: (url: string, body: object) => a.patch(`/api/v1${url}`).set('origin', ORIGIN).send(body),
     put: (url: string, body: object) => a.put(`/api/v1${url}`).set('origin', ORIGIN).send(body),
-    del: (url: string) => a.delete(`/api/v1${url}`).set('origin', ORIGIN),
+    /** Deletes the way the app does: with a fresh password confirmation when the user's password is known. */
+    del: (url: string) => confirmed(user, () => a.delete(`/api/v1${url}`).set('origin', ORIGIN)),
+    /** A POST that deletes (a bulk delete), with a fresh password confirmation like a delete. */
+    postConfirmed: (url: string, body?: object) => confirmed(user, () => a.post(`/api/v1${url}`).set('origin', ORIGIN).send(body ?? {})),
+    /** A delete sent without a password confirmation, to test the refusal. */
+    delUnconfirmed: (url: string) => a.delete(`/api/v1${url}`).set('origin', ORIGIN),
   };
+}
+
+/** A one-time password-confirmation pass for this user's session (POST /auth/confirm-password). */
+export async function confirmationFor(user: Pick<TestUser, 'agent' | 'password'>): Promise<string> {
+  const res = await user.agent.post('/api/v1/auth/confirm-password').set('origin', ORIGIN).send({ password: user.password });
+  if (res.status !== 200) throw new Error(`password confirmation failed: ${res.status} ${JSON.stringify(res.body)}`);
+  return (res.body as { token: string }).token;
+}
+
+type Step = [method: string, args: unknown[]];
+
+/** A request built when awaited (see `confirmed`), with the supertest calls the suites chain on a delete. */
+export interface ConfirmedRequest extends PromiseLike<request.Response> {
+  expect(status: number | ((res: request.Response) => unknown), body?: unknown): ConfirmedRequest;
+  set(field: string, value: string): ConfirmedRequest;
+  send(data?: unknown): ConfirmedRequest;
+  query(q: Record<string, unknown> | string): ConfirmedRequest;
+}
+
+/**
+ * Builds the request only when it is awaited, after fetching a password-confirmation pass, so tests keep writing
+ * `api(user).del(url).expect(204)`. Chained calls (expect, set, send, query) are replayed on the real request.
+ */
+function confirmed(user: TestUser, build: () => request.Test) {
+  const steps: Step[] = [];
+  // Wrapped in an object: a supertest request is itself thenable, and awaiting it would send it.
+  const run = async (): Promise<{ req: request.Test }> => {
+    // The pass first: a supertest request is bound to the server when it is built.
+    const pass = user.password ? await confirmationFor(user) : null;
+    let req = build();
+    if (pass) req = req.set(PASSWORD_CONFIRMATION_HEADER, pass);
+    for (const [m, args] of steps) req = (req as unknown as Record<string, (...a: unknown[]) => request.Test>)[m]!(...args);
+    return { req };
+  };
+  const chain: ConfirmedRequest = {
+    expect: (...args: unknown[]) => (steps.push(['expect', args]), chain),
+    set: (...args: unknown[]) => (steps.push(['set', args]), chain),
+    send: (...args: unknown[]) => (steps.push(['send', args]), chain),
+    query: (...args: unknown[]) => (steps.push(['query', args]), chain),
+    then: <R1 = request.Response, R2 = never>(ok?: (r: request.Response) => R1 | PromiseLike<R1>, bad?: (e: unknown) => R2 | PromiseLike<R2>): Promise<R1 | R2> =>
+      run().then(({ req }) => req.then(ok, bad)),
+  };
+  return chain;
 }
 
 /** Invites a new person into the owner's workspace with `roleKey` and signs them in there. */

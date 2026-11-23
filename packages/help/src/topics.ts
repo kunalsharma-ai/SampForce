@@ -86,6 +86,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/settings/territories': 'page.territories',
   '/app/settings/mobile': 'page.mobileAccess',
   '/app/announcements': 'page.announcements',
+  '/app/notifications': 'page.notifications',
   '/app/settings/mobile/configure': 'page.mobileConfiguration',
   '/app/settings/workspaces': 'page.workspaces',
   '/app/administration': 'page.administration',

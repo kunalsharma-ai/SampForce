@@ -3,6 +3,7 @@ import { type AnnouncementInput, announcementInputSchema } from '@dealflow/types
 import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { AnnouncementsService } from './announcements.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 @Controller('announcements')
 export class AnnouncementsController {
@@ -22,6 +23,7 @@ export class AnnouncementsController {
     return this.announcements.post(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('tenant:manage')

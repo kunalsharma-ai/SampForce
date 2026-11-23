@@ -15,6 +15,7 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { ViewsModule } from './views/views.module';
 import { CommonModule } from './common/common.module';
+import { PasswordConfirmationGuard } from './common/password-confirmation';
 import { ChatModule } from './chat/chat.module';
 import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
@@ -119,6 +120,8 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     { provide: APP_GUARD, useClass: FeatureGuard },
     // After FeatureGuard: the caller's workspace must have the route's features and action (ADR 0071).
     { provide: APP_GUARD, useClass: HierarchyGuard },
+    // Last: a destructive route needs a fresh password confirmation, checked after every right to act on it.
+    { provide: APP_GUARD, useClass: PasswordConfirmationGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     // Console writes must write a platform audit entry (ADR 0074, C3).
     { provide: APP_INTERCEPTOR, useClass: AuditRequiredInterceptor },
