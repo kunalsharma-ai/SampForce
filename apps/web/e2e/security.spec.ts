@@ -32,7 +32,7 @@ test('turn on two-step verification, then sign in with a code and with a recover
   await expect(page.getByRole('heading', { level: 1, name: 'Account security' })).toBeVisible();
   await expect(page.getByText('This device')).toBeVisible();
   await page.getByRole('button', { name: 'Turn on two-step verification' }).click();
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('img', { name: /QR code for your authenticator app/ })).toBeVisible();
   await expectNoA11yViolations(page);
