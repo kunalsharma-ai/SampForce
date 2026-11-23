@@ -37,7 +37,7 @@ function NextActionsPanel() {
   });
 
   return (
-    <Card className="h-full">
+    <Card className="h-full" data-next-actions="">
       <CardHeader>
         <div className="flex items-center gap-1.5">
           <CardTitle className="flex items-center gap-2">

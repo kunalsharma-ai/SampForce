@@ -87,7 +87,7 @@ test('waits for approval before emailing and reports why a run failed', async ({
   // The bell shows the approval request.
   await page.reload();
   await page.getByRole('button', { name: /Notifications, \d+ unread/ }).click();
-  await expect(page.getByRole('menuitem', { name: /Approval needed/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Approval needed/ })).toBeVisible();
   await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: 'Approve' }).click();
@@ -97,9 +97,9 @@ test('waits for approval before emailing and reports why a run failed', async ({
   await expect(async () => {
     await page.reload();
     await page.getByRole('button', { name: /Notifications, \d+ unread/ }).click();
-    await expect(page.getByRole('menuitem', { name: /Workflow "Welcome new contacts" failed/ })).toBeVisible({ timeout: 1000 });
+    await expect(page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Workflow "Welcome new contacts" failed/ })).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
-  await page.getByRole('menuitem', { name: /Workflow "Welcome new contacts" failed/ }).click();
+  await page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Workflow "Welcome new contacts" failed/ }).click();
   await expect(page).toHaveURL(/\?run=/);
   await expect(page.getByText(/Connect your Google or Microsoft mailbox/).first()).toBeVisible();
 });
