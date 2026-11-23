@@ -110,6 +110,9 @@ export const notifications = {
   'Sunset amber': ['Ámbar atardecer', 'Ambre couchant', 'Abendbernstein', 'كهرماني الغروب'],
   'Show password': ['Mostrar contraseña', 'Afficher le mot de passe', 'Passwort anzeigen', 'إظهار كلمة المرور'],
   'Hide password': ['Ocultar contraseña', 'Masquer le mot de passe', 'Passwort verbergen', 'إخفاء كلمة المرور'],
+  'Signed in': ['Sesión iniciada', 'Connecté', 'Angemeldet', 'تم تسجيل الدخول'],
+  'Opening your workspace…': ['Abriendo tu espacio de trabajo…', 'Ouverture de votre espace…', 'Ihr Arbeitsbereich wird geöffnet…', 'جارٍ فتح مساحة العمل…'],
+  'Getting your dashboard ready…': ['Preparando tu panel…', 'Préparation de votre tableau de bord…', 'Ihr Dashboard wird vorbereitet…', 'جارٍ تجهيز لوحة المعلومات…'],
   'Welcome to SampForce': ['Bienvenido a SampForce', 'Bienvenue sur SampForce', 'Willkommen bei SampForce', 'مرحبًا بك في SampForce'],
   'Your whole company, in one place': ['Toda tu empresa, en un solo lugar', 'Toute votre entreprise, au même endroit', 'Ihr ganzes Unternehmen an einem Ort', 'شركتك كلها في مكان واحد'],
   'Workspaces, teams, targets and every client relationship, from the top.': [

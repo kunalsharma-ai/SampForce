@@ -49,6 +49,11 @@ test.describe('animated sign-in', () => {
       await expect(page.locator('[data-scene]')).toHaveAttribute('aria-hidden', 'true');
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       await expect(page.getByText('The email or password is incorrect.')).toBeVisible();
+      // A wrong password: the red cross and the shake; typing again clears them.
+      await expect(page.locator('[data-sign-in-cross]')).toBeVisible();
+      await expect(page.locator('[data-sign-in-result]')).toHaveAttribute('data-sign-in-result', 'error');
+      await page.getByLabel('Password').pressSequentially('x');
+      await expect(page.locator('[data-sign-in-result]')).toHaveAttribute('data-sign-in-result', 'idle');
       if (PREVIEW_DIR) {
         await page.waitForTimeout(2500);
         await page.screenshot({ path: `${PREVIEW_DIR}/login-${level}.png` });
@@ -72,6 +77,12 @@ test.describe('animated sign-in', () => {
     const page = await ctx.newPage();
     await page.goto('/login?workspace=super');
     const main = page.locator('main');
+    // Fields are checked as soon as they are left.
+    await page.getByLabel('Work email').fill('not-an-email');
+    await page.getByLabel('Password').focus();
+    await expect(page.getByLabel('Work email')).toHaveAttribute('aria-invalid', 'true');
+    await page.getByLabel('Work email').fill('someone@example.com');
+    await expect(page.getByLabel('Work email')).toHaveAttribute('aria-invalid', 'false');
     await expect(main).toHaveAttribute('data-sfs-mode', 'dark');
     await page.getByRole('button', { name: 'Switch to light mode' }).click();
     await expect(main).toHaveAttribute('data-sfs-mode', 'light');
@@ -123,6 +134,8 @@ test.describe('animated sign-in', () => {
     await manager.getByLabel('Work email').fill(`rahul.${stamp}@example.com`);
     await manager.getByLabel('Password').fill('a-long-password-1');
     await manager.getByRole('button', { name: 'Sign in', exact: true }).click();
+    // The right password: the green tick, then the welcome.
+    await expect(manager.locator('[data-sign-in-tick]').getByRole('status')).toHaveText('Signed in');
     const welcome = manager.locator('[data-welcome="manager"]');
     await expect(welcome).toBeVisible();
     await expect(welcome.getByRole('status')).toHaveText('Welcome back, Rahul');
