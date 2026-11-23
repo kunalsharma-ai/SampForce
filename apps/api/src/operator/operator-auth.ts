@@ -15,6 +15,7 @@ import { jwtVerify, SignJWT } from 'jose';
 import { BUILT_IN_ROLE_DEFS, defaultRoleKey, expandPermissions, isBuiltInRole, type OperatorPermission as Permission } from '@dealflow/types';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
+import { OPERATOR_SESSION_SECONDS, OperatorSessions } from './operator-sessions';
 
 /**
  * The operator realm is separate from workspace sign-in: its own accounts, signing key, cookie and
@@ -24,14 +25,18 @@ import { PrismaService } from '../common/prisma.service';
 export const OPERATOR_COOKIE = 'df_op';
 export const OPERATOR_COOKIE_PATH = '/api/v1/operator';
 const ISSUER = 'dealflow-operator';
-/** Operator sessions are short; there is no refresh token. */
-export const OPERATOR_SESSION_SECONDS = 8 * 60 * 60;
+export { OPERATOR_REMEMBER_SECONDS, OPERATOR_SESSION_SECONDS } from './operator-sessions';
+const CHALLENGE_AUDIENCE = 'dealflow-operator-mfa';
 
 export interface OperatorContext {
   id: string;
   email: string;
   name: string;
   role: 'ADMIN' | 'SUPPORT';
+  /** The OperatorSession of this request (absent when the context is built outside a request, e.g. at sign-in). */
+  sessionId?: string;
+  /** The policy asks for two-step verification and the operator has not turned it on: only their own pages open. */
+  mfaSetupRequired?: boolean;
   /** The Console role (ADR 0074): a built-in key or a custom role id, its name, and what it allows. */
   consoleRole: string;
   roleName: string;
@@ -54,24 +59,41 @@ export class OperatorTokens {
     return this.key !== null;
   }
 
-  sign(operatorId: string): Promise<string> {
+  /** A session cookie naming the operator and their OperatorSession row (`sid`), which the guard checks on every request. */
+  sign(operatorId: string, sid: string, seconds = OPERATOR_SESSION_SECONDS): Promise<string> {
     if (!this.key) throw disabled();
-    return new SignJWT({}).setProtectedHeader({ alg: 'HS256' }).setSubject(operatorId).setIssuer(ISSUER).setAudience(ISSUER).setIssuedAt().setExpirationTime(`${OPERATOR_SESSION_SECONDS}s`).sign(this.key);
+    return new SignJWT({ sid }).setProtectedHeader({ alg: 'HS256' }).setSubject(operatorId).setIssuer(ISSUER).setAudience(ISSUER).setIssuedAt().setExpirationTime(`${seconds}s`).sign(this.key);
   }
 
-  async verify(token: string): Promise<string | null> {
+  async verify(token: string): Promise<{ sub: string; sid: string } | null> {
     if (!this.key) return null;
     try {
       const { payload } = await jwtVerify(token, this.key, { issuer: ISSUER, audience: ISSUER, algorithms: ['HS256'] });
+      return typeof payload.sub === 'string' && typeof payload.sid === 'string' ? { sub: payload.sub, sid: payload.sid } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The five-minute ticket between the password and the second step; a different audience, so it is never a session. */
+  signChallenge(operatorId: string): Promise<string> {
+    if (!this.key) throw disabled();
+    return new SignJWT({}).setProtectedHeader({ alg: 'HS256' }).setSubject(operatorId).setIssuer(ISSUER).setAudience(CHALLENGE_AUDIENCE).setIssuedAt().setExpirationTime('300s').sign(this.key);
+  }
+
+  async verifyChallenge(token: string): Promise<string | null> {
+    if (!this.key) return null;
+    try {
+      const { payload } = await jwtVerify(token, this.key, { issuer: ISSUER, audience: CHALLENGE_AUDIENCE, algorithms: ['HS256'] });
       return typeof payload.sub === 'string' ? payload.sub : null;
     } catch {
       return null;
     }
   }
 
-  cookie(res: Response, token: string | null): void {
+  cookie(res: Response, token: string | null, seconds = OPERATOR_SESSION_SECONDS): void {
     const opts: CookieOptions = { httpOnly: true, secure: this.env.COOKIE_SECURE, sameSite: 'strict', path: OPERATOR_COOKIE_PATH };
-    if (token) res.cookie(OPERATOR_COOKIE, token, { ...opts, maxAge: OPERATOR_SESSION_SECONDS * 1000 });
+    if (token) res.cookie(OPERATOR_COOKIE, token, { ...opts, maxAge: seconds * 1000 });
     else res.clearCookie(OPERATOR_COOKIE, opts);
   }
 }
@@ -108,6 +130,7 @@ export class OperatorGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly tokens: OperatorTokens,
     private readonly prisma: PrismaService,
+    private readonly sessions: OperatorSessions,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -116,12 +139,14 @@ export class OperatorGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(OPERATOR_PUBLIC, targets)) return true;
     const req = ctx.switchToHttp().getRequest<OperatorRequest>();
     const raw = (req.cookies as Record<string, string> | undefined)?.[OPERATOR_COOKIE];
-    const id = raw ? await this.tokens.verify(raw) : null;
-    // Operators are platform-level rows with no tenant, so this lookup needs no tenant context.
-    const op = id ? await this.prisma.platformOperator.findUnique({ where: { id } }) : null;
-    if (!op || op.status !== 'ACTIVE') throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to the operator console.' });
-    req.operator = await operatorContext(this.prisma, op);
+    const claims = raw ? await this.tokens.verify(raw) : null;
+    // Operators are platform-level rows with no tenant, so these lookups need no tenant context.
+    const op = claims ? await this.prisma.platformOperator.findUnique({ where: { id: claims.sub } }) : null;
+    const session = op && op.status === 'ACTIVE' ? await this.sessions.check(claims!.sid, op.id) : null;
+    if (!op || !session) throw new UnauthorizedException({ code: 'UNAUTHENTICATED', message: 'Sign in to the operator console.' });
+    req.operator = { ...(await operatorContext(this.prisma, op)), sessionId: session.id, mfaSetupRequired: session.mfaSetupRequired };
     if (this.reflector.getAllAndOverride<boolean>(OPERATOR_ANY, targets)) return true;
+    if (req.operator.mfaSetupRequired) throw new ForbiddenException({ code: 'MFA_SETUP_REQUIRED', message: 'Turn on two-step verification to use the Console.' });
     const needed = this.reflector.getAllAndOverride<Permission[]>(OPERATOR_PERMISSION, targets);
     // A route without a permission is closed: the route test makes sure none ships that way.
     if (!needed?.length || !needed.every((p) => req.operator!.permissions.includes(p))) throw new ForbiddenException(FORBIDDEN_FOR_ROLE);

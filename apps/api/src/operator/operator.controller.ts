@@ -144,23 +144,6 @@ export class OperatorController {
     return this.console.updatePlan(op, code, body, ip(req));
   }
 
-  @Post('login')
-  @OperatorPublic()
-  @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async login(@Body(new ZodPipe(operatorLoginSchema)) body: z.infer<typeof operatorLoginSchema>, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const op = await this.ops.login(body.email, body.password, ip(req));
-    this.tokens.cookie(res, await this.tokens.sign(op.id));
-    return op;
-  }
-
-  @Post('logout')
-  @OperatorPublic()
-  @HttpCode(204)
-  logout(@Res({ passthrough: true }) res: Response) {
-    this.tokens.cookie(res, null);
-  }
-
   /** The signed-in operator with their Console palette, colour mode, sidebar and sound (ADR 0074). */
   @Get('me')
   @OperatorAny()

@@ -225,7 +225,8 @@ export interface OnboardingState {
 
 // ───────────── Operator console ─────────────
 
-export const operatorLoginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(200) });
+/** `remember` keeps the Console session for 7 days instead of 8 hours (ADR 0074); the idle timeout still applies. */
+export const operatorLoginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(200), remember: z.boolean().optional() });
 
 export const operatorPlanSchema = z.object({
   planCode: z.enum(['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus']),

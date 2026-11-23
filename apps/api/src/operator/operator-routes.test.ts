@@ -7,18 +7,19 @@ import { OperatorMobileController } from '../mobile/mobile.controller';
 import { OperatorHelpController } from '../support/help-content.controller';
 import { OperatorSupportController } from '../support/support.controller';
 import { OperatorAdminController } from './operator-admin.controller';
+import { OperatorSecurityController } from './operator-security.controller';
 import { OPERATOR_ROUTE_METADATA, OperatorGuard } from './operator-auth';
 import { OperatorController } from './operator.controller';
 
-const CONTROLLERS = [OperatorController, OperatorAdminController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
+const CONTROLLERS = [OperatorController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController];
 
 /** Every Console route says what it needs (ADR 0074): a permission, any signed-in operator, or no session at all. */
 describe('operator routes', () => {
   const routes = CONTROLLERS.flatMap((c) =>
     Object.getOwnPropertyNames(c.prototype)
-      .filter((m) => m !== 'constructor' && Reflect.getMetadata(METHOD_METADATA, c.prototype[m]) !== undefined)
+      .filter((m) => m !== 'constructor' && Reflect.getMetadata(METHOD_METADATA, (c.prototype as unknown as Record<string, object>)[m]!) !== undefined)
       .map((m) => {
-        const fn = c.prototype[m] as object;
+        const fn = (c.prototype as unknown as Record<string, object>)[m]!;
         const read = (key: string) => Reflect.getMetadata(key, fn) ?? Reflect.getMetadata(key, c);
         return { route: `${c.name}.${m} ${Reflect.getMetadata(PATH_METADATA, fn)}`, permission: read(OPERATOR_ROUTE_METADATA.permission) as string[] | undefined, any: read(OPERATOR_ROUTE_METADATA.any), public: read(OPERATOR_ROUTE_METADATA.public) };
       }),
@@ -41,7 +42,7 @@ describe('operator routes', () => {
 
   it('keeps the signed-out routes to sign-in and password links', () => {
     expect(routes.filter((r) => r.public).map((r) => r.route.split(' ')[0]).sort()).toEqual(
-      ['OperatorAdminController.forgot', 'OperatorAdminController.linkInfo', 'OperatorAdminController.setPassword', 'OperatorController.login', 'OperatorController.logout'].sort(),
+      ['OperatorAdminController.forgot', 'OperatorAdminController.linkInfo', 'OperatorAdminController.setPassword', 'OperatorSecurityController.login', 'OperatorSecurityController.loginMfa', 'OperatorSecurityController.logout'].sort(),
     );
   });
 });

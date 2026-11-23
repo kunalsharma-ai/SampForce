@@ -44,18 +44,6 @@ export class OperatorService {
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
-  async login(email: string, password: string, ip: string | null): Promise<OperatorContext> {
-    const op = await this.prisma.platformOperator.findUnique({ where: { email } });
-    const ok = await this.passwords.verify(op?.passwordHash ?? null, password);
-    if (!op || !ok || op.status !== 'ACTIVE') {
-      await this.log(null, 'operator.login_failed', null, { email }, ip);
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Email or password is incorrect.' });
-    }
-    await this.prisma.platformOperator.update({ where: { id: op.id }, data: { lastLoginAt: new Date() } });
-    await this.log(op.id, 'operator.login', null, {}, ip);
-    return operatorContext(this.prisma, op);
-  }
-
   private scan<T>(fn: (tx: ScanTx) => Promise<T>): Promise<T> {
     return this.prisma.run({ operatorScan: true }, (tx) => fn(tx));
   }

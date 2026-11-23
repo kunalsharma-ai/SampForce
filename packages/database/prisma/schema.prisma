@@ -2627,6 +2627,13 @@ model PlatformOperator {
   consoleRole  String?        @map("console_role")
   status       OperatorStatus @default(ACTIVE)
   lastLoginAt  DateTime?      @map("last_login_at")
+  /// Two-step verification (ADR 0074): the TOTP secret sealed with SecretBox, when it was turned on, the last step used.
+  mfaSecretEnc     String?   @map("mfa_secret_enc")
+  mfaEnabledAt     DateTime? @map("mfa_enabled_at")
+  mfaLastStep      BigInt?   @map("mfa_last_step")
+  /// Failed sign-ins in a row; the fifth pauses sign-in until lockedUntil.
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
   /// Console palette, colour mode, sidebar and sound (ADR 0074, ConsolePreferences in @dealflow/types); null = defaults.
   preferences  Json?
   createdAt    DateTime       @default(now()) @map("created_at")
@@ -2636,6 +2643,52 @@ model PlatformOperator {
 
   @@index([consoleRole])
   @@map("platform_operators")
+}
+
+/// One-time recovery codes for an operator's two-step verification; only hashes are kept.
+model OperatorRecoveryCode {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  codeHash   String    @map("code_hash")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([operatorId])
+  @@map("operator_recovery_codes")
+}
+
+/// A signed-in Console session (ADR 0074). The session cookie names it, so it can be listed, ended and timed out when idle.
+model OperatorSession {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  remember   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  @@index([operatorId, revokedAt])
+  @@map("operator_sessions")
+}
+
+/// Every Console sign-in attempt, kept for the login history and suspicious sign-in alerts.
+model OperatorLoginEvent {
+  id         String   @id @default(uuid()) @map("_id")
+  operatorId String?  @map("operator_id")
+  email      String
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  /// success, wrong_password, wrong_code, locked, disabled
+  outcome    String
+  suspicious Boolean  @default(false)
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([operatorId, createdAt])
+  @@index([createdAt])
+  @@map("operator_login_events")
 }
 
 /// A custom Console role (ADR 0074): a name and any set of operator permissions. The six built-in roles live in code.
