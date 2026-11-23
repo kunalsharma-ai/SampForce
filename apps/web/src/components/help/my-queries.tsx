@@ -1,18 +1,19 @@
 'use client';
 
 import { HELP_CATEGORY_BY_ID, type HelpCategoryId, helpText } from '@dealflow/help';
-import { SUPPORT_TICKET_STATUSES, type SupportTicketDetail, type SupportTicketMessageRow, type SupportTicketRow, type SupportTicketStatus } from '@dealflow/types';
+import { SUPPORT_TICKET_STATUSES, type SupportAttachmentRow, type SupportTicketDetail, type SupportTicketMessageRow, type SupportTicketRow, type SupportTicketStatus } from '@dealflow/types';
 import { Button, Card, Skeleton } from '@dealflow/ui';
-import { ArrowLeft, ArrowUpCircle, Inbox, LifeBuoy, MessageSquareReply } from 'lucide-react';
+import { ArrowLeft, ArrowUpCircle, CheckCircle2, Inbox, LifeBuoy, MessageSquareReply, RotateCcw, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
 import { Segmented } from '@/components/forms/segmented';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
 import { type TicketScope, useCanSeeTeamQueries, useEscalateTicket, useReplyToTicket, useTicket, useTicketStatus, useTickets } from '@/lib/support';
 import { TicketStatusBadge, ToneIcon, usePriorityLabel, useStatusLabel } from './help-ui';
+import { AttachmentPicker, MessageFiles, RelatedRecord } from './support-files';
 
 /** My queries (ADR 0073): the questions a person sent from Help, and for managers their team's, with each conversation. */
 export function MyQueries() {
@@ -97,7 +98,7 @@ export function MyQueries() {
 function TicketListItem({ row, active, onSelect }: { row: SupportTicketRow; active: boolean; onSelect: () => void }) {
   const t = useT();
   const cat = HELP_CATEGORY_BY_ID[row.category as HelpCategoryId];
-  const replied = row.lastAuthorKind === 'OPERATOR' && row.status === 'ANSWERED';
+  const replied = row.lastAuthorKind !== 'USER' && row.status === 'AWAITING_USER';
   return (
     <button
       type="button"
@@ -110,7 +111,7 @@ function TicketListItem({ row, active, onSelect }: { row: SupportTicketRow; acti
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
           <span className="truncate font-medium">
-            <span className="text-muted-foreground">#{row.number}</span> {row.subject}
+            <span className="font-normal">#{row.number}</span> {row.subject}
           </span>
           <TicketStatusBadge status={row.status} />
         </span>
@@ -157,10 +158,16 @@ function TicketThread({ id, onBack }: { id: string; onBack: () => void }) {
           <TicketStatusBadge status={d.status} />
         </div>
         <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-          <span>{cat ? helpText(cat.title, t.language) : t('Something else')}</span>
+          <span>{cat ? helpText(cat.title, t.language) : d.categoryOther ? `${t('Other')}: ${d.categoryOther}` : t('Other')}</span>
           <span>{priority(d.priority)}</span>
           {d.pagePath && <span>{d.pagePath}</span>}
           {!d.mine && d.raisedBy && <span>{t('Raised by {name}', { name: d.raisedBy.name })}</span>}
+          {d.relatedRecord && <RelatedRecord record={d.relatedRecord} />}
+          {d.handling && d.contactMethod !== 'IN_APP' && (
+            <span data-contact-method={d.contactMethod}>
+              {d.contactMethod === 'PHONE' ? t('Call back on {phone}', { phone: d.contactPhone ?? '' }) : t('Prefers email: {email}', { email: d.context?.email ?? '' })}
+            </span>
+          )}
         </p>
         <p className="mt-1 flex flex-wrap gap-x-3 text-xs" data-ticket-handler={d.handler.level}>
           <span>
@@ -200,6 +207,7 @@ function Message({ message }: { message: SupportTicketMessageRow }) {
           {message.authorKind === 'WORKSPACE' && !message.mine && <span className="font-normal"> · {t('answering')}</span>}
         </p>
         <p className="mt-0.5 whitespace-pre-wrap">{message.body}</p>
+        <MessageFiles files={message.attachments} inverted={message.mine} />
         <p className={`mt-1 text-[11px] ${message.mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
           {new Date(message.createdAt).toLocaleString(t.formatLocale, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
@@ -213,28 +221,44 @@ function Composer({ ticket }: { ticket: SupportTicketDetail }) {
   const reply = useReplyToTicket(ticket.id);
   const status = useTicketStatus(ticket.id);
   const [body, setBody] = useState('');
-  const closed = ticket.status === 'CLOSED';
+  const [files, setFiles] = useState<SupportAttachmentRow[]>([]);
+  const finished = ticket.status === 'CLOSED' || ticket.status === 'RESOLVED';
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) return;
-    await reply.mutateAsync(body.trim());
+    await reply.mutateAsync({ body: body.trim(), attachmentIds: files.map((f) => f.id) });
     setBody('');
+    setFiles([]);
   };
   return (
     <form onSubmit={send} className="space-y-2 border-t border-border p-4">
       <label htmlFor="ticket-reply" className="sr-only">
         {t('Reply')}
       </label>
-      <Textarea id="ticket-reply" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={closed ? t('Write to open this query again') : t('Add details or answer support')} />
+      <Textarea id="ticket-reply" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={finished ? t('Write to open this query again') : t('Add details or answer support')} />
+      <AttachmentPicker files={files} onChange={setFiles} id="ticket-reply-files" />
       {(reply.error || status.error) && (
         <p role="alert" className="text-sm text-critical">
           {(reply.error ?? status.error)?.message}
         </p>
       )}
       <div className="flex flex-wrap justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" disabled={status.isPending} onClick={() => status.mutate(closed ? 'OPEN' : 'CLOSED')} data-toggle-ticket>
-          {closed ? t('Reopen query') : t('Close query')}
-        </Button>
+        <div className="flex flex-wrap gap-1">
+          {finished ? (
+            <Button type="button" variant="ghost" size="sm" disabled={status.isPending} onClick={() => status.mutate('SUBMITTED')} data-toggle-ticket>
+              <RotateCcw aria-hidden /> {t('Reopen query')}
+            </Button>
+          ) : (
+            <Button type="button" variant="ghost" size="sm" disabled={status.isPending} onClick={() => status.mutate('RESOLVED')} data-resolve-ticket>
+              <CheckCircle2 aria-hidden /> {t('Mark as resolved')}
+            </Button>
+          )}
+          {ticket.status !== 'CLOSED' && (
+            <Button type="button" variant="ghost" size="sm" disabled={status.isPending} onClick={() => status.mutate('CLOSED')} data-close-ticket>
+              <XCircle aria-hidden /> {t('Close query')}
+            </Button>
+          )}
+        </div>
         <Button type="submit" size="sm" disabled={!body.trim() || reply.isPending}>
           {t('Send reply')}
         </Button>
@@ -257,12 +281,22 @@ function HandlerPanel({ ticket }: { ticket: SupportTicketDetail }) {
   const [next, setNext] = useState<SupportTicketStatus>(ticket.status);
   const [note, setNote] = useState(ticket.resolutionNote ?? '');
   const [passOn, setPassOn] = useState('');
+  const [files, setFiles] = useState<SupportAttachmentRow[]>([]);
   const error = reply.error ?? status.error ?? escalate.error;
+  // Opening a new query marks it Under review, so the person who asked knows it was seen.
+  const reviewed = useRef(false);
+  useEffect(() => {
+    if (ticket.status !== 'SUBMITTED' || reviewed.current) return;
+    reviewed.current = true;
+    status.mutate({ status: 'UNDER_REVIEW' }, { onSuccess: () => setNext('UNDER_REVIEW') });
+  }, [ticket.status, status]);
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) return;
-    await reply.mutateAsync(body.trim());
+    await reply.mutateAsync({ body: body.trim(), attachmentIds: files.map((f) => f.id) });
     setBody('');
+    setFiles([]);
+    setNext('AWAITING_USER');
   };
   const upTo = ticket.handlerLevel === 'MANAGER' ? t('the Super Workspace') : t('SampForce support');
   return (
@@ -271,7 +305,8 @@ function HandlerPanel({ ticket }: { ticket: SupportTicketDetail }) {
         <label htmlFor="ticket-answer" className="text-sm font-medium">
           {t('Your answer')}
         </label>
-        <Textarea id="ticket-answer" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the query becomes Answered.')} />
+        <Textarea id="ticket-answer" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('The person who raised it is notified and the query waits for their reply.')} />
+        <AttachmentPicker files={files} onChange={setFiles} id="ticket-answer-files" />
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={!body.trim() || reply.isPending} data-send-answer>
             {t('Send answer')}

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import pkg from './package.json';
 
 const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
 
@@ -19,6 +20,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   output: 'standalone',
   transpilePackages: ['@dealflow/ui'],
+  // Sent with support queries, so the support team knows which build the person was on.
+  env: { NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION ?? pkg.version },
   // The browser talks to the API through this origin, so auth cookies stay first-party.
   async rewrites() {
     return [{ source: '/api/v1/:path*', destination: `${apiUrl}/api/v1/:path*` }];

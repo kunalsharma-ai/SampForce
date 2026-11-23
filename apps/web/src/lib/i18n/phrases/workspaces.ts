@@ -84,7 +84,7 @@ export const workspaces = {
   'Nobody yet': ['Nadie todavía', 'Personne pour l’instant', 'Noch niemand', 'لا أحد بعد'],
   'A note for them (optional)': ['Una nota para ellos (opcional)', 'Une note pour eux (facultatif)', 'Eine Notiz für sie (optional)', 'ملاحظة لهم (اختياري)'],
   'Pass it to {who}': ['Pasarla a {who}', 'Transmettre à {who}', 'An {who} weitergeben', 'أحلها إلى {who}'],
-  'The person who raised it is notified and the query becomes Answered.': ['Se avisa a quien la planteó y la consulta pasa a Respondida.', 'La personne qui l’a posée est prévenue et la demande passe à Répondue.', 'Die fragende Person wird benachrichtigt und die Anfrage wird beantwortet.', 'يُبلَّغ صاحب الاستفسار ويصبح الاستفسار مُجابًا.'],
+  'The person who raised it is notified and the query waits for their reply.': ['Se avisa a quien la planteó y la consulta queda esperando su respuesta.', 'La personne qui l’a posée est prévenue et la demande attend sa réponse.', 'Die fragende Person wird benachrichtigt, und die Anfrage wartet auf ihre Antwort.', 'يُبلَّغ صاحب الاستفسار وينتظر الاستفسار ردّه.'],
   answering: ['responde', 'répond', 'antwortet', 'يجيب'],
   'the Super Workspace': ['el espacio principal', 'l’espace principal', 'den Super-Arbeitsbereich', 'مساحة العمل الرئيسية'],
   'May chat with other Manager Workspaces': ['Puede chatear con otros espacios de gerente', 'Peut discuter avec les autres espaces manager', 'Darf mit anderen Manager-Arbeitsbereichen chatten', 'يمكنها الدردشة مع مساحات عمل المديرين الأخرى'],

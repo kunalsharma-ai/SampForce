@@ -10,14 +10,19 @@ import { SeniorDashboard } from '@/components/command-center/senior-dashboard';
 import { PageHeader } from '@/components/page-header';
 import { YourTargets } from '@/components/workspace-work/targets';
 import { TasksForYou } from '@/components/workspace-work/tasks';
+import { LevelDashboard } from '@/components/workspace-dashboard/level-dashboards';
 import { useHasFeature } from '@/lib/features';
 import { useCommandCenterContext } from '@/lib/command-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan, useSession } from '@/lib/session';
 import { AnalyticsDashboard } from './command-center';
 
-/** The dashboards (ADR 0063). */
+/** The dashboards (ADR 0063), plus the dashboard of the workspace level (ADR 0071 part 6). */
+type View = CommandCenterView | 'workspace';
 const BUILT: CommandCenterView[] = ['senior', 'manager', 'executive', 'analytics'];
+const LEVEL_LABEL: Record<'SUPER' | 'MANAGER' | 'EXECUTIVE', MessageKey> = { SUPER: 'Organisation', MANAGER: 'Team', EXECUTIVE: 'My day' };
+/** Which designation dashboards each workspace level may also open: a manager its team's, an executive its own. */
+const LEVEL_VIEWS: Record<'SUPER' | 'MANAGER' | 'EXECUTIVE', CommandCenterView[] | null> = { SUPER: null, MANAGER: ['manager'], EXECUTIVE: ['executive'] };
 const VIEW_LABEL: Record<CommandCenterView, MessageKey> = {
   executive: 'Executive',
   manager: 'Manager',
@@ -43,11 +48,15 @@ export function CommandCenter() {
     return <Skeleton className="h-96" aria-label={t('Loading')} />;
   if (!ctx.data) return <AnalyticsDashboard />;
 
-  const views = ctx.data.views.filter((v) => BUILT.includes(v));
-  const asked = params.get('view') as CommandCenterView | null;
-  const fallback = BUILT.includes(ctx.data.defaultView) ? ctx.data.defaultView : 'analytics';
+  const level = session.workspace?.level ?? 'SUPER';
+  // The organisation overview is for the Super Workspace's administrators; managers and executives always have theirs.
+  const hasLevelView = level !== 'SUPER' || session.permissions.includes('members:manage');
+  const allowed = LEVEL_VIEWS[level];
+  const views: View[] = [...(hasLevelView ? (['workspace'] as const) : []), ...ctx.data.views.filter((v) => BUILT.includes(v) && (!allowed || allowed.includes(v)))];
+  const asked = params.get('view') as View | null;
+  const fallback: View = hasLevelView ? 'workspace' : BUILT.includes(ctx.data.defaultView) ? ctx.data.defaultView : 'analytics';
   const view = asked && views.includes(asked) ? asked : fallback;
-  const choose = (v: CommandCenterView) => {
+  const choose = (v: View) => {
     const next = new URLSearchParams(params.toString());
     next.set('view', v);
     next.delete('transfer');
@@ -61,7 +70,7 @@ export function CommandCenter() {
       <div
         role="tablist"
         aria-label={t('Dashboards')}
-        className="mb-4 inline-flex rounded-lg border border-border bg-surface p-0.5"
+        className="mb-4 inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-0.5"
       >
         {views.map((v) => (
           <button
@@ -71,13 +80,13 @@ export function CommandCenter() {
             aria-selected={view === v}
             onClick={() => choose(v)}
             className={cn(
-              'h-8 rounded-md px-3 text-sm transition-colors',
+              'h-8 shrink-0 whitespace-nowrap rounded-md px-3 text-sm transition-colors',
               view === v
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
-            {t(VIEW_LABEL[v])}
+            {t(v === 'workspace' ? LEVEL_LABEL[level] : VIEW_LABEL[v])}
           </button>
         ))}
       </div>
@@ -86,14 +95,16 @@ export function CommandCenter() {
   return (
     <div>
       {tabs}
-      {/* Work handed down the workspace hierarchy (ADR 0071) comes first, whatever the dashboard. */}
+      {/* The workspace level's own dashboard leads; work handed down the hierarchy (ADR 0071) follows it, or comes first on the others. */}
+      {view === 'workspace' && level === 'SUPER' && <OnboardingChecklist />}
+      {view === 'workspace' && <LevelDashboard level={level} />}
       {(hasTasks || hasTargets) && (
-        <div className="mb-4 space-y-4">
+        <div className={view === 'workspace' ? 'mt-4 space-y-4' : 'mb-4 space-y-4'}>
           {hasTasks && <TasksForYou />}
           {hasTargets && <YourTargets />}
         </div>
       )}
-      {view === 'senior' ? (
+      {view === 'workspace' ? null : view === 'senior' ? (
         <div className="space-y-2">
           <PageHeader
             title="Senior management dashboard"

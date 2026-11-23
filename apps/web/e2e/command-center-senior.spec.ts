@@ -77,7 +77,7 @@ test('senior management sees the organisation: departments, rankings, revenue do
   expect((await page.request.put('/api/v1/command-center/targets', { data: { period: month, userId: null, amount: 50000 }, headers: ORIGIN })).ok()).toBe(true);
 
   // The owner opens on the senior management dashboard.
-  await page.goto('/app');
+  await page.goto('/app?view=senior');
   await expect(main.getByRole('heading', { name: 'Senior management dashboard', level: 1 })).toBeVisible();
   await expect(page.getByTestId('org-target')).toContainText('$23,000 of $50,000');
   const kpis = main.getByRole('list', { name: 'Organisation metrics' });

@@ -138,3 +138,46 @@ feature or map to a resource, or they are only checked by role.
   keeps support conversations separate from internal ones. Operators assign a support representative
   (`assignedOperatorId`, shown to the client) and write a resolution note; both are audited.
 - File attachments on tickets are not built yet; chat already carries files.
+
+## Part 6: Four dashboards
+
+- **One dashboard per level** (`GET /workspace-dashboard?period=TODAY|WEEK|MONTH|QUARTER`), counted on each request
+  through the Command Center's `Metrics` and the targets page's own achievement, so the numbers agree everywhere:
+  - **Super Workspace, "Organisation"** (administrators with members:manage only): workspaces used and left, leads,
+    calls, deals and sales, the organisation's running targets, performance by Manager and by Executive Workspace,
+    the leading manager and executive, open and overdue tasks and follow-ups.
+  - **Manager, "Team"**: its executives, team totals and targets, an executive ranking with the top one and the one
+    needing support, a daily, weekly and monthly report, an 8-week trend, and other managers' figures (never their
+    records) only when the Super Workspace allows it.
+  - **Executive, "My day"**: today's lead target, leads, what remains, calls against the call target, today's sales,
+    the monthly sales target, follow-ups coming up and overdue.
+  - **Console Admin**: the platform overview of part 2 now also counts support queries waiting on SampForce.
+- Each level has its own colour (violet, sky, green, as in the header badge), title and layout. Managers see only the
+  Team and Manager tabs; executives only My day and Executive. The designation dashboards (ADR 0063) stay one tab away
+  for the Super Workspace. No dashboard has a recent-activity list (Kunal, 2026-11-22).
+- "Important announcements" are the tasks and instructions already shown at the top; no separate announcement feed.
+
+## Part 7: Audit views
+
+- **Every kind of change the spec names is its own entry** with who, what, which record and when: workspace created
+  (`workspace.created`), permission changed (`workspace.permissions_changed`, which now lists only what really
+  changed), feature switched on or off (`workspace.features_changed`, new, beside the permission entry), subscription
+  changed (`billing.subscription_changed`), workspace limit changed (`workspace.limits_changed`, new: the Console's
+  limit changes are split from the rest of a subscription change), sales target set or changed (`target.*`), CRM
+  record edited or deleted (`company.*`, `contact.*`, `lead.*`, `deal.*`), task assigned or completed (`task.assigned`,
+  and `task.completed` now also for assigned tasks). Entries stay append-only.
+- **Who reads what** (`GET /audit-logs`, `GET /audit-logs/filters`):
+  - The Super Workspace reads the whole organisation's log, including what the Console changed for it.
+  - A Manager Workspace reads only its own team's log: what its people did and what was done to its team's
+    workspaces, never another team's or the Console's. It needs the Audit log feature and a new Super-only setting,
+    `canViewAuditLog` ("May read its own team's audit log" in the Permission Center), off by default
+    (AUDIT_NOT_PERMITTED otherwise).
+  - Executive Workspaces never read the log.
+  - The Console Admin reads the platform log (`GET /operator/audit-log`) filtered by client and action, with the
+    client's name, a page at a time.
+- Each row names the person and their workspace, the action in words with its kind (Workspaces, Permissions,
+  Features, Subscription, Workspace limits, Sales targets, Tasks, CRM records, People, Support queries), what changed,
+  and the record by name (still named after a record is deleted). Filters: kind of change, workspace (and those below
+  it), person, from and to dates.
+- The audit log lives on the Administration page. Managers see only the log there; the organisation-wide security
+  links and support access stay with the Super Workspace.

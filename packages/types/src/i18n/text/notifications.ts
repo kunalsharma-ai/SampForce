@@ -18,12 +18,11 @@ export const notifications = {
   'Query #{number} was passed to you': ['La consulta n.º {number} se te ha pasado', 'La demande n° {number} vous a été transmise', 'Anfrage #{number} wurde an Sie weitergegeben', 'أُحيل إليك الاستفسار رقم {number}'],
   'Your query #{number} has an answer': ['Tu consulta n.º {number} tiene respuesta', 'Votre demande n° {number} a une réponse', 'Ihre Anfrage #{number} wurde beantwortet', 'تلقّى استفسارك رقم {number} ردًا'],
   'Your query #{number} was closed': ['Tu consulta n.º {number} se ha cerrado', 'Votre demande n° {number} a été fermée', 'Ihre Anfrage #{number} wurde geschlossen', 'أُغلق استفسارك رقم {number}'],
-  'SampForce support closed query #{number}': [
-    'El soporte de SampForce cerró la consulta n.º {number}',
-    'Le support SampForce a fermé la demande n° {number}',
-    'Der SampForce-Support hat Anfrage #{number} geschlossen',
-    'أغلق دعم SampForce الاستفسار رقم {number}',
-  ],
+  'Your query #{number} is under review': ['Tu consulta n.º {number} está en revisión', 'Votre demande n° {number} est en cours d’examen', 'Ihre Anfrage #{number} wird geprüft', 'استفسارك رقم {number} قيد المراجعة'],
+  'Your query #{number} is in progress': ['Tu consulta n.º {number} está en curso', 'Votre demande n° {number} est en cours de traitement', 'Ihre Anfrage #{number} wird bearbeitet', 'يجري العمل على استفسارك رقم {number}'],
+  'Your query #{number} is waiting for your reply': ['Tu consulta n.º {number} espera tu respuesta', 'Votre demande n° {number} attend votre réponse', 'Ihre Anfrage #{number} wartet auf Ihre Antwort', 'استفسارك رقم {number} بانتظار ردك'],
+  'Your query #{number} is resolved': ['Tu consulta n.º {number} está resuelta', 'Votre demande n° {number} est résolue', 'Ihre Anfrage #{number} ist gelöst', 'تم حل استفسارك رقم {number}'],
+  'Your query #{number} was opened again': ['Tu consulta n.º {number} se ha vuelto a abrir', 'Votre demande n° {number} a été rouverte', 'Ihre Anfrage #{number} wurde wieder geöffnet', 'أُعيد فتح استفسارك رقم {number}'],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],
   '{currency} {amount} by card from {payer}, confirmed by {provider}.': [
