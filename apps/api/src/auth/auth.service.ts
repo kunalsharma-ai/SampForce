@@ -528,7 +528,7 @@ export class AuthService {
       tx.invitation.findUniqueOrThrow({ where: { tokenHash: TokenService.hashRefresh(token) }, include: { role: true, tenant: true } }),
     );
     const user = await this.prisma.user.findUnique({ where: { email: inv.email }, select: { id: true } });
-    return { tenantName: inv.tenant.name, email: inv.email, roleName: inv.role.name, hasAccount: !!user };
+    return { tenantName: inv.tenant.name, email: inv.email, roleName: inv.role.name, hasAccount: !!user, ...(inv.name && !user ? { name: inv.name } : {}) };
   }
 
   /**
@@ -557,9 +557,11 @@ export class AuthService {
         });
       }
       user = await this.prisma.user.create({
-        data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data) },
+        data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data), ...(inv.phone ? { phone: inv.phone } : {}) },
       });
     }
+    // The phone the inviter typed (W5) goes on an account that has none.
+    if (inv.phone && !user.phone) user = await this.prisma.user.update({ where: { id: user.id }, data: { phone: inv.phone } });
     const userId = user.id;
 
     await this.prisma.run({ tenantId, userId }, async (tx) => {

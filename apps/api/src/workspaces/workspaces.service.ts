@@ -18,6 +18,7 @@ import {
   type UpdateWorkspaceInput,
   type WorkspaceAction,
   type WorkspaceDeleted,
+  type WorkspaceEmailCheck,
   type WorkspaceImpact,
   WORKSPACE_ACTION_LABEL,
   WORKSPACE_LEVEL_LABEL,
@@ -124,6 +125,15 @@ export class WorkspacesService {
         if (me.level === 'MANAGER' && parent.node.id !== me.node.id) throw new HierarchyError('WORKSPACE_CREATE_FORBIDDEN', 'A manager creates Executive Workspaces only in their own team.');
       }
       await this.assertCapacity(tx, auth.tenantId, input.level, 1);
+      if (input.accessLevel && input.level !== 'MANAGER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'The access level belongs to Manager Workspaces.' });
+      if (input.executiveIds?.length && (input.level !== 'MANAGER' || me.level !== 'SUPER')) throw new BadRequestException({ code: 'INVALID_SETTING', message: 'Only a new Manager Workspace, created by the Super Workspace, takes existing Executive Workspaces.' });
+      const movingExecutives = (input.executiveIds ?? []).map((x) => org.byId.get(x));
+      if (movingExecutives.some((x) => !x || x.level !== 'EXECUTIVE' || x.node.archivedAt)) throw notFound();
+      // One email, one role (W5, spec section 3): checked here as well as while the person types.
+      if (input.person && 'inviteEmail' in input.person) {
+        const clash = await this.emailClash(tx, auth.tenantId, org, input.person.inviteEmail);
+        if (clash) throw new ConflictException({ code: clash.code, message: clash.message, details: [{ path: 'person.inviteEmail', message: clash.code }] });
+      }
 
       const nameKey = nameKeyOf(input.name);
       if (await tx.workspaceNode.findFirst({ where: { tenantId: auth.tenantId, nameKey }, select: { id: true } }))
@@ -142,20 +152,71 @@ export class WorkspacesService {
           features,
           actions: actions as Prisma.InputJsonValue,
           createdById: auth.userId,
+          department: input.department?.trim() || null,
+          description: input.description?.trim() || null,
+          accessLevel: input.level === 'MANAGER' ? (input.accessLevel ?? 'TEAM') : null,
+          ...(input.status === 'DEACTIVATED' ? { deactivatedAt: new Date(), deactivatedById: auth.userId, deactivationReason: 'Created switched off' } : {}),
         },
       });
+      if (movingExecutives.length) {
+        await tx.workspaceNode.updateMany({ where: { tenantId: auth.tenantId, id: { in: movingExecutives.map((x) => x!.node.id) } }, data: { parentId: node.id } });
+        for (const x of movingExecutives) await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.moved', entityType: 'workspace', entityId: x!.node.id, metadata: { from: x!.node.parentId, to: node.id }, meta });
+      }
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.created', entityType: 'workspace', entityId: node.id,
-        metadata: { level: node.level, name: node.name, parentId: node.parentId, features: features.length }, meta,
+        metadata: { level: node.level, name: node.name, parentId: node.parentId, features: features.length, ...(input.status === 'DEACTIVATED' ? { status: 'DEACTIVATED' } : {}), ...(movingExecutives.length ? { executivesMoved: movingExecutives.length } : {}) }, meta,
       });
       if (input.person && 'userId' in input.person) await this.placeMember(tx, auth, node, input.person.userId, meta);
       let inviteUrl: string | undefined;
       if (input.person && 'inviteEmail' in input.person) {
-        ({ inviteUrl } = await this.invitations.createIn(tx, auth, { email: input.person.inviteEmail, roleKey: input.person.roleKey ?? (input.level === 'MANAGER' ? 'manager' : 'member'), workspaceNodeId: node.id }, meta));
+        const p = input.person;
+        ({ inviteUrl } = await this.invitations.createIn(tx, auth, { email: p.inviteEmail, roleKey: p.roleKey ?? (input.level === 'MANAGER' ? 'manager' : 'member'), workspaceNodeId: node.id, ...(p.name ? { name: p.name } : {}), ...(p.phone ? { phone: p.phone } : {}) }, meta));
       }
       const after = await resolveOrganisation(tx, auth.tenantId);
       return { ...(await this.rowOf(tx, auth, after, after.byId.get(node.id)!)), ...(inviteUrl ? { inviteUrl } : {}) };
     });
+  }
+
+  /** Whether an email may be given a new workspace (W5): answered while the person types in the wizard. */
+  emailCheck(auth: AuthContext, email: string): Promise<WorkspaceEmailCheck> {
+    return this.prisma.run(auth, async (tx) => {
+      const org = await resolveOrganisation(tx, auth.tenantId);
+      const me = this.callerAccess(auth, org);
+      if (me.level === 'EXECUTIVE') throw new HierarchyError('WORKSPACE_CREATE_FORBIDDEN', 'Executive Workspaces cannot create workspaces.');
+      const clash = await this.emailClash(tx, auth.tenantId, org, email.trim().toLowerCase());
+      return clash ? { available: false, ...clash } : { available: true };
+    });
+  }
+
+  /**
+   * One email, one role in an organisation (spec section 3): an address that already works in a workspace here, or
+   * has a pending invitation to one, cannot be given another. The sentence names where, so the person knows why.
+   * Its workspace name is shown only when the caller can see that workspace.
+   */
+  private async emailClash(tx: TenantTx, tenantId: string, org: Org, email: string): Promise<{ code: 'EMAIL_IN_WORKSPACE' | 'EMAIL_INVITED'; message: string } | null> {
+    const place = (nodeId: string | null | undefined) => {
+      const a = nodeId ? org.byId.get(nodeId) : org.root;
+      return !a || a === org.root || (a.level === 'SUPER' && !a.node.parentId) ? null : a;
+    };
+    const member = await tx.membership.findFirst({ where: { tenantId, status: 'ACTIVE', user: { email } }, select: { workspaceNodeId: true } });
+    if (member) {
+      const a = place(member.workspaceNodeId);
+      const message = !a
+        ? 'This email is already a member of the Super Workspace. One email can hold only one role in your organisation.'
+        : a.level === 'MANAGER'
+          ? `This email is already the Manager of ${a.node.name}. One email can hold only one role in your organisation.`
+          : `This email is already the Executive of ${a.node.name}. One email can hold only one role in your organisation.`;
+      return { code: 'EMAIL_IN_WORKSPACE', message };
+    }
+    const invite = await tx.invitation.findFirst({ where: { tenantId, email, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, select: { workspaceNodeId: true } });
+    if (invite) {
+      const a = place(invite.workspaceNodeId);
+      return {
+        code: 'EMAIL_INVITED',
+        message: a ? `This email already has a pending invitation to ${a.node.name}. Withdraw that invitation first.` : 'This email already has a pending invitation to the Super Workspace. Withdraw that invitation first.',
+      };
+    }
+    return null;
   }
 
   /** The parent of a new workspace: the root for managers; the named manager, or the caller's own team, for executives. */
@@ -227,6 +288,12 @@ export class WorkspacesService {
         Object.assign(data, { name: input.name.trim(), nameKey });
       }
       if (input.designation) data.designation = input.designation.trim();
+      if (input.department !== undefined) data.department = input.department.trim() || null;
+      if (input.description !== undefined) data.description = input.description.trim() || null;
+      if (input.accessLevel !== undefined) {
+        if (target.level !== 'MANAGER') throw new BadRequestException({ code: 'INVALID_SETTING', message: 'The access level belongs to Manager Workspaces.' });
+        data.accessLevel = input.accessLevel;
+      }
       await tx.workspaceNode.update({ where: { id }, data });
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'workspace.updated', entityType: 'workspace', entityId: id, metadata: { from: { name: target.node.name, designation: target.node.designation }, to: input }, meta });
       const after = await resolveOrganisation(tx, auth.tenantId);
@@ -449,20 +516,20 @@ export class WorkspacesService {
       const org = await resolveOrganisation(tx, auth.tenantId);
       const target = this.authorityOver(auth, org, id, 'workspace_management', 'delete');
       if (nameKeyOf(input.confirmName) !== nameKeyOf(target.node.name)) {
-        throw new BadRequestException({ code: 'CONFIRM_NAME_MISMATCH', message: 'Type the workspace name exactly to delete it.', details: [{ path: 'confirmName', message: 'does not match' }] });
+        throw new BadRequestException({ code: 'CONFIRM_NAME_MISMATCH', message: 'Type the workspace name exactly to delete it.' });
       }
       const impact = await this.impactOf(tx, auth, org, target);
       let receiver: { id: string; name: string } | null = null;
       let handover: NodeAccess | null = null;
       if (input.handoverToId) {
         if (!impact.handoverOptions.some((o) => o.id === input.handoverToId)) {
-          throw new BadRequestException({ code: 'INVALID_HANDOVER', message: 'Choose one of the workspaces offered to receive the records.', details: [{ path: 'handoverToId', message: 'not allowed' }] });
+          throw new BadRequestException({ code: 'INVALID_HANDOVER', message: 'Choose one of the workspaces offered to receive the records.' });
         }
         handover = org.byId.get(input.handoverToId)!;
         receiver = await this.receiverOf(tx, auth, org, handover);
-        if (!receiver) throw new BadRequestException({ code: 'HANDOVER_EMPTY', message: 'That workspace has nobody in it yet to receive the records. Choose another one.', details: [{ path: 'handoverToId', message: 'empty' }] });
+        if (!receiver) throw new BadRequestException({ code: 'HANDOVER_EMPTY', message: 'That workspace has nobody in it yet to receive the records. Choose another one.' });
       } else if (impact.handoverRequired) {
-        throw new BadRequestException({ code: 'HANDOVER_REQUIRED', message: 'Choose the workspace that receives its records and workspaces.', details: [{ path: 'handoverToId', message: 'required' }] });
+        throw new BadRequestException({ code: 'HANDOVER_REQUIRED', message: 'Choose the workspace that receives its records and workspaces.' });
       }
 
       const people = impact.people.map((p) => p.userId);
@@ -617,6 +684,9 @@ export class WorkspacesService {
       canViewAuditLog: a.node.canViewAuditLog,
       canChatWithPeers: a.node.canChatWithPeers,
       editable,
+      department: a.node.department ?? null,
+      description: a.node.description ?? null,
+      accessLevel: a.node.accessLevel === 'OWN' ? 'OWN' : 'TEAM',
       deactivatedAt: a.node.deactivatedAt?.toISOString() ?? null,
       deactivationReason: a.node.deactivationReason ?? null,
       createdAt: a.node.createdAt.toISOString(),
