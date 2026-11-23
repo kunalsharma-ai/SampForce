@@ -10,6 +10,7 @@ export const publicPages = {
     '© {year} Sampledge. SampForce منتج من Sampledge.',
   ],
   'Browser extension privacy': ['Privacidad de la extensión del navegador', 'Confidentialité de l’extension du navigateur', 'Datenschutz der Browsererweiterung', 'خصوصية إضافة المتصفح'],
+  'Mobile app privacy': ['Privacidad de la aplicación móvil', 'Confidentialité de l’application mobile', 'Datenschutz der mobilen App', 'خصوصية تطبيق الجوال'],
   'billed annually · {price} monthly': [
     'facturación anual · {price} al mes con pago mensual',
     'facturé annuellement · {price} en mensuel',

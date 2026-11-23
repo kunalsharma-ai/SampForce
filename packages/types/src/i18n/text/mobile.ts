@@ -123,4 +123,18 @@ export const mobile = {
   'Your workspace does not allow this in the mobile app.': ['Tu espacio de trabajo no permite esto en la aplicación móvil.', 'Votre espace de travail ne permet pas cela dans l’application mobile.', 'Ihr Arbeitsbereich erlaubt das in der Mobile App nicht.', 'لا تسمح مساحة عملك بهذا في تطبيق الجوال.'],
   'You cannot change some of these fields in the mobile app.': ['No puedes cambiar algunos de estos campos en la aplicación móvil.', 'Vous ne pouvez pas modifier certains de ces champs dans l’application mobile.', 'Einige dieser Felder können Sie in der Mobile App nicht ändern.', 'لا يمكنك تغيير بعض هذه الحقول في تطبيق الجوال.'],
   'That version does not exist.': ['Esa versión no existe.', 'Cette version n’existe pas.', 'Diese Version gibt es nicht.', 'هذا الإصدار غير موجود.'],
+  // Records on the phone (M4)
+  'Mark the follow-up done or cancel it.': ['Marca el seguimiento como hecho o cancélalo.', 'Marquez le suivi comme fait ou annulez-le.', 'Markieren Sie die Nachverfolgung als erledigt oder sagen Sie sie ab.', 'ضع علامة على المتابعة كمكتملة أو ألغها.'],
+  'Change at least one field': ['Cambia al menos un campo', 'Modifiez au moins un champ', 'Ändern Sie mindestens ein Feld', 'غيّر حقلًا واحدًا على الأقل'],
+  'Too many fields': ['Demasiados campos', 'Trop de champs', 'Zu viele Felder', 'عدد الحقول كبير جدًا'],
+  // Profile photos (M6)
+  'Photos can be up to 1 MB.': ['Las fotos pueden ocupar hasta 1 MB.', 'Les photos peuvent faire jusqu’à 1 Mo.', 'Fotos dürfen bis zu 1 MB groß sein.', 'يمكن أن يصل حجم الصورة إلى 1 ميغابايت.'],
+  'Use a photo between 64 and 4096 pixels wide.': ['Usa una foto de entre 64 y 4096 píxeles de ancho.', 'Utilisez une photo de 64 à 4096 pixels de large.', 'Verwenden Sie ein Foto mit 64 bis 4096 Pixeln Breite.', 'استخدم صورة بعرض بين 64 و4096 بكسل.'],
+  'This person has no photo.': ['Esta persona no tiene foto.', 'Cette personne n’a pas de photo.', 'Diese Person hat kein Foto.', 'لا توجد صورة لهذا الشخص.'],
+  // Notifications and announcements (M8)
+  'Announcement not found.': ['Anuncio no encontrado.', 'Annonce introuvable.', 'Ankündigung nicht gefunden.', 'الإعلان غير موجود.'],
+  'Only the SampForce app can turn on notifications.': ['Solo la aplicación de SampForce puede activar las notificaciones.', 'Seule l’application SampForce peut activer les notifications.', 'Nur die SampForce-App kann Benachrichtigungen einschalten.', 'يمكن لتطبيق SampForce فقط تشغيل الإشعارات.'],
+  'This is not a push token from the SampForce app.': ['Este no es un token de notificaciones de la aplicación de SampForce.', 'Ce n’est pas un jeton de notification de l’application SampForce.', 'Dies ist kein Push-Token der SampForce-App.', 'هذا ليس رمز إشعارات من تطبيق SampForce.'],
+  'Give the announcement a title.': ['Ponle un título al anuncio.', 'Donnez un titre à l’annonce.', 'Geben Sie der Ankündigung einen Titel.', 'أعطِ الإعلان عنوانًا.'],
+  'Write the announcement.': ['Escribe el anuncio.', 'Rédigez l’annonce.', 'Schreiben Sie die Ankündigung.', 'اكتب الإعلان.'],
 } satisfies TextTable;

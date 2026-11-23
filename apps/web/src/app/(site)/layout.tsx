@@ -50,6 +50,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <Link href="/extension-privacy" className="hover:text-foreground">
             {t('Browser extension privacy')}
           </Link>
+          <Link href="/app-privacy" className="hover:text-foreground">
+            {t('Mobile app privacy')}
+          </Link>
         </div>
       </footer>
     </div>

@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 import { t } from '../lib/i18n';
+import { usePhoto } from '../lib/photos';
 import { useTheme } from '../lib/session';
 
 /** Small building blocks shared by every screen, drawn in the organisation's colours. */
@@ -124,6 +125,22 @@ const initials = (name: string) =>
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())
     .join('');
+
+/**
+ * A person's photo, or their initials while it loads or when they have none. Others' photos follow the
+ * organisation's "show profile pictures" setting; the server applies it too.
+ */
+export function Avatar({ name, photoUrl, size = 40, label }: { name: string; photoUrl: string | null | undefined; size?: number; label?: string }) {
+  const th = useTheme();
+  const src = usePhoto(photoUrl);
+  const box = { width: size, height: size, borderRadius: size / 2 };
+  if (src) return <Image source={{ uri: src }} accessibilityLabel={label} accessibilityIgnoresInvertColors style={[box, { backgroundColor: th.border }]} />;
+  return (
+    <View accessibilityLabel={label} role={label ? 'img' : undefined} style={[box, { backgroundColor: th.primary, alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ color: th.onPrimary, fontWeight: '700', fontSize: size * 0.38 }}>{initials(name)}</Text>
+    </View>
+  );
+}
 
 /** The organisation's logo, or its initials when it has none. */
 export function BrandMark({ name, logo, size = 32, color }: { name: string; logo: string | null; size?: number; color: string }) {

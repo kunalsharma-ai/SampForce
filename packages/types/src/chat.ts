@@ -83,6 +83,8 @@ export interface ChatPerson {
   id: string;
   name: string;
   operator: boolean;
+  /** The person's profile photo (ADR 0072, M6), when they have one. */
+  photoUrl?: string | null;
 }
 
 /** Someone in the workspace who can be messaged, for the people picker and the online dots. */

@@ -16,6 +16,7 @@ import {
   type z,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature } from '../common/auth-context';
+import { MobileModuleAccess } from '../mobile/mobile-module.guard';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
@@ -37,6 +38,8 @@ const user = (auth: AuthContext): ChatActor => ({ kind: 'user', auth });
  */
 @Controller('chat')
 @RequireFeature('team_chat')
+// The phone app too (ADR 0072, M7), while its Mobile Configuration has chat switched on for the person.
+@MobileModuleAccess('chat')
 export class ChatController {
   constructor(
     private readonly chat: ChatService,

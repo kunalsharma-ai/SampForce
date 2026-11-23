@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { getLocales } from 'expo-localization';
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AppState, useColorScheme } from 'react-native';
 import { deviceInfo } from './device';
 import { currentLanguage, pickLanguage, setLanguage } from './i18n';
@@ -78,5 +78,7 @@ export function useApi<T>(path: string | null) {
       live = false;
     };
   }, [c, path, n]);
-  return { ...state, reload: () => setN((x) => x + 1) };
+  // A stable function, so screens can reload on focus without looping.
+  const reload = useCallback(() => setN((x) => x + 1), []);
+  return { ...state, reload };
 }

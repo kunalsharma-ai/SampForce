@@ -45,6 +45,7 @@ export const MANAGED_KEYS = {
   SMTP_PASSWORD: { secret: true },
   MAIL_FROM: { secret: false },
   ZAPIER_INVITE_URL: { secret: false },
+  EXPO_ACCESS_TOKEN: { secret: true },
   STRIPE_SECRET_KEY: { secret: true },
   STRIPE_WEBHOOK_SECRET: { secret: true },
   RAZORPAY_KEY_ID: { secret: true },

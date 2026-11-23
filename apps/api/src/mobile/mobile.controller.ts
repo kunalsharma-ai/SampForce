@@ -21,6 +21,7 @@ import {
   operatorMobileActionSchema,
   type OperatorMobileLimitsInput,
   operatorMobileLimitsSchema,
+  mobilePushTokenSchema,
 } from '@dealflow/types';
 import { AllowRestricted, Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -28,6 +29,7 @@ import { Operator, type OperatorContext, OperatorGuard, OperatorRoles } from '..
 import { MobileAccessService } from './mobile-access.service';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileConfigService } from './mobile-config.service';
+import { MobilePushService } from './push/mobile-push.service';
 
 const AUTH_LIMIT = { default: { limit: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE ?? 10), ttl: 60_000 } };
 
@@ -84,7 +86,28 @@ export class MobileSessionController {
   constructor(
     private readonly mobile: MobileAuthService,
     private readonly configs: MobileConfigService,
+    private readonly push: MobilePushService,
   ) {}
+
+  /** Whether this phone gets notifications (ADR 0072, M8). */
+  @MobileAccess()
+  @Get('push')
+  pushStatus(@Auth() auth: AuthContext) {
+    return this.push.status(auth);
+  }
+
+  /** The phone's Expo push token, sent after the person allowed notifications. */
+  @MobileAccess()
+  @Put('push')
+  registerPush(@Auth() auth: AuthContext, @Body(new ZodPipe(mobilePushTokenSchema)) body: { token: string }) {
+    return this.push.register(auth, body.token);
+  }
+
+  @MobileAccess()
+  @Delete('push')
+  unregisterPush(@Auth() auth: AuthContext) {
+    return this.push.unregister(auth);
+  }
 
   /** Who is signed in on the phone, their organisation and workspace level. */
   @MobileAccess()

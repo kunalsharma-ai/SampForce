@@ -443,6 +443,21 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     },
   },
   {
+    key: 'expo_push', name: 'Phone notifications (Expo)', usedFor: 'Push notifications to the SampForce iPhone and Android app (ADR 0072)',
+    fields: [{ name: 'EXPO_ACCESS_TOKEN', label: 'Expo access token', required: false, help: 'Only needed when "Enhanced push security" is on in the Expo project. Without it, notifications are still sent.' }],
+    tested: [],
+    checkNote: 'Notifications go through Expo to Apple and Google with the credentials kept in the Expo project, so there is nothing to test here. Send yourself an announcement to check.',
+    app: { off: 'Phone notifications are sent', on: 'Phone notifications are sent with the access token' },
+    setup: {
+      consoleUrl: 'https://expo.dev/', consoleLabel: 'Expo',
+      steps: [
+        'In the Expo project of the SampForce app, upload the Apple push key (APNs .p8) and the Firebase (FCM v1) service account under Credentials.',
+        'Optional: turn on Enhanced push security, create an access token under Account settings > Access tokens, and paste it below.',
+        'Phones turn notifications on from Profile in the app; the Mobile Configuration chooses which ones each level gets.',
+      ],
+    },
+  },
+  {
     key: 'checkout', name: 'Plans and online checkout', usedFor: 'Whether workspaces can pay online, which Stripe or Razorpay price each plan uses, and what the public pricing page shows',
     fields: [
       { name: 'ONLINE_PAYMENTS_ENABLED', label: 'Online payments', required: false, switch: true, help: 'Off: workspaces pay offline against an invoice you mark paid. On: workspaces can check out with Stripe or Razorpay once their keys and prices are set.' },

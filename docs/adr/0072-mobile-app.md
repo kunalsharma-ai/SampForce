@@ -96,3 +96,135 @@ checks (ADR 0071) are applied on top of this, never instead of it.
   against the real API. Native builds, the Keychain and store review cannot be tested in CI.
 - **Web packages and React Native.** `.pnpmfile.cjs` drops React Native as an optional peer of the 3D chart packages,
   so the web app never resolves React Native.
+
+## M4: records on the phone (2026-11-23)
+
+- **Routes.** `/mobile/records/options`, `GET /mobile/records/:module`, `GET|PATCH|DELETE /mobile/records/:module/:id`
+  and `POST /mobile/records/:module`, for `companies` (leads), `contacts`, `follow_ups` and `tasks`. Deals follow
+  separately. All are `@MobileAccess()`; anything else under `/mobile/records` is 404.
+- **The web's own services.** Every call goes through `CompaniesService`, `ContactsService`, `CompanyWorkService` and
+  `TasksService`, so visibility down the hierarchy, ownership, audit, numbering and notifications are exactly the
+  web's. The phone layer only renames fields (MOBILE_FIELDS names such as `owner`, `company`, `followUpType` to the
+  services' `ownerId`, `companyId`, `type`), validates with the CRM's own zod schemas (errors come back under the
+  phone's names), and applies the field rules: records are narrowed to the fields the person may see, and a write to
+  a field they may not set, or a clear without the delete rule, is refused with `MOBILE_FIELD_NOT_ALLOWED`. A module
+  that is off for the person answers `MOBILE_MODULE_OFF`, even for an empty list.
+- **Follow-ups and tasks.** Both live in the task table; the tasks list leaves follow-ups out and a follow-up id is not
+  a task. A follow-up's status changes only to `DONE` (with an outcome) or `CANCELED`, as on the web, and "delete"
+  cancels it. Lists are the person's own (`scope: mine`), follow-ups by the web's buckets in the phone's time zone.
+- **Custom fields.** `options` returns the custom fields the configuration shows for each module, with the web's own
+  field access deciding whether the person may edit them; formula and file fields are read only on the phone.
+- **Screens.** Each record module is a stack inside its tab: list (search, buckets or open/done, more on request,
+  refreshed whenever it comes back into view), record page (fields for the level, call / WhatsApp / email /
+  directions as the configuration allows, mark done, cancel, edit, delete with an inline confirmation, a lead's
+  contacts and quick add), and one form for add and edit that offers only the fields the person may set and sends
+  only what changed. Dates are typed (`2026-12-01 14:30`) or picked (later today, tomorrow, next week); a native
+  date picker can come with the store builds.
+- **Brand colour as text.** `primaryText` in the theme is the brand colour moved just far enough towards black (or
+  white in dark mode) to read on cards, used for the active tab, so any brand colour passes WCAG AA.
+
+## M5: home screen figures and targets (2026-11-23)
+
+- **Routes.** `GET /mobile/dashboard?period=TODAY|WEEK|MONTH|QUARTER` and `GET /mobile/targets`, both `@MobileAccess()`.
+- **Same numbers as the web.** The dashboard reuses the web's level dashboard (ADR 0071 part 6: organisation,
+  team or day), the targets page and the CRM task and pipeline lists, so every figure matches what the web shows.
+  Only the cards the configuration chose for the person's level are built, and only what they need is loaded.
+- **Cards.** Each card carries headline numbers, bars or a short list, and target progress. A card that has nothing
+  to count says so in one plain sentence (no target set, no pipeline). Tapping a card opens the module behind it when
+  the person has that module. Deal amounts on the pipeline card follow the deals `amount` field rule, so Executives
+  see counts only by default. `showChart` decides whether the bars are drawn.
+- **Announcements.** SampForce has no announcements feature yet; the card says where they will appear. They come with
+  notifications (M8).
+- **Targets screen.** Read only, with achievement per target; targets are still set on the web.
+- **Reloading.** `useApi().reload` is now stable, so screens reload whenever they come back into view without
+  looping.
+
+## M6: profile photos (2026-11-23)
+
+- **Storage.** `UserPhoto` (collection `user_photos`), one per person and kept apart from the user so lists never
+  load image bytes. The same photo is used in every organisation the person belongs to.
+- **Routes.** `PUT /me/photo` (the image is the raw body: PNG, JPEG or WebP, 64 to 4096 pixels, up to 1 MB, checked
+  by its bytes, not its name or header), `DELETE /me/photo`, and `GET /people/:id/photo`. All work from the web and
+  the phone. A photo is served only to the person and to active members of the caller's organisation, with
+  `nosniff`, a sandboxing CSP and a long private cache (the URL carries a version). Setting and removing are audited.
+- **Hiding photos.** When the organisation's Mobile Configuration turns profile pictures off, phones get 404 for
+  other people's photos (and show initials); the person's own photo and the web are not affected.
+- **Where it shows.** `/auth/me` and `/mobile/session` carry `photoUrl`. The web shows it in the account menu and
+  lets the person set it on Account security; the phone shows it on the home screen and Profile, where it can be
+  chosen from the library or taken with the camera. Both crop the centre square and shrink to 512 pixels JPEG before
+  sending. Chat (M7) uses the same URLs.
+- **Packages.** `expo-image-picker` (with photo and camera permission texts in `app.json`) and
+  `expo-image-manipulator`.
+
+## M7: chat on the phone (2026-11-23)
+
+The phone uses the web's team chat (ADR 0069) as it is: the same conversations, people rules (ADR 0071 part 5),
+read and delivered marks and live events. There is no second chat back end.
+
+- **Access.** `ChatController` is marked `@MobileModuleAccess('chat')`: a phone token reaches it only while the
+  person's published Mobile Configuration has the chat module and the chat switch on, otherwise `MOBILE_MODULE_OFF`.
+  Web sessions are not checked by it. The guard (`mobile-module.guard.ts`) is reusable for other modules.
+- **Live.** The phone asks for a socket ticket and opens `wss://<server>/api/v1/chat/socket` (a native app sends no
+  Origin header, which the socket already allows). For a phone session the socket's periodic check also requires
+  mobile access to be live, the phone not signed out, and chat still on in its configuration, so switching chat off
+  closes open phone sockets. After two sockets that never open, the app uses the `/chat/events` catch-up route.
+  Events are handed to the screens once, by their `sid`.
+- **Screens.** Conversations (newest first, unread counts, the other person's photo), a conversation (grouped
+  bubbles, "Sending / Sent / Delivered / Read" under the person's last message, "is writing…", older messages on
+  scroll, a failed send can be tapped to try again with the same `clientId`), and New message (the people the
+  person may write to, with photos and who is online). Opening a conversation marks it read; loading the list marks
+  messages delivered.
+- **Photos.** `ChatPerson` carries `photoUrl` (M6), in members, authors and the people list.
+- **Left for later.** Sending attachments and editing or deleting messages stay on the web for now; the phone shows
+  attachment names, edits and deletions.
+
+## M8: push notifications and announcements (2026-11-23)
+
+- **One path for every notification.** `NotificationsService.send` (the web's bell) also queues a phone notification
+  when the web type has a phone type (`MOBILE_PUSH_TYPE_OF`: tasks and follow-ups assigned, due soon and overdue,
+  leads assigned, targets set, announcements, billing status). Chat messages queue one for the other members. The
+  queue (`MobilePush`, collection `mobile_pushes`) is written in the same transaction as the change, and only for
+  people who have a signed-in phone with a push token, so most events store nothing.
+- **Sending.** The worker sends due pushes through Expo's push service (`EXPO_PUSH_URL`), which passes them to Apple
+  and Google with the credentials kept in the Expo project. Each push is checked again when it goes: mobile access
+  live, the person still an active member, and their level's published Mobile Configuration sending that type (and
+  chat on, for chat). Otherwise it is SKIPPED with the reason. Network failures retry with back-off, five times. A
+  token Apple or Google reject (`DeviceNotRegistered`) is removed from the phone's row. Titles are translated into
+  the person's saved language. An optional `EXPO_ACCESS_TOKEN` (Console > Providers > Phone notifications) is sent
+  when the Expo project uses enhanced push security.
+- **The phone.** `GET/PUT/DELETE /mobile/push` (phone sessions only) read, set and clear this phone's token; a token
+  also on another row in the organisation (a shared phone) is let go. Profile has "Turn on notifications", which asks
+  the system for permission only when pressed. At start the app sends its current token again if notifications are
+  on. A tap opens the screen in `data.route` (`mobileRouteFor` maps the web link), or Notifications. The Notifications
+  screen shows the same list as the web's bell (`/notifications`, now open to phones while the configuration has the
+  notifications module), with mark as read.
+- **Task reminders.** The reminder sweep (ADR 0062) now also covers tasks with a due date (`task.due_soon`,
+  `task.overdue`), with the follow-up timing settings and categories.
+- **Announcements.** `Announcement` (collection `announcements`); `GET /announcements` for everyone (web and phone),
+  `POST` and `DELETE` for `tenant:manage`, audited. Posting notifies every active member (`announcement.posted`,
+  category "Important announcements"). The web page is `/app/announcements`, linked from Settings; the phone's
+  announcements card shows the latest three.
+- **Not testable here.** Real delivery needs the Expo project with the APNs key and the FCM service account, and a
+  real phone (simulators and the web build cannot get push tokens). The server side is tested against a stand-in of
+  Expo's push service.
+
+## M9: ready for the App Store and Google Play (2026-11-23)
+
+- **One identity.** Name SampForce, bundle id and package `com.sampledge.sampforce`, phones only (`supportsTablet:
+  false`, so no iPad screenshots or review), `ITSAppUsesNonExemptEncryption: false` (HTTPS only, so no export
+  paperwork for each build).
+- **Icons and splash.** `scripts/make-store-assets.mjs` renders the web's `icon.svg` into the App Store icon (1024,
+  no transparency, as Apple requires), the Android adaptive icon foreground, the splash image and the white Android
+  notification icon. Run it again after the logo changes.
+- **Permissions.** Only the camera and photos (profile picture, with the reason shown) and notifications. The
+  microphone, location, storage and draw-over-apps permissions that libraries add are blocked on Android. The iOS
+  privacy manifest declares the system APIs React Native and Expo use, and no tracking.
+- **Privacy.** A public page `/app-privacy` on the web says what the app uses, where it goes and how to remove it;
+  the app links it from Profile (`extra.privacyUrl`). The app makes no accounts, so account deletion is the
+  organisation removing the person (Apple's rule applies to apps that create accounts).
+- **Builds.** `eas.json`: `preview` (internal, Android APK for testers) and `production` (store builds, build
+  numbers kept by EAS and raised on each build); `eas submit` sends the Android build to the internal track as a draft.
+- **Checked before a build.** `test/store.test.ts` reads `app.json`, `eas.json` and the PNG headers, so a missing
+  icon, a transparent App Store icon or a missing permission reason fails in tests rather than in store review.
+- **Left for the owner.** Apple and Google developer accounts, `eas init` (the project id that push needs), the APNs
+  key and FCM service account in Expo, store screenshots from a real build, the listing, and a reviewer sign-in.

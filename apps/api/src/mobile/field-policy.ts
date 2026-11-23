@@ -17,7 +17,8 @@ const ALWAYS = new Set(['id', 'updatedAt', 'version']);
 type Rec = Record<string, unknown>;
 export type FieldAliases = Readonly<Record<string, string>>;
 
-function moduleOf(config: MobileResolvedConfig, module: MobileRecordModule) {
+/** The person's settings for a module; refuses a module their mobile app does not have. */
+export function moduleOf(config: MobileResolvedConfig, module: MobileRecordModule) {
   const m = config.modules.find((x) => x.key === module);
   if (!m) throw new ForbiddenException({ code: 'MOBILE_MODULE_OFF', message: 'This part of SampForce is not available in your mobile app.' });
   return m;

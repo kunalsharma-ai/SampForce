@@ -26,12 +26,14 @@ export class TasksService {
   ) {}
 
   /** Open tasks sort by due date (overdue first, undated last); finished tasks by completion time. */
-  list(auth: AuthContext, q: TaskListQuery): Promise<TaskRow[]> {
+  list(auth: AuthContext, q: TaskListQuery, opts: { withoutFollowUps?: boolean } = {}): Promise<TaskRow[]> {
     return this.prisma.run(auth, async (tx) => {
       const rows = await tx.task.findMany({
         where: {
           tenantId: auth.tenantId,
           deletedAt: null,
+          // The phone lists follow-ups on their own (ADR 0072).
+          ...(opts.withoutFollowUps ? { followUpType: null } : {}),
           status: q.status,
           ...(q.scope === 'mine' ? { assigneeId: auth.userId } : {}),
           ...(q.leadId ? { leadId: q.leadId } : {}),
@@ -47,6 +49,15 @@ export class TasksService {
       const owners = await ownerRefs(tx, rows.map((r) => r.assigneeId));
       const now = new Date();
       return rows.map((r) => toTaskRow(r, owners, now));
+    });
+  }
+
+  /** One task, as in the workspace's task list (which every member can read). */
+  get(auth: AuthContext, id: string): Promise<TaskRow> {
+    return this.prisma.run(auth, async (tx) => {
+      const row = await tx.task.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, followUpType: null } });
+      if (!row) throw notFound('Task');
+      return toTaskRow(row, await ownerRefs(tx, [row.assigneeId]), new Date());
     });
   }
 

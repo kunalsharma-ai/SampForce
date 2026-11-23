@@ -19,6 +19,7 @@ import { SequenceRunner } from '../sequences/sequence-runner.service';
 import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
+import { MobilePushService } from '../mobile/push/mobile-push.service';
 
 export interface WorkerTick {
   events: number;
@@ -42,6 +43,8 @@ export interface WorkerTick {
   reminders: number;
   /** Company logos looked up from company websites (ADR 0070). */
   logos: number;
+  /** Phone notifications sent through Expo (ADR 0072, M8). */
+  pushes: number;
 }
 
 /**
@@ -75,6 +78,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly zoom: ZoomService,
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
+    private readonly pushes: MobilePushService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -130,7 +134,9 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const zoomTranscripts = await this.zoom.importDue();
     const reminders = await this.reminders.sweep();
     const logos = await this.logos.runDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos };
+    // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
+    const pushes = await this.pushes.sendDue();
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

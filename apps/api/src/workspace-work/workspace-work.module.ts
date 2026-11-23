@@ -11,5 +11,6 @@ import { AssignedTasksController, TargetsController, WorkspaceDashboardControlle
   imports: [CrmModule, WorkspacesModule],
   controllers: [TargetsController, AssignedTasksController, WorkspaceDashboardController],
   providers: [TargetsService, AssignedTasksService, WorkspaceDashboardService, NotificationsService],
+  exports: [TargetsService, WorkspaceDashboardService],
 })
 export class WorkspaceWorkModule {}

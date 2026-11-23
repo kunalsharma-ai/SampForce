@@ -1,5 +1,5 @@
-import { ModuleScreen } from '../../src/components/module-screen';
+import { NotificationList } from '../../src/components/notifications';
 
 export default function Notifications() {
-  return <ModuleScreen module="notifications" />;
+  return <NotificationList />;
 }
