@@ -5,7 +5,20 @@ import { expect, type Page } from '@playwright/test';
  * senior management dashboard is at /app?view=senior and the analytics layout at /app?view=analytics. It starts on Free like any real sign-up; unless `plan` says otherwise it is then moved to
  * Enterprise Plus, so specs can reach every feature (ADR 0057). Pass `{ plan: 'free' }` to test the Free plan itself.
  */
-export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus' }: { plan?: string } = {}) {
+/**
+ * Deleting asks for the password (workspace redesign W1). Suites that test something else answer the Confirm deletion
+ * dialog whenever it opens with this person's password; password-confirmation.spec.ts tests the dialog itself.
+ */
+export async function autoConfirmDeletion(page: Page, password: string) {
+  const dialog = page.getByRole('dialog', { name: 'Confirm deletion' });
+  await page.addLocatorHandler(dialog, async () => {
+    await dialog.getByLabel('Password', { exact: true }).fill(password);
+    await dialog.getByRole('button', { name: 'Confirm delete' }).click();
+    await expect(dialog).toBeHidden();
+  });
+}
+
+export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus', autoConfirm = true }: { plan?: string; autoConfirm?: boolean } = {}) {
   const id = Math.random().toString(36).slice(2, 10);
   const email = `e2e-${id}@example.com`;
   await page.goto('/signup');
@@ -21,6 +34,7 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
   }
+  if (autoConfirm) await autoConfirmDeletion(page, 'correcthorse1');
   return { email, password: 'correcthorse1' };
 }
 

@@ -4,6 +4,7 @@ import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, Req
 import { ZodPipe } from '../common/zod.pipe';
 import { AnalyticsService } from './analytics.service';
 import { SuccessService } from './success.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const escalationQuery = z.object({ status: z.enum(['OPEN', 'RESOLVED']).optional(), companyId: z.string().uuid().optional() });
@@ -45,6 +46,7 @@ export class AnalyticsController {
     return this.analytics.setTarget(auth, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete('targets/:id')
   @AlsoRequireFeature('sales_target_management')
   @HttpCode(204)

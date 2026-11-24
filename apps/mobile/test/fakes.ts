@@ -30,6 +30,8 @@ export interface Call {
   body: unknown;
   auth: string | null;
   language: string | null;
+  /** The password-confirmation pass a delete carries. */
+  confirmation: string | null;
 }
 
 type Handler = (call: Call) => { status: number; body?: unknown } | Promise<{ status: number; body?: unknown }>;
@@ -41,7 +43,7 @@ export function fakeFetch(routes: Record<string, Handler>) {
     const url = new URL(input);
     const path = url.pathname.replace(/^\/api\/v1/, '') + url.search;
     const headers = (init?.headers ?? {}) as Record<string, string>;
-    const call: Call = { method: init?.method ?? 'GET', path, body: init?.body ? JSON.parse(String(init.body)) : undefined, auth: headers.authorization ?? null, language: headers['accept-language'] ?? null };
+    const call: Call = { method: init?.method ?? 'GET', path, body: init?.body ? JSON.parse(String(init.body)) : undefined, auth: headers.authorization ?? null, language: headers['accept-language'] ?? null, confirmation: headers['x-password-confirmation'] ?? null };
     calls.push(call);
     const handler = routes[`${call.method} ${url.pathname.replace(/^\/api\/v1/, '')}`];
     if (!handler) return new Response(JSON.stringify({ error: { code: 'NOT_FOUND', message: 'No route' } }), { status: 404 });

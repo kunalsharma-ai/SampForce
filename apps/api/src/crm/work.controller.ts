@@ -30,6 +30,7 @@ import { EXPORT_ENTITIES, type ExportEntity, ImportExportService, xlsxToCsv } fr
 import { IMPORT_FIELDS, ImportService } from './import.service';
 import { SearchService } from './search.service';
 import { TasksService } from './tasks.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const customFieldListQuery = z.object({ entity: z.enum(CUSTOM_FIELD_ENTITIES).optional(), includeInactive: z.enum(['true', 'false']).optional() });
@@ -96,6 +97,7 @@ export class ActivitiesController {
     return this.activities.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('activities:write')
@@ -128,6 +130,7 @@ export class TasksController {
     return this.tasks.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('activities:write')
@@ -193,6 +196,7 @@ export class CustomFieldsController {
     return this.fields.update(auth, id, body, meta);
   }
 
+  @ConfirmPassword()
   @Delete(':id')
   @HttpCode(204)
   @RequirePermissions('crm:configure')

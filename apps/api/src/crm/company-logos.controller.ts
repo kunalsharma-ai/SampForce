@@ -2,6 +2,7 @@ import { Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Req
 import type { Request, Response } from 'express';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions } from '../common/auth-context';
 import { CompanyLogosService, readLogoUpload } from './company-logos.service';
+import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 
@@ -32,6 +33,7 @@ export class CompanyLogosController {
   }
 
   /** Removes an uploaded logo; the automatic one from the website is looked up again. */
+  @ConfirmPassword()
   @Delete()
   @HttpCode(200)
   @RequirePermissions('companies:write')
