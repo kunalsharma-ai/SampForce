@@ -158,6 +158,7 @@ export const sampbidx = {
     "تحديثات الحالة من SampBidx بانتظار الإعداد حتى يرسل SampBidx أول استدعاء موقّع. أعطِ SampBidx العنوان والسر أدناه.",
   ],
   "Pasted email": ["Correo pegado", "E-mail collé", "Eingefügte E-Mail", "بريد ملصق"],
+  "Paste an RFQ email": ["Pegar un correo de RFQ", "Coller un e-mail de RFQ", "RFQ-E-Mail einfügen", "لصق بريد طلب عرض سعر"],
   "Paste an RFQ email and send it to SampBidx": ["Pega un correo de RFQ y envíalo a SampBidx", "Collez un e-mail de RFQ et envoyez-le à SampBidx", "RFQ-E-Mail einfügen und an SampBidx senden", "الصق بريد طلب عرض سعر وأرسله إلى SampBidx"],
   "Copy the client’s email from your mail program, including its From, Sent and Subject lines, and paste it here.": [
     "Copia el correo del cliente desde tu programa de correo, con sus líneas De, Enviado y Asunto, y pégalo aquí.",
