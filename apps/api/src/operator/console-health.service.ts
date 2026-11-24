@@ -64,15 +64,15 @@ export class ConsoleHealthService {
 
   /**
    * The worker's pass: clients not measured today, or measured before the weights last changed, oldest first.
-   * Returns how many were measured.
+   * Returns how many were measured. `only` keeps a pass to some clients (tests share a database with every other suite).
    */
-  async sweep(now = new Date()): Promise<number> {
+  async sweep(now = new Date(), only?: string[]): Promise<number> {
     const saved = await this.prisma.platformSetting.findUnique({ where: { key: HEALTH_SETTINGS_KEY } });
     const settings = parseSettings(saved?.value);
     const today = new Date(`${utcDay(now)}T00:00:00Z`);
     const cutoff = saved && saved.updatedAt > today ? saved.updatedAt : today;
     const due = await this.prisma.run({ operatorScan: true }, (tx) =>
-      tx.tenant.findMany({ where: { deletedAt: null, OR: [{ healthAt: null }, { healthAt: { lt: cutoff } }] }, select: { id: true }, orderBy: { createdAt: 'asc' }, take: BATCH }),
+      tx.tenant.findMany({ where: { deletedAt: null, ...(only ? { id: { in: only } } : {}), OR: [{ healthAt: null }, { healthAt: { lt: cutoff } }] }, select: { id: true }, orderBy: { createdAt: 'asc' }, take: BATCH }),
     );
     for (const t of due) await this.measure(t.id, settings, now);
     return due.length;

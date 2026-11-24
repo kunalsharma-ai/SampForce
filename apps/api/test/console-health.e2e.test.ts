@@ -105,7 +105,8 @@ describe('Console client health score', () => {
 
     // The worker measures again every client measured before the change, a batch per pass.
     const health = app.get(ConsoleHealthService);
-    for (let i = 0; i < 200 && (await health.sweep()) > 0; i++);
+    const ours = [alpha.tenantId, bravo.tenantId];
+    expect(await health.sweep(new Date(), ours)).toBe(2);
     const bravoHealth = (await op(admin).get(`/clients/${bravo.tenantId}/health`).expect(200)).body.health as ClientHealth;
     expect(bravoHealth).toMatchObject({ score: 0, band: 'CRITICAL' });
     expect(bravoHealth.signals.find((s) => s.key === 'features')).toMatchObject({ maxPoints: 100, points: 0 });
@@ -121,7 +122,7 @@ describe('Console client health score', () => {
 
     // A pass on a day already measured with the current weights leaves these clients alone.
     const at = bravoHealth.at;
-    await health.sweep();
+    expect(await health.sweep(new Date(), ours)).toBe(0);
     expect(((await op(admin).get(`/clients/${bravo.tenantId}/health`).expect(200)).body.health as ClientHealth).at).toBe(at);
   });
 });
