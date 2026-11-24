@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { ClientAvatar } from '@/components/console/client-avatar';
 import { BULK_TITLE, BulkDialog } from '@/components/console/client-bulk';
 import { CountrySelect } from '@/components/forms/inputs';
@@ -126,7 +126,21 @@ function ClientsList() {
   const pageNo = Number(params.get('page')) || 1;
   const [search, setSearch] = useState(f('search'));
 
+  // Set once the operator follows a link off the list, so a search still waiting to apply cannot rewrite the address
+  // while Next is navigating (which would cancel the navigation).
+  const leaving = useRef(false);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.('a[href]');
+      const href = a?.getAttribute('href') ?? '';
+      if (href && !href.startsWith('/operator/clients?') && href !== '/operator/clients') leaving.current = true;
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+
   const setParams = (next: Record<string, string | number | null>, keepPage = false) => {
+    if (leaving.current) return;
     // From the address bar, not this render's params: a debounced search runs later and must keep a filter chosen
     // in the meantime.
     const p = new URLSearchParams(window.location.search);
