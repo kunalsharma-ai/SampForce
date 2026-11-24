@@ -15,6 +15,7 @@ import {
   ChevronDown,
   CircleHelp,
   Clock3,
+  Compass,
   Flame,
   Inbox,
   LifeBuoy,
@@ -34,6 +35,7 @@ import {
   isFaq,
   popular,
   recentlyUpdated,
+  searchBriefs,
   searchView,
   useHelpContent,
   type ViewCategory,
@@ -51,6 +53,7 @@ import {
   UpdatedOn,
   VideoLink,
 } from './article';
+import { BriefResults, ExploreSampForce } from './explore';
 import { HelpSettingsButton, RestrictedFeatures, SupportNote } from './help-extras';
 import { ToneIcon } from './help-ui';
 import { RaiseQueryDialog } from './raise-query';
@@ -63,9 +66,14 @@ import { RaiseQueryDialog } from './raise-query';
 export function HelpCenter({
   reader,
   queriesHref,
+  currentPlan = null,
+  billingHref = null,
 }: {
   reader: HelpReader | null;
   queriesHref?: string;
+  /** The workspace's plan, marked under Explore SampForce. */
+  currentPlan?: string | null;
+  billingHref?: string | null;
 }) {
   const t = useT();
   const pathname = usePathname();
@@ -106,6 +114,10 @@ export function HelpCenter({
     () => (view && query.trim() ? searchView(view, query) : null),
     [view, query],
   );
+  const briefHits = useMemo(
+    () => (view && query.trim() ? searchBriefs(view, query) : []),
+    [view, query],
+  );
 
   // "Open the full guide" from a page's i button lands here with ?guide=<page id>; it opens once the content is in.
   const [guideParam] = useState(params.get('guide'));
@@ -123,6 +135,16 @@ export function HelpCenter({
   const open = (item: HelpItem) => {
     setOpened(item);
     if (workspace) countHelpView(item.key);
+  };
+  const openGuide = (pageId: string) => {
+    const g = view?.guides.find((x) => x.id === pageId);
+    if (g) open(g);
+  };
+  const jump = (id: string) => {
+    setQuery('');
+    setCategory(null);
+    // After the list re-renders without a filter.
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   if (!view || remote.isLoading) return <Skeleton className="h-[32rem] rounded-3xl" />;
@@ -300,6 +322,49 @@ export function HelpCenter({
         </div>
       </section>
 
+      {/* ── Ways in ── */}
+      {!hits && !category && (
+        <nav aria-label={t('Help sections')} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-help-ways>
+          {[
+            { id: 'explore', icon: <Compass className="size-5" aria-hidden />, title: t('Explore SampForce'), text: t('Every feature, plan and facility'), show: view.briefs.length > 0 },
+            { id: 'faqs', icon: <CircleHelp className="size-5" aria-hidden />, title: t('Frequently asked questions'), text: t('{count} answers', { count: view.faqs.length }), show: true },
+            { id: 'guide', icon: <BookOpen className="size-5" aria-hidden />, title: t('Feature guide'), text: t('{count} guides', { count: view.guides.length }), show: true },
+          ]
+            .filter((w) => w.show)
+            .map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => jump(w.id)}
+                className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-start transition hover:border-primary/40 hover:shadow-md motion-reduce:transition-none"
+                data-help-way={w.id}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">{w.icon}</span>
+                <span className="min-w-0">
+                  <span className="block font-semibold">{w.title}</span>
+                  <span className="block text-sm text-muted-foreground">{w.text}</span>
+                </span>
+              </button>
+            ))}
+          {workspace ? (
+            <button
+              type="button"
+              onClick={() => setRaising(true)}
+              className="group flex items-center gap-3 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 to-accent/10 p-4 text-start transition hover:shadow-md motion-reduce:transition-none"
+              data-help-way="raise"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
+                <LifeBuoy className="size-5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold">{t('Contact support')}</span>
+                <span className="block text-sm text-muted-foreground">{t('Raise a query, we reply here')}</span>
+              </span>
+            </button>
+          ) : null}
+        </nav>
+      )}
+
       {/* ── Announcements ── */}
       {view.announcements.length > 0 && !hits && (
         <section aria-label={t('Announcements')} className="space-y-3" data-help-announcements>
@@ -333,9 +398,14 @@ export function HelpCenter({
         </section>
       )}
 
+      {hits && (
+        <BriefResults briefs={briefHits} view={view} audience={audience!} onOpenGuide={workspace ? openGuide : undefined} />
+      )}
+
       {hits ? (
         <SearchResults
           hits={hits}
+          otherHits={briefHits.length}
           query={query}
           t={t}
           view={view}
@@ -358,6 +428,17 @@ export function HelpCenter({
 
           {/* ── Start here, for the reader's role ── */}
           {!category && reader && <RoleStart reader={reader} view={view} onOpen={open} t={t} />}
+
+          {/* ── Explore SampForce: features, plans and facilities ── */}
+          {!category && (
+            <ExploreSampForce
+              view={view}
+              audience={audience!}
+              currentPlan={currentPlan}
+              billingHref={billingHref}
+              onOpenGuide={workspace ? openGuide : undefined}
+            />
+          )}
 
           {/* ── Topics ── */}
           <section aria-labelledby="help-topics">
@@ -780,6 +861,7 @@ function GuideCard({
 /** Results while typing, grouped by module (topic); with nothing found, the most read help and the raise-query way out. */
 function SearchResults({
   hits,
+  otherHits,
   query,
   t,
   view,
@@ -789,6 +871,8 @@ function SearchResults({
   onRaise,
 }: {
   hits: ViewHit[];
+  /** Briefs found too: with those, no answers is not "nothing found". */
+  otherHits: number;
   query: string;
   t: Translator;
   view: HelpView;
@@ -803,14 +887,14 @@ function SearchResults({
   return (
     <section aria-labelledby="help-results" data-help-results>
       <p className="sr-only" aria-live="polite">
-        {t('{count} results for “{query}”', { count: hits.length, query })}
+        {t('{count} results for “{query}”', { count: hits.length + otherHits, query })}
       </p>
       <SectionTitle
         id="help-results"
         icon={<Search className="size-5" aria-hidden />}
         title={t('Results for “{query}”', { query: query.trim() })}
       />
-      {hits.length === 0 ? (
+      {hits.length === 0 && otherHits > 0 ? null : hits.length === 0 ? (
         <div
           className="rounded-2xl border border-dashed border-border p-8 text-center"
           data-help-no-results

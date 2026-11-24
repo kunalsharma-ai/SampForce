@@ -1,6 +1,6 @@
 'use client';
 
-import { allGuides, CONSOLE_FAQS, HELP_CATEGORIES, HELP_FAQS, type HelpText } from '@dealflow/help';
+import { allGuides, CONSOLE_FAQS, HELP_CATEGORIES, HELP_FAQS, type HelpText, PRODUCT_BRIEFS } from '@dealflow/help';
 import {
   FEATURES,
   HELP_ARTICLE_KINDS,
@@ -80,6 +80,7 @@ const KIND_LABEL: Record<HelpArticleKind, string> = {
   FAQ: 'Question & answer',
   GUIDE: 'Guide',
   ANNOUNCEMENT: 'Announcement',
+  FEATURE: 'Feature brief',
 };
 const STATUS_TONE: Record<HelpArticleStatus, 'warning' | 'success' | 'neutral'> = {
   DRAFT: 'warning',
@@ -180,7 +181,16 @@ function builtins(): Builtin[] {
     title: { en: g.topic.title },
     summary: local(g.topic.what),
   }));
-  return [...faqs, ...guides];
+  // Explore SampForce: each brief's summary is what readers see first; its highlights stay built-in.
+  const briefs = PRODUCT_BRIEFS.map((b) => ({
+    key: `feature:${b.id}`,
+    audience: 'workspace' as const,
+    kind: 'FEATURE' as const,
+    categoryId: b.category,
+    title: local(b.title),
+    summary: local(b.summary),
+  }));
+  return [...faqs, ...guides, ...briefs];
 }
 
 function Articles({ admin }: { admin: boolean }) {
@@ -258,7 +268,7 @@ function Articles({ admin }: { admin: boolean }) {
       {admin && (
         <Card className="flex flex-wrap items-end gap-2 p-4">
           <div className="min-w-64 flex-1">
-            <Label htmlFor="builtin-pick">Edit or hide a built-in answer or guide</Label>
+            <Label htmlFor="builtin-pick">Edit or hide a built-in answer, guide or feature brief</Label>
             <Select
               id="builtin-pick"
               value={builtinKey}
@@ -267,7 +277,7 @@ function Articles({ admin }: { admin: boolean }) {
               <option value="">Choose one…</option>
               {all.map((b) => (
                 <option key={b.key} value={b.key}>
-                  {b.kind === 'FAQ' ? 'Q&A' : 'Guide'} ·{' '}
+                  {b.kind === 'FAQ' ? 'Q&A' : b.kind === 'FEATURE' ? 'Feature brief' : 'Guide'} ·{' '}
                   {b.audience === 'console' ? 'Console' : 'Workspaces'} · {b.title.en}
                   {edited.has(b.key) ? ' (edited)' : ''}
                 </option>
@@ -547,6 +557,13 @@ function EditorForm({
           <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
             This replaces the built-in {d.builtinKey} once published. Archive it to hide the
             built-in one from readers.
+          </p>
+        )}
+        {d.kind === 'FEATURE' && (
+          <p className="rounded-xl border border-border bg-muted/40 p-3 text-sm" data-feature-brief-note>
+            A feature brief appears under Explore SampForce in every workspace Help Center and in the Help &amp;
+            support panel’s search. The summary is the brief readers see first; the body adds the detail, pictures
+            and links.
           </p>
         )}
 

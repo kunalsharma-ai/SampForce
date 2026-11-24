@@ -7,7 +7,8 @@ import { featureKeySchema } from './features';
  * what people said about them. Text is kept per language; a language left empty falls back to English.
  */
 
-export const HELP_ARTICLE_KINDS = ['FAQ', 'GUIDE', 'ANNOUNCEMENT'] as const;
+/** FEATURE: a brief about a part of SampForce, its offering or a facility, shown under Explore SampForce. */
+export const HELP_ARTICLE_KINDS = ['FAQ', 'GUIDE', 'ANNOUNCEMENT', 'FEATURE'] as const;
 export type HelpArticleKind = (typeof HELP_ARTICLE_KINDS)[number];
 export const HELP_ARTICLE_STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
 export type HelpArticleStatus = (typeof HELP_ARTICLE_STATUSES)[number];
@@ -20,8 +21,11 @@ export const HELP_SUMMARY_MAX = 1000;
 export const HELP_BODY_MAX = 20_000;
 export const HELP_MEDIA_MAX_BYTES = 10 * 1024 * 1024;
 
-/** An article's key everywhere (stats, feedback, links): faq:<id> or guide:<page id> for built-in help, article:<id> for the Console's own. */
-export const HELP_ARTICLE_KEY = /^(faq:[a-z][\w.]{1,60}|guide:page\.[\w.]{1,60}|article:[0-9a-f-]{36})$/i;
+/**
+ * An article's key everywhere (stats, feedback, links): faq:<id>, guide:<page id> or feature:<brief id> for built-in
+ * help, article:<id> for the Console's own.
+ */
+export const HELP_ARTICLE_KEY = /^(faq:[a-z][\w.]{1,60}|guide:page\.[\w.]{1,60}|feature:[a-z][\w-]{1,60}|article:[0-9a-f-]{36})$/i;
 
 const text = (max: number, required: boolean) => {
   const en = required ? z.string().trim().min(1).max(max) : z.string().trim().max(max).default('');
@@ -42,7 +46,7 @@ export const helpArticleInputSchema = z.object({
   /** Set to edit a built-in answer or guide instead of writing a new article. */
   builtinKey: z
     .string()
-    .regex(/^(faq:[a-z][\w.]{1,60}|guide:page\.[\w.]{1,60})$/i)
+    .regex(/^(faq:[a-z][\w.]{1,60}|guide:page\.[\w.]{1,60}|feature:[a-z][\w-]{1,60})$/i)
     .nullable()
     .optional(),
   audience: z.enum(HELP_AUDIENCES).default('workspace'),

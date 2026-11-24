@@ -4677,6 +4677,8 @@ enum HelpArticleKind {
   FAQ
   GUIDE
   ANNOUNCEMENT
+  /// A brief about a part of SampForce, its offering or a facility (Explore SampForce).
+  FEATURE
 }
 
 enum HelpArticleStatus {

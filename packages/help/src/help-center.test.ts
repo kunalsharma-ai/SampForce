@@ -1,4 +1,4 @@
-import { FEATURE_KEYS, PERMISSIONS } from '@dealflow/types';
+import { FEATURE_BY_KEY, FEATURE_KEYS, FEATURES, PERMISSIONS } from '@dealflow/types';
 import { describe, expect, it } from 'vitest';
 import {
   CONSOLE_FAQS,
@@ -7,10 +7,14 @@ import {
   HELP_FAQS,
   HELP_TOPICS,
   HIDDEN_GUIDES,
+  PRODUCT_BRIEFS,
   type HelpId,
   type HelpReader,
   type HelpText,
   allGuides,
+  briefAvailability,
+  briefHref,
+  builtinHelpKeys,
   categoriesFor,
   faqsFor,
   foldText,
@@ -181,4 +185,40 @@ describe('help search', () => {
     expect(hits.some((h) => h.kind === 'faq' && h.faq.id === 'data.export')).toBe(true);
     expect(searchHelp('zebra giraffe walrus', 'en', items, undefined, { partial: true })).toEqual([]);
   });
+
+  it('describes every part of SampForce in Explore SampForce, in all five languages', () => {
+    expect(new Set(PRODUCT_BRIEFS.map((b) => b.id)).size).toBe(PRODUCT_BRIEFS.length);
+    const guides = new Set(allGuides().map((g) => g.id as string));
+    const categories = new Set(HELP_CATEGORIES.filter((c) => c.audience === 'workspace').map((c) => c.id as string));
+    for (const b of PRODUCT_BRIEFS) {
+      for (const k of ['title', 'tagline', 'summary'] as const) fiveLanguages(b[k], `${b.id}.${k}`);
+      expect(b.highlights.length, b.id).toBeGreaterThanOrEqual(3);
+      b.highlights.forEach((h, i) => fiveLanguages(h, `${b.id}.highlights.${i}`));
+      expect(categories.has(b.category), `${b.id} category`).toBe(true);
+      for (const f of b.features) expect(FEATURE_BY_KEY[f], `${b.id} names ${f}`).toBeTruthy();
+      for (const g of b.guides) expect(guides.has(g), `${b.id} links ${g}`).toBe(true);
+      expect(builtinHelpKeys().has(`feature:${b.id}`)).toBe(true);
+    }
+    // Every feature in the plan catalogue is described by a brief (a subfeature by its parent's).
+    const described = new Set(PRODUCT_BRIEFS.flatMap((b) => b.features));
+    const missing = FEATURES.filter((f) => !described.has(f.key) && !(f.parent && described.has(f.parent))).map((f) => f.key);
+    expect(missing).toEqual([]);
+    expect(PRODUCT_BRIEFS.filter((b) => b.kind === 'facility').length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('says how much of each part the reader’s plan includes, and where it opens', () => {
+    const crm = PRODUCT_BRIEFS.find((b) => b.id === 'crm')!;
+    const all: HelpReader = { audience: 'workspace', features: [...FEATURE_KEYS], level: 'SUPER', permissions: [] };
+    const some: HelpReader = { ...all, features: ['account_management'] };
+    const none: HelpReader = { ...all, features: [] };
+    expect(briefAvailability(crm, all)).toBe('included');
+    expect(briefAvailability(crm, some)).toBe('partial');
+    expect(briefAvailability(crm, none)).toBe('not-included');
+    expect(briefAvailability(crm, { audience: 'console' })).toBe('included');
+    expect(briefHref(crm, some)).toBe(FEATURE_BY_KEY.account_management.paths[0]);
+    expect(briefHref(crm, none)).toBeNull();
+    // A facility every plan has is always included.
+    expect(briefAvailability(PRODUCT_BRIEFS.find((b) => b.id === 'security')!, none)).toBe('included');
+  });
 });
+

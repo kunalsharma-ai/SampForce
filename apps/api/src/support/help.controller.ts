@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import {
+  briefAvailability,
   categoriesFor,
   faqsFor,
   guidesFor,
@@ -7,6 +8,7 @@ import {
   type HelpReader,
   type HelpTopic,
   helpText,
+  PRODUCT_BRIEFS,
   restrictedGuides,
   searchHelp,
 } from '@dealflow/help';
@@ -41,6 +43,10 @@ export class HelpController {
     const faqs = on ? faqsFor(reader).filter((f) => !hidden.has(`faq:${f.id}`)) : [];
     const guides = on ? guidesFor(reader).filter((g) => !hidden.has(`guide:${g.id}`)) : [];
     const restricted = on && content.settings.explainRestricted ? restrictedGuides(reader) : [];
+    // Explore SampForce: a part the plan leaves out is only shown when the Super Workspace explains such features.
+    const briefs = on
+      ? PRODUCT_BRIEFS.filter((b) => !hidden.has(`feature:${b.id}`)).map((b) => ({ brief: b, availability: briefAvailability(b, reader) })).filter((x) => x.availability !== 'not-included' || content.settings.explainRestricted)
+      : [];
     const text = (t: HelpTopic) => ({ title: t.title, what: helpText(t.what, language), how: helpText(t.how, language), where: helpText(t.where, language) });
     return {
       language,
@@ -48,6 +54,20 @@ export class HelpController {
       categories: categoriesFor(reader, faqs, guides).map((c) => ({ id: c.id, icon: c.icon, tone: c.tone, title: helpText(c.title, language), description: helpText(c.description, language) })),
       faqs: faqs.map((q) => ({ id: q.id, category: q.category, question: helpText(q.q, language), answer: helpText(q.a, language), guide: q.guide ?? null })),
       guides: guides.map((g: HelpGuide) => ({ id: g.id, category: g.category, href: g.href ?? null, ...text(g.topic), sections: g.sections.map((s) => ({ id: s.id, ...text(s.topic) })) })),
+      briefs: briefs.map(({ brief: b, availability }) => ({
+        id: b.id,
+        kind: b.kind,
+        category: b.category,
+        icon: b.icon,
+        tone: b.tone,
+        title: helpText(b.title, language),
+        tagline: helpText(b.tagline, language),
+        summary: helpText(b.summary, language),
+        highlights: b.highlights.map((h) => helpText(h, language)),
+        features: b.features,
+        guides: b.guides,
+        availability,
+      })),
       content,
       settings: content.settings,
       /** Pages the reader cannot use, and why: their plan (ask the Super Workspace), their role or their level. */

@@ -71,11 +71,11 @@ test('help at every level, a raised query and its answer from the Console', asyn
   // ── The Help menu in the top bar, from any page ──
   await page.goto('/app/deals');
   await page.locator('[data-help-menu]').click();
-  const menu = page.getByRole('menu');
-  await expect(menu.getByRole('menuitem', { name: 'Frequently asked questions' })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'My queries' })).toBeVisible();
+  const menu = page.locator('[data-help-panel="workspace"]');
+  await expect(menu.getByRole('link', { name: 'Frequently asked questions' })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'My queries' })).toBeVisible();
   await shot(page, '05-help-menu');
-  await menu.getByRole('menuitem', { name: 'Other: raise a query' }).click();
+  await menu.getByRole('link', { name: 'Other: raise a query' }).click();
 
   // ── Other: raise a query, with answers suggested as you type ──
   const form = page.locator('[data-raise-query-dialog]');

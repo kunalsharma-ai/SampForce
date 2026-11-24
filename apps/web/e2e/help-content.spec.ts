@@ -172,7 +172,7 @@ test('Console help content, from writing to reader feedback', async ({ page, bro
 
   // A built-in answer, edited.
   await ops.getByRole('button', { name: 'All articles' }).click();
-  await ops.getByLabel('Edit or hide a built-in answer or guide').selectOption('faq:deals.move');
+  await ops.getByLabel('Edit or hide a built-in answer, guide or feature brief').selectOption('faq:deals.move');
   await ops.locator('[data-edit-builtin]').click();
   await expect(editor.getByLabel('Question', { exact: true })).toHaveValue(/move a deal/i);
   await editor
