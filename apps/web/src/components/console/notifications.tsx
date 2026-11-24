@@ -21,6 +21,21 @@ export function useUnreadNotifications(enabled = true) {
   return useQuery({ enabled, queryKey: UNREAD_KEY, queryFn: () => api<{ unread: number }>('/operator/me/notifications/unread'), refetchInterval: 30_000 });
 }
 
+/**
+ * Opening a Console page reads the notifications that point to it (ADR 0075): the bell and the menu count clear while
+ * the page is in front of the operator, including for something that arrives while it is open.
+ */
+export function useReadOpenedPage(path: string, enabled: boolean) {
+  const qc = useQueryClient();
+  const unread = useUnreadNotifications(enabled).data?.unread ?? 0;
+  useEffect(() => {
+    if (!enabled || !unread || !path.startsWith('/operator/') || document.visibilityState === 'hidden') return;
+    void api<{ updated: number }>('/operator/me/notifications/read-page', { method: 'POST', json: { path } })
+      .then((r) => (r.updated ? qc.invalidateQueries({ queryKey: ['operator', 'notifications'] }) : undefined))
+      .catch(() => undefined);
+  }, [path, enabled, unread, qc]);
+}
+
 export function useNotificationActions() {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ['operator', 'notifications'] });

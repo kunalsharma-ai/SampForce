@@ -143,6 +143,15 @@ export class ConsoleNotifier {
     return { unread: await this.unread(operatorId) };
   }
 
+  /** Opening a Console page reads the notifications that point to it (ADR 0075): the bell and menu count clear. */
+  async markPageRead(operatorId: string, path: string): Promise<{ updated: number; unread: number }> {
+    const res = await this.prisma.operatorNotification.updateMany({
+      where: { operatorId, inApp: true, readAt: null, OR: [{ link: path }, { link: { startsWith: `${path}?` } }, { link: { startsWith: `${path}#` } }] },
+      data: { readAt: new Date() },
+    });
+    return { updated: res.count, unread: await this.unread(operatorId) };
+  }
+
   async markAllRead(operatorId: string): Promise<{ unread: number }> {
     await this.prisma.operatorNotification.updateMany({ where: { operatorId, inApp: true, readAt: null }, data: { readAt: new Date() } });
     return { unread: 0 };

@@ -89,8 +89,20 @@ test('Console notifications: the bell, the notifications page and preferences', 
   await expect(ops.getByRole('tab', { name: 'Unread' })).toHaveAttribute('aria-selected', 'true');
   await expect(unusual.first()).toBeVisible();
   await expect(joined).toHaveCount(0);
-  await ops.getByRole('button', { name: 'Mark all read' }).click();
-  await expect(ops.getByText('You are all caught up')).toBeVisible();
+  // Opening the page a notification points to reads it too (ADR 0075): the unusual sign-ins are about Security.
+  await ops.goto('/operator/security');
+  await expect(ops.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(async () => {
+    await ops.goto('/operator/notifications?tab=unread');
+    await expect(ops.getByRole('tab', { name: 'Unread' })).toHaveAttribute('aria-selected', 'true');
+    await expect(unusual).toHaveCount(0, { timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+  // Whatever else arrived meanwhile (other clients' new workspaces), "Mark all read" clears.
+  const markAll = ops.getByRole('button', { name: 'Mark all read' });
+  await expect(async () => {
+    if ((await markAll.isVisible()) && (await markAll.isEnabled())) await markAll.click();
+    await expect(ops.getByText('You are all caught up')).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
   await expect(bell).toHaveAccessibleName('Notifications');
 
   // ── Preferences: per type, kept after a reload ──

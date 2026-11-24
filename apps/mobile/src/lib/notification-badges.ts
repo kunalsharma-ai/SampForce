@@ -32,3 +32,19 @@ export function arrived(before: NotificationSummary | null, after: NotificationS
   if (before.latestAt && after.latestAt <= before.latestAt) return false;
   return after.unread > before.unread;
 }
+
+/** Where a section's notifications live on the web, so a record opened on the phone reads the same rows. */
+const SECTION_HREF: Record<string, string> = { companies: '/app/companies', contacts: '/app/contacts', 'follow-ups': '/app/follow-ups', tasks: '/app/tasks', deals: '/app/deals', targets: '/app/targets' };
+
+/**
+ * What opening a screen reads (ADR 0075): a module's list reads its whole section; one record reads the notifications
+ * about that record; anything else (a form, Notifications itself, Profile) reads nothing.
+ */
+export function readTargetFor(pathname: string): { section: string } | { link: string } | null {
+  const [module, id, extra] = pathname.split(/[?#]/)[0]!.split('/').filter(Boolean);
+  const section = module ? MODULE_SECTION[module] : undefined;
+  if (!section) return null;
+  if (!id) return { section };
+  if (extra || id === 'form' || id === 'new') return null;
+  return { link: `${SECTION_HREF[section]}/${id}` };
+}

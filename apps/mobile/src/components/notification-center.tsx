@@ -78,34 +78,36 @@ export function NotificationBanner() {
   const tone = notificationTone(banner);
   return (
     <Animated.View style={[styles.bannerWrap, { top: insets.top + 6, transform: [{ translateY: y }] }]} pointerEvents="box-none">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('New notification: {title}', { title: banner.title })}
-        accessibilityLiveRegion="polite"
-        onPress={() => {
-          dismissBanner();
-          open(banner);
-        }}
-        style={[styles.banner, { backgroundColor: th.card, borderColor: tone === 'normal' ? th.border : RED }]}
-        testID="notification-banner"
-      >
-        <View style={[styles.bannerIcon, { backgroundColor: RED }]}>
-          <Ionicons aria-hidden name={tone === 'action' ? 'alert-circle' : 'notifications'} size={18} color="#FFFFFF" />
-        </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ color: th.text, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>
-            {banner.title}
-          </Text>
-          {banner.body ? (
-            <Text style={{ color: th.muted, fontSize: 13 }} numberOfLines={2}>
-              {banner.body}
+      {/* The banner and its close button sit side by side, so neither control is inside the other. */}
+      <View style={[styles.banner, { backgroundColor: th.card, borderColor: tone === 'normal' ? th.border : RED }]} testID="notification-banner">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('New notification: {title}', { title: banner.title })}
+          accessibilityLiveRegion="polite"
+          onPress={() => {
+            dismissBanner();
+            open(banner);
+          }}
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+        >
+          <View style={[styles.bannerIcon, { backgroundColor: RED }]}>
+            <Ionicons aria-hidden name={tone === 'action' ? 'alert-circle' : 'notifications'} size={18} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: th.text, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>
+              {banner.title}
             </Text>
-          ) : null}
-        </View>
+            {banner.body ? (
+              <Text style={{ color: th.muted, fontSize: 13 }} numberOfLines={2}>
+                {banner.body}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('Dismiss')} onPress={dismissBanner} hitSlop={10}>
           <Ionicons aria-hidden name="close" size={18} color={th.muted} />
         </Pressable>
-      </Pressable>
+      </View>
     </Animated.View>
   );
 }
