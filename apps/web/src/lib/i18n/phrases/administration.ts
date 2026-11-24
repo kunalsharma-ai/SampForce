@@ -272,4 +272,26 @@ export const administration = {
     'أعضاء مساحة العمل والدعوات وما يستطيع كل دور فعله. تُحتسب الدعوات المعلّقة ضمن مقاعدك: مستخدمان في الخطة المجانية، أو المقاعد التي تدفع خطتك ثمنها.',
   ],
   'Revoked': ['Revocada', 'Révoquée', 'Widerrufen', 'ملغاة'],
+  // Removing a person and deleting invitation rows
+  'Delete invitation for {email}': ['Eliminar la invitación de {email}', 'Supprimer l’invitation de {email}', 'Einladung für {email} löschen', 'حذف دعوة {email}'],
+  'Invitations deleted': ['Invitaciones eliminadas', 'Invitations supprimées', 'Gelöschte Einladungen', 'الدعوات المحذوفة'],
+  'Nobody else can receive their records yet.': ['Aún no hay nadie más que pueda recibir sus registros.', 'Personne d’autre ne peut encore recevoir ses fiches.', 'Noch kann niemand sonst die Datensätze übernehmen.', 'لا يوجد أحد آخر يمكنه استلام سجلاته بعد.'],
+  'Remove person': ['Quitar a la persona', 'Retirer la personne', 'Person entfernen', 'إزالة الشخص'],
+  'They stop being able to sign in to this workspace and disappear from the members list. Nothing in the CRM is erased: their records go to the person you choose. This cannot be undone, but you can invite them again later.': [
+    'Dejan de poder iniciar sesión en este espacio de trabajo y desaparecen de la lista de miembros. No se borra nada del CRM: sus registros pasan a la persona que elijas. No se puede deshacer, pero puedes volver a invitarlos más tarde.',
+    'La personne ne peut plus se connecter à cet espace de travail et disparaît de la liste des membres. Rien n’est effacé dans le CRM : ses fiches vont à la personne choisie. C’est irréversible, mais vous pourrez l’inviter à nouveau plus tard.',
+    'Die Person kann sich nicht mehr bei diesem Arbeitsbereich anmelden und verschwindet aus der Mitgliederliste. Im CRM wird nichts gelöscht: Ihre Datensätze gehen an die Person Ihrer Wahl. Das lässt sich nicht rückgängig machen, aber Sie können sie später erneut einladen.',
+    'لن يتمكن من تسجيل الدخول إلى مساحة العمل هذه وسيختفي من قائمة الأعضاء. لا يُمسح شيء من CRM: تنتقل سجلاته إلى الشخص الذي تختاره. لا يمكن التراجع عن ذلك، لكن يمكنك دعوته مجددًا لاحقًا.',
+  ],
+  'Who receives their records': ['Quién recibe sus registros', 'Qui reçoit ses fiches', 'Wer die Datensätze übernimmt', 'من يستلم سجلاته'],
+  '{companies} companies, {contacts} contacts, {leads} leads, {deals} deals, {rfqs} RFQs, {contracts} contracts and {tasks} open tasks': [
+    '{companies} empresas, {contacts} contactos, {leads} leads, {deals} oportunidades, {rfqs} RFQ, {contracts} contratos y {tasks} tareas abiertas',
+    '{companies} entreprises, {contacts} contacts, {leads} leads, {deals} affaires, {rfqs} RFQ, {contracts} contrats et {tasks} tâches ouvertes',
+    '{companies} Unternehmen, {contacts} Kontakte, {leads} Leads, {deals} Deals, {rfqs} RFQs, {contracts} Verträge und {tasks} offene Aufgaben',
+    '{companies} شركات و{contacts} جهات اتصال و{leads} عملاء محتملين و{deals} صفقات و{rfqs} طلبات عروض أسعار و{contracts} عقود و{tasks} مهام مفتوحة',
+  ],
+  '{name} was removed. {count} records and tasks now belong to {person}.': ['Se quitó a {name}. {count} registros y tareas pertenecen ahora a {person}.', '{name} a été retiré. {count} fiches et tâches appartiennent désormais à {person}.', '{name} wurde entfernt. {count} Datensätze und Aufgaben gehören jetzt {person}.', 'تمت إزالة {name}. أصبحت {count} من السجلات والمهام ملكًا لـ{person}.'],
+  '{name} was removed.': ['Se quitó a {name}.', '{name} a été retiré.', '{name} wurde entfernt.', 'تمت إزالة {name}.'],
+  '{name} will be removed and their records given to {person}.': ['Se quitará a {name} y sus registros pasarán a {person}.', '{name} sera retiré et ses fiches confiées à {person}.', '{name} wird entfernt und die Datensätze gehen an {person}.', 'ستتم إزالة {name} وتسليم سجلاته إلى {person}.'],
+  '{name} will be removed from this workspace.': ['Se quitará a {name} de este espacio de trabajo.', '{name} sera retiré de cet espace de travail.', '{name} wird aus diesem Arbeitsbereich entfernt.', 'ستتم إزالة {name} من مساحة العمل هذه.'],
 } as const satisfies PhraseTable;

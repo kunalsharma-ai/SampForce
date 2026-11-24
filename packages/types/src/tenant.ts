@@ -47,3 +47,40 @@ export interface MemberRow {
   department: { id: string; name: string } | null;
   reportingManager: { id: string; name: string } | null;
 }
+
+/**
+ * Removing a person from the workspace (Team Management): their sign-in here stops, their records go to the person
+ * chosen, and their invitations are deleted. Their account and the history of what they did stay.
+ */
+export const removeMemberSchema = z
+  .object({ handoverToUserId: z.string().uuid().nullable().optional() })
+  .optional()
+  .transform((v) => v ?? {});
+export type RemoveMemberInput = z.infer<typeof removeMemberSchema>;
+
+/** What removing a person would touch, shown before the owner confirms. */
+export interface MemberRemovalImpact {
+  membershipId: string;
+  userId: string;
+  name: string;
+  email: string;
+  roleName: string;
+  /** Records they own (not deleted) and their open tasks, which go to the person chosen. */
+  records: { companies: number; contacts: number; leads: number; deals: number; rfqs: number; contracts: number; openTasks: number };
+  /** Invitation rows for their email in this workspace, deleted with them. */
+  invitations: number;
+  /** Active members who can receive the records (everyone but the person removed). */
+  handoverOptions: { userId: string; name: string; email: string }[];
+  /** True when they own records or open tasks, so a receiver must be chosen. */
+  handoverRequired: boolean;
+}
+
+/** What a removal did, for the confirmation message. */
+export interface MemberRemoved {
+  name: string;
+  email: string;
+  handoverTo: string | null;
+  recordsMoved: number;
+  invitationsDeleted: number;
+  sessionsEnded: number;
+}

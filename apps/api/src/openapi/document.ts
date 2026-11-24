@@ -470,6 +470,9 @@ export function buildOpenApiDocument(): object {
   action('get', '/tenants/current/invitations', 'Tenants', 'Invitations (members:read)');
   action('post', '/tenants/current/invitations', 'Tenants', 'Invite by email; returns the link once — email delivery is not configured (members:manage)', invitationInputSchema);
   action('delete', '/tenants/current/invitations/{id}', 'Tenants', 'Revoke (members:manage)');
+  action('delete', '/tenants/current/invitations/{id}/record', 'Tenants', 'Delete an invitation row for good; asks for the password (members:manage)');
+  action('get', '/tenants/current/members/{membershipId}/removal', 'Tenants', 'What removing a person would move and delete (members:manage)');
+  action('delete', '/tenants/current/members/{membershipId}', 'Tenants', 'Remove a person: body { handoverToUserId } receives their records; asks for the password (members:manage)');
   r.registerPath({ method: 'get', path: '/auth/invitations/{token}', tags: ['Auth'], summary: 'Preview an invitation', request: { params: z.object({ token: z.string() }) }, responses: { 200: ok('Workspace, email and role'), ...notFound } });
   r.registerPath({ method: 'post', path: '/auth/invitations/accept', tags: ['Auth'], summary: 'Accept; existing accounts confirm their password', request: body(acceptInvitationSchema), responses: { 200: json(tenantRef, 'Joined; auth cookies set'), ...notFound, ...errors } });
 

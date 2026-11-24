@@ -36,7 +36,7 @@ export const organizationHelp = {
       'كل من يمكنه تسجيل الدخول إلى مساحة العمل، مع دوره وآخر نشاط له.',
     ],
     how: [
-      'Change a role from the menu on each row, or remove a person who has left.',
+      'Change a role from the menu on each row, or press Remove to take out a person who has left.',
       'Cambia el rol desde el menú de cada fila o quita a quien se haya ido.',
       'Changez le rôle depuis le menu de chaque ligne, ou retirez une personne partie.',
       'Ändern Sie die Rolle über das Menü jeder Zeile oder entfernen Sie ausgeschiedene Personen.',
@@ -60,11 +60,11 @@ export const organizationHelp = {
       'الدعوات التي أرسلتها ولم تُقبل بعد.',
     ],
     how: [
-      'Enter an email and role and send. Resend or cancel an invitation from its row.',
-      'Escribe un correo y un rol y envía. Reenvía o cancela una invitación desde su fila.',
-      'Saisissez une adresse et un rôle, puis envoyez. Renvoyez ou annulez une invitation depuis sa ligne.',
-      'Geben Sie E-Mail und Rolle ein und senden Sie. Erneut senden oder zurückziehen über die Zeile.',
-      'أدخل بريدًا ودورًا وأرسل. أعد إرسال الدعوة أو ألغها من صفها.',
+      'Enter an email and role and send. Revoke a pending invitation, or delete any row for good, from its row.',
+      'Escribe un correo y un rol y envía. Revoca una invitación pendiente o elimina cualquier fila desde la propia fila.',
+      'Saisissez une adresse et un rôle, puis envoyez. Révoquez une invitation en attente ou supprimez une ligne depuis celle-ci.',
+      'Geben Sie E-Mail und Rolle ein und senden Sie. Offene Einladungen widerrufen oder Zeilen endgültig löschen über die Zeile.',
+      'أدخل بريدًا ودورًا وأرسل. ألغِ دعوة معلّقة أو احذف أي صف نهائيًا من الصف نفسه.',
     ],
     where: [
       'Use it when adding new colleagues to SampForce.',

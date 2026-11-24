@@ -105,6 +105,24 @@ export class InvitationsService {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'member.invitation_revoked', entityType: 'invitation', entityId: id, meta });
     });
   }
+  /**
+   * Deletes an invitation row for good, whatever its status (an accepted, revoked or expired one clutters the list; a
+   * pending one's link stops working). Removing the person who accepted it is a separate step.
+   */
+  erase(auth: AuthContext, id: string, meta: RequestMeta): Promise<void> {
+    return this.prisma.run(auth, async (tx) => {
+      const row = await tx.invitation.findFirst({ where: { id, tenantId: auth.tenantId }, include: { role: true } });
+      if (!row) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Invitation not found.' });
+      if (row.role.key === 'owner' && auth.roleKey !== 'owner') {
+        throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only an owner can delete an invitation to the owner role.' });
+      }
+      await tx.invitation.deleteMany({ where: { id, tenantId: auth.tenantId } });
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId, actorUserId: auth.userId, action: 'member.invitation_deleted', entityType: 'invitation', entityId: id,
+        metadata: { email: row.email, role: row.role.key, status: toRow(row).status }, meta,
+      });
+    });
+  }
 }
 
 /**
