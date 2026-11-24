@@ -23,6 +23,7 @@ import {
 import type { z } from 'zod';
 import { Auth, type AuthContext, Meta, Public, type RequestMeta, RequireFeature, RequirePermissions } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
+import { NoPasswordConfirmation } from '../common/password-confirmation';
 import { AppError } from './apps.service';
 import { SampbidxService } from './sampbidx.service';
 
@@ -134,6 +135,7 @@ export class SampbidxController {
   }
 
   @Delete('attachments/:id')
+  @NoPasswordConfirmation('Removes a file you just added to an unsent RFQ email')
   @HttpCode(204)
   @RequirePermissions('activities:write')
   async detach(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
