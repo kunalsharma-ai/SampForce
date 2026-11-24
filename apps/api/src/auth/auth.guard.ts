@@ -23,6 +23,8 @@ import { featureNotIncluded, hasFeature, ssoEnforcedNow } from '../billing/entit
 import { PrismaService } from '../common/prisma.service';
 import { ACCESS_COOKIE } from './cookies';
 import { TokenService } from './token.service';
+import { levelOf } from '../workspaces/access';
+import { workspaceRulesFor } from '../workspaces/workspace-rules';
 
 /**
  * Global guard: authenticates the access token, re-checks the membership in the token's
@@ -87,12 +89,8 @@ export class AuthGuard implements CanActivate {
       if (membership && sessionLive) {
         const { tenant } = membership;
         const ssoRequired = tenant.ssoEnforced && claims.amr !== 'sso' && membership.role.key !== 'owner' && (await ssoEnforcedNow(this.prisma, claims.tid, true));
-        const restriction =
-          ssoRequired
-            ? 'sso_required'
-            : tenant.requireMfa && claims.amr === 'password'
-              ? 'mfa_enrolment'
-              : undefined;
+        const mfaRequired = claims.amr === 'password' && (tenant.requireMfa || (await this.mfaRequiredByConsole(claims.tid, claims.sub, membership.workspaceNodeId ?? null)));
+        const restriction = ssoRequired ? 'sso_required' : mfaRequired ? 'mfa_enrolment' : undefined;
         req.auth = {
           userId: claims.sub,
           tenantId: claims.tid,
@@ -214,6 +212,17 @@ export class AuthGuard implements CanActivate {
   }
 
   /** A browser extension connection: a session of its own, limited to the extension scopes. */
+  /** The Console's rule (W3) that the people of this workspace level must use two-step sign-in. */
+  private async mfaRequiredByConsole(tenantId: string, userId: string, nodeId: string | null): Promise<boolean> {
+    return this.prisma.run({ tenantId, userId }, async (tx) => {
+      const rules = await workspaceRulesFor(tx, tenantId);
+      if (!rules.mfaRequired.SUPER && !rules.mfaRequired.MANAGER && !rules.mfaRequired.EXECUTIVE) return false;
+      const node = nodeId ? await tx.workspaceNode.findFirst({ where: { tenantId, id: nodeId }, select: { level: true, parentId: true } }) : null;
+      const level = !node || (node.level === 'SUPER' && !node.parentId) ? 'SUPER' : levelOf(node.level);
+      return rules.mfaRequired[level];
+    });
+  }
+
   private async extensionAuth(token: string): Promise<AuthContext | undefined> {
     const hash = createHash('sha256').update(token).digest('hex');
     const session = await this.prisma.session.findUnique({ where: { extensionTokenHash: hash } });

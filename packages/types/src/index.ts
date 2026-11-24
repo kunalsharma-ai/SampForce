@@ -53,6 +53,7 @@ export * from './support';
 export * from './help-content';
 export * from './own-servers';
 export * from './workspaces';
+export * from './workspace-rules';
 export * from './console';
 export * from './console-shell';
 export * from './workspace-work';

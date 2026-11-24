@@ -425,6 +425,7 @@ export class WorkspacesService {
         executives: may('workspace_management', 'create') && room(usage.executives) && (me.level === 'SUPER' ? org.root.node.canCreateExecutives : me.level === 'MANAGER' && me.node.canCreateExecutives),
       },
       workspaces: rows,
+      rules: org.rules,
     };
   }
 

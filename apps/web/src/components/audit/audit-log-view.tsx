@@ -63,6 +63,7 @@ const ACTION_LABEL: Record<string, string> = {
   'support_ticket.escalated': 'Passed a support query up',
   'security.delete_refused': 'Tried to delete without confirming the password',
   'security.password_check_failed': 'Typed a wrong password to confirm a delete',
+  'security.workspace_rules_changed': 'SampForce changed the rules for this organisation’s workspaces',
   'auth.password_reset_requested': 'Asked for a password reset link',
   'auth.password_reset': 'Reset their password',
   'auth.mfa_enabled': 'Turned on two-step sign-in',

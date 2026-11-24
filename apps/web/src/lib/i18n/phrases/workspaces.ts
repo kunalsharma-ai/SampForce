@@ -63,6 +63,8 @@ export const workspaces = {
   '{on} of {all} on': ['{on} de {all} activadas', '{on} sur {all} activées', '{on} von {all} aktiv', '{on} من {all} مفعّلة'],
   'Turn all on': ['Activar todas', 'Tout activer', 'Alle einschalten', 'تفعيل الكل'],
   'Turn all off': ['Desactivar todas', 'Tout désactiver', 'Alle ausschalten', 'إيقاف الكل'],
+  'Your SampForce plan does not let this level delete data, so Delete cannot be given here.': ['Tu plan de SampForce no permite que este nivel elimine datos, así que aquí no se puede conceder Eliminar.', 'Votre offre SampForce ne permet pas à ce niveau de supprimer des données ; Supprimer ne peut donc pas être accordé ici.', 'Ihr SampForce-Tarif erlaubt dieser Ebene kein Löschen, daher kann Löschen hier nicht vergeben werden.', 'لا تسمح خطة SampForce لهذا المستوى بحذف البيانات، لذا لا يمكن منح الحذف هنا.'],
+  'Your SampForce plan keeps these modules from this level: {modules}.': ['Tu plan de SampForce no permite estos módulos en este nivel: {modules}.', 'Votre offre SampForce exclut ces modules à ce niveau : {modules}.', 'Ihr SampForce-Tarif schließt diese Module für diese Ebene aus: {modules}.', 'تمنع خطة SampForce هذه الوحدات عن هذا المستوى: {modules}.'],
   'What it may do in each module. A dash means {parent} cannot do it either.': [
     'Qué puede hacer en cada módulo. Un guion significa que {parent} tampoco puede.',
     'Ce qu’il peut faire dans chaque module. Un tiret signifie que {parent} ne le peut pas non plus.',

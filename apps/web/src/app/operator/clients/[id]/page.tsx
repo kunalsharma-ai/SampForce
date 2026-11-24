@@ -50,6 +50,7 @@ import {
   UsageMeter,
 } from '../../console-ui';
 import { useOperator } from '../../operator-shell';
+import { ClientWorkspaceRulesCard } from '../../workspace-rules/rules-editor';
 
 type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | null;
 
@@ -225,6 +226,7 @@ export default function ConsoleClientPage() {
       </div>
 
       <Authority client={c} admin={admin} />
+      <ClientWorkspaceRulesCard tenantId={c.id} admin={admin} />
       <HelpAccess tenantId={c.id} admin={admin} />
       <History client={c} />
 
