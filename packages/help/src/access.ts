@@ -17,6 +17,7 @@ export interface HelpReader {
 export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> = {
   'page.commandCenter': 'start',
   'page.help': 'start',
+  'page.notifications': 'start',
   'page.accountSecurity': 'account',
   'page.themeStudio': 'account',
   'page.workspaces': 'workspaces',
@@ -96,6 +97,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorWorkspaceRules': 'console-plans',
   'page.operatorProviders': 'console-providers',
   'page.operatorSettings': 'console-providers',
+  'page.operatorLocations': 'console-providers',
   'page.operatorChat': 'console-support',
   'page.operatorSupport': 'console-support',
   'page.operatorHelp': 'console-support',

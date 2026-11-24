@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
+import { PasswordInput } from '@/components/forms/password-input';
 
 export function AcceptInvitation({ token }: { token: string }) {
   const router = useRouter();
@@ -81,7 +82,7 @@ export function AcceptInvitation({ token }: { token: string }) {
           error={errors.password}
           hint={inv.hasAccount ? t('You already have an account; confirm it is you.') : t('At least 10 characters, with a letter and a number.')}
         >
-          <Input type="password" autoComplete={inv.hasAccount ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput autoComplete={inv.hasAccount ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {error && (
           <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">

@@ -34,6 +34,7 @@ import { Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { ClientLogo, CompanyCard, placeLine } from '@/components/console/client-profile';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -87,9 +88,19 @@ export default function ConsoleClientPage() {
       >
         ← Clients
       </Link>
+      <div className="flex items-start gap-4">
+      <ClientLogo client={c} canEdit={admin} />
+      <div className="min-w-0 flex-1">
       <PageHeader
         title={c.name}
-        description={`Client since ${formatDate(c.createdAt)} · ${c.people} ${c.people === 1 ? 'person' : 'people'}`}
+        description={[
+          c.customerId,
+          `Client since ${formatDate(c.createdAt)}`,
+          `${c.people} ${c.people === 1 ? 'person' : 'people'}`,
+          placeLine(c.profile.countryCode, null, c.profile.city),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
@@ -134,6 +145,8 @@ export default function ConsoleClientPage() {
           </div>
         }
       />
+      </div>
+      </div>
 
       {c.closure && (
         <div role="note" className="rounded-lg border border-critical/40 bg-critical/5 p-4 text-sm" data-client-closing>
@@ -206,6 +219,8 @@ export default function ConsoleClientPage() {
           </p>
         </Card>
       </div>
+
+      <CompanyCard client={c} canEdit={admin} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5" aria-labelledby="ws-h">

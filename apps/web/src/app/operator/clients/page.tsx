@@ -7,6 +7,8 @@ import { Copy, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { ClientAvatar } from '@/components/console/client-avatar';
+import { CountryFlag } from '@/components/crm/status-chip';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -47,7 +49,7 @@ export default function ConsoleClientsPage() {
           <label htmlFor="op-search" className="sr-only">
             Search clients
           </label>
-          <Input id="op-search" placeholder="Search by name" value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+          <Input id="op-search" placeholder="Name or customer ID" value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
         </div>
         <div>
           <label htmlFor="op-state" className="sr-only">
@@ -83,14 +85,28 @@ export default function ConsoleClientsPage() {
               return (
                 <tr key={c.id} className="border-t border-border">
                   <td className="p-3">
-                    <Link href={`/operator/clients/${c.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-                      {c.name}
-                    </Link>
-                    <span className="ms-2">
-                      {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
-                    </span>
-                    {c.closure && <span className="ms-2 text-xs text-muted-foreground" data-erased-on>erased on {formatDate(c.closure.eraseAfter)}</span>}
-                    {c.awaitingAdministrator && <span className="ms-2 text-xs text-muted-foreground">administrator not joined</span>}
+                    <div className="flex items-center gap-3">
+                      <ClientAvatar name={c.name} logoUrl={c.logoUrl} size="sm" />
+                      <div className="min-w-0">
+                        <Link href={`/operator/clients/${c.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+                          {c.name}
+                        </Link>
+                        <span className="ms-2">
+                          {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
+                        </span>
+                        {c.closure && <span className="ms-2 text-xs text-muted-foreground" data-erased-on>erased on {formatDate(c.closure.eraseAfter)}</span>}
+                        {c.awaitingAdministrator && <span className="ms-2 text-xs text-muted-foreground">administrator not joined</span>}
+                        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {c.customerId && <span className="font-mono tabular" data-customer-id>{c.customerId}</span>}
+                          {c.countryCode && (
+                            <span className="inline-flex items-center gap-1">
+                              <CountryFlag code={c.countryCode} />
+                              {c.city ?? c.countryCode}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="p-3">{s?.planName.replace('SampForce ', '') ?? '—'}</td>
                   <td className="p-3 tabular">{s ? price(s.priceCents, s.currency, s.billingFrequency) : '—'}</td>

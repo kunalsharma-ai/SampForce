@@ -80,6 +80,8 @@ test('custom fields are set up in CRM configuration and used on records and in f
 });
 
 test('statuses, categories, currency, notifications, exports, dashboards and attribution are configured by administrators', async ({ page }) => {
+  // Nine settings screens, each with an accessibility check: about 15 s here, close to 30 s on the shared CI runners.
+  test.setTimeout(90_000);
   await signUp(page, 'Fieldwork Admin Co');
   const main = page.getByRole('main');
 

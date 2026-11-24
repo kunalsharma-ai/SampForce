@@ -93,6 +93,7 @@ model User {
   resetTokens        PasswordResetToken[]
   gamificationAwards GamificationAward[]
   preferences        UserPreference?
+  notificationPrefs  NotificationPreference?
   regional           UserRegionalSetting?
   savedThemes        UserSavedTheme[]
   navigation         WorkspaceNavigation[]
@@ -105,6 +106,37 @@ model User {
 
 /// A person's profile photo (ADR 0072, M6). One per person, shown in every organisation they belong to (where the
 /// organisation shows photos). Kept apart from the user so lists never load image bytes.
+/// A client organisation's logo, set in the Console (ADR 0074, C4). Keyed by the client, not by `tenantId`, because
+/// it is platform data about the client rather than a record inside its workspace.
+model ClientLogo {
+  clientId    String   @id @map("_id")
+  contentType String   @map("content_type")
+  data        Bytes
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("client_logos")
+}
+
+/// An operator's change to the city list behind the location pickers (ADR 0074, C4): a city the shipped data lacks
+/// (originalName null) or a new name for one it has. Applied over apps/api/assets/geo on every look-up.
+model GeoCityEdit {
+  id           String   @id @default(uuid()) @map("_id")
+  countryCode  String   @map("country_code")
+  /// The region (state or province) code from the shipped data; null when the city has none.
+  regionCode   String?  @map("region_code")
+  name         String
+  /// The shipped name this renames; null for a city an operator added.
+  originalName String?  @map("original_name")
+  operatorId   String   @map("operator_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([countryCode])
+  @@map("geo_city_edits")
+}
+
 model UserPhoto {
   userId      String   @id @map("_id")
   contentType String   @map("content_type")
@@ -129,6 +161,21 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("user_preferences")
+}
+
+/// A person's own notification settings (ADR 0075): the chime, its volume, muted categories and browser or phone
+/// alerts. Follows the person across devices and workspaces.
+model NotificationPreference {
+  userId     String   @id @map("_id")
+  sound      Boolean  @default(true)
+  volume     Int      @default(40)
+  mutedSound String[] @map("muted_sound")
+  desktop    Boolean  @default(false)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("notification_preferences")
 }
 
 /// A person's language and regional formats. Per person, like UserPreference, so it follows them across workspaces.
@@ -358,6 +405,22 @@ model Tenant {
   leadNumberDigits      Int               @default(2) @map("lead_number_digits")
   /// Revenue attribution rule (ADR 0063, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
   revenueAttribution    Json?             @map("revenue_attribution")
+  /// Company details the Console keeps for the client (ADR 0074, C4). Country is ISO 3166-1 alpha-2; region is the
+  /// GeoNames first-level code (a state or province) and city its name.
+  legalName             String?           @map("legal_name")
+  website               String?
+  industry              String?
+  countryCode           String?           @map("country_code")
+  regionCode            String?           @map("region_code")
+  city                  String?
+  addressLine1          String?           @map("address_line1")
+  addressLine2          String?           @map("address_line2")
+  postalCode            String?           @map("postal_code")
+  contactName           String?           @map("contact_name")
+  contactEmail          String?           @map("contact_email")
+  contactPhone          String?           @map("contact_phone")
+  /// The client's readable number, shown as SF-000123; given once, in order, from the counter "client.customer".
+  customerNumber        Int?              @map("customer_number")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
@@ -504,6 +567,7 @@ model Tenant {
   chatPresence           ChatPresence[]
 
   @@index([createdAt])
+  @@index([customerNumber])
   @@map("tenants")
 }
 
@@ -1827,6 +1891,8 @@ model Notification {
   contactId      String?   @map("contact_id")
   /// The recipient is asked to do something (acknowledge, decide, resolve).
   actionRequired Boolean   @default(false) @map("action_required")
+  /// The section it comes from (ADR 0075: Leads, Tasks...), worked out when it is written; null for older rows.
+  section        String?
   readAt         DateTime? @map("read_at")
   createdAt      DateTime  @default(now()) @map("created_at")
 
@@ -1834,6 +1900,7 @@ model Notification {
 
   @@unique([userId, eventId, type])
   @@index([tenantId, userId, readAt, createdAt(sort: Desc)])
+  @@index([tenantId, userId, createdAt(sort: Desc)])
   @@map("notifications")
 }
 

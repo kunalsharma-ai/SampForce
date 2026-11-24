@@ -107,3 +107,19 @@ preferences follow the operator across devices. The "Operator log" menu item is 
   All, Unread and Preferences. Opening a notification goes to what it is about and marks it read. Reading and choosing
   change nothing on the platform, so those writes are marked `@OperatorNoAudit()`.
 - **Not yet.** Counts update by polling every 30 seconds, not over the support chat's socket.
+
+## C4a: client profile, customer IDs, logos and locations
+
+- **Customer ID.** Every client gets a number from the `client.customer` counter, shown as `SF-000123`. Existing
+  clients are numbered oldest first the first time the Console lists them, so no migration step is needed. The clients
+  search matches the name, the legal name and the customer ID (`SF-123`, `000123` or `123`).
+- **Company details.** Legal name, website, industry, country, state, city, address and a primary contact are fields on
+  the tenant. `PATCH /operator/clients/:id/profile` (clients.edit) validates the state against the country and
+  records only the changed fields, before and after, as `client.profile_updated`.
+- **Logo.** The browser crops the image into a 512 px PNG (an SVG is drawn to pixels first), so the API stores only
+  PNG, JPEG or WebP, checked by magic bytes, at most 2 MB and 32–4096 px wide, in `client_logos`. It is served from
+  `GET /operator/clients/:id/logo` with a sandboxing CSP, and the URL carries the update time so caches refresh.
+- **Locations.** States and cities still come from the shipped GeoNames files (ADR 0060); a fresh download was not
+  possible from the build sandbox. Operators with settings.manage add a missing city or rename a listed one on the
+  Locations page; edits live in `geo_city_edits`, apply to every city picker (Console and workspace) within 30
+  seconds, are audited as `location.*`, and each can be undone. A client keeps the city text it was saved with.

@@ -47,7 +47,7 @@ export function SignupForm() {
         <FloatingField id="email" label={t('Work email')} error={errors.email?.message}>
           <Input type="email" autoComplete="email" {...form.register('email')} />
         </FloatingField>
-        <FloatingField id="password" label={t('Password')} error={errors.password?.message} hint={t('At least 10 characters, with a letter and a number.')}>
+        <FloatingField id="password" reveal label={t('Password')} error={errors.password?.message} hint={t('At least 10 characters, with a letter and a number.')}>
           <Input type="password" autoComplete="new-password" {...form.register('password')} />
         </FloatingField>
         <FloatingField id="organizationName" label={t('Organization name')} error={errors.organizationName?.message}>

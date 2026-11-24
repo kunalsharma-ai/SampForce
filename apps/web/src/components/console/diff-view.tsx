@@ -25,6 +25,13 @@ const FIELD_LABEL: Record<string, string> = {
   currentPeriodEnd: 'Renews on',
   currentPeriodStart: 'Period starts',
   canCreateExecutives: 'Creates Executive Workspaces',
+  countryCode: 'Country',
+  regionCode: 'State / province',
+  addressLine1: 'Address',
+  addressLine2: 'Address (line 2)',
+  contactName: 'Primary contact',
+  contactEmail: 'Contact email',
+  contactPhone: 'Contact phone',
 };
 
 /** "maxManagerWorkspaces" → "Max manager workspaces". */

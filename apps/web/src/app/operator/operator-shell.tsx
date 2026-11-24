@@ -16,6 +16,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { ChatNotices } from '@/components/chat/chat-notices';
+import { ClientAvatar } from '@/components/console/client-avatar';
 import { ConsoleCommand } from '@/components/console/console-command';
 import { consolePagesFor, crumbsFor } from '@/components/console/console-nav';
 import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
@@ -27,6 +28,7 @@ import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
 import { isDarkNow, useConsolePaint } from '@/lib/console-appearance';
 import { playConsoleSound } from '@/lib/console-sound';
 import { useOperatorTicketCounts } from '@/lib/support';
+import { WelcomeScene } from '@/components/sign-in/welcome-overlay';
 import { StateBadge } from './console-ui';
 
 const ME_KEY = ['operator', 'me'] as const;
@@ -106,23 +108,12 @@ function ClientContextBar({ id }: { id: string }) {
   });
   if (!client.data) return null;
   const c = client.data;
-  const initials = c.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
   return (
     <div
       className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-surface/60 px-4 py-2 text-sm sm:px-6"
       data-client-context={c.id}
     >
-      <span
-        className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-primary/25 to-accent/25 text-[11px] font-semibold text-primary"
-        aria-hidden
-      >
-        {initials}
-      </span>
+      <ClientAvatar name={c.name} logoUrl={c.logoUrl} size="sm" />
       <Link href={`/operator/clients/${c.id}`} className="font-medium hover:underline">
         {c.name}
       </Link>
@@ -215,6 +206,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       <ChatNotices />
+      <WelcomeScene variant="console" name={me.data ? me.data.name || me.data.email : null} />
       {me.data && (
         <ConsoleSidebar
           collapsed={me.data.preferences.sidebarCollapsed}
