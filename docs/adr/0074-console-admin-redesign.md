@@ -123,3 +123,55 @@ preferences follow the operator across devices. The "Operator log" menu item is 
   possible from the build sandbox. Operators with settings.manage add a missing city or rename a listed one on the
   Locations page; edits live in `geo_city_edits`, apply to every city picker (Console and workspace) within 30
   seconds, are audited as `location.*`, and each can be undone. A client keeps the city text it was saved with.
+
+## C4b: clients list, bulk actions and the client timeline
+
+- **List.** `GET /operator/clients/page` filters by search (name, legal name, slug, customer ID or an administrator's
+  email), status, plan, billing, country, payment status and created dates; sorts on every column; and pages 25, 50
+  or 100 at a time. Status and payment are derived from the subscription, so filtering and sorting happen after loading
+  up to 5,000 clients, which is far above today's client count. The filters live in the address, so a filtered list
+  can be bookmarked or shared. The address is updated with `history.replaceState`, not a router navigation, so a late
+  debounced search never pulls the operator back to the list after they opened a client.
+- **Export.** `GET /operator/clients/export` writes what the filters show as CSV and is itself audited.
+- **Bulk actions.** `POST /operator/clients/bulk` runs one action over up to 200 clients: change status, extend
+  subscriptions by N days, set or clear a feature override, or email the administrators. Each action needs the same
+  permission as doing it to one client (`BULK_PERMISSION`). Suspending or deactivating needs CONFIRM typed. Every
+  client is changed through the same code as its own page and audited on its own; one `clients.bulk` entry records
+  the run without the typed word or the email's text. The result lists changed, skipped (with why) and failed clients.
+- **Timeline.** The client page shows the activity feed for that client, newest first, ten at a time, with the
+  category chips. It is the existing activity feed (C3a) filtered by client, so it has no separate store.
+- Left for later: saved filters beyond the address, a column chooser, health (C5) and mobile seats (C9) columns.
+
+## C5a: client health score
+
+- **Signals and scoring.** Seven signals, each measured from data the platform already stores and scored 0 to 1:
+  - sign-ins: people with a session in the client in the last 14 days, out of its active people;
+  - workspace use: Manager and Executive Workspaces against their limits;
+  - feature adoption: which of contacts, companies, deals, activities, tasks and RFQs had a record created in the last 30 days;
+  - mobile use: phone seats seen in the last 14 days;
+  - payment status;
+  - support load: open tickets, with a penalty for those older than 48 hours;
+  - subscription status.
+- **Signals that don't apply.** A signal that does not apply is left out and the remaining weights are scaled to 100, rather than counted as zero. Examples: mobile access off, no workspace limits, no payment status. The client page shows each signal's points, its maximum and the raw figure.
+- **Weights and bands.** Weights and band thresholds live in `PlatformSetting` key `console.health`, edited in Settings → Health score (`settings.manage`). The defaults follow the spec: 20/15/15/10/20/10/10, Healthy from 70, At risk from 40.
+- **When clients are measured.** The worker measures each client once per UTC day, in batches of 25 on the Console sweep's once-a-minute pace. A client is measured again when it was last measured before today, or before the weights last changed. It writes `ClientHealthDaily` (one row per client and day, with the signals) and the latest score on the tenant (`healthScore`, `healthBand`, `healthAt`), so the list can filter and sort on it with an index.
+- **Measure now.** An operator can measure a client on demand from its page. Each measurement and each change of weights is a platform audit entry with before and after.
+- **Advisory only.** The score never blocks anything.
+
+## C5b: Overview dashboard
+
+- **One endpoint.** `GET /api/v1/operator/overview/dashboard` (`clients.view`) returns the whole page: Action Required, 18 KPIs, the chart data, utilisation, mobile figures and the six newest Manager and Executive Workspaces. It is worked out from the same client rows the clients list uses and cached in the API process for `CONSOLE_OVERVIEW_CACHE_MS` (default one minute; browser tests use one second). Every figure is a count or sum across clients. No CRM record is read and no person is named.
+- **Change against 30 days ago.** The worker writes the 18 values once per UTC day to `platform_metrics_daily` (`PlatformMetricDaily`, keyed by day). Each card shows the change against the row from 30 days ago and a 30-day line from the rows in between. Until the first rows exist, a card says so instead of showing a made-up trend.
+- **Money.** Money figures use the currency with the most monthly recurring revenue. Other currencies are listed under the cards, never converted. A money change is shown only when the old snapshot is in the same currency. Cards show whole units so large sums fit.
+- **Action Required.** Eight items, hidden when 0, each linking to the filtered list:
+  - overdue payments;
+  - subscriptions renewing in 14 days;
+  - failed payments;
+  - support queries open over 48 hours;
+  - suspended clients;
+  - unused workspace seats on active clients;
+  - mobile access requests;
+  - providers whose last check failed.
+- **Churn.** Churn is a client moved to Deactivated, read from the `client.state_changed` audit entries. The growth chart's active line is clients created by the end of each month, minus those deactivated by then.
+- **Quick actions.** New client, New plan and Record payment, each shown only with its permission. New client opens the new client form on the clients list (`?new=1`).
+- Charts honour the operator's motion setting. Every chart has a text summary for screen readers.
