@@ -8,6 +8,7 @@ import { CompanyAutofill } from '@/components/crm/company-autofill';
 import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } from '@/components/crm/company-dashboard';
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { BusinessInformation } from '@/components/crm/business-information';
+import { CompanyEmailAssistant } from '@/components/crm/company-email-assistant';
 import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/crm/company-parts';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
@@ -50,6 +51,7 @@ export function CompanyDetail({ id }: { id: string }) {
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="min-w-0 space-y-4 lg:col-span-2">
             <BusinessInformation company={c} />
+            <CompanyEmailAssistant company={c} />
             <CompanyBusiness companyId={id} />
             <CompanyEmployeeDirectory company={c} />
             <CompanyInteractions company={ref} employees={people} />

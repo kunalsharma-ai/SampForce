@@ -426,6 +426,11 @@ model Tenant {
   healthScore           Int?              @map("health_score")
   healthBand            String?           @map("health_band")
   healthAt              DateTime?         @map("health_at")
+  /// Who the organisation is, for AI sales emails (ADR 0077): salesProfileSchema in @dealflow/types. The Super
+  /// Workspace keeps it; every workspace in the organisation writes with it. Null = never set.
+  salesProfile          Json?             @map("sales_profile")
+  salesProfileUpdatedAt DateTime?         @map("sales_profile_updated_at")
+  salesProfileUpdatedBy String?           @map("sales_profile_updated_by")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")

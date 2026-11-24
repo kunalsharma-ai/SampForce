@@ -26,6 +26,7 @@ import { Tr } from '@/lib/i18n';
 import { AppearanceSettings } from './appearance-settings';
 import { CloseCompanyCard } from './close-company';
 import { RegionalSettings } from './regional-settings';
+import { SalesProfileSettings } from './sales-profile-settings';
 import { SettingsJump } from './settings-jump';
 import { WorkspaceSettings } from './workspace-settings';
 
@@ -126,6 +127,7 @@ export default function SettingsPage() {
           </p>
         </div>
         <WorkspaceSettings />
+        <SalesProfileSettings />
         <AppearanceSettings />
         <RegionalSettings />
         <CloseCompanyCard />

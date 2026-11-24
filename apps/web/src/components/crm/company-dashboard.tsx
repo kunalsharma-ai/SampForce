@@ -19,6 +19,7 @@ import {
   Linkedin,
   Mail,
   MailOpen,
+  MailPlus,
   MapPin,
   MessageSquarePlus,
   Pencil,
@@ -63,6 +64,7 @@ import { INTERACTION_LABEL } from './work-labels';
 const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Plus }[] = [
   { action: 'edit', label: 'Edit company', icon: Pencil },
   { action: 'enrich', label: 'Enrich', icon: Sparkles },
+  { action: 'aiEmail', label: 'Write email with AI', icon: MailPlus },
   { action: 'addEmployee', label: 'Add employee', icon: UserPlus },
   { action: 'addBranch', label: 'Add branch', icon: Building2 },
   { action: 'addFollowUp', label: 'Add follow-up', icon: CalendarClock },

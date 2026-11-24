@@ -206,6 +206,26 @@ export const rules: Handler = (b) => {
     const where = [c.city, c.country].filter(Boolean).join(', ');
     return json({ summary: `${c.name} works in ${strip(c.industry) || 'its field'}${where ? `, based in ${where}` : ''}.${c.foundedYear ? ` It was founded in ${c.foundedYear}.` : ''}${(c.services ?? []).length ? ` Its services include ${(c.services as string[]).slice(0, 3).join(', ')}.` : ''}` });
   }
+  if (system.startsWith('You write a sales email from one organisation')) {
+    const c = input.company ?? {};
+    const s = input.sender ?? {};
+    const r = input.recipient ?? {};
+    const hello = r.firstName ? `Hi ${r.firstName},` : 'Hello,';
+    const offer = (s.services ?? []).length ? ` We help companies like yours with ${(s.services as string[]).slice(0, 2).join(' and ')}.` : ' [what we offer]';
+    const why = s.valueProposition ? ` ${s.valueProposition}` : '';
+    const fit = c.industry ? ` I saw that ${c.name} works in ${strip(c.industry)}${c.city ? ` from ${c.city}` : ''}.` : '';
+    const ask = /call/i.test(input.settings?.cta ?? '') ? ' Would [proposed time] suit you for a short call?' : '';
+    const sign = `${s.writer?.firstName ?? 'Me'}\n${s.organisation}`;
+    const follow = Array.from({ length: Number(input.settings?.followUps ?? 0) }, (_, i) => ({ waitDays: i === 0 ? 1 : 5, subject: `Re: ${s.organisation} for ${c.name}`, body: `${hello}\n\nA short follow-up ${i + 1}.\n\n${sign}` }));
+    return json({
+      subject: `${s.organisation} for ${c.name}`,
+      body: `${hello}\n\nI am writing from ${s.organisation}.${fit}${offer}${why}${ask}\n\n${sign}`,
+      subjectAlternatives: [`An idea for ${c.name}`, `${s.organisation} for ${c.name}`],
+      followUps: follow,
+      basedOn: [`Industry: ${strip(c.industry) || 'unknown'}`, `Sender: ${s.organisation}`],
+      checkBeforeSending: ask ? ['Fill in [proposed time]'] : [],
+    });
+  }
   if (system.startsWith('You explain to a sales manager')) {
     return text(`- The base forecast moved by ${input.delta?.base} ${input.currency}.\n- ${(input.changes ?? []).length} deals changed.`);
   }

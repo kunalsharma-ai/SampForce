@@ -244,4 +244,6 @@ export const errorsWork = {
   'Your role cannot change companies (companies:write).': ['Tu rol no puede modificar empresas (companies:write).', 'Votre rôle ne peut pas modifier les entreprises (companies:write).', 'Ihre Rolle kann keine Unternehmen ändern (companies:write).', 'لا يمكن لدورك تعديل الشركات (companies:write).'],
   'Name the detail': ['Nombra el dato', 'Nommez l’information', 'Benennen Sie die Angabe', 'سمِّ المعلومة'],
   'Enter a value': ['Introduce un valor', 'Saisissez une valeur', 'Geben Sie einen Wert ein', 'أدخل قيمة'],
+  'Employee not found.': ['No se encontró el empleado.', 'Employé introuvable.', 'Mitarbeiter nicht gefunden.', 'لم يُعثر على الموظف.'],
+  'Only the Super Workspace can change the sales profile.': ['Solo el Super Workspace puede cambiar el perfil de ventas.', 'Seul le Super Workspace peut modifier le profil commercial.', 'Nur der Super Workspace kann das Vertriebsprofil ändern.', 'لا يمكن تغيير ملف المبيعات إلا من مساحة العمل الرئيسية (Super Workspace).'],
 } as const satisfies TextTable;
