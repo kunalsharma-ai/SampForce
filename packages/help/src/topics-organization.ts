@@ -1780,6 +1780,30 @@ export const organizationHelp = {
       'استلام طلب عرض سعر ليس صفقة رابحة: لا يُحتسب إيرادًا إلا الطلبات الرابحة أو الصفقات الناتجة عنها.',
     ],
   },
+  'crm.businessInformation': {
+    title: 'Business information',
+    what: [
+      'Everything about the company in one place: overview, headquarters and offices, contact details, leadership and ownership, online profiles, certifications and other details.',
+      'Todo sobre la empresa en un solo lugar: descripción, sede y oficinas, datos de contacto, dirección y propiedad, perfiles en línea, certificaciones y otros datos.',
+      'Tout sur l’entreprise au même endroit : présentation, siège et bureaux, coordonnées, direction et actionnariat, profils en ligne, certifications et autres informations.',
+      'Alles über das Unternehmen an einem Ort: Überblick, Hauptsitz und Standorte, Kontaktdaten, Führung und Eigentümer, Online-Profile, Zertifizierungen und weitere Angaben.',
+      'كل ما يخص الشركة في مكان واحد: النبذة والمقر والمكاتب وبيانات التواصل والقيادة والملكية والحسابات على الإنترنت والشهادات وتفاصيل أخرى.',
+    ],
+    how: [
+      'Select Edit to change or clear any value. Values marked Auto were found by auto-fill; select the mark to open the page it came from.',
+      'Selecciona Editar para cambiar o borrar cualquier valor. Los valores marcados como Automático los encontró el autocompletado; selecciona la marca para abrir la página de origen.',
+      'Sélectionnez Modifier pour changer ou effacer une valeur. Les valeurs marquées Auto ont été trouvées par le remplissage automatique ; sélectionnez la marque pour ouvrir la page d’origine.',
+      'Wählen Sie Bearbeiten, um einen Wert zu ändern oder zu löschen. Mit Automatisch markierte Werte stammen aus der automatischen Ergänzung; wählen Sie die Markierung, um die Quelle zu öffnen.',
+      'اختر «تعديل» لتغيير أي قيمة أو مسحها. القيم الموسومة بـ«تلقائي» وجدها الإكمال التلقائي؛ اختر الوسم لفتح الصفحة التي جاءت منها.',
+    ],
+    where: [
+      'A value you edit is never changed by auto-fill again, and something you remove is not added back.',
+      'El autocompletado nunca vuelve a cambiar un valor que editas, y lo que quitas no se vuelve a añadir.',
+      'Le remplissage automatique ne modifie plus jamais une valeur que vous avez modifiée, et ce que vous retirez n’est pas rajouté.',
+      'Von Ihnen bearbeitete Werte ändert die automatische Ergänzung nie wieder, und Entferntes wird nicht erneut hinzugefügt.',
+      'لا يغيّر الإكمال التلقائي أبدًا قيمة عدّلتها، ولا يعيد إضافة ما أزلته.',
+    ],
+  },
   'crm.companyAutofill': {
     title: 'Auto-fill',
     what: [

@@ -93,3 +93,57 @@ test('a company saved without a website is looked up again when its website is a
   await expect(panel.getByRole('status')).toContainText(/details added/, { timeout: 30_000 });
   await expect(panel).toContainText('when the website changed');
 });
+
+test('Business Information holds every detail, tells auto-filled values apart, and edits in one place', async ({ page }) => {
+  test.setTimeout(90_000);
+  await signUp(page, 'Business Info Org');
+  const res = await page.request.post('/api/v1/companies', { data: { name: 'Northwind Insights', website: 'northwind-insights.example', notes: 'Met at the Pune expo.' }, headers: ORIGIN });
+  const { id } = await res.json();
+  await page.goto(`/app/companies/${id}`);
+  await expect(page.locator('#company-autofill').getByRole('status')).toContainText(/details added/, { timeout: 30_000 });
+
+  const info = page.locator('#business-information');
+  // Grouped sections, each value from auto-fill marked Auto with a link to its source; typed values carry no mark.
+  for (const section of ['Overview', 'HQ & Locations', 'Contact', 'Digital presence', 'Certifications', 'More details']) {
+    await expect(info.getByRole('region', { name: section })).toBeVisible();
+  }
+  const founded = info.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Founded/ }) });
+  await expect(founded.getByRole('link', { name: /Found by auto-fill: Company website/ })).toHaveAttribute('href', 'https://www.northwind-insights.example/about-us');
+  await expect(founded.locator('dd')).toHaveText('2009');
+  const remarks = info.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Remarks/ }) });
+  await expect(remarks).toContainText('Met at the Pune expo.');
+  await expect(remarks.getByText('Auto')).toHaveCount(0);
+  await expect(info.getByRole('region', { name: 'HQ & Locations' })).toContainText('Pune');
+  await expect(info.getByRole('region', { name: 'Certifications' })).toContainText('ISO 27001');
+  await axe(page);
+  await shot(page, '05-business-information', info);
+
+  // One Edit opens every field, grouped the same way.
+  await info.getByRole('button', { name: 'Edit' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit business information' });
+  await expect(dialog.getByLabel('Founded')).toHaveValue('2009');
+  await dialog.getByLabel('Founded').fill('2010');
+  const services = dialog.getByLabel('Services');
+  await services.fill((await services.inputValue()).replace('Panel Management\n', '').replace('\nPanel Management', ''));
+  await dialog.getByLabel('Social profiles').fill('https://x.com/NorthwindIns\nhttps://www.tiktok.com/@northwind');
+  await dialog.getByRole('button', { name: 'Add detail' }).click();
+  await dialog.getByRole('textbox', { name: 'Detail 1' }).fill('Panel size');
+  await dialog.getByRole('textbox', { name: 'Value 1' }).fill('2.1 million members');
+  await axe(page);
+  await shot(page, '06-edit-business-information', dialog);
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+
+  // The edited value is now the team's own: no Auto mark, and auto-fill keeps off it.
+  await expect(founded.locator('dd')).toHaveText('2010');
+  await expect(founded.getByRole('link', { name: /Found by auto-fill/ })).toHaveCount(0);
+  await expect(info.getByRole('region', { name: 'More details' })).toContainText('2.1 million members');
+  await expect(info.getByRole('region', { name: 'Digital presence' })).toContainText('tiktok.com/@northwind');
+  const saved = await (await page.request.get(`/api/v1/companies/${id}`)).json();
+  expect(saved.foundedYear).toBe(2010);
+  expect(saved.fieldSources.foundedYear).toMatchObject({ source: 'USER' });
+  expect(saved.services).not.toContain('Panel Management');
+  expect(saved.moreDetails).toEqual([{ label: 'Panel size', value: '2.1 million members' }]);
+  // Fields left alone keep their auto-fill source.
+  expect(saved.fieldSources.employeeCount).toMatchObject({ source: 'WEBSITE' });
+});

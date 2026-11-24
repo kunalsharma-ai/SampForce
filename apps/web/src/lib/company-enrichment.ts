@@ -15,13 +15,16 @@ export function useCompanyEnrichment(companyId: string, enabled = true) {
     // While a run waits or reads the website, check every few seconds; otherwise only when asked.
     refetchInterval: (q) => (q.state.data?.busy ? 3_000 : false),
   });
-  // When a run finishes, the company itself changed: reload it so the new details and logo show.
-  const wasBusy = React.useRef(false);
-  const busy = !!query.data?.busy;
+  // When a run finishes, the company itself changed: reload it so the new details and logo show. The company may
+  // have loaded just before the run finished, so the first finished run seen after opening the page counts too.
+  const seen = React.useRef<string | null>(null);
+  const latest = query.data?.runs.find((r) => r.status !== 'PENDING');
+  const finished = latest ? `${latest.id}:${latest.finishedAt}` : null;
   React.useEffect(() => {
-    if (wasBusy.current && !busy) void qc.invalidateQueries({ queryKey: ['companies', 'detail', companyId] });
-    wasBusy.current = busy;
-  }, [busy, companyId, qc]);
+    if (!finished || seen.current === finished) return;
+    if (seen.current !== null || latest?.status === 'DONE') void qc.invalidateQueries({ queryKey: ['companies', 'detail', companyId] });
+    seen.current = finished;
+  }, [finished, latest?.status, companyId, qc]);
   return query;
 }
 

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   ENRICH_FIELD_LABELS,
+  OPERATING_STATUSES,
   FIELD_SOURCE_LABELS,
   MOBILE_DASHBOARD_CARD_DEFS,
   MOBILE_FIELDS,
@@ -149,7 +150,7 @@ describe('page phrases', () => {
     ['fixed forecast columns', ['Overdue', 'Later', 'No close date']],
     // Mobile Configuration Center (ADR 0072): module, field and dashboard card names from the shared mobile config.
     // Company auto-fill (ADR 0076): field and source names, the confidence chips, and why a look-up found nothing.
-    ['company auto-fill labels', [...Object.values(ENRICH_FIELD_LABELS), ...Object.values(FIELD_SOURCE_LABELS), ...[...source('../../components/crm/company-autofill.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)]],
+    ['company auto-fill labels', [...Object.values(ENRICH_FIELD_LABELS), ...Object.values(FIELD_SOURCE_LABELS), ...OPERATING_STATUSES, ...[...source('../../components/crm/company-autofill.tsx').matchAll(/label: '([^']+)'/g)].map((m) => m[1]!)]],
     ['company auto-fill run errors', [...source('../../../../api/src/crm/company-enrichment.service.ts').matchAll(/(?:error: |error = |error \?\? |'FAILED', \[\], [^,]+, )'([^']+)'/g)].map((m) => m[1]!)],
     ['mobile configuration labels', [...MOBILE_MODULE_DEFS.flatMap((m) => [m.label, m.description]), ...Object.values(MOBILE_FIELDS).flatMap((fs) => fs.map((f) => f.label)), ...Object.values(MOBILE_DASHBOARD_CARD_DEFS).flatMap((c) => [c.label, c.description]), ...Object.values(MOBILE_LEVEL_LABEL), ...Object.values(MOBILE_NOTIFICATION_LABEL), ...Object.values(MOBILE_PHONE_ACTION_LABEL)]],
     // Company-centric CRM (ADR 0060): the starter statuses, designations and departments a workspace gets, shown with
