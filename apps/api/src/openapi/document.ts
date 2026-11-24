@@ -946,6 +946,9 @@ export function buildOpenApiDocument(): object {
   op('post', '/locations/cities', 'add a city the list does not have (settings.manage)');
   op('post', '/locations/cities/rename', 'give a listed city another name (settings.manage)');
   op('delete', '/locations/cities/{id}', 'remove an added city or undo a rename (settings.manage)');
+  op('get', '/clients/page', 'clients with filters (status, plan, billing, country, payment, created dates), sort on every column and pages of 25, 50 or 100 (clients.view)');
+  op('get', '/clients/export', 'the filtered clients list as CSV; the export is an audit entry (clients.view)');
+  op('post', '/clients/bulk', 'one action over up to 200 clients: change status (CONFIRM to suspend or deactivate), extend subscriptions, set a feature override or email the administrators; each client audited (the action\'s own permission)');
   op('get', '/activity', 'the Console activity feed: operator actions, clients joining, new workspaces, invoices, failed payments, tickets reaching SampForce and unusual sign-ins, only the kinds the role may act on (clients.view)');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.

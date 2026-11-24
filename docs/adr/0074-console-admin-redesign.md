@@ -123,3 +123,21 @@ preferences follow the operator across devices. The "Operator log" menu item is 
   possible from the build sandbox. Operators with settings.manage add a missing city or rename a listed one on the
   Locations page; edits live in `geo_city_edits`, apply to every city picker (Console and workspace) within 30
   seconds, are audited as `location.*`, and each can be undone. A client keeps the city text it was saved with.
+
+## C4b: clients list, bulk actions and the client timeline
+
+- **List.** `GET /operator/clients/page` filters by search (name, legal name, slug, customer ID or an administrator's
+  email), status, plan, billing, country, payment status and created dates; sorts on every column; and pages 25, 50
+  or 100 at a time. Status and payment are derived from the subscription, so filtering and sorting happen after loading
+  up to 5,000 clients, which is far above today's client count. The filters live in the address, so a filtered list
+  can be bookmarked or shared. The address is updated with `history.replaceState`, not a router navigation, so a late
+  debounced search never pulls the operator back to the list after they opened a client.
+- **Export.** `GET /operator/clients/export` writes what the filters show as CSV and is itself audited.
+- **Bulk actions.** `POST /operator/clients/bulk` runs one action over up to 200 clients: change status, extend
+  subscriptions by N days, set or clear a feature override, or email the administrators. Each action needs the same
+  permission as doing it to one client (`BULK_PERMISSION`). Suspending or deactivating needs CONFIRM typed. Every
+  client is changed through the same code as its own page and audited on its own; one `clients.bulk` entry records
+  the run without the typed word or the email's text. The result lists changed, skipped (with why) and failed clients.
+- **Timeline.** The client page shows the activity feed for that client, newest first, ten at a time, with the
+  category chips. It is the existing activity feed (C3a) filtered by client, so it has no separate store.
+- Left for later: saved filters beyond the address, a column chooser, health (C5) and mobile seats (C9) columns.

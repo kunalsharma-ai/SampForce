@@ -38,6 +38,8 @@ const urgent = (i: ConsoleActivityItem) => i.kind === 'subscription.past_due' ||
  * The server leaves out the kinds the operator's role may not act on; the chips narrow it further.
  */
 export function ActivityFeed({ categories, tenantId, pageSize = 30 }: { categories: ConsoleActivityCategory[]; tenantId?: string; pageSize?: number }) {
+  // On a client's own timeline its name before every line says nothing.
+  const showClient = !tenantId;
   const [picked, setPicked] = useState<ConsoleActivityCategory[]>([]);
   const feed = useInfiniteQuery({
     queryKey: ['operator', 'activity', tenantId ?? null, picked.join(','), pageSize],
@@ -93,7 +95,7 @@ export function ActivityFeed({ categories, tenantId, pageSize = 30 }: { categori
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm">
-                    {i.client && <span className="font-medium">{i.client.name} · </span>}
+                    {showClient && i.client && <span className="font-medium">{i.client.name} · </span>}
                     <span className={urgent(i) ? 'font-medium text-critical' : undefined}>{activitySentence(i)}</span>
                   </span>
                   <time dateTime={i.at} title={new Date(i.at).toLocaleString(fmtLocale())} className="block text-xs text-muted-foreground">
