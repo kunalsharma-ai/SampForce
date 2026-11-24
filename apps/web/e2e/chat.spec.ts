@@ -75,7 +75,9 @@ test('colleagues chat live in a channel and direct messages, with files, record 
   await priya.page.goto('/app/chat');
   const pm = priya.page.getByRole('main');
   const item = pm.locator('[data-conversation="Project updates"]');
-  await expect(item).toContainText('1');
+  // On a wide screen the chat page opens the newest conversation by itself, which reads it at once, so its unread
+  // badge may already be gone here; the badge in the sidebar and the tab title above proved it was unread.
+  await expect(item).toBeVisible();
   await item.click();
   await expect(pm.locator('[data-message]').filter({ hasText: 'India B2B fieldwork starts Monday.' })).toBeVisible();
   // Opening it reads it: the sender sees the read receipt, the badge clears.
@@ -223,9 +225,10 @@ test('a workspace admin and a super admin talk on the support line', async ({ pa
   await expect(line).toContainText('1');
   await line.click();
   await expect(om.locator('[data-message]').filter({ hasText: 'Hello, can you raise our seat limit to 25 before Monday?' })).toBeVisible();
+  // The receipt sits under the admin's own latest message, so check it before the reply becomes the latest one.
+  await expect(main.locator('[data-read-receipt="seen"]')).toBeVisible();
   await om.getByLabel('Message', { exact: true }).fill('Done. You now have 25 seats; the invoice follows the usual way.');
   await om.getByLabel('Message', { exact: true }).press('Enter');
-  await expect(main.locator('[data-read-receipt="seen"]')).toBeVisible();
   await expectNoViolations(ops);
   await shot(ops, '06-operator-support-chat');
 
