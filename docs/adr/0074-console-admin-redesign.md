@@ -157,3 +157,21 @@ preferences follow the operator across devices. The "Operator log" menu item is 
 - **When clients are measured.** The worker measures each client once per UTC day, in batches of 25 on the Console sweep's once-a-minute pace. A client is measured again when it was last measured before today, or before the weights last changed. It writes `ClientHealthDaily` (one row per client and day, with the signals) and the latest score on the tenant (`healthScore`, `healthBand`, `healthAt`), so the list can filter and sort on it with an index.
 - **Measure now.** An operator can measure a client on demand from its page. Each measurement and each change of weights is a platform audit entry with before and after.
 - **Advisory only.** The score never blocks anything.
+
+## C5b: Overview dashboard
+
+- **One endpoint.** `GET /api/v1/operator/overview/dashboard` (`clients.view`) returns the whole page: Action Required, 18 KPIs, the chart data, utilisation, mobile figures and the six newest Manager and Executive Workspaces. It is worked out from the same client rows the clients list uses and cached in the API process for `CONSOLE_OVERVIEW_CACHE_MS` (default one minute; browser tests use one second). Every figure is a count or sum across clients. No CRM record is read and no person is named.
+- **Change against 30 days ago.** The worker writes the 18 values once per UTC day to `platform_metrics_daily` (`PlatformMetricDaily`, keyed by day). Each card shows the change against the row from 30 days ago and a 30-day line from the rows in between. Until the first rows exist, a card says so instead of showing a made-up trend.
+- **Money.** Money figures use the currency with the most monthly recurring revenue. Other currencies are listed under the cards, never converted. A money change is shown only when the old snapshot is in the same currency. Cards show whole units so large sums fit.
+- **Action Required.** Eight items, hidden when 0, each linking to the filtered list:
+  - overdue payments;
+  - subscriptions renewing in 14 days;
+  - failed payments;
+  - support queries open over 48 hours;
+  - suspended clients;
+  - unused workspace seats on active clients;
+  - mobile access requests;
+  - providers whose last check failed.
+- **Churn.** Churn is a client moved to Deactivated, read from the `client.state_changed` audit entries. The growth chart's active line is clients created by the end of each month, minus those deactivated by then.
+- **Quick actions.** New client, New plan and Record payment, each shown only with its permission. New client opens the new client form on the clients list (`?new=1`).
+- Charts honour the operator's motion setting. Every chart has a text summary for screen readers.
