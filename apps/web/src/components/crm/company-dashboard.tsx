@@ -133,7 +133,8 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
             {(place || c.headquarters) && (
               <div className="space-y-1">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-medium">
-                  {c.country && <CountryFlag code={c.country} className="text-lg" />}
+                  {/* The country is written in the line, and the logo badge already names it for screen readers. */}
+                  {c.country && <CountryFlag code={c.country} decorative className="text-lg" />}
                   <span>{place || c.headquarters}</span>
                   {(c.address || c.headquarters) && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{t('Headquarters')}</span>

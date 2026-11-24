@@ -30,6 +30,8 @@ async function shot(page: Page, name: string) {
 }
 
 test('company leads get numbers and coloured statuses, configured in CRM configuration', async ({ page }) => {
+  // Long flow over many pages; it ran past the default timeout on a busy CI runner.
+  test.setTimeout(120_000);
   page.on('dialog', (d) => void d.accept());
   await signUp(page, 'Frequent Research Fieldwork Solutions');
   const acme = await post(page, '/companies', { name: 'Acme Panels', country: 'IN', city: 'Pune', state: 'MH', industry: 'Market research', website: 'acmepanels.example' });
