@@ -99,7 +99,8 @@ test('a customer signs in to the portal, approves a proposal and gets an answer 
 
   // The team answers from the inbox.
   await page.goto('/app/portal');
-  await page.getByRole('button', { name: /Add two more users/ }).click();
+  // The inbox row, not the "New in Portal" notice above the page that names the same request.
+  await page.locator('xpath=//main//button[not(ancestor::*[@data-section-notices])]').filter({ hasText: 'Add two more users' }).click();
   await page.getByLabel('Reply to the customer').fill('Done. They will get invitations today.');
   await page.getByRole('button', { name: 'Send reply' }).click();
   await expect(page.getByLabel('Status', { exact: true })).toHaveValue('in_progress');

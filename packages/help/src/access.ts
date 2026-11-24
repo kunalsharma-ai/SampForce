@@ -17,6 +17,7 @@ export interface HelpReader {
 export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> = {
   'page.commandCenter': 'start',
   'page.help': 'start',
+  'page.notifications': 'start',
   'page.accountSecurity': 'account',
   'page.themeStudio': 'account',
   'page.workspaces': 'workspaces',

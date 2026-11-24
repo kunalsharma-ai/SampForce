@@ -2008,8 +2008,6 @@ export const organizationHelp = {
     how: [
       'Owners and administrators write a title and a message and post it. Everyone gets a notification; phones get one too where the Mobile Configuration allows announcements. Remove an announcement once it no longer applies.',
       'Los propietarios y administradores escriben un título y un mensaje y lo publican. Todos reciben una notificación; los teléfonos también, si la configuración móvil permite anuncios. Quita un anuncio cuando ya no aplique.',
-      'Les propriétaires et administrateurs saisissent un titre et un message puis publient. Chacun reçoit une notification, et les téléphones aussi si la configuration mobile autorise les annonces. Retirez une annonce qui ne s’applique plus.',
-      'Inhaber und Administratoren geben Titel und Nachricht ein und veröffentlichen sie. Alle erhalten eine Benachrichtigung, Telefone ebenfalls, wenn die mobile Konfiguration Ankündigungen erlaubt. Veraltete Ankündigungen können Sie entfernen.',
       'Les propriétaires et administrateurs saisissent un titre et un message puis publient. Chacun reçoit une notification, et les téléphones aussi si la configuration mobile autorise les annonces. Retirez-la quand elle ne s’applique plus.',
       'Inhaber und Administratoren geben Titel und Nachricht ein und veröffentlichen sie. Alle erhalten eine Benachrichtigung, Telefone ebenfalls, wenn die mobile Konfiguration Ankündigungen erlaubt. Entfernen Sie sie, wenn sie nicht mehr gilt.',
       'يكتب المالكون والمسؤولون عنوانًا ورسالة وينشرونها. يتلقى الجميع إشعارًا، وتتلقاه الهواتف أيضًا إذا سمحت الإعدادات المحمولة بالإعلانات. احذف الإعلان عندما لا يعود ساريًا.',
@@ -2020,6 +2018,30 @@ export const organizationHelp = {
       'Utilisez-le pour une fermeture de bureau, un changement de règle ou tout ce que toute l’équipe doit voir.',
       'Nutzen Sie es für Büroschließungen, Regeländerungen oder alles, was das ganze Team sehen muss.',
       'استخدمه لإغلاق المكتب أو تغيير السياسات أو أي أمر يجب أن يراه الفريق كله.',
+    ],
+  },
+  'page.notifications': {
+    title: 'Notifications',
+    what: [
+      'Every notification SampForce has sent you, newest first. The same ones as the bell, the home dashboard and the section they come from.',
+      'Todas las notificaciones que SampForce te ha enviado, de la más reciente a la más antigua. Las mismas que la campana, el inicio y la sección de origen.',
+      'Toutes les notifications que SampForce vous a envoyées, des plus récentes aux plus anciennes. Les mêmes que la cloche, l’accueil et leur section.',
+      'Alle Benachrichtigungen, die SampForce Ihnen gesendet hat, die neuesten zuerst. Dieselben wie in der Glocke, auf der Startseite und im Bereich.',
+      'كل الإشعارات التي أرسلها إليك SampForce، الأحدث أولًا. هي نفسها في الجرس والصفحة الرئيسية والقسم الذي جاءت منه.',
+    ],
+    how: [
+      'Filter by unread, action required or section, open one to go to its record, or mark it read or unread. Below, choose the sound, its volume and browser alerts.',
+      'Filtra por sin leer, acción requerida o sección, abre una para ir a su registro o márcala como leída o no leída. Abajo, elige el sonido, su volumen y las alertas.',
+      'Filtrez par non lues, action requise ou section, ouvrez-en une pour aller à sa fiche, ou marquez-la lue ou non lue. Plus bas, réglez le son et les alertes.',
+      'Nach ungelesen, Handlung erforderlich oder Bereich filtern, eine öffnen oder als gelesen oder ungelesen markieren. Darunter Ton, Lautstärke und Hinweise wählen.',
+      'صفِّ حسب غير المقروء أو الإجراء المطلوب أو القسم، وافتح إشعارًا للانتقال إلى سجله، أو علّمه كمقروء أو غير مقروء. وفي الأسفل اختر الصوت ومستواه وتنبيهات المتصفح.',
+    ],
+    where: [
+      'Use it to catch up after time away, or to find an older assignment or approval.',
+      'Úsalo para ponerte al día tras una ausencia o encontrar una asignación o aprobación antigua.',
+      'Utilisez-la pour rattraper votre retard ou retrouver une ancienne attribution ou approbation.',
+      'Nutzen Sie sie, um nach einer Pause aufzuholen oder eine ältere Zuweisung oder Freigabe zu finden.',
+      'استخدمها لمتابعة ما فاتك بعد غياب، أو للعثور على إسناد أو موافقة قديمة.',
     ],
   },
   'page.operatorMobile': {
