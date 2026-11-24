@@ -36,7 +36,7 @@ export const organizationHelp = {
       'كل من يمكنه تسجيل الدخول إلى مساحة العمل، مع دوره وآخر نشاط له.',
     ],
     how: [
-      'Change a role from the menu on each row, or remove a person who has left.',
+      'Change a role from the menu on each row, or press Remove to take out a person who has left.',
       'Cambia el rol desde el menú de cada fila o quita a quien se haya ido.',
       'Changez le rôle depuis le menu de chaque ligne, ou retirez une personne partie.',
       'Ändern Sie die Rolle über das Menü jeder Zeile oder entfernen Sie ausgeschiedene Personen.',
@@ -60,11 +60,11 @@ export const organizationHelp = {
       'الدعوات التي أرسلتها ولم تُقبل بعد.',
     ],
     how: [
-      'Enter an email and role and send. Resend or cancel an invitation from its row.',
-      'Escribe un correo y un rol y envía. Reenvía o cancela una invitación desde su fila.',
-      'Saisissez une adresse et un rôle, puis envoyez. Renvoyez ou annulez une invitation depuis sa ligne.',
-      'Geben Sie E-Mail und Rolle ein und senden Sie. Erneut senden oder zurückziehen über die Zeile.',
-      'أدخل بريدًا ودورًا وأرسل. أعد إرسال الدعوة أو ألغها من صفها.',
+      'Enter an email and role and send. Revoke a pending invitation, or delete any row for good, from its row.',
+      'Escribe un correo y un rol y envía. Revoca una invitación pendiente o elimina cualquier fila desde la propia fila.',
+      'Saisissez une adresse et un rôle, puis envoyez. Révoquez une invitation en attente ou supprimez une ligne depuis celle-ci.',
+      'Geben Sie E-Mail und Rolle ein und senden Sie. Offene Einladungen widerrufen oder Zeilen endgültig löschen über die Zeile.',
+      'أدخل بريدًا ودورًا وأرسل. ألغِ دعوة معلّقة أو احذف أي صف نهائيًا من الصف نفسه.',
     ],
     where: [
       'Use it when adding new colleagues to SampForce.',
@@ -1994,6 +1994,30 @@ export const organizationHelp = {
       'SampBidx fait son retour (chiffrée, gagnée, perdue) sur la RFQ et dans RFQ, Envoyées à SampBidx. Ou transférez l’e-mail lui-même.',
       'SampBidx meldet zurück (angeboten, gewonnen, verloren) an der RFQ und unter RFQs, An SampBidx gesendet. Oder die E-Mail selbst übertragen.',
       'يُبلغ SampBidx بالنتيجة (مسعّر، فائز، خاسر) في الطلب وفي صفحة الطلبات، المرسلة إلى SampBidx. أو انقل بريد الطلب نفسه.',
+    ],
+  },
+  'crm.pasteRfqEmail': {
+    title: 'Paste an RFQ email',
+    what: [
+      'Sends an RFQ email a client sent you to SampBidx in one click, without filling in an RFQ form.',
+      'Envía a SampBidx en un clic el correo de RFQ que te mandó un cliente, sin rellenar un formulario de RFQ.',
+      'Envoie à SampBidx en un clic l’e-mail de RFQ qu’un client vous a envoyé, sans remplir de formulaire de RFQ.',
+      'Sendet eine RFQ-E-Mail eines Kunden mit einem Klick an SampBidx, ohne ein RFQ-Formular auszufüllen.',
+      'يرسل إلى SampBidx بنقرة واحدة بريد طلب عرض السعر الذي أرسله العميل، دون ملء نموذج طلب.',
+    ],
+    how: [
+      'Copy the whole email with its From, Sent and Subject lines, paste it, check the subject and sender, then press Send to SampBidx.',
+      'Copia el correo entero con sus líneas De, Enviado y Asunto, pégalo, revisa el asunto y el remitente y pulsa Enviar a SampBidx.',
+      'Copiez tout l’e-mail avec ses lignes De, Envoyé et Objet, collez-le, vérifiez l’objet et l’expéditeur, puis cliquez sur Envoyer à SampBidx.',
+      'Kopieren Sie die ganze E-Mail mit Von-, Gesendet- und Betreffzeile, fügen Sie sie ein, prüfen Sie Betreff und Absender und klicken Sie auf An SampBidx senden.',
+      'انسخ البريد كاملًا مع سطور «من» و«أُرسل» و«الموضوع»، والصقه، وتحقق من الموضوع والمرسل، ثم اضغط إرسال إلى SampBidx.',
+    ],
+    where: [
+      'It is also logged here as RFQ received. Attachments are not in pasted text: send those with the RFQ, or upload the email file.',
+      'También se registra aquí como RFQ recibida. Los adjuntos no van en el texto: envíalos con la RFQ o sube el archivo del correo.',
+      'Il est aussi enregistré ici comme RFQ reçue. Le texte collé n’a pas les pièces jointes : envoyez-les avec la RFQ ou importez le fichier de l’e-mail.',
+      'Sie wird hier auch als RFQ erhalten erfasst. Anhänge sind nicht im Text: senden Sie sie mit der RFQ oder laden Sie die E-Mail-Datei hoch.',
+      'يُسجَّل أيضًا هنا كطلب مستلم. لا يحمل النص الملصق المرفقات: أرسلها مع الطلب أو ارفع ملف البريد.',
     ],
   },
   'crm.ownership': {

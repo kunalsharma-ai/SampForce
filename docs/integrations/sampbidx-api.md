@@ -23,10 +23,14 @@ example `https://bids.frequentresearch.com/api`. SampForce adds `/v1/...` to it.
    presses **Check and save**. SampForce calls `GET /v1/ping` once and saves only if SampBidx answers 200.
 3. SampForce then shows a **status callback URL** and a **callback signing secret**. Store both in SampBidx.
 
-In production the address must be `https://` and must resolve to a public IP address. SampForce refuses private
-and internal addresses (10.x, 192.168.x, localhost and so on) so a typed-in address cannot reach internal systems.
-If SampBidx runs on the same private network as SampForce, tell the SampForce team; that needs a deliberate
-allow-list, which is not built yet.
+In production a public address must be `https://`. SampForce refuses private and internal addresses (10.x,
+192.168.x, 172.16-31.x, localhost and so on) so a typed-in address cannot reach internal systems, unless the
+SampForce operator approves them.
+
+If SampBidx runs on the same server or private network as SampForce, the operator adds its host name, address or
+range in the SampForce operator console under **Providers → Workspace servers → Approved private hosts** (for
+example `sampbidx-api, 172.16.0.0/12` for a Docker network, or `127.0.0.1`). After that, the workspace admin can
+enter the private address, and plain `http://` is accepted for that approved private host only.
 
 ## Authentication (SampForce → SampBidx)
 
@@ -138,7 +142,13 @@ The `email` part:
   there is no `message` part and `attachmentsIncluded` is `false`.
 - `source: "file"`: an uploaded .eml or .msg file. The `message` part is the file, and `email` carries `fileName`,
   plus `subject`, `from` and `date` read from the file's headers when it is an .eml (null for .msg).
+- `source: "pasted"`: the email's text, copied from a mail program and pasted on a company's page in SampForce. There
+  is no `message` part and `attachmentsIncluded` is `false`. `text` is exactly what was pasted, usually including
+  the From, Sent, To and Subject lines. `subject`, `from`, `to`, `cc` and `date` are read from those lines (or typed
+  by the person); any of them can be `null` or empty. A `contact` object `{ "id", "name", "email" }` names the
+  company's employee who sent it, or is `null`.
 - `company` and `rfq` are set when the sender linked the email to a company lead or to an RFQ (same shape as above).
+  A pasted email always has `company`.
 
 ## Answering a send
 

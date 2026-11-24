@@ -1,7 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { API_ENV, type ApiEnv } from '../common/env';
-import { publicFetch, UnsafeTargetError } from '../common/net-guard';
+import { UnsafeTargetError } from '../common/net-guard';
+import { workspaceFetch } from '../common/trusted-targets';
 
 /** The workspace's SampBidx address and key, plus the secret SampBidx signs its status callbacks with. Sealed at rest. */
 export interface SampbidxKeys {
@@ -42,7 +43,9 @@ export const CALLBACK_MAX_AGE_SECONDS = 300;
 /**
  * SampBidx's inbound API, version 1, as SampForce defines it in docs/integrations/sampbidx-api.md: check the key,
  * post an RFQ with its files, post an RFQ email. SampBidx is the workspace's own system, so its address is whatever
- * the admin enters; it is called through publicFetch like any customer-supplied URL. Tested against a local stand-in
+ * the admin enters; it is called through workspaceFetch (ADR 0068) like a workspace's own AI or email server: public
+ * addresses always, a private one (SampBidx on the same server or LAN) only when the operator lists it in
+ * TRUSTED_PRIVATE_HOSTS, and plain http only to such an approved private host. Tested against a local stand-in
  * that follows that document, not yet against SampBidx.
  */
 @Injectable()
@@ -80,17 +83,13 @@ export class SampbidxClient {
   private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST', path: string, body?: Buffer, headers: Record<string, string> = {}): Promise<T> {
     let res: Response;
     try {
-      res = await publicFetch(
-        `${keys.baseUrl.replace(/\/+$/, '')}${path}`,
-        {
-          method,
-          headers: { authorization: `Bearer ${keys.apiKey}`, accept: 'application/json', 'user-agent': 'SampForce', ...headers },
-          body: body ? new Uint8Array(body) : undefined,
-          redirect: 'error',
-          signal: AbortSignal.timeout(60_000),
-        },
-        this.env.ALLOW_PRIVATE_NETWORK_TARGETS,
-      );
+      res = await workspaceFetch(this.env, `${keys.baseUrl.replace(/\/+$/, '')}${path}`, {
+        method,
+        headers: { authorization: `Bearer ${keys.apiKey}`, accept: 'application/json', 'user-agent': 'SampForce', ...headers },
+        body: body ? new Uint8Array(body) : undefined,
+        redirect: 'error',
+        signal: AbortSignal.timeout(60_000),
+      });
     } catch (e) {
       if (e instanceof UnsafeTargetError) throw new SampbidxError('address', `SampForce cannot call that SampBidx address: ${e.message}.`);
       throw new SampbidxError('unavailable', 'SampBidx could not be reached. Check the address, or try again shortly.');

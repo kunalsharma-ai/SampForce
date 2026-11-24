@@ -10,6 +10,8 @@ import {
   sampbidxMailboxQuerySchema,
   type SampbidxSendMailboxEmailInput,
   sampbidxSendMailboxEmailSchema,
+  type SampbidxPastedEmail,
+  sampbidxSendPastedEmailSchema,
   type SampbidxSendRfqInput,
   sampbidxSendRfqSchema,
   type SampbidxTransferListQuery,
@@ -106,6 +108,15 @@ export class SampbidxController {
   @RequirePermissions('activities:read')
   sendMailbox(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxSendMailboxEmailSchema)) body: SampbidxSendMailboxEmailInput, @Meta() meta: RequestMeta) {
     return this.sampbidx.sendMailboxEmail(auth, body, meta);
+  }
+
+  /** Option 2c: the text of an RFQ email, pasted on a company's page. Also logs it there as an interaction. */
+  @Post('transfers/pasted-email')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @RequirePermissions('activities:write')
+  sendPasted(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxSendPastedEmailSchema)) body: SampbidxPastedEmail, @Meta() meta: RequestMeta) {
+    return this.sampbidx.sendPastedEmail(auth, body, meta);
   }
 
   /** Option 2b: an .eml or .msg file, as the raw body (name and optional links in the query). */

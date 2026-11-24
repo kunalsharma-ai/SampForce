@@ -3,7 +3,7 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input } from '@dealflow/ui';
 import { type InvitationCreated, type InvitationRow, invitationInputSchema } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, X } from 'lucide-react';
+import { Check, Copy, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { api } from '@/lib/api';
@@ -44,6 +44,11 @@ export function Invitations() {
   const revoke = useMutation({
     mutationFn: (id: string) => api(`/tenants/current/invitations/${id}`, { method: 'DELETE' }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['invitations'] }),
+  });
+  // Deletes the row for good; the server asks for the password first (the shell's confirm-deletion dialog).
+  const erase = useMutation({
+    mutationFn: (id: string) => api(`/tenants/current/invitations/${id}/record`, { method: 'DELETE' }),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ['invitations'] }),
   });
 
   const assignable = roles.data?.filter((r) => r.key !== 'owner' || me?.role === 'owner') ?? [];
@@ -117,6 +122,11 @@ export function Invitations() {
             <p className="text-xs text-muted-foreground">{t('The link is shown only now. If it is lost, create a new invitation; the old one stops working.')}</p>
           </div>
         )}
+        {erase.error && (
+          <p role="alert" className="text-sm text-critical">
+            {erase.error.message}
+          </p>
+        )}
         {list.data && list.data.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
@@ -141,10 +151,15 @@ export function Invitations() {
                       <Badge tone={STATUS_TONE[i.status]}>{t.maybe(i.status.charAt(0).toUpperCase() + i.status.slice(1))}</Badge>
                     </td>
                     <td className="py-2 text-muted-foreground">{formatDate(i.expiresAt)}</td>
-                    <td className="py-2 text-end">
+                    <td className="py-2 text-end whitespace-nowrap">
                       {canManage && i.status === 'pending' && (
                         <Button variant="ghost" size="sm" onClick={() => revoke.mutate(i.id)} disabled={revoke.isPending}>
                           <X aria-hidden /> {t('Revoke')}
+                        </Button>
+                      )}
+                      {canManage && (i.roleKey !== 'owner' || me?.role === 'owner') && (
+                        <Button variant="ghost" size="sm" aria-label={t('Delete invitation for {email}', { email: i.email })} onClick={() => erase.mutate(i.id)} disabled={erase.isPending}>
+                          <Trash2 aria-hidden /> {t('Delete')}
                         </Button>
                       )}
                     </td>

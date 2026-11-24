@@ -14,12 +14,15 @@ import {
   memberOrgSchema,
   type RoleVisibilityInput,
   roleVisibilitySchema,
+  type RemoveMemberInput,
+  removeMemberSchema,
   type SalesProfileInput,
   salesProfileSchema,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { InvitationsService } from './invitations.service';
+import { MemberRemovalService } from './member-removal.service';
 import { RolesService } from './roles.service';
 import { TeamsService } from './teams.service';
 import { TenantsService } from './tenants.service';
@@ -32,6 +35,7 @@ export class TenantsController {
     private readonly invitations: InvitationsService,
     private readonly roleService: RolesService,
     private readonly teams: TeamsService,
+    private readonly removal: MemberRemovalService,
   ) {}
 
   @Get('teams')
@@ -149,6 +153,26 @@ export class TenantsController {
     return this.tenants.changeMemberRole(auth, membershipId, body.roleKey, meta);
   }
 
+  /** What removing a person would move and delete, shown before the owner confirms. */
+  @Get('members/:membershipId/removal')
+  @RequirePermissions('members:manage')
+  removalImpact(@Auth() auth: AuthContext, @Param('membershipId', new ParseUUIDPipe()) membershipId: string) {
+    return this.removal.impact(auth, membershipId);
+  }
+
+  /** Removes a person from the workspace completely: records handed over, sign-in stopped, invitations deleted. */
+  @ConfirmPassword()
+  @Delete('members/:membershipId')
+  @RequirePermissions('members:manage')
+  removeMember(
+    @Auth() auth: AuthContext,
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body(new ZodPipe(removeMemberSchema)) body: RemoveMemberInput,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.removal.remove(auth, membershipId, body ?? {}, meta);
+  }
+
   @Get('invitations')
   @RequirePermissions('members:read')
   listInvitations(@Auth() auth: AuthContext) {
@@ -167,5 +191,14 @@ export class TenantsController {
   @RequirePermissions('members:manage')
   revokeInvitation(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
     return this.invitations.revoke(auth, id, meta);
+  }
+
+  /** Deletes an invitation row for good (accepted, revoked, expired or pending). */
+  @ConfirmPassword()
+  @Delete('invitations/:id/record')
+  @HttpCode(204)
+  @RequirePermissions('members:manage')
+  deleteInvitation(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
+    return this.invitations.erase(auth, id, meta);
   }
 }

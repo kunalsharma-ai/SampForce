@@ -29,8 +29,8 @@ export const sampbidxConnectSchema = z.object({
 });
 export type SampbidxConnectInput = z.infer<typeof sampbidxConnectSchema>;
 
-/** How a transfer started: a filled-in RFQ, an email from the synced mailbox, or an uploaded email file. */
-export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE'] as const;
+/** How a transfer started: a filled-in RFQ, an email from the synced mailbox, an uploaded email file, or email text pasted on a company. */
+export const SAMPBIDX_TRANSFER_KINDS = ['RFQ', 'MAILBOX_EMAIL', 'EMAIL_FILE', 'PASTED_EMAIL'] as const;
 export type SampbidxTransferKind = (typeof SAMPBIDX_TRANSFER_KINDS)[number];
 
 /** SampForce's side: is it with SampBidx yet. SENT means SampBidx accepted it and returned its id. */
@@ -80,6 +80,100 @@ export const sampbidxEmailFileQuerySchema = z.object({
   note: z.string().trim().max(2000).optional(),
 });
 export type SampbidxEmailFileQuery = z.infer<typeof sampbidxEmailFileQuerySchema>;
+
+/** Pasted RFQ email text can be up to this many characters (a long thread with quoted replies still fits). */
+export const SAMPBIDX_PASTED_EMAIL_MAX_CHARS = 100_000;
+
+/**
+ * Option 2c: the text of an RFQ email a client sent, copied from any mail program and pasted on the company page.
+ * Subject, sender and date are read from the text (parsePastedEmail); the person can correct them before sending.
+ */
+export const sampbidxSendPastedEmailSchema = z.object({
+  companyId: z.string().uuid(),
+  /** The employee of the company who sent it. Left out, SampForce matches the sender's address to an employee. */
+  contactId: z.string().uuid().optional().nullable(),
+  rfqId: z.string().uuid().optional().nullable(),
+  text: z.string().trim().min(20, 'Paste the whole RFQ email').max(SAMPBIDX_PASTED_EMAIL_MAX_CHARS, 'The pasted email is too long. Leave out older quoted replies.'),
+  subject: z.string().trim().max(300).optional().nullable(),
+  from: z.string().trim().max(300).optional().nullable(),
+  date: z.string().datetime({ offset: true }).optional().nullable(),
+  note: z.string().trim().max(2000).optional().nullable(),
+  /** Also log the email on the company as an "RFQ received" interaction. */
+  logInteraction: z.boolean().default(true),
+  resend: z.boolean().optional(),
+});
+/** What the browser sends (logInteraction may be left out). */
+export type SampbidxSendPastedEmailInput = z.input<typeof sampbidxSendPastedEmailSchema>;
+/** The same after validation, as the API reads it. */
+export type SampbidxPastedEmail = z.output<typeof sampbidxSendPastedEmailSchema>;
+
+/** What parsePastedEmail reads from pasted email text. Anything it cannot find is null or empty. */
+export interface PastedEmail {
+  subject: string | null;
+  /** The sender as written, for example "Jonas Weber <jonas@bluehill.example>". */
+  from: string | null;
+  fromEmail: string | null;
+  to: string[];
+  cc: string[];
+  date: Date | null;
+}
+
+const EMAIL_RE = /[^\s<>"'(),;:[\]]+@[^\s<>"'(),;:[\]]+\.[a-z]{2,}/gi;
+const HEADER_RE = /^\s*\**\s*(from|sent|date|to|cc|subject)\s*\**\s*:\s*(.*?)\s*$/i;
+const SEPARATOR_RE = /^\s*(-{2,}.*-{2,}|_{5,}|begin forwarded message:?|forwarded message)\s*$/i;
+
+function emailsIn(v: string): string[] {
+  return [...new Set((v.match(EMAIL_RE) ?? []).map((e) => e.toLowerCase()))];
+}
+
+/**
+ * Reads subject, sender, recipients and date from email text pasted out of a mail program. Understands the header
+ * block that Outlook, Gmail and Apple Mail put at the top of a copied or forwarded email ("From: … Sent: … To: …
+ * Subject: …"), and the Gmail screen layout (subject line, then "Name <address>"). The text itself is never changed:
+ * SampBidx always gets all of it.
+ */
+export function parsePastedEmail(raw: string): PastedEmail {
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n');
+  const out: PastedEmail = { subject: null, from: null, fromEmail: null, to: [], cc: [], date: null };
+  let i = 0;
+  // Skip blank lines and "---------- Forwarded message ---------" before the header block.
+  while (i < lines.length && i < 15 && (!lines[i]!.trim() || SEPARATOR_RE.test(lines[i]!))) i++;
+  let headers = 0;
+  for (; i < lines.length; i++) {
+    const m = HEADER_RE.exec(lines[i]!);
+    if (!m) break;
+    headers++;
+    const name = m[1]!.toLowerCase();
+    const value = m[2]!;
+    if (name === 'from' && !out.from) out.from = value || null;
+    else if (name === 'subject' && !out.subject) out.subject = value || null;
+    else if (name === 'to') out.to = emailsIn(value);
+    else if (name === 'cc') out.cc = emailsIn(value);
+    else if ((name === 'sent' || name === 'date') && !out.date) out.date = readDate(value);
+  }
+  if (!headers) {
+    // Gmail's open-email layout: the subject, perhaps "Inbox", then "Name <address>" on its own line.
+    const top = lines.map((l) => l.trim()).slice(0, 10);
+    const at = top.findIndex((l) => /^[^<>]{0,120}<[^<>\s]+@[^<>\s]+>/.test(l));
+    if (at >= 0) {
+      out.from = top[at]!.replace(/\s+(\d{1,2}:\d{2}.*|\(.*\))$/, '').trim();
+      const subject = top.slice(0, at).find((l) => l && !/^(inbox|external|important)$/i.test(l) && l.length <= 300);
+      if (subject) out.subject = subject;
+      const when = top.slice(at + 1, at + 3).find((l) => readDate(l.replace(/\s*\(.*\)\s*$/, '')));
+      if (when) out.date = readDate(when.replace(/\s*\(.*\)\s*$/, ''));
+    }
+  }
+  out.fromEmail = out.from ? (emailsIn(out.from)[0] ?? null) : null;
+  return out;
+}
+
+/** "Monday, November 24, 2026 8:12 AM", "Mon, 24 Nov 2026 08:12:00 +0000", "24 November 2026 at 08:12" and the like. */
+function readDate(v: string): Date | null {
+  const cleaned = v.replace(/\s+at\s+/i, ' ').replace(/(\d)(st|nd|rd|th)\b/gi, '$1').trim();
+  if (!/\d{4}/.test(cleaned)) return null;
+  const d = new Date(cleaned);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export const sampbidxTransferListQuerySchema = z.object({
   rfqId: z.string().uuid().optional(),

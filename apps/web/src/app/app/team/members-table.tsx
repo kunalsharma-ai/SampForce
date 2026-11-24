@@ -1,11 +1,13 @@
 'use client';
 
-import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
-import type { MemberRow } from '@dealflow/types';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
+import type { MemberRemoved, MemberRow } from '@dealflow/types';
+import { UserMinus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useCan, useSession } from '@/lib/session';
+import { RemoveMemberDialog } from './remove-member';
 import { RolesManager } from './roles-manager';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
@@ -25,6 +27,8 @@ export function MembersTable() {
   const { data: me } = useSession();
   const canManage = useCan('members:manage');
   const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<MemberRow | null>(null);
+  const [removed, setRemoved] = useState<MemberRemoved | null>(null);
   const members = useQuery({ queryKey: ['members'], queryFn: () => api<MemberRow[]>('/tenants/current/members') });
   const roles = useQuery({ queryKey: ['roles'], queryFn: () => api<RoleRow[]>('/tenants/current/roles') });
 
@@ -51,6 +55,13 @@ export function MembersTable() {
               {error}
             </p>
           )}
+          {removed && (
+            <p role="status" className="mb-3 rounded-md bg-success/10 px-3 py-2 text-sm" data-member-removed>
+              {removed.handoverTo
+                ? t('{name} was removed. {count} records and tasks now belong to {person}.', { name: removed.name, count: removed.recordsMoved, person: removed.handoverTo })
+                : t('{name} was removed.', { name: removed.name })}
+            </p>
+          )}
           {members.isPending ? (
             <Skeleton className="h-24" />
           ) : (
@@ -68,6 +79,11 @@ export function MembersTable() {
                     </span>
                   </th>
                   <th scope="col" className="py-2 font-medium">{t('Joined')}</th>
+                  {canManage && (
+                    <th scope="col" className="py-2">
+                      <span className="sr-only">{t('Actions')}</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -105,11 +121,21 @@ export function MembersTable() {
                       <MemberPosition member={m} members={members.data ?? []} canManage={canManage} />
                     </td>
                     <td className="py-2.5 text-muted-foreground">{new Date(m.joinedAt).toLocaleDateString(fmtLocale())}</td>
+                    {canManage && (
+                      <td className="py-2.5 text-end">
+                        {m.userId !== me?.user.id && (m.roleKey !== 'owner' || me?.role === 'owner') && (
+                          <Button variant="ghost" size="sm" aria-label={t('Remove {name}', { name: m.name })} onClick={() => (setRemoved(null), setRemoving(m))}>
+                            <UserMinus aria-hidden /> {t('Remove')}
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          {removing && <RemoveMemberDialog member={removing} onClose={() => setRemoving(null)} onRemoved={setRemoved} />}
         </CardContent>
       </Card>
 

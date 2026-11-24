@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { type AppConnection, Prisma, type SampbidxTransfer } from '@dealflow/database';
 import {
   type AppStatus,
+  parsePastedEmail,
   SAMPBIDX_MAX_FILES,
   SAMPBIDX_MAX_TOTAL_BYTES,
   SAMPBIDX_REQUIRED_RFQ_FIELDS,
@@ -16,6 +17,7 @@ import {
   type SampbidxRequiredField,
   type SampbidxRfqReadiness,
   type SampbidxSendMailboxEmailInput,
+  type SampbidxPastedEmail,
   type SampbidxSendRfqInput,
   type SampbidxSettings,
   type SampbidxTransferKind,
@@ -23,6 +25,7 @@ import {
   type SampbidxTransferRow,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
+import { hasFeature } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -39,7 +42,8 @@ const STALE_SENDING_MS = 2 * 60_000;
 /**
  * Sends RFQs to the workspace's SampBidx (ADR 0061), in one of two ways the person picks:
  * 1. A filled-in RFQ: its details (checked for the fields SampBidx needs) and the files attached to it.
- * 2. The RFQ email itself: one from the person's synced mailbox, or an .eml/.msg file they upload.
+ * 2. The RFQ email itself: one from the person's synced mailbox, an .eml/.msg file they upload, or its text pasted
+ *    on the company page.
  * Every send is a row in sampbidx_transfers with SampBidx's id once it accepts it; SampBidx reports progress back
  * through a signed callback. A failed send keeps its row and can be retried with the same Idempotency-Key.
  */
@@ -258,6 +262,73 @@ export class SampbidxService {
     return this.deliver(auth, conn, transfer);
   }
 
+  /**
+   * Email text a client sent, pasted on the company page and sent in one click. Subject, sender and date come from
+   * the person when given, otherwise from the text. The sender is matched to one of the company's employees, and the
+   * email is logged on the company as an "RFQ received" interaction unless the person turns that off.
+   */
+  async sendPastedEmail(auth: AuthContext, input: SampbidxPastedEmail, meta: RequestMeta): Promise<SampbidxTransferRow> {
+    const conn = await this.usableConnection(auth.tenantId);
+    const link = await this.links(auth, input.companyId, input.rfqId ?? null, null);
+    const parsed = parsePastedEmail(input.text);
+    const from = input.from?.trim() || parsed.from;
+    const date = input.date ? new Date(input.date) : parsed.date;
+    const contact = await this.prisma.run(auth, async (tx) => {
+      if (input.contactId) {
+        const c = await tx.contact.findFirst({ where: { id: input.contactId, tenantId: auth.tenantId, companyId: input.companyId, deletedAt: null }, select: { id: true, firstName: true, lastName: true, email: true } });
+        if (!c) throw new BadRequestException({ code: 'INVALID_CONTACT', message: 'That employee is not at this company.' });
+        return c;
+      }
+      const address = (from && from.match(/[^\s<>"'(),;:]+@[^\s<>"'(),;:]+\.[a-z]{2,}/i)?.[0]) || null;
+      if (!address) return null;
+      return tx.contact.findFirst({ where: { tenantId: auth.tenantId, companyId: input.companyId, deletedAt: null, email: { equals: address, mode: 'insensitive' } }, select: { id: true, firstName: true, lastName: true, email: true } });
+    });
+    const company = await this.prisma.run(auth, (tx) => tx.company.findFirstOrThrow({ where: { id: input.companyId, tenantId: auth.tenantId }, select: { name: true } }));
+    const contactName = contact ? [contact.firstName, contact.lastName].filter(Boolean).join(' ') : null;
+    const subject = input.subject?.trim() || parsed.subject || `RFQ email from ${contactName ?? company.name}`;
+    const { transfer, isCopy } = await this.prisma.run(auth, async (tx) => {
+      const prior = await tx.sampbidxTransfer.count({ where: { tenantId: auth.tenantId, companyId: input.companyId, kind: 'PASTED_EMAIL', emailText: input.text, delivery: 'SENT' } });
+      await this.assertNotDuplicate(tx, auth.tenantId, { companyId: input.companyId, kind: 'PASTED_EMAIL', emailText: input.text }, input.resend, 'This email is already with SampBidx. Send it again only if SampBidx should get a second copy.');
+      const t = await tx.sampbidxTransfer.create({
+        data: {
+          tenantId: auth.tenantId,
+          kind: 'PASTED_EMAIL',
+          title: subject.slice(0, 300),
+          emailFrom: from ?? null,
+          emailDate: date,
+          emailText: input.text,
+          contactId: contact?.id ?? null,
+          companyId: link.companyId,
+          rfqId: link.rfqId,
+          files: [],
+          note: input.note ?? null,
+          createdById: auth.userId,
+        },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sampbidx.pasted_email_sent', entityType: 'company', entityId: input.companyId, metadata: { transferId: t.id, chars: input.text.length }, meta });
+      return { transfer: t, isCopy: prior > 0 };
+    });
+    // The client's email belongs in the company's communication history whatever SampBidx answers; a second copy is not logged twice.
+    if (input.logInteraction && !isCopy && (await this.prisma.run(auth, (tx) => hasFeature(tx, auth.tenantId, 'interactions')))) {
+      const logged = await this.work.logInteraction(
+        auth,
+        {
+          companyId: input.companyId,
+          contactId: contact?.id ?? null,
+          kind: 'RFQ_RECEIVED',
+          subject: subject.slice(0, 200),
+          occurredAt: (date ?? new Date()).toISOString(),
+          sender: from ? from.slice(0, 200) : null,
+          remarks: input.text.slice(0, 10_000),
+          rfqId: link.rfqId,
+        },
+        meta,
+      );
+      await this.prisma.run(auth, (tx) => tx.sampbidxTransfer.update({ where: { id: transfer.id }, data: { activityId: logged.id } }));
+    }
+    return this.deliver(auth, conn, transfer);
+  }
+
   // ─── History and retries ───
 
   async list(auth: AuthContext, q: Partial<SampbidxTransferListQuery>): Promise<SampbidxTransferRow[]> {
@@ -404,6 +475,24 @@ export class SampbidxService {
         keys,
         t.id,
         { ...source, ...links, source: 'mailbox', email: { subject: m.subject, from: m.fromAddress, to: m.toAddresses, cc: m.ccAddresses, date: m.sentAt.toISOString(), text: m.bodyText ?? m.snippet ?? '', attachmentsIncluded: false } },
+        null,
+      );
+    }
+    if (t.kind === 'PASTED_EMAIL') {
+      const parsed = parsePastedEmail(t.emailText ?? '');
+      const contact = t.contactId
+        ? await this.prisma.run(auth, (tx) => tx.contact.findFirst({ where: { id: t.contactId!, tenantId: auth.tenantId }, select: { id: true, firstName: true, lastName: true, email: true } }))
+        : null;
+      return this.client.sendEmail(
+        keys,
+        t.id,
+        {
+          ...source,
+          ...links,
+          source: 'pasted',
+          contact: contact ? { id: contact.id, name: [contact.firstName, contact.lastName].filter(Boolean).join(' '), email: contact.email } : null,
+          email: { subject: t.title, from: t.emailFrom, to: parsed.to, cc: parsed.cc, date: t.emailDate?.toISOString() ?? null, text: t.emailText ?? '', attachmentsIncluded: false },
+        },
         null,
       );
     }
