@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CompanyEnrichmentService } from '../src/crm/company-enrichment.service';
 import { CompanyLogosService } from '../src/crm/company-logos.service';
+import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
 import { type LogoFixture, startLogoFixture } from './fixtures/logo-fixture';
 import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
@@ -18,6 +19,7 @@ function setEnv(vars: Record<string, string | undefined>): () => void {
 describe('company auto-fill', () => {
   let app: INestApplication;
   let fixture: LogoFixture;
+  let ai: AiFixture;
   let owner: TestUser;
   let http: ReturnType<typeof api>;
   let autofill: CompanyEnrichmentService;
@@ -33,7 +35,8 @@ describe('company auto-fill', () => {
 
   beforeAll(async () => {
     fixture = await startLogoFixture();
-    restore = setEnv({ LOGO_FIXTURE_URL: fixture.url });
+    ai = await createAiFixture();
+    restore = setEnv({ LOGO_FIXTURE_URL: fixture.url, ANTHROPIC_API_KEY: 'test-key-not-real', AI_API_BASE_URL: ai.url });
     app = await startApp();
     autofill = app.get(CompanyEnrichmentService);
     logos = app.get(CompanyLogosService);
@@ -46,6 +49,7 @@ describe('company auto-fill', () => {
     await logos.settle();
     await app.close();
     await fixture.close();
+    await ai.close();
     restore();
   });
 
@@ -95,6 +99,19 @@ describe('company auto-fill', () => {
     const audit = await asTenant(owner.tenantId, (tx) => tx.auditLog.findMany({ where: { tenantId: owner.tenantId, entityId: created.id, action: 'company.auto_filled' } }));
     expect(audit).toHaveLength(1);
     expect((audit[0]!.metadata as { fields: string[] }).fields).toContain('foundedYear');
+  });
+
+  it('writes an AI summary from Business Information only, saved and labelled with its time', async () => {
+    const created = (await http.post('/companies', { name: 'Summary Co', industry: 'Market research', country: 'IN', city: 'Pune', foundedYear: 2009, services: ['Online Surveys'] }).expect(201)).body;
+    const res = (await http.post(`/companies/${created.id}/ai-summary`).expect(200)).body;
+    expect(res.aiSummary).toBe('Summary Co works in Market research, based in Pune, IN. It was founded in 2009. Its services include Online Surveys.');
+    const c = await company(created.id);
+    expect(c.aiSummary).toBe(res.aiSummary);
+    expect(c.aiSummaryAt).toBe(res.aiSummaryAt);
+    // Nothing else on the company changed.
+    expect(c.overview).toBeNull();
+    const run = await asTenant(owner.tenantId, (tx) => tx.aiRun.findFirst({ where: { agent: 'company_summary', entityId: created.id } }));
+    expect(run).toMatchObject({ status: 'SUCCEEDED', entityType: 'company' });
   });
 
   it('combines the company’s own data with Wikidata, the company’s statement winning', async () => {

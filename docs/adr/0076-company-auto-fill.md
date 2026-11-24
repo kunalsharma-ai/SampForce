@@ -19,8 +19,7 @@ in Business Information as structured fields, not as custom fields.
   then page text read by pattern (labelled phones, `<address>` blocks, "founded in", "450 employees", ISO and similar
   certifications, service and industry lists). Then Wikidata, matched by the website (`P856`) or, without a website,
   only when exactly one non-person item has that exact name and a website. No paid registry, no LinkedIn scraping
-  (a LinkedIn company URL the site links to is kept), no search engine. An AI source is reserved (`AI`) for the AI
-  summary and is not used yet.
+  (a LinkedIn company URL the site links to is kept), no search engine. The `AI` source kind is reserved; the AI summary is kept apart from the fields (below).
 - **Only empty fields are filled.** Scalars are written only while empty; list fields (emails, phones, services,
   social links...) only gain new items. The headquarters address (street, city, state, postal code) is taken from
   one source as a block and only when all of it is empty. The time zone is filled only when the country has a single
@@ -42,6 +41,10 @@ in Business Information as structured fields, not as custom fields.
 - **Plan and switches.** It is the plan feature `company_enrichment` (catalogue version 3, on from Free). Operators
   can switch the Wikidata look-up off in the console card "Company auto-fill" (`COMPANY_AUTOFILL_WIKIDATA`); unset
   means on.
+
+- **Business Information is one card.** It replaces the old profile card. It has a key facts strip, then sections with their own icons: Overview, HQ & Locations (with flags), Contact, Leadership & Ownership (person cards), Digital presence, Certifications and More details. Each value shows an Auto mark linking to its source, or no mark when someone typed it. One Edit dialog covers every field and sends only what changed.
+- **The header** shows the HQ place and full address under the name, the main contact points, and a button for each profile found. Each button is in its platform's colours, using Simple Icons paths (CC0) and LinkedIn's "in" mark, and opens the profile in a new tab.
+- **AI summary.** `POST /companies/:id/ai-summary` (agent `company_summary`, needs `companies:write` and `ai:use`) writes two to four sentences from Business Information only. Website text is passed as untrusted data. The summary is saved on the company with its time and is always shown labelled as AI. It changes nothing else on the company.
 
 ## Consequences
 

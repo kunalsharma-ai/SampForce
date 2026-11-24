@@ -87,4 +87,22 @@ export const companyAutofill = {
   Acquired: ['Adquirida', 'Rachetée', 'Übernommen', 'مستحوذ عليها'],
   Merged: ['Fusionada', 'Fusionnée', 'Fusioniert', 'مندمجة'],
   Dissolved: ['Disuelta', 'Dissoute', 'Aufgelöst', 'منحلّة'],
+  // The company header (logo, location, facts, profile buttons).
+  'Company facts': ['Datos de la empresa', 'Chiffres clés', 'Eckdaten', 'حقائق عن الشركة'],
+  'Online profiles': ['Perfiles en línea', 'Profils en ligne', 'Online-Profile', 'الحسابات على الإنترنت'],
+  '{company} on {platform}': ['{company} en {platform}', '{company} sur {platform}', '{company} auf {platform}', '{company} على {platform}'],
+  // The AI summary and its agent (shown in the AI agents console).
+  'Company Summary': ['Resumen de la empresa', 'Synthèse de l’entreprise', 'Unternehmenszusammenfassung', 'ملخص الشركة'],
+  'Writes a short summary of a company from its Business Information, shown labelled as AI on the company page.': ['Escribe un breve resumen de una empresa a partir de su información, que se muestra marcado como IA en la página de la empresa.', 'Rédige une courte synthèse d’une entreprise à partir de ses informations, affichée avec la mention IA sur la page de l’entreprise.', 'Schreibt aus den Unternehmensinformationen eine kurze Zusammenfassung, die auf der Unternehmensseite als KI gekennzeichnet ist.', 'يكتب ملخصًا قصيرًا عن الشركة من معلوماتها، يظهر موسومًا بالذكاء الاصطناعي في صفحة الشركة.'],
+  'Business Information and auto-fill still work; only the written summary needs the AI provider.': ['La información de la empresa y el autocompletado siguen funcionando; solo el resumen escrito necesita el proveedor de IA.', 'Les informations de l’entreprise et le remplissage automatique fonctionnent toujours ; seule la synthèse rédigée nécessite le fournisseur d’IA.', 'Unternehmensinformationen und automatische Ergänzung funktionieren weiter; nur die geschriebene Zusammenfassung braucht den KI-Anbieter.', 'تظل معلومات الشركة والإكمال التلقائي تعمل؛ والملخص المكتوب وحده يحتاج إلى مزوّد الذكاء الاصطناعي.'],
+  'Read the company’s Business Information': ['Leer la información de la empresa', 'Lire les informations de l’entreprise', 'Die Unternehmensinformationen lesen', 'قراءة معلومات الشركة'],
+  'Save a summary labelled as AI on the company': ['Guardar en la empresa un resumen marcado como IA', 'Enregistrer sur l’entreprise une synthèse marquée IA', 'Eine als KI gekennzeichnete Zusammenfassung beim Unternehmen speichern', 'حفظ ملخص موسوم بالذكاء الاصطناعي في الشركة'],
+  'Change any Business Information': ['Cambiar la información de la empresa', 'Modifier les informations de l’entreprise', 'Unternehmensinformationen ändern', 'تغيير أي من معلومات الشركة'],
+  'Look anything up outside the company record': ['Buscar nada fuera de la ficha de la empresa', 'Chercher quoi que ce soit hors de la fiche de l’entreprise', 'Außerhalb des Unternehmensdatensatzes etwas nachschlagen', 'البحث عن أي شيء خارج سجل الشركة'],
+  'Contact the company': ['Contactar con la empresa', 'Contacter l’entreprise', 'Das Unternehmen kontaktieren', 'التواصل مع الشركة'],
+  'AI summary': ['Resumen de IA', 'Synthèse IA', 'KI-Zusammenfassung', 'ملخص بالذكاء الاصطناعي'],
+  'Written by AI from the details below, {when}. Check it before relying on it.': ['Escrito por IA a partir de los datos de abajo, {when}. Revísalo antes de confiar en él.', 'Rédigé par l’IA à partir des informations ci-dessous, {when}. Vérifiez-le avant de vous y fier.', 'Von KI aus den Angaben unten geschrieben, {when}. Prüfen Sie ihn, bevor Sie sich darauf verlassen.', 'كتبه الذكاء الاصطناعي من التفاصيل أدناه، {when}. تحقّق منه قبل الاعتماد عليه.'],
+  'Write AI summary': ['Escribir resumen de IA', 'Rédiger une synthèse IA', 'KI-Zusammenfassung schreiben', 'كتابة ملخص بالذكاء الاصطناعي'],
+  'Write again': ['Volver a escribir', 'Réécrire', 'Neu schreiben', 'إعادة الكتابة'],
+  'A few sentences on what this company does, written by AI from its Business Information.': ['Unas frases sobre a qué se dedica esta empresa, escritas por IA a partir de su información.', 'Quelques phrases sur l’activité de l’entreprise, rédigées par l’IA à partir de ses informations.', 'Ein paar Sätze dazu, was dieses Unternehmen macht, von KI aus seinen Unternehmensinformationen geschrieben.', 'بضع جمل عما تفعله هذه الشركة، يكتبها الذكاء الاصطناعي من معلوماتها.'],
 } as const satisfies PhraseTable;

@@ -7,7 +7,7 @@ import { PLAN_ENTITLEMENTS, type PlanCode } from './plans';
 /** Model tier an agent asks for. The gateway maps a tier to a model and an effort level. */
 export type AiTier = 'fast' | 'balanced' | 'deep';
 
-export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant', 'voice_assistant', 'retention_advisor'] as const;
+export const AI_AGENT_KEYS = ['copilot', 'lead_qualification', 'deal_intelligence', 'meeting_notes', 'proposal_draft', 'workflow_builder', 'forecast_explainer', 'email_assistant', 'voice_assistant', 'retention_advisor', 'company_summary'] as const;
 export type AiAgentKey = (typeof AI_AGENT_KEYS)[number];
 
 export interface AiAgentDef {
@@ -124,6 +124,16 @@ export const AI_AGENTS: Record<AiAgentKey, AiAgentDef> = {
     withoutModel: 'The churn-risk score, signals, suggested actions and follow-up schedule are rule-based and still work; the written briefing needs the AI provider.',
     can: ['Read the customer health signals, contracts, recent activity, open requests and escalations', 'Draft a briefing and steps for you to add to the follow-up schedule'],
     cannot: ['Create tasks or contact the customer', 'Change contracts, prices or discounts', 'Change the risk score'],
+  },
+  company_summary: {
+    key: 'company_summary',
+    name: 'Company Summary',
+    purpose: 'Writes a short summary of a company from its Business Information, shown labelled as AI on the company page.',
+    tier: 'fast',
+    permission: 'companies:write',
+    withoutModel: 'Business Information and auto-fill still work; only the written summary needs the AI provider.',
+    can: ['Read the company’s Business Information', 'Save a summary labelled as AI on the company'],
+    cannot: ['Change any Business Information', 'Look anything up outside the company record', 'Contact the company'],
   },
 };
 

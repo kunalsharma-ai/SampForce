@@ -8,178 +8,232 @@ import {
   type FieldSource,
   OPERATING_STATUSES,
   SOCIAL_PLATFORM_LABELS,
+  type SocialPlatform,
   socialPlatformOf,
 } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  Activity,
+  BadgeCheck,
+  Briefcase,
+  Building,
+  Building2,
+  CalendarDays,
+  Clock,
+  Contact,
+  Crown,
+  ExternalLink,
+  Factory,
+  Globe,
+  Info,
+  Landmark,
+  Layers,
+  Link2,
+  Mail,
+  MapPin,
+  Network,
+  Package,
+  Pencil,
+  Phone,
+  Plus,
+  Quote,
+  ScrollText,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  StickyNote,
+  Trash2,
+  UserRound,
+  Users,
+  UsersRound,
+} from 'lucide-react';
 import * as React from 'react';
 import { CountrySelect, TimeZoneSelect } from '@/components/forms/inputs';
+import { countryName } from '@/components/forms/locale-data';
 import { InfoTip } from '@/components/info-tip';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { Select, Textarea } from './select';
+import { BRAND_MARKS } from './brand-marks';
+import { INSTAGRAM_GRADIENT, profileLinks } from './social-icons';
 import { CountryFlag } from './status-chip';
 
 type T = ReturnType<typeof useT>;
-type Row = { field: EnrichField | 'notes'; label: string; value: React.ReactNode };
+type Icon = typeof Globe;
+type Sources = CompanyRow['fieldSources'];
 
-const link = (href: string, text?: string) => (
-  <a className="inline-flex min-h-6 items-center gap-1 break-all text-primary hover:underline" href={href} target="_blank" rel="noopener noreferrer">
-    {text ?? href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
-  </a>
-);
+const short = (href: string) => href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+const has = (v: unknown) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0);
 
-const plainList = (items: string[]) =>
-  items.length ? (
+/** Tinted colour sets for the section icons, so each section is easy to find at a glance. */
+const TINTS = {
+  primary: 'bg-primary/10 text-primary',
+  accent: 'bg-accent/10 text-accent',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  info: 'bg-info/10 text-info',
+  critical: 'bg-critical/10 text-critical',
+} as const;
+
+function Section({ id, icon: I, tint, title, children }: { id: string; icon: Icon; tint: keyof typeof TINTS; title: string; children: React.ReactNode }) {
+  return (
+    <section aria-labelledby={`bi-sec-${id}`} className="space-y-3 rounded-xl border border-border bg-background/40 p-4">
+      <h3 id={`bi-sec-${id}`} className="flex items-center gap-2.5 text-sm font-semibold">
+        <span className={`inline-flex size-8 items-center justify-center rounded-lg ${TINTS[tint]}`}>
+          <I aria-hidden className="size-4" />
+        </span>
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** A labelled value with a small icon, and the Auto mark when auto-fill found it. */
+function Item({ icon: I, label, source, wide, children }: { icon?: Icon; label: string; source?: FieldSource; wide?: boolean; children: React.ReactNode }) {
+  const t = useT();
+  return (
+    <div className={wide ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
+      <dt className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {I && <I aria-hidden className="size-3.5" />}
+        {label}
+        <SourceTag source={source} t={t} />
+      </dt>
+      <dd className="mt-1 break-words text-sm">{children}</dd>
+    </div>
+  );
+}
+
+function Chips({ items, tone, icon: I }: { items: string[]; tone: keyof typeof TINTS; icon?: Icon }) {
+  return (
     <ul className="flex flex-wrap gap-1.5">
       {items.map((x) => (
-        <li key={x} className="rounded-md border border-border bg-muted/40 px-2 py-0.5">
+        <li key={x} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${TINTS[tone]}`}>
+          {I && <I aria-hidden className="size-3.5" />}
           {x}
         </li>
       ))}
     </ul>
-  ) : null;
+  );
+}
+
+/** A big number with its label, for the key facts strip. */
+function Stat({ icon: I, tint, label, value, source }: { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }) {
+  const t = useT();
+  return (
+    <div className="flex min-w-[9.5rem] flex-1 basis-40 items-center gap-3 rounded-xl border border-border bg-background/60 p-3">
+      <span className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full ${TINTS[tint]}`}>
+        <I aria-hidden className="size-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+          {label} <SourceTag source={source} t={t} />
+        </p>
+        <p className="truncate text-base font-semibold">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+
+function Person({ name, role, icon: I }: { name: string; role?: string | null; icon?: Icon }) {
+  return (
+    <li className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background/60 p-2.5">
+      <span aria-hidden className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-accent/80 text-xs font-bold text-white">
+        {initials(name)}
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-1 truncate text-sm font-semibold">
+          {name}
+          {I && <I aria-hidden className="size-3.5 text-warning" />}
+        </span>
+        {role && <span className="block truncate text-xs text-muted-foreground">{role}</span>}
+      </span>
+    </li>
+  );
+}
+
+/** A labelled pill in the platform's colours that opens the profile. */
+function ProfilePill({ platform, url, name }: { platform: SocialPlatform | 'website'; url: string; name: string }) {
+  const mark = platform === 'website' ? null : BRAND_MARKS[platform];
+  const style: React.CSSProperties = platform === 'instagram' ? { backgroundImage: INSTAGRAM_GRADIENT } : mark ? { backgroundColor: mark.hex } : {};
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={short(url)}
+      className="group inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-surface py-1 pe-3 ps-1 text-sm font-medium shadow-sm transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
+      <span style={style} className={`inline-flex size-7 items-center justify-center rounded-full text-white ${platform === 'website' ? 'bg-primary text-primary-foreground' : ''}`}>
+        {mark ? (
+          <svg viewBox="0 0 24 24" aria-hidden className="size-4 fill-current">
+            <path d={mark.path} />
+          </svg>
+        ) : (
+          <Globe aria-hidden className="size-4" />
+        )}
+      </span>
+      {name}
+      <ExternalLink aria-hidden className="size-3 text-muted-foreground" />
+    </a>
+  );
+}
 
 /**
- * Business Information (ADR 0076): every detail about the company in one place, grouped, each value telling whether
- * auto-fill found it (with its source) or someone on the team entered it. One Edit opens every field.
+ * Business Information (ADR 0076): every detail about the company in one place, grouped into sections with their
+ * own icons, flags beside every country, and each value telling whether auto-fill found it (with its source) or
+ * someone on the team entered it. One Edit opens every field.
  */
 export function BusinessInformation({ company: c }: { company: CompanyRow }) {
   const t = useT();
   const canWrite = useCan('companies:write');
   const [editing, setEditing] = React.useState(false);
   const label = (f: EnrichField) => t.maybe(ENRICH_FIELD_LABELS[f]);
-  const points = (list: { value: string; primary?: boolean }[], kind: 'mailto' | 'tel') =>
-    list.length ? (
-      <ul className="space-y-0.5">
-        {list.map((p) => (
-          <li key={p.value}>
-            <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={`${kind}:${p.value}`}>
-              {p.value}
-            </a>
-            {p.primary && list.length > 1 && <span className="ms-1 text-xs text-muted-foreground">({t('primary')})</span>}
-          </li>
-        ))}
-      </ul>
-    ) : null;
-  const hq = [c.address, c.city, c.state, c.postalCode].filter(Boolean).join(', ');
-  const sections: { title: string; rows: Row[] }[] = [
-    {
-      title: t('Overview'),
-      rows: [
-        { field: 'overview', label: label('overview'), value: c.overview && <p className="whitespace-pre-line">{c.overview}</p> },
-        { field: 'legalName', label: label('legalName'), value: c.legalName },
-        { field: 'industry', label: label('industry'), value: c.industry },
-        { field: 'businessCategory', label: label('businessCategory'), value: c.businessCategory },
-        { field: 'companyType', label: label('companyType'), value: c.companyType && t.maybe(c.companyType) },
-        { field: 'foundedYear', label: label('foundedYear'), value: c.foundedYear },
-        { field: 'employeeCount', label: label('employeeCount'), value: c.employeeCount?.toLocaleString(t.formatLocale) },
-        { field: 'companySize', label: label('companySize'), value: c.companySize && t('{range} employees', { range: c.companySize }) },
-        { field: 'operatingStatus', label: label('operatingStatus'), value: c.operatingStatus && t.maybe(c.operatingStatus) },
-        { field: 'specialties', label: label('specialties'), value: c.specialties },
-        { field: 'services', label: label('services'), value: plainList(c.services) },
-        { field: 'products', label: label('products'), value: plainList(c.products) },
-        { field: 'industriesServed', label: label('industriesServed'), value: plainList(c.industriesServed) },
-      ],
-    },
-    {
-      title: t('HQ & Locations'),
-      rows: [
-        { field: 'address', label: t('Headquarters address'), value: hq || null },
-        { field: 'country', label: label('country'), value: c.country && <CountryFlag code={c.country} withName /> },
-        { field: 'headquarters', label: label('headquarters'), value: c.headquarters },
-        { field: 'timezone', label: label('timezone'), value: c.timezone },
-        { field: 'branchCount', label: label('branchCount'), value: c.branchCount },
-        {
-          field: 'addresses',
-          label: label('addresses'),
-          value: c.addresses.length ? (
-            <ul className="space-y-1">
-              {c.addresses.map((a, i) => (
-                <li key={i}>
-                  {a.label && <span className="font-medium">{a.label}: </span>}
-                  {[a.address, a.city, a.state, a.postalCode].filter(Boolean).join(', ')}
-                  {a.country && (
-                    <>
-                      {' '}
-                      <CountryFlag code={a.country} withName />
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : null,
-        },
-      ],
-    },
-    {
-      title: t('Contact'),
-      rows: [
-        { field: 'website', label: label('website'), value: c.website && link(c.website) },
-        { field: 'emails', label: label('emails'), value: points(c.emails.length ? c.emails : c.primaryEmail ? [{ value: c.primaryEmail, primary: true }] : [], 'mailto') },
-        { field: 'phones', label: label('phones'), value: points(c.phones.length ? c.phones : c.primaryPhone ? [{ value: c.primaryPhone, primary: true }] : [], 'tel') },
-        { field: 'contactPageUrl', label: label('contactPageUrl'), value: c.contactPageUrl && link(c.contactPageUrl) },
-      ],
-    },
-    {
-      title: t('Leadership & Ownership'),
-      rows: [
-        { field: 'ceo', label: label('ceo'), value: c.ceo },
-        { field: 'founders', label: label('founders'), value: plainList(c.founders) },
-        {
-          field: 'leadership',
-          label: label('leadership'),
-          value: c.leadership.length ? (
-            <ul className="space-y-0.5">
-              {c.leadership.map((l, i) => (
-                <li key={i}>
-                  <span className="font-medium">{l.name}</span>
-                  {l.title && <span className="text-muted-foreground">, {l.title}</span>}
-                </li>
-              ))}
-            </ul>
-          ) : null,
-        },
-        { field: 'parentCompanyName', label: label('parentCompanyName'), value: c.parentCompanyName },
-        { field: 'ownership', label: label('ownership'), value: c.ownership },
-      ],
-    },
-    {
-      title: t('Digital presence'),
-      rows: [
-        { field: 'linkedinUrl', label: label('linkedinUrl'), value: c.linkedinUrl && link(c.linkedinUrl) },
-        {
-          field: 'socialLinks',
-          label: label('socialLinks'),
-          value: c.socialLinks.filter((s) => s.platform !== 'linkedin' || s.url !== c.linkedinUrl).length ? (
-            <ul className="space-y-0.5">
-              {c.socialLinks
-                .filter((s) => s.platform !== 'linkedin' || s.url !== c.linkedinUrl)
-                .map((s) => (
-                  <li key={s.url}>
-                    <span className="text-muted-foreground">{SOCIAL_PLATFORM_LABELS[s.platform]}: </span>
-                    {link(s.url)}
-                  </li>
-                ))}
-            </ul>
-          ) : null,
-        },
-      ],
-    },
-    { title: t('Certifications'), rows: [{ field: 'certifications', label: label('certifications'), value: plainList(c.certifications) }] },
-    {
-      title: t('More details'),
-      rows: [
-        ...c.moreDetails.map((d, i): Row => ({ field: 'moreDetails', label: d.label, value: <span key={i} className="whitespace-pre-line">{d.value}</span> })),
-        { field: 'notes', label: t('Remarks'), value: c.notes && <span className="whitespace-pre-line">{c.notes}</span> },
-      ],
-    },
-  ];
-  const shown = sections.map((s) => ({ ...s, rows: s.rows.filter((r) => r.value !== null && r.value !== undefined && r.value !== '') })).filter((s) => s.rows.length);
+  const src: Sources = c.fieldSources;
+  const emails = c.emails.length ? c.emails : c.primaryEmail ? [{ value: c.primaryEmail, primary: true }] : [];
+  const phones = c.phones.length ? c.phones : c.primaryPhone ? [{ value: c.primaryPhone, primary: true }] : [];
+  const hqLine = [c.address, c.city, c.state, c.postalCode].filter(Boolean).join(', ');
+  const profiles = profileLinks(c);
+
+  const stats = [
+    c.foundedYear && { icon: CalendarDays, tint: 'primary' as const, label: label('foundedYear'), value: c.foundedYear, source: src.foundedYear },
+    c.employeeCount !== null && { icon: Users, tint: 'accent' as const, label: label('employeeCount'), value: c.employeeCount.toLocaleString(t.formatLocale), source: src.employeeCount },
+    c.companySize && { icon: UsersRound, tint: 'info' as const, label: label('companySize'), value: c.companySize, source: src.companySize },
+    c.branchCount !== null && { icon: Building, tint: 'success' as const, label: label('branchCount'), value: c.branchCount, source: src.branchCount },
+    c.operatingStatus && { icon: Activity, tint: 'warning' as const, label: label('operatingStatus'), value: t.maybe(c.operatingStatus), source: src.operatingStatus },
+  ].filter(Boolean) as { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }[];
+
+  const overview = has(c.overview) || has(c.legalName) || has(c.industry) || has(c.businessCategory) || has(c.companyType) || has(c.specialties) || has(c.services) || has(c.products) || has(c.industriesServed);
+  const locations = has(hqLine) || has(c.country) || has(c.headquarters) || has(c.timezone) || has(c.addresses);
+  const contact = has(c.website) || emails.length > 0 || phones.length > 0 || has(c.contactPageUrl);
+  const people = has(c.ceo) || has(c.founders) || has(c.leadership) || has(c.parentCompanyName) || has(c.ownership);
+  const more = has(c.moreDetails) || has(c.notes);
+  const empty = !stats.length && !overview && !locations && !contact && !people && !profiles.length && !has(c.certifications) && !more;
   const editable = canWrite && !c.restricted;
+  const pointLinks = (list: { value: string; primary?: boolean }[], kind: 'mailto' | 'tel') => (
+    <ul className="space-y-1">
+      {list.map((p) => (
+        <li key={p.value} className="flex flex-wrap items-center gap-1.5">
+          <a className="inline-flex min-h-6 items-center break-all font-medium text-primary hover:underline" href={`${kind}:${p.value}`}>
+            {p.value}
+          </a>
+          {p.primary && list.length > 1 && <Badge className="px-1.5 py-0 text-[10px]">{t('primary')}</Badge>}
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <Card id="business-information">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
@@ -192,31 +246,226 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
           </Button>
         )}
       </CardHeader>
-      <CardContent className="space-y-5">
-        {shown.length === 0 && <p className="text-sm text-muted-foreground">{t('No business details yet. Add the website and auto-fill finds the rest, or select Edit.')}</p>}
-        {shown.map((s) => (
-          <section key={s.title} aria-label={s.title} className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{s.title}</h3>
+      <CardContent className="space-y-4">
+        <AiSummary company={c} />
+        {empty && <p className="text-sm text-muted-foreground">{t('No business details yet. Add the website and auto-fill finds the rest, or select Edit.')}</p>}
+
+        {stats.length > 0 && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('Company facts')}>
+            {stats.map((s) => (
+              <Stat key={s.label} {...s} />
+            ))}
+          </div>
+        )}
+
+        {overview && (
+          <Section id="overview" icon={Factory} tint="primary" title={t('Overview')}>
+            {c.overview && (
+              <blockquote className="relative rounded-lg border-s-4 border-primary/60 bg-primary/5 py-2 pe-3 ps-4 text-sm leading-relaxed">
+                <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Quote aria-hidden className="size-3.5" /> {label('overview')} <SourceTag source={src.overview} t={t} />
+                </span>
+                <span className="whitespace-pre-line">{c.overview}</span>
+              </blockquote>
+            )}
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {s.rows.map((r, i) => {
-                const wide = ['overview', 'services', 'products', 'industriesServed', 'addresses', 'leadership', 'certifications', 'socialLinks', 'notes'].includes(r.field);
-                return (
-                  <div key={`${r.field}-${i}`} className={wide ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
-                    <dt className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                      {r.label}
-                      {r.field !== 'notes' && <SourceTag source={c.fieldSources[r.field]} t={t} />}
-                    </dt>
-                    <dd className="mt-0.5 break-words text-sm">{r.value}</dd>
-                  </div>
-                );
-              })}
+              {c.legalName && <Item icon={Landmark} label={label('legalName')} source={src.legalName}>{c.legalName}</Item>}
+              {c.industry && <Item icon={Factory} label={label('industry')} source={src.industry}>{c.industry}</Item>}
+              {c.businessCategory && <Item icon={Layers} label={label('businessCategory')} source={src.businessCategory}>{c.businessCategory}</Item>}
+              {c.companyType && <Item icon={Building2} label={label('companyType')} source={src.companyType}>{t.maybe(c.companyType)}</Item>}
+              {c.specialties && <Item icon={Sparkles} label={label('specialties')} source={src.specialties} wide>{c.specialties}</Item>}
+              {c.services.length > 0 && <Item icon={Briefcase} label={label('services')} source={src.services} wide><Chips items={c.services} tone="primary" /></Item>}
+              {c.products.length > 0 && <Item icon={Package} label={label('products')} source={src.products} wide><Chips items={c.products} tone="accent" /></Item>}
+              {c.industriesServed.length > 0 && <Item icon={Layers} label={label('industriesServed')} source={src.industriesServed} wide><Chips items={c.industriesServed} tone="info" /></Item>}
             </dl>
-          </section>
-        ))}
-        {shown.length > 0 && <p className="text-xs text-muted-foreground">{t('Values marked Auto were found by auto-fill; select one to see where. Everything else was entered by your team.')}</p>}
+          </Section>
+        )}
+
+        {locations && (
+          <Section id="locations" icon={MapPin} tint="critical" title={t('HQ & Locations')}>
+            {(hqLine || c.country || c.headquarters) && (
+              <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-3">
+                {c.country ? <CountryFlag code={c.country} className="mt-0.5 text-2xl" /> : <MapPin aria-hidden className="mt-0.5 size-5 text-primary" />}
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                    {t('Headquarters')} <SourceTag source={src.address ?? src.headquarters ?? src.country} t={t} />
+                  </p>
+                  <p className="text-sm font-semibold">{c.headquarters || [c.city, c.country && countryName(c.country, t.formatLocale)].filter(Boolean).join(', ')}</p>
+                  {hqLine && <p className="text-sm text-muted-foreground">{hqLine}</p>}
+                  {c.timezone && (
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock aria-hidden className="size-3.5" /> {c.timezone}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            {c.addresses.length > 0 && (
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Building aria-hidden className="size-3.5" /> {label('addresses')} ({c.addresses.length}) <SourceTag source={src.addresses} t={t} />
+                </p>
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {c.addresses.map((a, i) => (
+                    <li key={i} className="flex min-w-0 items-start gap-2.5 rounded-xl border border-border bg-background/60 p-3">
+                      {a.country ? <CountryFlag code={a.country} className="mt-0.5 text-lg" /> : <MapPin aria-hidden className="mt-0.5 size-4 text-muted-foreground" />}
+                      <div className="min-w-0 text-sm">
+                        <p className="font-semibold">{a.label || [a.city, a.country && countryName(a.country, t.formatLocale)].filter(Boolean).join(', ')}</p>
+                        <p className="text-muted-foreground">{[a.address, a.city, a.state, a.postalCode].filter(Boolean).join(', ')}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {contact && (
+          <Section id="contact" icon={Contact} tint="success" title={t('Contact')}>
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {c.website && (
+                <Item icon={Globe} label={label('website')} source={src.website}>
+                  <a className="inline-flex min-h-6 items-center break-all font-medium text-primary hover:underline" href={c.website} target="_blank" rel="noopener noreferrer">
+                    {short(c.website)}
+                  </a>
+                </Item>
+              )}
+              {c.contactPageUrl && (
+                <Item icon={Link2} label={label('contactPageUrl')} source={src.contactPageUrl}>
+                  <a className="inline-flex min-h-6 items-center break-all font-medium text-primary hover:underline" href={c.contactPageUrl} target="_blank" rel="noopener noreferrer">
+                    {short(c.contactPageUrl)}
+                  </a>
+                </Item>
+              )}
+              {emails.length > 0 && <Item icon={Mail} label={label('emails')} source={src.emails ?? src.primaryEmail}>{pointLinks(emails, 'mailto')}</Item>}
+              {phones.length > 0 && <Item icon={Phone} label={label('phones')} source={src.phones ?? src.primaryPhone}>{pointLinks(phones, 'tel')}</Item>}
+            </dl>
+          </Section>
+        )}
+
+        {people && (
+          <Section id="people" icon={Crown} tint="warning" title={t('Leadership & Ownership')}>
+            {(c.ceo || c.leadership.length > 0) && (
+              <ul className="grid gap-2 sm:grid-cols-2" aria-label={label('leadership')}>
+                {c.ceo && !c.leadership.some((l) => l.name === c.ceo) && <Person name={c.ceo} role={label('ceo')} icon={Crown} />}
+                {c.leadership.map((l, i) => (
+                  <Person key={i} name={l.name} role={l.title} icon={l.name === c.ceo ? Crown : undefined} />
+                ))}
+              </ul>
+            )}
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {c.founders.length > 0 && <Item icon={UserRound} label={label('founders')} source={src.founders} wide><Chips items={c.founders} tone="warning" /></Item>}
+              {c.parentCompanyName && <Item icon={Network} label={label('parentCompanyName')} source={src.parentCompanyName}>{c.parentCompanyName}</Item>}
+              {c.ownership && <Item icon={Landmark} label={label('ownership')} source={src.ownership}>{c.ownership}</Item>}
+            </dl>
+          </Section>
+        )}
+
+        {profiles.length > 0 && (
+          <Section id="digital" icon={Share2} tint="info" title={t('Digital presence')}>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {label('socialLinks')} <SourceTag source={src.socialLinks ?? src.linkedinUrl} t={t} />
+            </p>
+            <ul className="flex flex-wrap gap-2" aria-label={t('Online profiles')}>
+              {profiles.map((p) => (
+                <li key={p.platform}>
+                  <ProfilePill platform={p.platform} url={p.url} name={p.platform === 'website' ? t('Website') : SOCIAL_PLATFORM_LABELS[p.platform]} />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {c.certifications.length > 0 && (
+          <Section id="certifications" icon={ShieldCheck} tint="success" title={t('Certifications')}>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {label('certifications')} <SourceTag source={src.certifications} t={t} />
+            </p>
+            <Chips items={c.certifications} tone="success" icon={BadgeCheck} />
+          </Section>
+        )}
+
+        {more && (
+          <Section id="more" icon={Info} tint="accent" title={t('More details')}>
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              {c.moreDetails.map((d, i) => (
+                <Item key={i} icon={ScrollText} label={d.label} source={i === 0 ? src.moreDetails : undefined}>
+                  <span className="whitespace-pre-line">{d.value}</span>
+                </Item>
+              ))}
+              {c.notes && (
+                <Item icon={StickyNote} label={t('Remarks')} wide>
+                  <span className="whitespace-pre-line">{c.notes}</span>
+                </Item>
+              )}
+            </dl>
+          </Section>
+        )}
+
+        {!empty && <p className="text-xs text-muted-foreground">{t('Values marked Auto were found by auto-fill; select one to see where. Everything else was entered by your team.')}</p>}
       </CardContent>
       {editable && <BusinessInfoDialog company={c} open={editing} onOpenChange={setEditing} />}
     </Card>
+  );
+}
+
+/** The AI summary (ADR 0076): always labelled as AI, with when it was written, and written again on request. */
+function AiSummary({ company: c }: { company: CompanyRow }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const canCompanies = useCan('companies:write');
+  const canAi = useCan('ai:use');
+  const canWrite = canCompanies && canAi && !c.restricted;
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  if (!c.aiSummary && !canWrite) return null;
+  async function write() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/companies/${c.id}/ai-summary`, { method: 'POST' });
+      await qc.invalidateQueries({ queryKey: ['companies', 'detail', c.id] });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('Something went wrong. Please try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section aria-labelledby="bi-ai-summary" className="rounded-xl bg-gradient-to-r from-primary/60 via-accent/60 to-primary/40 p-px">
+      <div className="space-y-2 rounded-[11px] bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="bi-ai-summary" className="flex items-center gap-2 text-sm font-semibold">
+            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-white">
+              <Sparkles aria-hidden className="size-4" />
+            </span>
+            {t('AI summary')}
+            <Badge tone="accent" className="px-1.5 py-0 text-[10px]">
+              AI
+            </Badge>
+          </h3>
+          {canWrite && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void write()}>
+              <Sparkles aria-hidden /> {busy ? t('Writing…') : c.aiSummary ? t('Write again') : t('Write AI summary')}
+            </Button>
+          )}
+        </div>
+        {c.aiSummary ? (
+          <>
+            <p className="whitespace-pre-line text-sm leading-relaxed">{c.aiSummary}</p>
+            {c.aiSummaryAt && <p className="text-xs text-muted-foreground">{t('Written by AI from the details below, {when}. Check it before relying on it.', { when: formatDate(c.aiSummaryAt) })}</p>}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('A few sentences on what this company does, written by AI from its Business Information.')}</p>
+        )}
+        {error && (
+          <p role="alert" className="rounded-md border border-critical/40 bg-critical/10 p-2 text-sm">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

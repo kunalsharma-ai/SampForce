@@ -18,6 +18,19 @@ async function axe(page: Page) {
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
 
+/** The whole of a tall element, from a full-page capture, without the sticky top bar over it. */
+async function fullShot(page: Page, name: string, locator: ReturnType<Page['locator']>) {
+  if (!PREVIEW_DIR) return;
+  // At the top of the page the sticky top bar sits above the content, not over the element.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(300);
+  const box = await locator.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + window.scrollX, y: r.top + window.scrollY, width: r.width, height: r.height };
+  });
+  await page.screenshot({ path: `${PREVIEW_DIR}/${name}.png`, fullPage: true, clip: box });
+}
+
 async function shot(page: Page, name: string, locator?: ReturnType<Page['locator']>) {
   if (!PREVIEW_DIR) return;
   await page.waitForTimeout(300);
@@ -51,6 +64,13 @@ test('a new company is filled from its website, with sources, and each value can
   await expect(filled.locator(':scope > li').filter({ hasText: 'Industry' })).toContainText('Best guess');
   // The company itself now has the details: the business information card shows the filled description.
   await expect(page.getByText(/^Northwind Insights is a global market research company/).first()).toBeVisible();
+  // The header shows where the company is, and a button for each profile found, opening it directly.
+  const header = page.getByRole('region', { name: 'Northwind Insights' });
+  await expect(header).toContainText('4th Floor, Meridian Tower, 12 Harbour Road, Pune, Maharashtra, 411001, India');
+  const profiles = header.getByRole('list', { name: 'Online profiles' });
+  await expect(profiles.getByRole('link', { name: 'Northwind Insights on LinkedIn' })).toHaveAttribute('href', 'https://www.linkedin.com/company/northwind-insights');
+  await expect(profiles.getByRole('link')).toHaveCount(6);
+  await expect(profiles.getByRole('link', { name: 'Northwind Insights on YouTube' })).toHaveAttribute('target', '_blank');
   await axe(page);
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot(page, '01-company-page-after-autofill');
@@ -107,16 +127,23 @@ test('Business Information holds every detail, tells auto-filled values apart, a
   for (const section of ['Overview', 'HQ & Locations', 'Contact', 'Digital presence', 'Certifications', 'More details']) {
     await expect(info.getByRole('region', { name: section })).toBeVisible();
   }
-  const founded = info.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Founded/ }) });
+  const founded = info.getByRole('group', { name: 'Company facts' }).locator(':scope > div').filter({ hasText: /^Founded/ });
   await expect(founded.getByRole('link', { name: /Found by auto-fill: Company website/ })).toHaveAttribute('href', 'https://www.northwind-insights.example/about-us');
-  await expect(founded.locator('dd')).toHaveText('2009');
+  await expect(founded).toContainText('2009');
   const remarks = info.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Remarks/ }) });
   await expect(remarks).toContainText('Met at the Pune expo.');
   await expect(remarks.getByText('Auto')).toHaveCount(0);
   await expect(info.getByRole('region', { name: 'HQ & Locations' })).toContainText('Pune');
   await expect(info.getByRole('region', { name: 'Certifications' })).toContainText('ISO 27001');
+  // The AI summary is written on request from these details, and always labelled as AI.
+  const summary = info.getByRole('region', { name: /AI summary/ });
+  await summary.getByRole('button', { name: 'Write AI summary' }).click();
+  await expect(summary).toContainText('Northwind Insights works in Market research, based in Pune, IN.');
+  await expect(summary).toContainText(/Written by AI from the details below/);
+  await expect(summary.getByRole('button', { name: 'Write again' })).toBeVisible();
   await axe(page);
   await shot(page, '05-business-information', info);
+  await fullShot(page, '05b-business-information-full', info);
 
   // One Edit opens every field, grouped the same way.
   await info.getByRole('button', { name: 'Edit' }).click();
@@ -135,10 +162,10 @@ test('Business Information holds every detail, tells auto-filled values apart, a
   await expect(dialog).toBeHidden();
 
   // The edited value is now the team's own: no Auto mark, and auto-fill keeps off it.
-  await expect(founded.locator('dd')).toHaveText('2010');
+  await expect(founded).toContainText('2010');
   await expect(founded.getByRole('link', { name: /Found by auto-fill/ })).toHaveCount(0);
   await expect(info.getByRole('region', { name: 'More details' })).toContainText('2.1 million members');
-  await expect(info.getByRole('region', { name: 'Digital presence' })).toContainText('tiktok.com/@northwind');
+  await expect(info.getByRole('region', { name: 'Digital presence' }).getByRole('link', { name: /TikTok/ })).toHaveAttribute('href', 'https://www.tiktok.com/@northwind');
   const saved = await (await page.request.get(`/api/v1/companies/${id}`)).json();
   expect(saved.foundedYear).toBe(2010);
   expect(saved.fieldSources.foundedYear).toMatchObject({ source: 'USER' });
