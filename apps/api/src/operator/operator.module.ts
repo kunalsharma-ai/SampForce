@@ -1,4 +1,8 @@
 import { CompanyClosureService } from '../tenants/company-closure.service';
+import { ConsoleNotificationsController } from './console-notifications.controller';
+import { ConsoleNotificationsModule } from './console-notifications.module';
+import { ConsoleAuditController } from './console-audit.controller';
+import { ConsoleAuditService } from './console-audit.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
@@ -9,6 +13,9 @@ import { ConnectionTests } from './connection-tests';
 import { OperatorAdminController } from './operator-admin.controller';
 import { OperatorAdminService } from './operator-admin.service';
 import { OperatorGuard, OperatorTokens } from './operator-auth';
+import { OperatorSecurityController } from './operator-security.controller';
+import { OperatorSecurityService } from './operator-security.service';
+import { OperatorSessions } from './operator-sessions';
 import { OperatorController } from './operator.controller';
 import { ConsoleService } from './console.service';
 import { ConsoleShellService } from './console-shell.service';
@@ -17,5 +24,5 @@ import { WorkspaceRulesController } from './workspace-rules.controller';
 import { WorkspaceRulesService } from './workspace-rules.service';
 
 /** The platform operator console's API, a separate realm from workspace sign-in. */
-@Module({ imports: [AuthModule, BillingModule], controllers: [OperatorController, OperatorAdminController, WorkspaceRulesController], providers: [CompanyClosureService, OperatorService, OperatorAdminService, WorkspaceRulesService, ConsoleService, ConsoleShellService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard] })
+@Module({ imports: [AuthModule, BillingModule, ConsoleNotificationsModule], controllers: [OperatorController, OperatorAdminController, OperatorSecurityController, ConsoleAuditController, ConsoleNotificationsController, WorkspaceRulesController], providers: [CompanyClosureService, OperatorService, ConsoleAuditService, OperatorAdminService, OperatorSecurityService, OperatorSessions, WorkspaceRulesService, ConsoleService, ConsoleShellService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard, OperatorSessions] })
 export class OperatorModule {}

@@ -27,12 +27,14 @@ import {
   Moon,
   Palette,
   Search,
+  ShieldCheck,
   Sun,
   Volume2,
   VolumeX,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Crumb } from './console-nav';
+import { NotificationBell } from './notifications';
 
 export function ConsoleBreadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
@@ -212,6 +214,7 @@ export function ConsoleTopBar({
         >
           <Search aria-hidden />
         </Button>
+        <NotificationBell sound={me.preferences.sound} />
         <Button
           variant="ghost"
           size="icon"
@@ -255,6 +258,11 @@ export function ConsoleTopBar({
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/operator/account">
+                <ShieldCheck aria-hidden /> Account &amp; security
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onSignOut}>
               <LogOut aria-hidden /> Sign out
             </DropdownMenuItem>

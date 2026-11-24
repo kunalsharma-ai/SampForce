@@ -21,6 +21,7 @@ import { workerItems, workerLastTick, workerTicks } from '../observability/metri
 import { errorMessage } from './queue';
 import { MobilePushService } from '../mobile/push/mobile-push.service';
 import { CompanyClosureService } from '../tenants/company-closure.service';
+import { ConsoleNotificationSweep } from '../operator/console-notifications.service';
 
 export interface WorkerTick {
   events: number;
@@ -48,6 +49,8 @@ export interface WorkerTick {
   pushes: number;
   /** Closed companies whose 30 days passed, erased (workspace redesign W7). */
   erasures: number;
+  /** Console notifications delivered to operators (ADR 0074, C3b). */
+  consoleNotifications: number;
 }
 
 /**
@@ -83,6 +86,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly logos: CompanyLogosService,
     private readonly pushes: MobilePushService,
     private readonly closures: CompanyClosureService,
+    private readonly consoleNotices: ConsoleNotificationSweep,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -121,6 +125,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   }
 
   /** One pass over every queue. Relays first so new events start their workflows in the same tick. */
+  private lastConsoleSweep = 0;
+
   async tick(): Promise<WorkerTick> {
     const events = await this.relay.relayBatch();
     const executions = await this.executor.runDue();
@@ -141,7 +147,13 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
     const pushes = await this.pushes.sendDue();
     const erasures = await this.closures.eraseDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures };
+    // Console notifications once a minute: they read across every client, so not on every tick.
+    let consoleNotifications = 0;
+    if (Date.now() - this.lastConsoleSweep >= this.env.CONSOLE_NOTIFY_INTERVAL_MS) {
+      this.lastConsoleSweep = Date.now();
+      consoleNotifications = await this.consoleNotices.sweep();
+    }
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures, consoleNotifications };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

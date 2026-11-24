@@ -4,8 +4,9 @@ import { api } from './api';
 
 /** Data hooks for account security (two-step verification, devices) and workspace security settings. */
 
-export function useMfaStatus() {
-  return useQuery({ queryKey: ['mfa'], queryFn: () => api<MfaStatus>('/auth/mfa') });
+/** Two-step verification status: the workspace account's by default, or the Console operator's (`/operator/me/mfa`). */
+export function useMfaStatus(base = '/auth/mfa') {
+  return useQuery({ queryKey: base === '/auth/mfa' ? ['mfa'] : ['operator', 'mfa'], queryFn: () => api<MfaStatus>(base) });
 }
 
 export function useSessions() {

@@ -106,4 +106,25 @@ export const consoleAdmin = {
     'Verwenden Sie mindestens 12 Zeichen.',
     'استخدم 12 حرفًا على الأقل.',
   ],
+  'Turn on two-step verification to use the Console.': [
+    'Activa la verificación en dos pasos para usar la consola.',
+    'Activez la validation en deux étapes pour utiliser la console.',
+    'Schalten Sie die Bestätigung in zwei Schritten ein, um die Konsole zu nutzen.',
+    'فعّل التحقق بخطوتين لاستخدام وحدة التحكم.',
+  ],
+  'Session not found.': ['Sesión no encontrada.', 'Session introuvable.', 'Sitzung nicht gefunden.', 'الجلسة غير موجودة.'],
+  'The Console’s security policy requires two-step verification.': [
+    'La política de seguridad de la consola exige la verificación en dos pasos.',
+    'La politique de sécurité de la console exige la validation en deux étapes.',
+    'Die Sicherheitsrichtlinie der Konsole verlangt die Bestätigung in zwei Schritten.',
+    'تتطلب سياسة أمان وحدة التحكم التحقق بخطوتين.',
+  ],
+  'Use your account page to change your own two-step verification.': [
+    'Usa la página de tu cuenta para cambiar tu verificación en dos pasos.',
+    'Utilisez la page de votre compte pour modifier votre validation en deux étapes.',
+    'Ändern Sie Ihre Bestätigung in zwei Schritten auf Ihrer Kontoseite.',
+    'استخدم صفحة حسابك لتغيير التحقق بخطوتين الخاص بك.',
+  ],
+  'That audit entry was not found.': ['No se encontró esa entrada de auditoría.', 'Cette entrée du journal d’audit est introuvable.', 'Dieser Protokolleintrag wurde nicht gefunden.', 'لم يتم العثور على إدخال التدقيق هذا.'],
+  'Notification not found.': ['Notificación no encontrada.', 'Notification introuvable.', 'Benachrichtigung nicht gefunden.', 'لم يتم العثور على الإشعار.'],
 } satisfies TextTable;

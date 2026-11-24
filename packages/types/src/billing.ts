@@ -225,7 +225,8 @@ export interface OnboardingState {
 
 // ───────────── Operator console ─────────────
 
-export const operatorLoginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(200) });
+/** `remember` keeps the Console session for 7 days instead of 8 hours (ADR 0074); the idle timeout still applies. */
+export const operatorLoginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(200), remember: z.boolean().optional() });
 
 export const operatorPlanSchema = z.object({
   planCode: z.enum(['free', 'launch', 'growth', 'professional', 'business', 'enterprise', 'enterprise_plus']),
@@ -274,6 +275,8 @@ export interface OperatorMe {
   roleName: string;
   /** Everything the operator may do; the Console hides what is not in this list. */
   permissions: import('./console-security').OperatorPermission[];
+  /** The security policy requires two-step verification and it is not on yet: only the account page opens. */
+  mfaSetupRequired?: boolean;
   /** The operator's Console palette, colour mode, sidebar and sound (ADR 0074). */
   preferences: import('./console-shell').ConsolePreferences;
 }
@@ -315,12 +318,20 @@ export interface PublicPricing {
 
 export interface PlatformAuditRow {
   id: string;
-  operator: { id: string; email: string } | null;
+  operator: { id: string; email: string; name: string } | null;
   action: string;
   targetTenantId: string | null;
   /** The client organisation the entry is about, by name. */
   client: { id: string; name: string | null } | null;
+  /** What the entry is about (ADR 0074, C3), with its name when it was written. */
+  target: { type: string; id: string | null; label: string | null } | null;
+  /** The changed fields before and after, secrets removed. Null when the entry records no change of values. */
+  before: unknown;
+  after: unknown;
   metadata: Record<string, unknown>;
+  ip: string | null;
+  sessionId: string | null;
+  userAgent: string | null;
   createdAt: string;
 }
 
