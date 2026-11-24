@@ -23,10 +23,14 @@ example `https://bids.frequentresearch.com/api`. SampForce adds `/v1/...` to it.
    presses **Check and save**. SampForce calls `GET /v1/ping` once and saves only if SampBidx answers 200.
 3. SampForce then shows a **status callback URL** and a **callback signing secret**. Store both in SampBidx.
 
-In production the address must be `https://` and must resolve to a public IP address. SampForce refuses private
-and internal addresses (10.x, 192.168.x, localhost and so on) so a typed-in address cannot reach internal systems.
-If SampBidx runs on the same private network as SampForce, tell the SampForce team; that needs a deliberate
-allow-list, which is not built yet.
+In production a public address must be `https://`. SampForce refuses private and internal addresses (10.x,
+192.168.x, 172.16-31.x, localhost and so on) so a typed-in address cannot reach internal systems, unless the
+SampForce operator approves them.
+
+If SampBidx runs on the same server or private network as SampForce, the operator adds its host name, address or
+range in the SampForce operator console under **Providers → Workspace servers → Approved private hosts** (for
+example `sampbidx-api, 172.16.0.0/12` for a Docker network, or `127.0.0.1`). After that, the workspace admin can
+enter the private address, and plain `http://` is accepted for that approved private host only.
 
 ## Authentication (SampForce → SampBidx)
 

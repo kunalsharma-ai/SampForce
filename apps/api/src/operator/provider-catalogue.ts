@@ -412,13 +412,13 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     },
   },
   {
-    key: 'workspace_servers', name: 'Workspace servers', usedFor: "Private or internal servers that workspaces may use as their own AI server or email server. Public servers need no approval",
+    key: 'workspace_servers', name: 'Workspace servers', usedFor: "Private or internal servers that workspaces may use as their own AI server, email server or SampBidx. Public servers need no approval",
     fields: [
       { name: 'TRUSTED_PRIVATE_HOSTS', label: 'Approved private hosts', required: false, validate: trustedHostsError, help: 'Host names, addresses or ranges, separated by commas, for example ollama.lan, 10.0.0.0/8, 2406:b400::/32. Empty: workspaces can only use public servers.' },
     ],
     tested: [],
     checkNote: 'This is a setting, not a key, so there is nothing to test. Workspace admins test their own servers under Integrations.',
-    app: { off: 'Workspaces can connect their own AI and email servers on public addresses only', on: 'Workspaces can also use the approved private hosts' },
+    app: { off: 'Workspaces can connect their own AI and email servers and SampBidx on public addresses only', on: 'Workspaces can also use the approved private hosts' },
     setup: {
       steps: [
         'Workspace admins can add their own AI keys, their own AI server and their own email server under Integrations > Your own servers. Public servers work straight away.',

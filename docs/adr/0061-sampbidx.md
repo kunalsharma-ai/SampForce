@@ -62,8 +62,9 @@ contract, sends to it, and the SampBidx team builds to it.
 
 - Nothing has been sent to a real SampBidx. The tests use `apps/api/test/fixtures/sampbidx-fixture.ts`, which
   follows the document. Until SampBidx implements it, connecting fails at the ping.
-- A SampBidx on a private network (same LAN or VM as SampForce) is refused in production by the SSRF guard. Allowing
-  it needs an operator allow-list, which is not built.
+- A SampBidx on a private network (same LAN or VM as SampForce) is refused in production unless the operator lists
+  it under console Providers > Workspace servers > Approved private hosts (`TRUSTED_PRIVATE_HOSTS`, ADR 0068). SampBidx
+  calls go through the same `workspaceFetch` guard as a workspace's own AI and email servers (added 2026-11-24).
 - Synced mailbox emails go without their attachments, because mailbox sync does not store attachments. The .eml/.msg
   upload is the way to send those.
 - Sends are synchronous (up to 60 seconds) rather than queued. Retries are by hand.
