@@ -54,7 +54,8 @@ test('updates workspace settings and records them in the audit log', async ({ pa
   await expect(name).toHaveValue('Settings Org');
   await name.fill('Settings Org Renamed');
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByRole('status')).toHaveText('Saved.');
+  // The settings page has more than one form with its own status line (the sales profile too).
+  await expect(page.locator('form').filter({ has: name }).getByRole('status')).toHaveText('Saved.');
   await page.goto('/app/administration');
   await expect(page.getByRole('cell', { name: 'tenant.updated' })).toBeVisible();
 });
