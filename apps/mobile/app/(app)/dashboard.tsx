@@ -2,6 +2,7 @@ import { MOBILE_DASHBOARD_CARD_DEFS, type MobileDashboard, WORKSPACE_DASHBOARD_P
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { DashboardCard } from '../../src/components/dashboard';
+import { HomeNotificationsCard } from '../../src/components/notification-center';
 import { Chips } from '../../src/components/records';
 import { View } from 'react-native';
 import { Avatar, Body, Card, ErrorNote, Loading, Screen, Title } from '../../src/components/ui';
@@ -43,6 +44,8 @@ export default function Dashboard() {
           </Body>
         </View>
       </View>
+      {/* The second way to a notification (ADR 0075): the newest unread, on the home screen. */}
+      {s.config.modules.some((m) => m.key === 'notifications') ? <HomeNotificationsCard /> : null}
       {s.config.dashboard.length === 0 ? (
         <Card>
           <Body muted>{t('Your administrator has not chosen any cards for your home screen.')}</Body>

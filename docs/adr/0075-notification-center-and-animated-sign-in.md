@@ -71,3 +71,21 @@ polled every 30 seconds, had no history, no sound, and nothing appeared on the d
 - The Console bell keeps its exports, data attributes and accessible name, and gains the shared swing, halo and badge
   pop when the count rises (never on first load). While the Console is in the background and the browser allows it,
   a new notification also shows as a browser notification; the bell offers to ask for that permission once.
+
+## Part 4: the phone app
+
+The phone uses the same notification store and routes (they already allowed the phone through `@MobileModuleAccess('notifications')`).
+
+- **One summary**: `NotificationCenterProvider` (apps/mobile/src/lib/notification-center.tsx) asks for `/notifications/summary` every 20 seconds while the app is open, and again whenever the app comes back. The phone does not hold a long-poll, because phones suspend background requests.
+- **What the summary feeds**:
+  - The bell in every header, with its count.
+  - The tab badges, one per module that matches a notification section (Tasks counts tasks, Follow-ups counts follow-ups; Notifications counts everything).
+  - A notifications card at the top of the home screen.
+- **Something new**: an animated banner slides down. The sound is the phone's own notification sound, played through a local notification. It plays only when the person's chime is on and that category isn't muted, and only when the phone doesn't already get push notifications, so the sound never plays twice.
+- **Sign-in**: the sign-in screen opens on the scene of the level this phone last used (Executive the first time). Each level has its own scene drawn with plain views and `Animated`: Super is a crowned sun with orbiting planets, Manager is the team circling its lead, Executive is a rocket with rising deals.
+  - The greeting names the workspace in bold.
+  - The password has an eye button, named "Show characters" so that the label "Password" still finds only the field.
+  - "Forgot your password?" opens the server's web page.
+  - A wrong password shakes the box and shows a red cross; the right one draws a green tick.
+- **Welcome**: after signing in, a 2.8-second welcome plays: the level's scene, "Welcome back, {name}" and a progress bar. Under reduced motion it lasts 0.9 seconds. A tap skips it.
+- **Tests**: covered by `apps/web/e2e/mobile-notifications.spec.ts` and `apps/mobile/test/notification-center.test.ts`.
