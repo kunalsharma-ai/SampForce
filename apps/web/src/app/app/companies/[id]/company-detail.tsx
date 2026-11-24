@@ -4,6 +4,7 @@ import type { CompanyRow } from '@dealflow/types';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CompanyActionsProvider } from '@/components/crm/company-actions';
+import { CompanyAutofill } from '@/components/crm/company-autofill';
 import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } from '@/components/crm/company-dashboard';
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { CompanyBranches, CompanyFiles, CompanyOwnership, CompanyProfileCard } from '@/components/crm/company-parts';
@@ -60,6 +61,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </div>
           <div className="min-w-0 space-y-4">
             <CompanyLeadCard company={c} />
+            <CompanyAutofill company={c} />
             <CompanyFollowUps company={ref} employees={people} />
             <CompanyOwnership company={c} />
             <CompanyConcerns company={ref} employees={people} />

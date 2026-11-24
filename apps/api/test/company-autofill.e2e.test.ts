@@ -136,6 +136,14 @@ describe('company auto-fill', () => {
     expect(c.logo).toMatchObject({ source: 'AUTO', status: 'PENDING' });
   });
 
+  it('finishes at once when a name-only company is unknown to Wikidata, instead of retrying', async () => {
+    const created = (await http.post('/companies', { name: 'Plainfield Works' }).expect(201)).body;
+    await runWorker();
+    const s = await state(created.id);
+    expect(s.busy).toBe(false);
+    expect(s.runs[0]).toMatchObject({ status: 'NOTHING_FOUND', error: 'No website, and Wikidata has no company with exactly this name.' });
+  });
+
   it('never writes again what someone changed or cleared, and undoes what they reject', async () => {
     const created = (await http.post('/companies', { name: 'Lumen Harbor', website: 'lumenharbor.example' }).expect(201)).body;
     await runWorker();

@@ -1780,6 +1780,30 @@ export const organizationHelp = {
       'استلام طلب عرض سعر ليس صفقة رابحة: لا يُحتسب إيرادًا إلا الطلبات الرابحة أو الصفقات الناتجة عنها.',
     ],
   },
+  'crm.companyAutofill': {
+    title: 'Auto-fill',
+    what: [
+      'Details SampForce found for this company on its own website and on Wikidata, with where each one came from.',
+      'Los datos que SampForce encontró sobre esta empresa en su propio sitio web y en Wikidata, con el origen de cada uno.',
+      'Les informations que SampForce a trouvées sur cette entreprise sur son propre site web et sur Wikidata, avec l’origine de chacune.',
+      'Angaben, die SampForce auf der eigenen Website des Unternehmens und in Wikidata gefunden hat, jeweils mit Quelle.',
+      'التفاصيل التي وجدها SampForce عن هذه الشركة في موقعها الإلكتروني وفي ويكي بيانات، مع مصدر كل منها.',
+    ],
+    how: [
+      'Select Enrich to look the company up again. Auto-fill only fills empty fields and never changes what you entered. Undo removes a value, and it is not added again.',
+      'Selecciona Enriquecer para volver a buscar la empresa. El autocompletado solo rellena campos vacíos y nunca cambia lo que escribiste. Deshacer quita un valor, y no se vuelve a añadir.',
+      'Sélectionnez Enrichir pour rechercher à nouveau l’entreprise. Le remplissage automatique ne complète que les champs vides et ne modifie jamais ce que vous avez saisi. Annuler retire une valeur, qui ne sera plus ajoutée.',
+      'Wählen Sie Anreichern, um das Unternehmen erneut nachzuschlagen. Die automatische Ergänzung füllt nur leere Felder und ändert nie Ihre Eingaben. Rückgängig entfernt einen Wert, der danach nicht erneut hinzugefügt wird.',
+      'اختر «إثراء» للبحث عن الشركة مجددًا. لا يملأ الإكمال التلقائي إلا الحقول الفارغة ولا يغيّر أبدًا ما أدخلته. يزيل التراجع القيمة ولا تُضاف مرة أخرى.',
+    ],
+    where: [
+      'It runs by itself when a company is created, imported or given a new website. Values marked uncertain came from sources that disagree, so check them.',
+      'Se ejecuta solo al crear o importar una empresa o al cambiar su sitio web. Los valores marcados como inciertos vienen de fuentes que no coinciden; revísalos.',
+      'Il s’exécute seul quand une entreprise est créée, importée ou reçoit un nouveau site web. Les valeurs marquées incertaines viennent de sources en désaccord : vérifiez-les.',
+      'Läuft automatisch, wenn ein Unternehmen angelegt, importiert oder mit einer neuen Website versehen wird. Als unsicher markierte Werte stammen aus widersprüchlichen Quellen; bitte prüfen.',
+      'يعمل تلقائيًا عند إنشاء شركة أو استيرادها أو تغيير موقعها الإلكتروني. القيم الموسومة بأنها غير مؤكدة جاءت من مصادر متعارضة، فتحقق منها.',
+    ],
+  },
   'crm.companyKpis': {
     title: 'Company performance',
     what: [

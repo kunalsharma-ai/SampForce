@@ -199,7 +199,7 @@ export class CompanyEnrichmentService {
       const domain = logoDomain(company.domain) ?? c.domain;
       const collected = await Promise.race([
         this.collect(company.name, domain),
-        new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'Timed out' }), RUN_DEADLINE_MS).unref()),
+        new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.' }), RUN_DEADLINE_MS).unref()),
       ]);
       const attempts = c.attempts + 1;
       if (!collected.reached && !collected.candidates.length) {
@@ -226,6 +226,7 @@ export class CompanyEnrichmentService {
     const sources: Collected['sources'] = [];
     const candidates: Candidate[] = [];
     let error: string | null = null;
+    let wikidataFailed = false;
     const wikidata = async (d: string | null) => {
       if (!this.wikidataOn()) return null;
       try {
@@ -237,6 +238,7 @@ export class CompanyEnrichmentService {
         return found;
       } catch (err) {
         this.log.warn({ err: errorMessage(err) }, 'wikidata look-up failed');
+        wikidataFailed = true;
         return null;
       }
     };
@@ -269,6 +271,8 @@ export class CompanyEnrichmentService {
     }
     await wiki;
     if (sources.some((s) => s.kind === 'WIKIDATA')) reached = true;
+    // No website, and Wikidata answered without a match: there is nothing to retry.
+    if (!site && !wikidataFailed) reached = true;
     if (!site && !candidates.length) error = 'No website, and Wikidata has no company with exactly this name.';
     return { candidates, sources, reached, error };
   }
