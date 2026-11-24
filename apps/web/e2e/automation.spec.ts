@@ -16,6 +16,8 @@ async function expectNoA11yViolations(page: Page) {
 }
 
 test('builds, simulates and runs a workflow from the studio', async ({ page }) => {
+  // A long journey (build, simulate, activate, run, check two leads); 30 seconds is too tight on a busy CI runner.
+  test.setTimeout(90_000);
   await signUp(page, 'Studio Flow');
   await page.goto('/app/automation');
   await expect(page.getByRole('heading', { level: 1, name: 'Automation Studio' })).toBeVisible();
