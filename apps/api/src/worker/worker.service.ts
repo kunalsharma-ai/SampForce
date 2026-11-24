@@ -23,6 +23,7 @@ import { MobilePushService } from '../mobile/push/mobile-push.service';
 import { CompanyClosureService } from '../tenants/company-closure.service';
 import { ConsoleNotificationSweep } from '../operator/console-notifications.service';
 import { ConsoleHealthService } from '../operator/console-health.service';
+import { ConsoleOverviewService } from '../operator/console-overview.service';
 
 export interface WorkerTick {
   events: number;
@@ -91,6 +92,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly closures: CompanyClosureService,
     private readonly consoleNotices: ConsoleNotificationSweep,
     private readonly clientHealth: ConsoleHealthService,
+    private readonly overview: ConsoleOverviewService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -159,6 +161,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       this.lastConsoleSweep = Date.now();
       consoleNotifications = await this.consoleNotices.sweep();
       clientHealth = await this.clientHealth.sweep();
+      // The Overview's KPI values for today (C5b), once a day.
+      await this.overview.snapshot();
     }
     return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures, consoleNotifications, clientHealth };
   }

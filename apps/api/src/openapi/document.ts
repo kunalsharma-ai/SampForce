@@ -949,6 +949,7 @@ export function buildOpenApiDocument(): object {
   op('get', '/clients/page', 'clients with filters (status, plan, billing, country, payment, health, created dates), sort on every column and pages of 25, 50 or 100 (clients.view)');
   op('get', '/clients/export', 'the filtered clients list as CSV; the export is an audit entry (clients.view)');
   op('post', '/clients/bulk', 'one action over up to 200 clients: change status (CONFIRM to suspend or deactivate), extend subscriptions, set a feature override or email the administrators; each client audited (the action\'s own permission)');
+  op('get', '/overview/dashboard', 'the Overview: Action Required counts, 18 KPIs with their value 30 days ago and a 30-day line, client growth, revenue, plans, workspace utilisation, mobile use and new workspaces; cached for a minute (clients.view)');
   op('get', '/clients/{id}/health', 'a client\'s health score with every signal, its points and the figure behind it, and 30 days of scores (clients.view)');
   op('post', '/clients/{id}/health', 'measure a client\'s health score now; recorded with before and after (clients.view)');
   op('get', '/settings/health', 'the health score weights and band thresholds (any operator)');

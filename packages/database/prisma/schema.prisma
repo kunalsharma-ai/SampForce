@@ -2959,6 +2959,18 @@ model ClientHealthDaily {
   @@map("client_health_daily")
 }
 
+/// The Console Overview's figures for one UTC day (ADR 0074, C5b): every KPI value (ConsoleKpiKey -> number), so the
+/// cards can show the change against 30 days ago and a 30-day line. Written once a day by the worker.
+model PlatformMetricDaily {
+  /// YYYY-MM-DD.
+  day       String   @id @map("_id")
+  metrics   Json
+  currency  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("platform_metrics_daily")
+}
+
 model PlatformSetting {
   key         String   @id @map("_id")
   value       String

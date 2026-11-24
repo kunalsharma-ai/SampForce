@@ -116,7 +116,8 @@ export default function ConsoleClientsPage() {
 function ClientsList() {
   const me = useOperator();
   const params = useSearchParams();
-  const [creating, setCreating] = useState(false);
+  // The Overview's "New client" opens the list with the dialog open.
+  const [creating, setCreating] = useState(() => params.get('new') === '1');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<ConsoleBulkAction | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -134,7 +135,8 @@ function ClientsList() {
     const onClick = (e: MouseEvent) => {
       const a = (e.target as Element | null)?.closest?.('a[href]');
       const href = a?.getAttribute('href') ?? '';
-      if (href && !href.startsWith('/operator/clients?') && href !== '/operator/clients') leaving.current = true;
+      if (href && !href.startsWith('/operator/clients?') && href !== '/operator/clients')
+        leaving.current = true;
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -568,7 +570,14 @@ function ClientsList() {
           </div>
         </div>
       </Card>
-      {creating && <NewClientDialog onClose={() => setCreating(false)} />}
+      {creating && (
+        <NewClientDialog
+          onClose={() => {
+            setCreating(false);
+            if (params.get('new')) setParams({ new: null }, true);
+          }}
+        />
+      )}
       {bulk && (
         <BulkDialog
           action={bulk}
