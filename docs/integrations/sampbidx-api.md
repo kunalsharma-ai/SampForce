@@ -142,7 +142,13 @@ The `email` part:
   there is no `message` part and `attachmentsIncluded` is `false`.
 - `source: "file"`: an uploaded .eml or .msg file. The `message` part is the file, and `email` carries `fileName`,
   plus `subject`, `from` and `date` read from the file's headers when it is an .eml (null for .msg).
+- `source: "pasted"`: the email's text, copied from a mail program and pasted on a company's page in SampForce. There
+  is no `message` part and `attachmentsIncluded` is `false`. `text` is exactly what was pasted, usually including
+  the From, Sent, To and Subject lines. `subject`, `from`, `to`, `cc` and `date` are read from those lines (or typed
+  by the person); any of them can be `null` or empty. A `contact` object `{ "id", "name", "email" }` names the
+  company's employee who sent it, or is `null`.
 - `company` and `rfq` are set when the sender linked the email to a company lead or to an RFQ (same shape as above).
+  A pasted email always has `company`.
 
 ## Answering a send
 

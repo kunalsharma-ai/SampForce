@@ -181,6 +181,58 @@ describe('SampBidx (stand-in)', () => {
     await api(outsider).post(`/apps/sampbidx/transfers/email-file?name=x.eml&companyId=${companyId}`).expect(400);
   });
 
+  it('sends a pasted RFQ email in one click, matched to the employee and logged on the company', async () => {
+    const r = api(rep);
+    const text = [
+      'From: Priya Nair <Priya@AcmePanels.example>',
+      'Sent: Monday, November 23, 2026 9:30 AM',
+      'To: rep@sampforce.test; ops@sampforce.test',
+      'Subject: RFQ: Singapore fintech users, n=300',
+      '',
+      'Hi, please quote 300 fintech app users in Singapore, LOI 10, IR 30%. Field next week.',
+    ].join('\n');
+    // Someone who cannot see the company cannot paste on it.
+    await api(outsider).post('/apps/sampbidx/transfers/pasted-email', { companyId, text }).expect(404);
+    expect((await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text: 'hi' }).expect(400)).body.error.code).toBe('VALIDATION_FAILED');
+
+    const sent = (await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text }).expect(200)).body as SampbidxTransferRow;
+    expect(sent).toMatchObject({ kind: 'PASTED_EMAIL', delivery: 'SENT', title: 'RFQ: Singapore fintech users, n=300', emailFrom: 'Priya Nair <Priya@AcmePanels.example>', company: { id: companyId } });
+    expect(sent.remoteId).toMatch(/^SBX-/);
+    const got = sbx.received.at(-1)!;
+    expect(got.path).toBe('/v1/rfq-emails');
+    expect(got.idempotencyKey).toBe(sent.id);
+    expect(got.json).toMatchObject({
+      source: 'pasted',
+      company: { id: companyId, name: 'Acme Panels' },
+      contact: { id: priyaId, name: 'Priya Nair', email: 'priya@acmepanels.example' },
+      email: { subject: 'RFQ: Singapore fintech users, n=300', from: 'Priya Nair <Priya@AcmePanels.example>', to: ['rep@sampforce.test', 'ops@sampforce.test'], cc: [], text, attachmentsIncluded: false },
+    });
+    expect(got.parts.map((p) => p.name)).toEqual(['email']);
+
+    // It is in the company's communication history as an "RFQ received" from Priya.
+    const pastedLog = async () => ((await r.get(`/companies/${companyId}/interactions?kind=RFQ_RECEIVED`).expect(200)).body as Array<{ subject: string; contact: { id: string } | null; sender: string | null; remarks: string | null }>).filter((i) => i.subject.includes('Singapore') || i.subject.includes('nurses'));
+    expect(await pastedLog()).toEqual([expect.objectContaining({ subject: 'RFQ: Singapore fintech users, n=300', contact: expect.objectContaining({ id: priyaId }), sender: 'Priya Nair <Priya@AcmePanels.example>', remarks: text })]);
+
+    // The same text twice is a mistake unless asked for; a deliberate copy is not logged a second time.
+    expect((await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text }).expect(409)).body.error.code).toBe('ALREADY_SENT');
+    const copy = (await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text, resend: true }).expect(200)).body as SampbidxTransferRow;
+    expect(copy.id).not.toBe(sent.id);
+    expect(await pastedLog()).toHaveLength(1);
+
+    // Plain body text, corrected subject, chosen employee, not logged.
+    const plain = 'Hello team, we need a quote for 150 nurses in the US, LOI 20 minutes, by Friday.';
+    const custom = (await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text: plain, subject: 'US nurses quote', contactId: priyaId, rfqId, logInteraction: false }).expect(200)).body as SampbidxTransferRow;
+    expect(custom).toMatchObject({ title: 'US nurses quote', emailFrom: null, rfq: { id: rfqId } });
+    expect(sbx.received.at(-1)!.json).toMatchObject({ rfq: { id: rfqId }, contact: { id: priyaId }, email: { subject: 'US nurses quote', text: plain } });
+    expect(await pastedLog()).toHaveLength(1);
+    // Without a subject or a known sender, it is named after the company.
+    const bare = (await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text: 'Another plain request for a quote, 80 CFOs in UAE.', logInteraction: false }).expect(200)).body as SampbidxTransferRow;
+    expect(bare.title).toBe('RFQ email from Acme Panels');
+    // An employee of another company cannot be named.
+    const other = (await api(owner).post('/company-leads', { company: { name: 'Other Co', country: 'IN' }, employees: [{ firstName: 'Omar', lastName: 'Ali' }] }).expect(201)).body;
+    expect((await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text: plain + ' again', contactId: other.employeeIds[0] }).expect(400)).body.error.code).toBe('INVALID_CONTACT');
+  });
+
   it('takes signed status updates from SampBidx and refuses unsigned or stale ones', async () => {
     const { callbackUrl, secret } = (await api(owner).get('/apps/sampbidx/callback-secret').expect(200)).body as { callbackUrl: string; secret: string };
     const path = new URL(callbackUrl).pathname;
