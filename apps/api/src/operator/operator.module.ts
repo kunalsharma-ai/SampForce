@@ -1,3 +1,6 @@
+import { GeoModule } from '../geo/geo.module';
+import { ConsoleClientsProfileController } from './console-clients-profile.controller';
+import { ConsoleClientsProfileService } from './console-clients-profile.service';
 import { ConsoleNotificationsController } from './console-notifications.controller';
 import { ConsoleNotificationsModule } from './console-notifications.module';
 import { ConsoleAuditController } from './console-audit.controller';
@@ -21,5 +24,5 @@ import { ConsoleShellService } from './console-shell.service';
 import { OperatorService } from './operator.service';
 
 /** The platform operator console's API, a separate realm from workspace sign-in. */
-@Module({ imports: [AuthModule, BillingModule, ConsoleNotificationsModule], controllers: [OperatorController, OperatorAdminController, OperatorSecurityController, ConsoleAuditController, ConsoleNotificationsController], providers: [OperatorService, ConsoleAuditService, OperatorAdminService, OperatorSecurityService, OperatorSessions, ConsoleService, ConsoleShellService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard, OperatorSessions] })
+@Module({ imports: [AuthModule, BillingModule, ConsoleNotificationsModule, GeoModule], controllers: [OperatorController, ConsoleClientsProfileController, OperatorAdminController, OperatorSecurityController, ConsoleAuditController, ConsoleNotificationsController], providers: [OperatorService, ConsoleClientsProfileService, ConsoleAuditService, OperatorAdminService, OperatorSecurityService, OperatorSessions, ConsoleService, ConsoleShellService, OperatorTokens, OperatorGuard, ApolloClient, HunterClient, DeepgramClient, ConnectionTests], exports: [OperatorTokens, OperatorGuard, OperatorSessions] })
 export class OperatorModule {}

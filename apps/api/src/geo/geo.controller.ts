@@ -3,7 +3,7 @@ import { GEO_COUNTRIES, z } from '@dealflow/types';
 import { ZodPipe } from '../common/zod.pipe';
 import { GeoService } from './geo.service';
 
-const citiesQuery = z.object({
+export const citiesQuery = z.object({
   region: z.string().trim().max(10).optional(),
   q: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),

@@ -7,6 +7,7 @@ import {
   type ConsoleAuthorityInput,
   type ConsoleClientCreated,
   type ConsoleClientDetail,
+  type ConsoleClientProfile,
   type ConsoleClientRow,
   type ConsoleHistoryRow,
   type ConsoleOverview,
@@ -18,6 +19,7 @@ import {
   type ConsoleSubscription,
   type ConsoleSubscriptionInput,
   CUSTOM_PLAN_PREFIX,
+  customerIdOf,
   DEFAULT_WORKSPACE_DESIGNATION,
   FEATURE_CATALOG_VERSION,
   isPlanCode,
@@ -52,6 +54,18 @@ const HISTORY_ACTIONS = [
 ];
 
 const NOT_FOUND = { code: 'NOT_FOUND', message: 'Client organisation not found.' };
+export const CUSTOMER_COUNTER = 'client.customer';
+
+/** The versioned address of a client's logo, for the Console. */
+export function clientLogoUrl(clientId: string, updatedAt: Date | null | undefined): string | null {
+  return updatedAt ? `/api/v1/operator/clients/${clientId}/logo?v=${updatedAt.getTime().toString(36)}` : null;
+}
+
+export const PROFILE_FIELDS = ['legalName', 'website', 'industry', 'countryCode', 'regionCode', 'city', 'addressLine1', 'addressLine2', 'postalCode', 'contactName', 'contactEmail', 'contactPhone'] as const;
+
+export function profileOf(t: Record<(typeof PROFILE_FIELDS)[number], string | null>): ConsoleClientProfile {
+  return Object.fromEntries(PROFILE_FIELDS.map((f) => [f, t[f] ?? null])) as unknown as ConsoleClientProfile;
+}
 
 /** Adds whole months, keeping the day where the month has it (31 January + 1 month = 28 or 29 February). */
 export function addMonths(date: Date, months: number): Date {
@@ -226,7 +240,23 @@ export class ConsoleService {
     };
   }
 
+  /**
+   * Gives every client without a customer number the next one, oldest first. New clients get theirs the first time
+   * the Console lists or opens them; the counter only moves forward, so a number is never reused.
+   */
+  async ensureCustomerNumbers(): Promise<void> {
+    const missing = await this.prisma.run({ operatorScan: true }, (tx) =>
+      tx.tenant.findMany({ where: { OR: [{ customerNumber: null }, { customerNumber: { isSet: false } }] }, select: { id: true }, orderBy: { createdAt: 'asc' }, take: 1000 }),
+    );
+    for (const t of missing) {
+      const counter = await this.prisma.counter.upsert({ where: { id: CUSTOMER_COUNTER }, create: { id: CUSTOMER_COUNTER, value: 1 }, update: { value: { increment: 1 } } });
+      // Two Console requests at once may both try; the second finds the number already set and changes nothing.
+      await this.prisma.run({ tenantId: t.id }, (tx) => tx.tenant.updateMany({ where: { id: t.id, OR: [{ customerNumber: null }, { customerNumber: { isSet: false } }] }, data: { customerNumber: counter.value } }));
+    }
+  }
+
   private async rows(where: Prisma.TenantWhereInput): Promise<ConsoleClientRow[]> {
+    await this.ensureCustomerNumbers();
     const [plans, defs] = await Promise.all([this.planRows(), planDefinitions(this.prisma as unknown as TenantTx)]);
     const byCode = new Map(plans.map((p) => [p.code, p]));
     return this.prisma.run({ operatorScan: true }, async (tx) => {
@@ -237,14 +267,17 @@ export class ConsoleService {
         take: 500,
       });
       const ids = tenants.map((t) => t.id);
-      const [nodes, owners] = await Promise.all([
+      const [nodes, owners, logos] = await Promise.all([
         tx.workspaceNode.groupBy({ by: ['tenantId', 'level'], where: { tenantId: { in: ids }, archivedAt: null }, _count: { _all: true } }),
         tx.membership.groupBy({ by: ['tenantId'], where: { tenantId: { in: ids }, status: 'ACTIVE' }, _count: { _all: true } }),
+        tx.clientLogo.findMany({ where: { clientId: { in: ids } }, select: { clientId: true, updatedAt: true } }),
       ]);
+      const logoAt = new Map(logos.map((l) => [l.clientId, l.updatedAt]));
       const count = (t: string, level: string) => nodes.find((n) => n.tenantId === t && n.level === level)?._count._all ?? 0;
       const staffed = new Set(owners.map((o) => o.tenantId));
       return tenants.map((t) => ({
-        id: t.id, name: t.name, state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
+        id: t.id, name: t.name, customerId: customerIdOf(t.customerNumber), countryCode: t.countryCode, city: t.city, logoUrl: clientLogoUrl(t.id, logoAt.get(t.id)),
+        state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
         subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs) : null,
         usage: { managers: count(t.id, 'MANAGER'), executives: count(t.id, 'EXECUTIVE') },
         awaitingAdministrator: !staffed.has(t.id),
@@ -253,7 +286,13 @@ export class ConsoleService {
   }
 
   async clients(op: OperatorContext, search: string | undefined, ip: string | null): Promise<ConsoleClientRow[]> {
-    const rows = await this.rows(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { slug: { contains: search, mode: 'insensitive' } }] } : {});
+    // "SF-000123", "SF123" or "123" also finds the client by its customer ID.
+    const number = search ? /^(?:SF-?)?0*(\d{1,9})$/i.exec(search.trim())?.[1] : undefined;
+    const rows = await this.rows(
+      search
+        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { slug: { contains: search, mode: 'insensitive' } }, { legalName: { contains: search, mode: 'insensitive' } }, ...(number ? [{ customerNumber: Number(number) }] : [])] }
+        : {},
+    );
     await this.log(op.id, 'clients.listed', null, { search: search ?? null, results: rows.length }, ip);
     return rows;
   }
@@ -292,8 +331,9 @@ export class ConsoleService {
       };
     });
     const history = await this.history(id);
+    const tenant = await this.prisma.run({ tenantId: id }, (tx) => tx.tenant.findUniqueOrThrow({ where: { id } }));
     if (op) await this.log(op.id, 'client.viewed', id, {}, ip);
-    return { ...row, ...detail, history };
+    return { ...row, ...detail, profile: profileOf(tenant), history };
   }
 
   private async history(tenantId: string): Promise<ConsoleHistoryRow[]> {

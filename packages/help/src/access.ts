@@ -96,6 +96,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorPlans': 'console-plans',
   'page.operatorProviders': 'console-providers',
   'page.operatorSettings': 'console-providers',
+  'page.operatorLocations': 'console-providers',
   'page.operatorChat': 'console-support',
   'page.operatorSupport': 'console-support',
   'page.operatorHelp': 'console-support',
