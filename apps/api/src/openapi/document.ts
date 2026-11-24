@@ -230,6 +230,7 @@ import {
   sampbidxSendRfqSchema,
   sampbidxSendMailboxEmailSchema,
   sampbidxSendPastedEmailSchema,
+  sampbidxPastedCheckSchema,
   sampbidxEmailFileQuerySchema,
   sampbidxTransferListQuerySchema,
   sampbidxMailboxQuerySchema,
@@ -584,6 +585,11 @@ export function buildOpenApiDocument(): object {
   action('post', '/apps/sampbidx/transfers/rfq', 'Workspace apps', 'Send a filled-in RFQ and the chosen attachments to SampBidx; refused while required details are missing, or when already sent unless resend is true (companies:write)', sampbidxSendRfqSchema);
   action('get', '/apps/sampbidx/mailbox', 'Workspace apps', "Emails from the caller's own connected mailboxes, to pick an RFQ email (activities:read)", undefined, { query: sampbidxMailboxQuerySchema });
   action('post', '/apps/sampbidx/transfers/mailbox-email', 'Workspace apps', "Send one email from the caller's own synced mailbox to SampBidx (activities:read)", sampbidxSendMailboxEmailSchema);
+  action('post', '/apps/sampbidx/pasted-email/check', 'Workspace apps', 'Before sending pasted RFQ email text: subject, sender and date read from it, the company and employee it would be linked to (and how sure), whether it mentions attachments, and an earlier send of the same text (activities:write)', sampbidxPastedCheckSchema);
+  r.registerPath({ method: 'post', path: '/apps/sampbidx/attachments', tags: ['Workspace apps'], summary: 'Add a file (the raw request body, up to 20 MB, name in the query) to send with pasted RFQ email text; unused files are removed after a day (activities:write)', security: secured,
+    request: { query: z.object({ name: z.string() }) }, responses: { 200: ok('Attachment'), ...errors } });
+  r.registerPath({ method: 'delete', path: '/apps/sampbidx/attachments/{id}', tags: ['Workspace apps'], summary: 'Remove a file added for pasted text that has not been sent (activities:write)', security: secured,
+    request: { params: z.object({ id: z.string().uuid() }) }, responses: { 204: { description: 'Removed' }, ...notFound, ...errors } });
   action('post', '/apps/sampbidx/transfers/pasted-email', 'Workspace apps', "Send the text of an RFQ email pasted on a company to SampBidx; subject, sender and date are read from the text unless given, and it is logged on the company as an RFQ received interaction unless logInteraction is false (activities:write)", sampbidxSendPastedEmailSchema);
   r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/email-file', tags: ['Workspace apps'], summary: 'Send an .eml or Outlook .msg file (the raw request body, up to 10 MB, attachments included) to SampBidx (activities:read)', security: secured,
     request: { query: sampbidxEmailFileQuerySchema }, responses: { 200: ok('Transfer'), ...errors } });

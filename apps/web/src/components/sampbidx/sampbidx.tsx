@@ -1,9 +1,7 @@
 'use client';
 
 import {
-  parsePastedEmail,
   type RfqRow,
-  SAMPBIDX_PASTED_EMAIL_MAX_CHARS,
   SAMPBIDX_EMAIL_FILE_MAX_BYTES,
   SAMPBIDX_MAX_FILES,
   type SampbidxDelivery,
@@ -15,15 +13,15 @@ import { Badge, Button, cn, Dialog, DialogContent, DialogDescription, DialogTitl
 import { CheckCircle2, ClipboardPaste, ExternalLink, FileText, Inbox, Mail, RotateCw, Send, Upload } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
-import { Select, Textarea } from '@/components/crm/select';
+import { Textarea } from '@/components/crm/select';
 import { InfoTip } from '@/components/info-tip';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
-import { useCompanyEmployees } from '@/lib/company-work';
 import { relativeTime } from '@/lib/format';
 import { useHasFeature } from '@/lib/features';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useSampbidxApp, useSampbidxMailbox, useSampbidxReadiness, useSampbidxSend } from '@/lib/sampbidx';
 import { useCan } from '@/lib/session';
+import { RfqCapture } from './rfq-capture';
 
 const FIELD_LABEL: Record<SampbidxRequiredField, MessageKey> = {
   projectName: 'Project name',
@@ -312,7 +310,7 @@ export function SendRfqToSampbidx({ rfq, dirty }: { rfq: RfqRow; dirty: boolean 
 export function TransferEmailDialog({ open, onOpenChange, link }: { open: boolean; onOpenChange: (o: boolean) => void; link?: { companyId: string; rfqId?: string | null; label: string } | null }) {
   const t = useT();
   const app = useSampbidxApp(open);
-  const [tab, setTab] = React.useState<'mailbox' | 'file'>('mailbox');
+  const [tab, setTab] = React.useState<'paste' | 'mailbox' | 'file'>('paste');
   const [q, setQ] = React.useState('');
   const [picked, setPicked] = React.useState<string | null>(null);
   const [file, setFile] = React.useState<File | null>(null);
@@ -342,6 +340,7 @@ export function TransferEmailDialog({ open, onOpenChange, link }: { open: boolea
     }
   };
   const tabs: { id: typeof tab; label: MessageKey; icon: React.ReactNode }[] = [
+    { id: 'paste', label: 'Paste the email', icon: <ClipboardPaste aria-hidden className="size-4" /> },
     { id: 'mailbox', label: 'From your mailbox', icon: <Inbox aria-hidden className="size-4" /> },
     { id: 'file', label: 'Upload the email file', icon: <Upload aria-hidden className="size-4" /> },
   ];
@@ -367,7 +366,9 @@ export function TransferEmailDialog({ open, onOpenChange, link }: { open: boolea
             </button>
           ))}
         </div>
-        {tab === 'mailbox' ? (
+        {tab === 'paste' ? (
+          <RfqCapture bare source={{ type: 'rfqs' }} companyId={link?.companyId ?? null} />
+        ) : tab === 'mailbox' ? (
           <div className="space-y-2">
             <Input aria-label={t('Search your mailbox')} placeholder={t('Search by subject or sender')} value={q} onChange={(e) => setQ(e.target.value)} />
             {box.isPending ? (
@@ -407,6 +408,8 @@ export function TransferEmailDialog({ open, onOpenChange, link }: { open: boolea
             <p className="text-xs text-muted-foreground">{t('In Outlook, drag the email to your desktop (.msg). In Gmail, open the email, choose More, then Download message (.eml). The file keeps the email’s attachments.')}</p>
           </div>
         )}
+        {tab !== 'paste' && (
+          <>
         <div className="mt-3">
           <Field id="sbx-email-note" label={t('Note for the SampBidx team (optional)')}>
             <Textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -430,162 +433,10 @@ export function TransferEmailDialog({ open, onOpenChange, link }: { open: boolea
             <Send aria-hidden /> {pending ? t('Sending to SampBidx…') : pickedRow?.transferredAt && tab === 'mailbox' ? t('Send another copy to SampBidx') : t('Send email to SampBidx')}
           </Button>
         </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-/**
- * "Paste RFQ email" on a company's communication log: the person copies the RFQ email a client sent from any mail
- * program, pastes it, and presses one button. SampForce reads subject, sender and date from the text, matches the
- * sender to one of the company's employees, sends the whole text to SampBidx and logs it as an "RFQ received".
- */
-export function PasteRfqEmail({ company }: { company: { id: string; name: string } }) {
-  const t = useT();
-  const app = useSampbidxApp();
-  const employees = useCompanyEmployees(company.id);
-  const send = useSampbidxSend();
-  const [text, setText] = React.useState('');
-  const [subject, setSubject] = React.useState('');
-  const [contactId, setContactId] = React.useState('');
-  const [touched, setTouched] = React.useState({ subject: false, contact: false });
-  const [log, setLog] = React.useState(true);
-  const [note, setNote] = React.useState('');
-  const parsed = React.useMemo(() => parsePastedEmail(text), [text]);
-  const people = employees.data ?? [];
-  const matched = parsed.fromEmail ? people.find((p) => p.email?.toLowerCase() === parsed.fromEmail) : undefined;
-  // What was read from the text fills the fields until the person changes them.
-  React.useEffect(() => {
-    if (!touched.subject) setSubject(parsed.subject ?? '');
-    if (!touched.contact) setContactId(matched?.id ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed.subject, matched?.id]);
-  const connected = app.data?.state === 'connected' || app.data?.state === 'error';
-  const ready = text.trim().length >= 20;
-  const duplicate = send.pasted.error && (send.pasted.error as { code?: string }).code === 'ALREADY_SENT';
-  const clear = () => {
-    setText('');
-    setSubject('');
-    setContactId('');
-    setNote('');
-    setTouched({ subject: false, contact: false });
-  };
-  const go = async (resend?: boolean) => {
-    try {
-      await send.pasted.mutateAsync({
-        companyId: company.id,
-        text,
-        subject: subject.trim() || null,
-        contactId: contactId || null,
-        date: parsed.date ? parsed.date.toISOString() : null,
-        note: note.trim() || null,
-        logInteraction: log,
-        resend,
-      });
-      clear();
-    } catch {
-      // Shown below.
-    }
-  };
-  return (
-    <section aria-labelledby="sbx-paste-title" className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
-      <h3 id="sbx-paste-title" className="flex items-center gap-2 text-sm font-semibold">
-        <ClipboardPaste aria-hidden className="size-4 text-primary" /> {t('Paste an RFQ email and send it to SampBidx')}
-        <InfoTip topic="crm.pasteRfqEmail" />
-      </h3>
-      <p className="mt-0.5 text-xs text-muted-foreground">{t('Copy the client’s email from your mail program, including its From, Sent and Subject lines, and paste it here.')}</p>
-      <div className="mt-2">
-        <label htmlFor="sbx-paste-text" className="sr-only">
-          {t('RFQ email text')}
-        </label>
-        <Textarea
-          id="sbx-paste-text"
-          rows={ready ? 8 : 3}
-          maxLength={SAMPBIDX_PASTED_EMAIL_MAX_CHARS}
-          placeholder={t('Paste the RFQ email here')}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            if (send.pasted.data || send.pasted.error) send.pasted.reset();
-          }}
-        />
-      </div>
-      {ready && (
-        <div className="mt-2 space-y-2">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Field id="sbx-paste-subject" label={t('Subject')}>
-              <Input
-                value={subject}
-                maxLength={300}
-                placeholder={t('RFQ email from {name}', { name: people.find((p) => p.id === contactId)?.name ?? company.name })}
-                onChange={(e) => {
-                  setSubject(e.target.value);
-                  setTouched((x) => ({ ...x, subject: true }));
-                }}
-              />
-            </Field>
-            <Field id="sbx-paste-contact" label={t('Sent by')}>
-              <Select
-                value={contactId}
-                onChange={(e) => {
-                  setContactId(e.target.value);
-                  setTouched((x) => ({ ...x, contact: true }));
-                }}
-              >
-                <option value="">{t('Not one of the employees')}</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.email ? `${p.name} (${p.email})` : p.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <p className="text-xs text-muted-foreground" data-testid="sbx-paste-detected">
-            {parsed.from ? t('From {sender}', { sender: parsed.from }) : t('No sender found in the text.')}
-            {parsed.date && <> · {parsed.date.toLocaleString()}</>}
-            {matched && <> · {t('Matched to {name}', { name: matched.name })}</>}
-          </p>
-          <Field id="sbx-paste-note" label={t('Note for the SampBidx team (optional)')}>
-            <Textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
-          </Field>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="size-4 accent-[hsl(var(--primary))]" checked={log} onChange={(e) => setLog(e.target.checked)} />
-            {t('Also log it in Interactions as “RFQ received”')}
-          </label>
-        </div>
-      )}
-      {app.data && !connected && (
-        <div className="mt-2">
-          <NotConnected />
-        </div>
-      )}
-      {send.pasted.error && (
-        <p role="alert" className="mt-2 text-sm text-critical">
-          {send.pasted.error.message}
-        </p>
-      )}
-      {send.pasted.data && (
-        <div className="mt-2">
-          <SampbidxTransferList items={[send.pasted.data]} label={t('Result')} showLinks={false} />
-        </div>
-      )}
-      <div className="mt-2 flex flex-wrap justify-end gap-2">
-        {text && (
-          <Button type="button" size="sm" variant="ghost" onClick={clear}>
-            {t('Clear')}
-          </Button>
-        )}
-        {duplicate ? (
-          <Button type="button" size="sm" disabled={send.pasted.isPending} onClick={() => void go(true)}>
-            <Send aria-hidden /> {t('Send another copy to SampBidx')}
-          </Button>
-        ) : (
-          <Button type="button" size="sm" disabled={!connected || !ready || send.pasted.isPending} onClick={() => void go()}>
-            <Send aria-hidden /> {send.pasted.isPending ? t('Sending to SampBidx…') : t('Send to SampBidx')}
-          </Button>
-        )}
-      </div>
-    </section>
-  );
-}

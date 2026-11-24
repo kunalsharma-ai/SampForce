@@ -42,8 +42,8 @@ export function useCompanyDashboard(companyId: string) {
   return useQuery({ queryKey: ['company-dashboard', companyId], queryFn: () => api<CompanyDashboard>(`/companies/${companyId}/dashboard`) });
 }
 
-export function useCompanyEmployees(companyId: string) {
-  return useQuery({ queryKey: ['company-employees', companyId], queryFn: () => api<CompanyEmployeeRow[]>(`/companies/${companyId}/employees`) });
+export function useCompanyEmployees(companyId: string, enabled = true) {
+  return useQuery({ enabled, queryKey: ['company-employees', companyId], queryFn: () => api<CompanyEmployeeRow[]>(`/companies/${companyId}/employees`) });
 }
 
 export function useInteractions(companyId: string, filter: { kind?: InteractionKind | ''; contactId?: string }) {

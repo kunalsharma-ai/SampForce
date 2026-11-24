@@ -1,9 +1,13 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { type AppConnection, Prisma, type SampbidxTransfer } from '@dealflow/database';
 import {
   type AppStatus,
+  domainKey,
+  FREE_MAIL_DOMAINS,
+  mentionsAttachments,
   parsePastedEmail,
+  pastedEmailKey,
   SAMPBIDX_MAX_FILES,
   SAMPBIDX_MAX_TOTAL_BYTES,
   SAMPBIDX_REQUIRED_RFQ_FIELDS,
@@ -17,6 +21,9 @@ import {
   type SampbidxRequiredField,
   type SampbidxRfqReadiness,
   type SampbidxSendMailboxEmailInput,
+  type SampbidxCaptureSource,
+  type SampbidxPastedCheck,
+  type SampbidxPastedCheckInput,
   type SampbidxPastedEmail,
   type SampbidxSendRfqInput,
   type SampbidxSettings,
@@ -263,32 +270,89 @@ export class SampbidxService {
   }
 
   /**
-   * Email text a client sent, pasted on the company page and sent in one click. Subject, sender and date come from
-   * the person when given, otherwise from the text. The sender is matched to one of the company's employees, and the
-   * email is logged on the company as an "RFQ received" interaction unless the person turns that off.
+   * What SampForce reads from pasted RFQ email text, and who it would link it to, before anything is sent: the
+   * employee whose address sent it, else a company whose domain matches, with a sentence when the person should
+   * check. Also says when the same text was sent before. Only records the person may change are suggested.
+   */
+  async checkPasted(auth: AuthContext, input: SampbidxPastedCheckInput): Promise<SampbidxPastedCheck> {
+    const parsed = parsePastedEmail(input.text);
+    const link = await this.resolveClient(auth, parsed.fromEmail, input.companyId ?? null, input.contactId ?? null);
+    const duplicate = input.text.trim().length >= 20 ? await this.findPastedDuplicate(auth, input.text) : null;
+    return {
+      subject: parsed.subject,
+      from: parsed.from,
+      fromEmail: parsed.fromEmail,
+      to: parsed.to,
+      cc: parsed.cc,
+      date: parsed.date?.toISOString() ?? null,
+      ...link,
+      mentionsAttachments: mentionsAttachments(input.text),
+      duplicate,
+    };
+  }
+
+  /** A file to send next to pasted text (the raw request body). Kept until a transfer uses it; unused ones go after a day. */
+  async uploadAttachment(auth: AuthContext, file: { name: string; contentType: string; data: Buffer }, meta: RequestMeta): Promise<{ id: string; name: string; sizeBytes: number; contentType: string }> {
+    if (!file.data.length) throw new BadRequestException({ code: 'EMPTY_FILE', message: 'The file is empty.' });
+    const row = await this.prisma.run(auth, async (tx) => {
+      await tx.sampbidxAttachment.deleteMany({ where: { tenantId: auth.tenantId, transferId: null, createdAt: { lt: new Date(Date.now() - 24 * 3600_000) } } });
+      const a = await tx.sampbidxAttachment.create({
+        data: {
+          tenantId: auth.tenantId,
+          createdById: auth.userId,
+          name: file.name.slice(0, 200),
+          contentType: file.contentType || 'application/octet-stream',
+          sizeBytes: file.data.length,
+          sha256: createHash('sha256').update(file.data).digest('hex'),
+          data: new Uint8Array(file.data),
+        },
+        select: { id: true, name: true, sizeBytes: true, contentType: true },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sampbidx.attachment_added', entityType: 'sampbidx_attachment', entityId: a.id, metadata: { name: a.name, bytes: a.sizeBytes }, meta });
+      return a;
+    });
+    return row;
+  }
+
+  /** Removes an attachment the person added but has not sent yet. */
+  async removeAttachment(auth: AuthContext, id: string): Promise<void> {
+    const n = await this.prisma.run(auth, (tx) => tx.sampbidxAttachment.deleteMany({ where: { id, tenantId: auth.tenantId, createdById: auth.userId, transferId: null } }));
+    if (!n.count) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Attachment not found.' });
+  }
+
+  /**
+   * RFQ email text a client sent, pasted wherever the person works with that client (company, employee, lead, deal,
+   * an email in the inbox, or the RFQs page) and sent in one click. The text goes exactly as pasted, with any files
+   * added next to it. It is linked to the company and employee the person confirmed, or to the employee whose
+   * address sent it; it is never linked on a guess, and no company or contact is created. It is logged on the
+   * company as an "RFQ received" interaction unless the person turns that off.
    */
   async sendPastedEmail(auth: AuthContext, input: SampbidxPastedEmail, meta: RequestMeta): Promise<SampbidxTransferRow> {
     const conn = await this.usableConnection(auth.tenantId);
-    const link = await this.links(auth, input.companyId, input.rfqId ?? null, null);
     const parsed = parsePastedEmail(input.text);
     const from = input.from?.trim() || parsed.from;
     const date = input.date ? new Date(input.date) : parsed.date;
-    const contact = await this.prisma.run(auth, async (tx) => {
-      if (input.contactId) {
-        const c = await tx.contact.findFirst({ where: { id: input.contactId, tenantId: auth.tenantId, companyId: input.companyId, deletedAt: null }, select: { id: true, firstName: true, lastName: true, email: true } });
-        if (!c) throw new BadRequestException({ code: 'INVALID_CONTACT', message: 'That employee is not at this company.' });
-        return c;
-      }
-      const address = (from && from.match(/[^\s<>"'(),;:]+@[^\s<>"'(),;:]+\.[a-z]{2,}/i)?.[0]) || null;
-      if (!address) return null;
-      return tx.contact.findFirst({ where: { tenantId: auth.tenantId, companyId: input.companyId, deletedAt: null, email: { equals: address, mode: 'insensitive' } }, select: { id: true, firstName: true, lastName: true, email: true } });
-    });
-    const company = await this.prisma.run(auth, (tx) => tx.company.findFirstOrThrow({ where: { id: input.companyId, tenantId: auth.tenantId }, select: { name: true } }));
-    const contactName = contact ? [contact.firstName, contact.lastName].filter(Boolean).join(' ') : null;
-    const subject = input.subject?.trim() || parsed.subject || `RFQ email from ${contactName ?? company.name}`;
+    const resolved = await this.resolveClient(auth, parsed.fromEmail, input.companyId ?? null, input.contactId ?? null);
+    if (input.contactId && !resolved.contact) throw new BadRequestException({ code: 'INVALID_CONTACT', message: 'That employee is not at this company.' });
+    // A company found only by the email's domain is used when the person sent it on (they saw it on screen as the
+    // suggestion); without an explicit company, only a certain match (the sender's own employee record) links it.
+    const companyId = input.companyId ?? (resolved.confidence === 'contact' ? (resolved.company?.id ?? null) : null);
+    const contact = resolved.contact && (!companyId || resolved.contact.companyId === companyId) ? resolved.contact : null;
+    const link = await this.links(auth, companyId, input.rfqId ?? null, null);
+    const source = input.source ?? null;
+    const emailMessageId = source?.type === 'email' && source.id ? await this.visibleEmail(auth, source.id) : null;
+    const companyName = link.companyId ? (await this.prisma.run(auth, (tx) => tx.company.findFirst({ where: { id: link.companyId!, tenantId: auth.tenantId }, select: { name: true } })))?.name ?? null : null;
+    const subject = input.subject?.trim() || parsed.subject || (contact || companyName ? `RFQ email from ${contact?.name ?? companyName}` : 'RFQ email');
+    const hash = createHash('sha256').update(pastedEmailKey(input.text)).digest('hex');
+    const attachmentIds = [...new Set(input.attachmentIds ?? [])];
     const { transfer, isCopy } = await this.prisma.run(auth, async (tx) => {
-      const prior = await tx.sampbidxTransfer.count({ where: { tenantId: auth.tenantId, companyId: input.companyId, kind: 'PASTED_EMAIL', emailText: input.text, delivery: 'SENT' } });
-      await this.assertNotDuplicate(tx, auth.tenantId, { companyId: input.companyId, kind: 'PASTED_EMAIL', emailText: input.text }, input.resend, 'This email is already with SampBidx. Send it again only if SampBidx should get a second copy.');
+      const prior = await tx.sampbidxTransfer.count({ where: { tenantId: auth.tenantId, kind: 'PASTED_EMAIL', emailTextHash: hash, delivery: 'SENT' } });
+      await this.assertNotDuplicate(tx, auth.tenantId, { kind: 'PASTED_EMAIL', emailTextHash: hash }, input.resend, 'This RFQ email is already with SampBidx. Send it again only if SampBidx should get a second copy.');
+      const files = attachmentIds.length
+        ? await tx.sampbidxAttachment.findMany({ where: { tenantId: auth.tenantId, id: { in: attachmentIds }, createdById: auth.userId, transferId: null }, select: { id: true, name: true, sizeBytes: true } })
+        : [];
+      if (files.length !== attachmentIds.length) throw new BadRequestException({ code: 'INVALID_FILE', message: 'One of the attachments was already sent or removed. Add it again.' });
+      checkFileLimits(files);
       const t = await tx.sampbidxTransfer.create({
         data: {
           tenantId: auth.tenantId,
@@ -297,23 +361,37 @@ export class SampbidxService {
           emailFrom: from ?? null,
           emailDate: date,
           emailText: input.text,
+          emailTextHash: hash,
+          emailMessageId,
           contactId: contact?.id ?? null,
           companyId: link.companyId,
           rfqId: link.rfqId,
-          files: [],
+          sourceType: source?.type ?? null,
+          sourceId: source?.id ?? null,
+          attachmentIds: files.map((f) => f.id),
+          files: files.map((f) => ({ name: f.name, sizeBytes: f.sizeBytes })),
           note: input.note ?? null,
           createdById: auth.userId,
         },
       });
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sampbidx.pasted_email_sent', entityType: 'company', entityId: input.companyId, metadata: { transferId: t.id, chars: input.text.length }, meta });
+      if (files.length) await tx.sampbidxAttachment.updateMany({ where: { tenantId: auth.tenantId, id: { in: files.map((f) => f.id) } }, data: { transferId: t.id } });
+      await this.audit.record(tx, {
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        action: 'sampbidx.pasted_email_sent',
+        entityType: link.companyId ? 'company' : 'sampbidx_transfer',
+        entityId: link.companyId ?? t.id,
+        metadata: { transferId: t.id, chars: input.text.length, files: files.length, source: source?.type ?? null, confidence: resolved.confidence },
+        meta,
+      });
       return { transfer: t, isCopy: prior > 0 };
     });
     // The client's email belongs in the company's communication history whatever SampBidx answers; a second copy is not logged twice.
-    if (input.logInteraction && !isCopy && (await this.prisma.run(auth, (tx) => hasFeature(tx, auth.tenantId, 'interactions')))) {
+    if (input.logInteraction && !isCopy && link.companyId && (await this.prisma.run(auth, (tx) => hasFeature(tx, auth.tenantId, 'interactions')))) {
       const logged = await this.work.logInteraction(
         auth,
         {
-          companyId: input.companyId,
+          companyId: link.companyId,
           contactId: contact?.id ?? null,
           kind: 'RFQ_RECEIVED',
           subject: subject.slice(0, 200),
@@ -327,6 +405,102 @@ export class SampbidxService {
       await this.prisma.run(auth, (tx) => tx.sampbidxTransfer.update({ where: { id: transfer.id }, data: { activityId: logged.id } }));
     }
     return this.deliver(auth, conn, transfer);
+  }
+
+  /** The client behind pasted text: given ids first, then the sender's employee record, then the email's domain. */
+  private async resolveClient(
+    auth: AuthContext,
+    fromEmail: string | null,
+    companyId: string | null,
+    contactId: string | null,
+  ): Promise<Pick<SampbidxPastedCheck, 'company' | 'contact' | 'confidence' | 'review' | 'candidates'>> {
+    return this.prisma.run(auth, async (tx) => {
+      const name = (c: { firstName: string; lastName: string | null }) => [c.firstName, c.lastName].filter(Boolean).join(' ');
+      const pick = { id: true, firstName: true, lastName: true, email: true, companyId: true } as const;
+      const editable = async (id: string) => {
+        try {
+          await this.work.assertEditable(auth, id);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const companyRef = async (id: string | null) => (id && (await editable(id)) ? await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null }, select: { id: true, name: true } }) : null);
+      const given = await companyRef(companyId);
+      if (companyId && !given) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Company not found.' });
+      if (contactId) {
+        const c = await tx.contact.findFirst({ where: { id: contactId, tenantId: auth.tenantId, deletedAt: null, ...(companyId ? { companyId } : {}) }, select: pick });
+        if (!c) return { company: given, contact: null, confidence: given ? 'given' : 'none', review: null, candidates: [] };
+        return { company: given ?? (await companyRef(c.companyId)), contact: { id: c.id, name: name(c), email: c.email, companyId: c.companyId }, confidence: 'given', review: null, candidates: [] };
+      }
+      const senders = fromEmail
+        ? await tx.contact.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, OR: [{ matchKeys: { has: `e:${fromEmail}` } }, { email: { equals: fromEmail, mode: 'insensitive' } }] }, select: pick, take: 10 })
+        : [];
+      if (given) {
+        const own = senders.find((c) => c.companyId === given.id);
+        if (own) return { company: given, contact: { id: own.id, name: name(own), email: own.email, companyId: own.companyId }, confidence: 'given', review: null, candidates: [] };
+        const elsewhere = senders.find((c) => c.companyId && c.companyId !== given.id);
+        const other = elsewhere ? await companyRef(elsewhere.companyId) : null;
+        return {
+          company: given,
+          contact: null,
+          confidence: 'given',
+          review: other ? `${fromEmail} is ${name(elsewhere!)} at ${other.name}, not ${given.name}. Check this is the right company before sending.` : null,
+          candidates: other ? [other] : [],
+        };
+      }
+      for (const c of senders) {
+        const company = await companyRef(c.companyId);
+        if (c.companyId && !company) continue;
+        return {
+          company,
+          contact: { id: c.id, name: name(c), email: c.email, companyId: c.companyId },
+          confidence: 'contact',
+          review: senders.length > 1 ? `${fromEmail} belongs to more than one employee. Check it is ${name(c)}.` : null,
+          candidates: [],
+        };
+      }
+      const domain = fromEmail ? domainKey(fromEmail) : null;
+      if (domain && !FREE_MAIL_DOMAINS.has(domain)) {
+        const found = await tx.company.findMany({ where: { tenantId: auth.tenantId, deletedAt: null, OR: [{ matchKeys: { has: `d:${domain}` } }, { domain: { equals: domain, mode: 'insensitive' } }] }, select: { id: true, name: true }, take: 5, orderBy: { createdAt: 'asc' } });
+        const usable: { id: string; name: string }[] = [];
+        for (const f of found) if (await editable(f.id)) usable.push(f);
+        if (usable.length) {
+          return {
+            company: usable[0]!,
+            contact: null,
+            confidence: 'domain',
+            review: `No employee has the address ${fromEmail}. ${usable[0]!.name} was found by the domain ${domain}; check it before sending.`,
+            candidates: usable,
+          };
+        }
+      }
+      return {
+        company: null,
+        contact: null,
+        confidence: 'none',
+        review: fromEmail ? `No client in SampForce has the address ${fromEmail}. Choose the company, or send it without one.` : 'SampForce could not find who sent this. Choose the company, or send it without one.',
+        candidates: [],
+      };
+    });
+  }
+
+  /** The latest send of the same pasted text (spacing and case ignored) that is with SampBidx or on its way. */
+  private async findPastedDuplicate(auth: AuthContext, text: string): Promise<SampbidxPastedCheck['duplicate']> {
+    const hash = createHash('sha256').update(pastedEmailKey(text)).digest('hex');
+    return this.prisma.run(auth, async (tx) => {
+      const t = await tx.sampbidxTransfer.findFirst({ where: { tenantId: auth.tenantId, kind: 'PASTED_EMAIL', emailTextHash: hash, delivery: { in: ['SENT', 'SENDING'] } }, orderBy: { createdAt: 'desc' }, select: { id: true, remoteId: true, sentAt: true, createdById: true, companyId: true } });
+      if (!t) return null;
+      const [people, company] = await Promise.all([personRefs(tx, auth.tenantId, [t.createdById]), t.companyId ? tx.company.findFirst({ where: { id: t.companyId, tenantId: auth.tenantId }, select: { name: true } }) : null]);
+      return { transferId: t.id, remoteId: t.remoteId, sentAt: t.sentAt?.toISOString() ?? null, sentBy: people.get(t.createdById)?.name ?? null, company: company?.name ?? null };
+    });
+  }
+
+  /** An email the person may read (their own mailbox's, or one in the shared inbox they can open). */
+  private async visibleEmail(auth: AuthContext, id: string): Promise<string> {
+    const m = await this.prisma.run(auth, (tx) => tx.emailMessage.findFirst({ where: { id, tenantId: auth.tenantId }, select: { id: true } }));
+    if (!m) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Email not found.' });
+    return m.id;
   }
 
   // ─── History and retries ───
@@ -458,9 +632,10 @@ export class SampbidxService {
   /** Builds the request from what is stored now, so a retry sends the RFQ as it is at that moment. */
   private async send(auth: AuthContext, keys: SampbidxKeys, transferId: string) {
     const t = await this.prisma.run(auth, (tx) => tx.sampbidxTransfer.findUniqueOrThrow({ where: { id: transferId } }));
-    const sender = await this.prisma.run(auth, async (tx) => (await personRefs(tx, auth.tenantId, [auth.userId])).get(auth.userId) ?? null);
     const tenant = await this.prisma.run(auth, (tx) => tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true } }));
-    const source = { system: 'SampForce', workspace: tenant.name, transferId: t.id, sentBy: sender ? { name: sender.name } : null, note: t.note };
+    const team = await this.clientTeam(auth, t.createdById, t.companyId);
+    // sentBy is the person who sent it (also on a retry by someone else); clientTeam is who looks after the client.
+    const source = { system: 'SampForce', workspace: tenant.name, transferId: t.id, sentBy: team.sentBy, clientTeam: team.clientTeam, note: t.note };
     if (t.kind === 'RFQ') {
       const rfq = await this.work.getRfq(auth, t.rfqId!);
       const files = await this.prisma.run(auth, (tx) => tx.companyFile.findMany({ where: { tenantId: auth.tenantId, id: { in: t.fileIds }, rfqId: t.rfqId }, orderBy: { createdAt: 'asc' } }));
@@ -480,9 +655,14 @@ export class SampbidxService {
     }
     if (t.kind === 'PASTED_EMAIL') {
       const parsed = parsePastedEmail(t.emailText ?? '');
-      const contact = t.contactId
-        ? await this.prisma.run(auth, (tx) => tx.contact.findFirst({ where: { id: t.contactId!, tenantId: auth.tenantId }, select: { id: true, firstName: true, lastName: true, email: true } }))
-        : null;
+      const [contact, files, email] = await this.prisma.run(auth, (tx) =>
+        Promise.all([
+          t.contactId ? tx.contact.findFirst({ where: { id: t.contactId, tenantId: auth.tenantId }, select: { id: true, firstName: true, lastName: true, email: true } }) : null,
+          t.attachmentIds.length ? tx.sampbidxAttachment.findMany({ where: { tenantId: auth.tenantId, id: { in: t.attachmentIds } }, orderBy: { createdAt: 'asc' } }) : [],
+          t.emailMessageId ? tx.emailMessage.findFirst({ where: { id: t.emailMessageId, tenantId: auth.tenantId }, select: { conversationId: true } }) : null,
+        ]),
+      );
+      if (files.length !== t.attachmentIds.length) throw new SampbidxError('gone', 'An attachment of this RFQ email is no longer stored. Send the email again with its files.');
       return this.client.sendEmail(
         keys,
         t.id,
@@ -490,10 +670,13 @@ export class SampbidxService {
           ...source,
           ...links,
           source: 'pasted',
+          sourceReference: this.sourceReference(t, email?.conversationId ?? null),
           contact: contact ? { id: contact.id, name: [contact.firstName, contact.lastName].filter(Boolean).join(' '), email: contact.email } : null,
-          email: { subject: t.title, from: t.emailFrom, to: parsed.to, cc: parsed.cc, date: t.emailDate?.toISOString() ?? null, text: t.emailText ?? '', attachmentsIncluded: false },
+          email: { subject: t.title, from: t.emailFrom, to: parsed.to, cc: parsed.cc, date: t.emailDate?.toISOString() ?? null, text: t.emailText ?? '', attachmentsIncluded: files.length > 0 },
+          attachments: files.map((f) => ({ name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes, sha256: f.sha256 })),
         },
         null,
+        files.map((f) => ({ name: 'files', filename: f.name, contentType: f.contentType, data: Buffer.from(f.data) })),
       );
     }
     return this.client.sendEmail(
@@ -541,19 +724,24 @@ export class SampbidxService {
 
   private async rows(tx: Prisma.TransactionClient, tenantId: string, rows: Omit<SampbidxTransfer, 'emailFileData'>[]): Promise<SampbidxTransferRow[]> {
     if (!rows.length) return [];
-    const [rfqs, companies, people] = await Promise.all([
+    const [rfqs, companies, people, contacts] = await Promise.all([
       tx.rfq.findMany({ where: { tenantId, id: { in: rows.map((r) => r.rfqId).filter((x): x is string => !!x) } }, select: { id: true, number: true, projectName: true } }),
-      tx.company.findMany({ where: { tenantId, id: { in: rows.map((r) => r.companyId).filter((x): x is string => !!x) } }, select: { id: true, name: true } }),
+      tx.company.findMany({ where: { tenantId, id: { in: rows.map((r) => r.companyId).filter((x): x is string => !!x) } }, select: { id: true, name: true, pocUserId: true, ownerId: true } }),
       personRefs(tx as never, tenantId, rows.map((r) => r.createdById)),
+      tx.contact.findMany({ where: { tenantId, id: { in: rows.map((r) => r.contactId).filter((x): x is string => !!x) } }, select: { id: true, firstName: true, lastName: true } }),
     ]);
+    const pocs = await personRefs(tx as never, tenantId, companies.flatMap((c) => [c.pocUserId, c.ownerId]));
     return rows.map((r) => ({
       id: r.id,
       kind: r.kind as SampbidxTransferKind,
       title: r.title,
       rfq: rfqs.find((x) => x.id === r.rfqId) ?? null,
-      company: companies.find((x) => x.id === r.companyId) ?? null,
+      company: ((c) => (c ? { id: c.id, name: c.name } : null))(companies.find((x) => x.id === r.companyId)),
+      clientPoc: ((c) => { const id = c?.pocUserId ?? c?.ownerId; return id ? (pocs.get(id)?.name ?? null) : null; })(companies.find((x) => x.id === r.companyId)),
       emailFrom: r.emailFrom,
       emailDate: r.emailDate?.toISOString() ?? null,
+      contact: ((c) => (c ? { id: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(' ') } : null))(contacts.find((x) => x.id === r.contactId)),
+      source: r.sourceType ? { type: r.sourceType as SampbidxCaptureSource, id: r.sourceId } : null,
       files: Array.isArray(r.files) ? (r.files as { name: string; sizeBytes: number }[]) : [],
       note: r.note,
       delivery: r.delivery as SampbidxTransferRow['delivery'],
@@ -590,6 +778,39 @@ export class SampbidxService {
 
   private keys(conn: AppConnection): SampbidxKeys {
     return JSON.parse(this.box.open(conn.credentialsEncrypted)) as SampbidxKeys;
+  }
+
+  /**
+   * The SampForce people behind a send, by name, email and designation: who sent it, and for the linked client its
+   * point of contact (POC), owner and manager.
+   */
+  private async clientTeam(auth: AuthContext, senderId: string, companyId: string | null) {
+    return this.prisma.run(auth, async (tx) => {
+      const company = companyId ? await tx.company.findFirst({ where: { id: companyId, tenantId: auth.tenantId }, select: { pocUserId: true, ownerId: true, managerId: true } }) : null;
+      const ids = [senderId, company?.pocUserId, company?.ownerId, company?.managerId];
+      const [refs, users] = await Promise.all([personRefs(tx, auth.tenantId, ids), tx.user.findMany({ where: { id: { in: ids.filter((x): x is string => !!x) } }, select: { id: true, email: true } })]);
+      const person = (id: string | null | undefined) => {
+        const r = id ? refs.get(id) : undefined;
+        return r ? { id: r.id, name: r.name, email: users.find((u) => u.id === r.id)?.email ?? null, designation: r.designation } : null;
+      };
+      return { sentBy: person(senderId), clientTeam: company ? { poc: person(company.pocUserId), owner: person(company.ownerId), manager: person(company.managerId) } : null };
+    });
+  }
+
+  /** Where the RFQ email was captured in SampForce, with a link back to that page for the SampBidx team. */
+  private sourceReference(t: Pick<SampbidxTransfer, 'sourceType' | 'sourceId' | 'emailMessageId'>, conversationId: string | null) {
+    if (!t.sourceType) return null;
+    const web = this.env.PUBLIC_WEB_URL.replace(/\/$/, '');
+    const path: Record<string, string | null> = {
+      company: t.sourceId ? `/app/companies/${t.sourceId}` : null,
+      contact: t.sourceId ? `/app/contacts/${t.sourceId}` : null,
+      lead: t.sourceId ? `/app/leads/${t.sourceId}` : null,
+      deal: t.sourceId ? `/app/deals/${t.sourceId}` : null,
+      email: conversationId ? `/app/communication?conversation=${conversationId}` : null,
+      rfqs: '/app/rfqs?tab=sampbidx',
+    };
+    const p = path[t.sourceType] ?? null;
+    return { type: t.sourceType, id: t.sourceId, url: p ? `${web}${p}` : null };
   }
 
   private callbackUrl(hookId: string): string {

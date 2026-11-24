@@ -71,7 +71,12 @@ The `rfq` part:
   "system": "SampForce",
   "workspace": "Frequent Research Fieldwork Solutions",
   "transferId": "6b0c4c1e-6f0e-4a3e-9f0a-2f5d8b7f1c11",
-  "sentBy": { "name": "Rahul Verma" },
+  "sentBy": { "id": "…", "name": "Rahul Verma", "email": "rahul@frequentresearch.com", "designation": "Business Development Manager" },
+  "clientTeam": {
+    "poc": { "id": "…", "name": "Kunal Sharma", "email": "kunal@frequentresearch.com", "designation": "Director" },
+    "owner": { "id": "…", "name": "Rahul Verma", "email": "rahul@frequentresearch.com", "designation": "Business Development Manager" },
+    "manager": null
+  },
   "note": "Client wants the quote by Friday.",
   "rfq": {
     "id": "c0a8…",
@@ -102,6 +107,11 @@ The `rfq` part:
 }
 ```
 
+`sentBy` is the SampForce user who sent the RFQ (on a retry by someone else, still the original sender).
+`clientTeam` is who looks after this client in SampForce: `poc` (the client's point of contact), `owner` and
+`manager`. Each person is `{ id, name, email, designation }` or `null`; `clientTeam` is `null` when no company is
+linked. Show `sentBy` and `clientTeam.poc` on the bid so everyone can see who sent it and who the client's POC is.
+
 `market` is an ISO 3166 country code. `currency` is an ISO 4217 code. Dates are ISO 8601 in UTC. Any field except
 `number`, `projectName` and the required ones above can be `null`.
 
@@ -113,6 +123,7 @@ The `rfq` part:
 | --- | --- | --- |
 | `email` | `application/json` | Always |
 | `message` | `message/rfc822` (.eml) or `application/vnd.ms-outlook` (.msg) | When the person uploaded the email file. It is the whole original email, its attachments included, up to 10 MB |
+| `files` (0–10 times) | the file's own type | Only with `source: "pasted"`: the email's attachments, added by hand next to the pasted text, each up to 20 MB, with `filename` |
 
 The `email` part:
 
@@ -121,7 +132,8 @@ The `email` part:
   "system": "SampForce",
   "workspace": "Frequent Research Fieldwork Solutions",
   "transferId": "…",
-  "sentBy": { "name": "Rahul Verma" },
+  "sentBy": { "id": "…", "name": "Rahul Verma", "email": "rahul@frequentresearch.com", "designation": "Business Development Manager" },
+  "clientTeam": { "poc": { "id": "…", "name": "Kunal Sharma", "email": "kunal@frequentresearch.com", "designation": "Director" }, "owner": null, "manager": null },
   "note": null,
   "source": "mailbox",
   "company": { "id": "…", "name": "Acme Panels Pvt Ltd", "leadNumber": "FRFS01", "country": "IN" },
@@ -142,13 +154,18 @@ The `email` part:
   there is no `message` part and `attachmentsIncluded` is `false`.
 - `source: "file"`: an uploaded .eml or .msg file. The `message` part is the file, and `email` carries `fileName`,
   plus `subject`, `from` and `date` read from the file's headers when it is an .eml (null for .msg).
-- `source: "pasted"`: the email's text, copied from a mail program and pasted on a company's page in SampForce. There
-  is no `message` part and `attachmentsIncluded` is `false`. `text` is exactly what was pasted, usually including
-  the From, Sent, To and Subject lines. `subject`, `from`, `to`, `cc` and `date` are read from those lines (or typed
-  by the person); any of them can be `null` or empty. A `contact` object `{ "id", "name", "email" }` names the
-  company's employee who sent it, or is `null`.
+- `source: "pasted"`: the email's text, copied from a mail program and pasted into SampForce wherever the client
+  conversation is (a company, contact, lead or deal page, an inbox email, or the RFQs page). `text` is exactly what
+  was pasted, usually including the From, Sent, To and Subject lines. `subject`, `from`, `to`, `cc` and `date` are
+  read from those lines (or typed by the person); any of them can be `null` or empty. SampForce never fills a value
+  it could not read. Pasted text cannot carry files, so the person adds the email's attachments by hand: they come
+  as `files` parts, listed in `attachments` (`[{ "name", "contentType", "sizeBytes", "sha256" }]`), and
+  `attachmentsIncluded` is `true` when there is at least one. There is no `message` part. Also sent:
+  - `contact`: `{ "id", "name", "email" }`, the client's employee who sent the email, or `null`.
+  - `sourceReference`: `{ "type", "id", "url" }`, where in SampForce the email was captured. `type` is `company`,
+    `contact`, `lead`, `deal`, `email` or `rfqs`; `url` opens that page in SampForce (for signed-in users), or is `null`.
+  - `company` can be `null` when the sender chose to send without linking a client.
 - `company` and `rfq` are set when the sender linked the email to a company lead or to an RFQ (same shape as above).
-  A pasted email always has `company`.
 
 ## Answering a send
 

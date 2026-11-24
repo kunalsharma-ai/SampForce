@@ -1,8 +1,11 @@
-import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, type RawBodyRequest } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, ParseUUIDPipe, PayloadTooLargeException, Post, Query, Req, type RawBodyRequest } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import {
+  SAMPBIDX_ATTACHMENT_MAX_BYTES,
   SAMPBIDX_EMAIL_FILE_MAX_BYTES,
+  type SampbidxPastedCheckInput,
+  sampbidxPastedCheckSchema,
   type SampbidxConnectInput,
   sampbidxConnectSchema,
   type SampbidxEmailFileQuery,
@@ -34,16 +37,16 @@ async function plain<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Reads an uploaded email file sent as the raw request body, up to the email file limit. */
-async function readEmailFile(req: Request): Promise<Buffer> {
+/** Reads an uploaded file sent as the raw request body, up to a limit (the email file limit unless given). */
+async function readEmailFile(req: Request, max = SAMPBIDX_EMAIL_FILE_MAX_BYTES, tooBigMessage = 'Email files can be up to 10 MB.'): Promise<Buffer> {
   const declared = Number(req.headers['content-length']);
-  const tooBig = () => new PayloadTooLargeException({ code: 'PAYLOAD_TOO_LARGE', message: 'Email files can be up to 10 MB.' });
-  if (Number.isFinite(declared) && declared > SAMPBIDX_EMAIL_FILE_MAX_BYTES) throw tooBig();
+  const tooBig = () => new PayloadTooLargeException({ code: 'PAYLOAD_TOO_LARGE', message: tooBigMessage });
+  if (Number.isFinite(declared) && declared > max) throw tooBig();
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > SAMPBIDX_EMAIL_FILE_MAX_BYTES) throw tooBig();
+    if (size > max) throw tooBig();
     chunks.push(chunk);
   }
   if (!size) throw new BadRequestException({ code: 'EMPTY_FILE', message: 'The file is empty.' });
@@ -110,7 +113,34 @@ export class SampbidxController {
     return this.sampbidx.sendMailboxEmail(auth, body, meta);
   }
 
-  /** Option 2c: the text of an RFQ email, pasted on a company's page. Also logs it there as an interaction. */
+  /** Before sending pasted text: subject, sender and date read from it, the client it would be linked to, and earlier sends of it. */
+  @Post('pasted-email/check')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  @RequirePermissions('activities:write')
+  checkPasted(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxPastedCheckSchema)) body: SampbidxPastedCheckInput) {
+    return this.sampbidx.checkPasted(auth, body);
+  }
+
+  /** A file to send with pasted text, as the raw body (name in the query). Up to 20 MB. */
+  @Post('attachments')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @RequirePermissions('activities:write')
+  async attach(@Auth() auth: AuthContext, @Query('name') name: string | undefined, @Req() req: Request, @Meta() meta: RequestMeta) {
+    if (!name?.trim()) throw new BadRequestException({ code: 'INVALID_NAME', message: 'Give the file a name.' });
+    const data = await readEmailFile(req, SAMPBIDX_ATTACHMENT_MAX_BYTES, 'Attachments can be up to 20 MB each.');
+    return this.sampbidx.uploadAttachment(auth, { name: name.trim(), contentType: String(req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase(), data }, meta);
+  }
+
+  @Delete('attachments/:id')
+  @HttpCode(204)
+  @RequirePermissions('activities:write')
+  async detach(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    await this.sampbidx.removeAttachment(auth, id);
+  }
+
+  /** Option 2c: the text of an RFQ email, pasted wherever the person works with the client. Also logs it as an interaction. */
   @Post('transfers/pasted-email')
   @HttpCode(200)
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

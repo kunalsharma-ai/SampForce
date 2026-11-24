@@ -38,16 +38,32 @@ contract, sends to it, and the SampBidx team builds to it.
     attachments, so the screen says so.
   - From an .eml or Outlook .msg file they upload, up to 10 MB. The file is checked by its headers or signature,
     sent as it is with its attachments, and kept on the transfer row so a retry works.
-  - Pasted on a company's page (added 2026-11-24, Kunal: "just paste my RFQ email then one single click"). The box
-    sits at the top of the company's Interactions card, where the sales team logs communication with the client.
-    The person pastes the email text, SampForce reads subject, sender, recipients and date from the header lines
-    Outlook, Gmail and Apple Mail put on a copied or forwarded email (`parsePastedEmail` in `@dealflow/types`), matches
-    the sender's address to one of the company's employees, and one click sends it (`POST
-    /apps/sampbidx/transfers/pasted-email`, kind `PASTED_EMAIL`, `source: "pasted"`). The text goes exactly as pasted;
-    the person can correct subject and employee first. It is also logged as an "RFQ received" interaction unless they
-    untick that (a deliberate second copy is not logged twice). Pasted text carries no attachments. The same text
-    on the same company is refused as a duplicate unless the person asks for another copy. Needs `activities:write`
-    and the right to change that company.
+  - Pasted, wherever the client conversation is (added 2026-11-24, Kunal: "just paste my RFQ email then one single
+    click", then the "One-Click RFQ Transfer" spec). The "Capture RFQ & send to SampBidx" card is on company pages
+    (top of Interactions), contact, lead and deal pages, under each inbound email in the inbox, and as the first tab
+    of the RFQs page's transfer dialog. The person pastes the email text, SampForce reads subject, sender, recipients
+    and date from the header lines Outlook, Gmail and Apple Mail put on a copied email (`parsePastedEmail` in
+    `@dealflow/types`) and checks the client (`POST /apps/sampbidx/pasted-email/check`):
+    - the page's company and contact are used (confidence `given`), and a sender who belongs to another company is
+      flagged for review;
+    - otherwise a contact whose address matches the sender is used (`contact`);
+    - otherwise a company whose website domain matches is suggested (`domain`, never for free mail), and the person
+      must press "This client is right" or pick another before sending;
+    - otherwise nothing is linked (`none`), and the person picks a company or sends without one.
+    No company or contact is ever created by a capture. Values that could not be read stay empty, never invented.
+    One click sends it (`POST /apps/sampbidx/transfers/pasted-email`, kind `PASTED_EMAIL`, `source: "pasted"`). The
+    text goes exactly as pasted. Pasted text cannot carry files, so the card warns when the email mentions an
+    attachment and lets the person add up to 10 files (20 MB each, stored as `sampbidx_attachments` until sent,
+    unused ones removed after a day); they go as `files` parts. The transfer keeps the text, its hash, the contact,
+    the files and where it was captured (`sourceType`, `sourceId`), sent as `sourceReference` with a link back.
+    The same text (ignoring spacing) already sent from this workspace is shown as "Duplicate RFQ detected" and
+    refused unless the person sends another copy. It is logged as an "RFQ received" interaction on the company
+    unless they untick that. The card's states are Ready to send, Check the client, Sending, Sent (only after
+    SampBidx answers), Transfer failed (text kept, "Try again" resends) and Duplicate RFQ detected. Needs
+    `activities:write`.
+  - Every send names who sent it (`sentBy`: name, email, designation) and who looks after the client (`clientTeam`:
+    POC, owner, manager), so SampBidx can show "sent by Rahul Verma, client POC Kunal Sharma" on the bid (Kunal,
+    2026-11-24). A retry by someone else keeps the original sender.
   - Any of them can be linked to a company lead or an RFQ. A mailbox email whose contact belongs to a company the person
     can change is linked to that company automatically.
 - **Transfers.** Every send is a `sampbidx_transfers` row with:
@@ -67,7 +83,7 @@ contract, sends to it, and the SampBidx team builds to it.
   - the RFQ dialog (the steps and earlier sends)
   - the RFQs page ("Transfer RFQ email to SampBidx" and a "Sent to SampBidx" tab)
   - the Integrations card (connection, callback URL and secret, recent activity)
-  - every company page (the "Paste an RFQ email" box in Interactions)
+  - company, contact, lead and deal pages and inbox emails (the "Capture RFQ & send to SampBidx" card)
 
 ## Consequences
 

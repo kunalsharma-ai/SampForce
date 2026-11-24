@@ -441,7 +441,7 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
         ) : !rows.data?.length ? (
           <p className="text-sm text-muted-foreground">{t('No employees at this company yet.')}</p>
         ) : (
-          <div className="-mx-2 overflow-x-auto">
+          <div className="relative -mx-2 overflow-x-auto">
             <table className={cn('w-full text-sm', compact ? 'min-w-[760px]' : 'min-w-[960px]')} aria-label={t('Employees / POCs')}>
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
