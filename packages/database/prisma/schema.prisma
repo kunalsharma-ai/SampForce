@@ -744,6 +744,15 @@ model WorkspaceNode {
   deactivatedAt        DateTime? @map("deactivated_at")
   deactivatedById      String?   @map("deactivated_by_id")
   deactivationReason   String?   @map("deactivation_reason")
+  /// Temporarily blacklisted until this time: its people, and everyone below it, are stopped like a deactivated
+  /// workspace, and the block lifts by itself when the time passes (or earlier, when it is reactivated).
+  blacklistedUntil     DateTime? @map("blacklisted_until")
+  blacklistedById      String?   @map("blacklisted_by_id")
+  blacklistReason      String?   @map("blacklist_reason")
+  /// Set ("operator:<email>") when the Console deactivated or blacklisted it: only the Console can lift that.
+  lockedByConsole      String?   @map("locked_by_console")
+  /// The people a delete took out of it (W4), so restoring it brings exactly them back.
+  removedMemberIds     String[]  @map("removed_member_ids")
   /// Set when deleted (W4): the node stays, renamed out of the way, so history and audit entries keep their name.
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -1701,6 +1710,9 @@ model Invitation {
   /// copied to the account when it has none.
   name            String?
   phone           String?
+  /// The Console's permission (operator email) for this person to own one more Super Workspace: without it, someone
+  /// who already owns a Super Workspace cannot accept the administrator invitation of another company.
+  superGrantedBy  String?   @map("super_granted_by")
   expiresAt       DateTime  @map("expires_at")
   acceptedAt      DateTime? @map("accepted_at")
   revokedAt       DateTime? @map("revoked_at")

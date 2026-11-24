@@ -131,8 +131,8 @@ export class OperatorController {
   @Post('clients/:id/administrator-invitation')
   @OperatorPermission('users.manage')
   @HttpCode(200)
-  inviteAdministrator(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(z.object({ email: emailSchema.optional() }).strict())) body: { email?: string }, @Req() req: Request) {
-    return this.console.resendAdministrator(op, id, body.email, ip(req));
+  inviteAdministrator(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(z.object({ email: emailSchema.optional(), allowAnotherSuper: z.boolean().optional() }).strict())) body: { email?: string; allowAnotherSuper?: boolean }, @Req() req: Request) {
+    return this.console.resendAdministrator(op, id, body.email, ip(req), body.allowAnotherSuper);
   }
 
   /** Every plan, shipped and Console-made, with its features, limits and commercial terms. */

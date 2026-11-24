@@ -34,6 +34,7 @@ import { type ChangePasswordInput, type ConfirmPasswordInput, type PasswordChang
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
 import { resolveWorkspaceAccess } from '../workspaces/access';
+import { superWorkspaceRefused, superWorkspacesOwnedBy } from '../workspaces/super-rule';
 import { PasswordService } from './password.service';
 import { type AuthMethod, TokenService } from './token.service';
 
@@ -565,6 +566,7 @@ export class AuthService {
       authMethod: auth.authMethod,
       mfaEnabled: !!user.mfaEnabledAt,
       ...(auth.restriction ? { restriction: auth.restriction } : {}),
+      ...(auth.restrictionUntil ? { restrictionUntil: auth.restrictionUntil } : {}),
     };
   }
 
@@ -591,7 +593,7 @@ export class AuthService {
   async acceptInvitation(input: AcceptInvitationInput, meta: RequestMeta): Promise<IssuedTokens> {
     const tenantId = await this.invitationTenant(input.token);
     const tokenHash = TokenService.hashRefresh(input.token);
-    const inv = await this.prisma.run({ tenantId }, (tx) => tx.invitation.findUniqueOrThrow({ where: { tokenHash } }));
+    const inv = await this.prisma.run({ tenantId }, (tx) => tx.invitation.findUniqueOrThrow({ where: { tokenHash }, include: { role: { select: { key: true } } } }));
 
     let user = await this.prisma.user.findUnique({ where: { email: inv.email } });
     if (user) {
@@ -612,6 +614,11 @@ export class AuthService {
       user = await this.prisma.user.create({
         data: { email: inv.email, name: input.name, passwordHash: await this.passwords.hash(password.data), ...(inv.phone ? { phone: inv.phone } : {}) },
       });
+    }
+    // One person, one Super Workspace: an owner invitation into another company's Super Workspace needs the Console's yes.
+    if (inv.role.key === 'owner' && !inv.workspaceNodeId && !inv.superGrantedBy) {
+      const owned = await superWorkspacesOwnedBy(this.prisma, user.id, tenantId);
+      if (owned.length) throw superWorkspaceRefused(owned[0]!.name);
     }
     // The phone the inviter typed (W5) goes on an account that has none.
     if (inv.phone && !user.phone) user = await this.prisma.user.update({ where: { id: user.id }, data: { phone: inv.phone } });

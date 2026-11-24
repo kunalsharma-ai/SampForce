@@ -79,7 +79,7 @@ export async function seedMeeting(page: Page, m: { title: string; hoursFromNow: 
 }
 
 /** Opens a workspace's Actions menu on the hierarchy page and picks one (Edit, Permissions, Deactivate, Reactivate, Delete). */
-export async function workspaceAction(page: Page, workspace: string, action: 'Edit' | 'Permissions' | 'Deactivate' | 'Reactivate' | 'Delete') {
+export async function workspaceAction(page: Page, workspace: string, action: 'Edit' | 'Permissions' | 'Deactivate' | 'Blacklist for a while' | 'Reactivate' | 'Delete') {
   await page.getByRole('button', { name: `Actions for ${workspace}`, exact: true }).click();
   await page.getByRole('menuitem', { name: action, exact: true }).click();
 }

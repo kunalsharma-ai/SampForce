@@ -41,6 +41,7 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { INVITATION_TTL_MS } from '../tenants/invitations.service';
 import { levelOf, nameKeyOf } from '../workspaces/access';
+import { assertSuperAllowedForEmail } from '../workspaces/super-rule';
 import type { OperatorContext } from './operator-auth';
 import { changedFields, writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
@@ -389,15 +390,15 @@ export class ConsoleService {
   }
 
   /** A new owner invitation for the client's administrator; any earlier one for the client stops working. */
-  private async inviteAdministrator(tx: TenantTx, op: OperatorContext, tenantId: string, email: string): Promise<string> {
+  private async inviteAdministrator(tx: TenantTx, op: OperatorContext, tenantId: string, email: string, superGranted = false): Promise<string> {
     const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: 'owner' } } });
     if (!role) throw new NotFoundException(NOT_FOUND);
     await tx.invitation.updateMany({ where: { tenantId, roleId: role.id, acceptedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
     const token = randomBytes(32).toString('base64url');
     const row = await tx.invitation.create({
-      data: { tenantId, email, roleId: role.id, tokenHash: TokenService.hashRefresh(token), invitedById: `operator:${op.id}`, workspaceNodeId: null, expiresAt: new Date(Date.now() + INVITATION_TTL_MS) },
+      data: { tenantId, email, roleId: role.id, tokenHash: TokenService.hashRefresh(token), invitedById: `operator:${op.id}`, workspaceNodeId: null, expiresAt: new Date(Date.now() + INVITATION_TTL_MS), ...(superGranted ? { superGrantedBy: op.email } : {}) },
     });
-    await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'member.invited', entityType: 'invitation', entityId: row.id, metadata: { email, role: 'owner', operator: op.email } });
+    await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'member.invited', entityType: 'invitation', entityId: row.id, metadata: { email, role: 'owner', operator: op.email, ...(superGranted ? { anotherSuperWorkspaceAllowed: true } : {}) } });
     return this.inviteUrl(token);
   }
 
@@ -407,6 +408,8 @@ export class ConsoleService {
    */
   async createClient(op: OperatorContext, input: ClientCreate, ip: string | null): Promise<ConsoleClientCreated> {
     const { row: plan, terms } = await this.planFor(input.planCode);
+    // One person, one Super Workspace: an administrator who already owns one needs the Console's explicit yes.
+    const { owns } = await assertSuperAllowedForEmail(this.prisma, input.administrator.email, input.allowAnotherSuper);
     const defs = await planDefinitions(this.prisma as unknown as TenantTx);
     const tenantId = randomUUID();
     const slug = `${slugify(input.organisation.name)}-${randomBytes(3).toString('hex')}`;
@@ -424,6 +427,7 @@ export class ConsoleService {
       `Manager Workspaces: ${input.maxManagerWorkspaces ?? planLimit(defs[plan.code]?.maxManagerWorkspaces)}`,
       `Executive Workspaces: ${input.maxExecutiveWorkspaces ?? planLimit(defs[plan.code]?.maxExecutiveWorkspaces)}`,
       `Super Workspace creates Executive Workspaces: ${input.superCanCreateExecutives ? 'yes' : 'no'}`,
+      ...(owns.length ? [`Another Super Workspace allowed for ${input.administrator.email} (already owns ${owns.join(', ')})`] : []),
     ];
     const inviteUrl = await this.prisma.run({ tenantId }, async (tx) => {
       await provisionTenant(tx, { tenantId, name: input.organisation.name, slug, planCode: plan.code });
@@ -444,21 +448,23 @@ export class ConsoleService {
         },
       });
       await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'tenant.created', entityType: 'tenant', entityId: tenantId, metadata: { name: input.organisation.name, plan: plan.code, operator: op.email, changes } });
-      return this.inviteAdministrator(tx, op, tenantId, input.administrator.email);
+      return this.inviteAdministrator(tx, op, tenantId, input.administrator.email, owns.length > 0);
     });
     await this.log(op.id, 'client.created', tenantId, { reason: input.reason ?? 'New client', changes, administrator: input.administrator.email }, ip);
     return { client: await this.client(null, tenantId, ip), inviteUrl };
   }
 
-  async resendAdministrator(op: OperatorContext, id: string, email: string | undefined, ip: string | null): Promise<ConsoleClientCreated> {
+  async resendAdministrator(op: OperatorContext, id: string, email: string | undefined, ip: string | null, allowAnotherSuper?: boolean): Promise<ConsoleClientCreated> {
+    let granted = false;
     const inviteUrl = await this.prisma.run({ tenantId: id }, async (tx) => {
       if (!(await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } }))) throw new NotFoundException(NOT_FOUND);
       const pending = await tx.invitation.findFirst({ where: { tenantId: id, acceptedAt: null, revokedAt: null, role: { key: 'owner' } }, orderBy: { createdAt: 'desc' } });
       const to = email ?? pending?.email;
       if (!to) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'Enter the administrator’s email address.', details: [{ path: 'email', message: 'Required' }] });
-      return this.inviteAdministrator(tx, op, id, to);
+      granted = (await assertSuperAllowedForEmail(this.prisma, to, allowAnotherSuper, id)).owns.length > 0;
+      return this.inviteAdministrator(tx, op, id, to, granted);
     });
-    await this.log(op.id, 'client.administrator_invited', id, { reason: 'Administrator invitation sent', changes: [`Invitation for ${email ?? 'the administrator'}`] }, ip);
+    await this.log(op.id, 'client.administrator_invited', id, { reason: 'Administrator invitation sent', changes: [`Invitation for ${email ?? 'the administrator'}`, ...(granted ? ['Another Super Workspace allowed'] : [])] }, ip);
     return { client: await this.client(null, id, ip), inviteUrl };
   }
 

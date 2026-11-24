@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { Minimize2 } from 'lucide-react';
 import { useAppearanceSync } from '@/lib/appearance-sync';
 import { useT } from '@/lib/i18n';
+import { fmtLocale } from '@/lib/i18n/locale';
 import { useRegionalSync } from '@/lib/regional-sync';
 import { useSession, useSignOut } from '@/lib/session';
 import { useLockedFeature } from '@/lib/features';
@@ -101,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </p>
             ) : data?.restriction &&
               !(data.restriction === 'mfa_enrolment' && pathname === '/app/account/security') ? (
-              <PolicyGate restriction={data.restriction} />
+              <PolicyGate restriction={data.restriction} until={data.restrictionUntil} />
             ) : locked ? (
               <FeatureLocked feature={locked} />
             ) : (
@@ -133,10 +134,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /** Shown instead of the page while the workspace's security policy is not met (the API refuses the data anyway). */
-function PolicyGate({ restriction }: { restriction: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated' }) {
+function PolicyGate({ restriction, until }: { restriction: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated'; until?: string }) {
   const signOut = useSignOut();
   const t = useT();
   const mfa = restriction === 'mfa_enrolment';
+  if (restriction === 'workspace_deactivated' && until) {
+    return (
+      <Card className="mx-auto mt-8 max-w-lg" data-workspace-blacklisted>
+        <CardHeader>
+          <CardTitle>{t('Your workspace is blocked for now')}</CardTitle>
+          <CardDescription>
+            {t('It is blacklisted until {date}, so you cannot work in SampForce before then. Your data is kept. Ask your manager or administrator, or SampForce support, if you think this is a mistake.', {
+              date: new Intl.DateTimeFormat(fmtLocale(), { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(until)),
+            })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => void signOut()}>
+            {t('top.signOut')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (restriction === 'workspace_deactivated') {
     return (
       <Card className="mx-auto mt-8 max-w-lg" data-workspace-deactivated>

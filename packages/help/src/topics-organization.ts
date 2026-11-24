@@ -2236,6 +2236,30 @@ export const organizationHelp = {
       'استخدمها عندما يجب ألا تسمح خطة للمديرين أو التنفيذيين بالحذف، أو يجب أن تفرض تسجيل الدخول بخطوتين.',
     ],
   },
+  'page.operatorWorkspaceManagement': {
+    title: 'Workspace Management',
+    what: [
+      'Every Super, Manager and Executive Workspace of every client, with who heads it, its status, its users, its parent and what it may use.',
+      'Todos los espacios Super, de Gerente y de Ejecutivo de cada cliente, con quién los dirige, su estado, sus usuarios, su espacio superior y lo que pueden usar.',
+      'Tous les espaces Super, Manager et Exécutif de chaque client, avec leur responsable, leur statut, leurs utilisateurs, leur parent et ce qu’ils peuvent utiliser.',
+      'Alle Super-, Manager- und Executive-Arbeitsbereiche aller Kunden, mit Leitung, Status, Nutzern, übergeordnetem Bereich und Freigaben.',
+      'كل مساحات العمل الرئيسية ومساحات المديرين والتنفيذيين لكل عميل، مع من يرأسها وحالتها ومستخدميها ومساحتها الأعلى وما يمكنها استخدامه.',
+    ],
+    how: [
+      'Open Actions on a workspace to suspend it, blacklist it until a day, delete or restore it. Blocks and deletes ask for your password; the client cannot lift a block you set.',
+      'Abre Acciones en un espacio para suspenderlo, bloquearlo hasta un día, eliminarlo o restaurarlo. Los bloqueos y eliminaciones piden tu contraseña; el cliente no puede levantar un bloqueo tuyo.',
+      'Ouvrez Actions sur un espace pour le suspendre, le bloquer jusqu’à un jour, le supprimer ou le restaurer. Blocages et suppressions demandent votre mot de passe ; le client ne peut pas lever votre blocage.',
+      'Öffnen Sie Aktionen, um einen Bereich zu sperren, bis zu einem Tag zu blockieren, zu löschen oder wiederherzustellen. Sperren und Löschen verlangen Ihr Passwort; der Kunde kann Ihre Sperre nicht aufheben.',
+      'افتح الإجراءات على مساحة لتعليقها أو حظرها حتى يوم محدد أو حذفها أو استعادتها. يطلب الحظر والحذف كلمة مرورك، ولا يستطيع العميل رفع حظر وضعته.',
+    ],
+    where: [
+      'Use it when a client or one of its teams must be stopped for a while, removed, or brought back. Deleting a Super Workspace closes the company for 30 days before erasing it.',
+      'Úsalo cuando haya que detener un tiempo a un cliente o a uno de sus equipos, quitarlo o recuperarlo. Eliminar un espacio Super cierra la empresa 30 días antes de borrarla.',
+      'Utilisez-la quand un client ou une de ses équipes doit être arrêté un temps, retiré ou rétabli. Supprimer un espace Super ferme l’entreprise 30 jours avant de l’effacer.',
+      'Nutzen Sie es, wenn ein Kunde oder ein Team eine Zeit lang gestoppt, entfernt oder zurückgeholt werden muss. Einen Super-Bereich löschen schließt das Unternehmen 30 Tage vor dem Löschen.',
+      'استخدمها عندما يجب إيقاف عميل أو أحد فرقه لفترة أو إزالته أو إعادته. حذف مساحة العمل الرئيسية يغلق الشركة 30 يومًا قبل محوها.',
+    ],
+  },
   'page.mobileConfiguration': {
     title: 'Mobile configuration',
     what: [

@@ -172,6 +172,7 @@ export const help = {
   'Contact by': ['Contactar por', 'Contact par', 'Kontakt per', 'التواصل عبر'],
   'In the app': ['En la aplicación', 'Dans l’application', 'In der App', 'داخل التطبيق'],
   'App version': ['Versión de la aplicación', 'Version de l’application', 'App-Version', 'إصدار التطبيق'],
+  'Workspace Management': ['Gestión de espacios de trabajo', 'Gestion des espaces de travail', 'Arbeitsbereichsverwaltung', 'إدارة مساحات العمل'],
   'Workspace rules': ['Reglas de espacios de trabajo', 'Règles des espaces de travail', 'Regeln für Arbeitsbereiche', 'قواعد مساحات العمل'],
   'Mobile app': ['Aplicación móvil', 'Application mobile', 'Mobile App', 'تطبيق الجوال'],
   Web: ['Web', 'Web', 'Web', 'الويب'],
