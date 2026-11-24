@@ -12,7 +12,7 @@ import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson }
 describe('mobile records', () => {
   let app: INestApplication;
   let owner: TestUser;
-  let exec: TestUser & { userId: string };
+  let exec: TestUser & { userId: string; workspaceId: string };
   let ownerToken = '';
   let execToken = '';
   const http = () => request(app.getHttpServer());
@@ -106,7 +106,11 @@ describe('mobile records', () => {
 
   it('lets only levels with the delete rule delete, and switches modules off', async () => {
     const lead = (await phone(execToken).post('/companies', { name: 'Short Lived' }).expect(201)).body as MobileRecord;
-    // Executives cannot delete by default.
+    // New workspaces cannot delete until the workspace above turns Delete on (workspace redesign W2).
+    expect((await phone(execToken).del(`/companies/${lead.id}`, 403)).body.error.code).toBe('ACTION_NOT_GRANTED');
+    const granted = (await api(exec).get('/auth/me').expect(200)).body.workspace.actions as Record<string, string[]>;
+    await api(owner).put(`/workspaces/${exec.workspaceId}/permissions`, { actions: { ...granted, CRM: [...granted.CRM!, 'delete'] } }).expect(200);
+    // Even then, the mobile configuration keeps delete off for executives by default.
     expect((await phone(execToken).del(`/companies/${lead.id}`, 403)).body.error.code).toBe('MOBILE_ACTION_NOT_ALLOWED');
     await phone(ownerToken).del(`/companies/${lead.id}`, 204);
     await phone(ownerToken).get(`/companies/${lead.id}`).expect(404);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { type MeetingAnalysis, meetingAnalysisSchema, type MeetingRecord, type MeetingRecordUpdate, type TranscriptionStatus } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,6 +54,7 @@ export function MeetingRecordView({ id }: { id: string }) {
   const canWrite = useCan('activities:write');
   const router = useRouter();
   const update = useUpdate(id);
+  const mayDelete = useCanDelete('meeting_intelligence');
   const remove = useMutation({
     mutationFn: () => api(`/meeting-records/${id}`, { method: 'DELETE' }),
     onSuccess: () => router.push('/app/meetings'),
@@ -86,7 +88,7 @@ export function MeetingRecordView({ id }: { id: string }) {
             {t('Meeting link')} <ExternalLink className="size-3" aria-hidden />
           </a>
         )}
-        {canWrite && (
+        {canWrite && mayDelete && (
           <Button
             variant="outline"
             size="sm"

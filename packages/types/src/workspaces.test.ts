@@ -21,8 +21,15 @@ describe('workspace inheritance (ADR 0071)', () => {
   it('gives executives no administration beyond viewing by default', () => {
     const exec = defaultChildActions('EXECUTIVE', allActions());
     expect(exec.Administration).toEqual(['view']);
-    expect(exec.CRM).toEqual(['view', 'create', 'edit', 'delete', 'reports']);
+    expect(exec.CRM).toEqual(['view', 'create', 'edit', 'reports']);
     expect(defaultChildActions('MANAGER', allActions()).CRM).not.toContain('configure');
+  });
+
+  it('never turns delete on by default, at any level', () => {
+    for (const level of ['MANAGER', 'EXECUTIVE'] as const) {
+      const grants = defaultChildActions(level, allActions());
+      expect(Object.values(grants).some((list) => list?.includes('delete'))).toBe(false);
+    }
   });
 
   it('reads stored grants leniently', () => {

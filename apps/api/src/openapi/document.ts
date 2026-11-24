@@ -899,7 +899,7 @@ export function buildOpenApiDocument(): object {
   action('get', '/support-access', 'Tenants', 'Support access grants (tenant:manage)');
   r.registerPath({ method: 'post', path: '/support-access', tags: ['Tenants'], summary: 'Let platform support see members and the audit log for 1 to 72 hours (tenant:manage)', security: secured, request: body(supportGrantSchema), responses: { 201: ok('Grant'), ...errors } });
   r.registerPath({ method: 'delete', path: '/support-access/{id}', tags: ['Tenants'], summary: 'End support access now (tenant:manage)', security: secured, request: { params: idParam }, responses: { 204: ok('Ended'), ...notFound, ...errors } });
-  const op = (method: 'get' | 'post', path: string, summary: string, schema?: z.ZodTypeAny) =>
+  const op = (method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, summary: string, schema?: z.ZodTypeAny) =>
     r.registerPath({ method, path: `/operator${path}`, tags: ['Operator'], summary: `Operator console: ${summary}. Separate df_op session; 404 when the console is disabled`,
       request: { ...(path.includes('{id}') ? { params: idParam } : {}), ...(schema ? body(schema) : {}) }, responses: { 200: ok('OK'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled or not found') } });
   op('post', '/login', 'sign in', operatorLoginSchema);
@@ -933,7 +933,28 @@ export function buildOpenApiDocument(): object {
     summary: 'Operator console: run a no-cost connection test for a provider and store the result; logged (ADMIN, 10 a minute)',
     request: { params: z.object({ key: z.enum(PROVIDER_CHECK_KEYS) }) },
     responses: { 200: ok('Provider row with the new check'), 400: json(error, 'Key not set, or not a checkable provider'), 401: json(error, 'No operator session'), 403: json(error, 'Operator role'), 404: json(error, 'Disabled') } });
-  op('get', '/audit-log', 'platform audit log');
+  op('get', '/audit-log', 'platform audit log, newest first: search (q), client, operator, action, target, dates; each entry says what it is about, the values before and after (secrets removed) and the session it came from (audit.view)');
+  op('get', '/audit-log/export', 'the filtered platform audit log as CSV, up to 10,000 rows; the export is itself an audit entry (audit.view)');
+  op('get', '/audit-log/{id}', 'one platform audit entry (audit.view)');
+  op('patch', '/clients/{id}/profile', 'edit a client\'s company details: name, legal name, website, industry, country, state, city, address and primary contact; recorded with before and after (clients.edit)');
+  op('put', '/clients/{id}/logo', 'set a client\'s logo: the raw PNG, JPEG or WebP image as the body, up to 2 MB (clients.edit)');
+  op('delete', '/clients/{id}/logo', 'remove a client\'s logo (clients.edit)');
+  op('get', '/clients/{id}/logo', 'a client\'s logo image (any operator)');
+  op('get', '/locations/{country}/regions', 'states and provinces of a country (any operator)');
+  op('get', '/locations/{country}/cities', 'cities of a country, with the Console\'s added and renamed cities applied (any operator)');
+  op('get', '/locations/{country}/changes', 'cities operators added or renamed in a country (settings.manage)');
+  op('post', '/locations/cities', 'add a city the list does not have (settings.manage)');
+  op('post', '/locations/cities/rename', 'give a listed city another name (settings.manage)');
+  op('delete', '/locations/cities/{id}', 'remove an added city or undo a rename (settings.manage)');
+  op('get', '/clients/page', 'clients with filters (status, plan, billing, country, payment, health, created dates), sort on every column and pages of 25, 50 or 100 (clients.view)');
+  op('get', '/clients/export', 'the filtered clients list as CSV; the export is an audit entry (clients.view)');
+  op('post', '/clients/bulk', 'one action over up to 200 clients: change status (CONFIRM to suspend or deactivate), extend subscriptions, set a feature override or email the administrators; each client audited (the action\'s own permission)');
+  op('get', '/overview/dashboard', 'the Overview: Action Required counts, 18 KPIs with their value 30 days ago and a 30-day line, client growth, revenue, plans, workspace utilisation, mobile use and new workspaces; cached for a minute (clients.view)');
+  op('get', '/clients/{id}/health', 'a client\'s health score with every signal, its points and the figure behind it, and 30 days of scores (clients.view)');
+  op('post', '/clients/{id}/health', 'measure a client\'s health score now; recorded with before and after (clients.view)');
+  op('get', '/settings/health', 'the health score weights and band thresholds (any operator)');
+  op('put', '/settings/health', 'change the health score weights and bands; every client is measured again (settings.manage)');
+  op('get', '/activity', 'the Console activity feed: operator actions, clients joining, new workspaces, invoices, failed payments, tickets reaching SampForce and unusual sign-ins, only the kinds the role may act on (clients.view)');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.
   action('get', '/reports', 'Reports', 'Saved reports the caller may see: their own and shared ones (reports:read)');

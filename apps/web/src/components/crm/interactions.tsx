@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { INTERACTION_KINDS, type InteractionKind, type InteractionRow, interactionInputSchema, interactionUpdateSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { CalendarClock, FileSignature, Handshake, Linkedin, Mail, MailOpen, MessageCircle, MessagesSquare, Paperclip, Pencil, Phone, PhoneIncoming, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
@@ -37,6 +38,7 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
   const [kind, setKind] = React.useState<InteractionKind | ''>('');
   const [contactId, setContactId] = React.useState('');
   const list = useInteractions(company.id, { kind, contactId });
+  const mayDelete = useCanDelete('interactions');
   const remove = useRemoveInteraction();
   const [logging, setLogging] = React.useState(false);
   const [editing, setEditing] = React.useState<InteractionRow | null>(null);
@@ -83,7 +85,8 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
               <InteractionItem
                 key={`${i.source}-${i.id}`}
                 i={i}
-                canDelete={canWrite && i.source === 'LOGGED'}
+                canChange={canWrite && i.source === 'LOGGED'}
+                canDelete={mayDelete}
                 onEdit={() => setEditing(i)}
                 onDelete={() => window.confirm(t('Delete “{subject}”?', { subject: i.subject })) && remove.mutate(i.id)}
               />
@@ -97,7 +100,7 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
   );
 }
 
-function InteractionItem({ i, canDelete, onEdit, onDelete }: { i: InteractionRow; canDelete: boolean; onEdit: () => void; onDelete: () => void }) {
+function InteractionItem({ i, canChange, canDelete, onEdit, onDelete }: { i: InteractionRow; canChange: boolean; canDelete: boolean; onEdit: () => void; onDelete: () => void }) {
   const t = useT();
   const Icon = KIND_ICON[i.kind];
   return (
@@ -157,14 +160,16 @@ function InteractionItem({ i, canDelete, onEdit, onDelete }: { i: InteractionRow
             </p>
           )}
         </div>
-        {canDelete && (
+        {canChange && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" onClick={onEdit} aria-label={t('Edit “{subject}”', { subject: i.subject })}>
               <Pencil aria-hidden />
             </Button>
-            <Button size="sm" variant="ghost" onClick={onDelete} aria-label={t('Delete “{subject}”', { subject: i.subject })}>
-              <Trash2 aria-hidden />
-            </Button>
+            {canDelete && (
+              <Button size="sm" variant="ghost" onClick={onDelete} aria-label={t('Delete “{subject}”', { subject: i.subject })}>
+                <Trash2 aria-hidden />
+              </Button>
+            )}
           </div>
         )}
       </div>

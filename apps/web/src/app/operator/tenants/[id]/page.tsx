@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, formatMinor, INVOICE_STATUS, SUBSCRIPTION_STATUS } from '@/lib/billing';
-import { useOperator } from '../../operator-shell';
+import { can, useOperator } from '../../operator-shell';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATUSES: SubscriptionState[] = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'UNPAID', 'CANCELED'];
@@ -23,7 +23,9 @@ export default function OperatorTenantPage() {
   if (!me.data || t.isPending) return <Skeleton className="h-96" />;
   if (t.error) return <ErrorText error={t.error} />;
   const d = t.data;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'subscriptions.manage');
+  const canFeatures = can(me.data, 'features.manage');
+  const canBilling = can(me.data, 'billing.manage');
 
   return (
     <div className="space-y-6">
@@ -50,7 +52,7 @@ export default function OperatorTenantPage() {
           </CardContent>
         )}
       </Card>
-      <WorkspaceFeatures d={d} admin={admin} />
+      <WorkspaceFeatures d={d} admin={canFeatures} />
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
         <span className="text-sm">
           <span className="font-medium">Mobile app</span> <span className="text-muted-foreground">· approve, suspend or withdraw this client’s iPhone and Android access</span>
@@ -82,7 +84,7 @@ export default function OperatorTenantPage() {
                     )}
                     {i.paymentReference && <span className="text-muted-foreground">ref {i.paymentReference}</span>}
                   </div>
-                  {admin && i.provider === 'OFFLINE' && i.status === 'OPEN' && <RecordPayment d={d} i={i} />}
+                  {canBilling && i.provider === 'OFFLINE' && i.status === 'OPEN' && <RecordPayment d={d} i={i} />}
                 </li>
               ))}
             </ul>

@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../common/prisma.service';
 import { ConsoleService } from './console.service';
 import type { OperatorContext } from './operator-auth';
+import { writePlatformAudit } from './platform-audit';
 
 const PER_KIND = 6;
 const LEVEL_LABEL: Record<string, string> = {
@@ -35,7 +36,8 @@ export class ConsoleShellService {
       where: { id: op.id },
       select: { preferences: true },
     });
-    return { ...op, preferences: normaliseConsolePreferences(row?.preferences) };
+    const { sessionId: _session, ...me } = op;
+    return { ...me, mfaSetupRequired: !!op.mfaSetupRequired, preferences: normaliseConsolePreferences(row?.preferences) };
   }
 
   async setPreferences(
@@ -66,23 +68,26 @@ export class ConsoleShellService {
   async search(op: OperatorContext, q: string, ip: string | null): Promise<ConsoleSearchResult> {
     const text = { contains: q, mode: 'insensitive' as const };
     const ticketNumber = /^#?(\d{1,7})$/.exec(q)?.[1];
+    // Each kind is searched only when the operator's role may open it (ADR 0074).
+    const can = (p: OperatorContext['permissions'][number]) => op.permissions.includes(p);
+    const none = Promise.resolve([] as never[]);
 
     const [scanned, users, plans] = await Promise.all([
       this.prisma.run({ operatorScan: true }, async (tx) => {
         const [clients, workspaces, invoices, tickets] = await Promise.all([
-          tx.tenant.findMany({
+          !can('clients.view') ? none : tx.tenant.findMany({
             where: { deletedAt: null, OR: [{ name: text }, { slug: text }] },
             select: { id: true, name: true, slug: true },
             orderBy: { name: 'asc' },
             take: PER_KIND,
           }),
-          tx.workspaceNode.findMany({
+          !can('workspaces.view') ? none : tx.workspaceNode.findMany({
             where: { archivedAt: null, name: text },
             select: { id: true, tenantId: true, name: true, level: true },
             orderBy: { name: 'asc' },
             take: PER_KIND,
           }),
-          tx.invoice.findMany({
+          !can('billing.view') ? none : tx.invoice.findMany({
             where: { OR: [{ number: text }, { providerInvoiceId: text }] },
             select: {
               id: true,
@@ -95,7 +100,7 @@ export class ConsoleShellService {
             orderBy: { issuedAt: 'desc' },
             take: PER_KIND,
           }),
-          tx.supportTicket.findMany({
+          !can('support.handle') ? none : tx.supportTicket.findMany({
             where: ticketNumber
               ? { OR: [{ subject: text }, { number: Number(ticketNumber) }] }
               : { subject: text },
@@ -106,13 +111,13 @@ export class ConsoleShellService {
         ]);
         return { clients, workspaces, invoices, tickets };
       }),
-      this.prisma.user.findMany({
+      !can('users.view') ? none : this.prisma.user.findMany({
         where: { OR: [{ email: text }, { name: text }] },
         select: { id: true, name: true, email: true },
         orderBy: { name: 'asc' },
         take: PER_KIND,
       }),
-      this.console.plans(),
+      can('clients.view') ? this.console.plans() : none,
     ]);
 
     // The client of each person (their first active membership) and the names of every client mentioned.
@@ -203,15 +208,7 @@ export class ConsoleShellService {
           href: '/operator/plans',
         })),
     ];
-    await this.prisma.platformAuditLog.create({
-      data: {
-        operatorId: op.id,
-        action: 'console.searched',
-        targetTenantId: null,
-        metadata: { q, results: hits.length },
-        ip,
-      },
-    });
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'console.searched', target: null, metadata: { q, results: hits.length }, ip });
     return { q, hits };
   }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { quarterPeriod, type RevenueAnalytics } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -248,6 +249,7 @@ export function Targets({ period }: { period: string }) {
       await done();
     },
   });
+  const mayDelete = useCanDelete('revenue_intelligence');
   const remove = useMutation({ mutationFn: (id: string) => api(`/analytics/targets/${id}`, { method: 'DELETE' }), onSuccess: done });
   return (
     <Card>
@@ -266,7 +268,7 @@ export function Targets({ period }: { period: string }) {
               <li key={tg.id} className="flex items-center gap-2 py-1.5">
                 <span>{tg.user?.name ?? t('Whole team')}</span>
                 <span className="ms-auto tabular-nums">{formatMoney(tg.amount, base)}</span>
-                {canManage && (
+                {canManage && mayDelete && (
                   <Button size="sm" variant="ghost" onClick={() => remove.mutate(tg.id)} aria-label={t('Remove target for {name}', { name: tg.user?.name ?? t('whole team') })}>
                     {t('Remove')}
                   </Button>

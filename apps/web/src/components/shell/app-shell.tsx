@@ -23,6 +23,7 @@ import { useShell } from '@/stores/shell';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { SectionNotices } from '../notifications/section-notices';
+import { WelcomeOverlay } from '../sign-in/welcome-overlay';
 import { PasswordConfirmationProvider } from '../security/confirm-deletion-dialog';
 import { CustomizeMenuDialog } from './customize-menu';
 import { FeatureLocked } from './feature-locked';
@@ -124,16 +125,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {data && !data.restriction && <MobileBottomNav />}
         {data && <CustomizeMenuDialog />}
         <KeyboardShortcuts />
+        {/* The level's welcome, once, right after signing in (ADR 0075). */}
+        <WelcomeOverlay />
       </div>
     </PasswordConfirmationProvider>
   );
 }
 
 /** Shown instead of the page while the workspace's security policy is not met (the API refuses the data anyway). */
-function PolicyGate({ restriction }: { restriction: 'mfa_enrolment' | 'sso_required' }) {
+function PolicyGate({ restriction }: { restriction: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated' }) {
   const signOut = useSignOut();
   const t = useT();
   const mfa = restriction === 'mfa_enrolment';
+  if (restriction === 'workspace_deactivated') {
+    return (
+      <Card className="mx-auto mt-8 max-w-lg" data-workspace-deactivated>
+        <CardHeader>
+          <CardTitle>{t('Your workspace is deactivated')}</CardTitle>
+          <CardDescription>{t('The workspace above yours has deactivated it, so you cannot work in SampForce for now. Your data is kept. Ask your manager or administrator to reactivate it.')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => void signOut()}>
+            {t('top.signOut')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card className="mx-auto mt-8 max-w-lg">
       <CardHeader>

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
+import { type ClientHealthSummary, HEALTH_BANDS } from './console-health';
+import type { OperatorPermission } from './console-security';
 import { FEATURE_KEYS, type FeatureKey, featureKeySchema } from './features';
 import { type ActionGrants, actionGrantsSchema, type WorkspaceLevel } from './workspaces';
 
@@ -199,9 +201,81 @@ export interface ConsoleSubscription {
   limitsSetForClient: { managers: boolean; executives: boolean };
 }
 
+/** The client's readable number: 123 becomes "SF-000123". */
+export function customerIdOf(n: number | null | undefined): string | null {
+  return typeof n === 'number' && n > 0 ? `SF-${String(n).padStart(6, '0')}` : null;
+}
+
+const optionalText = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable();
+
+/** PATCH /operator/clients/:id/profile: the client's company details. Empty text clears a field. */
+export const consoleClientProfileSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    legalName: optionalText(160),
+    website: z
+      .string()
+      .trim()
+      .max(200)
+      .transform((v) => (v && !/^https?:\/\//i.test(v) ? `https://${v}` : v) || null)
+      .refine((v) => v === null || /^https?:\/\/[^\s/$.?#][^\s]*\.[^\s]{2,}$/i.test(v), 'Use a web address such as example.com')
+      .nullable(),
+    industry: optionalText(80),
+    countryCode: z
+      .string()
+      .trim()
+      .regex(/^([A-Za-z]{2})?$/, 'Use a two-letter country code')
+      .transform((v) => v.toUpperCase() || null)
+      .nullable(),
+    regionCode: optionalText(10),
+    city: optionalText(120),
+    addressLine1: optionalText(200),
+    addressLine2: optionalText(200),
+    postalCode: optionalText(20),
+    contactName: optionalText(120),
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .transform((v) => v.toLowerCase() || null)
+      .refine((v) => v === null || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Use an email address such as name@example.com')
+      .nullable(),
+    contactPhone: z
+      .string()
+      .trim()
+      .max(40)
+      .refine((v) => v === '' || /^\+?[0-9 ()./-]{6,}$/.test(v), 'Use digits, spaces and an optional + only')
+      .transform((v) => v || null)
+      .nullable(),
+  })
+  .strict();
+export type ConsoleClientProfileInput = z.infer<typeof consoleClientProfileSchema>;
+
+/** The client's company details as the Console keeps them. */
+export interface ConsoleClientProfile {
+  legalName: string | null;
+  website: string | null;
+  industry: string | null;
+  countryCode: string | null;
+  regionCode: string | null;
+  city: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  postalCode: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+}
+
 export interface ConsoleClientRow {
   id: string;
   name: string;
+  /** "SF-000123"; given to every client in the order they joined. */
+  customerId: string | null;
+  countryCode: string | null;
+  city: string | null;
+  /** Versioned address of the client's logo, or null without one. */
+  logoUrl: string | null;
   state: ClientState;
   createdAt: string;
   people: number;
@@ -209,6 +283,10 @@ export interface ConsoleClientRow {
   usage: { managers: number; executives: number };
   /** The administrator has not accepted the invitation yet. */
   awaitingAdministrator: boolean;
+  /** Set while the client has closed its company (W7): nobody signs in, and the data is erased after eraseAfter. */
+  closure: { closedAt: string; eraseAfter: string; closedBy: string | null; reason: string | null } | null;
+  /** The latest health score (C5); null until the worker first measures the client. */
+  health: ClientHealthSummary | null;
 }
 
 export interface ConsoleWorkspaceRow {
@@ -233,6 +311,7 @@ export interface ConsoleHistoryRow {
 }
 
 export interface ConsoleClientDetail extends ConsoleClientRow {
+  profile: ConsoleClientProfile;
   /** The Super Workspace's ceiling: actions per module, null = every action. */
   authority: { actions: ActionGrants | null; canCreateExecutives: boolean };
   features: FeatureKey[];
@@ -257,4 +336,112 @@ export interface ConsoleOverview {
   needsAttention: { id: string; name: string; why: string }[];
   /** Support queries that reached the Console and wait on it, and how many clients raised them. */
   support: { waiting: number; clients: number };
+}
+
+// ───────────── Locations (ADR 0074, C4) ─────────────
+
+/** A city on the Locations page: from the shipped list, added by an operator, or renamed by one. */
+export interface ConsoleCityRow {
+  name: string;
+  region: string | null;
+  /** Set for a city an operator added or renamed; the id removes that change. */
+  edit: { id: string; kind: 'added' | 'renamed'; originalName: string | null; by: string | null; at: string } | null;
+}
+
+const placeName = z.string().trim().min(1).max(120);
+const regionCode = z.string().trim().max(10).transform((v) => v || null).nullable();
+
+/** POST /operator/locations/cities: add a city the list does not have. */
+export const consoleCityAddSchema = z.object({ countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()), regionCode, name: placeName }).strict();
+export type ConsoleCityAddInput = z.infer<typeof consoleCityAddSchema>;
+
+/** POST /operator/locations/cities/rename: give a listed city another name. */
+export const consoleCityRenameSchema = z
+  .object({ countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()), regionCode, originalName: placeName, name: placeName })
+  .strict();
+export type ConsoleCityRenameInput = z.infer<typeof consoleCityRenameSchema>;
+
+export const consoleCityQuerySchema = z.object({
+  region: z.string().trim().max(10).optional(),
+  q: z.string().trim().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
+
+// ───────────── Clients list: filters, sort, paging, bulk actions (ADR 0074, C4b) ─────────────
+
+export const CONSOLE_CLIENT_SORTS = ['name', 'customerId', 'country', 'plan', 'payment', 'state', 'people', 'managers', 'executives', 'created', 'renews', 'health'] as const;
+export type ConsoleClientSort = (typeof CONSOLE_CLIENT_SORTS)[number];
+export const CONSOLE_CLIENT_PAGE_SIZES = [25, 50, 100] as const;
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), z.enum(values).optional());
+
+/** GET /operator/clients/page and /operator/clients/export: every filter is optional and they combine. */
+export const consoleClientListQuerySchema = z.object({
+  /** Name, legal name, slug, customer ID ("SF-000123", "123") or an administrator's email. */
+  search: z.string().trim().max(100).optional(),
+  state: optionalEnum(CLIENT_STATES),
+  plan: z.string().trim().max(60).optional(),
+  billing: optionalEnum(BILLING_FREQUENCIES),
+  country: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((v) => v.toUpperCase()).optional().or(z.literal('').transform(() => undefined)),
+  /** A payment status, or NONE for clients without one. */
+  payment: optionalEnum([...PAYMENT_STATUSES, 'NONE'] as const),
+  createdFrom: isoDay.optional().or(z.literal('').transform(() => undefined)),
+  /** A health band, or NONE for clients not measured yet. */
+  health: optionalEnum([...HEALTH_BANDS, 'NONE'] as const),
+  createdTo: isoDay.optional().or(z.literal('').transform(() => undefined)),
+  sort: z.enum(CONSOLE_CLIENT_SORTS).default('created'),
+  dir: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  perPage: z.coerce.number().int().refine((n) => (CONSOLE_CLIENT_PAGE_SIZES as readonly number[]).includes(n), 'Choose 25, 50 or 100 per page.').default(25),
+});
+export type ConsoleClientListQuery = z.infer<typeof consoleClientListQuerySchema>;
+
+export interface ConsoleClientPage {
+  items: ConsoleClientRow[];
+  total: number;
+  page: number;
+  perPage: number;
+}
+
+export const CONSOLE_BULK_ACTIONS = ['state', 'extend', 'feature', 'notify'] as const;
+export type ConsoleBulkAction = (typeof CONSOLE_BULK_ACTIONS)[number];
+/** Who may run each bulk action: the same permission as doing it to one client. */
+export const BULK_PERMISSION: Record<ConsoleBulkAction, OperatorPermission> = {
+  state: 'clients.status',
+  extend: 'subscriptions.manage',
+  feature: 'features.manage',
+  notify: 'notifications.broadcast',
+};
+/** Typed by the operator before a bulk action that takes access away. */
+export const BULK_CONFIRM_WORD = 'CONFIRM';
+
+/**
+ * POST /operator/clients/bulk: one action over up to 200 clients. Suspending or deactivating needs `confirm` set to
+ * CONFIRM. Each client is changed (and audited) on its own; one more entry records the run.
+ */
+export const consoleClientBulkSchema = z
+  .discriminatedUnion('action', [
+    z.object({ action: z.literal('state'), ids: z.array(z.string().uuid()).min(1).max(200), state: z.enum(CLIENT_STATES), reason, confirm: z.string().optional() }).strict(),
+    z.object({ action: z.literal('extend'), ids: z.array(z.string().uuid()).min(1).max(200), days: z.number().int().min(1).max(366), reason }).strict(),
+    z.object({ action: z.literal('feature'), ids: z.array(z.string().uuid()).min(1).max(200), feature: featureKeySchema, enabled: z.boolean().nullable(), reason }).strict(),
+    z
+      .object({ action: z.literal('notify'), ids: z.array(z.string().uuid()).min(1).max(200), subject: z.string().trim().min(3).max(150), message: z.string().trim().min(10).max(5000) })
+      .strict(),
+  ])
+  .superRefine((v, ctx) => {
+    if (v.action === 'state' && v.state !== 'ACTIVE' && v.confirm !== BULK_CONFIRM_WORD) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['confirm'], message: 'Type CONFIRM to change these clients.' });
+    }
+  });
+export type ConsoleClientBulkInput = z.infer<typeof consoleClientBulkSchema>;
+
+export interface ConsoleClientBulkResult {
+  action: ConsoleBulkAction;
+  /** Clients the action changed (or emailed). */
+  done: { id: string; name: string }[];
+  /** Clients it left as they were, with why: already in that state, no subscription, no administrator… */
+  skipped: { id: string; name: string; reason: string }[];
+  failed: { id: string; name: string; reason: string }[];
 }

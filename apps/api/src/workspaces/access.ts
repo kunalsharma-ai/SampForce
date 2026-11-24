@@ -2,6 +2,7 @@ import type { TenantTx } from '@dealflow/database';
 import {
   type ActionGrants,
   allActions,
+  capByRules,
   DEFAULT_WORKSPACE_DESIGNATION,
   type FeatureKey,
   intersectActions,
@@ -9,8 +10,10 @@ import {
   parseActionGrants,
   type WorkspaceLevel,
   WORKSPACE_LEVELS,
+  type WorkspaceRules,
 } from '@dealflow/types';
 import { entitlementsFor } from '../billing/entitlements';
+import { workspaceRulesFor } from './workspace-rules';
 
 /**
  * Workspace access (ADR 0071): what a workspace of the hierarchy may use, computed from the organisation's
@@ -32,6 +35,12 @@ export interface StoredNode {
   canViewOtherManagers: boolean;
   canViewAuditLog: boolean;
   canChatWithPeers: boolean;
+  /** Optional so stand-ins and older reads need not set them (W4, W5). */
+  department?: string | null;
+  description?: string | null;
+  accessLevel?: string | null;
+  deactivatedAt?: Date | null;
+  deactivationReason?: string | null;
   archivedAt: Date | null;
   createdAt: Date;
 }
@@ -48,7 +57,7 @@ export interface NodeAccess {
 }
 
 /** The parts of a transaction access needs (an operator scan has them too). */
-type Reader = Pick<TenantTx, 'workspaceNode' | 'plan' | 'subscription' | 'tenantFeatureOverride'>;
+type Reader = Pick<TenantTx, 'workspaceNode' | 'plan' | 'subscription' | 'tenantFeatureOverride' | 'planWorkspaceRules'>;
 
 /** How workspace names are compared: case and repeated spaces do not make a name different. */
 export const nameKeyOf = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -86,8 +95,8 @@ export async function organisationNodes(tx: Pick<TenantTx, 'workspaceNode'>, ten
  * Effective access of every workspace of the organisation, computed top-down in one pass. Archived workspaces keep
  * an entry (with nothing granted) so their former members get nothing rather than the root's access.
  */
-export async function resolveOrganisation(tx: Reader, tenantId: string): Promise<{ root: NodeAccess; byId: Map<string, NodeAccess> }> {
-  const [nodes, ent] = await Promise.all([organisationNodes(tx, tenantId), entitlementsFor(tx, tenantId)]);
+export async function resolveOrganisation(tx: Reader, tenantId: string): Promise<{ root: NodeAccess; byId: Map<string, NodeAccess>; rules: WorkspaceRules }> {
+  const [nodes, ent, rules] = await Promise.all([organisationNodes(tx, tenantId), entitlementsFor(tx, tenantId), workspaceRulesFor(tx, tenantId)]);
   const stored = nodes.find((n) => n.level === 'SUPER' && !n.parentId);
   const rootNode = stored ?? virtualRoot(tenantId);
   const ceiling = rootNode.actions ? parseActionGrants(rootNode.actions) : allActions();
@@ -105,11 +114,15 @@ export async function resolveOrganisation(tx: Reader, tenantId: string): Promise
     for (const n of children.get(parent.node.id) ?? []) {
       if (byId.has(n.id)) continue;
       const live = !n.archivedAt && !parent.node.archivedAt;
+      const level = levelOf(n.level);
+      // The Console's rules for the level (W3) cap what the workspace above granted: withheld modules and Delete.
+      const granted = { features: intersectFeatures(parent.features, n.features), actions: intersectActions(parent.actions, parseActionGrants(n.actions)) };
+      const capped = !live ? { features: [], actions: {} } : level === 'SUPER' ? granted : capByRules(level, rules, granted.features, granted.actions);
       const access: NodeAccess = {
         node: live ? n : { ...n, archivedAt: n.archivedAt ?? parent.node.archivedAt },
-        level: levelOf(n.level),
-        features: live ? intersectFeatures(parent.features, n.features) : [],
-        actions: live ? intersectActions(parent.actions, parseActionGrants(n.actions)) : {},
+        level,
+        features: capped.features,
+        actions: capped.actions,
       };
       byId.set(n.id, access);
       queue.push(access);
@@ -117,7 +130,7 @@ export async function resolveOrganisation(tx: Reader, tenantId: string): Promise
   }
   // A node whose parent chain is broken (parent missing) gets nothing.
   for (const n of nodes) if (!byId.has(n.id)) byId.set(n.id, { node: n, level: levelOf(n.level), features: [], actions: {} });
-  return { root, byId };
+  return { root, byId, rules };
 }
 
 /** Access of one workspace; null = the organisation's Super Workspace. */
@@ -154,9 +167,25 @@ export function branchIds(nodes: readonly Pick<StoredNode, 'id' | 'parentId'>[],
  * Users who work in a workspace's branch (it and everything below it), for record visibility: a manager sees the
  * records of their own workspace and their executives'.
  */
-export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string): Promise<string[]> {
-  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } });
-  const ids = [...branchIds(nodes, nodeId)];
+export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string, { below = true }: { below?: boolean } = {}): Promise<string[]> {
+  const nodes = below ? await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } }) : [];
+  const ids = below ? [...branchIds(nodes, nodeId)] : [nodeId];
   const members = await tx.membership.findMany({ where: { tenantId, status: 'ACTIVE', workspaceNodeId: { in: ids } }, select: { userId: true } });
   return members.map((m) => m.userId);
+}
+
+/**
+ * Whether a person's workspace, or any workspace above it, is deactivated (W4): the nearest deactivated one, or
+ * null when everything up to the Super Workspace is live. Deleted (archived) workspaces count too.
+ */
+export async function deactivatedAbove(tx: Pick<TenantTx, 'workspaceNode'>, tenantId: string, nodeId: string | null | undefined): Promise<{ id: string; name: string } | null> {
+  if (!nodeId) return null;
+  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, deactivatedAt: true, archivedAt: true } });
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const seen = new Set<string>();
+  for (let n = byId.get(nodeId); n && !seen.has(n.id); n = n.parentId ? byId.get(n.parentId) : undefined) {
+    seen.add(n.id);
+    if (n.deactivatedAt || n.archivedAt) return { id: n.id, name: n.name };
+  }
+  return null;
 }

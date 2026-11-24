@@ -2,6 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, 
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
+  type ChangePasswordInput,
+  changePasswordSchema,
+  type PasswordChanged,
   type ConfirmPasswordInput,
   confirmPasswordSchema,
   type PasswordConfirmationIssued,
@@ -168,6 +171,16 @@ export class AuthController {
   @Post('confirm-password')
   confirmPassword(@Auth() auth: AuthContext, @Body(new ZodPipe(confirmPasswordSchema)) body: ConfirmPasswordInput, @Meta() meta: RequestMeta): Promise<PasswordConfirmationIssued> {
     return this.auth.confirmPassword(auth, body, meta);
+  }
+
+  /** Changes the password while signed in: the current one, then the new one. Other devices are signed out. */
+  @AllowRestricted()
+  @MobileAccess()
+  @Throttle(AUTH_LIMIT)
+  @HttpCode(200)
+  @Post('password')
+  changePassword(@Auth() auth: AuthContext, @Body(new ZodPipe(changePasswordSchema)) body: ChangePasswordInput, @Meta() meta: RequestMeta): Promise<PasswordChanged> {
+    return this.auth.changePassword(auth, body, meta);
   }
 
   @AllowRestricted()

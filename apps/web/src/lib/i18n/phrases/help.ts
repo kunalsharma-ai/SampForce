@@ -13,6 +13,11 @@ export const help = {
   Workspaces: ['Espacios de trabajo', 'Espaces de travail', 'Arbeitsbereiche', 'مساحات العمل'],
   Providers: ['Proveedores', 'Fournisseurs', 'Anbieter', 'المزوّدون'],
   'Operator log': ['Registro de operadores', 'Journal des opérateurs', 'Betreiberprotokoll', 'سجل المشغّلين'],
+  'Operators': ['Operadores', 'Opérateurs', 'Operatoren', 'المشغلون'],
+  'Roles & permissions': ['Roles y permisos', 'Rôles et autorisations', 'Rollen und Berechtigungen', 'الأدوار والصلاحيات'],
+  Security: ['Seguridad', 'Sécurité', 'Sicherheit', 'الأمان'],
+  'Account & security': ['Cuenta y seguridad', 'Compte et sécurité', 'Konto und Sicherheit', 'الحساب والأمان'],
+  'Activity & audit log': ['Actividad y registro de auditoría', 'Activité et journal d’audit', 'Aktivität und Prüfprotokoll', 'النشاط وسجل التدقيق'],
   // Help center feature guide
   'Feature guide': ['Guía de funciones', 'Guide des fonctions', 'Funktionsleitfaden', 'دليل الميزات'],
   'What every page and section is for, how to use it and when it helps. The same help opens from the i button next to each title.': [
@@ -167,6 +172,7 @@ export const help = {
   'Contact by': ['Contactar por', 'Contact par', 'Kontakt per', 'التواصل عبر'],
   'In the app': ['En la aplicación', 'Dans l’application', 'In der App', 'داخل التطبيق'],
   'App version': ['Versión de la aplicación', 'Version de l’application', 'App-Version', 'إصدار التطبيق'],
+  'Workspace rules': ['Reglas de espacios de trabajo', 'Règles des espaces de travail', 'Regeln für Arbeitsbereiche', 'قواعد مساحات العمل'],
   'Mobile app': ['Aplicación móvil', 'Application mobile', 'Mobile App', 'تطبيق الجوال'],
   Web: ['Web', 'Web', 'Web', 'الويب'],
   'What kind of problem is it? (optional)': ['¿Qué tipo de problema es? (opcional)', 'De quel type de problème s’agit-il ? (facultatif)', 'Um welche Art von Problem geht es? (optional)', 'ما نوع المشكلة؟ (اختياري)'],

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import { type PipelineInput, pipelineInputSchema, type PipelineRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,6 +70,7 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
     onError: (e) => setError(e.message),
   });
   const makeDefault = useMutation({ mutationFn: () => api(`/pipelines/${pipeline!.id}/default`, { method: 'POST' }), onSuccess: invalidate, onError: (e) => setError(e.message) });
+  const mayDelete = useCanDelete('sales_pipeline');
   const remove = useMutation({ mutationFn: () => api(`/pipelines/${pipeline!.id}`, { method: 'DELETE' }), onSuccess: invalidate, onError: (e) => setError(e.message) });
 
   const setStage = (i: number, patch: Partial<DraftStage>) => {
@@ -111,9 +113,11 @@ function PipelineEditor({ pipeline, canManage, onDone }: { pipeline?: PipelineRo
               <Button type="button" variant="ghost" size="sm" onClick={() => makeDefault.mutate()}>
                 <Star aria-hidden /> {t('Make default')}
               </Button>
-              <Button type="button" variant="ghost" size="sm" aria-label={t('Delete {name}', { name: pipeline.name })} onClick={() => remove.mutate()} disabled={pipeline.dealCount > 0} title={pipeline.dealCount > 0 ? t('Move or delete its deals first') : undefined}>
-                <Trash2 aria-hidden />
-              </Button>
+              {mayDelete && (
+                <Button type="button" variant="ghost" size="sm" aria-label={t('Delete {name}', { name: pipeline.name })} onClick={() => remove.mutate()} disabled={pipeline.dealCount > 0} title={pipeline.dealCount > 0 ? t('Move or delete its deals first') : undefined}>
+                  <Trash2 aria-hidden />
+                </Button>
+              )}
             </div>
           )}
         </CardHeader>

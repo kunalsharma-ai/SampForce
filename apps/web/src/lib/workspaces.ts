@@ -1,6 +1,6 @@
 'use client';
 
-import type { CreateWorkspaceInput, UpdateWorkspaceInput, WorkspacePermissionsInput, WorkspaceRow, WorkspaceTree } from '@dealflow/types';
+import { type CreateWorkspaceInput, PASSWORD_CONFIRMATION_HEADER, type UpdateWorkspaceInput, type WorkspaceDeleted, type WorkspaceImpact, type WorkspacePermissionsInput, type WorkspaceRow, type WorkspaceTree } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 
@@ -36,9 +36,25 @@ export function useWorkspaceMutations() {
       mutationFn: ({ id, userId }: { id: string; userId: string }) => api<WorkspaceRow>(`/workspaces/${id}/members`, { method: 'POST', json: { userId } }),
       onSuccess: refresh,
     }),
-    archive: useMutation({
-      mutationFn: (id: string) => api(`/workspaces/${id}`, { method: 'DELETE' }),
+    /** Deactivating asks for the password: the caller passes the one-time pass from the dialog. */
+    deactivate: useMutation({
+      mutationFn: ({ id, reason, pass }: { id: string; reason: string; pass: string }) =>
+        api<WorkspaceRow>(`/workspaces/${id}/deactivate`, { method: 'POST', json: { reason }, headers: { [PASSWORD_CONFIRMATION_HEADER]: pass } }),
+      onSuccess: refresh,
+    }),
+    reactivate: useMutation({
+      mutationFn: (id: string) => api<WorkspaceRow>(`/workspaces/${id}/reactivate`, { method: 'POST' }),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({
+      mutationFn: ({ id, confirmName, handoverToId, pass }: { id: string; confirmName: string; handoverToId: string | null; pass: string }) =>
+        api<WorkspaceDeleted>(`/workspaces/${id}`, { method: 'DELETE', json: { confirmName, handoverToId }, headers: { [PASSWORD_CONFIRMATION_HEADER]: pass } }),
       onSuccess: refresh,
     }),
   };
+}
+
+/** What deleting a workspace would touch (W4), loaded when the delete dialog opens. */
+export function useWorkspaceImpact(id: string | null) {
+  return useQuery({ enabled: !!id, queryKey: ['workspaces', 'impact', id], queryFn: () => api<WorkspaceImpact>(`/workspaces/${id}/impact`), staleTime: 0 });
 }

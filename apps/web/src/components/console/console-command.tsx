@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { fuzzyFilter } from '@/lib/fuzzy';
-import { CONSOLE_PAGES } from './console-nav';
+import { consolePagesFor } from './console-nav';
 
 const ITEM =
   'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm aria-selected:bg-primary/10 aria-selected:text-foreground';
@@ -51,10 +51,12 @@ export function ConsoleCommand({
   onOpenChange,
   dark,
   sound,
+  permissions,
   onPreferences,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  permissions: readonly string[];
   dark: boolean;
   sound: boolean;
   onPreferences: (p: ConsolePreferencesUpdate) => void;
@@ -87,7 +89,7 @@ export function ConsoleCommand({
   };
 
   const q = query.trim();
-  const pages = fuzzyFilter(CONSOLE_PAGES, q, (p) => `${p.label} ${p.group}`);
+  const pages = fuzzyFilter(consolePagesFor(permissions), q, (p) => `${p.label} ${p.group}`);
   const actions = [
     {
       id: 'mode',

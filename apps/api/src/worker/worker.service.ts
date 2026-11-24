@@ -20,6 +20,10 @@ import { WebhookDeliverer } from '../webhooks/delivery.service';
 import { workerItems, workerLastTick, workerTicks } from '../observability/metrics';
 import { errorMessage } from './queue';
 import { MobilePushService } from '../mobile/push/mobile-push.service';
+import { CompanyClosureService } from '../tenants/company-closure.service';
+import { ConsoleNotificationSweep } from '../operator/console-notifications.service';
+import { ConsoleHealthService } from '../operator/console-health.service';
+import { ConsoleOverviewService } from '../operator/console-overview.service';
 
 export interface WorkerTick {
   events: number;
@@ -45,6 +49,12 @@ export interface WorkerTick {
   logos: number;
   /** Phone notifications sent through Expo (ADR 0072, M8). */
   pushes: number;
+  /** Closed companies whose 30 days passed, erased (workspace redesign W7). */
+  erasures: number;
+  /** Console notifications delivered to operators (ADR 0074, C3b). */
+  consoleNotifications: number;
+  /** Clients whose health score was measured (ADR 0074, C5): each once a day, and again after the weights change. */
+  clientHealth: number;
 }
 
 /**
@@ -79,6 +89,10 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
     private readonly pushes: MobilePushService,
+    private readonly closures: CompanyClosureService,
+    private readonly consoleNotices: ConsoleNotificationSweep,
+    private readonly clientHealth: ConsoleHealthService,
+    private readonly overview: ConsoleOverviewService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -117,6 +131,8 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
   }
 
   /** One pass over every queue. Relays first so new events start their workflows in the same tick. */
+  private lastConsoleSweep = 0;
+
   async tick(): Promise<WorkerTick> {
     const events = await this.relay.relayBatch();
     const executions = await this.executor.runDue();
@@ -136,7 +152,19 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const logos = await this.logos.runDue();
     // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
     const pushes = await this.pushes.sendDue();
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes };
+    const erasures = await this.closures.eraseDue();
+    // Console notifications once a minute: they read across every client, so not on every tick.
+    // Client health scores (ADR 0074, C5) on the same once-a-minute pace: each client is measured once a day.
+    let consoleNotifications = 0;
+    let clientHealth = 0;
+    if (Date.now() - this.lastConsoleSweep >= this.env.CONSOLE_NOTIFY_INTERVAL_MS) {
+      this.lastConsoleSweep = Date.now();
+      consoleNotifications = await this.consoleNotices.sweep();
+      clientHealth = await this.clientHealth.sweep();
+      // The Overview's KPI values for today (C5b), once a day.
+      await this.overview.snapshot();
+    }
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures, consoleNotifications, clientHealth };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */

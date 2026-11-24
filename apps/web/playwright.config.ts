@@ -143,6 +143,8 @@ export default defineConfig({
         // The worker runs inside the API for e2e so workflows, webhooks and notifications progress.
         RUN_WORKER_IN_PROCESS: 'true',
         WORKER_POLL_MS: '500',
+        CONSOLE_NOTIFY_INTERVAL_MS: '2000',
+        CONSOLE_OVERVIEW_CACHE_MS: '1000',
         ALLOW_PRIVATE_NETWORK_TARGETS: 'true',
         // Not a real key: requests go to the fixture above, never to Anthropic.
         ANTHROPIC_API_KEY: 'test-key-not-real',

@@ -50,6 +50,17 @@ model Plan {
   @@map("plans")
 }
 
+/// Console rules for the workspaces of every client on a plan (workspace redesign W3). Shape: WorkspaceRules in
+/// @dealflow/types. No row = no extra limits.
+model PlanWorkspaceRules {
+  planCode  String   @id @map("_id")
+  rules     Json
+  updatedBy String   @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plan_workspace_rules")
+}
+
 enum UserStatus {
   ACTIVE
   DISABLED
@@ -59,6 +70,8 @@ model User {
   id               String     @id @default(uuid()) @map("_id")
   email            String     @unique
   name             String
+  /// Work phone (W5), from the workspace invitation or the profile.
+  phone            String?
   passwordHash     String     @map("password_hash")
   status           UserStatus @default(ACTIVE)
   emailVerifiedAt  DateTime?  @map("email_verified_at")
@@ -93,6 +106,37 @@ model User {
 
 /// A person's profile photo (ADR 0072, M6). One per person, shown in every organisation they belong to (where the
 /// organisation shows photos). Kept apart from the user so lists never load image bytes.
+/// A client organisation's logo, set in the Console (ADR 0074, C4). Keyed by the client, not by `tenantId`, because
+/// it is platform data about the client rather than a record inside its workspace.
+model ClientLogo {
+  clientId    String   @id @map("_id")
+  contentType String   @map("content_type")
+  data        Bytes
+  sizeBytes   Int      @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("client_logos")
+}
+
+/// An operator's change to the city list behind the location pickers (ADR 0074, C4): a city the shipped data lacks
+/// (originalName null) or a new name for one it has. Applied over apps/api/assets/geo on every look-up.
+model GeoCityEdit {
+  id           String   @id @default(uuid()) @map("_id")
+  countryCode  String   @map("country_code")
+  /// The region (state or province) code from the shipped data; null when the city has none.
+  regionCode   String?  @map("region_code")
+  name         String
+  /// The shipped name this renames; null for a city an operator added.
+  originalName String?  @map("original_name")
+  operatorId   String   @map("operator_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([countryCode])
+  @@map("geo_city_edits")
+}
+
 model UserPhoto {
   userId      String   @id @map("_id")
   contentType String   @map("content_type")
@@ -361,9 +405,38 @@ model Tenant {
   leadNumberDigits      Int               @default(2) @map("lead_number_digits")
   /// Revenue attribution rule (ADR 0063, attributionRuleSchema in @dealflow/types); null = the whole deal to its closer.
   revenueAttribution    Json?             @map("revenue_attribution")
+  /// Company details the Console keeps for the client (ADR 0074, C4). Country is ISO 3166-1 alpha-2; region is the
+  /// GeoNames first-level code (a state or province) and city its name.
+  legalName             String?           @map("legal_name")
+  website               String?
+  industry              String?
+  countryCode           String?           @map("country_code")
+  regionCode            String?           @map("region_code")
+  city                  String?
+  addressLine1          String?           @map("address_line1")
+  addressLine2          String?           @map("address_line2")
+  postalCode            String?           @map("postal_code")
+  contactName           String?           @map("contact_name")
+  contactEmail          String?           @map("contact_email")
+  contactPhone          String?           @map("contact_phone")
+  /// The client's readable number, shown as SF-000123; given once, in order, from the counter "client.customer".
+  customerNumber        Int?              @map("customer_number")
+  /// The latest health score (ADR 0074, C5): 0-100, its band (HEALTHY, AT_RISK, CRITICAL) and when the worker
+  /// measured it. The signals behind it are in client_health_daily.
+  healthScore           Int?              @map("health_score")
+  healthBand            String?           @map("health_band")
+  healthAt              DateTime?         @map("health_at")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
+  /// Closing the company (workspace redesign W7): who closed it and when. The status is PENDING_DELETION from then
+  /// on, so nobody can sign in; the Console can reopen it until eraseAfter, when the worker erases its data.
+  closedAt              DateTime?         @map("closed_at")
+  closedById            String?           @map("closed_by_id")
+  closeReason           String?           @map("close_reason")
+  eraseAfter            DateTime?         @map("erase_after")
+  /// Set once the worker has erased the company's data; the row stays (deletedAt set) as the record that it existed.
+  erasedAt              DateTime?         @map("erased_at")
 
   subscription           Subscription?
   navigation             WorkspaceNavigation[]
@@ -498,6 +571,9 @@ model Tenant {
   chatSignals            ChatSignal[]
   chatPresence           ChatPresence[]
 
+  @@index([createdAt])
+  @@index([customerNumber])
+  @@index([healthBand])
   @@map("tenants")
 }
 
@@ -546,6 +622,9 @@ model Subscription {
   /// Workspace limits (ADR 0071) set by the Console Admin for this client; null = the plan's limit.
   maxManagerWorkspaces   Int?               @map("max_manager_workspaces")
   maxExecutiveWorkspaces Int?               @map("max_executive_workspaces")
+  /// Console rules for this client's workspaces (workspace redesign W3): only what differs from its plan's rules.
+  /// Shape: WorkspaceRulesOverride in @dealflow/types; null = the plan's rules.
+  workspaceRules         Json?              @map("workspace_rules")
   /// Sales-led terms the Console Admin agreed with this client (ADR 0071): price for one billing period in minor
   /// units, its currency, whether it has been paid, the term in months and whether it renews by itself.
   priceCents             Int?               @map("price_cents")
@@ -560,6 +639,7 @@ model Subscription {
   plan   Plan   @relation(fields: [planCode], references: [code], onUpdate: NoAction)
 
   @@index([provider, providerCustomerId])
+  @@index([pastDueSince])
   @@map("subscriptions")
 }
 
@@ -654,6 +734,17 @@ model WorkspaceNode {
   /// executive, the other executives of the same team). Both sides need it.
   canChatWithPeers     Boolean   @default(false) @map("can_chat_with_peers")
   createdById          String?   @map("created_by_id")
+  /// Wizard details (W5): the team or department, a short description, and for a Manager Workspace whose records it
+  /// sees: TEAM (its own and its executives'; null means TEAM) or OWN (only its own people's).
+  department           String?
+  description          String?
+  accessLevel          String?   @map("access_level")
+  /// Set while deactivated (W4): its people, and everyone in the workspaces below it, cannot work until it is
+  /// reactivated. Grants are kept, so reactivating restores things exactly.
+  deactivatedAt        DateTime? @map("deactivated_at")
+  deactivatedById      String?   @map("deactivated_by_id")
+  deactivationReason   String?   @map("deactivation_reason")
+  /// Set when deleted (W4): the node stays, renamed out of the way, so history and audit entries keep their name.
   archivedAt           DateTime? @map("archived_at")
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")
@@ -661,6 +752,7 @@ model WorkspaceNode {
   @@unique([tenantId, nameKey])
   @@index([tenantId, parentId])
   @@index([tenantId, level])
+  @@index([level, createdAt])
   @@map("workspace_nodes")
 }
 
@@ -1605,6 +1697,10 @@ model Invitation {
   invitedById     String    @map("invited_by_id")
   /// The workspace (ADR 0071) the person joins when they accept. Null = the Super Workspace.
   workspaceNodeId String?   @map("workspace_node_id")
+  /// The invitee's name and phone as the inviter typed them (W5): the name pre-fills the accept page, the phone is
+  /// copied to the account when it has none.
+  name            String?
+  phone           String?
   expiresAt       DateTime  @map("expires_at")
   acceptedAt      DateTime? @map("accepted_at")
   revokedAt       DateTime? @map("revoked_at")
@@ -2621,6 +2717,9 @@ model Invoice {
 
   @@unique([provider, providerInvoiceId])
   @@index([tenantId, issuedAt])
+  // The Console activity feed (ADR 0074, C3) reads invoices across clients by these times.
+  @@index([issuedAt])
+  @@index([paidAt])
   @@map("invoices")
 }
 
@@ -2671,9 +2770,19 @@ model PlatformOperator {
   email        String         @unique
   name         String
   passwordHash String         @map("password_hash")
+  /// Kept in step with consoleRole: ADMIN for Super Admins, SUPPORT for every other role (the CLI and last-admin guard use it).
   role         OperatorRole   @default(SUPPORT)
+  /// The Console role (ADR 0074): a built-in key (super_admin, finance, support, sales, operations, read_only) or an OperatorConsoleRole id. Null = from `role`.
+  consoleRole  String?        @map("console_role")
   status       OperatorStatus @default(ACTIVE)
   lastLoginAt  DateTime?      @map("last_login_at")
+  /// Two-step verification (ADR 0074): the TOTP secret sealed with SecretBox, when it was turned on, the last step used.
+  mfaSecretEnc     String?   @map("mfa_secret_enc")
+  mfaEnabledAt     DateTime? @map("mfa_enabled_at")
+  mfaLastStep      BigInt?   @map("mfa_last_step")
+  /// Failed sign-ins in a row; the fifth pauses sign-in until lockedUntil.
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
   /// Console palette, colour mode, sidebar and sound (ADR 0074, ConsolePreferences in @dealflow/types); null = defaults.
   preferences  Json?
   createdAt    DateTime       @default(now()) @map("created_at")
@@ -2681,7 +2790,84 @@ model PlatformOperator {
 
   auditLogs PlatformAuditLog[]
 
+  notifications     OperatorNotification[]
+  notificationPrefs OperatorNotificationPref[]
+
+  @@index([consoleRole])
   @@map("platform_operators")
+}
+
+/// One-time recovery codes for an operator's two-step verification; only hashes are kept.
+model OperatorRecoveryCode {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  codeHash   String    @map("code_hash")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([operatorId])
+  @@map("operator_recovery_codes")
+}
+
+/// A signed-in Console session (ADR 0074). The session cookie names it, so it can be listed, ended and timed out when idle.
+model OperatorSession {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  remember   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  @@index([operatorId, revokedAt])
+  @@map("operator_sessions")
+}
+
+/// Every Console sign-in attempt, kept for the login history and suspicious sign-in alerts.
+model OperatorLoginEvent {
+  id         String   @id @default(uuid()) @map("_id")
+  operatorId String?  @map("operator_id")
+  email      String
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  /// success, wrong_password, wrong_code, locked, disabled
+  outcome    String
+  suspicious Boolean  @default(false)
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([operatorId, createdAt])
+  @@index([createdAt])
+  @@index([suspicious, createdAt])
+  @@map("operator_login_events")
+}
+
+/// A custom Console role (ADR 0074): a name and any set of operator permissions. The six built-in roles live in code.
+model OperatorConsoleRole {
+  id          String   @id @default(uuid()) @map("_id")
+  name        String   @unique
+  description String   @default("")
+  permissions String[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("operator_console_roles")
+}
+
+/// One-time links to choose an operator password: an invitation (72 hours) or a reset (1 hour). Only a hash is kept.
+model OperatorPasswordToken {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  purpose    String
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([operatorId])
+  @@map("operator_password_tokens")
 }
 
 /// Append-only log of everything operators do. The application role may insert and read, never change.
@@ -2692,16 +2878,99 @@ model PlatformAuditLog {
   targetTenantId String?  @map("target_tenant_id")
   metadata       Json     @default("{}")
   ip             String?
+  /// What the entry is about (ADR 0074, C3): client, operator, role, plan, provider, setting, ticket, help_article...
+  targetType     String?  @map("target_type")
+  targetId       String?  @map("target_id")
+  /// The target's name when it was written, so the entry still reads well after a rename or delete.
+  targetLabel    String?  @map("target_label")
+  /// The changed fields before and after, with secrets removed (platform-audit.ts redact()).
+  before         Json?
+  after          Json?
+  /// The Console session the change came from, and its browser.
+  sessionId      String?  @map("session_id")
+  userAgent      String?  @map("user_agent")
   createdAt      DateTime @default(now()) @map("created_at")
 
   operator PlatformOperator? @relation(fields: [operatorId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([targetTenantId, createdAt])
   @@index([createdAt])
+  @@index([operatorId, createdAt])
+  @@index([targetType, targetId, createdAt])
   @@map("platform_audit_logs")
 }
 
+/// A Console notification for one operator (ADR 0074, C3b), written by the worker's notification sweep.
+model OperatorNotification {
+  id         String    @id @default(uuid()) @map("_id")
+  operatorId String    @map("operator_id")
+  type       String
+  title      String
+  body       String?
+  link       String?
+  /// The client it is about. Named like platform_audit_logs so the workspace guard does not treat the row as a workspace's.
+  targetTenantId String? @map("target_tenant_id")
+  /// One notification per operator per event: the sweep may see an event twice.
+  dedupeKey  String    @map("dedupe_key")
+  /// False when the operator chose email only: the row only keeps the event from being sent twice.
+  inApp      Boolean   @default(true) @map("in_app")
+  emailedAt  DateTime? @map("emailed_at")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([operatorId, dedupeKey])
+  @@index([operatorId, inApp, createdAt])
+  @@index([operatorId, inApp, readAt])
+  @@map("operator_notifications")
+}
+
+/// How one operator wants one type of Console notification: in the Console, by email, both or neither.
+model OperatorNotificationPref {
+  id         String  @id @default(uuid()) @map("_id")
+  operatorId String  @map("operator_id")
+  type       String
+  inApp      Boolean @map("in_app")
+  email      Boolean
+
+  operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([operatorId, type])
+  @@map("operator_notification_prefs")
+}
+
 /// Deployment-wide settings that platform admins edit in the operator console (not per workspace).
+/// A client's health score for one day (ADR 0074, C5), with every signal's points and the figure behind it
+/// (ClientHealthSignal[] in @dealflow/types). Written by the worker once a day per client; advisory only.
+model ClientHealthDaily {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  /// UTC day, YYYY-MM-DD.
+  day       String
+  score     Int
+  band      String
+  signals   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, day])
+  @@index([day])
+  @@map("client_health_daily")
+}
+
+/// The Console Overview's figures for one UTC day (ADR 0074, C5b): every KPI value (ConsoleKpiKey -> number), so the
+/// cards can show the change against 30 days ago and a 30-day line. Written once a day by the worker.
+model PlatformMetricDaily {
+  /// YYYY-MM-DD.
+  day       String   @id @map("_id")
+  metrics   Json
+  currency  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("platform_metrics_daily")
+}
+
 model PlatformSetting {
   key         String   @id @map("_id")
   value       String
@@ -4612,6 +4881,8 @@ model SupportTicket {
   @@index([tenantId, raisedByUserId, lastMessageAt(sort: Desc)])
   @@index([status, lastMessageAt(sort: Desc)])
   @@index([tenantId, handlerLevel, handlerNodeId, lastMessageAt(sort: Desc)])
+  @@index([handlerLevel, createdAt])
+  @@index([handlerLevel, escalatedAt])
   @@map("support_tickets")
 }
 

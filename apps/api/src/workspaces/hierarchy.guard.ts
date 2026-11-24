@@ -10,6 +10,7 @@ import {
   REQUIRED_FEATURE,
   REQUIRED_PERMISSIONS,
 } from '../common/auth-context';
+import { CONFIRMS_PASSWORD, type ConfirmPasswordRule } from '../common/password-confirmation/password-confirmation.decorator';
 import { PrismaService } from '../common/prisma.service';
 import { resolveWorkspaceAccess } from './access';
 import { actionFor, PERMISSION_FEATURE, RESOURCE_FEATURE, routeFeatures } from './route-access';
@@ -58,6 +59,10 @@ export class HierarchyGuard implements CanActivate {
       if (f) checks.push({ feature: f, action: declared ?? actionFor(p, req.method) });
     }
     for (const f of explicit ? [explicit, ...also] : also) checks.push({ feature: f, action: declared ?? actionFor(permissions[0] ?? null, req.method) });
+    // Anything that asks for the password destroys data, so it also needs the workspace's Delete action (W2), whatever
+    // the route's HTTP method or permission says (a bulk delete is a POST, a configuration delete asks for manage).
+    const confirm = this.reflector.getAllAndOverride<ConfirmPasswordRule | undefined>(CONFIRMS_PASSWORD, targets);
+    if (confirm && confirm.deletes !== false && (!confirm.when || confirm.when(req))) for (const f of features) checks.push({ feature: f, action: 'delete' });
     const refused = checks.find((c) => !actionAllowed(access.actions, c.feature, c.action));
     if (refused) {
       throw new ForbiddenException({

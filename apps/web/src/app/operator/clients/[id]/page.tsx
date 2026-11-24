@@ -15,6 +15,8 @@ import {
   type ActionGrants,
   type ClientState,
   type ConsoleClientCreated,
+  CONSOLE_ACTIVITY_CATEGORIES,
+  CONSOLE_ACTIVITY_PERMISSION,
   type ConsoleClientDetail,
   type ConsolePlanRow,
   type ConsoleWorkspaceRow,
@@ -34,6 +36,9 @@ import { Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { ActivityFeed } from '@/components/console/activity-feed';
+import { ClientHealthCard, HealthPill } from '@/components/console/client-health';
+import { ClientLogo, CompanyCard, placeLine } from '@/components/console/client-profile';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
@@ -49,9 +54,10 @@ import {
   toLimit,
   UsageMeter,
 } from '../../console-ui';
-import { useOperator } from '../../operator-shell';
+import { can, useOperator } from '../../operator-shell';
+import { ClientWorkspaceRulesCard } from '../../workspace-rules/rules-editor';
 
-type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | null;
+type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | 'reopen' | null;
 
 /** One client organisation in the Console (ADR 0071): its subscription, limits, authority, workspaces and history. */
 export default function ConsoleClientPage() {
@@ -68,7 +74,11 @@ export default function ConsoleClientPage() {
   if (client.error) return <ErrorText error={client.error} />;
   const c = client.data;
   const s = c.subscription;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'clients.edit');
+  const canSubscription = can(me.data, 'subscriptions.manage');
+  const canState = can(me.data, 'clients.status');
+  const canInvite = can(me.data, 'users.manage');
+  const canHelp = can(me.data, 'settings.manage');
   const changeState = (to: ClientState) => {
     setNextState(to);
     setOpen('state');
@@ -82,17 +92,35 @@ export default function ConsoleClientPage() {
       >
         ← Clients
       </Link>
+      <div className="flex items-start gap-4">
+      <ClientLogo client={c} canEdit={admin} />
+      <div className="min-w-0 flex-1">
       <PageHeader
         title={c.name}
-        description={`Client since ${formatDate(c.createdAt)} · ${c.people} ${c.people === 1 ? 'person' : 'people'}`}
+        description={[
+          c.customerId,
+          `Client since ${formatDate(c.createdAt)}`,
+          `${c.people} ${c.people === 1 ? 'person' : 'people'}`,
+          placeLine(c.profile.countryCode, null, c.profile.city),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <StateBadge state={c.state} />
-            {admin && (
+            {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
+            <HealthPill health={c.health} size="md" />
+            {canState && c.closure && (
+              <Button size="sm" onClick={() => setOpen('reopen')}>
+                Reopen company
+              </Button>
+            )}
+            {canSubscription && !c.closure && (
+              <Button variant="outline" size="sm" onClick={() => setOpen('renew')}>
+                Renew or upgrade
+              </Button>
+            )}
+            {canState && !c.closure && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setOpen('renew')}>
-                  Renew or upgrade
-                </Button>
                 {c.state === 'ACTIVE' ? (
                   <>
                     <Button variant="outline" size="sm" onClick={() => changeState('SUSPENDED')}>
@@ -122,6 +150,20 @@ export default function ConsoleClientPage() {
           </div>
         }
       />
+      </div>
+      </div>
+
+      {c.closure && (
+        <div role="note" className="rounded-lg border border-critical/40 bg-critical/5 p-4 text-sm" data-client-closing>
+          <p className="font-medium">
+            Closed by its owner on {formatDate(c.closure.closedAt)}
+            {c.closure.closedBy ? ` (${c.closure.closedBy})` : ''}. Its data is erased on {formatDate(c.closure.eraseAfter)}.
+          </p>
+          <p className="text-muted-foreground">
+            {c.closure.reason ? `Reason given: ${c.closure.reason}. ` : ''}Nobody in the client can sign in. Reopening before that date restores everything.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-5 lg:col-span-2" aria-labelledby="sub-h">
@@ -129,7 +171,7 @@ export default function ConsoleClientPage() {
             <h2 id="sub-h" className="font-medium">
               Subscription
             </h2>
-            {admin && s && (
+            {canSubscription && s && (
               <Button size="sm" variant="outline" onClick={() => setOpen('subscription')}>
                 Change subscription
               </Button>
@@ -183,6 +225,18 @@ export default function ConsoleClientPage() {
         </Card>
       </div>
 
+      <CompanyCard client={c} canEdit={admin} />
+
+      <ClientHealthCard clientId={c.id} />
+
+      <Card className="p-5" aria-labelledby="timeline-h" data-client-timeline>
+        <h2 id="timeline-h" className="font-medium">
+          Timeline
+        </h2>
+        <p className="mb-4 mt-1 text-sm text-muted-foreground">Everything that happened to this client, newest first: its own events and every Console change.</p>
+        <ActivityFeed categories={CONSOLE_ACTIVITY_CATEGORIES.filter((k) => can(me.data!, CONSOLE_ACTIVITY_PERMISSION[k] as never))} tenantId={c.id} pageSize={10} />
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5" aria-labelledby="ws-h">
           <h2 id="ws-h" className="font-medium">
@@ -216,7 +270,7 @@ export default function ConsoleClientPage() {
               {new Date(c.pendingAdministrator.expiresAt).toLocaleDateString(fmtLocale())}.
             </p>
           )}
-          {admin && (
+          {canInvite && (
             <Button size="sm" variant="outline" onClick={() => setOpen('invite')}>
               New invitation link
             </Button>
@@ -225,7 +279,8 @@ export default function ConsoleClientPage() {
       </div>
 
       <Authority client={c} admin={admin} />
-      <HelpAccess tenantId={c.id} admin={admin} />
+      <ClientWorkspaceRulesCard tenantId={c.id} admin={can(me.data, 'workspaces.manage')} />
+      <HelpAccess tenantId={c.id} admin={canHelp} />
       <History client={c} />
 
       {open === 'subscription' && s && (
@@ -234,6 +289,7 @@ export default function ConsoleClientPage() {
       {open === 'renew' && <RenewDialog client={c} onClose={() => setOpen(null)} />}
       {open === 'state' && <StateDialog client={c} to={nextState} onClose={() => setOpen(null)} />}
       {open === 'invite' && <InviteDialog client={c} onClose={() => setOpen(null)} />}
+      {open === 'reopen' && <ReopenDialog client={c} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -687,6 +743,38 @@ function StateDialog({
   );
 }
 
+/** Reopens a company its owner closed (workspace redesign W7): sign-in works again, with everything in it. */
+function ReopenDialog({ client, onClose }: { client: ConsoleClientDetail; onClose: () => void }) {
+  const [reason, setReason] = useState('');
+  const save = useSave(client.id, onClose);
+  const m = useMutation({
+    mutationFn: () => api<ConsoleClientDetail>(`/operator/clients/${client.id}/reopen`, { method: 'POST', json: { reason } }),
+    onSuccess: save,
+  });
+  return (
+    <Shell title="Reopen company" description={`Everyone in ${client.name} can sign in again, and nothing is erased. Possible until ${client.closure ? formatDate(client.closure.eraseAfter) : ''}.`} onClose={onClose}>
+      <form
+        className="mt-4 space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          m.mutate();
+        }}
+      >
+        <ReasonField id="reopen-reason" value={reason} onChange={setReason} />
+        <ErrorText error={m.error} />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={m.isPending}>
+            Reopen company
+          </Button>
+        </div>
+      </form>
+    </Shell>
+  );
+}
+
 function InviteDialog({ client, onClose }: { client: ConsoleClientDetail; onClose: () => void }) {
   const [email, setEmail] = useState(client.pendingAdministrator?.email ?? '');
   const qc = useQueryClient();
@@ -871,6 +959,10 @@ const ACTION_LABEL: Record<string, string> = {
   'tenant.features_overridden': 'Features overridden',
   'tenant.suspended': 'Suspended',
   'tenant.reactivated': 'Reactivated',
+  'client.reopened': 'Reopened',
+  'client.closed_by_owner': 'Closed by its owner',
+  'tenant.closed': 'Closed by its owner',
+  'tenant.reopened': 'Reopened',
   'tenant.offline_payment_recorded': 'Payment recorded',
 };
 

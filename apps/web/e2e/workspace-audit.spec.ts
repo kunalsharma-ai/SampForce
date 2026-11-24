@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, type Browser, expect, type Page, test } from '@playwright/test';
-import { E2E_DATABASE_URL, signUp } from './helpers';
+import { E2E_DATABASE_URL, signUp, workspaceAction } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for phase previews). */
@@ -105,7 +105,7 @@ test('the Super Workspace reads its audit log, lets a manager read the team’s,
   await manager.goto('/app/administration');
   await expect(manager.locator('[data-audit-refused]')).toContainText('has not let your workspace read the audit log');
   await page.goto('/app/settings/workspaces');
-  await page.getByRole('button', { name: 'Permissions North India Sales' }).click();
+  await workspaceAction(page, 'North India Sales', 'Permissions');
   const dialog = page.getByRole('dialog');
   await dialog.locator('[data-audit-setting]').getByLabel('May read its own team’s audit log').check();
   await dialog.getByRole('button', { name: 'Save permissions' }).click();
@@ -127,8 +127,8 @@ test('the Super Workspace reads its audit log, lets a manager read the team’s,
 
   // ── The Console Admin reads the platform log for this client ──
   await ops.getByRole('link', { name: 'Audit log' }).click();
-  await expect(ops.getByRole('heading', { level: 1, name: 'Platform audit log' })).toBeVisible();
-  await ops.getByLabel('Client').selectOption({ label: org });
+  await expect(ops.getByRole('heading', { level: 1, name: 'Activity & audit log' })).toBeVisible();
+  await ops.getByLabel('Client', { exact: true }).selectOption({ label: org });
   const entry = ops.locator('[data-platform-entry="client.subscription_changed"]').first();
   await expect(entry.locator('[data-platform-client]')).toHaveText(org);
   await expect(entry).toContainText('Manager Workspaces');

@@ -35,6 +35,19 @@ export const passwordResetSchema = z.object({
 });
 export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
 
+/** Changing the password while signed in: the current one, then the new one (W6). */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password').max(200),
+    newPassword: passwordSchema,
+  })
+  .refine((v) => v.currentPassword !== v.newPassword, { path: ['newPassword'], message: 'Choose a password you have not used here' });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+/** How many other devices were signed out. */
+export interface PasswordChanged {
+  signedOut: number;
+}
+
 export const switchTenantSchema = z.object({ tenantId: z.string().uuid() });
 export type SwitchTenantInput = z.infer<typeof switchTenantSchema>;
 
@@ -81,7 +94,7 @@ export interface MeResponse {
   authMethod: 'password' | 'mfa' | 'sso';
   mfaEnabled: boolean;
   /** The workspace's policy is not met yet: only setup screens work until it is. */
-  restriction?: 'mfa_enrolment' | 'sso_required';
+  restriction?: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated';
 }
 
 /*

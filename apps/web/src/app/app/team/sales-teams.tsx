@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import type { MemberRow, TeamInput, TeamRow } from '@dealflow/types';
 import { useQuery } from '@tanstack/react-query';
@@ -60,6 +61,7 @@ function TeamDialog({ team, onClose }: { team: TeamRow | null; onClose: () => vo
   const members = useQuery({ queryKey: ['members'], queryFn: () => api<MemberRow[]>('/tenants/current/members') });
   const [form, setForm] = useState<TeamInput>({ name: team?.name ?? '', description: team?.description ?? null, memberUserIds: team?.members.map((m) => m.id) ?? [] });
   const save = useGamificationMutation((b: TeamInput) => (team ? gamificationApi.updateTeam(team.id, b) : gamificationApi.createTeam(b)), onClose);
+  const mayDelete = useCanDelete('user_management');
   const remove = useGamificationMutation(() => gamificationApi.removeTeam(team!.id), onClose);
   const [confirm, setConfirm] = useState(false);
   const active = (members.data ?? []).filter((m) => m.status === 'ACTIVE');
@@ -104,7 +106,7 @@ function TeamDialog({ team, onClose }: { team: TeamRow | null; onClose: () => vo
           </fieldset>
           {(save.error || remove.error) && <p role="alert" className="text-sm text-critical">{(save.error ?? remove.error)!.message}</p>}
           <div className="flex flex-wrap justify-between gap-2">
-            {team ? (
+            {team && mayDelete ? (
               confirm ? (
                 <Button type="button" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>{t('Confirm delete')}</Button>
               ) : (

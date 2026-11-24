@@ -14,7 +14,7 @@ import type { Request, Response } from 'express';
 import type { z } from 'zod';
 import { Auth, type AuthContext, Meta, MobileAccess, Public, type RequestMeta } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard } from '../operator/operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorPermission } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { SupportService } from './support.service';
 
@@ -87,6 +87,7 @@ export class SupportAttachmentsController {
 @Controller('operator/support/tickets')
 @Public()
 @UseGuards(OperatorGuard)
+@OperatorPermission('support.handle')
 export class OperatorSupportController {
   constructor(private readonly support: SupportService) {}
 
@@ -125,7 +126,7 @@ export class OperatorSupportController {
 
   @Post(':id/attachments')
   async upload(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Query('name') name: string | undefined, @Req() req: Request) {
-    return this.support.operatorUpload(op, id, fileFrom(req, name, await readUpload(req)));
+    return this.support.operatorUpload(op, id, fileFrom(req, name, await readUpload(req)), req.ip ?? null);
   }
 
   @Get(':id/attachments/:fileId/download')

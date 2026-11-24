@@ -5,7 +5,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { Auth, type AuthContext, MobileAccess, Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
-import { Operator, type OperatorContext, OperatorGuard, OperatorRoles } from '../operator/operator-auth';
+import { Operator, type OperatorContext, OperatorGuard, OperatorPermission, OperatorAny } from '../operator/operator-auth';
 import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { HelpContentService } from './help-content.service';
 
@@ -72,119 +72,128 @@ export class OperatorHelpController {
 
   /** The Console's own Help page: published articles for the console audience. */
   @Get('content')
+  @OperatorAny()
   consoleContent() {
     return this.content.consoleContent();
   }
 
   @Get('articles')
+  @OperatorAny()
   list(@Query(new ZodPipe(helpArticleListQuerySchema)) q: z.output<typeof helpArticleListQuerySchema>) {
     return this.content.list(q);
   }
 
   @Get('articles/:id')
+  @OperatorAny()
   get(@Param('id', uuid) id: string) {
     return this.content.get(id);
   }
 
   @Post('articles')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('settings.manage')
   create(@Operator() op: OperatorContext, @Body(new ZodPipe(helpArticleInputSchema)) body: z.output<typeof helpArticleInputSchema>, @Req() req: Request) {
     return this.content.create(op, body, req.ip ?? null);
   }
 
   @Put('articles/:id')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('settings.manage')
   update(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(helpArticleInputSchema)) body: z.output<typeof helpArticleInputSchema>, @Req() req: Request) {
     return this.content.update(op, id, body, req.ip ?? null);
   }
 
   @Post('articles/:id/publish')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   publish(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Req() req: Request) {
     return this.content.setStatus(op, id, 'PUBLISHED', req.ip ?? null);
   }
 
   @Post('articles/:id/unpublish')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   unpublish(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Req() req: Request) {
     return this.content.setStatus(op, id, 'DRAFT', req.ip ?? null);
   }
 
   @Post('articles/:id/archive')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   archive(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Req() req: Request) {
     return this.content.setStatus(op, id, 'ARCHIVED', req.ip ?? null);
   }
 
   @Post('articles/:id/versions/:version/restore')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   restore(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Param('version', ParseIntPipe) version: number, @Req() req: Request) {
     return this.content.restore(op, id, version, req.ip ?? null);
   }
 
   @Get('categories')
+  @OperatorAny()
   categories() {
     return this.content.categories();
   }
 
   @Put('categories')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('settings.manage')
   saveCategory(@Operator() op: OperatorContext, @Body(new ZodPipe(helpCategoryInputSchema)) body: z.output<typeof helpCategoryInputSchema>, @Req() req: Request) {
     return this.content.saveCategory(op, body, req.ip ?? null);
   }
 
   @Post('categories/:id/archive')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   archiveCategory(@Operator() op: OperatorContext, @Param('id', new ZodPipe(categoryId)) id: string, @Req() req: Request) {
     return this.content.archiveCategory(op, id, true, req.ip ?? null);
   }
 
   @Post('categories/:id/restore')
+  @OperatorPermission('settings.manage')
   @HttpCode(200)
-  @OperatorRoles('ADMIN')
   restoreCategory(@Operator() op: OperatorContext, @Param('id', new ZodPipe(categoryId)) id: string, @Req() req: Request) {
     return this.content.archiveCategory(op, id, false, req.ip ?? null);
   }
 
   @Get('media')
+  @OperatorAny()
   mediaList() {
     return this.content.mediaList();
   }
 
   @Post('media')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('settings.manage')
   async upload(@Operator() op: OperatorContext, @Query('name') name: string | undefined, @Req() req: Request) {
     return this.content.upload(op, fileFrom(req, name, await readUpload(req)), req.ip ?? null);
   }
 
   @Get('media/:id')
+  @OperatorAny()
   async media(@Param('id', uuid) id: string, @Res() res: Response): Promise<void> {
     sendMedia(res, await this.content.media(id));
   }
 
   /** Whether a client gets the Help Center's answers and guides. Support stays reachable either way. */
   @Get('clients/:tenantId/settings')
+  @OperatorPermission('clients.view')
   clientSettings(@Param('tenantId', uuid) tenantId: string) {
     return this.content.clientSettings(tenantId);
   }
 
   @Put('clients/:tenantId/settings')
-  @OperatorRoles('ADMIN')
+  @OperatorPermission('settings.manage')
   setClientSettings(@Operator() op: OperatorContext, @Param('tenantId', uuid) tenantId: string, @Body(new ZodPipe(operatorHelpSettingsSchema)) body: z.output<typeof operatorHelpSettingsSchema>, @Req() req: Request) {
     return this.content.setClientHelp(op, tenantId, body.helpEnabled, req.ip ?? null);
   }
 
   @Get('feedback')
+  @OperatorPermission('support.handle')
   feedback(@Query(new ZodPipe(feedbackQuerySchema)) q: z.output<typeof feedbackQuerySchema>) {
     return this.content.feedbackList(q);
   }
 
   @Post('feedback/:id/review')
+  @OperatorPermission('support.handle')
   @HttpCode(200)
   review(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Req() req: Request) {
     return this.content.reviewFeedback(op, id, req.ip ?? null);

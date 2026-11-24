@@ -1,7 +1,7 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type TenantTx } from '@dealflow/database';
-import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, type PlatformAuditQuery, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
-import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, PlatformAuditRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
+import { FEATURE_CATALOG_VERSION, FEATURE_KEYS, type FeatureKey, normaliseFeatures, type OperatorFeatureOverridesInput, type OperatorPlanDefinitionInput, type OperatorPlanRow, type OperatorWorkspaceFeatures, PLAN_CATALOG, PLAN_ENTITLEMENTS, type PlanCode } from '@dealflow/types';
+import type { DeploymentSettingRow, OperatorOpenInvoice, OperatorPaymentInput, OperatorPlanInput, OperatorProviderRow, OperatorSettings, OperatorTenantDetail, OperatorTenantRow, ProviderCheckKey, ProviderKey, ProviderKeysUpdateInput, ProviderWebhookStatus } from '@dealflow/types';
 import { AI_HEALTH_PREFIX, AI_PROVIDER_DEFS, type AiProviderKey, isAiProviderKey, providerOrder, readHealth } from '../ai/ai-providers';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../auth/password.service';
@@ -20,6 +20,7 @@ import { ConnectionTests } from './connection-tests';
 import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue';
 import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
 import type { OperatorContext } from './operator-auth';
+import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 type ScanTx = Prisma.TransactionClient;
 
@@ -43,18 +44,6 @@ export class OperatorService {
     private readonly keys: ProviderKeysService,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
-
-  async login(email: string, password: string, ip: string | null): Promise<OperatorContext> {
-    const op = await this.prisma.platformOperator.findUnique({ where: { email } });
-    const ok = await this.passwords.verify(op?.passwordHash ?? null, password);
-    if (!op || !ok || op.status !== 'ACTIVE') {
-      await this.log(null, 'operator.login_failed', null, { email }, ip);
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Email or password is incorrect.' });
-    }
-    await this.prisma.platformOperator.update({ where: { id: op.id }, data: { lastLoginAt: new Date() } });
-    await this.log(op.id, 'operator.login', null, {}, ip);
-    return { id: op.id, email: op.email, name: op.name, role: op.role };
-  }
 
   private scan<T>(fn: (tx: ScanTx) => Promise<T>): Promise<T> {
     return this.prisma.run({ operatorScan: true }, (tx) => fn(tx));
@@ -161,18 +150,20 @@ export class OperatorService {
     await this.prisma.plan.update({ where: { code }, data: { entitlements: next as unknown as Prisma.InputJsonValue } });
     const added = features.filter((f) => !before.features.includes(f));
     const removed = before.features.filter((f) => !features.includes(f));
+    const limitsBefore = { maxUsers: before.maxUsers, maxPipelines: before.maxPipelines, monthlyAiCredits: before.monthlyAiCredits, automationRunsPerMonth: before.automationRunsPerMonth };
     await this.log(op.id, 'plan.definition_changed', null, {
       plan: code, reason: input.reason, added, removed,
-      limits: { from: { maxUsers: before.maxUsers, maxPipelines: before.maxPipelines, monthlyAiCredits: before.monthlyAiCredits, automationRunsPerMonth: before.automationRunsPerMonth }, to: input.limits },
-    }, ip);
+      limits: { from: limitsBefore, to: input.limits },
+    }, ip, { before: { ...limitsBefore, features: before.features }, after: { ...input.limits, features } });
     return this.plans();
   }
 
   /** Grants (true) or withholds (false) features for one workspace; null hands the feature back to the plan. */
   async setFeatureOverrides(op: OperatorContext, id: string, input: OperatorFeatureOverridesInput, ip: string | null): Promise<OperatorTenantDetail> {
-    await this.prisma.run({ tenantId: id }, async (tx) => {
+    const previous = await this.prisma.run({ tenantId: id }, async (tx) => {
       const tenant = await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
       if (!tenant) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
+      const existing = await tx.tenantFeatureOverride.findMany({ where: { tenantId: id, feature: { in: Object.keys(input.overrides) } }, select: { feature: true, enabled: true } });
       const changes: { feature: string; enabled: boolean | null }[] = [];
       for (const [feature, enabled] of Object.entries(input.overrides) as [FeatureKey, boolean | null][]) {
         if (enabled === null) {
@@ -191,14 +182,15 @@ export class OperatorService {
         tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.features_overridden', entityType: 'tenant', entityId: id,
         metadata: { operator: op.email, reason: input.reason, changes },
       });
+      return Object.fromEntries(Object.keys(input.overrides).map((f) => [f, existing.find((e) => e.feature === f)?.enabled ?? null]));
     });
-    await this.log(op.id, 'tenant.features_overridden', id, { overrides: input.overrides, reason: input.reason }, ip);
+    await this.log(op.id, 'tenant.features_overridden', id, { overrides: input.overrides, reason: input.reason }, ip, { before: previous, after: input.overrides });
     return this.tenant(op, id, ip);
   }
 
   /** Manual plan changes for sales-led deals, credits and corrections. Recorded in both audit logs. */
   async setPlan(op: OperatorContext, id: string, input: OperatorPlanInput, ip: string | null) {
-    await this.prisma.run({ tenantId: id }, async (tx) => {
+    const was = await this.prisma.run({ tenantId: id }, async (tx) => {
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
       if (!before) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
       const now = new Date();
@@ -215,8 +207,9 @@ export class OperatorService {
         tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.plan_overridden', entityType: 'subscription', entityId: before.id,
         metadata: { operator: op.email, reason: input.reason, from: { planCode: before.planCode, seats: before.seats, status: before.status }, to: { planCode: input.planCode, seats: input.seats, status: input.status } },
       });
+      return { planCode: before.planCode, seats: before.seats, status: before.status };
     });
-    await this.log(op.id, 'tenant.plan_overridden', id, { ...input }, ip);
+    await this.log(op.id, 'tenant.plan_overridden', id, { ...input }, ip, { before: was, after: { planCode: input.planCode, seats: input.seats, status: input.status } });
     return this.tenant(op, id, ip);
   }
 
@@ -258,6 +251,7 @@ export class OperatorService {
 
   /** Bank details and other payment instructions for offline invoices. Empty removes the console value. */
   async setPaymentInstructions(op: OperatorContext, instructions: string, ip: string | null): Promise<OperatorSettings> {
+    const old = (await this.prisma.platformSetting.findUnique({ where: { key: PAYMENT_INSTRUCTIONS_KEY } }))?.value ?? null;
     if (instructions) {
       await this.prisma.platformSetting.upsert({
         where: { key: PAYMENT_INSTRUCTIONS_KEY },
@@ -268,45 +262,22 @@ export class OperatorService {
       await this.prisma.platformSetting.deleteMany({ where: { key: PAYMENT_INSTRUCTIONS_KEY } });
     }
     // The full text is kept in the log so a changed bank account can always be traced.
-    await this.log(op.id, 'settings.payment_instructions_updated', null, { instructions: instructions || null }, ip);
+    await this.log(op.id, 'settings.payment_instructions_updated', null, { instructions: instructions || null }, ip, { before: { instructions: old }, after: { instructions: instructions || null } });
     return this.settings();
   }
 
   async setSuspended(op: OperatorContext, id: string, suspended: boolean, reason: string, ip: string | null) {
+    let wasStatus: string | null = null;
     await this.prisma.run({ tenantId: id }, async (tx) => {
       const t = await tx.tenant.findUnique({ where: { id } });
       if (!t || t.deletedAt) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Workspace not found.' });
       if (t.status === 'PENDING_DELETION') throw new ForbiddenException({ code: 'PENDING_DELETION', message: 'This workspace is scheduled for deletion.' });
       await tx.tenant.update({ where: { id }, data: { status: suspended ? 'SUSPENDED' : 'ACTIVE' } });
+      wasStatus = t.status;
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: suspended ? 'tenant.suspended' : 'tenant.reactivated', entityType: 'tenant', entityId: id, metadata: { operator: op.email, reason } });
     });
-    await this.log(op.id, suspended ? 'tenant.suspended' : 'tenant.reactivated', id, { reason }, ip);
+    await this.log(op.id, suspended ? 'tenant.suspended' : 'tenant.reactivated', id, { reason }, ip, { before: { status: wasStatus }, after: { status: suspended ? 'SUSPENDED' : 'ACTIVE' } });
     return this.tenant(op, id, ip);
-  }
-
-  /** The platform log (ADR 0071, part 7): newest first, filtered by client, operator or action, a page at a time. */
-  async auditLog(q: PlatformAuditQuery): Promise<PlatformAuditRow[]> {
-    const rows = await this.prisma.platformAuditLog.findMany({
-      where: {
-        ...(q.tenantId ? { targetTenantId: q.tenantId } : {}),
-        ...(q.operatorId ? { operatorId: q.operatorId } : {}),
-        ...(q.action ? { action: { contains: q.action, mode: 'insensitive' as const } } : {}),
-        ...(q.before ? { createdAt: { lt: new Date(q.before) } } : {}),
-      },
-      include: { operator: { select: { id: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: q.limit,
-    });
-    const tenantIds = [...new Set(rows.map((r) => r.targetTenantId).filter((v): v is string => !!v))];
-    const tenants = tenantIds.length
-      ? await this.prisma.run({ operatorScan: true }, (tx) => tx.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } }))
-      : [];
-    const names = new Map(tenants.map((t) => [t.id, t.name]));
-    return rows.map((r) => ({
-      id: r.id, operator: r.operator, action: r.action, targetTenantId: r.targetTenantId,
-      client: r.targetTenantId ? { id: r.targetTenantId, name: names.get(r.targetTenantId) ?? null } : null,
-      metadata: r.metadata as Record<string, unknown>, createdAt: r.createdAt.toISOString(),
-    }));
   }
 
   // ───── Provider setup: keys entered here (stored in the database), and a no-cost connection test for each ─────
@@ -466,7 +437,7 @@ export class OperatorService {
     return (await this.providers()).find((r) => r.key === key)!;
   }
 
-  async log(operatorId: string | null, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId, metadata: metadata as Prisma.InputJsonValue, ip } });
+  async log(operatorId: string | null, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, tenantId: targetTenantId, metadata, ip, ...extra });
   }
 }

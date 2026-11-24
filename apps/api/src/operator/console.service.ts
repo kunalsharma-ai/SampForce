@@ -7,6 +7,7 @@ import {
   type ConsoleAuthorityInput,
   type ConsoleClientCreated,
   type ConsoleClientDetail,
+  type ConsoleClientProfile,
   type ConsoleClientRow,
   type ConsoleHistoryRow,
   type ConsoleOverview,
@@ -18,6 +19,7 @@ import {
   type ConsoleSubscription,
   type ConsoleSubscriptionInput,
   CUSTOM_PLAN_PREFIX,
+  customerIdOf,
   DEFAULT_WORKSPACE_DESIGNATION,
   FEATURE_CATALOG_VERSION,
   isPlanCode,
@@ -30,6 +32,7 @@ import {
   SUPPORT_LEVELS,
   type z,
   type consoleClientCreateSchema,
+  type ClientHealthBand,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../auth/token.service';
@@ -39,6 +42,7 @@ import { PrismaService } from '../common/prisma.service';
 import { INVITATION_TTL_MS } from '../tenants/invitations.service';
 import { levelOf, nameKeyOf } from '../workspaces/access';
 import type { OperatorContext } from './operator-auth';
+import { changedFields, writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
 
 const DAY = 86_400_000;
 type ClientCreate = z.output<typeof consoleClientCreateSchema>;
@@ -51,6 +55,18 @@ const HISTORY_ACTIONS = [
 ];
 
 const NOT_FOUND = { code: 'NOT_FOUND', message: 'Client organisation not found.' };
+export const CUSTOMER_COUNTER = 'client.customer';
+
+/** The versioned address of a client's logo, for the Console. */
+export function clientLogoUrl(clientId: string, updatedAt: Date | null | undefined): string | null {
+  return updatedAt ? `/api/v1/operator/clients/${clientId}/logo?v=${updatedAt.getTime().toString(36)}` : null;
+}
+
+export const PROFILE_FIELDS = ['legalName', 'website', 'industry', 'countryCode', 'regionCode', 'city', 'addressLine1', 'addressLine2', 'postalCode', 'contactName', 'contactEmail', 'contactPhone'] as const;
+
+export function profileOf(t: Record<(typeof PROFILE_FIELDS)[number], string | null>): ConsoleClientProfile {
+  return Object.fromEntries(PROFILE_FIELDS.map((f) => [f, t[f] ?? null])) as unknown as ConsoleClientProfile;
+}
 
 /** Adds whole months, keeping the day where the month has it (31 January + 1 month = 28 or 29 February). */
 export function addMonths(date: Date, months: number): Date {
@@ -187,7 +203,7 @@ export class ConsoleService {
     await this.log(op.id, 'plan.definition_changed', null, {
       plan: code, reason: input.reason, added: features.filter((f) => !before.features.includes(f)), removed: before.features.filter((f) => !features.includes(f)),
       limits: { from: { ...before, features: undefined }, to: limits }, ...(input.terms ? { terms: input.terms } : {}), ...(input.name ? { name: { from: row.name, to: input.name } } : {}),
-    }, ip);
+    }, ip, { target: { type: 'plan', id: code, label: input.name ?? row.name }, ...changedFields({ name: row.name, ...before, terms: this.termsOf(row) } as Record<string, unknown>, { name: input.name ?? row.name, ...limits, features, terms }) });
     return this.plans();
   }
 
@@ -195,6 +211,8 @@ export class ConsoleService {
 
   private stateOf(tenantStatus: string, subStatus: string | null): ClientState {
     if (tenantStatus === 'SUSPENDED') return subStatus === 'CANCELED' ? 'DEACTIVATED' : 'SUSPENDED';
+    // A company its owner closed (W7) cannot be used either; `closure` on the row says why and until when.
+    if (tenantStatus === 'PENDING_DELETION') return 'SUSPENDED';
     return 'ACTIVE';
   }
 
@@ -225,7 +243,24 @@ export class ConsoleService {
     };
   }
 
-  private async rows(where: Prisma.TenantWhereInput): Promise<ConsoleClientRow[]> {
+  /**
+   * Gives every client without a customer number the next one, oldest first. New clients get theirs the first time
+   * the Console lists or opens them; the counter only moves forward, so a number is never reused.
+   */
+  async ensureCustomerNumbers(): Promise<void> {
+    const missing = await this.prisma.run({ operatorScan: true }, (tx) =>
+      tx.tenant.findMany({ where: { OR: [{ customerNumber: null }, { customerNumber: { isSet: false } }] }, select: { id: true }, orderBy: { createdAt: 'asc' }, take: 1000 }),
+    );
+    for (const t of missing) {
+      const counter = await this.prisma.counter.upsert({ where: { id: CUSTOMER_COUNTER }, create: { id: CUSTOMER_COUNTER, value: 1 }, update: { value: { increment: 1 } } });
+      // Two Console requests at once may both try; the second finds the number already set and changes nothing.
+      await this.prisma.run({ tenantId: t.id }, (tx) => tx.tenant.updateMany({ where: { id: t.id, OR: [{ customerNumber: null }, { customerNumber: { isSet: false } }] }, data: { customerNumber: counter.value } }));
+    }
+  }
+
+  /** Clients matching `where`, newest first, with their subscription, usage and logo. */
+  async rows(where: Prisma.TenantWhereInput, take = 500): Promise<ConsoleClientRow[]> {
+    await this.ensureCustomerNumbers();
     const [plans, defs] = await Promise.all([this.planRows(), planDefinitions(this.prisma as unknown as TenantTx)]);
     const byCode = new Map(plans.map((p) => [p.code, p]));
     return this.prisma.run({ operatorScan: true }, async (tx) => {
@@ -233,26 +268,59 @@ export class ConsoleService {
         where: { deletedAt: null, ...where },
         include: { subscription: true, _count: { select: { memberships: { where: { status: 'ACTIVE' } } } } },
         orderBy: { createdAt: 'desc' },
-        take: 500,
+        take,
       });
       const ids = tenants.map((t) => t.id);
-      const [nodes, owners] = await Promise.all([
+      const [nodes, owners, logos] = await Promise.all([
         tx.workspaceNode.groupBy({ by: ['tenantId', 'level'], where: { tenantId: { in: ids }, archivedAt: null }, _count: { _all: true } }),
         tx.membership.groupBy({ by: ['tenantId'], where: { tenantId: { in: ids }, status: 'ACTIVE' }, _count: { _all: true } }),
+        tx.clientLogo.findMany({ where: { clientId: { in: ids } }, select: { clientId: true, updatedAt: true } }),
       ]);
+      const logoAt = new Map(logos.map((l) => [l.clientId, l.updatedAt]));
       const count = (t: string, level: string) => nodes.find((n) => n.tenantId === t && n.level === level)?._count._all ?? 0;
       const staffed = new Set(owners.map((o) => o.tenantId));
+      // Who closed a closing company (W7): users are not workspace documents, so the plain client reads them.
+      const closerIds = tenants.map((t) => t.closedById).filter((x): x is string => !!x);
+      const closers = new Map(closerIds.length ? (await this.prisma.user.findMany({ where: { id: { in: closerIds } }, select: { id: true, email: true } })).map((u) => [u.id, u.email]) : []);
       return tenants.map((t) => ({
-        id: t.id, name: t.name, state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
+        id: t.id, name: t.name, customerId: customerIdOf(t.customerNumber), countryCode: t.countryCode, city: t.city, logoUrl: clientLogoUrl(t.id, logoAt.get(t.id)),
+        state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
         subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs) : null,
         usage: { managers: count(t.id, 'MANAGER'), executives: count(t.id, 'EXECUTIVE') },
         awaitingAdministrator: !staffed.has(t.id),
+        closure:
+          t.status === 'PENDING_DELETION' && t.closedAt && t.eraseAfter
+            ? { closedAt: t.closedAt.toISOString(), eraseAfter: t.eraseAfter.toISOString(), closedBy: t.closedById ? (closers.get(t.closedById) ?? null) : null, reason: t.closeReason ?? null }
+            : null,
+        health: t.healthScore !== null && t.healthBand ? { score: t.healthScore, band: t.healthBand as ClientHealthBand } : null,
       }));
     });
   }
 
+  /**
+   * What the clients search matches: the name, legal name or slug, the customer ID ("SF-000123", "SF123" or "123")
+   * and the email of an administrator.
+   */
+  async searchWhere(search: string | undefined): Promise<Prisma.TenantWhereInput> {
+    const q = search?.trim();
+    if (!q) return {};
+    const number = /^(?:SF-?)?0*(\d{1,9})$/i.exec(q)?.[1];
+    const byEmail = q.includes('@')
+      ? await this.prisma.run({ operatorScan: true }, async (tx) => {
+          const users = await tx.user.findMany({ where: { email: { contains: q.toLowerCase(), mode: 'insensitive' } }, select: { id: true }, take: 50 });
+          if (!users.length) return [];
+          const m = await tx.membership.findMany({ where: { userId: { in: users.map((u) => u.id) }, role: { key: 'owner' } }, select: { tenantId: true }, take: 200 });
+          return [...new Set(m.map((x) => x.tenantId))];
+        })
+      : [];
+    const text = { contains: q, mode: 'insensitive' as const };
+    return {
+      OR: [{ name: text }, { slug: text }, { legalName: text }, ...(number ? [{ customerNumber: Number(number) }] : []), ...(byEmail.length ? [{ id: { in: byEmail } }] : [])],
+    };
+  }
+
   async clients(op: OperatorContext, search: string | undefined, ip: string | null): Promise<ConsoleClientRow[]> {
-    const rows = await this.rows(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { slug: { contains: search, mode: 'insensitive' } }] } : {});
+    const rows = await this.rows(await this.searchWhere(search));
     await this.log(op.id, 'clients.listed', null, { search: search ?? null, results: rows.length }, ip);
     return rows;
   }
@@ -291,8 +359,9 @@ export class ConsoleService {
       };
     });
     const history = await this.history(id);
+    const tenant = await this.prisma.run({ tenantId: id }, (tx) => tx.tenant.findUniqueOrThrow({ where: { id } }));
     if (op) await this.log(op.id, 'client.viewed', id, {}, ip);
-    return { ...row, ...detail, history };
+    return { ...row, ...detail, profile: profileOf(tenant), history };
   }
 
   private async history(tenantId: string): Promise<ConsoleHistoryRow[]> {
@@ -401,6 +470,7 @@ export class ConsoleService {
   async setSubscription(op: OperatorContext, id: string, input: ConsoleSubscriptionInput, ip: string | null): Promise<ConsoleClientDetail> {
     const plan = input.planCode ? await this.planFor(input.planCode) : null;
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       await transactionLock(tx, `workspaces:${id}`);
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
@@ -461,6 +531,7 @@ export class ConsoleService {
         note('Executive Workspaces', before.maxExecutiveWorkspaces ?? planLimit(defs[before.planCode]?.maxExecutiveWorkspaces), input.maxExecutiveWorkspaces ?? planLimit(defs[(data.planCode as string | undefined) ?? before.planCode]?.maxExecutiveWorkspaces));
       }
       if (!changes.length) return;
+      diff = changedFields(before as unknown as Record<string, unknown>, data as Record<string, unknown>);
       await tx.subscription.update({ where: { tenantId: id }, data });
       // Workspace limits get an entry of their own in the client's log, so "who changed a limit" has one answer.
       const limits = changes.filter((c) => c.startsWith('Manager Workspaces:') || c.startsWith('Executive Workspaces:'));
@@ -468,13 +539,14 @@ export class ConsoleService {
       if (rest.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: rest } });
       if (limits.length) await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.limits_changed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes: limits } });
     });
-    if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip);
+    if (changes.length) await this.log(op.id, 'client.subscription_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
   /** Another term from the current renewal date (or today, if it has passed), optionally on a new plan. */
   async renew(op: OperatorContext, id: string, input: ConsoleRenewInput, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       const before = await tx.subscription.findUnique({ where: { tenantId: id } });
       if (!before) throw new NotFoundException(NOT_FOUND);
@@ -486,6 +558,7 @@ export class ConsoleService {
       changes.push(`Renewed for ${months} months: ${day(from)} to ${day(end)}`);
       if (plan.row.code !== before.planCode) changes.push(`Plan: ${(await this.planRows()).find((r) => r.code === before.planCode)?.name ?? before.planCode} → ${plan.row.name}`);
       if (input.paymentStatus) changes.push(`Payment: ${before.paymentStatus ?? 'none'} → ${input.paymentStatus}`);
+      diff = changedFields(before as unknown as Record<string, unknown>, { planCode: plan.row.code, status: 'ACTIVE', currentPeriodStart: from, currentPeriodEnd: end, durationMonths: months, paymentStatus: input.paymentStatus });
       await tx.subscription.update({
         where: { tenantId: id },
         data: {
@@ -495,7 +568,7 @@ export class ConsoleService {
       });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'billing.subscription_renewed', entityType: 'subscription', entityId: before.id, metadata: { operator: op.email, reason: input.reason, changes } });
     });
-    await this.log(op.id, 'client.renewed', id, { reason: input.reason, changes }, ip);
+    await this.log(op.id, 'client.renewed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
@@ -505,11 +578,13 @@ export class ConsoleService {
    */
   async setState(op: OperatorContext, id: string, state: ClientState, reason: string, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let prevState: ClientState | null = null;
     await this.prisma.run({ tenantId: id }, async (tx) => {
       const t = await tx.tenant.findFirst({ where: { id, deletedAt: null }, include: { subscription: true } });
       if (!t) throw new NotFoundException(NOT_FOUND);
       if (t.status === 'PENDING_DELETION') throw new ForbiddenException({ code: 'PENDING_DELETION', message: 'This client is scheduled for deletion.' });
       const before = this.stateOf(t.status, t.subscription?.status ?? null);
+      prevState = before;
       if (before === state) return;
       changes.push(`Status: ${before} → ${state}`);
       await tx.tenant.update({ where: { id }, data: { status: state === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED' } });
@@ -521,7 +596,7 @@ export class ConsoleService {
     });
     if (changes.length) {
       // Sessions of a suspended client end at their next request: the workspace guard refuses a suspended tenant.
-      await this.log(op.id, 'client.state_changed', id, { reason, changes }, ip);
+      await this.log(op.id, 'client.state_changed', id, { reason, changes }, ip, { before: { state: prevState }, after: { state } });
     }
     return this.client(null, id, ip);
   }
@@ -529,6 +604,7 @@ export class ConsoleService {
   /** The Super Workspace's ceiling: which actions it may use in each module, and whether it creates Executive Workspaces. */
   async setAuthority(op: OperatorContext, id: string, input: ConsoleAuthorityInput, ip: string | null): Promise<ConsoleClientDetail> {
     const changes: string[] = [];
+    let diff: ReturnType<typeof changedFields> = { before: {}, after: {} };
     await this.prisma.run({ tenantId: id }, async (tx) => {
       if (!(await tx.tenant.findFirst({ where: { id, deletedAt: null }, select: { id: true } }))) throw new NotFoundException(NOT_FOUND);
       await transactionLock(tx, `workspaces:${id}`);
@@ -548,10 +624,11 @@ export class ConsoleService {
         changes.push(`Super Workspace creates Executive Workspaces: ${root.canCreateExecutives ? 'yes' : 'no'} → ${input.canCreateExecutives ? 'yes' : 'no'}`);
       }
       if (!changes.length) return;
+      diff = changedFields({ actions: root.actions, canCreateExecutives: root.canCreateExecutives }, { actions: data.actions, canCreateExecutives: data.canCreateExecutives });
       await tx.workspaceNode.update({ where: { id: root.id }, data });
       await this.audit.record(tx, { tenantId: id, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'workspace.permissions_changed', entityType: 'workspace', entityId: root.id, metadata: { operator: op.email, reason: input.reason, changes } });
     });
-    if (changes.length) await this.log(op.id, 'client.authority_changed', id, { reason: input.reason, changes }, ip);
+    if (changes.length) await this.log(op.id, 'client.authority_changed', id, { reason: input.reason, changes }, ip, diff);
     return this.client(null, id, ip);
   }
 
@@ -598,7 +675,8 @@ export class ConsoleService {
     const attention: ConsoleOverview['needsAttention'] = [];
     for (const r of rows) {
       const s = r.subscription;
-      if (r.state === 'SUSPENDED') attention.push({ id: r.id, name: r.name, why: 'Suspended' });
+      if (r.closure) attention.push({ id: r.id, name: r.name, why: 'Closed by its owner' });
+      else if (r.state === 'SUSPENDED') attention.push({ id: r.id, name: r.name, why: 'Suspended' });
       else if (s?.paymentStatus === 'OVERDUE' || s?.status === 'PAST_DUE' || s?.status === 'UNPAID') attention.push({ id: r.id, name: r.name, why: 'Payment overdue' });
       else if (r.state === 'ACTIVE' && s?.renewsOn && new Date(`${s.renewsOn}T00:00:00Z`).getTime() < now) attention.push({ id: r.id, name: r.name, why: 'Renewal date has passed' });
       else if (r.awaitingAdministrator && r.state === 'ACTIVE') attention.push({ id: r.id, name: r.name, why: 'Administrator has not joined yet' });
@@ -625,8 +703,8 @@ export class ConsoleService {
     };
   }
 
-  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null): Promise<void> {
-    await this.prisma.platformAuditLog.create({ data: { operatorId, action, targetTenantId, metadata: metadata as Prisma.InputJsonValue, ip } });
+  private async log(operatorId: string, action: string, targetTenantId: string | null, metadata: Record<string, unknown>, ip: string | null, extra: Pick<PlatformAuditEntry, 'target' | 'before' | 'after'> = {}): Promise<void> {
+    await writePlatformAudit(this.prisma, { operatorId, action, tenantId: targetTenantId, metadata, ip, ...extra });
   }
 }
 

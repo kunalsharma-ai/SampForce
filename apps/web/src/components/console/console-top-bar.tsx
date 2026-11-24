@@ -27,6 +27,7 @@ import {
   Moon,
   Palette,
   Search,
+  ShieldCheck,
   Sun,
   Volume2,
   VolumeX,
@@ -34,6 +35,7 @@ import {
 import Link from 'next/link';
 import { HelpSupportButton } from '@/components/help/help-panel';
 import type { Crumb } from './console-nav';
+import { NotificationBell } from './notifications';
 
 const CONSOLE_READER = { audience: 'console' } as const;
 
@@ -215,7 +217,8 @@ export function ConsoleTopBar({
         >
           <Search aria-hidden />
         </Button>
-        <HelpSupportButton reader={CONSOLE_READER} canManage={me.role === 'ADMIN'} />
+        <HelpSupportButton reader={CONSOLE_READER} canManage={me.permissions.includes('settings.manage')} />
+        <NotificationBell sound={me.preferences.sound} />
         <Button
           variant="ghost"
           size="icon"
@@ -243,7 +246,7 @@ export function ConsoleTopBar({
               <span className="hidden text-start leading-tight xl:block">
                 <span className="block text-sm font-medium">{me.name}</span>
                 <span className="block text-[11px] text-muted-foreground">
-                  {me.role === 'ADMIN' ? 'Admin' : 'Support'}
+                  {me.roleName}
                 </span>
               </span>
             </button>
@@ -255,10 +258,15 @@ export function ConsoleTopBar({
                 {me.email}
               </span>
               <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                Platform staff · {me.role === 'ADMIN' ? 'Admin' : 'Support'}
+                Platform staff · {me.roleName}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/operator/account">
+                <ShieldCheck aria-hidden /> Account &amp; security
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onSignOut}>
               <LogOut aria-hidden /> Sign out
             </DropdownMenuItem>

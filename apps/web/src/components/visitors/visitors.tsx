@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import { CONSENT_MODES, type ImportantPage, PAGE_KIND_LABELS, PAGE_KINDS, VISITOR_DASHBOARD_DAYS, type VisitorDetail, type VisitorRow, type VisitorSettings, type VisitorSettingsInput } from '@dealflow/types';
 import Link from 'next/link';
@@ -320,6 +321,7 @@ function VisitorDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const q = useVisitor(id);
   const canManage = useCan('visitors:manage');
   const [confirm, setConfirm] = useState(false);
+  const mayDelete = useCanDelete('website_visitors');
   const erase = useVisitorMutation(() => visitorsApi.erase(id), onClose);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -329,7 +331,7 @@ function VisitorDialog({ id, onClose }: { id: string; onClose: () => void }) {
           <DialogDescription className="text-sm text-muted-foreground">{t('Visits recorded by the tracking script on your website.')}</DialogDescription>
         </div>
         {q.isPending ? <Skeleton className="h-40" /> : q.data ? <VisitorBody v={q.data} /> : <p role="alert" className="text-sm text-critical">{q.error?.message}</p>}
-        {canManage && q.data && (
+        {canManage && mayDelete && q.data && (
           <div className="border-t border-border pt-3">
             {erase.error && <p role="alert" className="mb-2 text-sm text-critical">{erase.error.message}</p>}
             {confirm ? (

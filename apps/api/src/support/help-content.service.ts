@@ -28,6 +28,7 @@ import { PrismaService } from '../common/prisma.service';
 import { notFound } from '../crm/crm-helpers';
 import type { OperatorContext } from '../operator/operator-auth';
 import { resolveWorkspaceAccess } from '../workspaces/access';
+import { writePlatformAudit } from '../operator/platform-audit';
 
 type Article = Prisma.HelpArticleGetPayload<object>;
 type ArticleInput = z.output<typeof helpArticleInputSchema>;
@@ -101,7 +102,7 @@ export class HelpContentService {
       if (!(await tx.tenant.findUnique({ where: { id: tenantId }, select: { id: true } }))) throw notFound('Client');
       return tx.helpSettings.upsert({ where: { tenantId }, create: { tenantId, helpEnabled }, update: { helpEnabled } });
     });
-    await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action: 'help_settings.client_updated', targetTenantId: tenantId, metadata: { helpEnabled }, ip } });
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action: 'help_settings.client_updated', tenantId, metadata: { helpEnabled }, ip, before: { helpEnabled: !helpEnabled }, after: { helpEnabled } });
     return toSettings(row, false);
   }
 
@@ -413,7 +414,7 @@ export class HelpContentService {
   }
 
   private async log(op: OperatorContext, action: string, metadata: Record<string, unknown>, ip: string | null) {
-    await this.prisma.platformAuditLog.create({ data: { operatorId: op.id, action, targetTenantId: null, metadata: metadata as Prisma.InputJsonValue, ip } });
+    await writePlatformAudit(this.prisma, { operatorId: op.id, action, metadata, ip });
   }
 }
 

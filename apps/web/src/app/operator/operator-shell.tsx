@@ -6,6 +6,7 @@ import {
   type ConsolePreferencesUpdate,
   normaliseConsolePreferences,
   type OperatorMe,
+  type OperatorPermission,
   SUPPORT_WAITING_STATUSES,
 } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,19 +16,29 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { ChatNotices } from '@/components/chat/chat-notices';
+import { ClientAvatar } from '@/components/console/client-avatar';
 import { ConsoleCommand } from '@/components/console/console-command';
-import { crumbsFor } from '@/components/console/console-nav';
+import { consolePagesFor, crumbsFor } from '@/components/console/console-nav';
 import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
 import { ConsoleTopBar } from '@/components/console/console-top-bar';
+import { useUnreadNotifications } from '@/components/console/notifications';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
 import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
 import { isDarkNow, useConsolePaint } from '@/lib/console-appearance';
 import { playConsoleSound } from '@/lib/console-sound';
 import { useOperatorTicketCounts } from '@/lib/support';
+import { WelcomeScene } from '@/components/sign-in/welcome-overlay';
 import { StateBadge } from './console-ui';
 
 const ME_KEY = ['operator', 'me'] as const;
+
+const SIGNED_OUT_PAGES = ['/operator/login', '/operator/forgot-password', '/operator/set-password'];
+
+/** Whether the signed-in operator's role allows something (ADR 0074). The API checks it again on every request. */
+export function can(me: Pick<OperatorMe, 'permissions'> | undefined | null, permission: OperatorPermission): boolean {
+  return !!me?.permissions?.includes(permission);
+}
 
 export function useOperator(enabled = true) {
   return useQuery({
@@ -76,14 +87,17 @@ function useMutationSounds(on: boolean) {
 
 /** Chat unread and tickets waiting, for the menu badges; keeps the support chat connection open on every page. */
 function useBadgeCounts(me: OperatorMe | undefined) {
-  const realm = React.useMemo(() => (me ? operatorRealm(me.id) : null), [me]);
+  // Only operators who handle support have the chat and ticket counts (ADR 0074).
+  const handles = can(me, 'support.handle');
+  const realm = React.useMemo(() => (me && handles ? operatorRealm(me.id) : null), [me, handles]);
   useChatLive(realm);
   const chat = useChatUnread(realm).data?.total ?? 0;
-  const counts = useOperatorTicketCounts(!!me);
+  const counts = useOperatorTicketCounts(handles);
   const tickets = counts.data
     ? SUPPORT_WAITING_STATUSES.reduce((n, st) => n + counts.data[st], 0)
     : 0;
-  return { chat, tickets };
+  const notifications = useUnreadNotifications(!!me).data?.unread ?? 0;
+  return { chat, tickets, notifications };
 }
 
 /** Keeps the client's name, plan and status in view on every page inside that client (ADR 0074). */
@@ -94,23 +108,12 @@ function ClientContextBar({ id }: { id: string }) {
   });
   if (!client.data) return null;
   const c = client.data;
-  const initials = c.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
   return (
     <div
       className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-surface/60 px-4 py-2 text-sm sm:px-6"
       data-client-context={c.id}
     >
-      <span
-        className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-primary/25 to-accent/25 text-[11px] font-semibold text-primary"
-        aria-hidden
-      >
-        {initials}
-      </span>
+      <ClientAvatar name={c.name} logoUrl={c.logoUrl} size="sm" />
       <Link href={`/operator/clients/${c.id}`} className="font-medium hover:underline">
         {c.name}
       </Link>
@@ -128,7 +131,8 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
-  const onLogin = path === '/operator/login';
+  // Signed-out pages: sign in, forgot password, and choosing a password from a link.
+  const onLogin = SIGNED_OUT_PAGES.includes(path);
   const me = useOperator(!onLogin);
   const save = usePreferenceSaver();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -155,6 +159,20 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   }, [me.data]);
 
   useEffect(() => setMenuOpen(false), [path]);
+
+  // When the policy requires two-step verification and it is not on yet, only the account page opens.
+  useEffect(() => {
+    if (me.data?.mfaSetupRequired && path !== '/operator/account') router.replace('/operator/account?setup=1');
+  }, [me.data?.mfaSetupRequired, path, router]);
+
+  // A role without the overview (a support-only custom role) starts on the first page it may open.
+  useEffect(() => {
+    if (path === '/operator' && me.data && !can(me.data, 'clients.view')) {
+      // Notifications is everyone's; a support-only role starts on its first working page instead.
+      const first = consolePagesFor(me.data.permissions).find((p) => p.href !== '/operator/notifications');
+      if (first) router.replace(first.href);
+    }
+  }, [path, me.data, router]);
 
   const signOut = async () => {
     await api('/operator/logout', { method: 'POST' }).catch(() => undefined);
@@ -188,10 +206,12 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       <ChatNotices />
+      <WelcomeScene variant="console" name={me.data ? me.data.name || me.data.email : null} />
       {me.data && (
         <ConsoleSidebar
           collapsed={me.data.preferences.sidebarCollapsed}
           counts={counts}
+          permissions={me.data.permissions}
           onToggle={() => save.mutate({ sidebarCollapsed: !me.data!.preferences.sidebarCollapsed })}
         />
       )}
@@ -204,6 +224,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
             <ConsoleSidebarNav
               collapsed={false}
               counts={counts}
+              permissions={me.data.permissions}
               onNavigate={() => setMenuOpen(false)}
             />
           )}
@@ -241,6 +262,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
         <ConsoleCommand
           open={searchOpen}
           onOpenChange={setSearchOpen}
+          permissions={me.data.permissions}
           dark={isDarkNow(me.data.preferences.mode)}
           sound={me.data.preferences.sound}
           onPreferences={(p) => save.mutate(p)}

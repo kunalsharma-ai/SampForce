@@ -1,3 +1,5 @@
+import { ConsoleNotificationsModule } from '../operator/console-notifications.module';
+import { OperatorModule } from '../operator/operator.module';
 import { AppsModule } from '../apps/apps.module';
 import { CommercialModule } from '../commercial/commercial.module';
 import { RevenueModule } from '../revenue/revenue.module';
@@ -14,12 +16,13 @@ import { CompanyLogosService } from '../crm/company-logos.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MobileModule } from '../mobile/mobile.module';
+import { CompanyClosureService } from '../tenants/company-closure.service';
 import { WorkerService } from './worker.service';
 
 /** The background loop over every queue (Phase 3 automation plus Phase 4 queued agent runs). */
 @Module({
-  imports: [AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule],
-  providers: [WorkerService, CrmRemindersService, CompanyLogosService, NotificationsService],
+  imports: [ConsoleNotificationsModule, OperatorModule, AppsModule, AutomationModule, AiModule, CommercialModule, RevenueModule, BillingModule, SequencesModule, IntelligenceModule, GamificationModule, VisitorsModule, ProspectsModule, MobileModule],
+  providers: [WorkerService, CrmRemindersService, CompanyLogosService, NotificationsService, CompanyClosureService],
   exports: [WorkerService],
 })
 export class WorkerModule {}

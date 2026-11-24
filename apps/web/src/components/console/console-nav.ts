@@ -1,17 +1,24 @@
+import type { OperatorPermission } from '@dealflow/types';
 import {
   Activity,
+  Bell,
+  KeyRound,
   Building2,
   CreditCard,
   HelpCircle,
   LayoutDashboard,
   LifeBuoy,
+  MapPin,
   type LucideIcon,
   MessagesSquare,
+  Network,
   PenSquare,
   Plug,
   Settings,
+  ShieldCheck,
   Smartphone,
   Ticket,
+  UserCog,
 } from 'lucide-react';
 
 /**
@@ -19,7 +26,7 @@ import {
  * pages still to come (Workspaces, Users, Features, Billing...) are added as each part ships, never as dead links.
  */
 
-export type ConsoleBadge = 'chat' | 'tickets';
+export type ConsoleBadge = 'chat' | 'tickets' | 'notifications';
 
 export interface ConsoleNavItem {
   key: string;
@@ -32,6 +39,8 @@ export interface ConsoleNavItem {
   exact?: boolean;
   badge?: ConsoleBadge;
   children?: ConsoleNavItem[];
+  /** Shown only to operators whose role has this permission (ADR 0074); the API refuses the page otherwise. */
+  permission?: OperatorPermission;
 }
 
 export interface ConsoleNavGroup {
@@ -45,7 +54,8 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
     key: 'command',
     label: 'Command',
     items: [
-      { key: 'overview', label: 'Overview', href: '/operator', icon: LayoutDashboard, exact: true },
+      { key: 'overview', label: 'Overview', href: '/operator', icon: LayoutDashboard, exact: true, permission: 'clients.view' },
+      { key: 'notifications', label: 'Notifications', href: '/operator/notifications', icon: Bell, badge: 'notifications' },
     ],
   },
   {
@@ -58,15 +68,17 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
         href: '/operator/clients',
         icon: Building2,
         also: ['/operator/tenants'],
+        permission: 'clients.view',
       },
-      { key: 'mobile', label: 'Mobile app', href: '/operator/mobile', icon: Smartphone },
+      { key: 'workspace-rules', label: 'Workspace rules', href: '/operator/workspace-rules', icon: Network, permission: 'workspaces.view' },
+      { key: 'mobile', label: 'Mobile app', href: '/operator/mobile', icon: Smartphone, permission: 'clients.view' },
     ],
   },
   {
     key: 'commercial',
     label: 'Commercial',
     items: [
-      { key: 'plans', label: 'Plans & subscriptions', href: '/operator/plans', icon: CreditCard },
+      { key: 'plans', label: 'Plans & subscriptions', href: '/operator/plans', icon: CreditCard, permission: 'clients.view' },
     ],
   },
   {
@@ -85,6 +97,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
             href: '/operator/support',
             icon: Ticket,
             badge: 'tickets',
+            permission: 'support.handle',
           },
           {
             key: 'chat',
@@ -92,6 +105,7 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
             href: '/operator/chat',
             icon: MessagesSquare,
             badge: 'chat',
+            permission: 'support.handle',
           },
           {
             key: 'help-manage',
@@ -106,14 +120,20 @@ export const CONSOLE_NAV: ConsoleNavGroup[] = [
   {
     key: 'governance',
     label: 'Governance',
-    items: [{ key: 'audit', label: 'Audit log', href: '/operator/audit', icon: Activity }],
+    items: [
+      { key: 'audit', label: 'Activity & audit log', href: '/operator/audit', icon: Activity, permission: 'audit.view' },
+      { key: 'operators', label: 'Operators', href: '/operator/operators', icon: UserCog, permission: 'operators.manage' },
+      { key: 'roles', label: 'Roles & permissions', href: '/operator/roles', icon: KeyRound, permission: 'operators.manage' },
+      { key: 'security', label: 'Security', href: '/operator/security', icon: ShieldCheck, permission: 'security.manage' },
+    ],
   },
   {
     key: 'platform',
     label: 'Platform',
     items: [
-      { key: 'providers', label: 'Providers', href: '/operator/providers', icon: Plug },
-      { key: 'settings', label: 'Settings', href: '/operator/settings', icon: Settings },
+      { key: 'providers', label: 'Providers', href: '/operator/providers', icon: Plug, permission: 'system.view' },
+      { key: 'settings', label: 'Settings', href: '/operator/settings', icon: Settings, permission: 'system.view' },
+      { key: 'locations', label: 'Locations', href: '/operator/locations', icon: MapPin, permission: 'settings.manage' },
       { key: 'help', label: 'Help', href: '/operator/help', icon: HelpCircle, exact: true },
     ],
   },
@@ -125,9 +145,23 @@ export function navItemActive(item: ConsoleNavItem, path: string): boolean {
   return paths.some((p) => path === p || (!item.exact && path.startsWith(`${p}/`)));
 }
 
-/** Every page in the menu, flattened, for breadcrumbs and the command palette. */
-export const CONSOLE_PAGES: { label: string; href: string; icon: LucideIcon; group: string }[] =
-  CONSOLE_NAV.flatMap((g) =>
+/** The menu an operator sees: items their role allows, parents with at least one such child, groups not left empty. */
+export function consoleNavFor(permissions: readonly string[] | null | undefined): ConsoleNavGroup[] {
+  const allowed = (i: ConsoleNavItem) => !i.permission || !!permissions?.includes(i.permission);
+  return CONSOLE_NAV.map((g) => ({
+    ...g,
+    items: g.items.flatMap((i): ConsoleNavItem[] => {
+      if (!i.children) return allowed(i) ? [i] : [];
+      const children = i.children.filter(allowed);
+      return children.length ? [{ ...i, children }] : [];
+    }),
+  })).filter((g) => g.items.length > 0);
+}
+
+export type ConsolePage = { label: string; href: string; icon: LucideIcon; group: string };
+
+const pagesOf = (nav: ConsoleNavGroup[]): ConsolePage[] =>
+  nav.flatMap((g) =>
     g.items.flatMap((i) =>
       i.children
         ? i.children.map((c) => ({ label: c.label, href: c.href, icon: c.icon, group: g.label }))
@@ -135,8 +169,16 @@ export const CONSOLE_PAGES: { label: string; href: string; icon: LucideIcon; gro
     ),
   );
 
+/** Every page in the menu, flattened, for breadcrumbs. */
+export const CONSOLE_PAGES: ConsolePage[] = pagesOf(CONSOLE_NAV);
+
+/** The pages an operator may open, for the command palette. */
+export function consolePagesFor(permissions: readonly string[] | null | undefined): ConsolePage[] {
+  return pagesOf(consoleNavFor(permissions));
+}
+
 /** Titles for path segments that are not menu items, used by the breadcrumbs. */
-const SEGMENT_LABEL: Record<string, string> = { manage: 'Manage', tenants: 'Clients' };
+const SEGMENT_LABEL: Record<string, string> = { manage: 'Manage', tenants: 'Clients', account: 'Account & security' };
 
 export interface Crumb {
   label: string;

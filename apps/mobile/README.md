@@ -17,9 +17,32 @@ At sign-in, open "Use another server" to point the app at a local API (for examp
 `http://10.0.2.2:4000` from the Android emulator). The organisation must be approved by the Console and switched on by
 its Super Workspace first.
 
+## Build an Android APK
+
+You need Node 26, pnpm 10 (`npm install -g pnpm@10.28.0`), JDK 17 and the Android SDK (install Android Studio, then set
+`ANDROID_HOME`, for example `~/Library/Android/sdk` on a Mac or `%LOCALAPPDATA%\Android\Sdk` on Windows).
+
+```bash
+pnpm install                              # at the repository root
+pnpm --filter @dealflow/types build
+cd apps/mobile
+npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease                 # Windows: gradlew.bat assembleRelease
+```
+
+The APK is `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`. Copy it to a phone and open it (allow
+"install unknown apps"). This build is signed with the debug key, so it is for testing, not for Google Play.
+
+The app signs in to `extra.apiUrl` in `app.json` (`https://app.sampforce.com`); change it before building to use another
+server, or use "Use another server" on the sign-in screen. Release builds only talk to `https://` servers.
+
+With Expo instead (no Android SDK needed): `npx eas-cli login`, `npx eas-cli init`, then
+`npx eas-cli build --platform android --profile preview`, which gives a link to download the APK.
+
 ## Before the stores
 
-Store builds and submission come in M9. What the SampForce team will need then:
+Store builds use `eas.json` (ADR 0072, M9). What the SampForce team needs:
 
 - Apple Developer Program account (organisation enrolment) and an App Store Connect app for `com.sampledge.sampforce`.
 - Google Play Console account and an app with package `com.sampledge.sampforce`.

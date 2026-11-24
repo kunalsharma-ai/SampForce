@@ -1,9 +1,27 @@
 'use client';
 
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Skeleton,
+} from '@dealflow/ui';
 import {
   type ActionGrants,
-  type CreateWorkspaceInput,
   FEATURE_BY_KEY,
   FEATURE_GROUPS,
   type FeatureGroup,
@@ -13,18 +31,23 @@ import {
   WORKSPACE_ACTIONS,
   WORKSPACE_LEVEL_LABEL,
   type WorkspaceAction,
+  type WorkspaceDeleted,
   type WorkspacePermissionsInput,
   type WorkspaceRow,
+  type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { Copy, KeyRound, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Building2, ChevronDown, Crown, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { useMembers } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { useCanDelete } from '@/lib/features';
 import { useWorkspaceMutations, useWorkspaceTree } from '@/lib/workspaces';
+import { DeactivateWorkspaceDialog, DeleteWorkspaceDialog } from './workspace-lifecycle';
+import { CreateWorkspaceWizard } from './workspace-wizard';
 
 type Creating = 'MANAGER' | 'EXECUTIVE';
 
@@ -35,8 +58,12 @@ type Creating = 'MANAGER' | 'EXECUTIVE';
 export function WorkspacesManager() {
   const t = useT();
   const tree = useWorkspaceTree();
-  const { archive } = useWorkspaceMutations();
+  const { reactivate } = useWorkspaceMutations();
+  const canDelete = useCanDelete('workspace_management');
   const [creating, setCreating] = useState<Creating | null>(null);
+  const [deactivating, setDeactivating] = useState<WorkspaceRow | null>(null);
+  const [deleting, setDeleting] = useState<WorkspaceRow | null>(null);
+  const [deleted, setDeleted] = useState<WorkspaceDeleted | null>(null);
   const [permissionsOf, setPermissionsOf] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -82,26 +109,47 @@ export function WorkspacesManager() {
         </CardContent>
       </Card>
 
-      <Card>
+      {data.mine.level === 'SUPER' && (
+        <div className="flex gap-3 rounded-lg border border-accent/40 bg-accent/5 p-4 text-sm" role="note" data-super-banner>
+          <Crown className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden />
+          <div>
+            <p className="font-medium">{t('{company} has one Super Workspace, and it is yours.', { company: data.organization.name })}</p>
+            <p className="text-muted-foreground">{t('It holds the company’s settings, billing and every workspace below it. There is only ever one, so it cannot be created again, deactivated or deleted; closing the company is the only way to end it.')}</p>
+          </div>
+        </div>
+      )}
+
+      <Card id="structure" className="scroll-mt-20">
         <CardHeader>
           <CardTitle>{t('Workspace structure')}</CardTitle>
-          <CardDescription>{t('Who reports to whom. Open Permissions on a workspace below yours to choose what it may use and do.')}</CardDescription>
+          <CardDescription>{t('Who reports to whom. Use Actions on a workspace below yours to edit it, choose what it may use and do, deactivate or delete it.')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2" aria-label={t('Workspace structure')} data-workspace-tree>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium" data-company-node>
+            <Building2 className="size-4 text-muted-foreground" aria-hidden />
+            <span className="sr-only">{t('Company')}: </span>
+            {data.organization.name}
+          </div>
+          <ul className="ms-5 mt-3 space-y-3 border-s border-border ps-5" aria-label={t('Workspace structure')} data-workspace-tree>
             {roots(data).map((w) => (
-              <Branch key={w.id} row={w} tree={data} depth={0} onPermissions={setPermissionsOf} onEdit={setEditing} onArchive={(r) => {
-                if (window.confirm(t('Archive {name}? Its pending invitations are withdrawn and it stops counting towards your limit.', { name: r.name }))) archive.mutate(r.id);
-              }} />
+              <Branch key={w.id} row={w} tree={data} depth={1} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
             ))}
           </ul>
-          <ErrorText error={archive.error} />
+          <ErrorText error={reactivate.error} />
+          <p role="status" className="mt-3 text-sm text-muted-foreground" data-workspace-deleted>
+            {deleted &&
+              (deleted.handoverTo
+                ? t('{name} was deleted. {records} records and {workspaces} workspaces went to {to}.', { name: deleted.name, records: deleted.recordsMoved, workspaces: deleted.workspacesMoved, to: deleted.handoverTo })
+                : t('{name} was deleted.', { name: deleted.name }))}
+          </p>
         </CardContent>
       </Card>
 
-      {creating && <CreateDialog level={creating} tree={data} onClose={() => setCreating(null)} />}
-      {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} onClose={() => setPermissionsOf(null)} />}
+      {creating && <CreateWorkspaceWizard tree={data} initialLevel={creating} onClose={() => setCreating(null)} />}
+      {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} rules={data.rules} onClose={() => setPermissionsOf(null)} />}
       {edited && <EditDialog row={edited} tree={data} onClose={() => setEditing(null)} />}
+      {deactivating && <DeactivateWorkspaceDialog row={deactivating} onClose={() => setDeactivating(null)} />}
+      {deleting && <DeleteWorkspaceDialog row={deleting} onClose={() => setDeleting(null)} onDeleted={setDeleted} />}
     </div>
   );
 }
@@ -132,52 +180,121 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
   );
 }
 
-function Branch({ row, tree, depth, onPermissions, onEdit, onArchive }: { row: WorkspaceRow; tree: WorkspaceTree; depth: number; onPermissions: (id: string) => void; onEdit: (id: string) => void; onArchive: (row: WorkspaceRow) => void }) {
+type BranchProps = {
+  row: WorkspaceRow;
+  tree: WorkspaceTree;
+  depth: number;
+  canDelete: boolean;
+  onPermissions: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDeactivate: (row: WorkspaceRow) => void;
+  onReactivate: (row: WorkspaceRow) => void;
+  onDelete: (row: WorkspaceRow) => void;
+};
+
+function Branch(props: BranchProps) {
+  const { row, tree, depth, canDelete, onPermissions, onEdit, onDeactivate, onReactivate, onDelete } = props;
   const t = useT();
   const children = tree.workspaces.filter((w) => w.parentId === row.id).sort((a, b) => (a.level === b.level ? a.name.localeCompare(b.name) : a.level === 'MANAGER' ? -1 : 1));
   const mine = row.id === tree.mine.id;
+  const status = row.deactivatedAt
+    ? { tone: 'warning' as const, label: t('Deactivated') }
+    : row.people.length
+      ? { tone: 'success' as const, label: t('Active') }
+      : row.pendingInvites.length
+        ? { tone: 'primary' as const, label: t('Invited') }
+        : { tone: 'neutral' as const, label: t('Empty') };
+  const executives = tree.workspaces.filter((w) => w.parentId === row.id && w.level === 'EXECUTIVE').length;
   return (
-    <li>
-      <div className="flex flex-wrap items-start gap-3 rounded-md border border-border p-3" style={{ marginInlineStart: `${depth * 1.5}rem` }} data-workspace={row.name}>
+    // Connector lines: each child hangs off the vertical line of the list it is in (see the ul below).
+    <li className={depth > 0 ? 'relative before:absolute before:-start-5 before:top-7 before:w-5 before:border-t before:border-border' : undefined}>
+      <div className={`flex flex-wrap items-start gap-3 rounded-lg border bg-card p-3 shadow-sm ${row.level === 'SUPER' ? 'border-accent/50' : 'border-border'}`} data-workspace={row.name} data-level={row.level}>
         <div className="min-w-0 flex-1 space-y-1">
           <p className="flex flex-wrap items-center gap-2 font-medium">
             {row.name}
             <Badge tone={row.level === 'SUPER' ? 'accent' : row.level === 'MANAGER' ? 'primary' : 'neutral'}>{t.maybe(WORKSPACE_LEVEL_LABEL[row.level])}</Badge>
+            <Badge tone={status.tone} data-workspace-status>
+              {status.label}
+            </Badge>
             {mine && <Badge tone="success">{t('Yours')}</Badge>}
           </p>
-          <p className="text-sm text-muted-foreground">{t.maybe(row.designation)}</p>
-          <p className="text-xs text-muted-foreground">
-            {row.people.length ? row.people.map((p) => p.name).join(', ') : row.pendingInvites.length ? t('Invited: {emails}', { emails: row.pendingInvites.join(', ') }) : t('Nobody in it yet')}
+          {row.deactivatedAt && row.deactivationReason && <p className="text-xs text-warning" data-deactivation-reason>{t('Deactivated: {reason}', { reason: row.deactivationReason })}</p>}
+          <p className="text-sm text-muted-foreground">
+            {t.maybe(row.designation)}
+            {row.department && <> · {row.department}</>}
+          </p>
+          <p className="text-sm" data-workspace-person>
+            {row.people.length ? row.people.map((p) => `${p.name} (${p.email})`).join(', ') : row.pendingInvites.length ? t('Invited: {emails}', { emails: row.pendingInvites.join(', ') }) : t('Nobody in it yet')}
+          </p>
+          <p className="text-xs text-muted-foreground" data-workspace-usage>
+            {row.level === 'SUPER' ? (
+              <>
+                {limitText(t, t('Manager Workspaces'), tree.usage.managers)} · {limitText(t, t('Executive Workspaces'), tree.usage.executives)}
+              </>
+            ) : row.level === 'MANAGER' ? (
+              t('Executive Workspaces in its team: {count}', { count: executives })
+            ) : (
+              t('Counts towards the Executive Workspaces limit')
+            )}
             {' · '}
             {t('Features: {count}', { count: row.features.length })}
             {row.restrictedFeatures.length > 0 && <> · {t('Not given: {count}', { count: row.restrictedFeatures.length })}</>}
           </p>
         </div>
         {row.editable && (
-          <div className="flex flex-wrap gap-1">
-            <Button size="sm" variant="outline" onClick={() => onPermissions(row.id)}>
-              <KeyRound className="size-4" aria-hidden />
-              {t('Permissions')}
-              <span className="sr-only"> {row.name}</span>
-            </Button>
-            <Button size="icon" variant="ghost" aria-label={t('Edit {name}', { name: row.name })} onClick={() => onEdit(row.id)}>
-              <Pencil aria-hidden />
-            </Button>
-            <Button size="icon" variant="ghost" aria-label={t('Archive {name}', { name: row.name })} disabled={children.length > 0 || row.people.length > 0} title={children.length || row.people.length ? t('Move its people and workspaces out first') : undefined} onClick={() => onArchive(row)}>
-              <Trash2 aria-hidden />
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" aria-label={t('Actions for {name}', { name: row.name })}>
+                {t('Actions')}
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEdit(row.id)}>
+                <Pencil aria-hidden />
+                {t('Edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onPermissions(row.id)}>
+                <KeyRound aria-hidden />
+                {t('Permissions')}
+              </DropdownMenuItem>
+              {row.deactivatedAt ? (
+                <DropdownMenuItem onSelect={() => onReactivate(row)}>
+                  <Power aria-hidden />
+                  {t('Reactivate')}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onSelect={() => onDeactivate(row)}>
+                  <PowerOff aria-hidden />
+                  {t('Deactivate')}
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-critical focus:text-critical" onSelect={() => onDelete(row)}>
+                    <Trash2 aria-hidden />
+                    {t('Delete')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
       {children.length > 0 && (
-        <ul className="mt-2 space-y-2">
+        <ul className="ms-5 mt-3 space-y-3 border-s border-border ps-5">
           {children.map((c) => (
-            <Branch key={c.id} row={c} tree={tree} depth={depth + 1} onPermissions={onPermissions} onEdit={onEdit} onArchive={onArchive} />
+            <Branch key={c.id} {...props} row={c} depth={depth + 1} />
           ))}
         </ul>
       )}
     </li>
   );
+}
+
+function limitText(t: ReturnType<typeof useT>, label: string, u: { used: number; max: number | null }): string {
+  return u.max === null ? t('{label}: {used}, no limit', { label, used: u.used }) : t('{label}: {used} of {max}', { label, used: u.used, max: u.max });
 }
 
 // ───────────── Permission Center ─────────────
@@ -198,7 +315,7 @@ function grantable(parent: readonly FeatureKey[]): { group: FeatureGroup; items:
   }).filter((g) => g.items.length > 0);
 }
 
-function PermissionCenter({ row, parent, callerLevel, onClose }: { row: WorkspaceRow; parent: WorkspaceRow; callerLevel: WorkspaceRow['level']; onClose: () => void }) {
+function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: WorkspaceRow; parent: WorkspaceRow; callerLevel: WorkspaceRow['level']; rules?: WorkspaceRules; onClose: () => void }) {
   const t = useT();
   const { permissions } = useWorkspaceMutations();
   const groups = useMemo(() => grantable(parent.features), [parent.features]);
@@ -211,6 +328,10 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
   const [saved, setSaved] = useState(false);
   const modules = FEATURE_GROUPS.filter((g) => (parent.actions[g] ?? []).length > 0);
   const managerSettings = row.level === 'MANAGER' && callerLevel === 'SUPER';
+  // The Console's rules for this level (W3): what can never be given here, whatever is ticked.
+  const ruleBlocksDelete = !!rules && row.level !== 'SUPER' && !(row.level === 'MANAGER' ? rules.managerDelete : rules.executiveDelete);
+  const ruleModules = rules && row.level !== 'SUPER' ? (row.level === 'MANAGER' ? rules.managerModules : rules.executiveModules) : FEATURE_GROUPS;
+  const ruleBlockedModules = FEATURE_GROUPS.filter((g) => !ruleModules.includes(g));
 
   const toggleFeature = (key: FeatureKey, on: boolean) => {
     setSaved(false);
@@ -318,6 +439,16 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
               {t('Actions')}
             </h3>
             <p className="text-xs text-muted-foreground">{t('What it may do in each module. A dash means {parent} cannot do it either.', { parent: parent.name })}</p>
+            {ruleBlocksDelete && (
+              <p className="text-xs text-warning" data-rule-note="delete">
+                {t('Your SampForce plan does not let this level delete data, so Delete cannot be given here.')}
+              </p>
+            )}
+            {ruleBlockedModules.length > 0 && (
+              <p className="text-xs text-warning" data-rule-note="modules">
+                {t('Your SampForce plan keeps these modules from this level: {modules}.', { modules: ruleBlockedModules.map((g) => t.maybe(g)).join(', ') })}
+              </p>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm" data-action-matrix>
                 <thead>
@@ -339,7 +470,7 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
                         {t.maybe(g)}
                       </th>
                       {WORKSPACE_ACTIONS.map((a) => {
-                        const allowed = (parent.actions[g] ?? []).includes(a);
+                        const allowed = (parent.actions[g] ?? []).includes(a) && !(a === 'delete' && ruleBlocksDelete) && !ruleBlockedModules.includes(g);
                         return (
                           <td key={a} className="px-1 text-center">
                             {allowed ? (
@@ -417,91 +548,6 @@ function PermissionCenter({ row, parent, callerLevel, onClose }: { row: Workspac
 }
 
 // ───────────── Creating and editing ─────────────
-
-function CreateDialog({ level, tree, onClose }: { level: Creating; tree: WorkspaceTree; onClose: () => void }) {
-  const t = useT();
-  const { create } = useWorkspaceMutations();
-  const managers = tree.workspaces.filter((w) => w.level === 'MANAGER');
-  const isSuper = tree.mine.level === 'SUPER';
-  const [name, setName] = useState('');
-  const [designation, setDesignation] = useState('');
-  const [parentId, setParentId] = useState(isSuper ? '' : tree.mine.id);
-  const [email, setEmail] = useState('');
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
-        <DialogTitle className="text-lg font-semibold">{inviteUrl ? t('Workspace created') : level === 'MANAGER' ? t('New Manager Workspace') : t('New Executive Workspace')}</DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">
-          {inviteUrl
-            ? t('Send this link to the person. It works once and for seven days.')
-            : t('It starts with what its parent workspace has, apart from actions this level never needs. Change that in its Permissions afterwards.')}
-        </DialogDescription>
-        {inviteUrl ? (
-          <div className="mt-4 space-y-4">
-            <div className="flex gap-2">
-              <Input readOnly value={inviteUrl} aria-label={t('Invitation link')} />
-              <Button variant="outline" onClick={() => void navigator.clipboard?.writeText(inviteUrl)}>
-                <Copy className="size-4" aria-hidden />
-                {t('Copy')}
-              </Button>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={onClose}>{t('Done')}</Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            className="mt-4 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const input: CreateWorkspaceInput = {
-                level,
-                name,
-                ...(designation.trim() ? { designation } : {}),
-                ...(level === 'EXECUTIVE' && parentId ? { parentId } : {}),
-                ...(email.trim() ? { person: { inviteEmail: email.trim() } } : {}),
-              };
-              create.mutate(input, { onSuccess: (row) => (row.inviteUrl ? setInviteUrl(row.inviteUrl) : onClose()) });
-            }}
-          >
-            <Field id="ws-name" label={t('Workspace name')}>
-              <Input id="ws-name" required minLength={2} maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder={level === 'MANAGER' ? t('For example: North India') : t('For example: Priya Sharma')} />
-            </Field>
-            <Field id="ws-designation" label={t('Designation')} hint={t('What the person in it is called, for example Regional Sales Manager.')}>
-              <Input id="ws-designation" maxLength={80} value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder={level === 'MANAGER' ? t.maybe('Sales Manager') : t.maybe('Sales Executive')} />
-            </Field>
-            {level === 'EXECUTIVE' && isSuper && (
-              <Field id="ws-parent" label={t('Reports to')}>
-                <Select id="ws-parent" value={parentId} onChange={(e) => setParentId(e.target.value)}>
-                  <option value="">{t('The Super Workspace directly')}</option>
-                  {managers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-            <Field id="ws-email" label={t('Invite by email')} hint={t('Optional. You can also move an existing member in later.')}>
-              <Input id="ws-email" type="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Field>
-            <ErrorText error={create.error} />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
-                {t('Cancel')}
-              </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? t('Saving…') : t('Create workspace')}
-              </Button>
-            </div>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function EditDialog({ row, tree, onClose }: { row: WorkspaceRow; tree: WorkspaceTree; onClose: () => void }) {
   const t = useT();

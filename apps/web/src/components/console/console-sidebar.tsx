@@ -5,9 +5,9 @@ import { ChevronDown, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Logo } from '@/components/logo';
-import { type ConsoleBadge, CONSOLE_NAV, type ConsoleNavItem, navItemActive } from './console-nav';
+import { type ConsoleBadge, type ConsoleNavItem, consoleNavFor, navItemActive } from './console-nav';
 
 export type BadgeCounts = Partial<Record<ConsoleBadge, number>>;
 
@@ -49,7 +49,9 @@ function ItemLink({
         ? { 'data-chat-unread': count }
         : item.badge === 'tickets'
           ? { 'data-tickets-waiting': count }
-          : {})}
+          : item.badge === 'notifications'
+            ? { 'data-notifications-unread': count }
+            : {})}
       className={cn(
         'group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
         active
@@ -84,7 +86,7 @@ function ItemLink({
         <>
           <span className="relative flex-1 truncate">{item.label}</span>
           {item.badge && (
-            <CountBadge value={count} tone={item.badge === 'chat' ? 'critical' : 'warning'} />
+            <CountBadge value={count} tone={item.badge === 'tickets' ? 'warning' : 'critical'} />
           )}
         </>
       )}
@@ -187,16 +189,19 @@ function Parent({
 export function ConsoleSidebarNav({
   collapsed,
   counts,
+  permissions,
   onNavigate,
 }: {
   collapsed: boolean;
   counts: BadgeCounts;
+  permissions: readonly string[];
   onNavigate?: () => void;
 }) {
   const path = usePathname();
+  const nav = useMemo(() => consoleNavFor(permissions), [permissions]);
   return (
     <nav aria-label="Operator" className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
-      {CONSOLE_NAV.map((group) => (
+      {nav.map((group) => (
         <section key={group.key} aria-labelledby={`console-group-${group.key}`}>
           <h2
             id={`console-group-${group.key}`}
@@ -240,10 +245,12 @@ export function ConsoleSidebarNav({
 export function ConsoleSidebar({
   collapsed,
   counts,
+  permissions,
   onToggle,
 }: {
   collapsed: boolean;
   counts: BadgeCounts;
+  permissions: readonly string[];
   onToggle: () => void;
 }) {
   return (
@@ -265,7 +272,7 @@ export function ConsoleSidebar({
           </div>
         )}
       </div>
-      <ConsoleSidebarNav collapsed={collapsed} counts={counts} />
+      <ConsoleSidebarNav collapsed={collapsed} counts={counts} permissions={permissions} />
       <div className="border-t border-border/70 p-3">
         <button
           type="button"

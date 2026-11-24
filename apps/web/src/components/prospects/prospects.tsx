@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   COMPANY_SIZES,
@@ -314,6 +315,7 @@ export function ProspectListView({ id }: { id: string }) {
   const [note, setNote] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dedupe = useProspectMutation(() => prospectsApi.dedupe(id), (r) => setNote(r.removed ? t.plural('count.removedDuplicates', r.removed) : t('No duplicates found.')));
+  const mayDelete = useCanDelete('prospect_lists');
   const exportCsv = useProspectMutation(() => prospectsApi.exportCsv(id));
   const del = useProspectMutation(() => prospectsApi.deleteList(id), () => router.push('/app/prospects'));
   const set = (patch: ProspectFilters) => (setSelected(new Set()), setFilters((f) => ({ ...f, page: 1, ...patch })));
@@ -361,7 +363,7 @@ export function ProspectListView({ id }: { id: string }) {
       {panel === 'edit' && (
         <div className="space-y-2">
           <ListForm list={list} onDone={() => setPanel(null)} />
-          {confirmDelete ? (
+          {!mayDelete ? null : confirmDelete ? (
             <Button variant="destructive" size="sm" disabled={del.isPending} onClick={() => del.mutate(undefined)}>{t.plural('count.deleteListProspects', list.prospects)}</Button>
           ) : (
             <Button variant="outline" size="sm" onClick={() => setConfirmDelete(true)}>{t('Delete list')}</Button>
@@ -504,6 +506,7 @@ function BulkBar({ listId, ids, onDone }: { listId: string; ids: string[]; onDon
   });
   const verify = useProspectMutation(() => prospectsApi.verify(ids), (r) => onDone(r.skipped ? t.plural('count.verifiedSkipped', r.checked, { skipped: r.skipped }) : t.plural('count.verified', r.checked)));
   const move = useProspectMutation((copy: boolean) => prospectsApi.move(ids, target, copy), (r) => onDone(r.duplicates ? t.plural('count.movedDuplicates', r.moved, { duplicates: r.duplicates }) : t.plural('count.moved', r.moved)));
+  const mayDelete = useCanDelete('prospect_lists');
   const remove = useProspectMutation(() => prospectsApi.remove(ids), (r) => onDone(t('Deleted {n}.', { n: r.deleted })));
   const err = toCrm.error ?? verify.error ?? move.error ?? remove.error;
   const running = (sequences.data ?? []).filter((s) => s.status === 'ACTIVE');
@@ -536,7 +539,7 @@ function BulkBar({ listId, ids, onDone }: { listId: string; ids: string[]; onDon
           </label>
           <Button size="sm" variant="outline" disabled={!target || move.isPending} onClick={() => move.mutate(false)}>{t('Move')}</Button>
           <Button size="sm" variant="outline" disabled={!target || move.isPending} onClick={() => move.mutate(true)}>{t('Copy')}</Button>
-          <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>{t('Delete')}</Button>
+          {mayDelete && <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>{t('Delete')}</Button>}
         </div>
         <Alert error={err} />
         {failures.length > 0 && (
