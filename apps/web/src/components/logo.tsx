@@ -1,5 +1,6 @@
 import { cn } from '@dealflow/ui';
 import { useId } from 'react';
+import './logo.css';
 
 /** The mark's shapes, shared with the animated sign-in mark (ADR 0075) so the two can never drift apart. */
 export const LOGO_PARTS = {
@@ -26,7 +27,7 @@ export function LogoMark({ className }: { className?: string }) {
   const b = `sf-b-${id}`;
   const h = `sf-h-${id}`;
   return (
-    <svg viewBox="-4 -1 66 66" className={cn('size-8', className)} aria-hidden>
+    <svg viewBox="-4 -1 66 66" className={cn('size-8 overflow-visible', className)} aria-hidden>
       <defs>
         <linearGradient id={a} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#FFC857" />
@@ -41,14 +42,29 @@ export function LogoMark({ className }: { className?: string }) {
           <stop offset=".55" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
       </defs>
+      {/* A ring of light that bursts out when the bolt strikes; invisible otherwise. */}
+      <circle cx="29" cy="32" r="27" fill="none" stroke="#E02424" strokeWidth="3" opacity="0" className="sf-part sf-ring" />
+      {/* The class names only move when a parent has sf-logo-anim (the animated corner logo, logo.css). */}
       {LOGO_PARTS.streaks.map((s, i) => (
-        <rect key={i} {...s} rx="1.7" fill={`url(#${i === 2 ? b : a})`} />
+        <g key={i} className={`sf-dash sf-dash-${i}`}>
+          <rect {...s} rx="1.7" fill={`url(#${i === 2 ? b : a})`} className={`sf-part sf-streak sf-streak-${i}`} />
+        </g>
       ))}
-      <polygon points={LOGO_PARTS.upper} fill={`url(#${a})`} />
-      <polygon points={LOGO_PARTS.upper} fill={`url(#${h})`} />
-      <polygon points={LOGO_PARTS.lower} fill={`url(#${b})`} />
-      <polygon points={LOGO_PARTS.lower} fill={`url(#${h})`} opacity=".5" />
-      <path d={LOGO_PARTS.spark} fill="#FFC857" />
+      <g className="sf-bolt-hover">
+        <g className="sf-part sf-bolt">
+          <g className="sf-part sf-upper">
+            <polygon points={LOGO_PARTS.upper} fill={`url(#${a})`} />
+            <polygon points={LOGO_PARTS.upper} fill={`url(#${h})`} />
+          </g>
+          <g className="sf-part sf-lower">
+            <polygon points={LOGO_PARTS.lower} fill={`url(#${b})`} />
+            <polygon points={LOGO_PARTS.lower} fill={`url(#${h})`} opacity=".5" />
+          </g>
+        </g>
+      </g>
+      <g className="sf-spark-hover">
+        <path d={LOGO_PARTS.spark} fill="#FFC857" className="sf-part sf-spark" />
+      </g>
     </svg>
   );
 }
@@ -69,18 +85,19 @@ export function LogoOnRed({ className }: { className?: string }) {
   );
 }
 
-/** "Samp" in slate and "Force" in the brand gradient (deep red in light themes, coral to amber in dark ones). */
-export function Logo({ className, compact }: { className?: string; compact?: boolean }) {
+/**
+ * "Samp" in slate and "Force" in the brand gradient (deep red in light themes, coral to amber in dark ones).
+ * `animated` is the app's top-left corner logo: it strikes in on load, twinkles at rest and jolts on hover (logo.css).
+ */
+export function Logo({ className, compact, animated }: { className?: string; compact?: boolean; animated?: boolean }) {
   return (
-    <span className={cn('inline-flex items-center gap-2', className)}>
+    <span className={cn('inline-flex items-center gap-2', animated && 'sf-logo-anim', className)} data-logo-animated={animated ? 'yes' : undefined}>
       <LogoMark />
       {!compact && (
-        <span className="leading-tight">
+        <span className="sf-word leading-tight">
           <span className="block text-base font-semibold tracking-tight" translate="no">
             <span className="text-slate-500 dark:text-slate-400">Samp</span>
-            <span className="bg-gradient-to-r from-[#C81E1E] to-[#8B1A1A] bg-clip-text font-bold text-transparent dark:from-[#FF8A8A] dark:to-[#FFC857]">
-              Force
-            </span>
+            <span className="sf-force font-bold">Force</span>
           </span>
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">by Sampledge</span>
         </span>

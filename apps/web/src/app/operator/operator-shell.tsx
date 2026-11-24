@@ -218,7 +218,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent side="left" className="flex w-[280px] flex-col p-0 pt-4">
           <DialogTitle className="flex items-center gap-2 px-4 pb-4 text-sm font-semibold">
-            <Logo compact /> SampForce Console
+            <Logo compact animated /> SampForce Console
           </DialogTitle>
           {me.data && (
             <ConsoleSidebarNav
@@ -242,7 +242,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
           />
         ) : (
           <header className="flex h-16 items-center gap-3 border-b border-border/70 px-6">
-            <Logo compact />
+            <Logo compact animated />
             <span className="font-semibold">SampForce Console</span>
             <Badge tone="warning">Platform staff</Badge>
           </header>

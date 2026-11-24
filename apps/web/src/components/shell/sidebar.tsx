@@ -208,7 +208,7 @@ export function Sidebar() {
     >
       <div className={cn('flex h-16 items-center px-4', collapsed && 'justify-center px-0')}>
         <Link href="/app" aria-label={t('nav.home')}>
-          <Logo compact={collapsed} />
+          <Logo compact={collapsed} animated />
         </Link>
       </div>
       <SidebarNav collapsed={collapsed} />
