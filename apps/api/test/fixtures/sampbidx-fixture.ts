@@ -7,6 +7,8 @@ import type { AddressInfo } from 'node:net';
  * POST /v1/rfqs and POST /v1/rfq-emails (multipart), under /api (so the base URL is `${url}/api`). It is not
  * SampBidx: it shows SampForce keeps to the document, and SampBidx's own team must build the same endpoints.
  *
+ * It also takes chat messages (POST /v1/messages, ADR 0077) and lists them at GET /__messages.
+ *
  * SBX.key is accepted; any other key gets 401. An RFQ whose project name contains "REFUSE" gets 422. POST /__fail
  * with {"count": n} makes the next n sends answer 503. GET /__received lists what arrived (for browser tests).
  */
@@ -29,9 +31,18 @@ export interface SbxReceived {
   parts: SbxPart[];
 }
 
+export interface SbxMessage {
+  id: string;
+  idempotencyKey: string | null;
+  json: Record<string, unknown>;
+  parts: SbxPart[];
+}
+
 export interface SampbidxFixture {
   url: string;
   received: SbxReceived[];
+  /** Chat messages SampBidx accepted, once each. */
+  messages: SbxMessage[];
   calls: string[];
   failNext(n: number): void;
   close(): Promise<void>;
@@ -69,6 +80,8 @@ function parseMultipart(body: Buffer, contentType: string): SbxPart[] & { raw?: 
 
 export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   const received: SbxReceived[] = [];
+  const messages: SbxMessage[] = [];
+  const messageByKey = new Map<string, SbxMessage>();
   const calls: string[] = [];
   const byKey = new Map<string, SbxReceived>();
   let failures = 0;
@@ -81,6 +94,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
       const json = (status: number, body: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
       if (u.pathname === '/health') return void res.writeHead(200).end('ok');
       if (u.pathname === '/__received') return void json(200, received);
+      if (u.pathname === '/__messages') return void json(200, messages);
       if (u.pathname === '/__fail' && req.method === 'POST') {
         failures = Number((JSON.parse(raw.toString() || '{}') as { count?: number }).count ?? 1);
         return void json(200, { failing: failures });
@@ -91,6 +105,21 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
       const path = u.pathname.slice('/api'.length);
       if (req.headers.authorization !== `Bearer ${SBX.key}`) return void json(401, { error: { message: 'Invalid API key' } });
       if (req.method === 'GET' && path === '/v1/ping') return void json(200, { ok: true, account: { name: SBX.account }, apiVersion: 'v1' });
+      if (req.method === 'POST' && path === '/v1/messages') {
+        if (failures > 0) {
+          failures--;
+          return void json(503, { error: { message: 'Temporarily unavailable' } });
+        }
+        const idem = (req.headers['idempotency-key'] as string | undefined) ?? null;
+        if (idem && messageByKey.has(idem)) return void json(200, { id: messageByKey.get(idem)!.id, duplicate: true });
+        const parts = parseMultipart(raw, String(req.headers['content-type'] ?? ''));
+        const main = parts.find((p) => p.name === 'message');
+        if (!main?.text) return void json(400, { error: { message: 'Missing the "message" part' } });
+        const rec: SbxMessage = { id: `MSG-${randomBytes(3).toString('hex').toUpperCase()}`, idempotencyKey: idem, json: JSON.parse(main.text) as Record<string, unknown>, parts };
+        messages.push(rec);
+        if (idem) messageByKey.set(idem, rec);
+        return void json(201, { id: rec.id });
+      }
       if (req.method === 'POST' && (path === '/v1/rfqs' || path === '/v1/rfq-emails')) {
         if (failures > 0) {
           failures--;
@@ -119,6 +148,7 @@ export async function startSampbidxFixture(port = 0): Promise<SampbidxFixture> {
   return {
     url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     received,
+    messages,
     calls,
     failNext: (n) => void (failures = n),
     close: () => new Promise((r) => server.close(() => r())),

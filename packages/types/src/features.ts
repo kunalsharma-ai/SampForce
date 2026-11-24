@@ -61,6 +61,7 @@ export const FEATURE_KEYS = [
   'whatsapp',
   'sms',
   'sampbidx',
+  'sampbidx_chat',
   'api_access',
   'webhooks',
   // Administration
@@ -128,6 +129,11 @@ export interface FeatureDef {
    * when its `defaultFrom` says so (see parsePlanEntitlements); lists saved since then are taken as written.
    */
   since?: number;
+  /**
+   * In no plan until the Console Admin adds it to a plan or grants it to one organisation: a module the Console
+   * switches on deliberately (SampBidx chat).
+   */
+  optIn?: boolean;
 }
 
 export const FEATURES: FeatureDef[] = [
@@ -176,6 +182,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'whatsapp', group: 'Apps', label: 'WhatsApp', description: 'WhatsApp Business messages from CRM records.', defaultFrom: 'professional', paths: [] },
   { key: 'sms', group: 'Apps', label: 'SMS', description: 'SMS through your Twilio account.', defaultFrom: 'professional', paths: [] },
   { key: 'sampbidx', group: 'Apps', label: 'SampBidx', description: 'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.', defaultFrom: 'free', paths: [] },
+  { key: 'sampbidx_chat', group: 'Communication', label: 'Chat with SampBidx team', description: 'Talk with the SampBidx bidding team inside Team chat: a general line and one chat per RFQ sent to SampBidx. The Console Admin allows it for the Super Workspace, which hands it down to its Manager and Executive Workspaces.', defaultFrom: 'free', paths: [], parent: 'team_chat', since: 4, optIn: true },
   { key: 'api_access', group: 'Apps', label: 'API and Zapier', description: 'Workspace API keys and the Zapier app.', defaultFrom: 'growth', paths: [] },
   { key: 'webhooks', group: 'Apps', label: 'Webhooks', description: 'Signed webhooks to your own systems.', defaultFrom: 'growth', paths: [] },
 
@@ -223,7 +230,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
-export const FEATURE_CATALOG_VERSION = 3;
+export const FEATURE_CATALOG_VERSION = 4;
 
 /** Subfeatures of a feature, in catalogue order. */
 export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {
@@ -247,7 +254,7 @@ export const FEATURE_BY_KEY: Record<FeatureKey, FeatureDef> = Object.fromEntries
 /** The features a plan includes before any operator changes it: everything from `defaultFrom` up. */
 export function defaultPlanFeatures(plan: PlanCode): FeatureKey[] {
   const rank = PLAN_CODES.indexOf(plan);
-  return FEATURES.filter((f) => PLAN_CODES.indexOf(f.defaultFrom) <= rank).map((f) => f.key);
+  return FEATURES.filter((f) => !f.optIn && PLAN_CODES.indexOf(f.defaultFrom) <= rank).map((f) => f.key);
 }
 
 /** Keeps known keys only, in catalogue order, without duplicates: a stored list may hold keys a later release removed. */

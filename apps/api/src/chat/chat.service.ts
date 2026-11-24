@@ -16,6 +16,9 @@ import {
   type ChatPerson,
   type ChatSearchHit,
   type ChatStreamEvent,
+  type ChatSampbidxInfo,
+  type SampbidxChatPerson,
+  type SampbidxChatDelivery,
   chatConversationInputSchema,
   chatConversationUpdateSchema,
   chatMessageInputSchema,
@@ -39,6 +42,7 @@ import { isOnline } from './chat-presence';
 import { ChatReach, chatNotAllowed } from './chat-reach';
 import { queueMobilePush } from '../mobile/push/push-queue';
 import { photoUrl } from '../profile-photos/profile-photos.service';
+import { SAMPBIDX_GENERAL_KEY, SAMPBIDX_GENERAL_TITLE, sampbidxChatAllowed, sampbidxChatMembers, sampbidxChatRefused } from './sampbidx-line';
 
 /** A workspace user (in their workspace), or a super admin from the operator console acting in one workspace. */
 export type ChatActor = { kind: 'user'; auth: AuthContext } | { kind: 'operator'; op: OperatorContext };
@@ -71,6 +75,32 @@ export class ChatService {
     private readonly bus: ChatBus,
     private readonly audit: AuditService,
   ) {}
+
+  /** Set by the SampBidx app (ADR 0077): posts a message written in a SampBidx conversation to SampBidx. */
+  onSampbidxMessage: ((tenantId: string, messageId: string) => void) | null = null;
+
+  /** SAMPBIDX conversations are left out for people whose workspace does not have SampBidx chat. */
+  private async hiddenKinds(tx: TenantTx, actor: ChatActor): Promise<Prisma.ChatConversationWhereInput> {
+    if (actor.kind !== 'user') return {};
+    return (await sampbidxChatAllowed(tx, actor.auth.tenantId, actor.auth.workspaceNodeId)) ? {} : { kind: { not: 'SAMPBIDX' } };
+  }
+
+  /**
+   * The general line to the SampBidx team, created on first use, with everyone whose workspace has SampBidx chat on
+   * it. People whose workspace lost it are taken off; their messages stay.
+   */
+  async sampbidxLine(tx: TenantTx, tenantId: string): Promise<ConversationRecord> {
+    let conv = await tx.chatConversation.findFirst({ where: { tenantId, directKey: SAMPBIDX_GENERAL_KEY }, include: { members: true } });
+    if (!conv) conv = await tx.chatConversation.create({ data: { tenantId, kind: 'SAMPBIDX', directKey: SAMPBIDX_GENERAL_KEY, name: SAMPBIDX_GENERAL_TITLE }, include: { members: true } });
+    const allowed = new Set((await sampbidxChatMembers(tx, tenantId)).map((m) => m.userId));
+    const have = new Set(conv.members.map((m) => m.userId).filter((u): u is string => !!u));
+    const add = [...allowed].filter((u) => !have.has(u));
+    const drop = conv.members.filter((m) => m.userId && !allowed.has(m.userId));
+    if (add.length) await tx.chatMember.createMany({ data: add.map((userId) => ({ tenantId, conversationId: conv!.id, userId })) });
+    if (drop.length) await tx.chatMember.deleteMany({ where: { tenantId, id: { in: drop.map((m) => m.id) } } });
+    if (add.length || drop.length) conv = await tx.chatConversation.findFirstOrThrow({ where: { id: conv.id, tenantId }, include: { members: true } });
+    return conv;
+  }
 
   /** Runs `fn` in the workspace's context: the user's own session, or the workspace for an operator. */
   private async run<T>(actor: ChatActor, tenantId: string | undefined, fn: (tx: TenantTx, signals: Signal[]) => Promise<T>): Promise<T> {
@@ -156,15 +186,21 @@ export class ChatService {
       }
       throw notFound('Conversation');
     }
+    if (conv.kind === 'SAMPBIDX' && !(await sampbidxChatAllowed(tx, tenantId, actor.auth.workspaceNodeId))) throw sampbidxChatRefused();
     return conv;
   }
 
-  private audience(conv: ConversationRecord): ChatAudience {
+  /** The conversation for SampBidx's side: no person's access applies. */
+  async conversationForSampbidx(tx: TenantTx, tenantId: string, id: string): Promise<ConversationRecord> {
+    return tx.chatConversation.findFirstOrThrow({ where: { id, tenantId, kind: 'SAMPBIDX' }, include: { members: true } });
+  }
+
+  audience(conv: ConversationRecord): ChatAudience {
     return { tenantId: conv.tenantId, conversationId: conv.id, userIds: conv.members.map((m) => m.userId).filter((v): v is string => !!v), operators: conv.kind === 'SUPPORT' };
   }
 
   private canManage(actor: ChatActor, conv: ConversationRecord): boolean {
-    if (conv.kind === 'DIRECT' || actor.kind === 'operator') return false;
+    if (conv.kind === 'DIRECT' || conv.kind === 'SAMPBIDX' || actor.kind === 'operator') return false;
     if (isAdmin(actor)) return true;
     return conv.kind === 'CHANNEL' && conv.members.some((m) => m.userId === actor.auth.userId && m.role === 'OWNER');
   }
@@ -183,10 +219,11 @@ export class ChatService {
     return tx.chatMessage.count({ where: { tenantId: conv.tenantId, conversationId: conv.id, deletedAt: null, ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}), ...notMine } });
   }
 
-  private async conversationRows(tx: TenantTx, actor: ChatActor, convs: ConversationRecord[], workspaces?: Map<string, string>): Promise<ChatConversationRow[]> {
+  async conversationRows(tx: TenantTx, actor: ChatActor, convs: ConversationRecord[], workspaces?: Map<string, string>): Promise<ChatConversationRow[]> {
     const people = await this.people(tx, convs.flatMap((c) => c.members.map((m) => m.userId)), convs.flatMap((c) => c.members.map((m) => m.operatorId)));
     const names = workspaces ?? new Map((await tx.tenant.findMany({ where: { id: { in: [...new Set(convs.map((c) => c.tenantId))] } }, select: { id: true, name: true } })).map((t) => [t.id, t.name]));
     const unread = await Promise.all(convs.map((c) => this.unread(tx, actor, c)));
+    const sbx = await this.sampbidxInfo(tx, convs);
     return convs.map((c, i) => {
       const members = c.members
         .map((m) => ({
@@ -204,7 +241,7 @@ export class ChatService {
         tenantId: c.tenantId,
         workspace: names.get(c.tenantId) ?? '',
         kind: c.kind as ChatKind,
-        title: c.kind === 'SUPPORT' ? SUPPORT_TITLE : c.kind === 'DIRECT' ? (other?.person.name ?? members[0]?.person.name ?? '') : (c.name ?? ''),
+        title: c.kind === 'SUPPORT' ? SUPPORT_TITLE : c.kind === 'DIRECT' ? (other?.person.name ?? members[0]?.person.name ?? '') : c.kind === 'SAMPBIDX' && c.directKey === SAMPBIDX_GENERAL_KEY ? SAMPBIDX_GENERAL_TITLE : (c.name ?? ''),
         topic: c.topic,
         link: this.linkOf(c.linkType, c.linkId, c.linkLabel, actor),
         archived: !!c.archivedAt,
@@ -213,12 +250,49 @@ export class ChatService {
         lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
         lastMessagePreview: c.lastMessagePreview,
         canManage: this.canManage(actor, c),
+        ...(c.kind === 'SAMPBIDX' ? { sampbidx: sbx.get(c.id) ?? null } : {}),
         createdAt: c.createdAt.toISOString(),
       };
     });
   }
 
-  private async messageRows(tx: TenantTx, actor: ChatActor, tenantId: string, rows: MessageRecord[]): Promise<ChatMessageRow[]> {
+  private async sampbidxInfo(tx: TenantTx, convs: ConversationRecord[]): Promise<Map<string, ChatSampbidxInfo>> {
+    const out = new Map<string, ChatSampbidxInfo>();
+    const mine = convs.filter((c) => c.kind === 'SAMPBIDX');
+    if (!mine.length) return out;
+    const ids = mine.map((c) => c.sampbidxTransferId).filter((v): v is string => !!v);
+    const transfers = ids.length ? await tx.sampbidxTransfer.findMany({ where: { id: { in: ids } }, omit: { emailFileData: true } }) : [];
+    const rfqIds = transfers.map((t) => t.rfqId).filter((v): v is string => !!v);
+    const companyIds = transfers.map((t) => t.companyId).filter((v): v is string => !!v);
+    const [rfqs, companies] = await Promise.all([
+      rfqIds.length ? tx.rfq.findMany({ where: { id: { in: rfqIds } }, select: { id: true, number: true, projectName: true } }) : [],
+      companyIds.length ? tx.company.findMany({ where: { id: { in: companyIds } }, select: { id: true, name: true } }) : [],
+    ]);
+    const rfq = new Map(rfqs.map((r) => [r.id, r]));
+    const company = new Map(companies.map((r) => [r.id, r]));
+    const byId = new Map(transfers.map((t) => [t.id, t]));
+    for (const c of mine) {
+      const t = c.sampbidxTransferId ? byId.get(c.sampbidxTransferId) : undefined;
+      out.set(c.id, {
+        scope: c.directKey === SAMPBIDX_GENERAL_KEY ? 'general' : 'rfq',
+        transfer: t
+          ? {
+              id: t.id,
+              title: t.title,
+              rfq: t.rfqId ? (rfq.get(t.rfqId) ?? null) : null,
+              company: t.companyId ? (company.get(t.companyId) ?? null) : null,
+              remoteId: t.remoteId,
+              remoteUrl: t.remoteUrl && /^https?:\/\//i.test(t.remoteUrl) ? t.remoteUrl : null,
+              remoteStatus: t.remoteStatus,
+            }
+          : null,
+        people: Array.isArray(c.sampbidxPeople) ? (c.sampbidxPeople as unknown as SampbidxChatPerson[]) : [],
+      });
+    }
+    return out;
+  }
+
+  async messageRows(tx: TenantTx, actor: ChatActor, tenantId: string, rows: MessageRecord[]): Promise<ChatMessageRow[]> {
     const ids = rows.map((r) => r.id);
     const [people, files] = await Promise.all([
       this.people(tx, rows.map((r) => r.authorUserId), rows.map((r) => r.authorOperatorId)),
@@ -240,6 +314,9 @@ export class ChatService {
         writtenAt: r.writtenAt?.toISOString() ?? null,
         editedAt: r.editedAt?.toISOString() ?? null,
         deleted,
+        ...(r.externalAuthor ? { external: r.externalAuthor as unknown as SampbidxChatPerson } : {}),
+        ...(r.system ? { system: true } : {}),
+        ...(r.remoteDelivery ? { sampbidxDelivery: { state: r.remoteDelivery as SampbidxChatDelivery, error: r.remoteError, attempts: r.remoteAttempts ?? 0 } } : {}),
       };
     });
   }
@@ -335,9 +412,12 @@ export class ChatService {
     const actor: ChatActor = { kind: 'user', auth };
     return this.run(actor, undefined, async (tx) => {
       if (isAdmin(actor) && (await ChatReach.load(tx, auth.tenantId)).isSuper(auth.userId)) await this.supportLine(tx, auth.tenantId);
+      const hidden = await this.hiddenKinds(tx, actor);
+      // Everyone with SampBidx chat is on the general line to the SampBidx team.
+      if (!hidden.kind) await this.sampbidxLine(tx, auth.tenantId);
       const mine = await tx.chatMember.findMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, select: { conversationId: true } });
       const convs = await tx.chatConversation.findMany({
-        where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, archivedAt: archived ? { not: null } : null },
+        where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, archivedAt: archived ? { not: null } : null, ...hidden },
         include: { members: true },
       });
       return sortConversations(await this.conversationRows(tx, actor, convs));
@@ -407,9 +487,16 @@ export class ChatService {
     const actor: ChatActor = { kind: 'user', auth };
     return this.run(actor, undefined, async (tx, signals) => {
       const conv = await this.conversation(tx, actor, auth.tenantId, id);
-      if (!this.canManage(actor, conv)) throw forbidden('Only the channel owner or a workspace admin can change who is in it.');
-      await this.assertMembers(tx, auth.tenantId, userIds, 'userIds');
-      (await ChatReach.load(tx, auth.tenantId)).assert(auth.userId, userIds);
+      if (conv.kind === 'SAMPBIDX') {
+        // Anyone in an RFQ chat may bring in colleagues who have SampBidx chat; the general line has everyone already.
+        if (conv.directKey === SAMPBIDX_GENERAL_KEY) throw forbidden('Everyone with SampBidx chat is on the SampBidx team line.');
+        const allowed = new Set((await sampbidxChatMembers(tx, auth.tenantId)).map((m) => m.userId));
+        if (userIds.some((u) => !allowed.has(u))) throw badRequest('VALIDATION_FAILED', 'Choose people whose workspace has SampBidx chat.', 'userIds');
+      } else {
+        if (!this.canManage(actor, conv)) throw forbidden('Only the channel owner or a workspace admin can change who is in it.');
+        await this.assertMembers(tx, auth.tenantId, userIds, 'userIds');
+        (await ChatReach.load(tx, auth.tenantId)).assert(auth.userId, userIds);
+      }
       const have = new Set(conv.members.map((m) => m.userId));
       const add = [...new Set(userIds)].filter((u) => !have.has(u));
       if (add.length) await tx.chatMember.createMany({ data: add.map((userId) => ({ tenantId: auth.tenantId, conversationId: id, userId })) });
@@ -426,6 +513,7 @@ export class ChatService {
     return this.run(actor, undefined, async (tx, signals) => {
       const conv = await this.conversation(tx, actor, auth.tenantId, id);
       if (conv.kind === 'DIRECT') throw forbidden('People cannot be removed from a direct message.');
+      if (conv.kind === 'SAMPBIDX' && (conv.directKey === SAMPBIDX_GENERAL_KEY || userId !== auth.userId)) throw forbidden('Everyone with SampBidx chat is on the SampBidx team line.');
       if (userId !== auth.userId && !this.canManage(actor, conv)) throw forbidden('Only the channel owner or a workspace admin can change who is in it.');
       if (conv.kind === 'SUPPORT' && (await this.adminIds(tx, auth.tenantId)).includes(userId)) throw forbidden('Workspace admins are always on the support line.');
       const m = conv.members.find((x) => x.userId === userId);
@@ -463,7 +551,10 @@ export class ChatService {
   async send(actor: ChatActor, id: string, input: z.output<typeof chatMessageInputSchema>, tenantId?: string): Promise<ChatMessageRow> {
     const tid = tenantOf(actor, tenantId);
     try {
-      return await this.sendOnce(actor, id, input, tid);
+      const row = await this.sendOnce(actor, id, input, tid);
+      // A new message in a SampBidx conversation goes on to SampBidx; the worker retries it if this try fails.
+      if (row.sampbidxDelivery?.state === 'SENDING' && row.sampbidxDelivery.attempts === 0) this.onSampbidxMessage?.(tid, row.id);
+      return row;
     } catch (err) {
       // The same message arrived twice at once (an outbox retry racing the first try): return the stored one.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -498,6 +589,7 @@ export class ChatService {
         const other = conv.members.find((m) => m.userId && m.userId !== actor.auth.userId)?.userId;
         if (other && !(await ChatReach.load(tx, tid)).canTalk(actor.auth.userId, other)) throw chatNotAllowed();
       }
+      if (conv.kind === 'SAMPBIDX' && input.link) throw badRequest('VALIDATION_FAILED', 'SampBidx cannot open SampForce records, so a SampBidx chat takes no record links.', 'link');
       const link = await this.resolveLink(tx, actor, tid, input.link, 'link');
       const files = input.attachmentIds.length
         ? await tx.chatAttachment.findMany({ where: { tenantId: tid, id: { in: input.attachmentIds }, conversationId: id, messageId: null, ...(actor.kind === 'user' ? { uploadedByUserId: actor.auth.userId } : { uploadedByOperatorId: actor.op.id }) }, select: { id: true, name: true } })
@@ -512,6 +604,7 @@ export class ChatService {
           tenantId: tid, conversationId: id, clientId: input.clientId, body: input.body, writtenAt,
           ...(actor.kind === 'user' ? { authorUserId: actor.auth.userId } : { authorOperatorId: actor.op.id }),
           linkType: link?.type ?? null, linkId: link?.id ?? null, linkLabel: link?.label ?? null,
+          ...(conv.kind === 'SAMPBIDX' ? { remoteDelivery: 'SENDING', remoteAttempts: 0, remoteRetryAt: new Date(now.getTime() + 60_000) } : {}),
         },
       });
       if (files.length) await tx.chatAttachment.updateMany({ where: { tenantId: tid, id: { in: files.map((f) => f.id) } }, data: { messageId: msg.id } });
@@ -525,7 +618,7 @@ export class ChatService {
       const others = conv.members.map((m) => m.userId).filter((u): u is string => !!u && (actor.kind !== 'user' || u !== actor.auth.userId));
       if (others.length) {
         const from = actor.kind === 'user' ? ((await tx.user.findUnique({ where: { id: actor.auth.userId }, select: { name: true } }))?.name ?? '') : 'SampForce support';
-        const title = conv.kind === 'CHANNEL' && conv.name ? `${from} in #${conv.name}` : from;
+        const title = conv.kind === 'CHANNEL' && conv.name ? `${from} in #${conv.name}` : conv.kind === 'SAMPBIDX' ? `${from} in ${conv.directKey === SAMPBIDX_GENERAL_KEY ? SAMPBIDX_GENERAL_TITLE : (conv.name ?? '')}` : from;
         await queueMobilePush(tx, tid, others, { type: 'chat_message', title, body: preview || null, route: `/chat/${id}` });
       }
       return (await this.messageRows(tx, actor, tid, [msg]))[0]!;
@@ -538,6 +631,7 @@ export class ChatService {
     const conv = await this.conversation(tx, actor, tid, msg.conversationId);
     const mine = (actor.kind === 'user' ? msg.authorUserId : msg.authorOperatorId) === personId(actor);
     if (!mine && !(allowManager && this.canManage(actor, conv))) throw forbidden('You can only change your own messages.');
+    if (conv.kind === 'SAMPBIDX') throw forbidden('Messages in a SampBidx chat cannot be changed, because SampBidx already has them.');
     if (msg.deletedAt) throw badRequest('MESSAGE_DELETED', 'This message was deleted.');
     return { msg, conv };
   }
@@ -628,7 +722,8 @@ export class ChatService {
     const actor: ChatActor = { kind: 'user', auth };
     return this.run(actor, undefined, async (tx) => {
       const mine = await tx.chatMember.findMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, select: { conversationId: true } });
-      const ids = mine.map((m) => m.conversationId).filter((c) => !q.conversationId || c === q.conversationId);
+      const visible = await tx.chatConversation.findMany({ where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, ...(await this.hiddenKinds(tx, actor)) }, select: { id: true } });
+      const ids = visible.map((m) => m.id).filter((c) => !q.conversationId || c === q.conversationId);
       if (!ids.length) return [];
       const rows = await tx.chatMessage.findMany({
         where: { tenantId: auth.tenantId, conversationId: { in: ids }, deletedAt: null, OR: [{ body: { contains: q.q, mode: 'insensitive' } }, { linkLabel: { contains: q.q, mode: 'insensitive' } }] },
@@ -649,7 +744,7 @@ export class ChatService {
     const actor: ChatActor = { kind: 'user', auth };
     return this.run(actor, undefined, async (tx) => {
       const mine = await tx.chatMember.findMany({ where: { tenantId: auth.tenantId, userId: auth.userId }, select: { conversationId: true } });
-      const convs = await tx.chatConversation.findMany({ where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, archivedAt: null }, include: { members: true } });
+      const convs = await tx.chatConversation.findMany({ where: { tenantId: auth.tenantId, id: { in: mine.map((m) => m.conversationId) }, archivedAt: null, ...(await this.hiddenKinds(tx, actor)) }, include: { members: true } });
       const counts = await Promise.all(convs.map((c) => this.unread(tx, actor, c)));
       return { total: counts.reduce((a, b) => a + b, 0), conversations: counts.filter((n) => n > 0).length };
     });

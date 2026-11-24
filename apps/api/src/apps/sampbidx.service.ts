@@ -356,6 +356,9 @@ export class SampbidxService {
     return this.deliver(auth, conn, t);
   }
 
+  /** Set by SampBidx chat (ADR 0077): a status change as a line in the RFQ's chat. */
+  onStatus: ((tenantId: string, transferId: string, text: string) => Promise<void>) | null = null;
+
   // ─── SampBidx's status callback ───
 
   /** A status update from SampBidx, signed with the workspace's callback secret. Unknown transfers are ignored. */
@@ -402,6 +405,8 @@ export class SampbidxService {
       });
       return row;
     });
+    // The RFQ's chat with the SampBidx team shows the change too (ADR 0077).
+    if (updated) await this.onStatus?.(tenantId, updated.id, `${remoteTitle(body.status, updated.title)}${body.note ? `: ${body.note}` : ''}`);
     await this.apps.recordEvent(tenantId, conn, {
       kind: 'status.received',
       ok: true,

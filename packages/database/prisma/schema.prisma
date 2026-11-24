@@ -4602,6 +4602,9 @@ enum ChatKind {
   DIRECT
   CHANNEL
   SUPPORT
+  /// With the SampBidx bidding team (ADR 0077): directKey "sampbidx" for the general line, "sampbidx:<transfer id>"
+  /// for one RFQ sent to SampBidx.
+  SAMPBIDX
 }
 
 enum ChatMemberRole {
@@ -4632,6 +4635,10 @@ model ChatConversation {
   archivedAt         DateTime?     @map("archived_at")
   lastMessageAt      DateTime?     @map("last_message_at")
   lastMessagePreview String?       @map("last_message_preview")
+  /// SAMPBIDX conversations about one RFQ: the transfer it is about.
+  sampbidxTransferId String?       @map("sampbidx_transfer_id")
+  /// SAMPBIDX conversations: the SampBidx people who have written in it ({id, name, email, role}[], latest first).
+  sampbidxPeople     Json?         @map("sampbidx_people")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
 
@@ -4685,12 +4692,24 @@ model ChatMessage {
   linkLabel        String?       @map("link_label")
   editedAt         DateTime?     @map("edited_at")
   deletedAt        DateTime?     @map("deleted_at")
+  /// Written in SampBidx (ADR 0077): {id, name, email, role}. clientId is then "sampbidx:<SampBidx's message id>".
+  externalAuthor   Json?         @map("external_author")
+  /// A line from SampBidx about the RFQ (a status change), not a person's message.
+  system           Boolean?
+  /// Written in SampForce in a SAMPBIDX conversation: SENDING, SENT or FAILED, and the tries so far.
+  remoteDelivery   String?       @map("remote_delivery")
+  remoteAttempts   Int?          @map("remote_attempts")
+  remoteError      String?       @map("remote_error")
+  remoteId         String?       @map("remote_id")
+  /// When the worker may try again.
+  remoteRetryAt    DateTime?     @map("remote_retry_at")
   createdAt        DateTime      @default(now()) @map("created_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([conversationId, clientId])
+  @@index([remoteDelivery, remoteRetryAt])
   @@index([tenantId, conversationId, createdAt(sort: Desc)])
   @@map("chat_messages")
 }
