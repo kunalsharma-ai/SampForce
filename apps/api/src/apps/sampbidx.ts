@@ -69,7 +69,7 @@ export class SampbidxClient {
   }
 
   /**
-   * POST /v1/messages (multipart, ADR 0077): a chat message written in SampForce, as JSON in "message" and each file
+   * POST /v1/messages (multipart, ADR 0078): a chat message written in SampForce, as JSON in "message" and each file
    * as a "files" part. The message id is the Idempotency-Key, so a retry never shows twice in SampBidx.
    */
   async postMessage(keys: SampbidxKeys, messageId: string, message: unknown, files: Part[]): Promise<{ id: string | null }> {

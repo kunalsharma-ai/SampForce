@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, type OnModuleInit, PayloadTooLargeException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, type OnModuleInit, PayloadTooLargeException, UnauthorizedException } from '@nestjs/common';
 import { type AppConnection, Prisma, type SampbidxTransfer, type TenantTx } from '@dealflow/database';
 import {
   type ChatConversationRow,
@@ -20,6 +20,7 @@ import { PrismaService } from '../common/prisma.service';
 import { ChatBus } from '../chat/chat-bus';
 import { type ChatActor, ChatService } from '../chat/chat.service';
 import { SAMPBIDX_GENERAL_KEY, SAMPBIDX_GENERAL_TITLE, sampbidxChatAllowed, sampbidxChatMembers, sampbidxChatRefused, sampbidxTransferKey } from '../chat/sampbidx-line';
+import { notFound } from '../crm/crm-helpers';
 import { companyScope, visibility } from '../crm/visibility';
 import { queueMobilePush } from '../mobile/push/push-queue';
 import { AppError, AppsService } from './apps.service';
@@ -40,7 +41,7 @@ const PREVIEW_MAX = 140;
 const PEOPLE_KEPT = 20;
 
 /**
- * Chat with the SampBidx team (ADR 0077). Messages written in a SampBidx conversation of Team chat are posted to
+ * Chat with the SampBidx team (ADR 0078). Messages written in a SampBidx conversation of Team chat are posted to
  * SampBidx (POST /v1/messages) straight after they are stored, and retried by the worker until SampBidx has them.
  * SampBidx's people answer through a signed callback, and read the list of SampForce people who may chat through
  * another one. Status changes of a transferred RFQ appear in its chat as lines from SampBidx.
@@ -107,7 +108,7 @@ export class SampbidxChatService implements OnModuleInit {
     return this.withSignals(auth.tenantId, auth, async (tx, signals) => {
       await this.assertAllowed(tx, auth);
       const t = await tx.sampbidxTransfer.findFirst({ where: { tenantId: auth.tenantId, id: transferId, AND: [await this.visibleTransfers(tx, auth)] }, omit: { emailFileData: true } });
-      if (!t) throw new NotFoundException({ code: 'NOT_FOUND', message: 'RFQ sent to SampBidx not found' });
+      if (!t) throw notFound('RFQ');
       let conv = await this.transferChat(tx, auth.tenantId, t, signals);
       if (!conv.members.some((m) => m.userId === auth.userId)) {
         await tx.chatMember.create({ data: { tenantId: auth.tenantId, conversationId: conv.id, userId: auth.userId } });
@@ -123,7 +124,7 @@ export class SampbidxChatService implements OnModuleInit {
     await this.prisma.run(auth, async (tx) => {
       await this.assertAllowed(tx, auth);
       const m = await tx.chatMessage.findFirst({ where: { tenantId: auth.tenantId, id: messageId, authorUserId: auth.userId } });
-      if (!m || !m.remoteDelivery) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Message not found' });
+      if (!m || !m.remoteDelivery) throw notFound('Message');
       if (m.remoteDelivery === 'SENT') return;
       await tx.chatMessage.update({ where: { id: m.id }, data: { remoteDelivery: 'SENDING', remoteRetryAt: new Date(), remoteError: null } });
     });

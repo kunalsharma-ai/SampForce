@@ -6,7 +6,7 @@ import { SampbidxChatService } from '../src/apps/sampbidx-chat.service';
 import { SBX, sbxSign, startSampbidxFixture, type SampbidxFixture } from './fixtures/sampbidx-fixture';
 import { api, asTenant, inviteMember, ORIGIN, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
-/** Chat with the SampBidx team (ADR 0077) against the local SampBidx stand-in. */
+/** Chat with the SampBidx team (ADR 0078) against the local SampBidx stand-in. */
 describe('SampBidx chat (stand-in)', () => {
   let app: INestApplication;
   let sbx: SampbidxFixture;

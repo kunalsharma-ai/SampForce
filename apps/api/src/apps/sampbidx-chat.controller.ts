@@ -10,7 +10,7 @@ import { SampbidxChatService } from './sampbidx-chat.service';
 const uuid = new ParseUUIDPipe({ version: '4' });
 
 /**
- * Chat with the SampBidx team inside Team chat (ADR 0077). Reading and writing the conversations goes through the
+ * Chat with the SampBidx team inside Team chat (ADR 0078). Reading and writing the conversations goes through the
  * Team chat routes; these start a chat about an RFQ sent to SampBidx and resend a message SampBidx does not have.
  */
 @Controller('apps/sampbidx/chat')

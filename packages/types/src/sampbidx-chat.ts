@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CHAT_MESSAGE_MAX } from './chat';
 
 /*
- * Chat with the SampBidx team (ADR 0077). SampForce people write in Team chat; each message is posted to SampBidx
+ * Chat with the SampBidx team (ADR 0078). SampForce people write in Team chat; each message is posted to SampBidx
  * (POST /v1/messages), and SampBidx posts its team's messages back as signed callbacks. The contract SampBidx builds
  * to is in docs/integrations/sampbidx-api.md, "Chat with the SampBidx team".
  */

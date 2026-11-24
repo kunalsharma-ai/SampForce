@@ -44,6 +44,7 @@ export const features = {
   'Webhooks': ['Webhooks', 'Webhooks', 'Webhooks', 'خطافات الويب'],
   'SMS': ['SMS', 'SMS', 'SMS', 'الرسائل النصية'],
   'SampBidx': ['SampBidx', 'SampBidx', 'SampBidx', 'SampBidx'],
+  'Chat with SampBidx team': ['Chat con el equipo de SampBidx', 'Discussion avec l’équipe SampBidx', 'Chat mit dem SampBidx-Team', 'الدردشة مع فريق SampBidx'],
   'Slack': ['Slack', 'Slack', 'Slack', 'Slack'],
   'Microsoft Teams': ['Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams', 'Microsoft Teams'],
   'Zoom': ['Zoom', 'Zoom', 'Zoom', 'Zoom'],
@@ -258,6 +259,12 @@ export const features = {
     'Messages WhatsApp Business depuis les fiches du CRM.',
     'WhatsApp-Business-Nachrichten aus CRM-Datensätzen.',
     'رسائل WhatsApp Business من سجلات CRM.',
+  ],
+  'Talk with the SampBidx bidding team inside Team chat: a general line and one chat per RFQ sent to SampBidx. The Console Admin allows it for the Super Workspace, which hands it down to its Manager and Executive Workspaces.': [
+    'Habla con el equipo de ofertas de SampBidx dentro del chat del equipo: una línea general y un chat por cada RFQ enviada a SampBidx. El administrador de la consola lo permite para el espacio Super, que lo cede a sus espacios de gerente y ejecutivo.',
+    'Échangez avec l’équipe d’offres SampBidx dans la discussion d’équipe : une ligne générale et une discussion par RFQ envoyée à SampBidx. L’administrateur de la console l’autorise pour l’espace Super, qui le transmet à ses espaces Manager et Exécutif.',
+    'Sprechen Sie im Team-Chat mit dem SampBidx-Angebotsteam: eine allgemeine Linie und ein Chat pro an SampBidx gesendeter RFQ. Der Console-Admin erlaubt es für den Super-Arbeitsbereich, der es an seine Manager- und Executive-Arbeitsbereiche weitergibt.',
+    'تحدّث مع فريق العروض في SampBidx داخل دردشة الفريق: خط عام ودردشة لكل طلب عرض مرسل إلى SampBidx. يسمح به مسؤول وحدة التحكم لمساحة العمل الرئيسية، التي تمنحه لمساحات المديرين والتنفيذيين التابعة لها.',
   ],
   'Send RFQs and RFQ emails to SampBidx for bidding, and follow their status.': [
     'Envía RFQ y correos de RFQ a SampBidx para cotizar, y sigue su estado.',

@@ -4602,7 +4602,7 @@ enum ChatKind {
   DIRECT
   CHANNEL
   SUPPORT
-  /// With the SampBidx bidding team (ADR 0077): directKey "sampbidx" for the general line, "sampbidx:<transfer id>"
+  /// With the SampBidx bidding team (ADR 0078): directKey "sampbidx" for the general line, "sampbidx:<transfer id>"
   /// for one RFQ sent to SampBidx.
   SAMPBIDX
 }
@@ -4692,7 +4692,7 @@ model ChatMessage {
   linkLabel        String?       @map("link_label")
   editedAt         DateTime?     @map("edited_at")
   deletedAt        DateTime?     @map("deleted_at")
-  /// Written in SampBidx (ADR 0077): {id, name, email, role}. clientId is then "sampbidx:<SampBidx's message id>".
+  /// Written in SampBidx (ADR 0078): {id, name, email, role}. clientId is then "sampbidx:<SampBidx's message id>".
   externalAuthor   Json?         @map("external_author")
   /// A line from SampBidx about the RFQ (a status change), not a person's message.
   system           Boolean?

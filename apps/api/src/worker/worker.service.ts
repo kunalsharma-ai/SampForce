@@ -59,7 +59,7 @@ export interface WorkerTick {
   consoleNotifications: number;
   /** Clients whose health score was measured (ADR 0074, C5): each once a day, and again after the weights change. */
   clientHealth: number;
-  /** SampBidx chat messages tried again (ADR 0077). */
+  /** SampBidx chat messages tried again (ADR 0078). */
   sampbidxChat: number;
 }
 

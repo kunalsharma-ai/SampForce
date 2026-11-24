@@ -7,7 +7,7 @@ import type { AddressInfo } from 'node:net';
  * POST /v1/rfqs and POST /v1/rfq-emails (multipart), under /api (so the base URL is `${url}/api`). It is not
  * SampBidx: it shows SampForce keeps to the document, and SampBidx's own team must build the same endpoints.
  *
- * It also takes chat messages (POST /v1/messages, ADR 0077) and lists them at GET /__messages.
+ * It also takes chat messages (POST /v1/messages, ADR 0078) and lists them at GET /__messages.
  *
  * SBX.key is accepted; any other key gets 401. An RFQ whose project name contains "REFUSE" gets 422. POST /__fail
  * with {"count": n} makes the next n sends answer 503. GET /__received lists what arrived (for browser tests).

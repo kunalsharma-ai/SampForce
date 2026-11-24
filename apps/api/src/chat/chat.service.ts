@@ -76,7 +76,7 @@ export class ChatService {
     private readonly audit: AuditService,
   ) {}
 
-  /** Set by the SampBidx app (ADR 0077): posts a message written in a SampBidx conversation to SampBidx. */
+  /** Set by the SampBidx app (ADR 0078): posts a message written in a SampBidx conversation to SampBidx. */
   onSampbidxMessage: ((tenantId: string, messageId: string) => void) | null = null;
 
   /** SAMPBIDX conversations are left out for people whose workspace does not have SampBidx chat. */

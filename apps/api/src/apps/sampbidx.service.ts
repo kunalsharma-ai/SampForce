@@ -356,7 +356,7 @@ export class SampbidxService {
     return this.deliver(auth, conn, t);
   }
 
-  /** Set by SampBidx chat (ADR 0077): a status change as a line in the RFQ's chat. */
+  /** Set by SampBidx chat (ADR 0078): a status change as a line in the RFQ's chat. */
   onStatus: ((tenantId: string, transferId: string, text: string) => Promise<void>) | null = null;
 
   // ─── SampBidx's status callback ───
@@ -405,7 +405,7 @@ export class SampbidxService {
       });
       return row;
     });
-    // The RFQ's chat with the SampBidx team shows the change too (ADR 0077).
+    // The RFQ's chat with the SampBidx team shows the change too (ADR 0078).
     if (updated) await this.onStatus?.(tenantId, updated.id, `${remoteTitle(body.status, updated.title)}${body.note ? `: ${body.note}` : ''}`);
     await this.apps.recordEvent(tenantId, conn, {
       kind: 'status.received',

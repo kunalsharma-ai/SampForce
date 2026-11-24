@@ -1,10 +1,10 @@
 import type { TenantTx } from '@dealflow/database';
 import { ForbiddenException } from '@nestjs/common';
-import type { WorkspaceLevel } from '@dealflow/types';
+import { FEATURE_BY_KEY, type FeatureKey, type WorkspaceLevel } from '@dealflow/types';
 import { resolveOrganisation, resolveWorkspaceAccess } from '../workspaces/access';
 
 /*
- * Who may chat with the SampBidx team (ADR 0077). The `sampbidx_chat` feature runs down the workspace hierarchy like
+ * Who may chat with the SampBidx team (ADR 0078). The `sampbidx_chat` feature runs down the workspace hierarchy like
  * every other module: the Console Admin allows it for an organisation (its Super Workspace), the Super Workspace hands
  * it down to Manager Workspaces, and they to Executive Workspaces. Switched off at any level, it is off below. The
  * SampBidx app itself (`sampbidx`) must be there too, since the messages travel through its connection.
@@ -24,11 +24,13 @@ export async function sampbidxChatAllowed(tx: Reader, tenantId: string, nodeId: 
   return access.features.includes('sampbidx_chat') && access.features.includes('sampbidx');
 }
 
+/** The same refusal as the hierarchy guard gives for any module the workspace above has not handed down. */
 export function sampbidxChatRefused(): ForbiddenException {
+  const feature: FeatureKey = 'sampbidx_chat';
   return new ForbiddenException({
     code: 'FEATURE_NOT_GRANTED',
-    message: 'Chat with SampBidx team is not available in your workspace. Ask the administrator of the workspace above yours.',
-    details: [{ path: 'feature', message: 'sampbidx_chat' }],
+    message: `${FEATURE_BY_KEY[feature].label} is not available in your workspace. Ask the administrator of the workspace above yours.`,
+    details: [{ path: 'feature', message: feature }],
   });
 }
 
