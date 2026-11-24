@@ -72,6 +72,8 @@ test('the Console limits a plan, the Permission Center shows the limit, and one 
   await expect(card).toContainText('Limits set');
   await card.scrollIntoViewIfNeeded();
   await shot(ops, '06-console-workspace-rules');
+  // The Console top bar is sticky: keep the card below it, or axe counts the checkboxes it covers as too small.
+  await card.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 88));
   await axe(ops);
 
   // The client's Permission Center says why Delete cannot be given, and the manager has lost it.
