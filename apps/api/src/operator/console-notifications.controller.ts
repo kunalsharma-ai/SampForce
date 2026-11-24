@@ -1,9 +1,12 @@
 import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { type OperatorNotificationPrefsInput, operatorNotificationPrefsSchema, type OperatorNotificationQuery, operatorNotificationQuerySchema } from '@dealflow/types';
+import { z } from 'zod';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { ConsoleNotifier } from './console-notifications.service';
 import { Operator, OperatorAny, type OperatorContext, OperatorGuard, OperatorNoAudit } from './operator-auth';
+
+const operatorReadPageSchema = z.object({ path: z.string().max(500).startsWith('/operator/') }).strict();
 
 /**
  * The signed-in operator's own Console notifications and how they want each type (ADR 0074, C3b). Reading and
@@ -31,6 +34,14 @@ export class ConsoleNotificationsController {
   @OperatorNoAudit()
   readAll(@Operator() op: OperatorContext) {
     return this.notifier.markAllRead(op.id);
+  }
+
+  /** The page the operator just opened: its notifications are read. */
+  @Post('notifications/read-page')
+  @HttpCode(200)
+  @OperatorNoAudit()
+  readPage(@Operator() op: OperatorContext, @Body(new ZodPipe(operatorReadPageSchema)) body: { path: string }) {
+    return this.notifier.markPageRead(op.id, body.path);
   }
 
   @Post('notifications/:id/read')

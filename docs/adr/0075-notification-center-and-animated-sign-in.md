@@ -89,3 +89,13 @@ The phone uses the same notification store and routes (they already allowed the 
   - A wrong password shakes the box and shows a red cross; the right one draws a green tick.
 - **Welcome**: after signing in, a 2.8-second welcome plays: the level's scene, "Welcome back, {name}" and a progress bar. Under reduced motion it lasts 0.9 seconds. A tap skips it.
 - **Tests**: covered by `apps/web/e2e/mobile-notifications.spec.ts` and `apps/mobile/test/notification-center.test.ts`.
+
+## Part 5: opening a section reads it
+
+Unread notifications stay unread until the person actually opens the place they are about. Opening it marks them read and clears the count there; nobody has to press "Mark as read".
+
+- **Workspace (web)**: the section strip (`SectionNotices`) marks the section's notifications read the first time the page is shown, and reads anything new that arrives while the page stays open. A record page reads the notifications that link to that record (a company, its business information, a deal, a lead). The strip stays as "New in {section}: {n} · Marked as read" with a "Got it" button, so the person still sees what was new. A hidden browser tab reads nothing until it is shown.
+- **Sections**: every section with notifications is listed in `NOTIFICATION_SECTIONS`, now including integrations, meetings, activities and customer success, and automation also covers webhooks. Email notifications fall under sequences and communication.
+- **Console**: `POST /operator/me/notifications/read-page { path }` marks the operator's notifications that link to the open page read (exact path, or the path followed by `?` or `#`). The Console shell calls it on every page change while anything is unread.
+- **Phone**: opening a tab that has a notification section reads that section (`POST /notifications/read { section }`), and opening a record reads the notifications that link to it. `readTargetFor(pathname)` in `apps/mobile/src/lib/notification-badges.ts` decides which.
+- **Tests**: `notification-center.spec.ts`, `console-notifications.spec.ts` and `mobile-notifications.spec.ts` open a section and check that its count goes to zero while other sections keep theirs.

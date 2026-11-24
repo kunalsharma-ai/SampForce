@@ -87,9 +87,17 @@ test('the phone signs in on its animated scene and shows notifications in the be
   await expect(banner).toBeVisible({ timeout: 30_000 });
   await expect(phone.getByRole('button', { name: 'Notifications, 3 unread' }).first()).toBeVisible();
   await shot(phone, '44-app-banner');
+  // The banner sits over the header for six seconds; close it before using the bell and tabs.
+  await phone.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(phone.getByTestId('notification-banner')).toHaveCount(0);
 
-  // The bell opens the list: All, Unread, Action required; marking all read clears the badges.
-  await phone.getByRole('button', { name: 'Notifications, 3 unread' }).first().click();
+  // Opening Tasks reads its two (ADR 0075): its badge goes and the bell counts only the announcement.
+  await phone.getByRole('tab', { name: /Tasks/ }).click();
+  await expect(phone.getByRole('button', { name: 'Notifications, 1 unread' }).first()).toBeVisible();
+  await expect.poll(async () => ((await (await guest.request.get(`${API}/api/v1/notifications/summary`)).json()) as { bySection: { tasks?: number } }).bySection.tasks ?? 0).toBe(0);
+
+  // The bell opens the list (the Tasks header is the top one of the stacked screens): All, Unread, Action required.
+  await phone.getByRole('button', { name: 'Notifications, 1 unread' }).last().click();
   await expect(phone.getByRole('radiogroup', { name: 'Show' })).toBeVisible();
   await phone.getByRole('radio', { name: 'Unread' }).click();
   await expect(phone.getByRole('button', { name: 'Office closed on Friday, unread' })).toBeVisible();

@@ -21,7 +21,7 @@ import { ConsoleCommand } from '@/components/console/console-command';
 import { consolePagesFor, crumbsFor } from '@/components/console/console-nav';
 import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
 import { ConsoleTopBar } from '@/components/console/console-top-bar';
-import { useUnreadNotifications } from '@/components/console/notifications';
+import { useReadOpenedPage, useUnreadNotifications } from '@/components/console/notifications';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
 import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
@@ -134,6 +134,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   // Signed-out pages: sign in, forgot password, and choosing a password from a link.
   const onLogin = SIGNED_OUT_PAGES.includes(path);
   const me = useOperator(!onLogin);
+  useReadOpenedPage(path, !!me.data);
   const save = usePreferenceSaver();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

@@ -82,15 +82,18 @@ test('waits for approval before emailing and reports why a run failed', async ({
   await expect(page.getByText('Active', { exact: true })).toBeVisible();
 
   await apiPost(page, '/contacts', { firstName: 'Nina', lastName: 'New', email: 'nina@buyer.test' });
+  // The bell shows the approval request (checked before opening Approvals, which reads it: ADR 0075).
+  await page.goto('/app/contacts');
+  await expect(async () => {
+    await page.reload();
+    await page.getByRole('button', { name: /Notifications, \d+ unread/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Approval needed/ })).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+  await page.keyboard.press('Escape');
   await page.goto('/app/approvals');
   await expect(page.getByRole('heading', { name: /Email the record: "Great to meet you" to nina@buyer.test/ })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('[data-section-read="yes"]')).toContainText('Marked as read');
   await expectNoA11yViolations(page);
-
-  // The bell shows the approval request.
-  await page.reload();
-  await page.getByRole('button', { name: /Notifications, \d+ unread/ }).click();
-  await expect(page.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: /^Unread: Approval needed/ })).toBeVisible();
-  await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByText('Nothing is waiting for approval.')).toBeVisible();
