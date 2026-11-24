@@ -41,6 +41,9 @@ export interface StoredNode {
   accessLevel?: string | null;
   deactivatedAt?: Date | null;
   deactivationReason?: string | null;
+  blacklistedUntil?: Date | null;
+  blacklistReason?: string | null;
+  lockedByConsole?: string | null;
   archivedAt: Date | null;
   createdAt: Date;
 }
@@ -174,18 +177,24 @@ export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'member
   return members.map((m) => m.userId);
 }
 
+/** Whether a workspace is blacklisted right now (the block lifts by itself at its end time). */
+export const blacklistedNow = (n: { blacklistedUntil?: Date | null }, now = new Date()) => !!n.blacklistedUntil && n.blacklistedUntil > now;
+
 /**
- * Whether a person's workspace, or any workspace above it, is deactivated (W4): the nearest deactivated one, or
- * null when everything up to the Super Workspace is live. Deleted (archived) workspaces count too.
+ * Whether a person's workspace, or any workspace above it, is deactivated (W4) or blacklisted for now: the nearest
+ * one, or null when everything up to the Super Workspace is live. Deleted (archived) workspaces count too. `until` is
+ * set when the nearest block is a temporary blacklist, so the person is told when it ends.
  */
-export async function deactivatedAbove(tx: Pick<TenantTx, 'workspaceNode'>, tenantId: string, nodeId: string | null | undefined): Promise<{ id: string; name: string } | null> {
-  if (!nodeId) return null;
-  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, deactivatedAt: true, archivedAt: true } });
+export async function deactivatedAbove(tx: Pick<TenantTx, 'workspaceNode'>, tenantId: string, nodeId: string | null | undefined): Promise<{ id: string; name: string; until: Date | null } | null> {
+  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, name: true, level: true, parentId: true, deactivatedAt: true, archivedAt: true, blacklistedUntil: true } });
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const seen = new Set<string>();
-  for (let n = byId.get(nodeId); n && !seen.has(n.id); n = n.parentId ? byId.get(n.parentId) : undefined) {
+  // People without a workspace are in the Super Workspace: only the Console can block that one (a blacklist).
+  const start = nodeId ? byId.get(nodeId) : nodes.find((n) => n.level === 'SUPER' && !n.parentId);
+  for (let n = start; n && !seen.has(n.id); n = n.parentId ? byId.get(n.parentId) : undefined) {
     seen.add(n.id);
-    if (n.deactivatedAt || n.archivedAt) return { id: n.id, name: n.name };
+    if (n.deactivatedAt || n.archivedAt) return { id: n.id, name: n.name, until: null };
+    if (blacklistedNow(n)) return { id: n.id, name: n.name, until: n.blacklistedUntil! };
   }
   return null;
 }

@@ -434,6 +434,30 @@ export const organizationHelp = {
       'استخدمها عند إعداد SampForce أول مرة وعند تغيّر بيانات عملك.',
     ],
   },
+  'settings.salesProfile': {
+    title: 'Sales profile',
+    what: [
+      'Your organisation’s name, services, value proposition and signature, used by the AI email assistant on company pages.',
+      'El nombre, los servicios, la propuesta de valor y la firma de tu organización, que usa el asistente de correo con IA en las páginas de empresa.',
+      'Le nom, les services, la proposition de valeur et la signature de votre organisation, utilisés par l’assistant e-mail IA sur les pages entreprise.',
+      'Name, Leistungen, Nutzenversprechen und Signatur Ihrer Organisation, die der KI-E-Mail-Assistent auf Unternehmensseiten verwendet.',
+      'اسم مؤسستك وخدماتها وعرض القيمة والتوقيع، ويستخدمها مساعد البريد بالذكاء الاصطناعي في صفحات الشركات.',
+    ],
+    how: [
+      'Fill in what you offer, one service per line, and save. The more specific it is, the more specific the emails are.',
+      'Indica lo que ofreces, un servicio por línea, y guarda. Cuanto más concreto sea, más concretos serán los correos.',
+      'Indiquez ce que vous proposez, un service par ligne, puis enregistrez. Plus c’est précis, plus les e-mails le seront.',
+      'Tragen Sie Ihr Angebot ein, eine Leistung pro Zeile, und speichern Sie. Je genauer es ist, desto genauer werden die E-Mails.',
+      'اكتب ما تقدمه، خدمة واحدة في كل سطر، ثم احفظ. كلما كان أدق كانت الرسائل أدق.',
+    ],
+    where: [
+      'Only the Super Workspace can change it. Manager and Executive Workspaces use the same profile, so emails always speak for your organisation.',
+      'Solo el Super Workspace puede cambiarlo. Los espacios de gerente y de ejecutivo usan el mismo perfil, así que los correos siempre hablan por tu organización.',
+      'Seul le Super Workspace peut le modifier. Les espaces Manager et Exécutif utilisent le même profil : les e-mails parlent toujours au nom de votre organisation.',
+      'Nur der Super Workspace kann es ändern. Manager- und Executive-Workspaces nutzen dasselbe Profil, sodass E-Mails immer für Ihre Organisation sprechen.',
+      'لا يمكن تغييره إلا من مساحة العمل الرئيسية. تستخدم مساحات المديرين والتنفيذيين الملف نفسه، فتتحدث الرسائل دائمًا باسم مؤسستك.',
+    ],
+  },
   'settings.workspace': {
     title: 'Workspace',
     what: [
@@ -1780,6 +1804,78 @@ export const organizationHelp = {
       'استلام طلب عرض سعر ليس صفقة رابحة: لا يُحتسب إيرادًا إلا الطلبات الرابحة أو الصفقات الناتجة عنها.',
     ],
   },
+  'crm.businessInformation': {
+    title: 'Business information',
+    what: [
+      'Everything about the company in one place: overview, headquarters and offices, contact details, leadership and ownership, online profiles, certifications and other details.',
+      'Todo sobre la empresa en un solo lugar: descripción, sede y oficinas, datos de contacto, dirección y propiedad, perfiles en línea, certificaciones y otros datos.',
+      'Tout sur l’entreprise au même endroit : présentation, siège et bureaux, coordonnées, direction et actionnariat, profils en ligne, certifications et autres informations.',
+      'Alles über das Unternehmen an einem Ort: Überblick, Hauptsitz und Standorte, Kontaktdaten, Führung und Eigentümer, Online-Profile, Zertifizierungen und weitere Angaben.',
+      'كل ما يخص الشركة في مكان واحد: النبذة والمقر والمكاتب وبيانات التواصل والقيادة والملكية والحسابات على الإنترنت والشهادات وتفاصيل أخرى.',
+    ],
+    how: [
+      'Select Edit to change or clear any value. Values marked Auto were found by auto-fill; select the mark to open the page it came from.',
+      'Selecciona Editar para cambiar o borrar cualquier valor. Los valores marcados como Automático los encontró el autocompletado; selecciona la marca para abrir la página de origen.',
+      'Sélectionnez Modifier pour changer ou effacer une valeur. Les valeurs marquées Auto ont été trouvées par le remplissage automatique ; sélectionnez la marque pour ouvrir la page d’origine.',
+      'Wählen Sie Bearbeiten, um einen Wert zu ändern oder zu löschen. Mit Automatisch markierte Werte stammen aus der automatischen Ergänzung; wählen Sie die Markierung, um die Quelle zu öffnen.',
+      'اختر «تعديل» لتغيير أي قيمة أو مسحها. القيم الموسومة بـ«تلقائي» وجدها الإكمال التلقائي؛ اختر الوسم لفتح الصفحة التي جاءت منها.',
+    ],
+    where: [
+      'A value you edit is never changed by auto-fill again, and something you remove is not added back.',
+      'El autocompletado nunca vuelve a cambiar un valor que editas, y lo que quitas no se vuelve a añadir.',
+      'Le remplissage automatique ne modifie plus jamais une valeur que vous avez modifiée, et ce que vous retirez n’est pas rajouté.',
+      'Von Ihnen bearbeitete Werte ändert die automatische Ergänzung nie wieder, und Entferntes wird nicht erneut hinzugefügt.',
+      'لا يغيّر الإكمال التلقائي أبدًا قيمة عدّلتها، ولا يعيد إضافة ما أزلته.',
+    ],
+  },
+  'crm.companyEmailAssistant': {
+    title: 'AI email assistant',
+    what: [
+      'Writes a sales email to this company for your own organisation, using the company’s Business Information and your sales profile in Settings.',
+      'Escribe un correo de ventas a esta empresa en nombre de tu organización, con la información de la empresa y tu perfil de ventas de Configuración.',
+      'Rédige un e-mail commercial à cette entreprise au nom de votre organisation, à partir de ses informations et de votre profil commercial dans les Paramètres.',
+      'Schreibt eine Vertriebs-E-Mail an dieses Unternehmen für Ihre eigene Organisation, mit den Unternehmensinformationen und Ihrem Vertriebsprofil aus den Einstellungen.',
+      'يكتب رسالة مبيعات إلى هذه الشركة باسم مؤسستك، باستخدام معلومات الشركة وملف المبيعات الخاص بك في الإعدادات.',
+    ],
+    how: [
+      'Pick the purpose, who it is for, the tone, length and call to action, then select Write email. Edit the draft and open it in the email window to send it.',
+      'Elige el propósito, el destinatario, el tono, la longitud y la llamada a la acción, y selecciona Escribir correo. Edita el borrador y ábrelo en la ventana de correo para enviarlo.',
+      'Choisissez l’objectif, le destinataire, le ton, la longueur et l’appel à l’action, puis sélectionnez Rédiger l’e-mail. Modifiez le brouillon et ouvrez-le dans la fenêtre d’e-mail pour l’envoyer.',
+      'Wählen Sie Zweck, Empfänger, Ton, Länge und Handlungsaufforderung und dann E-Mail schreiben. Bearbeiten Sie den Entwurf und öffnen Sie ihn im E-Mail-Fenster, um ihn zu senden.',
+      'اختر الغرض والمستلم والنبرة والطول والدعوة إلى الإجراء، ثم اختر كتابة الرسالة. عدّل المسودة وافتحها في نافذة البريد لإرسالها.',
+    ],
+    where: [
+      'It only uses facts it has and never makes up a name; anything it could not know appears in [square brackets] for you to fill in. Nothing is sent until you press Send.',
+      'Solo usa los datos que tiene y nunca inventa un nombre; lo que no puede saber aparece entre [corchetes] para que lo completes. No se envía nada hasta que pulses Enviar.',
+      'Il n’utilise que les faits dont il dispose et n’invente jamais de nom ; ce qu’il ne peut pas savoir apparaît entre [crochets] pour que vous le complétiez. Rien n’est envoyé avant que vous appuyiez sur Envoyer.',
+      'Es nutzt nur vorhandene Fakten und erfindet nie einen Namen; was es nicht wissen kann, steht in [eckigen Klammern] zum Ausfüllen. Nichts wird gesendet, bevor Sie auf Senden klicken.',
+      'لا يستخدم إلا الحقائق المتوفرة ولا يخترع اسمًا أبدًا؛ وما لا يمكنه معرفته يظهر بين [قوسين معقوفين] لتكمله. لا يُرسل شيء حتى تضغط إرسال.',
+    ],
+  },
+  'crm.companyAutofill': {
+    title: 'Auto-fill',
+    what: [
+      'Details SampForce found for this company on its own website and on Wikidata, with where each one came from.',
+      'Los datos que SampForce encontró sobre esta empresa en su propio sitio web y en Wikidata, con el origen de cada uno.',
+      'Les informations que SampForce a trouvées sur cette entreprise sur son propre site web et sur Wikidata, avec l’origine de chacune.',
+      'Angaben, die SampForce auf der eigenen Website des Unternehmens und in Wikidata gefunden hat, jeweils mit Quelle.',
+      'التفاصيل التي وجدها SampForce عن هذه الشركة في موقعها الإلكتروني وفي ويكي بيانات، مع مصدر كل منها.',
+    ],
+    how: [
+      'Select Enrich to look the company up again. Auto-fill only fills empty fields and never changes what you entered. Undo removes a value, and it is not added again.',
+      'Selecciona Enriquecer para volver a buscar la empresa. El autocompletado solo rellena campos vacíos y nunca cambia lo que escribiste. Deshacer quita un valor, y no se vuelve a añadir.',
+      'Sélectionnez Enrichir pour rechercher à nouveau l’entreprise. Le remplissage automatique ne complète que les champs vides et ne modifie jamais ce que vous avez saisi. Annuler retire une valeur, qui ne sera plus ajoutée.',
+      'Wählen Sie Anreichern, um das Unternehmen erneut nachzuschlagen. Die automatische Ergänzung füllt nur leere Felder und ändert nie Ihre Eingaben. Rückgängig entfernt einen Wert, der danach nicht erneut hinzugefügt wird.',
+      'اختر «إثراء» للبحث عن الشركة مجددًا. لا يملأ الإكمال التلقائي إلا الحقول الفارغة ولا يغيّر أبدًا ما أدخلته. يزيل التراجع القيمة ولا تُضاف مرة أخرى.',
+    ],
+    where: [
+      'It runs by itself when a company is created, imported or given a new website. Values marked uncertain came from sources that disagree, so check them.',
+      'Se ejecuta solo al crear o importar una empresa o al cambiar su sitio web. Los valores marcados como inciertos vienen de fuentes que no coinciden; revísalos.',
+      'Il s’exécute seul quand une entreprise est créée, importée ou reçoit un nouveau site web. Les valeurs marquées incertaines viennent de sources en désaccord : vérifiez-les.',
+      'Läuft automatisch, wenn ein Unternehmen angelegt, importiert oder mit einer neuen Website versehen wird. Als unsicher markierte Werte stammen aus widersprüchlichen Quellen; bitte prüfen.',
+      'يعمل تلقائيًا عند إنشاء شركة أو استيرادها أو تغيير موقعها الإلكتروني. القيم الموسومة بأنها غير مؤكدة جاءت من مصادر متعارضة، فتحقق منها.',
+    ],
+  },
   'crm.companyKpis': {
     title: 'Company performance',
     what: [
@@ -2234,6 +2330,30 @@ export const organizationHelp = {
       'Utilisez-la quand une offre ne doit pas laisser les managers ou exécutifs supprimer, ou doit exiger la connexion en deux étapes.',
       'Nutzen Sie es, wenn ein Tarif Managern oder Executives das Löschen verbieten oder die Zwei-Schritt-Anmeldung verlangen soll.',
       'استخدمها عندما يجب ألا تسمح خطة للمديرين أو التنفيذيين بالحذف، أو يجب أن تفرض تسجيل الدخول بخطوتين.',
+    ],
+  },
+  'page.operatorWorkspaceManagement': {
+    title: 'Workspace Management',
+    what: [
+      'Every Super, Manager and Executive Workspace of every client, with who heads it, its status, its users, its parent and what it may use.',
+      'Todos los espacios Super, de Gerente y de Ejecutivo de cada cliente, con quién los dirige, su estado, sus usuarios, su espacio superior y lo que pueden usar.',
+      'Tous les espaces Super, Manager et Exécutif de chaque client, avec leur responsable, leur statut, leurs utilisateurs, leur parent et ce qu’ils peuvent utiliser.',
+      'Alle Super-, Manager- und Executive-Arbeitsbereiche aller Kunden, mit Leitung, Status, Nutzern, übergeordnetem Bereich und Freigaben.',
+      'كل مساحات العمل الرئيسية ومساحات المديرين والتنفيذيين لكل عميل، مع من يرأسها وحالتها ومستخدميها ومساحتها الأعلى وما يمكنها استخدامه.',
+    ],
+    how: [
+      'Open Actions on a workspace to suspend it, blacklist it until a day, delete or restore it. Blocks and deletes ask for your password; the client cannot lift a block you set.',
+      'Abre Acciones en un espacio para suspenderlo, bloquearlo hasta un día, eliminarlo o restaurarlo. Los bloqueos y eliminaciones piden tu contraseña; el cliente no puede levantar un bloqueo tuyo.',
+      'Ouvrez Actions sur un espace pour le suspendre, le bloquer jusqu’à un jour, le supprimer ou le restaurer. Blocages et suppressions demandent votre mot de passe ; le client ne peut pas lever votre blocage.',
+      'Öffnen Sie Aktionen, um einen Bereich zu sperren, bis zu einem Tag zu blockieren, zu löschen oder wiederherzustellen. Sperren und Löschen verlangen Ihr Passwort; der Kunde kann Ihre Sperre nicht aufheben.',
+      'افتح الإجراءات على مساحة لتعليقها أو حظرها حتى يوم محدد أو حذفها أو استعادتها. يطلب الحظر والحذف كلمة مرورك، ولا يستطيع العميل رفع حظر وضعته.',
+    ],
+    where: [
+      'Use it when a client or one of its teams must be stopped for a while, removed, or brought back. Deleting a Super Workspace closes the company for 30 days before erasing it.',
+      'Úsalo cuando haya que detener un tiempo a un cliente o a uno de sus equipos, quitarlo o recuperarlo. Eliminar un espacio Super cierra la empresa 30 días antes de borrarla.',
+      'Utilisez-la quand un client ou une de ses équipes doit être arrêté un temps, retiré ou rétabli. Supprimer un espace Super ferme l’entreprise 30 jours avant de l’effacer.',
+      'Nutzen Sie es, wenn ein Kunde oder ein Team eine Zeit lang gestoppt, entfernt oder zurückgeholt werden muss. Einen Super-Bereich löschen schließt das Unternehmen 30 Tage vor dem Löschen.',
+      'استخدمها عندما يجب إيقاف عميل أو أحد فرقه لفترة أو إزالته أو إعادته. حذف مساحة العمل الرئيسية يغلق الشركة 30 يومًا قبل محوها.',
     ],
   },
   'page.mobileConfiguration': {

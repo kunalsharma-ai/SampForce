@@ -21,7 +21,7 @@ import { ConsoleCommand } from '@/components/console/console-command';
 import { consolePagesFor, crumbsFor } from '@/components/console/console-nav';
 import { ConsoleSidebar, ConsoleSidebarNav } from '@/components/console/console-sidebar';
 import { ConsoleTopBar } from '@/components/console/console-top-bar';
-import { useUnreadNotifications } from '@/components/console/notifications';
+import { useReadOpenedPage, useUnreadNotifications } from '@/components/console/notifications';
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
 import { operatorRealm, useChatLive, useChatUnread } from '@/lib/chat';
@@ -134,6 +134,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
   // Signed-out pages: sign in, forgot password, and choosing a password from a link.
   const onLogin = SIGNED_OUT_PAGES.includes(path);
   const me = useOperator(!onLogin);
+  useReadOpenedPage(path, !!me.data);
   const save = usePreferenceSaver();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -218,7 +219,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent side="left" className="flex w-[280px] flex-col p-0 pt-4">
           <DialogTitle className="flex items-center gap-2 px-4 pb-4 text-sm font-semibold">
-            <Logo compact /> SampForce Console
+            <Logo compact animated /> SampForce Console
           </DialogTitle>
           {me.data && (
             <ConsoleSidebarNav
@@ -242,7 +243,7 @@ export function OperatorShell({ children }: { children: React.ReactNode }) {
           />
         ) : (
           <header className="flex h-16 items-center gap-3 border-b border-border/70 px-6">
-            <Logo compact />
+            <Logo compact animated />
             <span className="font-semibold">SampForce Console</span>
             <Badge tone="warning">Platform staff</Badge>
           </header>

@@ -42,6 +42,12 @@ export function useWorkspaceMutations() {
         api<WorkspaceRow>(`/workspaces/${id}/deactivate`, { method: 'POST', json: { reason }, headers: { [PASSWORD_CONFIRMATION_HEADER]: pass } }),
       onSuccess: refresh,
     }),
+    /** A blacklist until a day (YYYY-MM-DD): asks for the password like deactivating. */
+    blacklist: useMutation({
+      mutationFn: ({ id, until, reason, pass }: { id: string; until: string; reason: string; pass: string }) =>
+        api<WorkspaceRow>(`/workspaces/${id}/blacklist`, { method: 'POST', json: { until, reason }, headers: { [PASSWORD_CONFIRMATION_HEADER]: pass } }),
+      onSuccess: refresh,
+    }),
     reactivate: useMutation({
       mutationFn: (id: string) => api<WorkspaceRow>(`/workspaces/${id}/reactivate`, { method: 'POST' }),
       onSuccess: refresh,

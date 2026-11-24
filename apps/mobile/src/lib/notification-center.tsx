@@ -1,4 +1,5 @@
 import { type CenterNotification, type MobilePushStatus, type NotificationPage, type NotificationPreferences, type NotificationSummary, notificationCategoryOf, notificationChimes } from '@dealflow/types';
+import { usePathname } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -12,8 +13,8 @@ import { useController, useSession } from './session';
  * person has the chime on (and the phone is not already getting it as a push).
  */
 
-export { arrived, badgeFor, badgeText, MODULE_SECTION, SUMMARY_EVERY_MS } from './notification-badges';
-import { arrived, SUMMARY_EVERY_MS } from './notification-badges';
+export { arrived, badgeFor, badgeText, MODULE_SECTION, readTargetFor, SUMMARY_EVERY_MS } from './notification-badges';
+import { arrived, readTargetFor, SUMMARY_EVERY_MS } from './notification-badges';
 
 interface Center {
   summary: NotificationSummary | null;
@@ -85,6 +86,24 @@ export function NotificationCenterProvider({ children }: { children: ReactNode }
       sub.remove();
     };
   }, [c, on, refresh]);
+
+  // Opening a part of the app is reading it: its tab badge, the bell and the home card clear (ADR 0075).
+  const pathname = usePathname();
+  useEffect(() => {
+    const target = on && AppState.currentState !== 'background' ? readTargetFor(pathname) : null;
+    if (!target || !summary) return;
+    if ('section' in target) {
+      if (!(summary.bySection as Record<string, number | undefined>)[target.section]) return;
+      void c.api.post('/notifications/read', { section: target.section }).then(refresh, (e: unknown) => c.report(e));
+      return;
+    }
+    void c.api
+      .get<NotificationPage>(`/notifications?filter=unread&limit=100&link=${encodeURIComponent(target.link)}`)
+      .then((page) => (page.items.length ? c.api.post('/notifications/read', { ids: page.items.map((n) => n.id) }).then(refresh) : undefined))
+      .catch((e: unknown) => c.report(e));
+    // Runs when the screen changes, and when something new arrives for the screen that is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, on, summary?.latestAt, summary !== null]);
 
   const value = useMemo(() => ({ summary, banner, dismissBanner: () => setBanner(null), refresh }), [summary, banner, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

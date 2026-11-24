@@ -19,7 +19,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <header className="border-b border-border/60">
         <nav aria-label={t('nav.main')} className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-4 sm:px-6">
           <Link href="/">
-            <Logo />
+            <Logo animated />
           </Link>
           <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
             {t('Pricing')}

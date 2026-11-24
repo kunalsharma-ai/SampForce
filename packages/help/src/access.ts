@@ -95,6 +95,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.operatorMobile': 'console-clients',
   'page.operatorPlans': 'console-plans',
   'page.operatorWorkspaceRules': 'console-plans',
+  'page.operatorWorkspaceManagement': 'console-clients',
   'page.operatorProviders': 'console-providers',
   'page.operatorSettings': 'console-providers',
   'page.operatorLocations': 'console-providers',

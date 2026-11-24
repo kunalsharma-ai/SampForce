@@ -39,6 +39,8 @@ export const notifications = {
   'New in {section}': ['Novedades en {section}', 'Nouveautés dans {section}', 'Neu in {section}', 'الجديد في {section}'],
   'New in {section}: {n}': ['Novedades en {section}: {n}', 'Nouveautés dans {section} : {n}', 'Neu in {section}: {n}', 'الجديد في {section}: {n}'],
   'New about this record: {n}': ['Novedades sobre este registro: {n}', 'Nouveautés sur cette fiche : {n}', 'Neu zu diesem Datensatz: {n}', 'الجديد حول هذا السجل: {n}'],
+  'Marked as read': ['Marcadas como leídas', 'Marquées comme lues', 'Als gelesen markiert', 'تم تعليمها كمقروءة'],
+  'Got it': ['Entendido', 'Compris', 'Verstanden', 'حسنًا'],
   'Mark these read': ['Marcar estas como leídas', 'Marquer comme lues', 'Diese als gelesen markieren', 'تعليم هذه كمقروءة'],
   'See all {n} in {section}': ['Ver las {n} de {section}', 'Voir les {n} dans {section}', 'Alle {n} in {section} anzeigen', 'عرض كل الـ {n} في {section}'],
 

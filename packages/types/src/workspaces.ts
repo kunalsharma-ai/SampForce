@@ -240,6 +240,24 @@ export interface WorkspaceEmailCheck {
 export const deactivateWorkspaceSchema = z.object({ reason: z.string().trim().min(3).max(500) }).strict();
 export type DeactivateWorkspaceInput = z.infer<typeof deactivateWorkspaceSchema>;
 
+/** The longest temporary blacklist, in days. */
+export const WORKSPACE_BLACKLIST_MAX_DAYS = 365;
+
+/**
+ * Temporarily blacklisting a workspace: stopped like a deactivation, lifting by itself at the start of `until`
+ * (YYYY-MM-DD, after today, at most a year away).
+ */
+export const blacklistWorkspaceSchema = z
+  .object({
+    until: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the day the blacklist ends')
+      .refine((d) => new Date(`${d}T00:00:00Z`).getTime() <= Date.now() + (WORKSPACE_BLACKLIST_MAX_DAYS + 1) * 86_400_000, 'A blacklist lasts at most a year'),
+    reason: z.string().trim().min(3).max(500),
+  })
+  .strict();
+export type BlacklistWorkspaceInput = z.infer<typeof blacklistWorkspaceSchema>;
+
 /**
  * Deleting a Manager or Executive Workspace (W4): the person types its name, and names the workspace that receives
  * its records (and, for a manager, its Executive Workspaces). Nothing in the CRM is erased.
@@ -317,6 +335,11 @@ export interface WorkspaceRow {
   /** Set while the workspace is deactivated (W4): its people, and everyone below it, cannot work until reactivated. */
   deactivatedAt: string | null;
   deactivationReason: string | null;
+  /** Set while temporarily blacklisted: when the block lifts by itself (ISO), and why it was set. */
+  blacklistedUntil: string | null;
+  blacklistReason: string | null;
+  /** The Console set the current block: only SampForce support can lift it. */
+  lockedByConsole: boolean;
   createdAt: string;
 }
 

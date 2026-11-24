@@ -135,6 +135,11 @@ export const consoleClientCreateSchema = z
     ...subscriptionLimits,
     /** Whether the Super Workspace may create Executive Workspaces itself. */
     superCanCreateExecutives: z.boolean().default(true),
+    /**
+     * One person owns one Super Workspace: when the administrator already owns another company's, the Console must
+     * allow this one explicitly (the creation is refused with SUPER_WORKSPACE_LIMIT otherwise).
+     */
+    allowAnotherSuper: z.boolean().optional(),
     reason: reason.optional(),
   })
   .strict();

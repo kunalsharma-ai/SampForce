@@ -6,6 +6,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { inLanguage, requestLanguage, tr } from '../common/request-language';
 import { MailerService } from '../mail/mailer.service';
+import { writePlatformAudit } from '../operator/platform-audit';
 import { nameKeyOf } from '../workspaces/access';
 
 const DAY = 86_400_000;
@@ -86,7 +87,7 @@ export class CompanyClosureService {
     });
     // Everyone signed in to this company is signed out now; the access checks refuse it from here on anyway.
     await this.prisma.session.updateMany({ where: { activeTenantId: tenant.id, revokedAt: null }, data: { revokedAt: now } });
-    await this.prisma.platformAuditLog.create({ data: { operatorId: null, action: 'client.closed_by_owner', targetTenantId: tenant.id, metadata: { reason: input.reason || null, eraseAfter: eraseAfter.toISOString() } } });
+    await writePlatformAudit(this.prisma, { operatorId: null, action: 'client.closed_by_owner', tenantId: tenant.id, metadata: { reason: input.reason || null, eraseAfter: eraseAfter.toISOString() } });
     this.logger.log({ tenantId: tenant.id, requestId: meta.requestId }, 'Company closed by its owner');
 
     const owner = await this.prisma.user.findUnique({ where: { id: auth.userId }, select: { email: true, name: true } });
@@ -110,6 +111,26 @@ export class CompanyClosureService {
     return { name: tenant.name, eraseAfter: eraseAfter.toISOString() };
   }
 
+  /**
+   * The Console closes a client (deleting its Super Workspace from Workspace Management): the same 30 days as an
+   * owner's closing, with the same restore, then the same erasure. Everyone is signed out at once.
+   */
+  async closeByConsole(operator: { id: string; email: string }, tenantId: string, reason: string, ip: string | null): Promise<{ name: string; eraseAfter: string }> {
+    const now = new Date();
+    const eraseAfter = new Date(now.getTime() + COMPANY_REOPEN_DAYS * DAY);
+    const tenant = await this.prisma.run({ tenantId }, async (tx) => {
+      const t = await tx.tenant.findFirst({ where: { id: tenantId, deletedAt: null } });
+      if (!t) throw new NotFoundException({ code: 'NOT_FOUND', message: 'That client does not exist.' });
+      if (t.status === 'PENDING_DELETION') throw new ConflictException({ code: 'COMPANY_NOT_ACTIVE', message: 'This company is not active, so it cannot be closed.' });
+      await tx.tenant.update({ where: { id: t.id }, data: { status: 'PENDING_DELETION', closedAt: now, closedById: null, closeReason: reason, eraseAfter } });
+      await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'tenant.closed', entityType: 'tenant', entityId: tenantId, metadata: { operator: operator.email, reason, eraseAfter: eraseAfter.toISOString(), by: 'console' } });
+      return t;
+    });
+    await this.prisma.session.updateMany({ where: { activeTenantId: tenantId, revokedAt: null }, data: { revokedAt: now } });
+    await writePlatformAudit(this.prisma, { operatorId: operator.id, action: 'client.closed_by_console', tenantId, metadata: { reason, eraseAfter: eraseAfter.toISOString() }, ip, before: { status: tenant.status }, after: { status: 'PENDING_DELETION' } });
+    return { name: tenant.name, eraseAfter: eraseAfter.toISOString() };
+  }
+
   /** The Console reopens a closed company within its 30 days: sign-in works again and nothing was lost. */
   async reopen(operator: { id: string; email: string }, tenantId: string, reason: string, ip: string | null): Promise<void> {
     await this.prisma.run({ tenantId }, async (tx) => {
@@ -120,7 +141,7 @@ export class CompanyClosureService {
       await tx.tenant.update({ where: { id: tenantId }, data: { status: 'ACTIVE', closedAt: null, closedById: null, closeReason: null, eraseAfter: null } });
       await this.audit.record(tx, { tenantId, actorUserId: null, actorType: 'PLATFORM_ADMIN', action: 'tenant.reopened', entityType: 'tenant', entityId: tenantId, metadata: { operator: operator.email, reason, closedAt: t.closedAt.toISOString() } });
     });
-    await this.prisma.platformAuditLog.create({ data: { operatorId: operator.id, action: 'client.reopened', targetTenantId: tenantId, metadata: { reason }, ip } });
+    await writePlatformAudit(this.prisma, { operatorId: operator.id, action: 'client.reopened', tenantId, metadata: { reason }, ip, before: { status: 'PENDING_DELETION' }, after: { status: 'ACTIVE' } });
   }
 
   /**
@@ -162,7 +183,7 @@ export class CompanyClosureService {
       }
       await tx.tenant.update({ where: { id: tenantId }, data: { erasedAt: new Date(), deletedAt: new Date(), closeReason: null } });
     });
-    await this.prisma.platformAuditLog.create({ data: { operatorId: null, action: 'client.erased', targetTenantId: tenantId, metadata: { name, documents, anonymised } } });
+    await writePlatformAudit(this.prisma, { operatorId: null, action: 'client.erased', tenantId, metadata: { name, documents, anonymised } });
     this.logger.log({ tenantId, documents, anonymised }, 'Closed company erased');
   }
 

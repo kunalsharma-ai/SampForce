@@ -48,6 +48,7 @@ import { relativeTime } from '@/lib/format';
 import { useTeams } from '@/lib/gamification';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
+import { AutofillFinder } from './autofill-finder';
 
 const STEP_LABELS = {
   company: 'Company information',
@@ -71,7 +72,7 @@ const FIELD_STEP: Record<string, LeadFormStep> = {
   statusId: 'status', notes: 'remarks', customFields: 'remarks',
 };
 
-interface CompanyValue {
+export interface CompanyValue {
   name: string;
   websites: PointValue[];
   linkedinUrls: PointValue[];
@@ -354,6 +355,7 @@ export function LeadWizard() {
                 <div className="sm:col-span-2">
                   <PointsEditor id="lead-websites" label={t('Official website URL')} kind="url" values={c.websites} onChange={(websites) => setCompany({ websites })} errors={pointErrors(ce, 'websites')} addLabel={t('Add website')} />
                 </div>
+                <AutofillFinder company={c} onApply={setCompany} />
                 <div className="sm:col-span-2">
                   <PointsEditor id="lead-linkedin" label={t('Company LinkedIn URL')} kind="url" values={c.linkedinUrls} onChange={(linkedinUrls) => setCompany({ linkedinUrls })} errors={pointErrors(ce, 'linkedinUrls')} addLabel={t('Add LinkedIn page')} />
                 </div>

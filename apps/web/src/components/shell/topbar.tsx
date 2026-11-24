@@ -110,7 +110,7 @@ export function Topbar() {
       <Dialog open={navOpen} onOpenChange={setNavOpen}>
         <DialogContent side="left" className="flex flex-col pt-4">
           <DialogTitle className="px-4 pb-4">
-            <Logo />
+            <Logo animated />
           </DialogTitle>
           <SidebarNav onNavigate={() => setNavOpen(false)} idPrefix="mnav" />
         </DialogContent>

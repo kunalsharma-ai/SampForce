@@ -16,6 +16,8 @@ import {
   roleVisibilitySchema,
   type RemoveMemberInput,
   removeMemberSchema,
+  type SalesProfileInput,
+  salesProfileSchema,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -76,6 +78,18 @@ export class TenantsController {
     @Meta() meta: RequestMeta,
   ) {
     return this.tenants.update(auth, body, meta);
+  }
+
+  @Get('sales-profile')
+  @RequirePermissions('tenant:read')
+  salesProfile(@Auth() auth: AuthContext) {
+    return this.tenants.salesProfile(auth);
+  }
+
+  @Put('sales-profile')
+  @RequirePermissions('tenant:manage')
+  setSalesProfile(@Auth() auth: AuthContext, @Body(new ZodPipe(salesProfileSchema)) body: SalesProfileInput, @Meta() meta: RequestMeta) {
+    return this.tenants.setSalesProfile(auth, body, meta);
   }
 
   @Get('members')

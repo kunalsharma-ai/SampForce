@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { customFieldFiltersParam } from './custom-fields';
+import { type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -93,6 +94,13 @@ const optionalUrl = z
 const contactPoint = <T extends z.ZodTypeAny>(value: T) =>
   z.object({ value, label: z.string().trim().max(60).nullable().optional(), primary: z.boolean().optional() });
 const pointList = <T extends z.ZodTypeAny>(value: T) => z.array(contactPoint(value)).max(20).optional();
+/** A list of short texts (services, certifications): trimmed, blanks and repeats dropped. */
+const textList = (max: number) =>
+  z
+    .array(z.string().trim().max(max))
+    .max(60)
+    .transform((list) => [...new Map(list.filter(Boolean).map((v) => [v.toLowerCase(), v])).values()])
+    .optional();
 const requiredEmail = z.string().trim().toLowerCase().max(254).email('Enter a valid email');
 const requiredPhone = z.string().trim().max(40).regex(/^\+?[0-9 ().-]{6,}$/, 'Enter a valid phone number');
 const requiredUrl = z
@@ -157,6 +165,22 @@ export const companyInputSchema = z.object({
   websites: pointList(requiredUrl),
   linkedinUrls: pointList(requiredUrl),
   addresses: z.array(companyAddressSchema).max(50).optional(),
+  // Business Information from public sources (ADR 0076); people can type or correct every one of them.
+  services: textList(200),
+  products: textList(200),
+  industriesServed: textList(120),
+  certifications: textList(120),
+  founders: textList(160),
+  employeeCount: z.coerce.number().int().min(0).max(10_000_000).nullable().optional(),
+  legalName: optionalText(200),
+  parentCompanyName: optionalText(200),
+  ownership: optionalText(300),
+  ceo: optionalText(160),
+  leadership: z.array(leaderSchema).max(30).optional(),
+  operatingStatus: z.enum(OPERATING_STATUSES).nullable().optional(),
+  contactPageUrl: optionalUrl,
+  socialLinks: z.array(socialLinkSchema).max(30).optional(),
+  moreDetails: z.array(moreDetailSchema).max(40).optional(),
 });
 export const companyUpdateSchema = companyInputSchema.partial();
 export type CompanyInput = z.infer<typeof companyInputSchema>;
@@ -223,6 +247,26 @@ export interface CompanyRow {
   websites: ContactPoint[];
   linkedinUrls: ContactPoint[];
   addresses: CompanyAddress[];
+  services: string[];
+  products: string[];
+  industriesServed: string[];
+  certifications: string[];
+  founders: string[];
+  employeeCount: number | null;
+  legalName: string | null;
+  parentCompanyName: string | null;
+  ownership: string | null;
+  ceo: string | null;
+  leadership: Leader[];
+  operatingStatus: string | null;
+  contactPageUrl: string | null;
+  socialLinks: SocialLink[];
+  moreDetails: MoreDetail[];
+  /** AI summary of the company (ADR 0076), labelled as AI wherever it is shown. */
+  aiSummary: string | null;
+  aiSummaryAt: string | null;
+  /** Where each Business Information value came from (auto-fill, or typed by someone). */
+  fieldSources: Record<string, FieldSource>;
   /**
    * True when the record belongs to someone else and the caller's role may not see its details: contact details,
    * notes, overview and custom fields are left out.

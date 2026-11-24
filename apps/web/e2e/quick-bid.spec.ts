@@ -34,6 +34,8 @@ async function seedCatalogue(page: Page) {
 }
 
 test('picks a template in the gallery and builds, saves and finalises a bid in the studio', async ({ page }) => {
+  // Long flow over many pages; it ran past the default timeout on a busy CI runner.
+  test.setTimeout(120_000);
   await signUp(page, 'Studio Co');
   await seedCatalogue(page);
 

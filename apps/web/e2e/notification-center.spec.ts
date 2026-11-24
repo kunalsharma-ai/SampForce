@@ -115,17 +115,18 @@ test('a new notification arrives live in the bell, on the home dashboard and in 
   await expect(panel.locator('[data-read="no"]')).toHaveCount(2);
   await executive.keyboard.press('Escape');
 
-  // The Tasks section shows its own unread notifications at the top; marking them read clears the bell too.
+  // Opening Tasks is reading them: the strip shows what was new on this visit, and the bell and menu count clear.
   await executive.goto('/app/tasks');
   const strip = executive.locator('[data-section-notices="tasks"]');
   await expect(strip).toContainText('New in Tasks: 2');
+  await expect(strip).toContainText('Marked as read');
   await expect(strip).toContainText('Call the five new research leads');
-  await shot(executive, '03-section-notices-tasks');
-  await axe(executive);
-  await strip.getByRole('button', { name: 'Mark these read' }).click();
-  await expect(strip).toHaveCount(0);
   await expect(bell).toHaveAttribute('aria-label', 'Notifications');
   await expect(executive.locator('[data-nav-unread="tasks"]')).toHaveCount(0);
+  await shot(executive, '03-section-notices-tasks');
+  await axe(executive);
+  await strip.getByRole('button', { name: 'Got it' }).click();
+  await expect(strip).toHaveCount(0);
   // Opening another page (a fresh page load) and reading chimed nothing: what was there already never replays.
   expect(await chimes(executive)).toBe(0);
   await executive.reload();

@@ -428,6 +428,22 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
     },
   },
   {
+    key: 'company_autofill', name: 'Company auto-fill', usedFor: "Filling in missing company details from the company's own website and from Wikidata",
+    fields: [
+      { name: 'COMPANY_AUTOFILL_WIKIDATA', label: 'Also read Wikidata', required: false, switch: true, help: 'On (or unset): founded year, head count, industry, head office, founders and CEO of larger companies come from Wikidata too. Off: only the companies\' own websites are read.' },
+    ],
+    tested: [],
+    checkNote: 'This is a setting, not a key, so there is nothing to test. Auto-fill needs no key: it reads public pages only.',
+    app: { off: 'Reads company websites only', on: 'Reads company websites and Wikidata' },
+    setup: {
+      steps: [
+        'Auto-fill runs when a company is created or imported, and when someone presses Enrich on a company. It only fills empty fields and keeps the source of every value; people can undo any of it.',
+        'It reads the company\'s own website (home, About and Contact pages) and, with this switch on, Wikidata. It never reads LinkedIn or other sites that forbid it.',
+        'The server needs outbound https to the company websites, and to www.wikidata.org while this switch is on.',
+      ],
+    },
+  },
+  {
     key: 'zapier', name: 'Zapier', usedFor: 'The SampForce app in Zapier: the invite link shown under Settings > Apps',
     fields: [{ name: 'ZAPIER_INVITE_URL', label: 'Invite link', required: true, help: "Zapier developer platform > your SampForce integration > Sharing. Workspaces sign in with their own SampForce API keys." }],
     tested: ['ZAPIER_INVITE_URL'],

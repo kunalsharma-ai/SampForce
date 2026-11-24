@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -8,6 +8,8 @@ import { assertRefs, badRef, diff, notFound, orderBy, paging } from './crm-helpe
 import { NotificationsService } from '../notifications/notifications.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { CompanyLogosService } from './company-logos.service';
+import { CompanyEnrichmentService, publicSources } from './company-enrichment.service';
+import type { CompanyNow } from './enrichment/merge';
 import { canSeeDetails, companyScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
 
 const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country', 'leadSeq', 'statusChangedAt'] as const;
@@ -48,6 +50,7 @@ export class CompaniesService {
     private readonly fields: CustomFieldsService,
     private readonly notifications: NotificationsService,
     private readonly logos: CompanyLogosService,
+    private readonly enrichment: CompanyEnrichmentService,
   ) {}
 
   /** The row context, with logo references; companies with a website that were never looked up are queued. */
@@ -143,6 +146,8 @@ export class CompaniesService {
     await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', row.id, customFields);
     // The logo is found from the website by the worker (ADR 0070).
     if (row.domain) await this.logos.domainChangedIn(tx, auth.tenantId, row.id, row.domain);
+    // Missing details are filled from public sources by the worker (ADR 0076).
+    await this.enrichment.queueIn(tx, auth.tenantId, row, 'CREATE', auth.userId);
     await assignLeadNumbers(tx, auth.tenantId);
     const numbered = await tx.company.findUniqueOrThrow({ where: { id: row.id }, select: { leadNumber: true } });
     await this.audit.record(tx, {
@@ -207,6 +212,9 @@ export class CompaniesService {
       const customFields = await this.fields.validateFor(tx, auth, 'COMPANY', input.customFields, before.customFields as Record<string, unknown>);
       const { customFields: _cf, ...rest } = input;
       const data = normalise(rest, before);
+      // What people type or clear is theirs: auto-fill never writes it again (ADR 0076).
+      const sources = this.enrichment.userEdits(before as unknown as CompanyNow, rest as Record<string, unknown>, auth.userId);
+      if (sources) data.fieldSources = sources as unknown as Prisma.InputJsonValue;
       // The assigned manager follows the new owner unless the change names one.
       if (ownerChanged && input.managerId === undefined) data.managerId = input.ownerId ? await reportingManagerOf(tx, auth.tenantId, input.ownerId) : null;
       const statusChanged = input.statusId !== undefined && input.statusId !== before.statusId;
@@ -221,7 +229,10 @@ export class CompaniesService {
         include,
       });
       if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', id, customFields);
-      if (row.domain !== before.domain) await this.logos.domainChangedIn(tx, auth.tenantId, id, row.domain);
+      if (row.domain !== before.domain) {
+        await this.logos.domainChangedIn(tx, auth.tenantId, id, row.domain);
+        if (row.domain) await this.enrichment.queueIn(tx, auth.tenantId, row, 'WEBSITE_CHANGED', auth.userId);
+      }
       const changes = diff(before, input);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.updated', entityType: 'company', entityId: id,
@@ -455,6 +466,26 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     websites: hide(points(r.websites), []),
     linkedinUrls: hide(points(r.linkedinUrls), []),
     addresses: hide((Array.isArray(r.addresses) ? r.addresses : []) as unknown as CompanyAddress[], []),
+    services: hide(r.services ?? [], []),
+    products: hide(r.products ?? [], []),
+    industriesServed: r.industriesServed ?? [],
+    certifications: r.certifications ?? [],
+    founders: r.founders ?? [],
+    employeeCount: r.employeeCount ?? null,
+    legalName: r.legalName ?? null,
+    parentCompanyName: r.parentCompanyName ?? null,
+    ownership: r.ownership ?? null,
+    ceo: r.ceo ?? null,
+    leadership: hide(jsonList<Leader>(r.leadership), []),
+    operatingStatus: r.operatingStatus ?? null,
+    contactPageUrl: hide(r.contactPageUrl ?? null, null),
+    socialLinks: hide(jsonList<SocialLink>(r.socialLinks), []),
+    moreDetails: hide(jsonList<MoreDetail>(r.moreDetails), []),
+    aiSummary: hide(r.aiSummary ?? null, null),
+    aiSummaryAt: hide(r.aiSummaryAt?.toISOString() ?? null, null),
+    fieldSources: hide(publicSources(r.fieldSources) as Record<string, FieldSource>, {}),
     restricted: !show,
   };
 }
+
+const jsonList = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);

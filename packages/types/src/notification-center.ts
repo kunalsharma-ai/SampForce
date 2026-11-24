@@ -31,7 +31,11 @@ export const NOTIFICATION_SECTIONS = [
   { key: 'targets', label: 'Targets', href: '/app/targets', types: ['target.'] },
   { key: 'gamification', label: 'Competitions', href: '/app/gamification', types: ['gamification.'] },
   { key: 'announcements', label: 'Announcements', href: '/app/announcements', types: ['announcement.'] },
-  { key: 'automation', label: 'Automation', href: '/app/automation', types: ['workflow.', 'webhook.', 'integration.'] },
+  { key: 'automation', label: 'Automation', href: '/app/automation', types: ['workflow.', 'webhook.'] },
+  { key: 'integrations', label: 'Integrations', href: '/app/integrations', types: ['integration.'] },
+  { key: 'meetings', label: 'Meetings', href: '/app/meetings', types: ['meeting.'] },
+  { key: 'activities', label: 'Activities', href: '/app/activities', types: ['activity.'] },
+  { key: 'customer-success', label: 'Customer success', href: '/app/customer-success', types: [] },
   { key: 'help', label: 'Help and support', href: '/app/help', types: ['support.', 'escalation.'] },
   { key: 'billing', label: 'Billing', href: '/app/billing', types: ['billing.'] },
 ] as const;
