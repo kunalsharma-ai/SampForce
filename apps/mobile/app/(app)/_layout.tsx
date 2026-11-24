@@ -3,9 +3,12 @@ import { MOBILE_MODULE_BY_KEY, MOBILE_RECORD_MODULES_LIVE, type MobileModuleKey 
 import { Redirect, Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import { HeaderBell, NotificationBanner } from '../../src/components/notification-center';
 import { BrandMark, Loading } from '../../src/components/ui';
+import { WelcomeScene } from '../../src/components/sign-in-scene';
 import { t, tMaybe } from '../../src/lib/i18n';
 import { MODULE_ICON } from '../../src/lib/modules';
+import { badgeFor, NotificationCenterProvider, useNotificationCenter } from '../../src/lib/notification-center';
 import { onNotificationTap, refreshPush } from '../../src/lib/push';
 import { useController, useSession, useTheme } from '../../src/lib/session';
 
@@ -36,14 +39,29 @@ function usePushBridge(signedIn: boolean) {
 
 export default function AppLayout() {
   const s = useSession();
-  const th = useTheme();
   usePushBridge(s.status === 'signedIn');
   // While the stored session loads, wait here so a link into the app keeps its place.
   if (s.status === 'starting') return <Loading />;
   if (s.status !== 'signedIn') return <Redirect href="/" />;
+  return (
+    <NotificationCenterProvider>
+      <AppTabs />
+      {/* Something new slides down over every screen; right after signing in, the level's welcome (ADR 0075). */}
+      <NotificationBanner />
+      <WelcomeScene />
+    </NotificationCenterProvider>
+  );
+}
+
+function AppTabs() {
+  const s = useSession();
+  const th = useTheme();
+  const { summary } = useNotificationCenter();
+  if (s.status !== 'signedIn') return null;
   const { tabs, modules, branding } = s.config;
   const allowed = new Set(modules.map((m) => m.key));
   const order = [...tabs, ...MODULE_ROUTES.filter((k) => !tabs.includes(k))];
+  const bell = allowed.has('notifications');
 
   return (
     <Tabs
@@ -55,6 +73,9 @@ export default function AppLayout() {
         tabBarInactiveTintColor: th.muted,
         tabBarStyle: { backgroundColor: th.card, borderTopColor: th.border },
         sceneStyle: { backgroundColor: th.background },
+        tabBarBadgeStyle: { backgroundColor: '#E02424', color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+        // The bell on every screen's header, with the unread count.
+        ...(bell ? { headerRight: () => <HeaderBell color={th.onPrimary} /> } : {}),
       }}
     >
       {order.map((key) => (
@@ -67,6 +88,8 @@ export default function AppLayout() {
             // Record modules and chat draw their own headers (list, record, form).
             ...((MOBILE_RECORD_MODULES_LIVE as readonly string[]).includes(key) || key === 'chat' ? { headerShown: false } : {}),
             title: tMaybe(MOBILE_MODULE_BY_KEY[key].label),
+            // Unread notifications from this part of the app, on its tab.
+            tabBarBadge: badgeFor(key, summary),
             tabBarIcon: ({ focused, color, size }) => <Ionicons aria-hidden name={focused ? MODULE_ICON[key].on : MODULE_ICON[key].off} color={color as string} size={size} />,
             ...(key === 'dashboard'
               ? {
