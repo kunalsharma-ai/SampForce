@@ -32,6 +32,15 @@ const FIELD_LABEL: Record<string, string> = {
   contactName: 'Primary contact',
   contactEmail: 'Contact email',
   contactPhone: 'Contact phone',
+  'weight.login': 'Sign-ins weight',
+  'weight.workspaces': 'Workspace use weight',
+  'weight.features': 'Feature adoption weight',
+  'weight.mobile': 'Mobile use weight',
+  'weight.payment': 'Payment weight',
+  'weight.support': 'Support load weight',
+  'weight.subscription': 'Subscription weight',
+  healthyFrom: 'Healthy from',
+  atRiskFrom: 'At risk from',
 };
 
 /** "maxManagerWorkspaces" → "Max manager workspaces". */

@@ -946,9 +946,14 @@ export function buildOpenApiDocument(): object {
   op('post', '/locations/cities', 'add a city the list does not have (settings.manage)');
   op('post', '/locations/cities/rename', 'give a listed city another name (settings.manage)');
   op('delete', '/locations/cities/{id}', 'remove an added city or undo a rename (settings.manage)');
-  op('get', '/clients/page', 'clients with filters (status, plan, billing, country, payment, created dates), sort on every column and pages of 25, 50 or 100 (clients.view)');
+  op('get', '/clients/page', 'clients with filters (status, plan, billing, country, payment, health, created dates), sort on every column and pages of 25, 50 or 100 (clients.view)');
   op('get', '/clients/export', 'the filtered clients list as CSV; the export is an audit entry (clients.view)');
   op('post', '/clients/bulk', 'one action over up to 200 clients: change status (CONFIRM to suspend or deactivate), extend subscriptions, set a feature override or email the administrators; each client audited (the action\'s own permission)');
+  op('get', '/overview/dashboard', 'the Overview: Action Required counts, 18 KPIs with their value 30 days ago and a 30-day line, client growth, revenue, plans, workspace utilisation, mobile use and new workspaces; cached for a minute (clients.view)');
+  op('get', '/clients/{id}/health', 'a client\'s health score with every signal, its points and the figure behind it, and 30 days of scores (clients.view)');
+  op('post', '/clients/{id}/health', 'measure a client\'s health score now; recorded with before and after (clients.view)');
+  op('get', '/settings/health', 'the health score weights and band thresholds (any operator)');
+  op('put', '/settings/health', 'change the health score weights and bands; every client is measured again (settings.manage)');
   op('get', '/activity', 'the Console activity feed: operator actions, clients joining, new workspaces, invoices, failed payments, tickets reaching SampForce and unusual sign-ins, only the kinds the role may act on (clients.view)');
 
   // Phase 7: report builder, dashboards and the data behind the visual explorers.

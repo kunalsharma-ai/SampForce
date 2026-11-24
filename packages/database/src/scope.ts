@@ -138,6 +138,8 @@ const OPERATOR_READ = new Set([
   'SupportTicketAttachment',
   // Help Center feedback (ADR 0073): what people said about help articles, for the Console to review.
   'HelpFeedback',
+  // Client health (ADR 0074, C5): the score and the figures behind it. Written in the client's own context.
+  'ClientHealthDaily',
 ]);
 
 /** Revoked grants: the application may not rewrite these records. */

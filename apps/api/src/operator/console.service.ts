@@ -32,6 +32,7 @@ import {
   SUPPORT_LEVELS,
   type z,
   type consoleClientCreateSchema,
+  type ClientHealthBand,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../auth/token.service';
@@ -282,6 +283,7 @@ export class ConsoleService {
         subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs) : null,
         usage: { managers: count(t.id, 'MANAGER'), executives: count(t.id, 'EXECUTIVE') },
         awaitingAdministrator: !staffed.has(t.id),
+        health: t.healthScore !== null && t.healthBand ? { score: t.healthScore, band: t.healthBand as ClientHealthBand } : null,
       }));
     });
   }
