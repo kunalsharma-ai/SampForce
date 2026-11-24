@@ -7,6 +7,8 @@ import {
   type EnrichmentRun,
   type EnrichmentStatus,
   type EnrichmentTrigger,
+  type EnrichmentPreview,
+  type EnrichmentPreviewRequest,
   type FieldSource,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
@@ -38,6 +40,8 @@ const LEASE_MS = 5 * 60_000;
 const IMPORT_SPACING_MS = 3000;
 /** The Enrich button waits this long after a run finished, so it cannot be used to hammer a website. */
 const MANUAL_COOLDOWN_MS = 60_000;
+/** Look-ups before a company is saved, per person per minute. */
+const PREVIEWS_PER_MINUTE = 6;
 
 type Collected = { candidates: Candidate[]; sources: { url: string; kind: 'WEBSITE' | 'WIKIDATA' }[]; reached: boolean; error: string | null };
 
@@ -50,6 +54,8 @@ type Collected = { candidates: Candidate[]; sources: { url: string; kind: 'WEBSI
 export class CompanyEnrichmentService {
   private readonly log = new Logger(CompanyEnrichmentService.name);
   private inFlight: Promise<unknown> | null = null;
+  /** When each person last looked companies up before saving them (rate limit). */
+  private readonly previews = new Map<string, number[]>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -122,6 +128,37 @@ export class CompanyEnrichmentService {
   }
 
   /** Undoes a run, or some of its fields. */
+  /**
+   * Looks a company up before it is saved, for the review step of Create Company. Nothing is stored: the details are
+   * filled into the form, and the run queued when the company is saved writes them with their sources.
+   */
+  async preview(auth: AuthContext, req: EnrichmentPreviewRequest): Promise<EnrichmentPreview> {
+    if (!auth.permissions.includes('companies:write')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot change companies (companies:write).' });
+    await this.prisma.run(auth, async (tx) => {
+      if (!(await hasFeature(tx, auth.tenantId, 'company_enrichment'))) throw featureNotIncluded('company_enrichment');
+    });
+    const domain = logoDomain(req.website ?? null);
+    if (!domain && !this.wikidataOn()) throw new ConflictException({ code: 'NO_WEBSITE', message: 'Add the company’s website first.' });
+    const key = auth.userId || auth.tenantId;
+    const now = Date.now();
+    const recent = (this.previews.get(key) ?? []).filter((at) => now - at < 60_000);
+    if (recent.length >= PREVIEWS_PER_MINUTE) {
+      throw new HttpException({ code: 'TOO_SOON', message: 'You are looking up companies too quickly. Try again in a minute.' }, HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.previews.set(key, [...recent, now]);
+    const collected = await Promise.race([
+      this.collect(req.name, domain),
+      new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.' }), RUN_DEADLINE_MS).unref()),
+    ]);
+    const blank: CompanyNow = { name: req.name, fieldSources: {}, website: domain ? `https://${domain}` : null, domain };
+    const result = merge(blank, collected.candidates, 'preview', new Date());
+    return {
+      found: result.fills.map(({ undone: _undone, ...f }) => f),
+      sources: collected.sources,
+      error: result.fills.length ? null : collected.error,
+    };
+  }
+
   undo(auth: AuthContext, companyId: string, runId: string, fields: EnrichField[] | undefined, meta: RequestMeta): Promise<CompanyEnrichmentState> {
     return this.prisma
       .run(auth, async (tx) => {
@@ -284,6 +321,10 @@ export class CompanyEnrichmentService {
       const company = await tx.company.findFirst({ where: { id: c.companyId, tenantId: c.tenantId, deletedAt: null } });
       if (!company) return;
       const result = merge(company as unknown as CompanyNow, collected.candidates, c.id, new Date());
+      const confirmed = JSON.stringify(result.fieldSources) !== JSON.stringify(company.fieldSources ?? {});
+      if (!result.fills.length && confirmed) {
+        await tx.company.update({ where: { id: company.id }, data: { fieldSources: result.fieldSources as unknown as Prisma.InputJsonValue } });
+      }
       if (result.fills.length) {
         await tx.company.update({ where: { id: company.id }, data: { ...(result.data as Prisma.CompanyUncheckedUpdateInput), fieldSources: result.fieldSources as unknown as Prisma.InputJsonValue } });
         if (result.data.website && !company.domain) await this.logos.domainChangedIn(tx, c.tenantId, company.id, String(result.data.domain ?? ''));

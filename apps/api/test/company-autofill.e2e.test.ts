@@ -114,6 +114,23 @@ describe('company auto-fill', () => {
     expect(run).toMatchObject({ status: 'SUCCEEDED', entityType: 'company' });
   });
 
+  it('looks a company up before it is saved, without storing anything, and limits how often', async () => {
+    const before = await asTenant(owner.tenantId, (tx) => tx.company.count());
+    const res = (await http.post('/companies/autofill-preview', { name: 'Northwind Insights', website: 'https://northwind-insights.example' }).expect(200)).body;
+    const byField = Object.fromEntries(res.found.map((f: { field: string; value: unknown }) => [f.field, f.value]));
+    expect(byField).toMatchObject({ foundedYear: 2009, city: 'Pune', country: 'IN', primaryEmail: 'info@northwind-insights.example', industry: 'Market research' });
+    expect(res.found.find((f: { field: string }) => f.field === 'foundedYear')).toMatchObject({ source: 'WEBSITE', url: 'https://www.northwind-insights.example/about-us', confidence: 'medium' });
+    expect(res.found.some((f: { field: string }) => f.field === 'website')).toBe(false);
+    expect(res.sources[0]).toMatchObject({ kind: 'WEBSITE' });
+    expect(await asTenant(owner.tenantId, (tx) => tx.company.count())).toBe(before);
+    // An unreachable site says so.
+    const off = (await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(200)).body;
+    expect(off).toMatchObject({ found: [], error: 'Could not reach offline-co.example' });
+    // A few look-ups a minute per person.
+    for (let i = 0; i < 4; i++) await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(200);
+    await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(429);
+  });
+
   it('combines the company’s own data with Wikidata, the company’s statement winning', async () => {
     const created = (await http.post('/companies', { name: 'Globex Analytics', website: 'https://globex-analytics.example' }).expect(201)).body;
     await runWorker();

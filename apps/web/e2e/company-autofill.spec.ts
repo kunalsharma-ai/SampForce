@@ -174,3 +174,117 @@ test('Business Information holds every detail, tells auto-filled values apart, a
   // Fields left alone keep their auto-fill source.
   expect(saved.fieldSources.employeeCount).toMatchObject({ source: 'WEBSITE' });
 });
+
+test('Create Company finds the details before saving; the person picks what to use', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signUp(page, 'Create Autofill Org');
+  const main = page.getByRole('main');
+  await page.goto('/app/companies/new');
+  await main.getByLabel('Company name *').fill('Northwind Insights');
+  await main.getByLabel('Official website URL 1', { exact: true }).fill('https://northwind-insights.example');
+  const finder = main.getByRole('region', { name: 'Fill in the rest automatically' });
+  await finder.getByRole('button', { name: 'Find details' }).click();
+  const found = finder.getByRole('group', { name: /Found for this form/ });
+  await expect(found).toContainText('2009');
+  await expect(found.getByRole('checkbox', { name: /Description/ })).toBeChecked();
+  // Everything the form has no place for is added after saving.
+  await expect(finder).toContainText('Added after you save, with their sources');
+  await expect(finder).toContainText('Certifications');
+  // Leave the industry guess out.
+  await found.getByRole('checkbox', { name: /Industry/ }).uncheck();
+  await axe(page);
+  await fullShot(page, '07-create-company-find-details', finder);
+  await found.getByRole('button', { name: /^Use \d+ selected$/ }).click();
+  await expect(finder.getByRole('status')).toContainText(/Added \d+ details to the form/);
+  await expect(main.getByLabel('Company overview')).toHaveValue(/^Northwind Insights is a global market research company/);
+
+  // Through the steps to save; the values are in the form to check on the way.
+  for (let i = 0; i < 7; i++) await main.getByRole('button', { name: 'Next' }).click();
+  await expect(main).toContainText('Pune');
+  await main.getByRole('button', { name: 'Save lead' }).click();
+  await expect(page).toHaveURL(/\/app\/companies\/[0-9a-f-]{36}$/);
+  const id = page.url().split('/').pop()!;
+  // After saving, auto-fill adds the rest, and the values taken from the look-up keep their source.
+  await expect(page.locator('#company-autofill').getByRole('status')).toContainText(/details added/, { timeout: 30_000 });
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/v1/companies/${id}`)).json()).fieldSources?.foundedYear?.url, { timeout: 15_000 })
+    .toBe('https://www.northwind-insights.example/about-us');
+  const saved = await (await page.request.get(`/api/v1/companies/${id}`)).json();
+  expect(saved.certifications).toContain('ISO 27001');
+  expect(saved.industry).toBe('Market research');
+});
+
+test('the AI email assistant writes for your own organisation from its sales profile, editable before sending', async ({ page }) => {
+  test.setTimeout(90_000);
+  await signUp(page, 'Insight Panels Showcase');
+
+  // The Super Workspace describes the organisation once, in Settings.
+  await page.goto('/app/settings#sales-profile');
+  const card = page.locator('#sales-profile');
+  await expect(card.getByLabel('Services')).toBeEnabled();
+  await card.getByLabel('Organisation name in emails').fill('Insight Panels');
+  await card.getByLabel('Website').fill('https://insight-panels.example');
+  await card.getByLabel('What your organisation does').fill('A market research company with its own online panels.');
+  await card.getByLabel('Services').fill('Online surveys\nB2B panels\nConsumer trackers');
+  await card.getByLabel('Industries you serve').fill('Food and drink\nRetail');
+  await card.getByLabel('Value proposition').fill('Verified respondents in 40 countries, with first results within a week.');
+  await card.getByLabel('What sets you apart').fill('Own panels, not resold\nISO 20252 certified');
+  await card.getByLabel('Signature added to every email').fill('Book a call: https://insight-panels.example/meet');
+  await card.getByRole('button', { name: 'Save sales profile' }).click();
+  await expect(card.getByRole('status')).toHaveText('Saved.');
+  await fullShot(page, '08-settings-sales-profile', card);
+
+  const res = await page.request.post('/api/v1/company-leads', {
+    data: {
+      company: { name: 'Contoso Foods', industry: 'Food manufacturing', city: 'Lyon', country: 'FR', emails: [{ value: 'hello@contoso-foods.example' }] },
+      employees: [{ firstName: 'Priya', lastName: 'Nair', jobTitle: 'Head of Insights', emails: [{ value: 'priya@contoso-foods.example' }] }],
+    },
+    headers: ORIGIN,
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+  const { company } = await res.json();
+  await page.goto(`/app/companies/${company.id}`);
+
+  // The quick action in the header leads to the assistant.
+  await page.getByRole('button', { name: 'Write email with AI' }).click();
+  const assistant = page.locator('#company-email-assistant');
+  await expect(assistant).toContainText('Writing for Insight Panels');
+  await assistant.getByText('Ask for a meeting').click();
+  await assistant.getByLabel('Write to').selectOption({ label: 'Priya Nair · Head of Insights' });
+  await assistant.getByLabel('Tone').selectOption('friendly');
+  await assistant.getByRole('radiogroup', { name: 'Personalisation' }).getByRole('radio', { name: 'Deep' }).click();
+  await assistant.getByRole('radiogroup', { name: 'Follow-ups' }).getByRole('radio', { name: '2' }).click();
+  await assistant.getByLabel('Sales objective').fill('their 2027 consumer tracker');
+  await assistant.getByRole('button', { name: 'Write email' }).click();
+
+  const draft = assistant.getByRole('region', { name: 'Draft email' });
+  await expect(draft.getByLabel('Subject')).toHaveValue('Insight Panels for Contoso Foods');
+  const body = draft.getByRole('textbox', { name: 'Email', exact: true });
+  await expect(body).toHaveValue(/^Hi Priya,/);
+  await expect(body).toHaveValue(/Online surveys and B2B panels/);
+  await expect(body).toHaveValue(/Book a call: https:\/\/insight-panels\.example\/meet$/);
+  await expect(draft).toContainText('priya@contoso-foods.example');
+  // What it could not know is left in brackets and listed for the person to fill in.
+  await expect(draft.getByText('Check before sending')).toBeVisible();
+  await expect(draft).toContainText('Fill in [proposed time]');
+  await body.fill((await body.inputValue()).replace('[proposed time]', 'Tuesday at 10:00'));
+  await expect(draft).not.toContainText('Fill in [proposed time]');
+  await axe(page);
+  await fullShot(page, '09-ai-email-assistant', assistant);
+
+  // The follow-ups are their own emails, also editable.
+  await draft.getByRole('tab', { name: /Follow-up 2/ }).click();
+  await expect(draft.getByRole('textbox', { name: 'Email', exact: true })).toHaveValue(/A short follow-up 2/);
+  await draft.getByRole('tab', { name: 'First email' }).click();
+  await expect(draft.getByRole('textbox', { name: 'Email', exact: true })).toHaveValue(/Tuesday at 10:00/);
+
+  // Nothing is sent from here: it opens in the normal email window, filled in.
+  await draft.getByRole('button', { name: 'Open in email' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New email' });
+  await expect(dialog.getByLabel('To')).toHaveValue('priya@contoso-foods.example');
+  await expect(dialog.getByLabel('Subject')).toHaveValue('Insight Panels for Contoso Foods');
+  await expect(dialog.getByLabel('Message')).toHaveValue(/Tuesday at 10:00/);
+  await shot(page, '10-ai-email-open-in-email');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});

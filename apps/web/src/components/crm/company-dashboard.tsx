@@ -19,6 +19,7 @@ import {
   Linkedin,
   Mail,
   MailOpen,
+  MailPlus,
   MapPin,
   MessageSquarePlus,
   Pencil,
@@ -63,6 +64,7 @@ import { INTERACTION_LABEL } from './work-labels';
 const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Plus }[] = [
   { action: 'edit', label: 'Edit company', icon: Pencil },
   { action: 'enrich', label: 'Enrich', icon: Sparkles },
+  { action: 'aiEmail', label: 'Write email with AI', icon: MailPlus },
   { action: 'addEmployee', label: 'Add employee', icon: UserPlus },
   { action: 'addBranch', label: 'Add branch', icon: Building2 },
   { action: 'addFollowUp', label: 'Add follow-up', icon: CalendarClock },
@@ -131,7 +133,8 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
             {(place || c.headquarters) && (
               <div className="space-y-1">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-medium">
-                  {c.country && <CountryFlag code={c.country} className="text-lg" />}
+                  {/* The country is written in the line, and the logo badge already names it for screen readers. */}
+                  {c.country && <CountryFlag code={c.country} decorative className="text-lg" />}
                   <span>{place || c.headquarters}</span>
                   {(c.address || c.headquarters) && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{t('Headquarters')}</span>

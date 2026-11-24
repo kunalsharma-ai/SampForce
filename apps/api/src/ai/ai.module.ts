@@ -17,6 +17,7 @@ import { PrismaService } from '../common/prisma.service';
 import { RecordContextBuilder } from './record-context';
 import { RetentionController } from './retention.controller';
 import { CompanySummaryController } from './company-summary.controller';
+import { CompanyEmailController } from './company-email.controller';
 import { RevenueModule } from '../revenue/revenue.module';
 import { DeepgramClient } from '../meetings/deepgram';
 import { MeetingRecordsController } from '../meetings/meeting-records.controller';
@@ -27,7 +28,7 @@ import { VoiceNotesService } from '../voice/voice-notes.service';
 /** Phase 4: AI gateway, Copilot, agents and forecasting. */
 @Module({
   imports: [CrmModule, IntelligenceModule, RevenueModule],
-  controllers: [AiController, ForecastController, MeetingRecordsController, VoiceNotesController, RetentionController, CompanySummaryController],
+  controllers: [AiController, ForecastController, MeetingRecordsController, VoiceNotesController, RetentionController, CompanySummaryController, CompanyEmailController],
   providers: [
     { provide: AI_PROVIDER, inject: [API_ENV, PrismaService], useFactory: (env: ApiEnv, prisma: PrismaService) => new AiProviderChain(env, platformHealthStore(prisma)) },
     AiGateway,

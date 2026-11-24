@@ -1,11 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import type { MemberOrgInput, MemberRow, TenantDetails, UpdateTenantInput } from '@dealflow/types';
+import { type MemberOrgInput, type MemberRow, type SalesProfile, type SalesProfileInput, salesProfileSchema, type TenantDetails, type UpdateTenantInput } from '@dealflow/types';
 import { reportingTree } from '../crm/visibility';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertCanGrant } from './roles.service';
+import { workspaceLevelOf } from '../workspaces/access';
 
 @Injectable()
 export class TenantsService {
@@ -40,6 +41,35 @@ export class TenantsService {
       });
       return toDetails(after);
     });
+  }
+
+  /** Who the organisation is, for AI sales emails (ADR 0077). Every workspace reads the one profile. */
+  salesProfile(auth: AuthContext): Promise<SalesProfile> {
+    return this.prisma.run(auth, async (tx) => this.salesProfileOf(tx, auth));
+  }
+
+  /** Only the Super Workspace keeps the profile; Manager and Executive Workspaces use it as it is. */
+  setSalesProfile(auth: AuthContext, input: SalesProfileInput, meta: RequestMeta): Promise<SalesProfile> {
+    return this.prisma.run(auth, async (tx) => {
+      if ((await workspaceLevelOf(tx, auth.tenantId, auth.membershipId)) !== 'SUPER') {
+        throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only the Super Workspace can change the sales profile.' });
+      }
+      const before = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { salesProfile: true } });
+      await tx.tenant.update({ where: { id: auth.tenantId }, data: { salesProfile: input, salesProfileUpdatedAt: new Date(), salesProfileUpdatedBy: auth.userId } });
+      const old = salesProfileSchema.safeParse(before.salesProfile ?? {});
+      const changed = Object.keys(input).filter((k) => JSON.stringify(old.success ? old.data[k as keyof SalesProfileInput] : null) !== JSON.stringify(input[k as keyof SalesProfileInput]));
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sales_profile.updated', entityType: 'tenant', entityId: auth.tenantId, metadata: { changed }, meta });
+      return this.salesProfileOf(tx, auth);
+    });
+  }
+
+  private async salesProfileOf(tx: TenantTx, auth: AuthContext): Promise<SalesProfile> {
+    const t = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true, salesProfile: true, salesProfileUpdatedAt: true, salesProfileUpdatedBy: true } });
+    const parsed = salesProfileSchema.safeParse(t.salesProfile ?? {});
+    const profile = parsed.success ? parsed.data : salesProfileSchema.parse({});
+    const by = t.salesProfileUpdatedBy ? await tx.user.findUnique({ where: { id: t.salesProfileUpdatedBy }, select: { id: true, name: true } }) : null;
+    const editable = auth.permissions.includes('tenant:manage') && (await workspaceLevelOf(tx, auth.tenantId, auth.membershipId)) === 'SUPER';
+    return { ...profile, workspaceName: t.name, updatedAt: t.salesProfileUpdatedAt?.toISOString() ?? null, updatedBy: by, editable };
   }
 
   async members(auth: AuthContext): Promise<MemberRow[]> {

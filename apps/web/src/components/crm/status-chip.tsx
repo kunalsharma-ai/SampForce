@@ -21,13 +21,18 @@ export function StatusChip({ status, className }: { status: Pick<CrmStatusRef, '
 }
 
 /** A country flag (SVG, so it shows on every system) with the country's name for screen readers and on hover. */
-export function CountryFlag({ code, withName = false, className }: { code: string | null | undefined; withName?: boolean; className?: string }) {
+/** `decorative` hides the flag from screen readers where the country is already written next to it. */
+export function CountryFlag({ code, withName = false, decorative = false, className }: { code: string | null | undefined; withName?: boolean; decorative?: boolean; className?: string }) {
   const t = useT();
   if (!code) return withName ? <span className="text-muted-foreground">—</span> : null;
   const name = countryName(code, t.formatLocale);
   return (
     <span className={cn('inline-flex items-center gap-1.5', className)}>
-      <span className={`fi fi-${code.toLowerCase()} rounded-[2px] shadow-sm`} role="img" aria-label={name} title={name} />
+      {decorative ? (
+        <span className={`fi fi-${code.toLowerCase()} rounded-[2px] shadow-sm`} aria-hidden title={name} />
+      ) : (
+        <span className={`fi fi-${code.toLowerCase()} rounded-[2px] shadow-sm`} role="img" aria-label={name} title={name} />
+      )}
       {withName && <span>{name}</span>}
     </span>
   );

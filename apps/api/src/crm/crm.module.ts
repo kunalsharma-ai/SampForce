@@ -10,7 +10,7 @@ import { CompanyFilesController, CompanyLeadPartsController, CompanyLeadsControl
 import { CompanyLeadsService } from './company-leads.service';
 import { CompanyLogosController } from './company-logos.controller';
 import { CompanyLogosService } from './company-logos.service';
-import { CompanyEnrichmentController } from './company-enrichment.controller';
+import { CompanyAutofillPreviewController, CompanyEnrichmentController } from './company-enrichment.controller';
 import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CompanyDashboardController, FollowUpsController, InteractionsController, RfqsController } from './company-work.controller';
 import { CompanyWorkService } from './company-work.service';
@@ -63,6 +63,7 @@ import {
     RfqsController,
     CompanyLeadPartsController,
     CompanyLogosController,
+    CompanyAutofillPreviewController,
     CompanyEnrichmentController,
     CompanyFilesController,
     EmployeeStatsController,

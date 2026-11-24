@@ -46,6 +46,8 @@ in Business Information as structured fields, not as custom fields.
 - **The header** shows the HQ place and full address under the name, the main contact points, and a button for each profile found. Each button is in its platform's colours, using Simple Icons paths (CC0) and LinkedIn's "in" mark, and opens the profile in a new tab.
 - **AI summary.** `POST /companies/:id/ai-summary` (agent `company_summary`, needs `companies:write` and `ai:use`) writes two to four sentences from Business Information only. Website text is passed as untrusted data. The summary is saved on the company with its time and is always shown labelled as AI. It changes nothing else on the company.
 
+- **Create Company.** After the name and website, **Find details** calls `POST /companies/autofill-preview`. It reads the same sources, stores nothing, and allows 6 look-ups per person per minute. The person ticks which found values go into the form; values that were already typed are kept. Details the form has no place for are added by the run queued on save. When that run sees a value a source also states, the value gains the source without becoming an undoable fill.
+
 ## Consequences
 
 - Real company sites can differ from the made-up sites in tests (`apps/api/test/fixtures/company-sites.ts`), so the

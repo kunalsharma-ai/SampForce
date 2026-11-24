@@ -239,8 +239,11 @@ export const errorsWork = {
   // Company auto-fill (ADR 0076)
   'Auto-fill is already looking this company up.': ['El autocompletado ya está buscando esta empresa.', 'Le remplissage automatique recherche déjà cette entreprise.', 'Das automatische Ausfüllen sucht dieses Unternehmen bereits.', 'التعبئة التلقائية تبحث عن هذه الشركة بالفعل.'],
   'This company was just looked up. Try again in a minute.': ['Esta empresa se acaba de buscar. Inténtalo de nuevo en un minuto.', 'Cette entreprise vient d’être recherchée. Réessayez dans une minute.', 'Dieses Unternehmen wurde gerade gesucht. Versuchen Sie es in einer Minute erneut.', 'تم البحث عن هذه الشركة للتو. حاول مجددًا بعد دقيقة.'],
+  'You are looking up companies too quickly. Try again in a minute.': ['Estás buscando empresas demasiado rápido. Inténtalo de nuevo en un minuto.', 'Vous recherchez des entreprises trop vite. Réessayez dans une minute.', 'Sie suchen zu schnell nach Unternehmen. Versuchen Sie es in einer Minute erneut.', 'أنت تبحث عن الشركات بسرعة كبيرة. حاول مجددًا بعد دقيقة.'],
   'Auto-fill run not found.': ['No se encontró la ejecución de autocompletado.', 'Exécution du remplissage automatique introuvable.', 'Lauf des automatischen Ausfüllens nicht gefunden.', 'لم يُعثر على عملية التعبئة التلقائية.'],
   'Your role cannot change companies (companies:write).': ['Tu rol no puede modificar empresas (companies:write).', 'Votre rôle ne peut pas modifier les entreprises (companies:write).', 'Ihre Rolle kann keine Unternehmen ändern (companies:write).', 'لا يمكن لدورك تعديل الشركات (companies:write).'],
   'Name the detail': ['Nombra el dato', 'Nommez l’information', 'Benennen Sie die Angabe', 'سمِّ المعلومة'],
   'Enter a value': ['Introduce un valor', 'Saisissez une valeur', 'Geben Sie einen Wert ein', 'أدخل قيمة'],
+  'Employee not found.': ['No se encontró el empleado.', 'Employé introuvable.', 'Mitarbeiter nicht gefunden.', 'لم يُعثر على الموظف.'],
+  'Only the Super Workspace can change the sales profile.': ['Solo el Super Workspace puede cambiar el perfil de ventas.', 'Seul le Super Workspace peut modifier le profil commercial.', 'Nur der Super Workspace kann das Vertriebsprofil ändern.', 'لا يمكن تغيير ملف المبيعات إلا من مساحة العمل الرئيسية (Super Workspace).'],
 } as const satisfies TextTable;

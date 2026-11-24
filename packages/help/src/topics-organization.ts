@@ -434,6 +434,30 @@ export const organizationHelp = {
       'استخدمها عند إعداد SampForce أول مرة وعند تغيّر بيانات عملك.',
     ],
   },
+  'settings.salesProfile': {
+    title: 'Sales profile',
+    what: [
+      'Your organisation’s name, services, value proposition and signature, used by the AI email assistant on company pages.',
+      'El nombre, los servicios, la propuesta de valor y la firma de tu organización, que usa el asistente de correo con IA en las páginas de empresa.',
+      'Le nom, les services, la proposition de valeur et la signature de votre organisation, utilisés par l’assistant e-mail IA sur les pages entreprise.',
+      'Name, Leistungen, Nutzenversprechen und Signatur Ihrer Organisation, die der KI-E-Mail-Assistent auf Unternehmensseiten verwendet.',
+      'اسم مؤسستك وخدماتها وعرض القيمة والتوقيع، ويستخدمها مساعد البريد بالذكاء الاصطناعي في صفحات الشركات.',
+    ],
+    how: [
+      'Fill in what you offer, one service per line, and save. The more specific it is, the more specific the emails are.',
+      'Indica lo que ofreces, un servicio por línea, y guarda. Cuanto más concreto sea, más concretos serán los correos.',
+      'Indiquez ce que vous proposez, un service par ligne, puis enregistrez. Plus c’est précis, plus les e-mails le seront.',
+      'Tragen Sie Ihr Angebot ein, eine Leistung pro Zeile, und speichern Sie. Je genauer es ist, desto genauer werden die E-Mails.',
+      'اكتب ما تقدمه، خدمة واحدة في كل سطر، ثم احفظ. كلما كان أدق كانت الرسائل أدق.',
+    ],
+    where: [
+      'Only the Super Workspace can change it. Manager and Executive Workspaces use the same profile, so emails always speak for your organisation.',
+      'Solo el Super Workspace puede cambiarlo. Los espacios de gerente y de ejecutivo usan el mismo perfil, así que los correos siempre hablan por tu organización.',
+      'Seul le Super Workspace peut le modifier. Les espaces Manager et Exécutif utilisent le même profil : les e-mails parlent toujours au nom de votre organisation.',
+      'Nur der Super Workspace kann es ändern. Manager- und Executive-Workspaces nutzen dasselbe Profil, sodass E-Mails immer für Ihre Organisation sprechen.',
+      'لا يمكن تغييره إلا من مساحة العمل الرئيسية. تستخدم مساحات المديرين والتنفيذيين الملف نفسه، فتتحدث الرسائل دائمًا باسم مؤسستك.',
+    ],
+  },
   'settings.workspace': {
     title: 'Workspace',
     what: [
@@ -1802,6 +1826,30 @@ export const organizationHelp = {
       'Le remplissage automatique ne modifie plus jamais une valeur que vous avez modifiée, et ce que vous retirez n’est pas rajouté.',
       'Von Ihnen bearbeitete Werte ändert die automatische Ergänzung nie wieder, und Entferntes wird nicht erneut hinzugefügt.',
       'لا يغيّر الإكمال التلقائي أبدًا قيمة عدّلتها، ولا يعيد إضافة ما أزلته.',
+    ],
+  },
+  'crm.companyEmailAssistant': {
+    title: 'AI email assistant',
+    what: [
+      'Writes a sales email to this company for your own organisation, using the company’s Business Information and your sales profile in Settings.',
+      'Escribe un correo de ventas a esta empresa en nombre de tu organización, con la información de la empresa y tu perfil de ventas de Configuración.',
+      'Rédige un e-mail commercial à cette entreprise au nom de votre organisation, à partir de ses informations et de votre profil commercial dans les Paramètres.',
+      'Schreibt eine Vertriebs-E-Mail an dieses Unternehmen für Ihre eigene Organisation, mit den Unternehmensinformationen und Ihrem Vertriebsprofil aus den Einstellungen.',
+      'يكتب رسالة مبيعات إلى هذه الشركة باسم مؤسستك، باستخدام معلومات الشركة وملف المبيعات الخاص بك في الإعدادات.',
+    ],
+    how: [
+      'Pick the purpose, who it is for, the tone, length and call to action, then select Write email. Edit the draft and open it in the email window to send it.',
+      'Elige el propósito, el destinatario, el tono, la longitud y la llamada a la acción, y selecciona Escribir correo. Edita el borrador y ábrelo en la ventana de correo para enviarlo.',
+      'Choisissez l’objectif, le destinataire, le ton, la longueur et l’appel à l’action, puis sélectionnez Rédiger l’e-mail. Modifiez le brouillon et ouvrez-le dans la fenêtre d’e-mail pour l’envoyer.',
+      'Wählen Sie Zweck, Empfänger, Ton, Länge und Handlungsaufforderung und dann E-Mail schreiben. Bearbeiten Sie den Entwurf und öffnen Sie ihn im E-Mail-Fenster, um ihn zu senden.',
+      'اختر الغرض والمستلم والنبرة والطول والدعوة إلى الإجراء، ثم اختر كتابة الرسالة. عدّل المسودة وافتحها في نافذة البريد لإرسالها.',
+    ],
+    where: [
+      'It only uses facts it has and never makes up a name; anything it could not know appears in [square brackets] for you to fill in. Nothing is sent until you press Send.',
+      'Solo usa los datos que tiene y nunca inventa un nombre; lo que no puede saber aparece entre [corchetes] para que lo completes. No se envía nada hasta que pulses Enviar.',
+      'Il n’utilise que les faits dont il dispose et n’invente jamais de nom ; ce qu’il ne peut pas savoir apparaît entre [crochets] pour que vous le complétiez. Rien n’est envoyé avant que vous appuyiez sur Envoyer.',
+      'Es nutzt nur vorhandene Fakten und erfindet nie einen Namen; was es nicht wissen kann, steht in [eckigen Klammern] zum Ausfüllen. Nichts wird gesendet, bevor Sie auf Senden klicken.',
+      'لا يستخدم إلا الحقائق المتوفرة ولا يخترع اسمًا أبدًا؛ وما لا يمكنه معرفته يظهر بين [قوسين معقوفين] لتكمله. لا يُرسل شيء حتى تضغط إرسال.',
     ],
   },
   'crm.companyAutofill': {
