@@ -13,7 +13,7 @@ import {
 } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRightLeft, Building2, Check, Download, FileText, Pencil, Plus, Trash2, UserRoundCog, X } from 'lucide-react';
+import { ArrowRightLeft, Check, Download, FileText, Pencil, Plus, Trash2, UserRoundCog, X } from 'lucide-react';
 import * as React from 'react';
 import { formatBytes, UploadZone } from '@/components/forms/upload-zone';
 import { InfoTip } from '@/components/info-tip';
@@ -55,57 +55,6 @@ const issuesToErrors = (issues: { path: PropertyKey[]; message: string }[], say:
 };
 const apiErrors = (e: unknown, say: (m: string) => string): Errors =>
   e instanceof ApiError && e.details?.length ? Object.fromEntries(e.details.map((d) => [d.path.replace(/\.value$/, ''), say(d.message)])) : {};
-
-/** Company profile from the lead form: contact points, business details and overview. */
-export function CompanyProfileCard({ company: c }: { company: CompanyRow }) {
-  const t = useT();
-  const link = (href: string | null, text?: string) =>
-    href ? (
-      <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={href} target="_blank" rel="noopener noreferrer">
-        {text ?? href.replace(/^https?:\/\/(www\.)?/, '')}
-      </a>
-    ) : null;
-  const points = (list: { value: string; primary?: boolean }[], kind: 'mailto' | 'tel' | 'web') =>
-    list.length ? (
-      <ul className="space-y-1">
-        {list.map((p) => (
-          <li key={p.value}>
-            {kind === 'web' ? link(p.value) : <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={`${kind}:${p.value}`}>{p.value}</a>}
-            {p.primary && list.length > 1 && <span className="ms-1 text-xs text-muted-foreground">({t('primary')})</span>}
-          </li>
-        ))}
-      </ul>
-    ) : null;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Building2 aria-hidden className="size-4" /> {t('Business information')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {c.overview && <p className="whitespace-pre-line text-sm">{c.overview}</p>}
-        <DetailList
-          items={[
-            ['Website', points(c.websites.length ? c.websites : c.website ? [{ value: c.website, primary: true }] : [], 'web') ?? (c.domain && link(`https://${c.domain}`, c.domain))],
-            ['LinkedIn', points(c.linkedinUrls, 'web')],
-            ['Email', points(c.emails, 'mailto')],
-            ['Phone', points(c.phones, 'tel')],
-            ['Business category', c.businessCategory],
-            ['Company size', c.companySize && t('{range} employees', { range: c.companySize })],
-            ['Company type', c.companyType && t.maybe(c.companyType)],
-            ['Number of branches', c.branchCount],
-            ['Address', [c.address, c.city, c.state, c.postalCode].filter(Boolean).join(', ') || null],
-            ['Country', c.country && <CountryFlag code={c.country} withName />],
-            ['Time zone', c.timezone],
-            ['Company specialties', c.specialties],
-            ['Remarks', c.notes && <span className="whitespace-pre-line">{c.notes}</span>],
-          ]}
-        />
-      </CardContent>
-    </Card>
-  );
-}
 
 // ─── Employees ───
 

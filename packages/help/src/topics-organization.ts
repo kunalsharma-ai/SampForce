@@ -1780,6 +1780,54 @@ export const organizationHelp = {
       'استلام طلب عرض سعر ليس صفقة رابحة: لا يُحتسب إيرادًا إلا الطلبات الرابحة أو الصفقات الناتجة عنها.',
     ],
   },
+  'crm.businessInformation': {
+    title: 'Business information',
+    what: [
+      'Everything about the company in one place: overview, headquarters and offices, contact details, leadership and ownership, online profiles, certifications and other details.',
+      'Todo sobre la empresa en un solo lugar: descripción, sede y oficinas, datos de contacto, dirección y propiedad, perfiles en línea, certificaciones y otros datos.',
+      'Tout sur l’entreprise au même endroit : présentation, siège et bureaux, coordonnées, direction et actionnariat, profils en ligne, certifications et autres informations.',
+      'Alles über das Unternehmen an einem Ort: Überblick, Hauptsitz und Standorte, Kontaktdaten, Führung und Eigentümer, Online-Profile, Zertifizierungen und weitere Angaben.',
+      'كل ما يخص الشركة في مكان واحد: النبذة والمقر والمكاتب وبيانات التواصل والقيادة والملكية والحسابات على الإنترنت والشهادات وتفاصيل أخرى.',
+    ],
+    how: [
+      'Select Edit to change or clear any value. Values marked Auto were found by auto-fill; select the mark to open the page it came from.',
+      'Selecciona Editar para cambiar o borrar cualquier valor. Los valores marcados como Automático los encontró el autocompletado; selecciona la marca para abrir la página de origen.',
+      'Sélectionnez Modifier pour changer ou effacer une valeur. Les valeurs marquées Auto ont été trouvées par le remplissage automatique ; sélectionnez la marque pour ouvrir la page d’origine.',
+      'Wählen Sie Bearbeiten, um einen Wert zu ändern oder zu löschen. Mit Automatisch markierte Werte stammen aus der automatischen Ergänzung; wählen Sie die Markierung, um die Quelle zu öffnen.',
+      'اختر «تعديل» لتغيير أي قيمة أو مسحها. القيم الموسومة بـ«تلقائي» وجدها الإكمال التلقائي؛ اختر الوسم لفتح الصفحة التي جاءت منها.',
+    ],
+    where: [
+      'A value you edit is never changed by auto-fill again, and something you remove is not added back.',
+      'El autocompletado nunca vuelve a cambiar un valor que editas, y lo que quitas no se vuelve a añadir.',
+      'Le remplissage automatique ne modifie plus jamais une valeur que vous avez modifiée, et ce que vous retirez n’est pas rajouté.',
+      'Von Ihnen bearbeitete Werte ändert die automatische Ergänzung nie wieder, und Entferntes wird nicht erneut hinzugefügt.',
+      'لا يغيّر الإكمال التلقائي أبدًا قيمة عدّلتها، ولا يعيد إضافة ما أزلته.',
+    ],
+  },
+  'crm.companyAutofill': {
+    title: 'Auto-fill',
+    what: [
+      'Details SampForce found for this company on its own website and on Wikidata, with where each one came from.',
+      'Los datos que SampForce encontró sobre esta empresa en su propio sitio web y en Wikidata, con el origen de cada uno.',
+      'Les informations que SampForce a trouvées sur cette entreprise sur son propre site web et sur Wikidata, avec l’origine de chacune.',
+      'Angaben, die SampForce auf der eigenen Website des Unternehmens und in Wikidata gefunden hat, jeweils mit Quelle.',
+      'التفاصيل التي وجدها SampForce عن هذه الشركة في موقعها الإلكتروني وفي ويكي بيانات، مع مصدر كل منها.',
+    ],
+    how: [
+      'Select Enrich to look the company up again. Auto-fill only fills empty fields and never changes what you entered. Undo removes a value, and it is not added again.',
+      'Selecciona Enriquecer para volver a buscar la empresa. El autocompletado solo rellena campos vacíos y nunca cambia lo que escribiste. Deshacer quita un valor, y no se vuelve a añadir.',
+      'Sélectionnez Enrichir pour rechercher à nouveau l’entreprise. Le remplissage automatique ne complète que les champs vides et ne modifie jamais ce que vous avez saisi. Annuler retire une valeur, qui ne sera plus ajoutée.',
+      'Wählen Sie Anreichern, um das Unternehmen erneut nachzuschlagen. Die automatische Ergänzung füllt nur leere Felder und ändert nie Ihre Eingaben. Rückgängig entfernt einen Wert, der danach nicht erneut hinzugefügt wird.',
+      'اختر «إثراء» للبحث عن الشركة مجددًا. لا يملأ الإكمال التلقائي إلا الحقول الفارغة ولا يغيّر أبدًا ما أدخلته. يزيل التراجع القيمة ولا تُضاف مرة أخرى.',
+    ],
+    where: [
+      'It runs by itself when a company is created, imported or given a new website. Values marked uncertain came from sources that disagree, so check them.',
+      'Se ejecuta solo al crear o importar una empresa o al cambiar su sitio web. Los valores marcados como inciertos vienen de fuentes que no coinciden; revísalos.',
+      'Il s’exécute seul quand une entreprise est créée, importée ou reçoit un nouveau site web. Les valeurs marquées incertaines viennent de sources en désaccord : vérifiez-les.',
+      'Läuft automatisch, wenn ein Unternehmen angelegt, importiert oder mit einer neuen Website versehen wird. Als unsicher markierte Werte stammen aus widersprüchlichen Quellen; bitte prüfen.',
+      'يعمل تلقائيًا عند إنشاء شركة أو استيرادها أو تغيير موقعها الإلكتروني. القيم الموسومة بأنها غير مؤكدة جاءت من مصادر متعارضة، فتحقق منها.',
+    ],
+  },
   'crm.companyKpis': {
     title: 'Company performance',
     what: [

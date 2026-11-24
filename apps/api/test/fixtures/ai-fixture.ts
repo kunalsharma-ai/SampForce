@@ -201,6 +201,11 @@ export const rules: Handler = (b) => {
     };
     return json({ name: /deal/i.test(desc) ? 'Hand over won deals' : 'Call new leads', definitionJson: JSON.stringify(definition), notes: '' });
   }
+  if (system.startsWith('You write a short company summary')) {
+    const c = input.company ?? {};
+    const where = [c.city, c.country].filter(Boolean).join(', ');
+    return json({ summary: `${c.name} works in ${strip(c.industry) || 'its field'}${where ? `, based in ${where}` : ''}.${c.foundedYear ? ` It was founded in ${c.foundedYear}.` : ''}${(c.services ?? []).length ? ` Its services include ${(c.services as string[]).slice(0, 3).join(', ')}.` : ''}` });
+  }
   if (system.startsWith('You explain to a sales manager')) {
     return text(`- The base forecast moved by ${input.delta?.base} ${input.currency}.\n- ${(input.changes ?? []).length} deals changed.`);
   }

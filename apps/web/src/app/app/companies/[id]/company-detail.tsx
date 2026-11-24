@@ -4,9 +4,11 @@ import type { CompanyRow } from '@dealflow/types';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CompanyActionsProvider } from '@/components/crm/company-actions';
+import { CompanyAutofill } from '@/components/crm/company-autofill';
 import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } from '@/components/crm/company-dashboard';
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
-import { CompanyBranches, CompanyFiles, CompanyOwnership, CompanyProfileCard } from '@/components/crm/company-parts';
+import { BusinessInformation } from '@/components/crm/business-information';
+import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/crm/company-parts';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
@@ -47,12 +49,12 @@ export function CompanyDetail({ id }: { id: string }) {
         <CompanyKpis companyId={id} />
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="min-w-0 space-y-4 lg:col-span-2">
+            <BusinessInformation company={c} />
             <CompanyBusiness companyId={id} />
             <CompanyEmployeeDirectory company={c} />
             <CompanyInteractions company={ref} employees={people} />
             <CompanyRfqs company={ref} employees={people} />
             <RelatedDeals filter={{ companyId: id }} />
-            <CompanyProfileCard company={c} />
             <CompanyBranches company={c} />
             <CompanyCommercial company={{ id, name: c.name }} />
             <CompanyPortal company={{ id, name: c.name }} />
@@ -60,6 +62,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </div>
           <div className="min-w-0 space-y-4">
             <CompanyLeadCard company={c} />
+            <CompanyAutofill company={c} />
             <CompanyFollowUps company={ref} employees={people} />
             <CompanyOwnership company={c} />
             <CompanyConcerns company={ref} employees={people} />

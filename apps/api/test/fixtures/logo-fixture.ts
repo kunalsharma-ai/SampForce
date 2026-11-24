@@ -1,6 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { crc32, deflateSync } from 'node:zlib';
+import { ENRICH_SITES, wikidataAnswer } from './company-sites';
 
 /** A real PNG of `size`×`size` pixels: a rounded badge in `rgb` on white (small, valid, renders in browsers). */
 export function png(size: number, rgb: [number, number, number] = [37, 99, 235]): Buffer {
@@ -120,11 +121,17 @@ export async function startLogoFixture(port = 0): Promise<LogoFixture> {
       res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
       return;
     }
-    const m = /^\/site\/([^/]+)(\/.*)?$/.exec((req.url ?? '').split('?')[0]!);
+    const [pathname, search] = (req.url ?? '').split('?') as [string, string | undefined];
+    const m = /^\/site\/([^/]+)(\/.*)?$/.exec(pathname);
     const host = m?.[1] ?? '';
     const path = m?.[2] ?? '/';
     hits.push(`${host}${path}`);
-    const entry = LOGO_SITES[host]?.[path];
+    if (host === 'www.wikidata.org' && path === '/w/api.php') {
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(wikidataAnswer(new URLSearchParams(search ?? ''))));
+      return;
+    }
+    // Company auto-fill pages (ADR 0076) first; the logo files of the same made-up companies after them.
+    const entry = ENRICH_SITES[host]?.[path] ?? LOGO_SITES[host]?.[path];
     if (!entry) {
       res.writeHead(404, { 'content-type': 'text/html' }).end('<h1>Not found</h1>');
       return;

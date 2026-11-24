@@ -26,6 +26,7 @@ import {
   PhoneCall,
   Plus,
   Send,
+  Sparkles,
   Trophy,
   Upload,
   UserPlus,
@@ -55,11 +56,13 @@ import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDateTime } from './follow-ups';
 import { CompanyLogoEditor } from './company-logo';
-import { StatusChip } from './status-chip';
+import { CountryFlag, StatusChip } from './status-chip';
+import { SocialIconRow } from './social-icons';
 import { INTERACTION_LABEL } from './work-labels';
 
 const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Plus }[] = [
   { action: 'edit', label: 'Edit company', icon: Pencil },
+  { action: 'enrich', label: 'Enrich', icon: Sparkles },
   { action: 'addEmployee', label: 'Add employee', icon: UserPlus },
   { action: 'addBranch', label: 'Add branch', icon: Building2 },
   { action: 'addFollowUp', label: 'Add follow-up', icon: CalendarClock },
@@ -87,14 +90,15 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
     c.industry,
     c.companySize && t('{range} employees', { range: c.companySize }),
     c.foundedYear && t('Founded {year}', { year: String(c.foundedYear) }),
-    c.headquarters && t('HQ {place}', { place: c.headquarters }),
   ].filter(Boolean) as string[];
+  // The website and LinkedIn are in the profile buttons; the chips are for reaching someone.
   const contact: { href: string; label: string; icon: typeof Globe; external?: boolean; name: MessageKey }[] = [
     ...(website ? [{ href: website.startsWith('http') ? website : `https://${website}`, label: website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''), icon: Globe, external: true, name: 'Website' as const }] : []),
-    ...(c.linkedinUrl ? [{ href: c.linkedinUrl, label: c.linkedinUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\//, '').replace(/\/$/, ''), icon: Linkedin, external: true, name: 'LinkedIn' as const }] : []),
     ...(c.primaryEmail ? [{ href: `mailto:${c.primaryEmail}`, label: c.primaryEmail, icon: Mail, name: 'Email' as const }] : []),
     ...(c.primaryPhone ? [{ href: `tel:${c.primaryPhone}`, label: c.primaryPhone, icon: Phone, name: 'Phone' as const }] : []),
   ];
+  const place = [c.city, c.state, country].filter(Boolean).join(', ');
+  const fullAddress = [c.address, c.city, c.state, c.postalCode, country].filter(Boolean).join(', ');
   const people: [MessageKey, string][] = [
     ['Lead creator', personLabel(c.createdBy)],
     ['Lead owner', personLabel(c.ownerPerson) || c.owner?.name || ''],
@@ -102,7 +106,7 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
   ];
   return (
     <section aria-labelledby="company-name" className="relative mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-primary/25 via-accent/15 to-primary/5" />
+      <div aria-hidden className="absolute inset-x-0 top-0 h-48 bg-gradient-to-r from-primary/25 via-accent/15 to-primary/5 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
       <div className="relative space-y-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link href="/app/companies" className="inline-flex min-h-6 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -124,21 +128,36 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
               </h1>
               <PageHelp />
             </div>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-              {country && (
-                <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                  <MapPin aria-hidden className="size-4" /> {[c.city, country].filter(Boolean).join(', ')}
-                </span>
-              )}
-              {facts.map((f) => (
-                <span key={f} className="before:me-2 before:content-['·']">
-                  {f}
-                </span>
-              ))}
-            </p>
+            {(place || c.headquarters) && (
+              <div className="space-y-1">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-medium">
+                  {c.country && <CountryFlag code={c.country} className="text-lg" />}
+                  <span>{place || c.headquarters}</span>
+                  {(c.address || c.headquarters) && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{t('Headquarters')}</span>
+                  )}
+                </p>
+                {c.address && (
+                  <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                    <MapPin aria-hidden className="mt-0.5 size-4 shrink-0" />
+                    <span className="break-words">{fullAddress}</span>
+                  </p>
+                )}
+              </div>
+            )}
+            {facts.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5 pt-1" aria-label={t('Company facts')}>
+                {facts.map((f) => (
+                  <li key={f} className="rounded-full border border-border bg-background/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
-        {contact.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {contact.length > 0 && (
           <ul className="flex flex-wrap gap-2" aria-label={t('Contact details')}>
             {contact.map((x) => (
               <li key={x.href}>
@@ -155,6 +174,8 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
             ))}
           </ul>
         )}
+          <SocialIconRow company={c} />
+        </div>
         <dl className="grid gap-2 sm:grid-cols-3">
           {people.map(([label, value]) => (
             <div key={label} className="rounded-xl border border-border bg-background/60 px-3 py-2">

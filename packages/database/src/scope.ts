@@ -99,6 +99,8 @@ const WORKER_ALL = new Set([
   'AiRun',
   // Company logo look-ups (ADR 0070): the worker claims PENDING logos across workspaces.
   'CompanyLogo',
+  // Company auto-fill runs (ADR 0076): the worker claims PENDING runs across workspaces.
+  'CompanyEnrichment',
   'ApprovalRequest',
   'DomainEvent',
   'GamificationSettings',

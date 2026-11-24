@@ -1,6 +1,7 @@
 import { ZoomService } from '../apps/zoom.service';
 import { CrmRemindersService } from '../crm/crm-reminders.service';
 import { CompanyLogosService } from '../crm/company-logos.service';
+import { CompanyEnrichmentService } from '../crm/company-enrichment.service';
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from '@nestjs/common';
 import { AiRunner } from '../ai/ai-runner.service';
 import { BillingService } from '../billing/billing.service';
@@ -47,6 +48,8 @@ export interface WorkerTick {
   reminders: number;
   /** Company logos looked up from company websites (ADR 0070). */
   logos: number;
+  /** Company auto-fill runs (ADR 0076). */
+  autofills: number;
   /** Phone notifications sent through Expo (ADR 0072, M8). */
   pushes: number;
   /** Closed companies whose 30 days passed, erased (workspace redesign W7). */
@@ -88,6 +91,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     private readonly zoom: ZoomService,
     private readonly reminders: CrmRemindersService,
     private readonly logos: CompanyLogosService,
+    private readonly autofill: CompanyEnrichmentService,
     private readonly pushes: MobilePushService,
     private readonly closures: CompanyClosureService,
     private readonly consoleNotices: ConsoleNotificationSweep,
@@ -150,6 +154,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     const zoomTranscripts = await this.zoom.importDue();
     const reminders = await this.reminders.sweep();
     const logos = await this.logos.runDue();
+    const autofills = await this.autofill.runDue();
     // After everything that notifies, so a reminder written in this pass reaches phones in the same pass.
     const pushes = await this.pushes.sendDue();
     const erasures = await this.closures.eraseDue();
@@ -164,7 +169,7 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
       // The Overview's KPI values for today (C5b), once a day.
       await this.overview.snapshot();
     }
-    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, pushes, erasures, consoleNotifications, clientHealth };
+    return { events, executions, deliveries, approvalsExpired, syncs, aiRuns, contracts, health, billing, sequences, badges, visitorRetention, prospectImports, zoomTranscripts, reminders, logos, autofills, pushes, erasures, consoleNotifications, clientHealth };
   }
 
   /** Runs ticks until the queues are idle (tests and the "run now" paths use this). */
@@ -184,5 +189,6 @@ export class WorkerService implements OnApplicationBootstrap, OnApplicationShutd
     this.timer = null;
     await this.running;
     await this.logos.settle();
+    await this.autofill.settle();
   }
 }
