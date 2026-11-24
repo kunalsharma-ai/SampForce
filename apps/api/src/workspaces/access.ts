@@ -35,6 +35,12 @@ export interface StoredNode {
   canViewOtherManagers: boolean;
   canViewAuditLog: boolean;
   canChatWithPeers: boolean;
+  /** Optional so stand-ins and older reads need not set them (W4, W5). */
+  department?: string | null;
+  description?: string | null;
+  accessLevel?: string | null;
+  deactivatedAt?: Date | null;
+  deactivationReason?: string | null;
   archivedAt: Date | null;
   createdAt: Date;
 }
@@ -161,9 +167,25 @@ export function branchIds(nodes: readonly Pick<StoredNode, 'id' | 'parentId'>[],
  * Users who work in a workspace's branch (it and everything below it), for record visibility: a manager sees the
  * records of their own workspace and their executives'.
  */
-export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string): Promise<string[]> {
-  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } });
-  const ids = [...branchIds(nodes, nodeId)];
+export async function branchUserIds(tx: Pick<TenantTx, 'workspaceNode' | 'membership'>, tenantId: string, nodeId: string, { below = true }: { below?: boolean } = {}): Promise<string[]> {
+  const nodes = below ? await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, parentId: true } }) : [];
+  const ids = below ? [...branchIds(nodes, nodeId)] : [nodeId];
   const members = await tx.membership.findMany({ where: { tenantId, status: 'ACTIVE', workspaceNodeId: { in: ids } }, select: { userId: true } });
   return members.map((m) => m.userId);
+}
+
+/**
+ * Whether a person's workspace, or any workspace above it, is deactivated (W4): the nearest deactivated one, or
+ * null when everything up to the Super Workspace is live. Deleted (archived) workspaces count too.
+ */
+export async function deactivatedAbove(tx: Pick<TenantTx, 'workspaceNode'>, tenantId: string, nodeId: string | null | undefined): Promise<{ id: string; name: string } | null> {
+  if (!nodeId) return null;
+  const nodes = await tx.workspaceNode.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, deactivatedAt: true, archivedAt: true } });
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const seen = new Set<string>();
+  for (let n = byId.get(nodeId); n && !seen.has(n.id); n = n.parentId ? byId.get(n.parentId) : undefined) {
+    seen.add(n.id);
+    if (n.deactivatedAt || n.archivedAt) return { id: n.id, name: n.name };
+  }
+  return null;
 }

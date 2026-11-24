@@ -39,12 +39,12 @@ export class InvitationsService {
    * Creates an invitation and returns its link once. Only the SHA-256 hash of the token is stored.
    * No email provider is configured yet, so nothing is sent: the inviter copies the link.
    */
-  create(auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null }, meta: RequestMeta): Promise<InvitationCreated> {
+  create(auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null; name?: string; phone?: string }, meta: RequestMeta): Promise<InvitationCreated> {
     return this.prisma.run(auth, (tx) => this.createIn(tx, auth, input, meta));
   }
 
   /** The same inside the caller's transaction (a new workspace and its invitation commit together, ADR 0071). */
-  async createIn(tx: TenantTx, auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null }, meta: RequestMeta): Promise<InvitationCreated> {
+  async createIn(tx: TenantTx, auth: AuthContext, input: { email: string; roleKey: string; workspaceNodeId?: string | null; name?: string; phone?: string }, meta: RequestMeta): Promise<InvitationCreated> {
     {
       const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId: auth.tenantId, key: input.roleKey } } });
       if (!role) throw new BadRequestException({ code: 'UNKNOWN_ROLE', message: 'That role does not exist.' });
@@ -59,7 +59,12 @@ export class InvitationsService {
       if (member) throw new ConflictException({ code: 'ALREADY_MEMBER', message: 'That person is already a member of this workspace.' });
       await assertSeatAvailable(tx, auth.tenantId, input.email);
 
-      // A new invitation replaces any pending one for the same address.
+      // One email, one role (W5): a pending invitation into another workspace is not silently replaced.
+      const pending = await tx.invitation.findFirst({ where: { tenantId: auth.tenantId, email: input.email, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, select: { workspaceNodeId: true } });
+      if (pending && (pending.workspaceNodeId ?? null) !== (input.workspaceNodeId ?? null)) {
+        throw new ConflictException({ code: 'EMAIL_INVITED', message: 'This email already has a pending invitation to another workspace. Withdraw that invitation first.' });
+      }
+      // A new invitation into the same workspace replaces the pending one (a fresh link).
       await tx.invitation.updateMany({
         where: { tenantId: auth.tenantId, email: input.email, acceptedAt: null, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -73,6 +78,8 @@ export class InvitationsService {
           tokenHash: TokenService.hashRefresh(token),
           invitedById: auth.userId,
           workspaceNodeId: input.workspaceNodeId ?? null,
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.phone ? { phone: input.phone } : {}),
           expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
         },
         include: { role: true },

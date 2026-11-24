@@ -25,7 +25,7 @@ export interface AuthContext {
    * Set when the workspace's security policy is not met yet: only routes marked @AllowRestricted work
    * (the profile, two-step verification setup, sessions, switching workspace).
    */
-  restriction?: 'mfa_enrolment' | 'sso_required';
+  restriction?: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated';
   /**
    * Set when the caller is the browser extension (only routes marked @ExtensionAccess) or a workspace API key
    * (only routes marked @ApiKeyAccess). For an API key, sessionId is the key's id.

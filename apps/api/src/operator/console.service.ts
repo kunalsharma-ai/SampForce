@@ -195,6 +195,8 @@ export class ConsoleService {
 
   private stateOf(tenantStatus: string, subStatus: string | null): ClientState {
     if (tenantStatus === 'SUSPENDED') return subStatus === 'CANCELED' ? 'DEACTIVATED' : 'SUSPENDED';
+    // A company its owner closed (W7) cannot be used either; `closure` on the row says why and until when.
+    if (tenantStatus === 'PENDING_DELETION') return 'SUSPENDED';
     return 'ACTIVE';
   }
 
@@ -242,11 +244,18 @@ export class ConsoleService {
       ]);
       const count = (t: string, level: string) => nodes.find((n) => n.tenantId === t && n.level === level)?._count._all ?? 0;
       const staffed = new Set(owners.map((o) => o.tenantId));
+      // Who closed a closing company (W7): users are not workspace documents, so the plain client reads them.
+      const closerIds = tenants.map((t) => t.closedById).filter((x): x is string => !!x);
+      const closers = new Map(closerIds.length ? (await this.prisma.user.findMany({ where: { id: { in: closerIds } }, select: { id: true, email: true } })).map((u) => [u.id, u.email]) : []);
       return tenants.map((t) => ({
         id: t.id, name: t.name, state: this.stateOf(t.status, t.subscription?.status ?? null), createdAt: t.createdAt.toISOString(), people: t._count.memberships,
         subscription: t.subscription ? this.subscriptionOf(t.subscription, byCode, defs) : null,
         usage: { managers: count(t.id, 'MANAGER'), executives: count(t.id, 'EXECUTIVE') },
         awaitingAdministrator: !staffed.has(t.id),
+        closure:
+          t.status === 'PENDING_DELETION' && t.closedAt && t.eraseAfter
+            ? { closedAt: t.closedAt.toISOString(), eraseAfter: t.eraseAfter.toISOString(), closedBy: t.closedById ? (closers.get(t.closedById) ?? null) : null, reason: t.closeReason ?? null }
+            : null,
       }));
     });
   }
@@ -598,7 +607,8 @@ export class ConsoleService {
     const attention: ConsoleOverview['needsAttention'] = [];
     for (const r of rows) {
       const s = r.subscription;
-      if (r.state === 'SUSPENDED') attention.push({ id: r.id, name: r.name, why: 'Suspended' });
+      if (r.closure) attention.push({ id: r.id, name: r.name, why: 'Closed by its owner' });
+      else if (r.state === 'SUSPENDED') attention.push({ id: r.id, name: r.name, why: 'Suspended' });
       else if (s?.paymentStatus === 'OVERDUE' || s?.status === 'PAST_DUE' || s?.status === 'UNPAID') attention.push({ id: r.id, name: r.name, why: 'Payment overdue' });
       else if (r.state === 'ACTIVE' && s?.renewsOn && new Date(`${s.renewsOn}T00:00:00Z`).getTime() < now) attention.push({ id: r.id, name: r.name, why: 'Renewal date has passed' });
       else if (r.awaitingAdministrator && r.state === 'ACTIVE') attention.push({ id: r.id, name: r.name, why: 'Administrator has not joined yet' });

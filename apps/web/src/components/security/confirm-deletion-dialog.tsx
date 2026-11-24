@@ -25,11 +25,13 @@ export interface ConfirmDeletionDialogProps {
   /** Shown above the form, such as "Your password check has expired". */
   notice?: string;
   confirmLabel?: string;
+  /** Defaults to "Confirm deletion"; deactivating a workspace says so instead. */
+  title?: string;
   onConfirmed: (pass: string) => void;
   onCancel: () => void;
 }
 
-export function ConfirmDeletionDialog({ open, description, confirmName, endpoint = '/auth/confirm-password', notice, confirmLabel, onConfirmed, onCancel }: ConfirmDeletionDialogProps) {
+export function ConfirmDeletionDialog({ open, description, confirmName, endpoint = '/auth/confirm-password', notice, confirmLabel, title, onConfirmed, onCancel }: ConfirmDeletionDialogProps) {
   const t = useT();
   const id = useId();
   const [password, setPassword] = useState('');
@@ -74,7 +76,7 @@ export function ConfirmDeletionDialog({ open, description, confirmName, endpoint
             <ShieldAlert className="size-5" />
           </span>
           <div className="min-w-0">
-            <DialogTitle className="text-lg font-semibold">{t('Confirm deletion')}</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">{title ?? t('Confirm deletion')}</DialogTitle>
             <DialogDescription className="mt-1 text-sm text-muted-foreground">
               {description ?? t('This action will permanently delete the selected data.')} {t('Please enter your password to continue.')}
             </DialogDescription>

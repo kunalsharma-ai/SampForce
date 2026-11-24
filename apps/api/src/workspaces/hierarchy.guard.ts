@@ -62,7 +62,7 @@ export class HierarchyGuard implements CanActivate {
     // Anything that asks for the password destroys data, so it also needs the workspace's Delete action (W2), whatever
     // the route's HTTP method or permission says (a bulk delete is a POST, a configuration delete asks for manage).
     const confirm = this.reflector.getAllAndOverride<ConfirmPasswordRule | undefined>(CONFIRMS_PASSWORD, targets);
-    if (confirm && (!confirm.when || confirm.when(req))) for (const f of features) checks.push({ feature: f, action: 'delete' });
+    if (confirm && confirm.deletes !== false && (!confirm.when || confirm.when(req))) for (const f of features) checks.push({ feature: f, action: 'delete' });
     const refused = checks.find((c) => !actionAllowed(access.actions, c.feature, c.action));
     if (refused) {
       throw new ForbiddenException({

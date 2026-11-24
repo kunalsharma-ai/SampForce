@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
+import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import { type ClientState, type ConsoleClientCreated, type ConsoleClientRow, type ConsolePlanRow, type OperatorOpenInvoice, PAYMENT_STATUS_LABEL, PAYMENT_STATUSES, type PaymentStatus, PLAN_CATALOG } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Plus } from 'lucide-react';
@@ -87,8 +87,9 @@ export default function ConsoleClientsPage() {
                       {c.name}
                     </Link>
                     <span className="ms-2">
-                      <StateBadge state={c.state} />
+                      {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
                     </span>
+                    {c.closure && <span className="ms-2 text-xs text-muted-foreground" data-erased-on>erased on {formatDate(c.closure.eraseAfter)}</span>}
                     {c.awaitingAdministrator && <span className="ms-2 text-xs text-muted-foreground">administrator not joined</span>}
                   </td>
                   <td className="p-3">{s?.planName.replace('SampForce ', '') ?? '—'}</td>

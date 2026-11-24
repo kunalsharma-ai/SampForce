@@ -64,7 +64,7 @@ export function api(user: TestUser) {
     patch: (url: string, body: object) => a.patch(`/api/v1${url}`).set('origin', ORIGIN).send(body),
     put: (url: string, body: object) => a.put(`/api/v1${url}`).set('origin', ORIGIN).send(body),
     /** Deletes the way the app does: with a fresh password confirmation when the user's password is known. */
-    del: (url: string) => confirmed(user, () => a.delete(`/api/v1${url}`).set('origin', ORIGIN)),
+    del: (url: string, body?: object) => confirmed(user, () => { const r = a.delete(`/api/v1${url}`).set('origin', ORIGIN); return body ? r.send(body) : r; }),
     /** A POST that deletes (a bulk delete), with a fresh password confirmation like a delete. */
     postConfirmed: (url: string, body?: object) => confirmed(user, () => a.post(`/api/v1${url}`).set('origin', ORIGIN).send(body ?? {})),
     /** A delete sent without a password confirmation, to test the refusal. */

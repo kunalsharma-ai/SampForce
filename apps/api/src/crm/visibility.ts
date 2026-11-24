@@ -62,10 +62,12 @@ export async function visibility(tx: TenantTx, auth: AuthContext): Promise<Visib
  */
 async function workspaceBranch(tx: TenantTx, auth: AuthContext): Promise<string[] | null> {
   if (!auth.workspaceNodeId) return null;
-  const node = await tx.workspaceNode.findFirst({ where: { tenantId: auth.tenantId, id: auth.workspaceNodeId }, select: { level: true, parentId: true, archivedAt: true } });
+  const node = await tx.workspaceNode.findFirst({ where: { tenantId: auth.tenantId, id: auth.workspaceNodeId }, select: { level: true, parentId: true, archivedAt: true, accessLevel: true } });
   if (!node || node.archivedAt) return [];
   if (node.level === 'SUPER' && !node.parentId) return null;
   if (node.level === 'EXECUTIVE') return [];
+  // A Manager Workspace with the OWN access level (W5) sees only its own people's records, not its executives'.
+  if (node.accessLevel === 'OWN') return branchUserIds(tx, auth.tenantId, auth.workspaceNodeId, { below: false });
   return branchUserIds(tx, auth.tenantId, auth.workspaceNodeId);
 }
 

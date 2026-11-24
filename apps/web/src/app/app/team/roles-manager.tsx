@@ -32,7 +32,7 @@ export function RolesManager() {
   const included = billing.data ? billing.data.features.includes('custom_roles') : undefined;
 
   return (
-    <Card>
+    <Card id="roles" className="scroll-mt-20">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-1.5">
