@@ -1,6 +1,6 @@
 'use client';
 
-import type { AppStatus, SampbidxMailboxEmail, SampbidxRfqReadiness, SampbidxSendMailboxEmailInput, SampbidxSendRfqInput, SampbidxTransferRow } from '@dealflow/types';
+import type { AppStatus, SampbidxMailboxEmail, SampbidxRfqReadiness, SampbidxSendMailboxEmailInput, SampbidxSendPastedEmailInput, SampbidxSendRfqInput, SampbidxTransferRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 
@@ -39,6 +39,11 @@ export function useSampbidxSend() {
         return api<SampbidxTransferRow>(`/apps/sampbidx/transfers/email-file?${qs}`, { method: 'POST', body: file, headers: { 'content-type': emailFileType(file) } });
       },
       onSettled: refresh,
+    }),
+    pasted: useMutation({
+      mutationFn: (input: SampbidxSendPastedEmailInput) => api<SampbidxTransferRow>('/apps/sampbidx/transfers/pasted-email', { method: 'POST', json: input }),
+      // The pasted email is also logged on the company as an interaction.
+      onSettled: (_r, _e, input) => Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['interactions', input.companyId] }), qc.invalidateQueries({ queryKey: ['company-kpis', input.companyId] })]),
     }),
     retry: useMutation({ mutationFn: (id: string) => api<SampbidxTransferRow>(`/apps/sampbidx/transfers/${id}/retry`, { method: 'POST', json: {} }), onSettled: refresh }),
   };

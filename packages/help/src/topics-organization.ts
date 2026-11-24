@@ -1996,6 +1996,30 @@ export const organizationHelp = {
       'يُبلغ SampBidx بالنتيجة (مسعّر، فائز، خاسر) في الطلب وفي صفحة الطلبات، المرسلة إلى SampBidx. أو انقل بريد الطلب نفسه.',
     ],
   },
+  'crm.pasteRfqEmail': {
+    title: 'Paste an RFQ email',
+    what: [
+      'Sends an RFQ email a client sent you to SampBidx in one click, without filling in an RFQ form.',
+      'Envía a SampBidx en un clic el correo de RFQ que te mandó un cliente, sin rellenar un formulario de RFQ.',
+      'Envoie à SampBidx en un clic l’e-mail de RFQ qu’un client vous a envoyé, sans remplir de formulaire de RFQ.',
+      'Sendet eine RFQ-E-Mail eines Kunden mit einem Klick an SampBidx, ohne ein RFQ-Formular auszufüllen.',
+      'يرسل إلى SampBidx بنقرة واحدة بريد طلب عرض السعر الذي أرسله العميل، دون ملء نموذج طلب.',
+    ],
+    how: [
+      'Copy the whole email with its From, Sent and Subject lines, paste it, check the subject and sender, then press Send to SampBidx.',
+      'Copia el correo entero con sus líneas De, Enviado y Asunto, pégalo, revisa el asunto y el remitente y pulsa Enviar a SampBidx.',
+      'Copiez tout l’e-mail avec ses lignes De, Envoyé et Objet, collez-le, vérifiez l’objet et l’expéditeur, puis cliquez sur Envoyer à SampBidx.',
+      'Kopieren Sie die ganze E-Mail mit Von-, Gesendet- und Betreffzeile, fügen Sie sie ein, prüfen Sie Betreff und Absender und klicken Sie auf An SampBidx senden.',
+      'انسخ البريد كاملًا مع سطور «من» و«أُرسل» و«الموضوع»، والصقه، وتحقق من الموضوع والمرسل، ثم اضغط إرسال إلى SampBidx.',
+    ],
+    where: [
+      'It is also logged here as RFQ received. Attachments are not in pasted text: send those with the RFQ, or upload the email file.',
+      'También se registra aquí como RFQ recibida. Los adjuntos no van en el texto: envíalos con la RFQ o sube el archivo del correo.',
+      'Il est aussi enregistré ici comme RFQ reçue. Le texte collé n’a pas les pièces jointes : envoyez-les avec la RFQ ou importez le fichier de l’e-mail.',
+      'Sie wird hier auch als RFQ erhalten erfasst. Anhänge sind nicht im Text: senden Sie sie mit der RFQ oder laden Sie die E-Mail-Datei hoch.',
+      'يُسجَّل أيضًا هنا كطلب مستلم. لا يحمل النص الملصق المرفقات: أرسلها مع الطلب أو ارفع ملف البريد.',
+    ],
+  },
   'crm.ownership': {
     title: 'Lead ownership',
     what: [

@@ -1186,7 +1186,7 @@ model CompanyLogo {
 model SampbidxTransfer {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
-  /// RFQ, MAILBOX_EMAIL or EMAIL_FILE.
+  /// RFQ, MAILBOX_EMAIL, EMAIL_FILE or PASTED_EMAIL.
   kind            String
   title           String
   rfqId           String?   @map("rfq_id")
@@ -1198,6 +1198,12 @@ model SampbidxTransfer {
   emailFileName   String?   @map("email_file_name")
   emailFileType   String?   @map("email_file_type")
   emailFileData   Bytes?    @map("email_file_data")
+  /// The pasted email text (PASTED_EMAIL only), sent to SampBidx exactly as pasted.
+  emailText       String?   @map("email_text")
+  /// The company employee who sent the email (PASTED_EMAIL).
+  contactId       String?   @map("contact_id")
+  /// The "RFQ received" interaction logged for a pasted email, if any.
+  activityId      String?   @map("activity_id")
   /// Company files sent with an RFQ.
   fileIds         String[]  @map("file_ids")
   /// Names and sizes of everything sent, for the history list.

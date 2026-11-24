@@ -229,6 +229,7 @@ import {
   sampbidxConnectSchema,
   sampbidxSendRfqSchema,
   sampbidxSendMailboxEmailSchema,
+  sampbidxSendPastedEmailSchema,
   sampbidxEmailFileQuerySchema,
   sampbidxTransferListQuerySchema,
   sampbidxMailboxQuerySchema,
@@ -580,6 +581,7 @@ export function buildOpenApiDocument(): object {
   action('post', '/apps/sampbidx/transfers/rfq', 'Workspace apps', 'Send a filled-in RFQ and the chosen attachments to SampBidx; refused while required details are missing, or when already sent unless resend is true (companies:write)', sampbidxSendRfqSchema);
   action('get', '/apps/sampbidx/mailbox', 'Workspace apps', "Emails from the caller's own connected mailboxes, to pick an RFQ email (activities:read)", undefined, { query: sampbidxMailboxQuerySchema });
   action('post', '/apps/sampbidx/transfers/mailbox-email', 'Workspace apps', "Send one email from the caller's own synced mailbox to SampBidx (activities:read)", sampbidxSendMailboxEmailSchema);
+  action('post', '/apps/sampbidx/transfers/pasted-email', 'Workspace apps', "Send the text of an RFQ email pasted on a company to SampBidx; subject, sender and date are read from the text unless given, and it is logged on the company as an RFQ received interaction unless logInteraction is false (activities:write)", sampbidxSendPastedEmailSchema);
   r.registerPath({ method: 'post', path: '/apps/sampbidx/transfers/email-file', tags: ['Workspace apps'], summary: 'Send an .eml or Outlook .msg file (the raw request body, up to 10 MB, attachments included) to SampBidx (activities:read)', security: secured,
     request: { query: sampbidxEmailFileQuerySchema }, responses: { 200: ok('Transfer'), ...errors } });
   action('get', '/apps/sampbidx/transfers', 'Workspace apps', 'What was sent to SampBidx, newest first, with its delivery and SampBidx status (companies:read)', undefined, { query: sampbidxTransferListQuerySchema });

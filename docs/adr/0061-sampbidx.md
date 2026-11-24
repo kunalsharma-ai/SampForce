@@ -19,7 +19,7 @@ contract, sends to it, and the SampBidx team builds to it.
 - **A workspace app.** SampBidx is a workspace app like SMS through Twilio (`AppProvider.SAMPBIDX`, plan feature
   `sampbidx`, added to every stored plan once by `SHIPPED_FEATURES`). An admin enters the API address and key under
   Integrations. SampForce checks them with `GET /v1/ping` before saving, and seals the key. The address is called
-  through `publicFetch`, so in production it must be https on a public address.
+  through `workspaceFetch` (ADR 0068): https on a public address, or an operator-approved private host.
 - **The contract** is `docs/integrations/sampbidx-api.md`:
   - `POST /v1/rfqs` (multipart: an `rfq` JSON part and `files` parts)
   - `POST /v1/rfq-emails` (an `email` JSON part and an optional `message` part holding the original .eml or .msg)
@@ -33,12 +33,22 @@ contract, sends to it, and the SampBidx team builds to it.
   - A new RFQ can be saved with "Save and add attachments", which keeps the dialog open.
   - Sending needs `companies:write` and the right to change that company (ADR 0060 visibility).
   - An RFQ already with SampBidx is only sent again when the person ticks "send another copy".
-- **Option 2, the email itself**, comes from either of two places.
+- **Option 2, the email itself**, comes from one of three places.
   - From the person's own synced mailbox. Only the mailbox owner can pick its emails. Synced mail has text but no
     attachments, so the screen says so.
   - From an .eml or Outlook .msg file they upload, up to 10 MB. The file is checked by its headers or signature,
     sent as it is with its attachments, and kept on the transfer row so a retry works.
-  - Either can be linked to a company lead or an RFQ. A mailbox email whose contact belongs to a company the person
+  - Pasted on a company's page (added 2026-11-24, Kunal: "just paste my RFQ email then one single click"). The box
+    sits at the top of the company's Interactions card, where the sales team logs communication with the client.
+    The person pastes the email text, SampForce reads subject, sender, recipients and date from the header lines
+    Outlook, Gmail and Apple Mail put on a copied or forwarded email (`parsePastedEmail` in `@dealflow/types`), matches
+    the sender's address to one of the company's employees, and one click sends it (`POST
+    /apps/sampbidx/transfers/pasted-email`, kind `PASTED_EMAIL`, `source: "pasted"`). The text goes exactly as pasted;
+    the person can correct subject and employee first. It is also logged as an "RFQ received" interaction unless they
+    untick that (a deliberate second copy is not logged twice). Pasted text carries no attachments. The same text
+    on the same company is refused as a duplicate unless the person asks for another copy. Needs `activities:write`
+    and the right to change that company.
+  - Any of them can be linked to a company lead or an RFQ. A mailbox email whose contact belongs to a company the person
     can change is linked to that company automatically.
 - **Transfers.** Every send is a `sampbidx_transfers` row with:
   - kind, title, links and files
@@ -57,6 +67,7 @@ contract, sends to it, and the SampBidx team builds to it.
   - the RFQ dialog (the steps and earlier sends)
   - the RFQs page ("Transfer RFQ email to SampBidx" and a "Sent to SampBidx" tab)
   - the Integrations card (connection, callback URL and secret, recent activity)
+  - every company page (the "Paste an RFQ email" box in Interactions)
 
 ## Consequences
 
