@@ -264,7 +264,7 @@ export function ConsoleSidebar({
       <div
         className={cn('flex h-16 items-center gap-2.5 px-4', collapsed && 'justify-center px-0')}
       >
-        <Logo compact />
+        <Logo compact animated />
         {!collapsed && (
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-semibold">SampForce Console</p>
