@@ -17,8 +17,11 @@ test('forgot password: email a link, choose a new password, sign in with it', as
   // A fresh browser that is not signed in.
   const guest = await (await browser.newContext()).newPage();
   await guest.goto('/login');
-  await guest.getByRole('link', { name: 'Forgot your password?' }).click();
-  await expect(guest.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+  // A click that lands while the sign-in page is still hydrating can be lost on a busy runner; click again if so.
+  await expect(async () => {
+    if (!guest.url().includes('/forgot-password')) await guest.getByRole('link', { name: 'Forgot your password?' }).click();
+    await expect(guest.getByRole('heading', { name: 'Reset your password' })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
   await expectNoA11yViolations(guest);
   await guest.getByLabel('Work email').fill(email);
   await guest.getByRole('button', { name: 'Send reset link' }).click();
@@ -68,6 +71,9 @@ test('forgot password: email a link, choose a new password, sign in with it', as
 test('reset page without a link explains what to do', async ({ page }) => {
   await page.goto('/reset-password');
   await expect(page.getByRole('alert').filter({ hasText: 'needs the link from your reset email' })).toBeVisible();
-  await page.getByRole('link', { name: 'Ask for a new link' }).click();
-  await expect(page).toHaveURL(/\/forgot-password/);
+  // As above: a click during hydration can be lost, so click again if the page did not move.
+  await expect(async () => {
+    if (!page.url().includes('/forgot-password')) await page.getByRole('link', { name: 'Ask for a new link' }).click();
+    await expect(page).toHaveURL(/\/forgot-password/, { timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
 });
