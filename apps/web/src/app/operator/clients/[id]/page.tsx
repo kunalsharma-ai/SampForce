@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { ActivityFeed } from '@/components/console/activity-feed';
+import { ClientHealthCard, HealthPill } from '@/components/console/client-health';
 import { ClientLogo, CompanyCard, placeLine } from '@/components/console/client-profile';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
@@ -107,6 +108,7 @@ export default function ConsoleClientPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
+            <HealthPill health={c.health} size="md" />
             {canState && c.closure && (
               <Button size="sm" onClick={() => setOpen('reopen')}>
                 Reopen company
@@ -224,6 +226,8 @@ export default function ConsoleClientPage() {
       </div>
 
       <CompanyCard client={c} canEdit={admin} />
+
+      <ClientHealthCard clientId={c.id} />
 
       <Card className="p-5" aria-labelledby="timeline-h" data-client-timeline>
         <h2 id="timeline-h" className="font-medium">

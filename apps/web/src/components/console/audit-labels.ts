@@ -16,6 +16,8 @@ const ACTIONS: Record<string, string> = {
   'clients.bulk': 'Ran a bulk action on clients',
   'clients.exported': 'Exported the clients list',
   'client.profile_updated': 'Changed a client’s company details',
+  'client.health_measured': 'Measured a client’s health score',
+  'settings.health_updated': 'Changed the health score weights',
   'client.logo_set': 'Changed a client’s logo',
   'client.logo_removed': 'Removed a client’s logo',
   'location.city_added': 'Added a city',

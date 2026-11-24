@@ -1,3 +1,4 @@
+import { ConsoleHealthController } from './console-health.controller';
 import 'reflect-metadata';
 import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { OPERATOR_PERMISSIONS } from '@dealflow/types';
@@ -16,7 +17,7 @@ import { ConsoleClientsProfileController } from './console-clients-profile.contr
 import { ConsoleAuditController } from './console-audit.controller';
 import { ConsoleNotificationsController } from './console-notifications.controller';
 
-const CONTROLLERS = [ConsoleClientsListController, OperatorController, ConsoleClientsProfileController, ConsoleAuditController, ConsoleNotificationsController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController, WorkspaceRulesController];
+const CONTROLLERS = [ConsoleHealthController, ConsoleClientsListController, OperatorController, ConsoleClientsProfileController, ConsoleAuditController, ConsoleNotificationsController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController, WorkspaceRulesController];
 
 /** Every Console route says what it needs (ADR 0074): a permission, any signed-in operator, or no session at all. */
 describe('operator routes', () => {

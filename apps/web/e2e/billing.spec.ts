@@ -112,7 +112,7 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   await ops.getByRole('button', { name: 'Sign in' }).click();
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Settings' }).click();
   await ops.getByLabel('Payment instructions').fill(`Bank: E2E Sample Bank\n${account}`);
-  await ops.getByRole('button', { name: 'Save' }).click();
+  await ops.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(ops.getByText('Saved. Open invoices now show this.')).toBeVisible();
   await expectNoA11yViolations(ops);
 
@@ -148,7 +148,7 @@ test('pay by invoice: the workspace requests an invoice and the plan starts when
   // Leave the shared development database as it was.
   await ops.getByRole('navigation', { name: 'Operator' }).getByRole('link', { name: 'Settings' }).click();
   await ops.getByLabel('Payment instructions').fill('');
-  await ops.getByRole('button', { name: 'Save' }).click();
+  await ops.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(ops.getByText(/Not set\. Open invoices say/)).toBeVisible();
 });
 

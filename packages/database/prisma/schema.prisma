@@ -421,6 +421,11 @@ model Tenant {
   contactPhone          String?           @map("contact_phone")
   /// The client's readable number, shown as SF-000123; given once, in order, from the counter "client.customer".
   customerNumber        Int?              @map("customer_number")
+  /// The latest health score (ADR 0074, C5): 0-100, its band (HEALTHY, AT_RISK, CRITICAL) and when the worker
+  /// measured it. The signals behind it are in client_health_daily.
+  healthScore           Int?              @map("health_score")
+  healthBand            String?           @map("health_band")
+  healthAt              DateTime?         @map("health_at")
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   deletedAt             DateTime?         @map("deleted_at")
@@ -568,6 +573,7 @@ model Tenant {
 
   @@index([createdAt])
   @@index([customerNumber])
+  @@index([healthBand])
   @@map("tenants")
 }
 
@@ -2935,6 +2941,24 @@ model OperatorNotificationPref {
 }
 
 /// Deployment-wide settings that platform admins edit in the operator console (not per workspace).
+/// A client's health score for one day (ADR 0074, C5), with every signal's points and the figure behind it
+/// (ClientHealthSignal[] in @dealflow/types). Written by the worker once a day per client; advisory only.
+model ClientHealthDaily {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  /// UTC day, YYYY-MM-DD.
+  day       String
+  score     Int
+  band      String
+  signals   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, day])
+  @@index([day])
+  @@map("client_health_daily")
+}
+
 model PlatformSetting {
   key         String   @id @map("_id")
   value       String

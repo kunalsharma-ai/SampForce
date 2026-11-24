@@ -32,6 +32,7 @@ import {
   SUPPORT_LEVELS,
   type z,
   type consoleClientCreateSchema,
+  type ClientHealthBand,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../auth/token.service';
@@ -291,6 +292,7 @@ export class ConsoleService {
           t.status === 'PENDING_DELETION' && t.closedAt && t.eraseAfter
             ? { closedAt: t.closedAt.toISOString(), eraseAfter: t.eraseAfter.toISOString(), closedBy: t.closedById ? (closers.get(t.closedById) ?? null) : null, reason: t.closeReason ?? null }
             : null,
+        health: t.healthScore !== null && t.healthBand ? { score: t.healthScore, band: t.healthBand as ClientHealthBand } : null,
       }));
     });
   }

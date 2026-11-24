@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema } from './auth';
+import { type ClientHealthSummary, HEALTH_BANDS } from './console-health';
 import type { OperatorPermission } from './console-security';
 import { FEATURE_KEYS, type FeatureKey, featureKeySchema } from './features';
 import { type ActionGrants, actionGrantsSchema, type WorkspaceLevel } from './workspaces';
@@ -284,6 +285,8 @@ export interface ConsoleClientRow {
   awaitingAdministrator: boolean;
   /** Set while the client has closed its company (W7): nobody signs in, and the data is erased after eraseAfter. */
   closure: { closedAt: string; eraseAfter: string; closedBy: string | null; reason: string | null } | null;
+  /** The latest health score (C5); null until the worker first measures the client. */
+  health: ClientHealthSummary | null;
 }
 
 export interface ConsoleWorkspaceRow {
@@ -366,7 +369,7 @@ export const consoleCityQuerySchema = z.object({
 
 // ───────────── Clients list: filters, sort, paging, bulk actions (ADR 0074, C4b) ─────────────
 
-export const CONSOLE_CLIENT_SORTS = ['name', 'customerId', 'country', 'plan', 'payment', 'state', 'people', 'managers', 'executives', 'created', 'renews'] as const;
+export const CONSOLE_CLIENT_SORTS = ['name', 'customerId', 'country', 'plan', 'payment', 'state', 'people', 'managers', 'executives', 'created', 'renews', 'health'] as const;
 export type ConsoleClientSort = (typeof CONSOLE_CLIENT_SORTS)[number];
 export const CONSOLE_CLIENT_PAGE_SIZES = [25, 50, 100] as const;
 
@@ -385,6 +388,8 @@ export const consoleClientListQuerySchema = z.object({
   /** A payment status, or NONE for clients without one. */
   payment: optionalEnum([...PAYMENT_STATUSES, 'NONE'] as const),
   createdFrom: isoDay.optional().or(z.literal('').transform(() => undefined)),
+  /** A health band, or NONE for clients not measured yet. */
+  health: optionalEnum([...HEALTH_BANDS, 'NONE'] as const),
   createdTo: isoDay.optional().or(z.literal('').transform(() => undefined)),
   sort: z.enum(CONSOLE_CLIENT_SORTS).default('created'),
   dir: z.enum(['asc', 'desc']).default('desc'),

@@ -23,6 +23,7 @@ import {
   geoCountry,
   type OperatorOpenInvoice,
   PAYMENT_STATUS_LABEL,
+  HEALTH_BANDS,
   PAYMENT_STATUSES,
   type PaymentStatus,
   PLAN_CATALOG,
@@ -41,7 +42,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { ClientAvatar } from '@/components/console/client-avatar';
 import { BULK_TITLE, BulkDialog } from '@/components/console/client-bulk';
 import { CountrySelect } from '@/components/forms/inputs';
@@ -50,6 +51,7 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api, downloadFile } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
+import { HEALTH_BAND_LABEL, HealthPill } from '@/components/console/client-health';
 import { PaymentBadge, price, selectClass, StateBadge, toCents, toLimit } from '../console-ui';
 import { can, useOperator } from '../operator-shell';
 
@@ -60,6 +62,7 @@ const FILTERS = [
   'billing',
   'country',
   'payment',
+  'health',
   'createdFrom',
   'createdTo',
 ] as const;
@@ -70,6 +73,7 @@ const COLUMNS: { key: ConsoleClientSort; label: string; end?: boolean }[] = [
   { key: 'country', label: 'Country' },
   { key: 'plan', label: 'Plan' },
   { key: 'payment', label: 'Payment' },
+  { key: 'health', label: 'Health' },
   { key: 'renews', label: 'Renews' },
   { key: 'managers', label: 'Managers', end: true },
   { key: 'executives', label: 'Executives', end: true },
@@ -123,8 +127,24 @@ function ClientsList() {
   const pageNo = Number(params.get('page')) || 1;
   const [search, setSearch] = useState(f('search'));
 
+  // Set once the operator follows a link off the list, so a search still waiting to apply cannot rewrite the address
+  // while Next is navigating (which would cancel the navigation).
+  const leaving = useRef(false);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.('a[href]');
+      const href = a?.getAttribute('href') ?? '';
+      if (href && !href.startsWith('/operator/clients?') && href !== '/operator/clients') leaving.current = true;
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+
   const setParams = (next: Record<string, string | number | null>, keepPage = false) => {
-    const p = new URLSearchParams(params.toString());
+    if (leaving.current) return;
+    // From the address bar, not this render's params: a debounced search runs later and must keep a filter chosen
+    // in the meantime.
+    const p = new URLSearchParams(window.location.search);
     for (const [k, v] of Object.entries(next)) {
       if (v === null || v === '') p.delete(k);
       else p.set(k, String(v));
@@ -272,6 +292,16 @@ function ClientsList() {
           options={[
             ...PAYMENT_STATUSES.map((p) => [p, PAYMENT_STATUS_LABEL[p]] as [string, string]),
             ['NONE', 'No payment status'],
+          ]}
+        />
+        <FilterSelect
+          id="op-health"
+          label="Health"
+          value={f('health')}
+          onChange={(v) => setParams({ health: v })}
+          options={[
+            ...HEALTH_BANDS.map((b) => [b, HEALTH_BAND_LABEL[b]] as [string, string]),
+            ['NONE', 'Not measured'],
           ]}
         />
         <div className="w-48">
@@ -462,6 +492,9 @@ function ClientsList() {
                   </td>
                   <td className="p-3">
                     <PaymentBadge status={s?.paymentStatus ?? null} />
+                  </td>
+                  <td className="p-3">
+                    <HealthPill health={c.health} />
                   </td>
                   <td className="p-3 tabular">{s?.renewsOn ? formatDate(s.renewsOn) : '—'}</td>
                   <td className="p-3 text-end">

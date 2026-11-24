@@ -55,6 +55,7 @@ export * from './own-servers';
 export * from './workspaces';
 export * from './workspace-rules';
 export * from './console';
+export * from './console-health';
 export * from './console-shell';
 export * from './console-security';
 export * from './workspace-work';
