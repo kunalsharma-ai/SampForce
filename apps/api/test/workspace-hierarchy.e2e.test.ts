@@ -1,8 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { FEATURE_KEYS } from '@dealflow/types';
+import { FEATURE_BY_KEY, FEATURE_KEYS } from '@dealflow/types';
 import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
+
+/** Every feature a plan can carry; opt-in ones (such as SampBidx chat) come only from the Console Admin. */
+const PLAN_FEATURES = FEATURE_KEYS.filter((k) => !FEATURE_BY_KEY[k].optIn);
 
 /*
  * The four-level workspace hierarchy (ADR 0071), through the API with real data. Covers Kunal's scenarios 3 to 10
@@ -19,7 +22,7 @@ async function acceptInvite(app: INestApplication, inviteUrl: string, name: stri
   return { agent, email: me.user.email, password, tenantId: me.tenant.id, userId: me.user.id };
 }
 
-const allBut = (...out: string[]) => FEATURE_KEYS.filter((k) => !out.includes(k));
+const allBut = (...out: string[]) => PLAN_FEATURES.filter((k) => !out.includes(k));
 
 describe('workspace hierarchy', () => {
   let app: INestApplication;
@@ -153,13 +156,13 @@ describe('workspace hierarchy', () => {
     // The executive's own grant still lists it: switched back on above, it returns without a change below.
     const execRow = await db.workspaceNode.findUniqueOrThrow({ where: { id: executiveId } });
     expect(execRow.features).toContain('lead_management');
-    await api(superAdmin).put(`/workspaces/${managerId}/permissions`, { features: [...FEATURE_KEYS] }).expect(200);
+    await api(superAdmin).put(`/workspaces/${managerId}/permissions`, { features: [...PLAN_FEATURES] }).expect(200);
     await api(executive).get('/leads').expect(200);
   });
 
   it('scenario 9: a manager cannot grant a feature or action it was not given', async () => {
     await api(superAdmin).put(`/workspaces/${managerId}/permissions`, { features: allBut('deal_cloning') }).expect(200);
-    const res = await api(manager).put(`/workspaces/${executiveId}/permissions`, { features: [...FEATURE_KEYS] }).expect(403);
+    const res = await api(manager).put(`/workspaces/${executiveId}/permissions`, { features: [...PLAN_FEATURES] }).expect(403);
     expect(res.body.error.code).toBe('FEATURE_NOT_GRANTED');
     expect(res.body.error.details).toEqual([{ path: 'features', message: 'deal_cloning' }]);
     // Actions too: the manager's own grant has no "configure".
@@ -171,7 +174,7 @@ describe('workspace hierarchy', () => {
     const desk2 = (await api(superAdmin).get('/workspaces').expect(200)).body.workspaces.find((w: { name: string }) => w.name === 'Desk 2');
     expect((await api(manager).put(`/workspaces/${desk2.id}/permissions`, { features: [] })).status).toBe(404);
     expect((await api(manager).put(`/workspaces/${manager2Id}/permissions`, { features: [] }).expect(403)).body.error.code).toBe('WORKSPACE_ADMIN_FORBIDDEN');
-    await api(superAdmin).put(`/workspaces/${managerId}/permissions`, { features: [...FEATURE_KEYS] }).expect(200);
+    await api(superAdmin).put(`/workspaces/${managerId}/permissions`, { features: [...PLAN_FEATURES] }).expect(200);
   });
 
   it('scenario 10: an executive sees only their own records and only the actions granted', async () => {
