@@ -10,7 +10,7 @@ const OP_SECRET = 'operator-secret-that-is-at-least-32-chars';
 
 type Content = {
   categories: { id: string; parentId: string | null }[];
-  articles: { key: string; id: string; title: { en: string }; builtinKey: string | null; updatedAt: string }[];
+  articles: { key: string; id: string; kind: string; title: { en: string }; summary: { en: string }; builtinKey: string | null; updatedAt: string }[];
   hidden: string[];
   stats: Record<string, { views: number; helpful: number; notHelpful: number }>;
   builtinUpdatedAt: string;
@@ -198,6 +198,33 @@ describe('help center content from the Console', () => {
 
     await A.post(`/categories/onboarding-${tag}/archive`).expect(200);
     expect((await content(owner)).categories.map((x) => x.id)).not.toContain(`onboarding-${tag}`);
+  });
+
+  it('describes every part of SampForce and lets the Console write and edit feature briefs', async () => {
+    const A = as(admin);
+    // Built-in briefs come with GET /help, with how much of each the plan includes.
+    const help = (await api(owner).get('/help').expect(200)).body as { briefs: { id: string; kind: string; title: string; availability: string; features: string[] }[] };
+    const ids = help.briefs.map((b) => b.id);
+    expect(ids).toEqual(expect.arrayContaining(['crm', 'deals', 'outreach', 'security', 'mobile-app', 'help-support']));
+    expect(help.briefs.find((b) => b.id === 'security')).toMatchObject({ kind: 'facility', availability: 'included' });
+    expect(help.briefs.every((b) => ['included', 'partial', 'not-included'].includes(b.availability))).toBe(true);
+
+    // A brief can be read, rated and edited like any built-in help.
+    await api(owner).post('/help/feedback', { articleKey: 'feature:crm', helpful: true }).expect(200);
+    await api(owner).post('/help/feedback', { articleKey: 'feature:no-such-brief', helpful: true }).expect(404);
+    await A.post('/articles', article({ kind: 'FEATURE', builtinKey: 'feature:no-such-brief' })).expect(400);
+    const edit = (
+      await A.post('/articles', article({ kind: 'FEATURE', builtinKey: 'feature:hosting', categoryId: 'workspaces', title: { en: 'Cloud or your own server' }, summary: { en: `Run SampForce as a service or on your own server ${tag}.` } })).expect(201)
+    ).body;
+    await A.post(`/articles/${edit.id}/publish`).expect(200);
+    expect((await content(owner)).articles.find((a) => a.builtinKey === 'feature:hosting')).toMatchObject({ summary: { en: expect.stringContaining(tag) } });
+
+    // The Console's own brief appears next to the built-in ones.
+    const own = (await A.post('/articles', article({ kind: 'FEATURE', categoryId: 'crm', title: { en: `Field visits ${tag}` }, summary: { en: 'Plan and log visits to clients.' } })).expect(201)).body;
+    await A.post(`/articles/${own.id}/publish`).expect(200);
+    expect((await content(owner)).articles.find((a) => a.id === own.id)).toMatchObject({ kind: 'FEATURE', key: `article:${own.id}` });
+    await api(owner).post('/help/feedback', { articleKey: `article:${own.id}`, helpful: false, comment: 'Needs pictures.' }).expect(200);
+    await A.post(`/articles/${own.id}/archive`).expect(200);
   });
 
   it('reports on support queries for the Console', async () => {

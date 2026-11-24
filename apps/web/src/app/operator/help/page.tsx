@@ -22,7 +22,7 @@ export default function ConsoleHelpPage() {
           </Button>
         </div>
       )}
-      <HelpCenter reader={{ audience: 'console' }} />
+      <HelpCenter reader={{ audience: 'console' }} billingHref="/operator/plans" />
     </Suspense>
   );
 }

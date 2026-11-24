@@ -1,6 +1,10 @@
 'use client';
 
 import {
+  type BriefAvailability,
+  type BriefKind,
+  briefAvailability,
+  briefHref,
   faqsFor,
   foldText,
   guidesFor,
@@ -9,8 +13,10 @@ import {
   type HelpGuide,
   type HelpReader,
   helpText,
+  PRODUCT_BRIEFS,
 } from '@dealflow/help';
 import {
+  type FeatureKey,
   type HelpArticleStats,
   type HelpContent,
   type HelpReaderArticle,
@@ -136,10 +142,38 @@ export interface ViewGuide {
   english: string;
 }
 
+/** A brief under Explore SampForce: built-in, edited in the Console, or the Console's own (kind FEATURE). */
+export interface ViewBrief {
+  key: string;
+  id: string;
+  kind: BriefKind;
+  category: string;
+  icon: string;
+  tone: number;
+  title: string;
+  tagline: string;
+  summary: string;
+  highlights: string[];
+  /** More detail, as simple Markdown (Console articles only). */
+  body: string;
+  videoUrl: string | null;
+  features: readonly FeatureKey[];
+  guides: readonly string[];
+  availability: BriefAvailability;
+  /** The brief's features the reader may use now (all of them in the Console). */
+  included: readonly FeatureKey[];
+  /** Where the feature opens in the app, when the reader has it. */
+  href: string | null;
+  updatedAt: string;
+  english: string;
+}
+
 export interface HelpView {
   categories: ViewCategory[];
   faqs: ViewFaq[];
   guides: ViewGuide[];
+  /** Explore SampForce: the parts of the product and its facilities. */
+  briefs: ViewBrief[];
   announcements: {
     key: string;
     title: string;
@@ -278,10 +312,71 @@ export function buildHelpView(
     ordered.push(...kept.filter((s) => s.parentId === c.id));
   }
 
+  // Explore SampForce. A part the plan leaves out shows only while the Super Workspace explains such features.
+  const explain = reader.audience === 'console' || (content?.settings?.explainRestricted ?? true);
+  const mayUse = (list: readonly FeatureKey[]) => (reader.audience === 'console' ? list : list.filter((f) => reader.features?.includes(f)));
+  const briefs: ViewBrief[] = [];
+  for (const b of PRODUCT_BRIEFS) {
+    const key = `feature:${b.id}`;
+    if (hidden.has(key)) continue;
+    const availability = briefAvailability(b, reader);
+    if (availability === 'not-included' && !explain) continue;
+    const o = overrides.get(key);
+    briefs.push({
+      key,
+      id: b.id,
+      kind: b.kind,
+      category: o?.categoryId ?? b.category,
+      icon: b.icon,
+      tone: b.tone,
+      title: o ? localText(o.title, language) : helpText(b.title, language),
+      tagline: helpText(b.tagline, language),
+      summary: o ? localText(o.summary, language) : helpText(b.summary, language),
+      highlights: b.highlights.map((h) => helpText(h, language)),
+      body: o ? localText(o.body, language) : '',
+      videoUrl: o?.videoUrl ?? null,
+      features: b.features,
+      guides: b.guides,
+      availability,
+      included: mayUse(b.features),
+      href: briefHref(b, reader),
+      updatedAt: o?.updatedAt ?? builtinUpdated,
+      english: o ? [o.title.en, o.summary.en, o.body.en].join(' ') : [b.title[0], b.tagline[0], b.summary[0], ...b.highlights.map((h) => h[0])].join(' '),
+    });
+  }
+  for (const a of articles) {
+    if (a.builtinKey || a.kind !== 'FEATURE') continue;
+    const features = a.featureKey ? [a.featureKey as FeatureKey] : [];
+    const availability = briefAvailability({ features }, reader);
+    if (availability === 'not-included' && !explain) continue;
+    briefs.push({
+      key: a.key,
+      id: a.key,
+      kind: 'feature',
+      category: a.categoryId,
+      icon: HELP_CATEGORIES.find((c) => c.id === a.categoryId)?.icon ?? 'sparkles',
+      tone: HELP_CATEGORIES.find((c) => c.id === a.categoryId)?.tone ?? 1,
+      title: localText(a.title, language),
+      tagline: '',
+      summary: localText(a.summary, language),
+      highlights: [],
+      body: localText(a.body, language),
+      videoUrl: a.videoUrl,
+      features,
+      guides: [],
+      availability,
+      included: mayUse(features),
+      href: briefHref({ features }, reader),
+      updatedAt: a.updatedAt,
+      english: [a.title.en, a.summary.en, a.body.en].join(' '),
+    });
+  }
+
   return {
     categories: ordered,
     faqs: pinnedFirst(faqs),
     guides: pinnedFirst(guides),
+    briefs: pinnedFirst(briefs),
     announcements: articles
       .filter((a) => a.kind === 'ANNOUNCEMENT')
       .map((a) => ({
@@ -330,6 +425,28 @@ export function searchView(view: HelpView, query: string): ViewHit[] {
     if (n) hits.push({ kind: 'guide', item: g, score: n });
   }
   return hits.sort((a, b) => b.score - a.score);
+}
+
+/** Briefs whose words all appear in them, best match first (the same partial matching as searchView). */
+export function searchBriefs(view: HelpView, query: string): ViewBrief[] {
+  const words = foldText(query).split(' ').filter(Boolean);
+  if (!words.length) return [];
+  const scored: [ViewBrief, number][] = [];
+  for (const b of view.briefs) {
+    const strong = foldText(b.title);
+    const weak = foldText(`${b.tagline} ${b.summary} ${b.highlights.join(' ')} ${b.body} ${b.english}`);
+    let total = 0;
+    for (const w of words) {
+      if (strong.includes(w)) total += 3;
+      else if (weak.includes(w)) total += 1;
+      else {
+        total = 0;
+        break;
+      }
+    }
+    if (total) scored.push([b, total]);
+  }
+  return scored.sort((a, b) => b[1] - a[1]).map(([b]) => b);
 }
 
 /** The most read and most helpful answers and guides, from everyone's totals. */

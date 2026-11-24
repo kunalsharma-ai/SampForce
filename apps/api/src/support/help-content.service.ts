@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Prisma } from '@dealflow/database';
-import { builtinHelpKeys, faqsFor, guidesFor, HELP_CATEGORY_BY_ID, HELP_CONTENT_UPDATED, type HelpReader } from '@dealflow/help';
+import { briefAvailability, builtinHelpKeys, faqsFor, guidesFor, HELP_CATEGORY_BY_ID, HELP_CONTENT_UPDATED, type HelpReader, PRODUCT_BRIEF_BY_ID } from '@dealflow/help';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import {
   HELP_MEDIA_MAX_BYTES,
@@ -140,6 +140,10 @@ export class HelpContentService {
     if (override?.status === 'ARCHIVED') return false;
     if (override?.status === 'PUBLISHED' && visibleTo(override, reader)) return true;
     if (key.startsWith('faq:')) return faqsFor(reader).some((f) => `faq:${f.id}` === key);
+    if (key.startsWith('feature:')) {
+      const brief = PRODUCT_BRIEF_BY_ID[key.slice(8)];
+      return !!brief && (reader.audience === 'console' || briefAvailability(brief, reader) !== 'not-included' || (await this.settings(auth)).explainRestricted);
+    }
     return guidesFor(reader).some((g) => `guide:${g.id}` === key);
   }
 
