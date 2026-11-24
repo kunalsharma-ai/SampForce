@@ -240,6 +240,16 @@ export class OperatorSecurityService {
     return { enabled: !!op.mfaEnabledAt, enabledAt: op.mfaEnabledAt?.toISOString() ?? null, recoveryCodesRemaining: remaining, canManage: true };
   }
 
+  /**
+   * The operator's password again, before a block or a delete in Workspace Management. Wrong tries count towards the
+   * same lockout as signing in.
+   */
+  async confirmPassword(operatorId: string, password: string): Promise<void> {
+    const op = await this.prisma.platformOperator.findUniqueOrThrow({ where: { id: operatorId } });
+    if (op.lockedUntil && op.lockedUntil > new Date()) throw new BadRequestException(WRONG_PASSWORD);
+    await this.checkPassword(op, password);
+  }
+
   private async checkPassword(op: { id: string; passwordHash: string }, password: string): Promise<void> {
     if (!(await this.passwords.verify(op.passwordHash, password))) {
       await this.fail(op.id);

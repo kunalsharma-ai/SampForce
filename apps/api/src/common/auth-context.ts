@@ -26,6 +26,8 @@ export interface AuthContext {
    * (the profile, two-step verification setup, sessions, switching workspace).
    */
   restriction?: 'mfa_enrolment' | 'sso_required' | 'workspace_deactivated';
+  /** With workspace_deactivated: when a temporary blacklist ends (ISO time); absent for a deactivation. */
+  restrictionUntil?: string;
   /**
    * Set when the caller is the browser extension (only routes marked @ExtensionAccess) or a workspace API key
    * (only routes marked @ApiKeyAccess). For an API key, sessionId is the key's id.

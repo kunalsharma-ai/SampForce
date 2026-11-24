@@ -5,6 +5,8 @@ import {
   type CreateWorkspaceInput,
   createWorkspaceSchema,
   type DeactivateWorkspaceInput,
+  blacklistWorkspaceSchema,
+  type BlacklistWorkspaceInput,
   deactivateWorkspaceSchema,
   type DeleteWorkspaceInput,
   deleteWorkspaceSchema,
@@ -101,6 +103,16 @@ export class WorkspacesController {
   @OwnHierarchyRules()
   deactivate(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(deactivateWorkspaceSchema)) body: DeactivateWorkspaceInput, @Meta() meta: RequestMeta) {
     return this.workspaces.deactivate(auth, id, body, meta);
+  }
+
+  /** Blacklists it until a chosen day: stopped like a deactivation, lifting by itself. Asks for the password. */
+  @ConfirmPassword({ deletes: false })
+  @Post(':id/blacklist')
+  @HttpCode(200)
+  @RequireFeature('workspace_management')
+  @OwnHierarchyRules()
+  blacklist(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(blacklistWorkspaceSchema)) body: BlacklistWorkspaceInput, @Meta() meta: RequestMeta) {
+    return this.workspaces.blacklist(auth, id, body, meta);
   }
 
   @Post(':id/reactivate')

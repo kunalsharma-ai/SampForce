@@ -49,7 +49,7 @@ import { CountrySelect } from '@/components/forms/inputs';
 import { CountryFlag } from '@/components/crm/status-chip';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText, Field } from '@/components/revenue/tabs';
-import { api, downloadFile } from '@/lib/api';
+import { api, ApiError, downloadFile } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { HEALTH_BAND_LABEL, HealthPill } from '@/components/console/client-health';
 import { PaymentBadge, price, selectClass, StateBadge, toCents, toLimit } from '../console-ui';
@@ -685,6 +685,7 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
     managers: '',
     executives: '',
     superExecutives: true,
+    anotherSuper: false,
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF({ ...f, [k]: e.target.value });
@@ -711,6 +712,7 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
           ...(f.managers.trim() ? { maxManagerWorkspaces: toLimit(f.managers) } : {}),
           ...(f.executives.trim() ? { maxExecutiveWorkspaces: toLimit(f.executives) } : {}),
           superCanCreateExecutives: f.superExecutives,
+          ...(f.anotherSuper ? { allowAnotherSuper: true } : {}),
           reason: 'New client',
         },
       }),
@@ -918,6 +920,15 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
                 The Super Workspace may create Executive Workspaces itself
               </label>
             </fieldset>
+            {(create.error instanceof ApiError && create.error.code === 'SUPER_WORKSPACE_LIMIT') || f.anotherSuper ? (
+              <label className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm" data-allow-another-super>
+                <input type="checkbox" className="mt-0.5" checked={f.anotherSuper} onChange={(e) => setF({ ...f, anotherSuper: e.target.checked })} />
+                <span>
+                  <span className="block font-medium">Allow another Super Workspace</span>
+                  <span className="text-muted-foreground">One person owns one Super Workspace. Tick this only if {f.adminEmail || 'this administrator'} should own this client’s Super Workspace as well; it is written to the audit log.</span>
+                </span>
+              </label>
+            ) : null}
             <ErrorText error={create.error ?? plans.error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose}>

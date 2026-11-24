@@ -138,3 +138,40 @@ is deliberate.
   at it), and the tenant row stays with `deletedAt` and `erasedAt` as the record that the client existed. The
   platform audit log keeps `client.erased` with the counts. People who also belong to another organisation keep
   their account.
+
+## W8: Workspace management in the Console, temporary blacklists and one Super Workspace per person (2026-11-24)
+
+Kunal's sections 16-22, plus his follow-up the same day: the Console can suspend, blacklist for a while, delete or
+restore any Super, Manager or Executive Workspace; the Super Workspace can do the same to Manager and Executive
+Workspaces; a manager can act on its own Executive Workspaces, and deletes them only when the Super Workspace handed
+Delete down. Every block and delete asks for the password first.
+
+- **One Super Workspace per person.** Inside a company nobody creates a Super Workspace (only Manager and Executive
+  levels exist in the creation path). Across companies, someone who already owns a Super Workspace cannot become the
+  owner of another company's: the Console's client creation and administrator invitation refuse the email with
+  `SUPER_WORKSPACE_LIMIT` unless the operator ticks "Allow another Super Workspace", which marks that one invitation
+  (`Invitation.superGrantedBy`), and accepting any other owner invitation into a Super Workspace is refused the same
+  way (`workspaces/super-rule.ts`). The grant is per invitation, not a standing allowance on the person.
+- **Temporary blacklist.** `WorkspaceNode.blacklistedUntil` (+ reason, who): its people and everyone below are stopped
+  like a deactivation (restriction `workspace_deactivated` with `restrictionUntil`, error `WORKSPACE_BLACKLISTED`), and
+  the block lifts by itself at the start of the chosen day (UTC), at most a year away. One block at a time. Tenant side:
+  `POST /workspaces/:id/blacklist` with the password, the same authority as deactivating.
+- **Console blocks are the Console's.** A suspension or blacklist set by the Console carries `lockedByConsole`; the
+  client's Reactivate refuses it (`WORKSPACE_LOCKED_BY_CONSOLE`) and the Settings tree says so.
+- **Statuses.** Active, Pending (nobody has joined yet), Suspended, Temporarily blacklisted, Deleted. For a Super
+  Workspace: the client suspended = Suspended, a blacklist on its root node = Temporarily blacklisted (everyone in the
+  company, because people without a workspace node are now checked against the root), the company closing = Deleted
+  (restorable until its erase date).
+- **Console Workspace Management** (`/operator/workspaces`, `GET/PATCH/DELETE /operator/workspaces/:id`,
+  `POST …/suspend|blacklist|reactivate|restore`; `workspaces.view` to see, `workspaces.manage` to act, plus
+  `clients.status` for a Super Workspace's suspension, closing and reopening). The operator's password travels in the
+  body and is checked by `OperatorSecurityService.confirmPassword` (same lockout as sign-in): the global
+  password-confirmation guard runs before the Console's guard, so it cannot see operators (the route is marked
+  `@NoPasswordConfirmation` with that reason). Deleting a Manager or Executive Workspace reuses W4's removal
+  (`WorkspacesService.removeNode`) with no receiver to choose: records go to the nearest live workspace above with
+  someone in it. Restoring brings the node back active with the people the delete took out (`removedMemberIds`);
+  handed-over records stay where they went. Deleting a Super Workspace is W7's closing done by the Console
+  (`closeByConsole`), restoring it is W7's reopen.
+- **Audit.** Every Console action writes the client's audit log (actor type PLATFORM_ADMIN, operator email and name)
+  and the platform audit log; the workspace page shows the trail from both sides. W7's platform log writes now go
+  through `writePlatformAudit` (the reopen route was refused by the unaudited-write check otherwise).

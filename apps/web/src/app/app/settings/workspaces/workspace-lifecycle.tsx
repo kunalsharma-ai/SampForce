@@ -16,36 +16,47 @@ import { useWorkspaceImpact, useWorkspaceMutations } from '@/lib/workspaces';
  */
 
 /** Reason, then the password. */
-export function DeactivateWorkspaceDialog({ row, onClose }: { row: WorkspaceRow; onClose: () => void }) {
+export function DeactivateWorkspaceDialog({ row, onClose, blacklist = false }: { row: WorkspaceRow; onClose: () => void; blacklist?: boolean }) {
   const t = useT();
   const id = useId();
-  const { deactivate } = useWorkspaceMutations();
+  const { deactivate, blacklist: block } = useWorkspaceMutations();
+  const mutation = blacklist ? block : deactivate;
   const [reason, setReason] = useState('');
+  const [until, setUntil] = useState(() => new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10));
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const ready = reason.trim().length >= 3 && (!blacklist || until >= tomorrow);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   return (
     <>
       <Dialog open={step === 'form'} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-md p-6" data-deactivate-workspace>
-          <DialogTitle className="text-lg font-semibold">{t('Deactivate {name}', { name: row.name })}</DialogTitle>
+        <DialogContent className="max-w-md p-6" {...(blacklist ? { 'data-blacklist-workspace': true } : { 'data-deactivate-workspace': true })}>
+          <DialogTitle className="text-lg font-semibold">{blacklist ? t('Blacklist {name} for a while', { name: row.name }) : t('Deactivate {name}', { name: row.name })}</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-muted-foreground">
-            {t('Its people, and everyone in the workspaces below it, cannot work until you reactivate it. Nothing is deleted, and its permissions are kept.')}
+            {blacklist
+              ? t('Its people, and everyone in the workspaces below it, cannot work until the day you choose. Then the block lifts by itself; you can also lift it earlier with Reactivate.')
+              : t('Its people, and everyone in the workspaces below it, cannot work until you reactivate it. Nothing is deleted, and its permissions are kept.')}
           </DialogDescription>
           <form
             className="mt-4 space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (reason.trim().length >= 3) setStep('confirm');
+              if (ready) setStep('confirm');
             }}
           >
+            {blacklist && (
+              <Field id={`${id}-until`} label={t('Blocked until')} hint={t('The block lifts at the start of this day.')}>
+                <Input id={`${id}-until`} type="date" min={tomorrow} value={until} onChange={(e) => setUntil(e.target.value)} />
+              </Field>
+            )}
             <Field id={`${id}-reason`} label={t('Reason')} hint={t('Kept in the audit log.')}>
-              <Input id={`${id}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} autoFocus />
+              <Input id={`${id}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} autoFocus={!blacklist} />
             </Field>
-            <ErrorText error={deactivate.error} />
+            <ErrorText error={mutation.error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 {t('Cancel')}
               </Button>
-              <Button type="submit" disabled={reason.trim().length < 3 || deactivate.isPending}>
+              <Button type="submit" disabled={!ready || mutation.isPending}>
                 {t('Continue')}
               </Button>
             </div>
@@ -54,13 +65,14 @@ export function DeactivateWorkspaceDialog({ row, onClose }: { row: WorkspaceRow;
       </Dialog>
       <ConfirmDeletionDialog
         open={step === 'confirm'}
-        title={t('Confirm deactivation')}
-        confirmLabel={t('Deactivate')}
-        description={t('{name} will be deactivated.', { name: row.name })}
+        title={blacklist ? t('Confirm blacklist') : t('Confirm deactivation')}
+        confirmLabel={blacklist ? t('Blacklist') : t('Deactivate')}
+        description={blacklist ? t('{name} will be blocked until {date}.', { name: row.name, date: until }) : t('{name} will be deactivated.', { name: row.name })}
         onCancel={() => setStep('form')}
         onConfirmed={(pass) => {
           setStep('form');
-          deactivate.mutate({ id: row.id, reason: reason.trim(), pass }, { onSuccess: onClose });
+          if (blacklist) block.mutate({ id: row.id, until, reason: reason.trim(), pass }, { onSuccess: onClose });
+          else deactivate.mutate({ id: row.id, reason: reason.trim(), pass }, { onSuccess: onClose });
         }}
       />
     </>

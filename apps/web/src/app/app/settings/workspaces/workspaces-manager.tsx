@@ -37,12 +37,13 @@ import {
   type WorkspaceRules,
   type WorkspaceTree,
 } from '@dealflow/types';
-import { Building2, ChevronDown, Crown, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Ban, Building2, ChevronDown, Crown, KeyRound, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Select } from '@/components/crm/select';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { useMembers } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
+import { fmtLocale } from '@/lib/i18n/locale';
 import { useSession } from '@/lib/session';
 import { useCanDelete } from '@/lib/features';
 import { useWorkspaceMutations, useWorkspaceTree } from '@/lib/workspaces';
@@ -62,6 +63,7 @@ export function WorkspacesManager() {
   const canDelete = useCanDelete('workspace_management');
   const [creating, setCreating] = useState<Creating | null>(null);
   const [deactivating, setDeactivating] = useState<WorkspaceRow | null>(null);
+  const [blacklisting, setBlacklisting] = useState<WorkspaceRow | null>(null);
   const [deleting, setDeleting] = useState<WorkspaceRow | null>(null);
   const [deleted, setDeleted] = useState<WorkspaceDeleted | null>(null);
   const [permissionsOf, setPermissionsOf] = useState<string | null>(null);
@@ -132,7 +134,7 @@ export function WorkspacesManager() {
           </div>
           <ul className="ms-5 mt-3 space-y-3 border-s border-border ps-5" aria-label={t('Workspace structure')} data-workspace-tree>
             {roots(data).map((w) => (
-              <Branch key={w.id} row={w} tree={data} depth={1} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
+              <Branch key={w.id} row={w} tree={data} depth={1} canDelete={canDelete} onPermissions={setPermissionsOf} onEdit={setEditing} onDeactivate={setDeactivating} onBlacklist={setBlacklisting} onReactivate={(r) => reactivate.mutate(r.id)} onDelete={(r) => (setDeleted(null), setDeleting(r))} />
             ))}
           </ul>
           <ErrorText error={reactivate.error} />
@@ -149,6 +151,7 @@ export function WorkspacesManager() {
       {selected && <PermissionCenter row={selected} parent={parentOf(selected) ?? data.mine} callerLevel={data.mine.level} rules={data.rules} onClose={() => setPermissionsOf(null)} />}
       {edited && <EditDialog row={edited} tree={data} onClose={() => setEditing(null)} />}
       {deactivating && <DeactivateWorkspaceDialog row={deactivating} onClose={() => setDeactivating(null)} />}
+      {blacklisting && <DeactivateWorkspaceDialog blacklist row={blacklisting} onClose={() => setBlacklisting(null)} />}
       {deleting && <DeleteWorkspaceDialog row={deleting} onClose={() => setDeleting(null)} onDeleted={setDeleted} />}
     </div>
   );
@@ -188,17 +191,21 @@ type BranchProps = {
   onPermissions: (id: string) => void;
   onEdit: (id: string) => void;
   onDeactivate: (row: WorkspaceRow) => void;
+  onBlacklist: (row: WorkspaceRow) => void;
   onReactivate: (row: WorkspaceRow) => void;
   onDelete: (row: WorkspaceRow) => void;
 };
 
 function Branch(props: BranchProps) {
-  const { row, tree, depth, canDelete, onPermissions, onEdit, onDeactivate, onReactivate, onDelete } = props;
+  const { row, tree, depth, canDelete, onPermissions, onEdit, onDeactivate, onBlacklist, onReactivate, onDelete } = props;
   const t = useT();
   const children = tree.workspaces.filter((w) => w.parentId === row.id).sort((a, b) => (a.level === b.level ? a.name.localeCompare(b.name) : a.level === 'MANAGER' ? -1 : 1));
   const mine = row.id === tree.mine.id;
+  const blocked = !!row.deactivatedAt || !!row.blacklistedUntil;
   const status = row.deactivatedAt
     ? { tone: 'warning' as const, label: t('Deactivated') }
+    : row.blacklistedUntil
+      ? { tone: 'critical' as const, label: t('Blacklisted until {date}', { date: fmtDay(row.blacklistedUntil) }) }
     : row.people.length
       ? { tone: 'success' as const, label: t('Active') }
       : row.pendingInvites.length
@@ -219,6 +226,8 @@ function Branch(props: BranchProps) {
             {mine && <Badge tone="success">{t('Yours')}</Badge>}
           </p>
           {row.deactivatedAt && row.deactivationReason && <p className="text-xs text-warning" data-deactivation-reason>{t('Deactivated: {reason}', { reason: row.deactivationReason })}</p>}
+          {row.blacklistedUntil && row.blacklistReason && <p className="text-xs text-critical" data-blacklist-reason>{t('Blacklisted: {reason}', { reason: row.blacklistReason })}</p>}
+          {row.lockedByConsole && <p className="text-xs text-muted-foreground" data-console-lock>{t('SampForce support set this block, so only they can lift it.')}</p>}
           <p className="text-sm text-muted-foreground">
             {t.maybe(row.designation)}
             {row.department && <> · {row.department}</>}
@@ -258,16 +267,24 @@ function Branch(props: BranchProps) {
                 <KeyRound aria-hidden />
                 {t('Permissions')}
               </DropdownMenuItem>
-              {row.deactivatedAt ? (
-                <DropdownMenuItem onSelect={() => onReactivate(row)}>
-                  <Power aria-hidden />
-                  {t('Reactivate')}
-                </DropdownMenuItem>
+              {blocked ? (
+                !row.lockedByConsole && (
+                  <DropdownMenuItem onSelect={() => onReactivate(row)}>
+                    <Power aria-hidden />
+                    {t('Reactivate')}
+                  </DropdownMenuItem>
+                )
               ) : (
-                <DropdownMenuItem onSelect={() => onDeactivate(row)}>
-                  <PowerOff aria-hidden />
-                  {t('Deactivate')}
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onSelect={() => onDeactivate(row)}>
+                    <PowerOff aria-hidden />
+                    {t('Deactivate')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onBlacklist(row)}>
+                    <Ban aria-hidden />
+                    {t('Blacklist for a while')}
+                  </DropdownMenuItem>
+                </>
               )}
               {canDelete && (
                 <>
@@ -634,3 +651,8 @@ function EditDialog({ row, tree, onClose }: { row: WorkspaceRow; tree: Workspace
   );
 }
 
+
+/** A day in the person's own format (a blacklist's end). */
+function fmtDay(iso: string): string {
+  return new Intl.DateTimeFormat(fmtLocale(), { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(iso));
+}

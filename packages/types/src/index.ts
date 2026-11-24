@@ -61,6 +61,7 @@ export * from './console-health';
 export * from './console-overview';
 export * from './console-shell';
 export * from './console-security';
+export * from './console-workspaces';
 export * from './workspace-work';
 export * from './mobile';
 export * from './mobile-config';
