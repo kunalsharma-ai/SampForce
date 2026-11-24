@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 import { RulesEditor } from './rules-editor';
 
 type RulesList = { defaults: WorkspaceRules; plans: PlanWorkspaceRulesRow[] };
@@ -22,7 +22,7 @@ export default function WorkspaceRulesPage() {
   const q = useQuery({ enabled: !!me.data, queryKey: ['operator', 'workspace-rules'], queryFn: () => api<RulesList>('/operator/workspace-rules') });
   if (!me.data || q.isPending) return <Skeleton className="h-96" />;
   if (q.error) return <ErrorText error={q.error} />;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'workspaces.manage');
   return (
     <div className="space-y-6">
       <PageHeader

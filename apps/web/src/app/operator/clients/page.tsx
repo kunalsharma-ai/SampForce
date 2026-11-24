@@ -12,7 +12,7 @@ import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { PaymentBadge, price, selectClass, StateBadge, toCents, toLimit } from '../console-ui';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 
 /** Client organisations (ADR 0071): each has one Super Workspace, a subscription and its workspace limits. */
 export default function ConsoleClientsPage() {
@@ -33,7 +33,7 @@ export default function ConsoleClientsPage() {
         title="Clients"
         description="Client organisations, their plans, terms and workspace usage. CRM records are never shown here."
         actions={
-          me.data.role === 'ADMIN' ? (
+          can(me.data, 'clients.edit') ? (
             <Button onClick={() => setCreating(true)}>
               <Plus className="size-4" aria-hidden />
               New client

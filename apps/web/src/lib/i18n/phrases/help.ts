@@ -13,6 +13,8 @@ export const help = {
   Workspaces: ['Espacios de trabajo', 'Espaces de travail', 'Arbeitsbereiche', 'مساحات العمل'],
   Providers: ['Proveedores', 'Fournisseurs', 'Anbieter', 'المزوّدون'],
   'Operator log': ['Registro de operadores', 'Journal des opérateurs', 'Betreiberprotokoll', 'سجل المشغّلين'],
+  'Operators': ['Operadores', 'Opérateurs', 'Operatoren', 'المشغلون'],
+  'Roles & permissions': ['Roles y permisos', 'Rôles et autorisations', 'Rollen und Berechtigungen', 'الأدوار والصلاحيات'],
   // Help center feature guide
   'Feature guide': ['Guía de funciones', 'Guide des fonctions', 'Funktionsleitfaden', 'دليل الميزات'],
   'What every page and section is for, how to use it and when it helps. The same help opens from the i button next to each title.': [

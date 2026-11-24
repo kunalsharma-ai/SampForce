@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { ErrorText } from '@/components/revenue/tabs';
 import { api, ApiError } from '@/lib/api';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 import { fmtLocale } from '@/lib/i18n/locale';
 
 const STATE: Record<OperatorProviderRow['state'], { label: string; tone: 'neutral' | 'warning' | 'success' | 'critical' }> = {
@@ -410,7 +410,7 @@ function ProviderCard({ p, admin }: { p: OperatorProviderRow; admin: boolean }) 
             ) : (
               <p className="text-muted-foreground">Only operators with the Admin role can change keys or test connections.</p>
             ))}
-          {!p.checkable && !admin && <p className="text-muted-foreground">Only operators with the Admin role can change these settings.</p>}
+          {!p.checkable && !admin && <p className="text-muted-foreground">Only operators whose role manages providers can change these settings.</p>}
           {p.checkable && !p.configured && <p className="text-muted-foreground">Add the required keys to enable the test.</p>}
           <ErrorText error={check.error} />
         </div>
@@ -458,7 +458,7 @@ export default function OperatorProvidersPage() {
   const providers = useQuery({ enabled: !!me.data, queryKey: ['operator', 'providers'], queryFn: () => api<OperatorProviderRow[]>('/operator/providers') });
   if (!me.data || providers.isPending) return <Skeleton className="h-64" />;
   if (providers.error) return <ErrorText error={providers.error} />;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'providers.manage');
   // AI providers are alternatives: none is required on its own, so they are counted apart (ADR 0067).
   const keyed = providers.data.filter((p) => p.checkable && p.group !== 'ai');
   const missing = keyed.filter((p) => !p.configured).length;

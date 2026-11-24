@@ -5,7 +5,7 @@ import { PenSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { HelpCenter } from '@/components/help/help-center';
-import { useOperator } from '../operator-shell';
+import { can, useOperator } from '../operator-shell';
 
 /** The Console's own Help Center: how to run SampForce for clients (ADR 0073), and the way into managing Help. */
 export default function ConsoleHelpPage() {
@@ -17,7 +17,7 @@ export default function ConsoleHelpPage() {
           <Button asChild variant="outline" size="sm">
             <Link href="/operator/help/manage" data-manage-help>
               <PenSquare aria-hidden />{' '}
-              {me.data.role === 'ADMIN' ? 'Manage Help' : 'Help articles and feedback'}
+              {can(me.data, 'settings.manage') ? 'Manage Help' : 'Help articles and feedback'}
             </Link>
           </Button>
         </div>

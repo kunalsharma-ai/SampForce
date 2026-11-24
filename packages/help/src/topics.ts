@@ -104,6 +104,8 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/operator/mobile/[tenantId]': 'page.operatorMobile',
   '/operator/providers': 'page.operatorProviders',
   '/operator/audit': 'page.operatorAudit',
+  '/operator/operators': 'page.operatorOperators',
+  '/operator/roles': 'page.operatorRoles',
   '/operator/chat': 'page.operatorChat',
   '/operator/support': 'page.operatorSupport',
   '/operator/help': 'page.operatorHelp',

@@ -19,7 +19,7 @@ import { DEPLOYMENT_SETTINGS } from './deployment-settings';
 import { ConnectionTests } from './connection-tests';
 import { type CatalogueProvider, PROVIDER_CATALOGUE } from './provider-catalogue';
 import { PROVIDER_CHECK_PREFIX, readProviderCheck, type StoredCheck } from './provider-checks';
-import type { OperatorContext } from './operator-auth';
+import { type OperatorContext, operatorContext } from './operator-auth';
 
 type ScanTx = Prisma.TransactionClient;
 
@@ -53,7 +53,7 @@ export class OperatorService {
     }
     await this.prisma.platformOperator.update({ where: { id: op.id }, data: { lastLoginAt: new Date() } });
     await this.log(op.id, 'operator.login', null, {}, ip);
-    return { id: op.id, email: op.email, name: op.name, role: op.role };
+    return operatorContext(this.prisma, op);
   }
 
   private scan<T>(fn: (tx: ScanTx) => Promise<T>): Promise<T> {

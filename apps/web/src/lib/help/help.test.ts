@@ -79,7 +79,7 @@ describe('page help', () => {
     const pages = files(join(SRC, 'app'))
       .filter((f) => f.endsWith('page.tsx'))
       .map((f) => `/${relative(join(SRC, 'app'), f).replace(/\/?page\.tsx$/, '')}`)
-      .filter((r) => (r === '/app' || r.startsWith('/app/') || r === '/operator' || r.startsWith('/operator/')) && r !== '/operator/login');
+      .filter((r) => (r === '/app' || r.startsWith('/app/') || r === '/operator' || r.startsWith('/operator/')) && !['/operator/login', '/operator/forgot-password', '/operator/set-password'].includes(r));
     const missing = pages.filter((r) => r !== '/app/[module]' && !(r in PAGE_HELP));
     expect(missing).toEqual([]);
   });

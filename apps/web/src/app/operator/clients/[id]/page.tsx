@@ -49,7 +49,7 @@ import {
   toLimit,
   UsageMeter,
 } from '../../console-ui';
-import { useOperator } from '../../operator-shell';
+import { can, useOperator } from '../../operator-shell';
 import { ClientWorkspaceRulesCard } from '../../workspace-rules/rules-editor';
 
 type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | 'reopen' | null;
@@ -69,7 +69,11 @@ export default function ConsoleClientPage() {
   if (client.error) return <ErrorText error={client.error} />;
   const c = client.data;
   const s = c.subscription;
-  const admin = me.data.role === 'ADMIN';
+  const admin = can(me.data, 'clients.edit');
+  const canSubscription = can(me.data, 'subscriptions.manage');
+  const canState = can(me.data, 'clients.status');
+  const canInvite = can(me.data, 'users.manage');
+  const canHelp = can(me.data, 'settings.manage');
   const changeState = (to: ClientState) => {
     setNextState(to);
     setOpen('state');
@@ -89,16 +93,18 @@ export default function ConsoleClientPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {c.closure ? <Badge tone="critical">Closing</Badge> : <StateBadge state={c.state} />}
-            {admin && c.closure && (
+            {canState && c.closure && (
               <Button size="sm" onClick={() => setOpen('reopen')}>
                 Reopen company
               </Button>
             )}
-            {admin && !c.closure && (
+            {canSubscription && !c.closure && (
+              <Button variant="outline" size="sm" onClick={() => setOpen('renew')}>
+                Renew or upgrade
+              </Button>
+            )}
+            {canState && !c.closure && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setOpen('renew')}>
-                  Renew or upgrade
-                </Button>
                 {c.state === 'ACTIVE' ? (
                   <>
                     <Button variant="outline" size="sm" onClick={() => changeState('SUSPENDED')}>
@@ -147,7 +153,7 @@ export default function ConsoleClientPage() {
             <h2 id="sub-h" className="font-medium">
               Subscription
             </h2>
-            {admin && s && (
+            {canSubscription && s && (
               <Button size="sm" variant="outline" onClick={() => setOpen('subscription')}>
                 Change subscription
               </Button>
@@ -234,7 +240,7 @@ export default function ConsoleClientPage() {
               {new Date(c.pendingAdministrator.expiresAt).toLocaleDateString(fmtLocale())}.
             </p>
           )}
-          {admin && (
+          {canInvite && (
             <Button size="sm" variant="outline" onClick={() => setOpen('invite')}>
               New invitation link
             </Button>
@@ -243,8 +249,8 @@ export default function ConsoleClientPage() {
       </div>
 
       <Authority client={c} admin={admin} />
-      <ClientWorkspaceRulesCard tenantId={c.id} admin={admin} />
-      <HelpAccess tenantId={c.id} admin={admin} />
+      <ClientWorkspaceRulesCard tenantId={c.id} admin={can(me.data, 'workspaces.manage')} />
+      <HelpAccess tenantId={c.id} admin={canHelp} />
       <History client={c} />
 
       {open === 'subscription' && s && (

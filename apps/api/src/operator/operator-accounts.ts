@@ -55,7 +55,7 @@ export async function setOperatorRole(db: Db, email: string, role: OperatorRole)
   if (role === 'SUPPORT' && op.role === 'ADMIN' && op.status === 'ACTIVE' && (await otherActiveAdmins(db, op.id)) === 0) {
     throw new OperatorAccountError(`${op.email} is the last active ADMIN. Make another operator ADMIN first.`);
   }
-  const updated = await db.platformOperator.update({ where: { id: op.id }, data: { role } });
+  const updated = await db.platformOperator.update({ where: { id: op.id }, data: { role, consoleRole: null } });
   await db.platformAuditLog.create({ data: { operatorId: op.id, action: 'operator.role_changed', metadata: { via: 'cli', from: op.role, to: role } } });
   return updated;
 }
