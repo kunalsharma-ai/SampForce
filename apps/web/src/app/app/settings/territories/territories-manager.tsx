@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { type TerritoryInput, territoryInputSchema, type TerritoryRow } from '@dealflow/types';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -17,6 +18,7 @@ import { useTerritories, useTerritoryMutations } from '@/lib/territories';
 const EMPTY: TerritoryInput = { name: '', description: null, managerId: null, countries: [] };
 
 export function TerritoriesManager() {
+  const mayDelete = useCanDelete('territories');
   const t = useT();
   const canManage = useCan('tenant:manage');
   const list = useTerritories();
@@ -63,19 +65,21 @@ export function TerritoriesManager() {
                       <Button variant="ghost" size="icon" aria-label={t('Edit {name}', { name: row.name })} onClick={() => { setNotice(null); setEditing(row); }}>
                         <Pencil aria-hidden />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t('Delete {name}', { name: row.name })}
-                        disabled={remove.isPending}
-                        onClick={() => {
-                          if (window.confirm(t('Delete {name}? Its deals become “Not in a territory”. Deals and companies are not changed.', { name: row.name }))) {
-                            remove.mutate(row.id, { onSuccess: () => editing?.id === row.id && setEditing(null) });
-                          }
-                        }}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      {mayDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('Delete {name}', { name: row.name })}
+                          disabled={remove.isPending}
+                          onClick={() => {
+                            if (window.confirm(t('Delete {name}? Its deals become “Not in a territory”. Deals and companies are not changed.', { name: row.name }))) {
+                              remove.mutate(row.id, { onSuccess: () => editing?.id === row.id && setEditing(null) });
+                            }
+                          }}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </li>

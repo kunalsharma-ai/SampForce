@@ -12,7 +12,7 @@ import { personLabel, uploadCompanyFile } from '@/lib/company-leads';
 import { formatMoneyList, fromLocalInput, toLocalInput, useRfq, useRfqMutations, useRfqs } from '@/lib/company-work';
 import { SendRfqToSampbidx } from '@/components/sampbidx/sampbidx';
 import { formatDate } from '@/lib/crm';
-import { useHasFeature } from '@/lib/features';
+import { useHasFeature, useCanDelete } from '@/lib/features';
 import { useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { useCompanyAction } from './company-actions';
@@ -180,6 +180,7 @@ export function RfqDialog({
 }) {
   const t = useT();
   const qc = useQueryClient();
+  const mayDelete = useCanDelete('rfqs');
   const m = useRfqMutations();
   const canDeal = useCan('deals:write');
   // "Save and add attachments" keeps the dialog open on the new RFQ, so files and SampBidx come next.
@@ -410,7 +411,7 @@ export function RfqDialog({
             </p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            {current && (
+            {current && mayDelete && (
               <Button
                 type="button"
                 variant="ghost"

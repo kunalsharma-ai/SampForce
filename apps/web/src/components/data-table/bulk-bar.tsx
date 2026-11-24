@@ -8,6 +8,7 @@ import { Select } from '@/components/crm/select';
 import { useMembers } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useBulkAction } from '@/lib/table-views';
+import { ENTITY_FEATURE, useCanDelete } from '@/lib/features';
 
 /** Actions for the selected rows. Each record is changed through the normal API rules and audited. */
 export function BulkBar({
@@ -25,6 +26,7 @@ export function BulkBar({
 }) {
   const members = useMembers();
   const bulk = useBulkAction(entity);
+  const canDelete = useCanDelete(ENTITY_FEATURE[entity]);
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<string>('');
   const t = useT();
@@ -80,9 +82,11 @@ export function BulkBar({
           </Select>
         </>
       )}
-      <Button variant="outline" size="sm" className="text-critical" disabled={bulk.isPending} onClick={() => setConfirm(true)}>
-        <Trash2 aria-hidden /> {t('Delete')}
-      </Button>
+      {canDelete && (
+        <Button variant="outline" size="sm" className="text-critical" disabled={bulk.isPending} onClick={() => setConfirm(true)}>
+          <Trash2 aria-hidden /> {t('Delete')}
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={onClear}>
         <X aria-hidden /> {t('Clear selection')}
       </Button>

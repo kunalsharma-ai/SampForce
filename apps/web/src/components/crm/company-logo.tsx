@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import type { CompanyLogoRef, CompanyRow } from '@dealflow/types';
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
@@ -133,6 +134,7 @@ export function CompanyLogoEditor({ company }: { company: CompanyRow }) {
   const t = useT();
   const qc = useQueryClient();
   const canWrite = useCan('companies:write') && !company.restricted;
+  const mayDelete = useCanDelete('account_management');
   const { upload, remove, lookAgain } = useCompanyLogoMutations(company.id);
   const input = useRef<HTMLInputElement>(null);
   const status = company.logo?.status;
@@ -190,7 +192,7 @@ export function CompanyLogoEditor({ company }: { company: CompanyRow }) {
                   <RefreshCw aria-hidden className="size-4" /> {t('Find the logo on the website again')}
                 </DropdownMenuItem>
               )}
-              {uploaded && (
+              {uploaded && mayDelete && (
                 <DropdownMenuItem onSelect={() => remove.mutate()}>
                   <Trash2 aria-hidden className="size-4" /> {hasWebsite ? t('Use the website’s logo instead') : t('Remove logo')}
                 </DropdownMenuItem>

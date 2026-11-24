@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@dealflow/ui';
 import { PERMISSIONS, type RoleRow } from '@dealflow/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -80,6 +81,7 @@ export function RolesManager() {
 }
 
 function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void }) {
+  const mayDelete = useCanDelete('user_management');
   const t = useT();
   const qc = useQueryClient();
   const { data: me } = useSession();
@@ -147,7 +149,7 @@ function RoleEditor({ role, onDone }: { role: RoleRow | null; onDone: () => void
         <Button type="button" variant="ghost" onClick={onDone}>
           {t('Cancel')}
         </Button>
-        {role && (
+        {role && mayDelete && (
           <Button type="button" variant="destructive" className="ms-auto" disabled={remove.isPending || role.members > 0} title={role.members > 0 ? t('Move its members to another role first') : undefined} onClick={() => remove.mutate()}>
             {t('Delete role')}
           </Button>

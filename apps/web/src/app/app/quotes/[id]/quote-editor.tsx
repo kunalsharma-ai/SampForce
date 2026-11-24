@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import {
   Badge,
   Button,
@@ -137,6 +138,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
       }),
     onSuccess: (next) => refresh(next),
   });
+  const mayDelete = useCanDelete('quotes');
   const remove = useMutation({
     mutationFn: () => api(`/quotes/${q.id}`, { method: 'DELETE' }),
     onSuccess: async () => {
@@ -517,7 +519,7 @@ function Editor({ quote: q }: { quote: QuoteRow }) {
                       {t('Save your changes before submitting.')}
                     </p>
                   )}
-                  {q.status === 'DRAFT' && q.version === 1 && (
+                  {q.status === 'DRAFT' && q.version === 1 && mayDelete && (
                     <Button
                       className="w-full"
                       variant="ghost"

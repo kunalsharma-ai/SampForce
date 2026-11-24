@@ -1,5 +1,6 @@
 'use client';
 
+import { useCanDelete } from '@/lib/features';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton } from '@dealflow/ui';
 import {
   DATE_BUCKETS,
@@ -163,6 +164,7 @@ function Editor({ report }: { report?: ReportRow }) {
     },
     onError: (e: Error) => setSaveError(e),
   });
+  const mayDelete = useCanDelete('reports');
   const remove = useMutation({
     mutationFn: () => api<void>(`/reports/${report!.id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -450,7 +452,7 @@ function Editor({ report }: { report?: ReportRow }) {
                   <Download aria-hidden /> {t('Export CSV')}
                 </Button>
               )}
-              {report && !readOnly && (
+              {report && !readOnly && mayDelete && (
                 <Button
                   variant="ghost"
                   className="text-critical"
