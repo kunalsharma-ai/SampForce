@@ -199,7 +199,8 @@ test.describe('on a phone', () => {
     await card.getByLabel('RFQ email text').fill(PASTED.replace(/bluehill-insights/g, 'bluehill-mobile'));
     await expect(card.getByTestId('rfq-capture-status')).toHaveText('Ready to send');
     // Nothing wider than the screen.
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    // One pixel of slack for sub-pixel rounding, as the other phone checks allow.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
     await shot(page, card, '08-capture-phone');
     await card.getByRole('button', { name: 'Send RFQ to SampBidx' }).click();
     await expect(card.getByTestId('rfq-capture-status')).toHaveText('Sent to SampBidx');
