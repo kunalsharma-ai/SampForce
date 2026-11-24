@@ -556,6 +556,7 @@ model Tenant {
   leadOwnerChanges       LeadOwnerChange[]
   companyFiles           CompanyFile[]
   companyLogos           CompanyLogo[]
+  companyEnrichments     CompanyEnrichment[]
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
   rfqs                   Rfq[]
@@ -896,6 +897,31 @@ model Company {
   linkedinUrls      Json      @default("[]") @map("linkedin_urls")
   /// Further office addresses: [{ label?, country?, state?, city?, address?, postalCode? }].
   addresses         Json      @default("[]")
+  /// Business Information from public sources or typed by people (ADR 0076).
+  services          String[]
+  products          String[]
+  industriesServed  String[]  @map("industries_served")
+  certifications    String[]
+  founders          String[]
+  employeeCount     Int?      @map("employee_count")
+  legalName         String?   @map("legal_name")
+  /// The parent named publicly (a CRM parent record is parentCompanyId).
+  parentCompanyName String?   @map("parent_company_name")
+  ownership         String?
+  ceo               String?
+  /// [{ name, title? }]
+  leadership        Json      @default("[]")
+  /// Active, Acquired, Merged, Dissolved or Inactive.
+  operatingStatus   String?   @map("operating_status")
+  contactPageUrl    String?   @map("contact_page_url")
+  /// Official profiles: [{ platform, url }].
+  socialLinks       Json      @default("[]") @map("social_links")
+  /// Details with no column of their own: [{ label, value }].
+  moreDetails       Json      @default("[]") @map("more_details")
+  aiSummary         String?   @map("ai_summary")
+  aiSummaryAt       DateTime? @map("ai_summary_at")
+  /// Where each Business Information value came from: { field: { source, url, at, confidence, runId, items?, alternatives? } }.
+  fieldSources      Json      @default("{}") @map("field_sources")
   /// Normalised keys for duplicate checks, kept by the API: lower-case name without legal suffixes, domains,
   /// lower-case emails, last ten phone digits, LinkedIn paths.
   nameKey           String?   @map("name_key")
@@ -922,6 +948,7 @@ model Company {
   ownerChanges LeadOwnerChange[]
   files        CompanyFile[]
   logo         CompanyLogo?
+  enrichments  CompanyEnrichment[]
   tasks        Task[]
   rfqs         Rfq[]
 
@@ -1076,6 +1103,37 @@ model CompanyFile {
 /// A company's logo (ADR 0070): found automatically from the company's website, or uploaded by someone. Kept apart
 /// from the company so lists never load image bytes. The document doubles as the worker's queue item: PENDING with
 /// a due nextRunAt means "look for a logo now".
+/// Company auto-fill runs (ADR 0076): one per look-up, also the worker queue (PENDING + nextRunAt). `fills` records
+/// every value the run wrote, so it can be undone.
+model CompanyEnrichment {
+  id            String    @id @default(uuid()) @map("_id")
+  tenantId      String    @map("tenant_id")
+  companyId     String    @map("company_id")
+  /// PENDING, RUNNING, DONE, NOTHING_FOUND or FAILED.
+  status        String
+  /// CREATE, IMPORT, MANUAL or WEBSITE_CHANGED.
+  trigger       String
+  domain        String?
+  requestedById String?   @map("requested_by_id")
+  attempts      Int       @default(0)
+  nextRunAt     DateTime? @map("next_run_at")
+  /// [{ field, display, value, source, url, confidence, undone }]
+  fills         Json      @default("[]")
+  /// [{ url, kind }]
+  sources       Json      @default("[]")
+  error         String?
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, companyId, createdAt])
+  @@index([status, nextRunAt])
+  @@map("company_enrichments")
+}
+
 model CompanyLogo {
   id           String    @id @default(uuid()) @map("_id")
   tenantId     String    @map("tenant_id")
@@ -2766,27 +2824,27 @@ enum OperatorStatus {
 
 /// Platform staff. A separate realm from workspace users: own table, own sign-in, own token secret.
 model PlatformOperator {
-  id           String         @id @default(uuid()) @map("_id")
-  email        String         @unique
-  name         String
-  passwordHash String         @map("password_hash")
+  id               String         @id @default(uuid()) @map("_id")
+  email            String         @unique
+  name             String
+  passwordHash     String         @map("password_hash")
   /// Kept in step with consoleRole: ADMIN for Super Admins, SUPPORT for every other role (the CLI and last-admin guard use it).
-  role         OperatorRole   @default(SUPPORT)
+  role             OperatorRole   @default(SUPPORT)
   /// The Console role (ADR 0074): a built-in key (super_admin, finance, support, sales, operations, read_only) or an OperatorConsoleRole id. Null = from `role`.
-  consoleRole  String?        @map("console_role")
-  status       OperatorStatus @default(ACTIVE)
-  lastLoginAt  DateTime?      @map("last_login_at")
+  consoleRole      String?        @map("console_role")
+  status           OperatorStatus @default(ACTIVE)
+  lastLoginAt      DateTime?      @map("last_login_at")
   /// Two-step verification (ADR 0074): the TOTP secret sealed with SecretBox, when it was turned on, the last step used.
-  mfaSecretEnc     String?   @map("mfa_secret_enc")
-  mfaEnabledAt     DateTime? @map("mfa_enabled_at")
-  mfaLastStep      BigInt?   @map("mfa_last_step")
+  mfaSecretEnc     String?        @map("mfa_secret_enc")
+  mfaEnabledAt     DateTime?      @map("mfa_enabled_at")
+  mfaLastStep      BigInt?        @map("mfa_last_step")
   /// Failed sign-ins in a row; the fifth pauses sign-in until lockedUntil.
-  failedLoginCount Int       @default(0) @map("failed_login_count")
-  lockedUntil      DateTime? @map("locked_until")
+  failedLoginCount Int            @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?      @map("locked_until")
   /// Console palette, colour mode, sidebar and sound (ADR 0074, ConsolePreferences in @dealflow/types); null = defaults.
-  preferences  Json?
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
+  preferences      Json?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   auditLogs PlatformAuditLog[]
 
@@ -2902,21 +2960,21 @@ model PlatformAuditLog {
 
 /// A Console notification for one operator (ADR 0074, C3b), written by the worker's notification sweep.
 model OperatorNotification {
-  id         String    @id @default(uuid()) @map("_id")
-  operatorId String    @map("operator_id")
-  type       String
-  title      String
-  body       String?
-  link       String?
+  id             String    @id @default(uuid()) @map("_id")
+  operatorId     String    @map("operator_id")
+  type           String
+  title          String
+  body           String?
+  link           String?
   /// The client it is about. Named like platform_audit_logs so the workspace guard does not treat the row as a workspace's.
-  targetTenantId String? @map("target_tenant_id")
+  targetTenantId String?   @map("target_tenant_id")
   /// One notification per operator per event: the sweep may see an event twice.
-  dedupeKey  String    @map("dedupe_key")
+  dedupeKey      String    @map("dedupe_key")
   /// False when the operator chose email only: the row only keeps the event from being sent twice.
-  inApp      Boolean   @default(true) @map("in_app")
-  emailedAt  DateTime? @map("emailed_at")
-  readAt     DateTime? @map("read_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  inApp          Boolean   @default(true) @map("in_app")
+  emailedAt      DateTime? @map("emailed_at")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   operator PlatformOperator @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -5074,17 +5132,17 @@ model HelpFeedback {
 /// Help & Support settings of one organisation (ADR 0073): what the Console allows and what the Super Workspace chose.
 /// Raising and following queries is never switched off by these.
 model HelpSettings {
-  id                 String   @id @default(uuid()) @map("_id")
-  tenantId           String   @unique @map("tenant_id")
+  id                String   @id @default(uuid()) @map("_id")
+  tenantId          String   @unique @map("tenant_id")
   /// Set by the Console: the Help Center's answers and guides for this client.
-  helpEnabled        Boolean  @default(true) @map("help_enabled")
+  helpEnabled       Boolean  @default(true) @map("help_enabled")
   /// Set by the Super Workspace: the Help icon in the top bar.
-  menuVisible        Boolean  @default(true) @map("menu_visible")
+  menuVisible       Boolean  @default(true) @map("menu_visible")
   /// Set by the Super Workspace: list features people cannot use, with why and who can grant them.
-  explainRestricted  Boolean  @default(true) @map("explain_restricted")
+  explainRestricted Boolean  @default(true) @map("explain_restricted")
   /// Set by the Super Workspace: a note shown in Help, such as who to ask inside the company first.
-  supportNote        String?  @map("support_note")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  supportNote       String?  @map("support_note")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 

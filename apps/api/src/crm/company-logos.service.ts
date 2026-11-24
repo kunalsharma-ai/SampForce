@@ -5,11 +5,11 @@ import type { Request } from 'express';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
-import { publicFetch } from '../common/net-guard';
 import { PrismaService } from '../common/prisma.service';
 import { claimDue, errorMessage } from '../worker/queue';
 import { findLogo, LOGO_MAX_BYTES, LOGO_MIN_WIDTH, type LogoFetcher, logoDomain, sniffImage } from './company-logo-finder';
 import { notFound } from './crm-helpers';
+import { siteFetcher } from './site-fetch';
 import { canSeeDetails, companyScope, visibility } from './visibility';
 
 const TIMEOUT_MS = 6000;
@@ -229,80 +229,11 @@ export class CompanyLogosService {
     }
   }
 
-  /** The look-up's only way out: public https addresses, every redirect checked, sizes and times capped. */
+  /** The look-up's only way out: public https addresses, every redirect checked, sizes and times capped (site-fetch.ts). */
   private fetcher(): LogoFetcher {
-    const fx = this.env.LOGO_FIXTURE_URL;
-    const get = async (url: string, accept: string): Promise<{ res: Response; url: string } | null> => {
-      let target = url;
-      for (let hop = 0; hop < 5; hop++) {
-        const u = new URL(target);
-        let res: Response;
-        try {
-          const init = { redirect: 'manual' as const, signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': LOGO_USER_AGENT, accept } };
-          res = fx ? await fetch(`${fx}/site/${u.host}${u.pathname}${u.search}`, init) : await publicFetch(target, init, false);
-        } catch {
-          return null;
-        }
-        const location = res.headers.get('location');
-        if (res.status >= 300 && res.status < 400 && location) {
-          await res.body?.cancel().catch(() => undefined);
-          target = new URL(location, target).toString();
-          continue;
-        }
-        if (!res.ok) {
-          await res.body?.cancel().catch(() => undefined);
-          return null;
-        }
-        return { res, url: target };
-      }
-      return null;
-    };
-    return {
-      page: async (url) => {
-        const got = await get(url, 'text/html');
-        if (!got) return null;
-        if (!/text\/html|application\/xhtml/i.test(got.res.headers.get('content-type') ?? '')) {
-          await got.res.body?.cancel().catch(() => undefined);
-          return null;
-        }
-        const body = await readCapped(got.res, PAGE_MAX_BYTES, true);
-        return body ? { url: got.url, html: body.toString('utf8') } : null;
-      },
-      file: async (url) => {
-        const got = await get(url, 'image/*');
-        return got ? readCapped(got.res, LOGO_MAX_BYTES, false) : null;
-      },
-    };
+    const site = siteFetcher({ userAgent: LOGO_USER_AGENT, timeoutMs: TIMEOUT_MS, pageMaxBytes: PAGE_MAX_BYTES, fixtureUrl: this.env.LOGO_FIXTURE_URL });
+    return { page: (url) => site.page(url), file: (url) => site.file(url, 'image/*', LOGO_MAX_BYTES) };
   }
-}
-
-/** Reads at most `max` bytes. A page is cut there (its head is what matters); a file that is too big is dropped. */
-async function readCapped(res: Response, max: number, truncate: boolean): Promise<Buffer | null> {
-  if (!res.body) return Buffer.alloc(0);
-  const declared = Number(res.headers.get('content-length'));
-  if (!truncate && Number.isFinite(declared) && declared > max) {
-    await res.body.cancel().catch(() => undefined);
-    return null;
-  }
-  const reader = res.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > max) {
-        await reader.cancel().catch(() => undefined);
-        if (!truncate) return null;
-        break;
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return null;
-  }
-  return Buffer.concat(chunks);
 }
 
 function toRef(r: LogoMeta): CompanyLogoRef {

@@ -28,6 +28,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localize, tr } from '../common/request-language';
 import { parseCsv } from './csv';
+import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { defaultStatusId, reportingManagerOf } from './companies.service';
 import { phoneDigits } from './leads.service';
@@ -81,6 +82,7 @@ export class ImportService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly enrichment: CompanyEnrichmentService,
   ) {}
 
   async import(auth: AuthContext, req: ImportRequest, meta: RequestMeta): Promise<ImportResult> {
@@ -528,6 +530,13 @@ export class ImportService {
       tx.leadOwnerChange.createMany({ data: batch.map(({ id }) => ({ tenantId: auth.tenantId, companyId: id, fromUserId: null, toUserId: auth.userId, byUserId: auth.userId, reason: null, note: null })) }),
     );
     while ((await assignLeadNumbers(tx, auth.tenantId)) > 0);
+    // Imported companies get their missing details filled from public sources too, spaced out (ADR 0076).
+    await this.enrichment.queueImportIn(
+      tx,
+      auth.tenantId,
+      list.map(({ id, data }) => ({ id, name: String(data.name ?? ''), domain: (data.domain as string | undefined) ?? (data.website ? hostOf(String(data.website)) : null) })),
+      auth.userId,
+    );
   }
 
   /** Contacts' company column: matches company names (ignoring case and legal suffixes), creating the ones that do not exist. */
@@ -712,4 +721,12 @@ function describeValidation(err: unknown): string {
     return body.details?.map((d) => `${d.path}: ${localize(d.message)}`).join('; ') ?? (body.message ? localize(body.message) : tr('Invalid row'));
   }
   throw err;
+}
+
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
 }

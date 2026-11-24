@@ -78,6 +78,7 @@ export const FEATURE_KEYS = [
   'account_management',
   'company_branches',
   'company_files',
+  'company_enrichment',
   'company_owner_changes',
   'lead_drafts',
   'contact_management',
@@ -191,6 +192,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'account_management', group: 'CRM', label: 'Account management', description: 'Company leads (accounts) with their dashboard, status and owner.', defaultFrom: 'free', paths: ['/app/companies', '/app/accounts'], since: 2 },
   { key: 'company_branches', group: 'CRM', label: 'Company branches', description: 'Branches and offices of a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'company_files', group: 'CRM', label: 'Company files', description: 'Files kept on a company.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
+  { key: 'company_enrichment', group: 'CRM', label: 'Company auto-fill', description: 'Fill missing company details from the company’s own website and Wikidata, with the source of every value and undo.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 3 },
   { key: 'company_owner_changes', group: 'CRM', label: 'Company owner changes', description: 'Change a company’s owner with a reason, and its owner history.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'lead_drafts', group: 'CRM', label: 'New lead wizard drafts', description: 'Save the new lead wizard as a draft and finish it later.', defaultFrom: 'free', paths: [], parent: 'account_management', since: 2 },
   { key: 'contact_management', group: 'CRM', label: 'Contact management', description: 'Employees and points of contact of companies.', defaultFrom: 'free', paths: ['/app/contacts'], since: 2 },
@@ -221,7 +223,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
-export const FEATURE_CATALOG_VERSION = 2;
+export const FEATURE_CATALOG_VERSION = 3;
 
 /** Subfeatures of a feature, in catalogue order. */
 export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {

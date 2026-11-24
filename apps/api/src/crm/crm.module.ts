@@ -10,6 +10,8 @@ import { CompanyFilesController, CompanyLeadPartsController, CompanyLeadsControl
 import { CompanyLeadsService } from './company-leads.service';
 import { CompanyLogosController } from './company-logos.controller';
 import { CompanyLogosService } from './company-logos.service';
+import { CompanyEnrichmentController } from './company-enrichment.controller';
+import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CompanyDashboardController, FollowUpsController, InteractionsController, RfqsController } from './company-work.controller';
 import { CompanyWorkService } from './company-work.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -61,6 +63,7 @@ import {
     RfqsController,
     CompanyLeadPartsController,
     CompanyLogosController,
+    CompanyEnrichmentController,
     CompanyFilesController,
     EmployeeStatsController,
     RevenueRecordsController,
@@ -85,6 +88,7 @@ import {
     CrmConfigService,
     CompanyLeadsService,
     CompanyLogosService,
+    CompanyEnrichmentService,
     CompanyWorkService,
     NotificationsService,
     RevenueRecordsService,
@@ -92,6 +96,6 @@ import {
     InstructionsService,
     ClientConcernsService,
   ],
-  exports: [CrmConfigService, CompanyLeadsService, CompanyLogosService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
+  exports: [CrmConfigService, CompanyLeadsService, CompanyLogosService, CompanyEnrichmentService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

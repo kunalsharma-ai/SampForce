@@ -79,6 +79,11 @@ export const apiEnvSchema = z.object({
   FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /** Tests only: company logo look-ups (ADR 0070) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
   LOGO_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /**
+   * Company auto-fill (ADR 0076) also reads Wikidata (www.wikidata.org). Unset or true: on. False for a server that
+   * should only reach the companies' own websites (an office network without general internet).
+   */
+  COMPANY_AUTOFILL_WIKIDATA: bool.optional().or(z.literal('').transform(() => undefined)),
   /** Optional data provider for the email finder (Hunter.io). Unset = SampForce's own finder only. */
   HUNTER_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
   HUNTER_API_BASE_URL: z.string().url().default('https://api.hunter.io/v2'),
