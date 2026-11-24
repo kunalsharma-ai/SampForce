@@ -114,6 +114,16 @@ export function merge(company: CompanyNow, candidates: Candidate[], runId: strin
     write(field, winner, cands.slice(1));
   }
 
+  // A value already there that a source states too (filled in from the look-up before saving, or typed the same)
+  // keeps its value and gains the source, without becoming this run's fill: undo never clears it.
+  for (const [field, cands] of byField) {
+    if ((LIST_ENRICH_FIELDS as readonly string[]).includes(field) || field in data || locked(field) || sources[field]) continue;
+    const existing = company[field];
+    if (empty(existing)) continue;
+    const match = cands.find((c) => sameValue(existing, c.value));
+    if (match) sources[field] = { source: match.source, url: match.url, at, confidence: match.confidence, runId: null };
+  }
+
   function write(field: EnrichField, c: Candidate, others: Candidate[]) {
     const alternatives = others.filter((o) => o.source !== c.source && !sameValue(o.value, c.value)).map((o) => ({ value: display(field, o.value), source: o.source, url: o.url }));
     const unique = [...new Map(alternatives.map((a) => [a.value.toLowerCase(), a])).values()];

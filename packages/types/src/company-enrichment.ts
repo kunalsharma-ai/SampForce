@@ -264,3 +264,17 @@ export interface CompanyEnrichmentState {
 
 export const enrichmentUndoSchema = z.object({ fields: z.array(z.enum(ENRICH_FIELDS)).max(ENRICH_FIELDS.length).optional() }).strict();
 export type EnrichmentUndo = z.infer<typeof enrichmentUndoSchema>;
+
+/** Look a company up before it is saved (Create Company): nothing is stored. */
+export const enrichmentPreviewSchema = z
+  .object({ name: z.string().trim().min(1, 'Enter a company name').max(200), website: z.string().trim().max(500).nullable().optional() })
+  .strict();
+export type EnrichmentPreviewRequest = z.infer<typeof enrichmentPreviewSchema>;
+
+export interface EnrichmentPreview {
+  /** What auto-fill would fill on an empty company, best source first; `value` is the raw field value. */
+  found: (Omit<EnrichmentFill, 'undone'> & { value: unknown })[];
+  sources: { url: string; kind: 'WEBSITE' | 'WIKIDATA' }[];
+  /** Why nothing was found (the site could not be reached...), or null. */
+  error: string | null;
+}

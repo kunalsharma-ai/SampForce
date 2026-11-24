@@ -174,3 +174,42 @@ test('Business Information holds every detail, tells auto-filled values apart, a
   // Fields left alone keep their auto-fill source.
   expect(saved.fieldSources.employeeCount).toMatchObject({ source: 'WEBSITE' });
 });
+
+test('Create Company finds the details before saving; the person picks what to use', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signUp(page, 'Create Autofill Org');
+  const main = page.getByRole('main');
+  await page.goto('/app/companies/new');
+  await main.getByLabel('Company name *').fill('Northwind Insights');
+  await main.getByLabel('Official website URL 1', { exact: true }).fill('https://northwind-insights.example');
+  const finder = main.getByRole('region', { name: 'Fill in the rest automatically' });
+  await finder.getByRole('button', { name: 'Find details' }).click();
+  const found = finder.getByRole('group', { name: /Found for this form/ });
+  await expect(found).toContainText('2009');
+  await expect(found.getByRole('checkbox', { name: /Description/ })).toBeChecked();
+  // Everything the form has no place for is added after saving.
+  await expect(finder).toContainText('Added after you save, with their sources');
+  await expect(finder).toContainText('Certifications');
+  // Leave the industry guess out.
+  await found.getByRole('checkbox', { name: /Industry/ }).uncheck();
+  await axe(page);
+  await fullShot(page, '07-create-company-find-details', finder);
+  await found.getByRole('button', { name: /^Use \d+ selected$/ }).click();
+  await expect(finder.getByRole('status')).toContainText(/Added \d+ details to the form/);
+  await expect(main.getByLabel('Company overview')).toHaveValue(/^Northwind Insights is a global market research company/);
+
+  // Through the steps to save; the values are in the form to check on the way.
+  for (let i = 0; i < 7; i++) await main.getByRole('button', { name: 'Next' }).click();
+  await expect(main).toContainText('Pune');
+  await main.getByRole('button', { name: 'Save lead' }).click();
+  await expect(page).toHaveURL(/\/app\/companies\/[0-9a-f-]{36}$/);
+  const id = page.url().split('/').pop()!;
+  // After saving, auto-fill adds the rest, and the values taken from the look-up keep their source.
+  await expect(page.locator('#company-autofill').getByRole('status')).toContainText(/details added/, { timeout: 30_000 });
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/v1/companies/${id}`)).json()).fieldSources?.foundedYear?.url, { timeout: 15_000 })
+    .toBe('https://www.northwind-insights.example/about-us');
+  const saved = await (await page.request.get(`/api/v1/companies/${id}`)).json();
+  expect(saved.certifications).toContain('ISO 27001');
+  expect(saved.industry).toBe('Market research');
+});

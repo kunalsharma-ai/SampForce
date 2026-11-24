@@ -166,6 +166,16 @@ describe('what auto-fill writes', () => {
     expect(r.fills.map((f) => f.field)).toEqual(['foundedYear']);
   });
 
+  it('gives a value already there its source when a source states the same, without making it undoable', () => {
+    const r = merge({ fieldSources: {}, industry: 'market research', foundedYear: 2009 }, [c('industry', 'Market research'), c('foundedYear', 2009, 'WIKIDATA', 'medium')], 'run1', now);
+    expect(r.data).toEqual({});
+    expect(r.fills).toEqual([]);
+    expect(r.fieldSources.industry).toMatchObject({ source: 'WEBSITE', runId: null });
+    expect(r.fieldSources.foundedYear).toMatchObject({ source: 'WIKIDATA', confidence: 'medium', runId: null });
+    // A different value keeps no source: it is the team's own.
+    expect(merge({ fieldSources: {}, foundedYear: 2010 }, [c('foundedYear', 2009)], 'r', now).fieldSources.foundedYear).toBeUndefined();
+  });
+
   it('never writes a field someone cleared', () => {
     const r = merge({ fieldSources: { foundedYear: { source: 'USER', url: null, at: now.toISOString(), confidence: 'high', runId: null } }, foundedYear: null }, [c('foundedYear', 2001)], 'run1', now);
     expect(r.fills).toEqual([]);
