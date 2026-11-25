@@ -220,4 +220,18 @@ export const errorsProviders = {
   'Addresses must not contain a user name or password': ['Las direcciones no deben contener un nombre de usuario ni una contraseña', 'Les adresses ne doivent pas contenir de nom d’utilisateur ni de mot de passe', 'Adressen dürfen keinen Benutzernamen und kein Passwort enthalten', 'يجب ألا تحتوي العناوين على اسم مستخدم أو كلمة مرور'],
   'Use an https:// address: the API key would otherwise cross the internet unencrypted. Plain http is allowed only for a private server the operator approved.': ['Usa una dirección https://: de lo contrario, la clave de API cruzaría internet sin cifrar. El http simple solo se permite para un servidor privado aprobado por el operador.', 'Utilisez une adresse https:// : sinon la clé d’API traverserait Internet sans chiffrement. Le http simple n’est autorisé que pour un serveur privé approuvé par l’opérateur.', 'Verwenden Sie eine https://-Adresse: Sonst würde der API-Schlüssel unverschlüsselt durchs Internet gehen. Einfaches http ist nur für einen vom Betreiber genehmigten privaten Server erlaubt.', 'استخدم عنوان https://؛ وإلا فسيعبر مفتاح API الإنترنت دون تشفير. لا يُسمح بـ http العادي إلا لخادم خاص وافق عليه المشغّل.'],
   'Add the SMTP server (or an SMTP URL) first.': ['Añade primero el servidor SMTP (o una URL SMTP).', 'Ajoutez d’abord le serveur SMTP (ou une URL SMTP).', 'Fügen Sie zuerst den SMTP-Server (oder eine SMTP-URL) hinzu.', 'أضف خادم SMTP (أو عنوان URL لـ SMTP) أولًا.'],
+  // SampBidx chat (ADR 0078)
+  'Chat with SampBidx team is switched off for this SampForce organisation.': [
+    'El chat con el equipo de SampBidx está desactivado para esta organización de SampForce.',
+    'La discussion avec l’équipe SampBidx est désactivée pour cette organisation SampForce.',
+    'Der Chat mit dem SampBidx-Team ist für diese SampForce-Organisation ausgeschaltet.',
+    'الدردشة مع فريق SampBidx متوقفة لهذه المؤسسة في SampForce.',
+  ],
+  'Chat with SampBidx team is switched off for your organisation.': [
+    'El chat con el equipo de SampBidx está desactivado para tu organización.',
+    'La discussion avec l’équipe SampBidx est désactivée pour votre organisation.',
+    'Der Chat mit dem SampBidx-Team ist für Ihre Organisation ausgeschaltet.',
+    'الدردشة مع فريق SampBidx متوقفة لمؤسستك.',
+  ],
+  'Files can be up to 10 MB each and 20 MB in all.': ['Los archivos pueden tener hasta 10 MB cada uno y 20 MB en total.', 'Les fichiers peuvent faire jusqu’à 10 Mo chacun et 20 Mo au total.', 'Dateien dürfen je 10 MB und zusammen 20 MB groß sein.', 'يمكن أن يصل حجم كل ملف إلى 10 ميغابايت، و20 ميغابايت للمجموع.'],
 } as const satisfies TextTable;

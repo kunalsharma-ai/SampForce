@@ -88,10 +88,29 @@ export const SAMPBIDX_PASTED_EMAIL_MAX_CHARS = 100_000;
  * Option 2c: the text of an RFQ email a client sent, copied from any mail program and pasted on the company page.
  * Subject, sender and date are read from the text (parsePastedEmail); the person can correct them before sending.
  */
+/** Where in SampForce the RFQ email was captured, kept on the transfer and sent to SampBidx as the source reference. */
+export const SAMPBIDX_CAPTURE_SOURCES = ['company', 'contact', 'lead', 'deal', 'email', 'rfqs'] as const;
+export type SampbidxCaptureSource = (typeof SAMPBIDX_CAPTURE_SOURCES)[number];
+
+export const sampbidxCaptureSourceSchema = z.object({
+  type: z.enum(SAMPBIDX_CAPTURE_SOURCES),
+  /** The record's id (the email message for "email"); none for the RFQs page. */
+  id: z.string().uuid().optional().nullable(),
+});
+export type SampbidxCaptureSourceRef = z.infer<typeof sampbidxCaptureSourceSchema>;
+
+/** Attachment files added next to pasted email text: at most this many, within SAMPBIDX_MAX_TOTAL_BYTES. */
+export const SAMPBIDX_PASTED_MAX_FILES = 10;
+export const SAMPBIDX_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
+
 export const sampbidxSendPastedEmailSchema = z.object({
-  companyId: z.string().uuid(),
-  /** The employee of the company who sent it. Left out, SampForce matches the sender's address to an employee. */
+  /** The client company. Left out, the company of the matched employee (or the email's domain) is used if certain. */
+  companyId: z.string().uuid().optional().nullable(),
+  /** The employee who sent it. Left out, SampForce matches the sender's address to an employee. */
   contactId: z.string().uuid().optional().nullable(),
+  /** Attachments uploaded first with POST /apps/sampbidx/attachments; sent to SampBidx as files with the email. */
+  attachmentIds: z.array(z.string().uuid()).max(SAMPBIDX_PASTED_MAX_FILES).optional(),
+  source: sampbidxCaptureSourceSchema.optional().nullable(),
   rfqId: z.string().uuid().optional().nullable(),
   text: z.string().trim().min(20, 'Paste the whole RFQ email').max(SAMPBIDX_PASTED_EMAIL_MAX_CHARS, 'The pasted email is too long. Leave out older quoted replies.'),
   subject: z.string().trim().max(300).optional().nullable(),
@@ -106,6 +125,51 @@ export const sampbidxSendPastedEmailSchema = z.object({
 export type SampbidxSendPastedEmailInput = z.input<typeof sampbidxSendPastedEmailSchema>;
 /** The same after validation, as the API reads it. */
 export type SampbidxPastedEmail = z.output<typeof sampbidxSendPastedEmailSchema>;
+
+/** POST /apps/sampbidx/pasted-email/check: what SampForce reads from the text and who it would link it to, before sending. */
+export const sampbidxPastedCheckSchema = z.object({
+  text: z.string().max(SAMPBIDX_PASTED_EMAIL_MAX_CHARS),
+  companyId: z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
+});
+export type SampbidxPastedCheckInput = z.infer<typeof sampbidxPastedCheckSchema>;
+
+/**
+ * How sure the link to the client is. "given": the person is on that company or employee's page; "contact": the
+ * sender's address belongs to an employee; "domain": only the address's domain matches a company; "none": no match.
+ * Anything below "contact" (or a sender who belongs to another company) is shown for the person to check.
+ */
+export type SampbidxMatchConfidence = 'given' | 'contact' | 'domain' | 'none';
+
+export interface SampbidxPastedCheck {
+  subject: string | null;
+  from: string | null;
+  fromEmail: string | null;
+  to: string[];
+  cc: string[];
+  date: string | null;
+  company: { id: string; name: string } | null;
+  contact: { id: string; name: string; email: string | null; companyId: string | null } | null;
+  confidence: SampbidxMatchConfidence;
+  /** A sentence for the person when the match needs checking, for example the sender works at another company. */
+  review: string | null;
+  /** Other companies the email's domain matches, to choose from. */
+  candidates: { id: string; name: string }[];
+  /** The text says something is attached, but pasted text cannot carry files. */
+  mentionsAttachments: boolean;
+  /** The same email text was already sent to SampBidx. */
+  duplicate: { transferId: string; remoteId: string | null; sentAt: string | null; sentBy: string | null; company: string | null } | null;
+}
+
+/** "Please find attached", "see the attachment", "questionnaire attached", "enclosed"… */
+export function mentionsAttachments(text: string): boolean {
+  return /\b(attached|attachments?|enclosed|please find (the )?(attached|enclosed)|see (the )?(attached|attachment)|PFA)\b/i.test(text);
+}
+
+/** The same email pasted twice, whatever the spacing or line endings, gives the same key. */
+export function pastedEmailKey(text: string): string {
+  return text.replace(/\s+/g, ' ').trim().toLowerCase();
+}
 
 /** What parsePastedEmail reads from pasted email text. Anything it cannot find is null or empty. */
 export interface PastedEmail {
@@ -195,9 +259,15 @@ export interface SampbidxTransferRow {
   title: string;
   rfq: { id: string; number: string; projectName: string } | null;
   company: { id: string; name: string } | null;
+  /** The client's point of contact in the team (or its owner when no POC is set), by name. */
+  clientPoc: string | null;
   /** Sender and date of the email, for email transfers. */
   emailFrom: string | null;
   emailDate: string | null;
+  /** The employee it came from, for pasted emails. */
+  contact: { id: string; name: string } | null;
+  /** Where it was captured in SampForce. */
+  source: SampbidxCaptureSourceRef | null;
   files: { name: string; sizeBytes: number }[];
   note: string | null;
   delivery: SampbidxDelivery;

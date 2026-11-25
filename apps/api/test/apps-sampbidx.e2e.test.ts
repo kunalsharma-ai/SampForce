@@ -205,6 +205,8 @@ describe('SampBidx (stand-in)', () => {
       source: 'pasted',
       company: { id: companyId, name: 'Acme Panels' },
       contact: { id: priyaId, name: 'Priya Nair', email: 'priya@acmepanels.example' },
+      sentBy: { id: rep.userId, name: expect.any(String), email: expect.stringContaining('@') },
+      clientTeam: { owner: { id: rep.userId } },
       email: { subject: 'RFQ: Singapore fintech users, n=300', from: 'Priya Nair <Priya@AcmePanels.example>', to: ['rep@sampforce.test', 'ops@sampforce.test'], cc: [], text, attachmentsIncluded: false },
     });
     expect(got.parts.map((p) => p.name)).toEqual(['email']);
@@ -231,6 +233,60 @@ describe('SampBidx (stand-in)', () => {
     // An employee of another company cannot be named.
     const other = (await api(owner).post('/company-leads', { company: { name: 'Other Co', country: 'IN' }, employees: [{ firstName: 'Omar', lastName: 'Ali' }] }).expect(201)).body;
     expect((await r.post('/apps/sampbidx/transfers/pasted-email', { companyId, text: plain + ' again', contactId: other.employeeIds[0] }).expect(400)).body.error.code).toBe('INVALID_CONTACT');
+  });
+
+  it('captures pasted RFQ emails anywhere: links the client only when sure, keeps files, source and duplicates', async () => {
+    const r = api(rep);
+    // A client company with an employee whose address is known, and a domain-only company.
+    const blue = (await api(owner).post('/company-leads', { company: { name: 'Bluehill Insights', country: 'DE', website: 'https://bluehill.example', ownerId: rep.userId }, employees: [{ firstName: 'Jonas', lastName: 'Weber', emails: [{ value: 'jonas@bluehill.example' }] }] }).expect(201)).body;
+    const header = (from: string, subject: string) => [`From: ${from}`, 'Sent: Tuesday, November 24, 2026 7:00 AM', 'To: rep@sampforce.test', `Subject: ${subject}`, '', 'Please quote 500 CATI interviews with GPs in Germany, LOI 20. Questionnaire attached.'].join('\n');
+
+    // The sender is a known employee: certain, linked to their company.
+    const known = header('Jonas Weber <jonas@bluehill.example>', 'RFQ: German GPs CATI');
+    const c1 = (await r.post('/apps/sampbidx/pasted-email/check', { text: known }).expect(200)).body;
+    expect(c1).toMatchObject({ subject: 'RFQ: German GPs CATI', fromEmail: 'jonas@bluehill.example', company: { id: blue.company.id }, contact: { id: blue.employeeIds[0] }, confidence: 'contact', review: null, mentionsAttachments: true, duplicate: null });
+    // Someone new at a known domain: suggested by the domain, for the person to check.
+    const c2 = (await r.post('/apps/sampbidx/pasted-email/check', { text: header('Mia Braun <mia@bluehill.example>', 'Another RFQ') }).expect(200)).body;
+    expect(c2).toMatchObject({ company: { id: blue.company.id }, contact: null, confidence: 'domain', candidates: [{ id: blue.company.id }] });
+    expect(c2.review).toContain('found by the domain bluehill.example');
+    // Free mail and unknown senders are not guessed.
+    expect((await r.post('/apps/sampbidx/pasted-email/check', { text: header('Sam <sam.k@gmail.com>', 'Quote please') }).expect(200)).body).toMatchObject({ company: null, contact: null, confidence: 'none' });
+    // On another company's page, the sender's own company is pointed out.
+    const c3 = (await r.post('/apps/sampbidx/pasted-email/check', { text: known, companyId }).expect(200)).body;
+    expect(c3).toMatchObject({ company: { id: companyId }, contact: null, confidence: 'given', candidates: [{ id: blue.company.id }] });
+    expect(c3.review).toContain('at Bluehill Insights, not Acme Panels');
+
+    // A file added next to the text goes with it; the RFQs page (no company given) links by the sender's record.
+    const up = await rep.agent.post('/api/v1/apps/sampbidx/attachments?name=GP%20questionnaire.docx').set('origin', ORIGIN).set('content-type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').send(Buffer.from('docx bytes')).expect(200);
+    const before = await asTenant(owner.tenantId, (tx) => tx.company.count({ where: { tenantId: owner.tenantId } }));
+    const sent = (await r.post('/apps/sampbidx/transfers/pasted-email', { text: known, attachmentIds: [up.body.id], source: { type: 'rfqs' } }).expect(200)).body as SampbidxTransferRow;
+    expect(sent).toMatchObject({ kind: 'PASTED_EMAIL', delivery: 'SENT', company: { id: blue.company.id }, contact: { id: blue.employeeIds[0], name: 'Jonas Weber' }, source: { type: 'rfqs' }, files: [{ name: 'GP questionnaire.docx', sizeBytes: 10 }] });
+    expect(await asTenant(owner.tenantId, (tx) => tx.company.count({ where: { tenantId: owner.tenantId } }))).toBe(before);
+    const got = sbx.received.at(-1)!;
+    expect(got.json).toMatchObject({ source: 'pasted', sourceReference: { type: 'rfqs', url: expect.stringMatching(/\/app\/rfqs\?tab=sampbidx$/) }, email: { attachmentsIncluded: true }, attachments: [{ name: 'GP questionnaire.docx', sizeBytes: 10 }] });
+    expect(got.parts.filter((p) => p.name === 'files').map((p) => p.filename)).toEqual(['GP questionnaire.docx']);
+    // A used attachment cannot be sent again or removed.
+    await r.delUnconfirmed(`/apps/sampbidx/attachments/${up.body.id}`).expect(404);
+    const spare = await rep.agent.post('/api/v1/apps/sampbidx/attachments?name=spare.pdf').set('origin', ORIGIN).set('content-type', 'application/pdf').send(Buffer.from('%PDF')).expect(200);
+    await api(outsider).delUnconfirmed(`/apps/sampbidx/attachments/${spare.body.id}`).expect(404);
+    await r.delUnconfirmed(`/apps/sampbidx/attachments/${spare.body.id}`).expect(204);
+
+    // The same email pasted again elsewhere, even with different spacing, is a duplicate.
+    const again = known.replace(/\n/g, '\r\n  ');
+    expect((await r.post('/apps/sampbidx/pasted-email/check', { text: again, companyId }).expect(200)).body.duplicate).toMatchObject({ transferId: sent.id, company: 'Bluehill Insights' });
+    expect((await r.post('/apps/sampbidx/transfers/pasted-email', { text: again, companyId }).expect(409)).body.error.code).toBe('ALREADY_SENT');
+
+    // Unknown sender, no company chosen: sent without a client, never linked on a guess.
+    const loose = (await r.post('/apps/sampbidx/transfers/pasted-email', { text: header('Mia Braun <mia@bluehill.example>', 'Domain-only RFQ'), source: { type: 'rfqs' } }).expect(200)).body as SampbidxTransferRow;
+    expect(loose).toMatchObject({ company: null, contact: null });
+
+    // A failed send keeps the text and retries with the same key.
+    sbx.failNext(1);
+    const failed = (await r.post('/apps/sampbidx/transfers/pasted-email', { text: header('Jonas Weber <jonas@bluehill.example>', 'RFQ: retry me'), companyId: blue.company.id, source: { type: 'company', id: blue.company.id } }).expect(200)).body as SampbidxTransferRow;
+    expect(failed.delivery).toBe('FAILED');
+    const retried = (await r.post(`/apps/sampbidx/transfers/${failed.id}/retry`, {}).expect(200)).body as SampbidxTransferRow;
+    expect(retried).toMatchObject({ id: failed.id, delivery: 'SENT', clientPoc: expect.any(String) });
+    expect(sbx.received.at(-1)!).toMatchObject({ idempotencyKey: failed.id, json: { sourceReference: { type: 'company', id: blue.company.id, url: expect.stringContaining(`/app/companies/${blue.company.id}`) }, email: { subject: 'RFQ: retry me' } } });
   });
 
   it('takes signed status updates from SampBidx and refuses unsigned or stale ones', async () => {

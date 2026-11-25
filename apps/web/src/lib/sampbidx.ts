@@ -1,7 +1,8 @@
 'use client';
 
-import type { AppStatus, SampbidxMailboxEmail, SampbidxRfqReadiness, SampbidxSendMailboxEmailInput, SampbidxSendPastedEmailInput, SampbidxSendRfqInput, SampbidxTransferRow } from '@dealflow/types';
+import type { AppStatus, SampbidxPastedCheck, SampbidxMailboxEmail, SampbidxRfqReadiness, SampbidxSendMailboxEmailInput, SampbidxSendPastedEmailInput, SampbidxSendRfqInput, SampbidxTransferRow } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as React from 'react';
 import { api } from './api';
 
 /** SampBidx (ADR 0061): sending RFQs and RFQ emails, and what happened to them. */
@@ -53,4 +54,37 @@ export function useSampbidxSend() {
 export function emailFileType(file: File): string {
   if (file.type) return file.type;
   return file.name.toLowerCase().endsWith('.msg') ? 'application/vnd.ms-outlook' : 'message/rfc822';
+}
+
+/** What SampForce reads from pasted RFQ email text and who it would link it to, checked a moment after typing stops. */
+export function useSampbidxPastedCheck(text: string, companyId: string | null, contactId: string | null) {
+  const [settled, setSettled] = React.useState(text);
+  React.useEffect(() => {
+    const h = setTimeout(() => setSettled(text), 350);
+    return () => clearTimeout(h);
+  }, [text]);
+  const ready = settled.trim().length >= 20;
+  return useQuery({
+    enabled: ready,
+    queryKey: ['sampbidx', 'pasted-check', settled, companyId, contactId],
+    queryFn: () => api<SampbidxPastedCheck>('/apps/sampbidx/pasted-email/check', { method: 'POST', json: { text: settled, companyId, contactId } }),
+    placeholderData: (prev) => prev,
+    staleTime: 10_000,
+  });
+}
+
+export interface SampbidxUploadedFile {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  contentType: string;
+}
+
+export function useSampbidxAttachments() {
+  return {
+    add: useMutation({
+      mutationFn: (file: File) => api<SampbidxUploadedFile>(`/apps/sampbidx/attachments?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } }),
+    }),
+    remove: useMutation({ mutationFn: (id: string) => api<void>(`/apps/sampbidx/attachments/${id}`, { method: 'DELETE' }) }),
+  };
 }

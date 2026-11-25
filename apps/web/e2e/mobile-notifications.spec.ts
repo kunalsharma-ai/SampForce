@@ -102,7 +102,8 @@ test('the phone signs in on its animated scene and shows notifications in the be
   await phone.getByRole('button', { name: 'Notifications, 1 unread' }).last().click();
   await expect(phone.getByRole('radiogroup', { name: 'Show' })).toBeVisible();
   await phone.getByRole('radio', { name: 'Unread' }).click();
-  await expect(phone.getByRole('button', { name: 'Office closed on Friday, unread' })).toBeVisible();
+  // The home card underneath lists the same unread row once it refreshes; the list screen on top is the last one.
+  await expect(phone.getByRole('button', { name: 'Office closed on Friday, unread' }).last()).toBeVisible();
   await shot(phone, '45-app-notification-list');
   await expectNoA11yViolations(phone);
   await phone.getByRole('button', { name: 'Mark all as read' }).click();

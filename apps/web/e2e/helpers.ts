@@ -66,6 +66,12 @@ export async function seedInboundEmail(page: Page, email: { from: string; subjec
   await fixture({ action: 'inboundEmail', tenantId: me.tenant.id, userId: me.user.id, ...email });
 }
 
+/** Grants (or withholds) one feature for the signed-in organisation, as the Console Admin does on its client page. */
+export async function setFeature(page: Page, feature: string, enabled: boolean) {
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  await fixture({ action: 'featureOverride', tenantId: me.tenant.id, feature, enabled });
+}
+
 /** Approves the signed-in workspace for the mobile app and switches it on (ADR 0072). */
 export async function approveMobile(page: Page) {
   const me = await (await page.request.get('/api/v1/auth/me')).json();

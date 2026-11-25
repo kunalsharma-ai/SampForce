@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
 import type { ContactRow } from '@dealflow/types';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordEmails } from '@/components/crm/record-emails';
+import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
 import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { ContactWhatsapp } from '@/components/whatsapp/contact-whatsapp';
@@ -57,6 +58,7 @@ export function ContactDetail({ id }: { id: string }) {
             </CardContent>
           </Card>
           <RelatedDeals filter={{ contactId: id }} />
+          <RfqCapture source={{ type: 'contact', id }} companyId={c.company?.id ?? null} contactId={id} />
           <RecordEmails contactId={id} email={c.email} />
           <RecordMeetings target={{ contactId: id }} />
           <RecordZoomMeetings target={{ contactId: id }} />

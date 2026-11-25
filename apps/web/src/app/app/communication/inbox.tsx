@@ -36,6 +36,7 @@ import {
   PenSquare,
   Plug,
   Search,
+  Send,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -44,6 +45,8 @@ import { EmailReading, INTENT_TONE } from '@/components/ai/email-reading';
 import { RecordPicker } from '@/components/crm/record-picker';
 import { Select, Textarea } from '@/components/crm/select';
 import { ErrorText } from '@/components/revenue/tabs';
+import { RfqCapture } from '@/components/sampbidx/rfq-capture';
+import { useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
 import { api } from '@/lib/api';
 import {
   type InboxFilters,
@@ -512,7 +515,7 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
 
         <ol className="space-y-3" aria-label={tr('Messages')}>
           {t.messages.map((m) => (
-            <MessageItem key={m.id} m={m} />
+            <MessageItem key={m.id} m={m} client={{ companyId: t.contact?.companyId ?? null, contactId: t.contact?.id ?? null }} />
           ))}
         </ol>
 
@@ -614,9 +617,13 @@ function ThreadView({ id, onBack }: { id: string; onBack: () => void }) {
   );
 }
 
-function MessageItem({ m }: { m: InboxMessage }) {
+function MessageItem({ m, client }: { m: InboxMessage; client: { companyId: string | null; contactId: string | null } }) {
   const t = useT();
   const [open, setOpen] = useState(true);
+  const [capture, setCapture] = useState(false);
+  const sampbidxOn = useSampbidxEnabled();
+  const canLog = useCan('activities:write');
+  const sampbidx = sampbidxOn && canLog;
   return (
     <li className="rounded-lg border border-border p-3">
       <button
@@ -642,8 +649,34 @@ function MessageItem({ m }: { m: InboxMessage }) {
         </pre>
       )}
       {m.direction === 'OUTBOUND' && <Tracking m={m} t={t} />}
+      {m.direction === 'INBOUND' && sampbidx && (
+        <div className="mt-2">
+          {!capture ? (
+            <Button type="button" size="sm" variant="outline" onClick={() => setCapture(true)}>
+              <Send aria-hidden /> {t('Send RFQ to SampBidx')}
+            </Button>
+          ) : (
+            <div className="mt-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <RfqCapture bare source={{ type: 'email', id: m.id }} companyId={client.companyId} contactId={client.contactId} initialText={emailAsText(m)} />
+            </div>
+          )}
+        </div>
+      )}
     </li>
   );
+}
+
+/** A synced email written out the way a mail program copies it, so the RFQ capture reads it like a pasted one. */
+function emailAsText(m: InboxMessage): string {
+  return [
+    `From: ${m.from}`,
+    `Sent: ${new Date(m.sentAt).toUTCString()}`,
+    `To: ${m.to.join(', ')}`,
+    ...(m.cc.length ? [`Cc: ${m.cc.join(', ')}`] : []),
+    `Subject: ${m.subject}`,
+    '',
+    m.bodyText ?? m.snippet ?? '',
+  ].join('\n');
 }
 
 /** What SampForce observed for a sent message, worded so estimates are not read as facts. */

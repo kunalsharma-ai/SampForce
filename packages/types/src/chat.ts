@@ -7,7 +7,8 @@ import { z } from 'zod';
  * written while they cannot reach the server and send them, once, when the connection returns (`clientId`).
  */
 
-export const CHAT_KINDS = ['DIRECT', 'CHANNEL', 'SUPPORT'] as const;
+/** SAMPBIDX: a conversation with the SampBidx bidding team (the general line, or one RFQ sent to SampBidx). */
+export const CHAT_KINDS = ['DIRECT', 'CHANNEL', 'SUPPORT', 'SAMPBIDX'] as const;
 export type ChatKind = (typeof CHAT_KINDS)[number];
 
 /** Records a conversation or a message can point at. */
@@ -136,8 +137,40 @@ export interface ChatConversationRow {
   lastMessagePreview: string | null;
   /** Whether the caller may rename it, change members or archive it. */
   canManage: boolean;
+  /** SAMPBIDX conversations only: what it is about and who from SampBidx has written in it. */
+  sampbidx?: ChatSampbidxInfo | null;
   createdAt: string;
 }
+
+/** Someone from the SampBidx team, as SampBidx names them on their messages. */
+export interface SampbidxChatPerson {
+  /** SampBidx's own id for the person, when it sends one. */
+  id: string | null;
+  name: string;
+  email: string | null;
+  /** Their role in SampBidx ("Bid manager"). */
+  role: string | null;
+}
+
+export interface ChatSampbidxInfo {
+  /** The general line to the SampBidx team, or the chat about one RFQ sent to SampBidx. */
+  scope: 'general' | 'rfq';
+  transfer: {
+    id: string;
+    title: string;
+    rfq: { id: string; number: string; projectName: string } | null;
+    company: { id: string; name: string } | null;
+    remoteId: string | null;
+    remoteUrl: string | null;
+    remoteStatus: string | null;
+  } | null;
+  /** SampBidx people who have written here, most recent first. */
+  people: SampbidxChatPerson[];
+}
+
+/** Whether SampBidx has a message written in SampForce. */
+export const SAMPBIDX_CHAT_DELIVERIES = ['SENDING', 'SENT', 'FAILED'] as const;
+export type SampbidxChatDelivery = (typeof SAMPBIDX_CHAT_DELIVERIES)[number];
 
 export interface ChatAttachmentRow {
   id: string;
@@ -159,6 +192,12 @@ export interface ChatMessageRow {
   writtenAt: string | null;
   editedAt: string | null;
   deleted: boolean;
+  /** Written by someone in SampBidx (author is then null). */
+  external?: SampbidxChatPerson | null;
+  /** A line from SampBidx about the RFQ, such as a status change, rather than a person's message. */
+  system?: boolean;
+  /** Messages written in SampForce in a SampBidx conversation: whether SampBidx has it yet. */
+  sampbidxDelivery?: { state: SampbidxChatDelivery; error: string | null; attempts: number } | null;
 }
 
 export interface ChatSearchHit {

@@ -564,6 +564,7 @@ model Tenant {
   companyEnrichments     CompanyEnrichment[]
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
+  sampbidxAttachments    SampbidxAttachment[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
@@ -1204,6 +1205,13 @@ model SampbidxTransfer {
   contactId       String?   @map("contact_id")
   /// The "RFQ received" interaction logged for a pasted email, if any.
   activityId      String?   @map("activity_id")
+  /// sha256 of the pasted text with spacing and case ignored, to catch the same email pasted twice.
+  emailTextHash   String?   @map("email_text_hash")
+  /// Where it was captured: company, contact, lead, deal, email or rfqs, and that record's id.
+  sourceType      String?   @map("source_type")
+  sourceId        String?   @map("source_id")
+  /// Attachments added next to pasted text (sampbidx_attachments), sent as files.
+  attachmentIds   String[]  @map("attachment_ids")
   /// Company files sent with an RFQ.
   fileIds         String[]  @map("file_ids")
   /// Names and sizes of everything sent, for the history list.
@@ -1230,7 +1238,29 @@ model SampbidxTransfer {
   @@index([tenantId, companyId])
   @@index([tenantId, emailMessageId])
   @@index([tenantId, remoteId])
+  @@index([tenantId, emailTextHash])
   @@map("sampbidx_transfers")
+}
+
+/// A file added next to pasted RFQ email text, kept so the send (and any retry) carries it to SampBidx (ADR 0061).
+model SampbidxAttachment {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  createdById String   @map("created_by_id")
+  /// Set once a transfer uses it; unused uploads are removed after a day.
+  transferId  String?  @map("transfer_id")
+  name        String
+  contentType String   @map("content_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String
+  data        Bytes
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, transferId])
+  @@index([tenantId, createdAt])
+  @@map("sampbidx_attachments")
 }
 
 model Rfq {
@@ -4602,6 +4632,9 @@ enum ChatKind {
   DIRECT
   CHANNEL
   SUPPORT
+  /// With the SampBidx bidding team (ADR 0078): directKey "sampbidx" for the general line, "sampbidx:<transfer id>"
+  /// for one RFQ sent to SampBidx.
+  SAMPBIDX
 }
 
 enum ChatMemberRole {
@@ -4632,6 +4665,10 @@ model ChatConversation {
   archivedAt         DateTime?     @map("archived_at")
   lastMessageAt      DateTime?     @map("last_message_at")
   lastMessagePreview String?       @map("last_message_preview")
+  /// SAMPBIDX conversations about one RFQ: the transfer it is about.
+  sampbidxTransferId String?       @map("sampbidx_transfer_id")
+  /// SAMPBIDX conversations: the SampBidx people who have written in it ({id, name, email, role}[], latest first).
+  sampbidxPeople     Json?         @map("sampbidx_people")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
 
@@ -4685,12 +4722,24 @@ model ChatMessage {
   linkLabel        String?       @map("link_label")
   editedAt         DateTime?     @map("edited_at")
   deletedAt        DateTime?     @map("deleted_at")
+  /// Written in SampBidx (ADR 0078): {id, name, email, role}. clientId is then "sampbidx:<SampBidx's message id>".
+  externalAuthor   Json?         @map("external_author")
+  /// A line from SampBidx about the RFQ (a status change), not a person's message.
+  system           Boolean?
+  /// Written in SampForce in a SAMPBIDX conversation: SENDING, SENT or FAILED, and the tries so far.
+  remoteDelivery   String?       @map("remote_delivery")
+  remoteAttempts   Int?          @map("remote_attempts")
+  remoteError      String?       @map("remote_error")
+  remoteId         String?       @map("remote_id")
+  /// When the worker may try again.
+  remoteRetryAt    DateTime?     @map("remote_retry_at")
   createdAt        DateTime      @default(now()) @map("created_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([conversationId, clientId])
+  @@index([remoteDelivery, remoteRetryAt])
   @@index([tenantId, conversationId, createdAt(sort: Desc)])
   @@map("chat_messages")
 }

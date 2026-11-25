@@ -282,7 +282,7 @@ const LEGAL_SUFFIXES = new Set([
   'ltd', 'limited', 'inc', 'incorporated', 'llc', 'llp', 'lp', 'pvt', 'private', 'plc', 'gmbh', 'ag', 'sa', 'sas', 'sarl', 'srl', 'spa',
   'bv', 'nv', 'oy', 'ab', 'as', 'pte', 'pty', 'kk', 'co', 'corp', 'corporation', 'company', 'group', 'holdings', 'the',
 ]);
-const FREE_MAIL = new Set(['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.in', 'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.de', 'mail.com', 'yandex.com', 'zoho.com', 'rediffmail.com', 'qq.com', '163.com']);
+export const FREE_MAIL_DOMAINS: ReadonlySet<string> = new Set(['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.in', 'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.de', 'mail.com', 'yandex.com', 'zoho.com', 'rediffmail.com', 'qq.com', '163.com']);
 
 /** Company name for duplicate checks: case, accents, punctuation and legal suffixes ignored ("Acme Pvt. Ltd." = "ACME"). */
 export function companyNameKey(name: string | null | undefined): string | null {
@@ -340,7 +340,7 @@ export function matchKeys(input: { websites?: Array<string | null | undefined>; 
     if (!v || !v.includes('@')) continue;
     keys.add(`e:${v}`);
     const d = domainKey(v);
-    if (d && !FREE_MAIL.has(d) && input.emailDomains) keys.add(`d:${d}`);
+    if (d && !FREE_MAIL_DOMAINS.has(d) && input.emailDomains) keys.add(`d:${d}`);
   }
   for (const p of input.phones ?? []) {
     const k = phoneKey(p);
