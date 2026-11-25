@@ -426,7 +426,7 @@ model Tenant {
   healthScore           Int?              @map("health_score")
   healthBand            String?           @map("health_band")
   healthAt              DateTime?         @map("health_at")
-  /// Who the organisation is, for AI sales emails (ADR 0077): salesProfileSchema in @dealflow/types. The Super
+  /// Who the organisation is, for AI sales emails (ADR 0078): salesProfileSchema in @dealflow/types. The Super
   /// Workspace keeps it; every workspace in the organisation writes with it. Null = never set.
   salesProfile          Json?             @map("sales_profile")
   salesProfileUpdatedAt DateTime?         @map("sales_profile_updated_at")
@@ -5182,6 +5182,30 @@ model HelpArticleStat {
 }
 
 /// "Was this helpful?" at the end of an article, one answer per person and article, with an optional comment.
+/// A message sent from Help & Support on the public website by someone who is not signed in (ADR 0078). Global: it
+/// belongs to no workspace. The Console reads it under Support tickets > Website messages.
+model SiteSupportRequest {
+  id                  String    @id @default(uuid()) @map("_id")
+  /// Short reference shown to the visitor, such as "SF-7K2M9Q".
+  reference           String    @unique
+  name                String
+  email               String
+  /// SIGN_IN, SIGN_UP, BILLING, SALES or OTHER.
+  topic               String
+  message             String
+  pagePath            String?   @map("page_path")
+  language            String?
+  /// NEW or HANDLED.
+  status              String    @default("NEW")
+  handledAt           DateTime? @map("handled_at")
+  handledByOperatorId String?   @map("handled_by_operator_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("site_support_requests")
+}
+
 model HelpFeedback {
   id         String    @id @default(uuid()) @map("_id")
   tenantId   String    @map("tenant_id")

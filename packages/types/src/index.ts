@@ -53,6 +53,7 @@ export * from './sampbidx';
 export * from './sampbidx-chat';
 export * from './chat';
 export * from './support';
+export * from './site-support';
 export * from './help-content';
 export * from './own-servers';
 export * from './workspaces';

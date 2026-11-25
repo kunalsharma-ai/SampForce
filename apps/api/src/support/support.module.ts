@@ -7,10 +7,12 @@ import { HelpContentController, OperatorHelpController } from './help-content.co
 import { HelpContentService } from './help-content.service';
 import { OperatorSupportController, SupportAttachmentsController, SupportController } from './support.controller';
 import { SupportService } from './support.service';
+import { OperatorSiteSupportController, SiteSupportController } from './site-support.controller';
+import { SiteSupportService } from './site-support.service';
 
-/** The Help Center's API and its support tickets (ADR 0073). */
+/** The Help Center's API, its support tickets (ADR 0073) and the public website's Help & Support messages (ADR 0078). */
 @Module({
-  controllers: [HelpController, HelpContentController, OperatorHelpController, SupportController, SupportAttachmentsController, OperatorSupportController],
-  providers: [SupportService, HelpContentService, NotificationsService, OperatorTokens, OperatorGuard, OperatorSessions],
+  controllers: [HelpController, HelpContentController, OperatorHelpController, SupportController, SupportAttachmentsController, OperatorSupportController, SiteSupportController, OperatorSiteSupportController],
+  providers: [SupportService, SiteSupportService, HelpContentService, NotificationsService, OperatorTokens, OperatorGuard, OperatorSessions],
 })
 export class SupportModule {}

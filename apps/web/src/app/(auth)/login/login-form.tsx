@@ -113,7 +113,7 @@ export function LoginForm() {
 }
 
 /** Second step for accounts with two-step verification: an authenticator code, or a recovery code. */
-function SecondFactor({ challenge, onDone, onRestart }: { challenge: string; onDone: () => void; onRestart: () => void }) {
+export function SecondFactor({ challenge, onDone, onRestart }: { challenge: string; onDone: () => void; onRestart: () => void }) {
   const t = useT();
   const [useRecovery, setUseRecovery] = useState(false);
   const [code, setCode] = useState('');
