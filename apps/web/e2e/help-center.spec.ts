@@ -1,8 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
-import { FEATURE_KEYS } from '@dealflow/types';
+import { FEATURE_BY_KEY, FEATURE_KEYS } from '@dealflow/types';
 import { E2E_DATABASE_URL, signUp } from './helpers';
+
+/** Every feature a plan can carry; opt-in ones (such as SampBidx chat) come only from the Console Admin. */
+const PLAN_FEATURES = FEATURE_KEYS.filter((k) => !FEATURE_BY_KEY[k].optIn);
 
 /** Set PREVIEW_DIR to save screenshots of each screen (sampforce/previews/help-center). */
 const PREVIEW_DIR = process.env.PREVIEW_DIR;
@@ -19,6 +22,9 @@ async function shot(page: Page, name: string, fullPage = false) {
 async function axe(page: Page) {
   // A pointer left over a button after a click would check its hover colour instead.
   await page.mouse.move(0, 0);
+  // Switching views is a client navigation (router.replace) that puts the page's <title> back once it settles;
+  // a scan that starts before then reports "document-title". A title that never comes back still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
@@ -111,7 +117,7 @@ test('help at every level, a raised query and its answer from the Console', asyn
   const created = await post(page.request, '/workspaces', {
     level: 'MANAGER',
     name: 'North India Sales',
-    features: FEATURE_KEYS.filter((k) => k !== 'sequences' && k !== 'rfqs'),
+    features: PLAN_FEATURES.filter((k) => k !== 'sequences' && k !== 'rfqs'),
     person: { inviteEmail: `rahul.${Date.now()}@example.com` },
   });
   const exec = await post(page.request, '/workspaces', { level: 'EXECUTIVE', name: 'Amit Desk', parentId: created.id, person: { inviteEmail: `amit.${Date.now()}@example.com` } });

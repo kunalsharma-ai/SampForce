@@ -63,9 +63,19 @@ export class SampbidxClient {
     return this.accept(keys, '/v1/rfqs', transferId, [{ name: 'rfq', contentType: 'application/json', data: Buffer.from(JSON.stringify(rfq)) }, ...files]);
   }
 
-  /** POST /v1/rfq-emails (multipart): the email's details as JSON in "email", and the original file in "message" if there is one. */
-  sendEmail(keys: SampbidxKeys, transferId: string, email: unknown, message: Part | null): Promise<SampbidxAccepted> {
-    return this.accept(keys, '/v1/rfq-emails', transferId, [{ name: 'email', contentType: 'application/json', data: Buffer.from(JSON.stringify(email)) }, ...(message ? [message] : [])]);
+  /** POST /v1/rfq-emails (multipart): the email's details as JSON in "email", the original file in "message" if there is one, and files added next to pasted text as "files". */
+  sendEmail(keys: SampbidxKeys, transferId: string, email: unknown, message: Part | null, files: Part[] = []): Promise<SampbidxAccepted> {
+    return this.accept(keys, '/v1/rfq-emails', transferId, [{ name: 'email', contentType: 'application/json', data: Buffer.from(JSON.stringify(email)) }, ...(message ? [message] : []), ...files]);
+  }
+
+  /**
+   * POST /v1/messages (multipart, ADR 0078): a chat message written in SampForce, as JSON in "message" and each file
+   * as a "files" part. The message id is the Idempotency-Key, so a retry never shows twice in SampBidx.
+   */
+  async postMessage(keys: SampbidxKeys, messageId: string, message: unknown, files: Part[]): Promise<{ id: string | null }> {
+    const { body, contentType } = multipart([{ name: 'message', contentType: 'application/json', data: Buffer.from(JSON.stringify(message)) }, ...files]);
+    const r = await this.call<{ id?: string | number }>(keys, 'POST', '/v1/messages', body, { 'content-type': contentType, 'idempotency-key': messageId, 'x-sampforce-message-id': messageId });
+    return { id: r.id === undefined || r.id === null || r.id === '' ? null : String(r.id) };
   }
 
   private async accept(keys: SampbidxKeys, path: string, transferId: string, parts: Part[]): Promise<SampbidxAccepted> {

@@ -1,7 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, expect, type Locator, type Page, test } from '@playwright/test';
-import { FEATURE_KEYS } from '@dealflow/types';
+import { FEATURE_BY_KEY, FEATURE_KEYS } from '@dealflow/types';
 import { signUp, workspaceAction } from './helpers';
+
+/** Every feature a plan can carry; opt-in ones (such as SampBidx chat) come only from the Console Admin. */
+const PLAN_FEATURES = FEATURE_KEYS.filter((k) => !FEATURE_BY_KEY[k].optIn);
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for phase previews). */
@@ -44,7 +47,7 @@ test('shows the workspace in the header and refuses a module the workspace was n
     level: 'MANAGER',
     name: 'North India Sales',
     designation: 'Regional Sales Manager',
-    features: FEATURE_KEYS.filter((k) => k !== 'rfqs'),
+    features: PLAN_FEATURES.filter((k) => k !== 'rfqs'),
     person: { inviteEmail: `rahul.${Date.now()}@example.com` },
   });
   const token = (created.inviteUrl as string).split('/invite/')[1]!;

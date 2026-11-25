@@ -2,9 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { FEATURE_KEYS } from '@dealflow/types';
+import { FEATURE_BY_KEY, FEATURE_KEYS } from '@dealflow/types';
 import { PasswordService } from '../src/auth/password.service';
 import { api, appClient, inviteMember, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
+
+/** Every feature a plan can carry; opt-in ones (such as SampBidx chat) come only from the Console Admin. */
+const PLAN_FEATURES = FEATURE_KEYS.filter((k) => !FEATURE_BY_KEY[k].optIn);
 
 const OP_SECRET = 'operator-secret-that-is-at-least-32-chars';
 
@@ -84,7 +87,7 @@ describe('help center and support tickets', () => {
     });
 
     it('leaves out what a workspace was not given, and what a level or role cannot use', async () => {
-      await api(owner).put(`/workspaces/${managerId}/permissions`, { features: FEATURE_KEYS.filter((k) => k !== 'sequences' && k !== 'rfqs') }).expect(200);
+      await api(owner).put(`/workspaces/${managerId}/permissions`, { features: PLAN_FEATURES.filter((k) => k !== 'sequences' && k !== 'rfqs') }).expect(200);
       const forExec = (await api(executive).get('/help').expect(200)).body as Help;
       expect(forExec.level).toBe('EXECUTIVE');
       expect(forExec.guides.map((g) => g.id)).not.toContain('page.sequences');
@@ -99,7 +102,7 @@ describe('help center and support tickets', () => {
       expect(forMember.guides.map((g) => g.id)).not.toContain('page.billing');
       // The owner still sees it all.
       expect(((await api(owner).get('/help').expect(200)).body as Help).faqs.map((q) => q.id)).toContain('outreach.sequence');
-      await api(owner).put(`/workspaces/${managerId}/permissions`, { features: [...FEATURE_KEYS] }).expect(200);
+      await api(owner).put(`/workspaces/${managerId}/permissions`, { features: [...PLAN_FEATURES] }).expect(200);
     });
 
     it('speaks the reader’s language and searches', async () => {

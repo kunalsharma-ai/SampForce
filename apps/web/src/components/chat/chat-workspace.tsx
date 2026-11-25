@@ -65,6 +65,7 @@ import {
   useTypingStore,
 } from '@/lib/chat';
 import { fmtLocale, useT } from '@/lib/i18n';
+import { isSampbidx, RemoteStatus, SampbidxAvatar, SampbidxDeliveryLine, SampbidxHeaderExtras, SampbidxPeople, SampbidxPersonAvatar, SampbidxSection, SampbidxSystemLine, sampbidxSubtitle } from './sampbidx-chat';
 
 // ─── Small pieces ───
 
@@ -94,6 +95,7 @@ function Avatar({ name, operator, online, className }: { name: string; operator?
 }
 
 function GroupAvatar({ c, className }: { c: ChatConversationRow; className?: string }) {
+  if (isSampbidx(c)) return <SampbidxAvatar c={c} className={className} />;
   return (
     <span aria-hidden className={cn('grid size-10 shrink-0 place-items-center rounded-full shadow-sm ring-2 ring-surface', c.kind === 'SUPPORT' ? 'bg-warning/20 text-warning' : 'bg-primary/15 text-primary', className)}>
       {c.kind === 'SUPPORT' ? <LifeBuoy className="size-5" /> : <Hash className="size-5" />}
@@ -249,7 +251,7 @@ export function ChatWorkspace({ realm, header, initialId }: { realm: ChatRealm; 
 
   const text = q.trim().toLowerCase();
   const otherOf = (c: ChatConversationRow) => (c.kind === 'DIRECT' ? c.members.find((m) => m.person.id !== realm.selfId)?.person : undefined);
-  const filtered = rows.filter((c) => {
+  const matching = rows.filter((c) => {
     if (filter === 'unread' && !c.unread) return false;
     if (filter === 'direct' && c.kind !== 'DIRECT') return false;
     if (filter === 'groups' && c.kind === 'DIRECT') return false;
@@ -257,11 +259,56 @@ export function ChatWorkspace({ realm, header, initialId }: { realm: ChatRealm; 
     const hay = `${realm.kind === 'operator' ? c.workspace : c.title} ${c.topic ?? ''} ${c.members.map((m) => m.person.name).join(' ')} ${realm.kind === 'operator' ? (c.lastMessagePreview ?? '') : ''}`.toLowerCase();
     return hay.includes(text);
   });
+  // SampBidx conversations (ADR 0078) have their own section; the team's own list never mixes them in.
+  const filtered = matching.filter((c) => !isSampbidx(c));
+  const sbxRows = archived || filter === 'direct' ? [] : matching.filter(isSampbidx);
+  const hasSampbidx = rows.some(isSampbidx);
   // People you have no direct message with yet, matching the search, to start one from here.
   const directWith = new Set(rows.filter((c) => c.kind === 'DIRECT').map((c) => otherOf(c)?.id));
   const newPeople = isUser && text ? (people.data ?? []).filter((p) => p.id !== realm.selfId && !directWith.has(p.id) && `${p.name} ${p.email ?? ''}`.toLowerCase().includes(text)).slice(0, 5) : [];
   const unreadCount = rows.filter((c) => c.unread > 0).length;
   const { create } = useChatMutations(realm);
+  const renderRow = (c: ChatConversationRow) => {
+    const other = otherOf(c);
+    const typers = Object.values(typing[c.id] ?? {}).map((x) => x.name);
+    return (
+      <button
+        type="button"
+        onClick={() => setSelected(c.id)}
+        aria-current={selected === c.id ? 'true' : undefined}
+        data-conversation={c.title}
+        data-unread={c.unread || undefined}
+        className={cn(
+          'group relative flex w-full items-center gap-3 rounded-xl p-2.5 text-start transition-colors hover:bg-muted/70',
+          selected === c.id && (isSampbidx(c) ? 'bg-warning/15 hover:bg-warning/15' : 'bg-primary/10 hover:bg-primary/10'),
+        )}
+      >
+        {c.unread > 0 && <span aria-hidden className={cn('absolute inset-y-3 start-0 w-1 rounded-full', isSampbidx(c) ? 'bg-warning' : 'bg-primary')} />}
+        {c.kind === 'DIRECT' ? <Avatar name={c.title} online={other ? presence.get(other.id)?.online ?? false : undefined} /> : <GroupAvatar c={c} />}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className={cn('truncate text-sm', c.unread ? 'font-semibold text-foreground' : 'font-medium')}>{realm.kind === 'operator' ? c.workspace : c.kind === 'SUPPORT' ? t('SampForce support') : c.sampbidx?.scope === 'general' ? t('SampBidx team') : c.title}</span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {c.sampbidx?.transfer && <RemoteStatus status={c.sampbidx.transfer.remoteStatus} />}
+              <span className={cn('text-[11px]', c.unread ? 'font-semibold text-primary' : 'text-muted-foreground')}>{shortWhen(c.lastMessageAt)}</span>
+            </span>
+          </span>
+          <span className="flex items-center justify-between gap-2">
+            {typers.length ? (
+              <span className="truncate text-xs font-medium italic text-primary">{typers.length === 1 ? t('{name} is typing…', { name: typers[0]! }) : t('Several people are typing…')}</span>
+            ) : (
+              <span className={cn('truncate text-xs', c.unread ? 'text-foreground' : 'text-muted-foreground')}>{c.lastMessagePreview ?? (isSampbidx(c) ? sampbidxSubtitle(c, t) : c.topic || t('No messages yet.'))}</span>
+            )}
+            {c.unread > 0 && (
+              <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-5 text-primary-foreground animate-in zoom-in-50" aria-label={t('{n} unread', { n: c.unread })}>
+                {c.unread > 99 ? '99+' : c.unread}
+              </span>
+            )}
+          </span>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div className={cn('grid gap-4 lg:h-[calc(100dvh-14rem)] lg:min-h-[34rem]', details ? 'lg:grid-cols-[22rem_1fr] 2xl:grid-cols-[22rem_1fr_20rem]' : 'lg:grid-cols-[22rem_1fr]')}>
@@ -337,50 +384,13 @@ export function ChatWorkspace({ realm, header, initialId }: { realm: ChatRealm; 
           ) : (
             <>
               {text && filtered.length > 0 && <p className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('Conversations')}</p>}
+              {hasSampbidx && isUser && (sbxRows.length > 0 || (!text && filter === 'all')) && <SampbidxSection rows={sbxRows} renderRow={(c) => renderRow(c)} onOpen={setSelected} />}
               {filtered.length === 0 && !text ? (
-                <EmptyList archived={archived} isUser={isUser} filter={filter} onNew={() => setDialog('new')} />
+                hasSampbidx && sbxRows.length > 0 ? null : <EmptyList archived={archived} isUser={isUser} filter={filter} onNew={() => setDialog('new')} />
               ) : (
                 <ul className="space-y-0.5">
-                  {filtered.map((c) => {
-                    const other = otherOf(c);
-                    const typers = Object.values(typing[c.id] ?? {}).map((x) => x.name);
-                    return (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelected(c.id)}
-                          aria-current={selected === c.id ? 'true' : undefined}
-                          data-conversation={c.title}
-                          data-unread={c.unread || undefined}
-                          className={cn(
-                            'group relative flex w-full items-center gap-3 rounded-xl p-2.5 text-start transition-colors hover:bg-muted/70',
-                            selected === c.id && 'bg-primary/10 hover:bg-primary/10',
-                          )}
-                        >
-                          {c.unread > 0 && <span aria-hidden className="absolute inset-y-3 start-0 w-1 rounded-full bg-primary" />}
-                          {c.kind === 'DIRECT' ? <Avatar name={c.title} online={other ? presence.get(other.id)?.online ?? false : undefined} /> : <GroupAvatar c={c} />}
-                          <span className="min-w-0 flex-1">
-                            <span className="flex items-center justify-between gap-2">
-                              <span className={cn('truncate text-sm', c.unread ? 'font-semibold text-foreground' : 'font-medium')}>{realm.kind === 'operator' ? c.workspace : c.kind === 'SUPPORT' ? t('SampForce support') : c.title}</span>
-                              <span className={cn('shrink-0 text-[11px]', c.unread ? 'font-semibold text-primary' : 'text-muted-foreground')}>{shortWhen(c.lastMessageAt)}</span>
-                            </span>
-                            <span className="flex items-center justify-between gap-2">
-                              {typers.length ? (
-                                <span className="truncate text-xs font-medium italic text-primary">{typers.length === 1 ? t('{name} is typing…', { name: typers[0]! }) : t('Several people are typing…')}</span>
-                              ) : (
-                                <span className={cn('truncate text-xs', c.unread ? 'text-foreground' : 'text-muted-foreground')}>{c.lastMessagePreview ?? (c.topic || t('No messages yet.'))}</span>
-                              )}
-                              {c.unread > 0 && (
-                                <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-5 text-primary-foreground animate-in zoom-in-50" aria-label={t('{n} unread', { n: c.unread })}>
-                                  {c.unread > 99 ? '99+' : c.unread}
-                                </span>
-                              )}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {hasSampbidx && filtered.length > 0 && <li className="px-2 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('Your team')}</li>}
+                  {filtered.map((c) => <li key={c.id}>{renderRow(c)}</li>)}
                 </ul>
               )}
               {newPeople.length > 0 && (
@@ -636,7 +646,7 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
         <ThreadSkeleton />
       </div>
     );
-  const title = realm.kind === 'operator' ? c.workspace : c.kind === 'SUPPORT' ? t('SampForce support') : c.title;
+  const title = realm.kind === 'operator' ? c.workspace : c.kind === 'SUPPORT' ? t('SampForce support') : c.sampbidx?.scope === 'general' ? t('SampBidx team') : c.title;
   const others = c.members.filter((m) => m.person.id !== realm.selfId);
   const other = c.kind === 'DIRECT' ? others[0]?.person : undefined;
   const otherPresence = other ? presence.get(other.id) : undefined;
@@ -645,7 +655,9 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
     ? typers.length === 1
       ? t('{name} is typing…', { name: typers[0]! })
       : t('Several people are typing…')
-    : c.kind === 'SUPPORT'
+    : isSampbidx(c)
+      ? sampbidxSubtitle(c, t)
+      : c.kind === 'SUPPORT'
       ? realm.kind === 'operator'
         ? t('Support line of this workspace')
         : t('Your workspace admins and the SampForce super admins')
@@ -657,7 +669,7 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
 
   return (
     <>
-      <header className="flex items-center gap-3 border-b border-border bg-surface/80 p-3 backdrop-blur">
+      <header className={cn('flex items-center gap-3 border-b border-border p-3 backdrop-blur', isSampbidx(c) ? 'bg-gradient-to-r from-warning/15 via-surface/80 to-surface/80' : 'bg-surface/80')}>
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onBack} aria-label={t('Back to conversations')}>
           <ArrowLeft aria-hidden />
         </Button>
@@ -668,8 +680,9 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
             {subtitle}
           </p>
         </div>
-        {c.link && <span className="hidden md:inline-flex"><LinkChip link={c.link} /></span>}
-        {c.kind !== 'DIRECT' && (
+        {isSampbidx(c) && <SampbidxHeaderExtras c={c} />}
+        {c.link && !isSampbidx(c) && <span className="hidden md:inline-flex"><LinkChip link={c.link} /></span>}
+        {c.kind !== 'DIRECT' && !isSampbidx(c) && (
           <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex" title={c.members.map((m) => m.person.name).join(', ')}>
             <Users className="size-3.5" aria-hidden /> {t('{n} people', { n: c.members.length })}
           </span>
@@ -728,7 +741,8 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
               {rows.map((m, i) => {
                 const prev = rows[i - 1];
                 const newDay = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString();
-                const grouped = !!prev && !newDay && !prev.deleted && prev.author?.id === m.author?.id && new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60_000 && m.id !== unreadFrom;
+                const who = (x: ChatMessageRow) => x.author?.id ?? (x.external ? `sampbidx:${x.external.email ?? x.external.name}` : x.system ? 'system' : null);
+                const grouped = !!prev && !newDay && !prev.deleted && !prev.system && who(prev) === who(m) && new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60_000 && m.id !== unreadFrom;
                 const mine = m.author?.id === realm.selfId;
                 return (
                   <React.Fragment key={m.id}>
@@ -744,7 +758,7 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
                         <span className="h-px flex-1 bg-primary/50" />
                       </li>
                     )}
-                    <MessageItem realm={realm} m={m} mine={mine} grouped={grouped} status={mine ? statusOf(c, realm.selfId, m.createdAt) : undefined} />
+                    {m.system ? <SampbidxSystemLine m={m} /> : <MessageItem realm={realm} m={m} mine={mine} grouped={grouped} status={mine && !m.sampbidxDelivery ? statusOf(c, realm.selfId, m.createdAt) : undefined} />}
                   </React.Fragment>
                 );
               })}
@@ -844,16 +858,17 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
   const { edit, remove } = useChatMutations(realm);
   const [editing, setEditing] = React.useState(false);
   const [text, setText] = React.useState(m.body);
-  const name = m.author?.name ?? t('Someone');
+  const name = m.author?.name ?? m.external?.name ?? t('Someone');
   const onlyEmoji = !!m.body && m.body.length <= 8 && /^(?:\p{Extended_Pictographic}|‍|️|\s)+$/u.test(m.body);
   return (
     <li className={cn('group flex items-end gap-2', mine && 'flex-row-reverse', grouped ? 'pt-0.5' : 'pt-3')} data-message={m.id}>
-      {grouped ? <span className="size-8 shrink-0" /> : <Avatar name={name} operator={m.author?.operator} className="size-8 text-[10px]" />}
+      {grouped ? <span className="size-8 shrink-0" /> : m.external ? <SampbidxPersonAvatar name={name} className="size-8 text-[10px]" /> : <Avatar name={name} operator={m.author?.operator} className="size-8 text-[10px]" />}
       <div className={cn('flex min-w-0 max-w-[85%] flex-col gap-1 sm:max-w-[70%]', mine ? 'items-end' : 'items-start')}>
         {!grouped && (
           <div className={cn('flex flex-wrap items-baseline gap-2 px-1 text-xs text-muted-foreground', mine && 'justify-end')}>
             <span className="font-semibold text-foreground">{mine ? t('You') : name}</span>
             {m.author?.operator && <Badge tone="warning">{t('Super admin')}</Badge>}
+            {m.external && <Badge tone="warning">{m.external.role ? t('SampBidx · {role}', { role: m.external.role }) : t('SampBidx')}</Badge>}
           </div>
         )}
         {m.deleted ? (
@@ -884,7 +899,7 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
                 className={cn(
                   'relative whitespace-pre-wrap break-words text-start text-sm shadow-sm',
                   onlyEmoji ? 'bg-transparent px-1 text-4xl leading-tight shadow-none' : 'rounded-2xl px-3 py-2',
-                  !onlyEmoji && (mine ? 'bg-primary text-primary-foreground' : 'border border-border bg-surface-raised text-foreground'),
+                  !onlyEmoji && (mine ? 'bg-primary text-primary-foreground' : m.external ? 'border border-warning/40 bg-warning/10 text-foreground' : 'border border-border bg-surface-raised text-foreground'),
                   !onlyEmoji && !grouped && (mine ? 'rounded-ee-md' : 'rounded-es-md'),
                 )}
               >
@@ -920,11 +935,12 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
                 {mine && status && <Ticks status={status} />}
               </span>
             )}
+            {mine && <SampbidxDeliveryLine m={m} />}
             {m.writtenAt && <p className="px-1 text-[11px] text-muted-foreground">{t('Written at {time} while offline', { time: `${shortWhen(m.writtenAt)} ${time(m.writtenAt)}`.trim() })}</p>}
           </>
         )}
       </div>
-      {mine && !m.deleted && !editing && (
+      {mine && !m.deleted && !editing && !m.sampbidxDelivery && (
         <div className="flex shrink-0 gap-0.5 self-center opacity-100 transition-opacity focus-within:opacity-100 group-hover:opacity-100 lg:opacity-0">
           {m.body && (
             <button type="button" className="inline-flex min-h-6 min-w-6 items-center justify-center gap-1 rounded-md px-1.5 text-xs text-muted-foreground hover:bg-muted" onClick={() => { setText(m.body); setEditing(true); }}>
@@ -1096,7 +1112,7 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
         <Button type="button" variant="ghost" size="icon" className="shrink-0 rounded-full" onClick={() => fileRef.current?.click()} aria-label={t('Attach a file')}>
           <Paperclip aria-hidden />
         </Button>
-        {realm.kind === 'user' && (
+        {realm.kind === 'user' && !isSampbidx(conv) && (
           <Button type="button" variant="ghost" size="icon" className="hidden shrink-0 rounded-full sm:inline-flex" onClick={() => setPicking(true)} aria-label={t('Link a company, RFQ or deal')}>
             <Link2 aria-hidden />
           </Button>
@@ -1124,7 +1140,7 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
             }
           }}
           maxLength={CHAT_MESSAGE_MAX}
-          placeholder={t('Write a message')}
+          placeholder={isSampbidx(conv) ? t('Message the SampBidx team') : t('Write a message')}
           aria-label={t('Message')}
           className="max-h-[200px] min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
           rows={1}
@@ -1134,7 +1150,7 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
         </Button>
       </form>
       <p className="flex justify-between px-2 text-[11px] text-muted-foreground">
-        <span className="hidden sm:inline">{t('Enter to send, Shift + Enter for a new line')}</span>
+        <span className="hidden sm:inline">{isSampbidx(conv) ? t('Goes to the SampBidx team as well as your colleagues here') : t('Enter to send, Shift + Enter for a new line')}</span>
         {near && <span className={cn(body.length >= CHAT_MESSAGE_MAX && 'text-critical')}>{`${body.length} / ${CHAT_MESSAGE_MAX}`}</span>}
       </p>
       {picking && <LinkPicker onPick={(o) => { setLink(o); setPicking(false); }} onClose={() => setPicking(false)} />}
@@ -1166,8 +1182,9 @@ function DetailsPanel({ realm, id, onClose }: { realm: ChatRealm; id: string; on
             <LinkChip link={c.link} />
           </section>
         )}
+        {isSampbidx(c) && <SampbidxPeople people={c.sampbidx?.people ?? []} />}
         <section className="space-y-2">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t('People')}</h4>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{isSampbidx(c) ? t('From your team') : t('People')}</h4>
           <ul className="space-y-2">
             {c.members.map((m) => {
               const p = presence.get(m.person.id);

@@ -11,6 +11,7 @@ import { LeadQualificationCard } from '@/components/ai/record-ai';
 import { RecordMeetings } from '@/components/meetings/record-meetings';
 import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { RecordEmails } from '@/components/crm/record-emails';
+import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { RecordSequences } from '@/components/crm/record-sequences';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { Select } from '@/components/crm/select';
@@ -97,6 +98,7 @@ export function LeadDetail({ id }: { id: string }) {
               />
             </CardContent>
           </Card>
+          <RfqCapture source={{ type: 'lead', id }} />
           <RecordEmails leadId={id} email={l.email} />
           <ActivityTimeline related={{ leadId: id }} timeline={{ entity: 'lead', id }} />
         </div>
