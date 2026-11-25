@@ -254,6 +254,7 @@ export const validation = {
   'Use a time like 14:30': ['Usa una hora como 14:30', 'Utilisez une heure comme 14:30', 'Verwenden Sie eine Uhrzeit wie 14:30', 'استخدم وقتًا مثل 14:30'],
 
   // Also translated on pages (the same rows as the web app's page tables).
+  'Tell us a little more (at least 10 characters)': ['Cuéntanos un poco más (al menos 10 caracteres)', 'Dites-nous en un peu plus (au moins 10 caractères)', 'Erzählen Sie uns etwas mehr (mindestens 10 Zeichen)', 'أخبرنا بالمزيد قليلًا (10 أحرف على الأقل)'],
   'Enter your name': ['Introduce tu nombre', 'Saisissez votre nom', 'Geben Sie Ihren Namen ein', 'أدخل اسمك'],
   'Include at least one number': ['Incluye al menos un número', 'Incluez au moins un chiffre', 'Verwenden Sie mindestens eine Zahl', 'أضف رقمًا واحدًا على الأقل'],
   'Include at least one letter': ['Incluye al menos una letra', 'Incluez au moins une lettre', 'Verwenden Sie mindestens einen Buchstaben', 'أضف حرفًا واحدًا على الأقل'],

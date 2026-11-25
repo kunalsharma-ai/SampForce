@@ -8,6 +8,7 @@ import { OperatorChatController } from '../chat/chat.controller';
 import { OperatorMobileController } from '../mobile/mobile.controller';
 import { OperatorHelpController } from '../support/help-content.controller';
 import { OperatorSupportController } from '../support/support.controller';
+import { OperatorSiteSupportController } from '../support/site-support.controller';
 import { OperatorAdminController } from './operator-admin.controller';
 import { OperatorSecurityController } from './operator-security.controller';
 import { OPERATOR_ROUTE_METADATA, OperatorGuard } from './operator-auth';
@@ -18,7 +19,7 @@ import { ConsoleClientsProfileController } from './console-clients-profile.contr
 import { ConsoleAuditController } from './console-audit.controller';
 import { ConsoleNotificationsController } from './console-notifications.controller';
 
-const CONTROLLERS = [ConsoleHealthController, ConsoleOverviewController, ConsoleClientsListController, OperatorController, ConsoleClientsProfileController, ConsoleAuditController, ConsoleNotificationsController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorHelpController, OperatorMobileController, WorkspaceRulesController];
+const CONTROLLERS = [ConsoleHealthController, ConsoleOverviewController, ConsoleClientsListController, OperatorController, ConsoleClientsProfileController, ConsoleAuditController, ConsoleNotificationsController, OperatorAdminController, OperatorSecurityController, OperatorChatController, OperatorSupportController, OperatorSiteSupportController, OperatorHelpController, OperatorMobileController, WorkspaceRulesController];
 
 /** Every Console route says what it needs (ADR 0074): a permission, any signed-in operator, or no session at all. */
 describe('operator routes', () => {

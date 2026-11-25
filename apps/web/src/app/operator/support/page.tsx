@@ -9,7 +9,7 @@ import {
   type SupportTicketStatus,
 } from '@dealflow/types';
 import { Badge, Button, Card, Input, Skeleton } from '@dealflow/ui';
-import { BarChart3, Inbox, Search, Smartphone } from 'lucide-react';
+import { BarChart3, Globe, Inbox, Search, Smartphone } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
@@ -21,6 +21,7 @@ import {
 } from '@/components/help/help-ui';
 import { AttachmentPicker, MessageFiles, RelatedRecord } from '@/components/help/support-files';
 import { SupportReportView } from '@/components/help/support-report';
+import { SiteMessagesView } from '@/components/console/site-messages';
 import { PageHeader } from '@/components/page-header';
 import { useT } from '@/lib/i18n';
 import {
@@ -59,6 +60,7 @@ function SupportInbox() {
   );
   const selected = params.get('ticket');
   const reports = params.get('view') === 'reports';
+  const website = params.get('view') === 'website';
   const select = (id: string) => router.replace(`${pathname}?ticket=${id}`, { scroll: false });
   const count = (s: SupportTicketStatus | 'ALL') =>
     !counts.data
@@ -73,21 +75,34 @@ function SupportInbox() {
         title="Support tickets"
         description="Queries raised from Help in every client’s workspaces."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              router.replace(reports ? pathname : `${pathname}?view=reports`, { scroll: false })
-            }
-            data-support-view={reports ? 'tickets' : 'reports'}
-          >
-            {reports ? <Inbox aria-hidden /> : <BarChart3 aria-hidden />}{' '}
-            {reports ? t('Back to tickets') : t('Support reports')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* Messages from Help & Support on the public website, sent by people who are not signed in (ADR 0078). */}
+            <Button
+              variant={website ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => router.replace(website ? pathname : `${pathname}?view=website`, { scroll: false })}
+              data-support-view={website ? 'tickets' : 'website'}
+            >
+              {website ? <Inbox aria-hidden /> : <Globe aria-hidden />} {website ? t('Back to tickets') : t('Website messages')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                router.replace(reports ? pathname : `${pathname}?view=reports`, { scroll: false })
+              }
+              data-support-view={reports ? 'tickets' : 'reports'}
+            >
+              {reports ? <Inbox aria-hidden /> : <BarChart3 aria-hidden />}{' '}
+              {reports ? t('Back to tickets') : t('Support reports')}
+            </Button>
+          </div>
         }
       />
       {reports ? (
         <SupportReportView />
+      ) : website ? (
+        <SiteMessagesView enabled={!!me.data} />
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2">
