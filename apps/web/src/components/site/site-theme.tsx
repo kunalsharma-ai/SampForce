@@ -6,7 +6,7 @@ import { PAINT_CACHE_KEY } from '@/lib/appearance-engine';
 import { useT } from '@/lib/i18n';
 
 /**
- * The public website's own light and dark modes (ADR 0078), in its own Aurora palette. The choice is kept on this
+ * The public website's own light and dark modes (ADR 0078), in its own Ember palette, taken from the SampForce logo. The choice is kept on this
  * device only; until a visitor picks one, the site follows the device's colour scheme. The workspace theme the app
  * paints on <html> is put back when the visitor leaves the site.
  */

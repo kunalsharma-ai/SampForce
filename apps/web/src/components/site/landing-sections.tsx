@@ -20,7 +20,7 @@ function MarqueeRow({ items, reverse, dur }: { items: string[]; reverse?: boolea
           <span className="whitespace-nowrap">
             <Tr text={x} />
           </span>
-          <Sparkles className="size-4 text-accent" aria-hidden />
+          <Sparkles className="sfx-sparkle size-4 text-accent" aria-hidden />
         </li>
       ))}
     </ul>
@@ -103,7 +103,7 @@ export function FlowBoard() {
               <div key={stage} className="sfx-lane min-h-[230px] rounded-2xl p-3">
                 <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    {s === 3 ? <Trophy className="size-3.5 text-success" /> : <span className="size-2 rounded-full" style={{ background: `hsl(var(${['--sfx-cyan', '--sfx-violet', '--sfx-pink'][s]}))` }} />}
+                    {s === 3 ? <Trophy className="size-3.5 text-success" /> : <span className="size-2 rounded-full" style={{ background: `hsl(var(${['--sfx-amber', '--sfx-red', '--sfx-ember'][s]}))` }} />}
                     <Tr text={stage} />
                   </span>
                   <span className="rounded-full bg-muted px-2 py-0.5 tabular">{here.length}</span>
@@ -194,7 +194,7 @@ export function FeatureBento() {
           onPointerLeave={resetSpot}
         >
           <span className="sfx-icon-tile grid size-11 place-items-center rounded-2xl">
-            <f.icon className="size-5 text-primary" aria-hidden />
+            <f.icon className="sfx-icon-float size-5 text-primary" style={{ '--i': i } as CSSProperties} aria-hidden />
           </span>
           <h3 className="mt-4 text-lg font-semibold tracking-tight">
             <Tr text={f.title} />
@@ -263,7 +263,7 @@ export function AiSteps() {
       <motion.div
         aria-hidden
         className="absolute inset-x-[16%] top-7 hidden h-0.5 origin-left rounded-full md:block rtl:origin-right"
-        style={{ background: 'linear-gradient(90deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)), hsl(var(--sfx-cyan)))' }}
+        style={{ background: 'linear-gradient(90deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)), hsl(var(--sfx-amber)))' }}
         initial={{ scaleX: 0 }}
         whileInView={{ scaleX: 1 }}
         viewport={{ once: true, margin: '-30%' }}

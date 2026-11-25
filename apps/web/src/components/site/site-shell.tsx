@@ -5,12 +5,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
 import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthLanguage } from '@/components/auth-language';
-import { Logo } from '@/components/logo';
 import { useT } from '@/lib/i18n';
 import { AccessPortal } from './access-portal';
 import { AuroraCanvas } from './aurora-canvas';
 import { faceFromHash, PORTAL_HASH, type PortalFace, SiteContext } from './site-context';
 import { HelpOrb, HelpPanel } from './site-help';
+import { SiteLogo } from './site-logo';
+import { ScrollProgress, StrikeIntro } from './site-motion';
 import { SiteThemeToggle, useSiteTheme } from './site-theme';
 import './site.css';
 
@@ -20,7 +21,7 @@ function plainClick(e: MouseEvent): boolean {
 }
 
 /**
- * The public website's frame (ADR 0078): the Aurora sky, a floating glass header with the light/dark switch, the
+ * The public website's frame (ADR 0078): the ember sky, a floating glass header with the light/dark switch, the
  * sign-in and sign-up portal, and Help & Support on every page. No tracking scripts, no third-party embeds.
  */
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <SiteContext.Provider value={ctx}>
       <div className="sfx-root relative isolate flex min-h-screen flex-col overflow-x-clip" {...theme.attrs} data-site-root="">
         <AuroraCanvas mode={theme.mode} />
+        <ScrollProgress />
+        <StrikeIntro />
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2">
           {t('Skip to content')}
         </a>
@@ -96,7 +99,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             className="sfx-nav mx-auto flex max-w-6xl items-center gap-2 rounded-full border border-border/70 py-2 pe-2 ps-4 sm:gap-4"
           >
             <Link href="/" className="shrink-0 rounded-full">
-              <Logo animated />
+              <SiteLogo />
             </Link>
             <div className="ms-2 hidden items-center md:flex">
               {links.map((l) => (
@@ -156,7 +159,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         </main>
         <footer className="relative mt-10 border-t border-border/60 bg-surface/40 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-3 px-4 py-8 text-sm text-muted-foreground sm:px-6">
-            <Logo />
+            <SiteLogo />
             <span className="text-xs">{t('© {year} Sampledge. SampForce is a product of Sampledge.', { year: new Date().getFullYear() })}</span>
             <nav aria-label={t('Footer')} className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:ms-auto">
               <Link href="/pricing" className="hover:text-foreground">

@@ -11,14 +11,18 @@ attractive way to sign up and sign in.
 
 ## Decision
 
-- **Aurora palette, scoped.** `components/site/site.css` sets the shared design tokens (`--background`, `--primary`…)
+- **Ember palette from the logo, scoped.** (First drafted as a violet/cyan "Aurora" palette; changed on review so the
+  site carries the SampForce logo's red, ember and amber.) `components/site/site.css` sets the shared design tokens (`--background`, `--primary`…)
   on the site root (`.sfx-root`) and on its dialogs (`.sfx-scope`, since Radix portals render outside the page), so
-  shared components (buttons, inputs, the language picker) take the palette without changes. Dark: ink indigo,
-  electric violet, magenta, glacier cyan, lime spark. Light: pearl with the same hues at AA contrast.
+  shared components (buttons, inputs, the language picker) take the palette without changes. Dark: near-black
+  ember ink, logo red, ember orange, amber and a pale spark. Light: warm paper with deeper reds at AA contrast. The logo
+  is shown larger, with "Force" in the logo's red-to-amber, and the bolt sits at the centre of the hero orbit.
 - **Own light and dark modes.** `useSiteTheme` follows the device until the visitor picks one, keeps the choice in
   `localStorage` (`sampforce:site-theme`), sets `html.dark` while the site is open (shared `dark:` utilities read it)
   and puts the app's theme back on leaving.
-- **Animation.** A canvas sky (aurora ribbons and a constellation that leans to the pointer, paused when hidden),
+- **Animation.** A once-per-tab lightning strike on arrival, a scroll progress bar, a canvas sky (ember ribbons,
+  embers rising and sparks thrown off the pointer, a constellation that leans to it, paused when hidden), electric
+  arcs off the orbit core, faint drifting bolt watermarks, section headings with a bolt-tipped underline sweep,
   rising headline letters (word by word in Arabic), a kinetic Sell/Close/Grow ticker, the revenue orbit with the eight
   real modules and deals spiralling in, a capability marquee, a self-moving sample pipeline (labelled as sample
   deals), spotlight/tilt bento cards and a drawing AI-steps line. Everything holds still under reduced motion and the

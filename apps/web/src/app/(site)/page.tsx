@@ -2,28 +2,13 @@ import type { Metadata } from 'next';
 import { AiSteps, CapabilityMarquee, FeatureBento, FlowBoard } from '@/components/site/landing-sections';
 import { LandingFinale } from '@/components/site/landing-finale';
 import { LandingHero } from '@/components/site/landing-hero';
+import { SectionHead } from '@/components/site/site-motion';
 import { Tr } from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'SampForce by Sampledge: the AI-native sales CRM',
   description: 'Leads, deals, automation, quotes, contracts and revenue analytics in one workspace, with AI that explains itself and asks before it acts.',
 };
-
-function SectionHead({ id, kicker, title, body }: { id: string; kicker: string; title: string; body: string }) {
-  return (
-    <div className="mx-auto mb-10 max-w-2xl text-center">
-      <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">
-        <Tr text={kicker} />
-      </p>
-      <h2 id={id} className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-        <Tr text={title} />
-      </h2>
-      <p className="mt-3 text-muted-foreground">
-        <Tr text={body} />
-      </p>
-    </div>
-  );
-}
 
 /**
  * The public home page (ADR 0078): a living sky, the revenue orbit, a pipeline that moves on its own, and the modules

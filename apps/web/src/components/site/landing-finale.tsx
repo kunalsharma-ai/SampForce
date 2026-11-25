@@ -4,6 +4,7 @@ import { ArrowRight, KeyRound, LifeBuoy } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useT } from '@/lib/i18n';
 import { useSite } from './site-context';
+import { BoltWatermark } from './site-motion';
 
 /** The closing call: one more way in, and a way to ask first. */
 export function LandingFinale() {
@@ -19,6 +20,8 @@ export function LandingFinale() {
         className="sfx-ring-border rounded-[2rem]"
       >
         <div className="sfx-finale relative overflow-hidden rounded-[calc(2rem-1px)] px-6 py-14 text-center sm:px-12 sm:py-20">
+          <BoltWatermark className="-end-10 -top-10 h-80" />
+          <BoltWatermark className="-bottom-16 -start-8 h-56 [animation-delay:-6s]" />
           <h2 id="finale" className="mx-auto max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">
             <span className="sfx-gradient-text">{t('Your pipeline, but alive.')}</span>
           </h2>

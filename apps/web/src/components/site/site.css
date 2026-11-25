@@ -1,67 +1,68 @@
 /*
- * The public website's Aurora look (ADR 0078): ink-indigo nights or pearl days, electric violet, hot magenta and
- * glacier cyan, with a lime spark. The tokens are set on the site's root (and on its dialogs, which render outside
+ * The public website's Ember look (ADR 0078), taken from the SampForce logo: ember-black nights or ivory days in
+ * SampForce red, a glowing ember orange and the logo's amber spark. The tokens are set on the site's root (and on its dialogs, which render outside
  * it), so the shared components inside (buttons, inputs, the language picker) take the palette without changes.
  * Every animation stops for people who ask for less motion.
  */
 
 .sfx-root[data-sfx-mode='dark'],
 .sfx-scope[data-sfx-mode='dark'] {
-  --background: 248 47% 6%;
-  --foreground: 250 100% 98%;
-  --surface: 248 40% 10%;
-  --surface-raised: 248 34% 14%;
-  --border: 250 30% 22%;
-  --input: 250 28% 32%;
-  --ring: 262 100% 74%;
-  --primary: 262 100% 74%;
-  --primary-foreground: 248 47% 6%;
-  --accent: 330 100% 68%;
-  --accent-foreground: 248 47% 6%;
-  --muted: 248 32% 14%;
-  --muted-foreground: 250 26% 76%;
-  --success: 158 80% 50%;
-  --warning: 40 100% 64%;
+  --background: 350 32% 5%;
+  --foreground: 30 60% 97%;
+  --surface: 350 26% 9%;
+  --surface-raised: 350 22% 13%;
+  --border: 355 22% 20%;
+  --input: 355 20% 32%;
+  --ring: 4 92% 64%;
+  --primary: 4 92% 64%;
+  --primary-foreground: 350 32% 5%;
+  --accent: 41 100% 67%;
+  --accent-foreground: 350 32% 5%;
+  --muted: 350 22% 12%;
+  --muted-foreground: 25 20% 76%;
+  --success: 152 70% 50%;
+  --warning: 41 100% 67%;
   --critical: 351 100% 72%;
-  --critical-foreground: 248 47% 6%;
-  --popover: 248 40% 10%;
-  --popover-foreground: 250 100% 98%;
-  --sfx-violet: 262 100% 74%;
-  --sfx-pink: 330 100% 68%;
-  --sfx-cyan: 186 100% 62%;
-  --sfx-lime: 78 95% 64%;
-  --sfx-glass: 248 40% 12%;
+  --critical-foreground: 350 32% 5%;
+  --popover: 350 26% 9%;
+  --popover-foreground: 30 60% 97%;
+  /* The logo's own colours: SampForce red, the ember between, the amber spark, and a white-hot spark. */
+  --sfx-red: 0 84% 58%;
+  --sfx-ember: 18 100% 58%;
+  --sfx-amber: 41 100% 67%;
+  --sfx-spark: 46 100% 80%;
+  --sfx-glass: 350 26% 10%;
   --sfx-glow: 0.55;
   color-scheme: dark;
 }
 
 .sfx-root[data-sfx-mode='light'],
 .sfx-scope[data-sfx-mode='light'] {
-  --background: 250 60% 98.5%;
-  --foreground: 248 50% 10%;
+  --background: 30 60% 98.5%;
+  --foreground: 350 40% 9%;
   --surface: 0 0% 100%;
-  --surface-raised: 250 50% 96%;
-  --border: 250 30% 86%;
-  --input: 250 22% 62%;
-  --ring: 262 83% 50%;
-  --primary: 262 83% 50%;
+  --surface-raised: 30 50% 96%;
+  --border: 15 30% 86%;
+  --input: 15 18% 60%;
+  --ring: 0 76% 44%;
+  --primary: 0 76% 44%;
   --primary-foreground: 0 0% 100%;
-  --accent: 330 85% 42%;
+  --accent: 24 95% 36%;
   --accent-foreground: 0 0% 100%;
-  --muted: 250 40% 94.5%;
-  --muted-foreground: 250 18% 34%;
-  --success: 158 90% 24%;
+  --muted: 25 45% 94.5%;
+  --muted-foreground: 350 14% 34%;
+  --success: 152 85% 24%;
   --warning: 32 100% 30%;
   --critical: 351 75% 42%;
   --critical-foreground: 0 0% 100%;
   --popover: 0 0% 100%;
-  --popover-foreground: 248 50% 10%;
-  --sfx-violet: 262 83% 50%;
-  --sfx-pink: 330 85% 46%;
-  --sfx-cyan: 190 95% 32%;
-  --sfx-lime: 85 80% 30%;
+  --popover-foreground: 350 40% 9%;
+  --sfx-red: 0 76% 46%;
+  --sfx-ember: 16 92% 46%;
+  --sfx-amber: 36 100% 42%;
+  --sfx-spark: 40 100% 50%;
   --sfx-glass: 0 0% 100%;
-  --sfx-glow: 0.28;
+  --sfx-glow: 0.3;
   color-scheme: light;
 }
 
@@ -74,7 +75,7 @@
 /* ── Type ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
 
 .sfx-gradient-text {
-  background: linear-gradient(100deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)) 45%, hsl(var(--sfx-cyan)) 90%);
+  background: linear-gradient(100deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)) 45%, hsl(var(--sfx-amber)) 90%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -161,17 +162,17 @@
   isolation: isolate;
   overflow: hidden;
   border-radius: 9999px;
-  background: linear-gradient(110deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(110deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 10px 40px -10px hsl(var(--sfx-pink) / 0.7), inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  box-shadow: 0 10px 40px -10px hsl(var(--sfx-ember) / 0.7), inset 0 1px 0 hsl(0 0% 100% / 0.35);
   transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.4), box-shadow 0.25s;
 }
 .sfx-root[data-sfx-mode='light'] .sfx-cta,
 .sfx-scope[data-sfx-mode='light'] .sfx-cta {
-  background: linear-gradient(110deg, hsl(262 83% 46%), hsl(330 85% 40%));
+  background: linear-gradient(110deg, hsl(0 76% 42%), hsl(16 92% 38%));
 }
 .sfx-cta:hover {
-  box-shadow: 0 14px 50px -8px hsl(var(--sfx-pink) / 0.85), inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  box-shadow: 0 14px 50px -8px hsl(var(--sfx-ember) / 0.85), inset 0 1px 0 hsl(0 0% 100% / 0.35);
 }
 .sfx-cta::after {
   content: '';
@@ -204,7 +205,7 @@
   inset: -1.5px;
   z-index: -1;
   border-radius: inherit;
-  background: conic-gradient(from var(--sfx-angle, 0deg), hsl(var(--sfx-violet)), hsl(var(--sfx-cyan)), hsl(var(--sfx-pink)), hsl(var(--sfx-lime)), hsl(var(--sfx-violet)));
+  background: conic-gradient(from var(--sfx-angle, 0deg), hsl(var(--sfx-red)), hsl(var(--sfx-amber)), hsl(var(--sfx-ember)), hsl(var(--sfx-spark)), hsl(var(--sfx-red)));
   animation: sfx-spin-angle 4s linear infinite;
 }
 .sfx-ring-border::after {
@@ -232,7 +233,7 @@
   background: hsl(var(--sfx-glass) / 0.72);
   backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  box-shadow: 0 12px 40px -18px hsl(var(--sfx-violet) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  box-shadow: 0 12px 40px -18px hsl(var(--sfx-red) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.06);
 }
 .sfx-nav-link {
   position: relative;
@@ -244,7 +245,7 @@
   bottom: 0.3rem;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(90deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   transform: scaleX(0);
   transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -277,8 +278,9 @@
   transform-style: preserve-3d;
 }
 .sfx-core {
-  background: radial-gradient(circle at 35% 30%, hsl(0 0% 100% / 0.95), hsl(var(--sfx-violet)) 32%, hsl(var(--sfx-pink)) 62%, hsl(var(--sfx-violet) / 0.1) 100%);
-  box-shadow: 0 0 60px 10px hsl(var(--sfx-pink) / var(--sfx-glow)), 0 0 140px 40px hsl(var(--sfx-violet) / calc(var(--sfx-glow) * 0.7));
+  background: radial-gradient(circle at 35% 30%, hsl(var(--sfx-spark) / 0.35), hsl(350 40% 12%) 45%, hsl(350 45% 6%) 100%);
+  border: 1px solid hsl(var(--sfx-amber) / 0.45);
+  box-shadow: 0 0 60px 10px hsl(var(--sfx-red) / var(--sfx-glow)), 0 0 140px 40px hsl(var(--sfx-ember) / calc(var(--sfx-glow) * 0.7)), inset 0 0 30px hsl(var(--sfx-red) / 0.5);
   animation: sfx-breathe 4.5s ease-in-out infinite;
 }
 @keyframes sfx-breathe {
@@ -287,7 +289,7 @@
   }
 }
 .sfx-core-pulse {
-  border: 2px solid hsl(var(--sfx-pink) / 0.7);
+  border: 2px solid hsl(var(--sfx-ember) / 0.7);
   animation: sfx-pulse 3s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
 }
 @keyframes sfx-pulse {
@@ -301,13 +303,13 @@
   }
 }
 .sfx-ring {
-  border: 1px dashed hsl(var(--sfx-violet) / 0.45);
+  border: 1px dashed hsl(var(--sfx-ember) / 0.5);
   animation: sfx-spin var(--dur, 30s) linear infinite;
   animation-direction: var(--dir, normal);
 }
 .sfx-ring[data-solid] {
   border-style: solid;
-  border-color: hsl(var(--sfx-cyan) / 0.3);
+  border-color: hsl(var(--sfx-amber) / 0.35);
 }
 @keyframes sfx-spin {
   to {
@@ -335,8 +337,8 @@
   background: hsl(var(--sfx-glass) / 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid hsl(var(--sfx-violet) / 0.35);
-  box-shadow: 0 8px 30px -12px hsl(var(--sfx-violet) / 0.8);
+  border: 1px solid hsl(var(--sfx-red) / 0.35);
+  box-shadow: 0 8px 30px -12px hsl(var(--sfx-red) / 0.8);
 }
 /* Deals arriving at the core along a spiral, flaring as they land. */
 .sfx-comet {
@@ -347,8 +349,8 @@
   height: 10px;
   margin: -5px 0 0 -5px;
   border-radius: 9999px;
-  background: hsl(var(--sfx-lime));
-  box-shadow: 0 0 14px 4px hsl(var(--sfx-lime) / 0.8);
+  background: hsl(var(--sfx-spark));
+  box-shadow: 0 0 14px 4px hsl(var(--sfx-spark) / 0.8);
   offset-path: var(--path);
   animation: sfx-comet var(--dur, 5s) cubic-bezier(0.5, 0, 0.9, 0.6) infinite;
   animation-delay: var(--delay, 0s);
@@ -441,7 +443,7 @@
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--sfx-violet) / 0.16), transparent 45%);
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--sfx-red) / 0.16), transparent 45%);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -449,11 +451,11 @@
   opacity: 1;
 }
 .sfx-spot:hover {
-  border-color: hsl(var(--sfx-violet) / 0.55);
+  border-color: hsl(var(--sfx-red) / 0.55);
 }
 .sfx-icon-tile {
-  background: linear-gradient(135deg, hsl(var(--sfx-violet) / 0.22), hsl(var(--sfx-pink) / 0.18));
-  box-shadow: inset 0 0 0 1px hsl(var(--sfx-violet) / 0.35);
+  background: linear-gradient(135deg, hsl(var(--sfx-red) / 0.22), hsl(var(--sfx-ember) / 0.18));
+  box-shadow: inset 0 0 0 1px hsl(var(--sfx-red) / 0.35);
 }
 .sfx-spot:hover .sfx-icon-tile {
   animation: sfx-wiggle 0.7s cubic-bezier(0.3, 1.6, 0.5, 1);
@@ -476,7 +478,7 @@
 .sfx-deal {
   background: hsl(var(--surface));
   border: 1px solid hsl(var(--border));
-  box-shadow: 0 6px 24px -14px hsl(var(--sfx-violet) / 0.9);
+  box-shadow: 0 6px 24px -14px hsl(var(--sfx-red) / 0.9);
 }
 .sfx-deal[data-won] {
   border-color: hsl(var(--success) / 0.7);
@@ -513,9 +515,9 @@
 }
 .sfx-step[data-lit] .sfx-step-orb {
   border-color: transparent;
-  background: linear-gradient(135deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(135deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 0 0 6px hsl(var(--sfx-violet) / 0.15), 0 0 40px hsl(var(--sfx-pink) / var(--sfx-glow));
+  box-shadow: 0 0 0 6px hsl(var(--sfx-red) / 0.15), 0 0 40px hsl(var(--sfx-ember) / var(--sfx-glow));
   transform: scale(1.08);
 }
 
@@ -523,20 +525,20 @@
 
 .sfx-finale {
   background:
-    radial-gradient(60% 120% at 0% 0%, hsl(var(--sfx-violet) / 0.35), transparent 60%),
-    radial-gradient(60% 120% at 100% 100%, hsl(var(--sfx-pink) / 0.3), transparent 60%),
+    radial-gradient(60% 120% at 0% 0%, hsl(var(--sfx-red) / 0.35), transparent 60%),
+    radial-gradient(60% 120% at 100% 100%, hsl(var(--sfx-ember) / 0.3), transparent 60%),
     hsl(var(--surface) / 0.8);
 }
 
 /* ── Help & Support ───────────────────────────────────────────────────────────────────────────────────────────── */
 
 .sfx-help-orb {
-  background: linear-gradient(135deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(135deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 12px 40px -8px hsl(var(--sfx-pink) / 0.75);
+  box-shadow: 0 12px 40px -8px hsl(var(--sfx-ember) / 0.75);
 }
 .sfx-root[data-sfx-mode='light'] .sfx-help-orb {
-  background: linear-gradient(135deg, hsl(262 83% 46%), hsl(330 85% 40%));
+  background: linear-gradient(135deg, hsl(0 76% 42%), hsl(16 92% 38%));
 }
 .sfx-help-orb .sfx-help-label {
   max-width: 0;
@@ -552,7 +554,7 @@
 }
 .sfx-help-ping {
   animation: sfx-ping-soft 2.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
-  border: 2px solid hsl(var(--sfx-pink) / 0.6);
+  border: 2px solid hsl(var(--sfx-ember) / 0.6);
 }
 .sfx-help-icon {
   animation: sfx-float-turn 6s ease-in-out infinite;
@@ -564,8 +566,8 @@
 }
 .sfx-panel-head {
   background:
-    radial-gradient(120% 140% at 100% 0%, hsl(var(--sfx-pink) / 0.35), transparent 55%),
-    radial-gradient(100% 140% at 0% 100%, hsl(var(--sfx-violet) / 0.4), transparent 60%);
+    radial-gradient(120% 140% at 100% 0%, hsl(var(--sfx-ember) / 0.35), transparent 55%),
+    radial-gradient(100% 140% at 0% 100%, hsl(var(--sfx-red) / 0.4), transparent 60%);
 }
 
 @keyframes sfx-ping-soft {
@@ -583,9 +585,9 @@
 
 .sfx-portal-bg {
   background:
-    radial-gradient(circle at 50% 45%, hsl(var(--sfx-violet) / 0.35), transparent 55%),
-    radial-gradient(circle at 15% 85%, hsl(var(--sfx-pink) / 0.25), transparent 45%),
-    radial-gradient(circle at 85% 15%, hsl(var(--sfx-cyan) / 0.2), transparent 40%),
+    radial-gradient(circle at 50% 45%, hsl(var(--sfx-red) / 0.35), transparent 55%),
+    radial-gradient(circle at 15% 85%, hsl(var(--sfx-ember) / 0.25), transparent 45%),
+    radial-gradient(circle at 85% 15%, hsl(var(--sfx-amber) / 0.2), transparent 40%),
     hsl(var(--background));
 }
 /* Light streaks rushing past, as if the card had come out of hyperspace. */
@@ -620,15 +622,15 @@
   background: hsl(var(--surface) / 0.88);
   backdrop-filter: blur(22px) saturate(1.3);
   -webkit-backdrop-filter: blur(22px) saturate(1.3);
-  box-shadow: 0 40px 120px -30px hsl(var(--sfx-violet) / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.08);
+  box-shadow: 0 40px 120px -30px hsl(var(--sfx-red) / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.08);
 }
 .sfx-switch-pill {
-  background: linear-gradient(110deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(110deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   transition: transform 0.5s cubic-bezier(0.3, 1.3, 0.5, 1);
 }
 .sfx-root[data-sfx-mode='light'] .sfx-switch-pill,
 .sfx-scope[data-sfx-mode='light'] .sfx-switch-pill {
-  background: linear-gradient(110deg, hsl(262 83% 46%), hsl(330 85% 40%));
+  background: linear-gradient(110deg, hsl(0 76% 42%), hsl(16 92% 38%));
 }
 .sfx-star {
   background: hsl(var(--muted));
@@ -637,12 +639,12 @@
 }
 .sfx-star[data-state='done'],
 .sfx-star[data-state='current'] {
-  background: linear-gradient(135deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(135deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   border-color: transparent;
   color: hsl(var(--primary-foreground));
 }
 .sfx-star[data-state='current'] {
-  box-shadow: 0 0 0 5px hsl(var(--sfx-violet) / 0.2), 0 0 24px hsl(var(--sfx-pink) / var(--sfx-glow));
+  box-shadow: 0 0 0 5px hsl(var(--sfx-red) / 0.2), 0 0 24px hsl(var(--sfx-ember) / var(--sfx-glow));
   transform: scale(1.12);
 }
 .sfx-star-line {
@@ -651,7 +653,7 @@
 .sfx-star-line > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, hsl(var(--sfx-violet)), hsl(var(--sfx-pink)));
+  background: linear-gradient(90deg, hsl(var(--sfx-red)), hsl(var(--sfx-ember)));
   transform-origin: 0 50%;
   transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -727,4 +729,227 @@ html[data-motion='minimal'] .sfx-line-reveal {
   opacity: 1;
   transform: none;
   filter: none;
+}
+
+/* ── The SampForce logo on the site: larger, with "Samp" in the page's ink and "Force" in the logo's red-to-amber ── */
+.sfx-logo .sfx-logo-samp {
+  color: hsl(var(--foreground));
+}
+.sfx-logo .sf-force {
+  background-image:
+    linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%),
+    linear-gradient(to right, hsl(var(--sfx-red)), hsl(var(--sfx-ember)) 55%, hsl(var(--sfx-amber)));
+}
+.sfx-root[data-sfx-mode='light'] .sfx-logo .sf-force,
+.sfx-scope[data-sfx-mode='light'] .sfx-logo .sf-force {
+  background-image:
+    linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.85) 50%, transparent 60%),
+    linear-gradient(to right, #c81e1e, #b4380f);
+}
+.sfx-logo-glow {
+  filter: drop-shadow(0 0 10px hsl(var(--sfx-red) / calc(var(--sfx-glow) * 0.9)));
+}
+
+/* ── More motion: the strike, the progress bar, arcs, watermarks, section heads ─────────────────────────────────── */
+
+.sfx-strike-flash {
+  background: radial-gradient(ellipse at 50% 20%, hsl(var(--sfx-amber) / 0.55), hsl(var(--sfx-red) / 0.25) 40%, transparent 75%);
+  animation: sfx-strike-flash 1.3s ease-out forwards;
+}
+.sfx-strike-bolt {
+  fill: hsl(var(--sfx-spark));
+  filter: drop-shadow(0 0 18px hsl(var(--sfx-amber))) drop-shadow(0 0 48px hsl(var(--sfx-red)));
+  clip-path: inset(0 0 100% 0);
+  animation: sfx-strike-bolt 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes sfx-strike-bolt {
+  0% {
+    clip-path: inset(0 0 100% 0);
+    opacity: 1;
+  }
+  22% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  38% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 0;
+  }
+}
+@keyframes sfx-strike-flash {
+  0%,
+  12% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 1;
+  }
+  32% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.sfx-progress {
+  background: linear-gradient(to right, hsl(var(--sfx-red)), hsl(var(--sfx-ember)), hsl(var(--sfx-amber)));
+  box-shadow: 0 0 12px hsl(var(--sfx-ember) / 0.8);
+}
+
+.sfx-arc {
+  fill: none;
+  stroke: hsl(var(--sfx-spark));
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px hsl(var(--sfx-amber)));
+  opacity: 0;
+  animation: sfx-arc 3.6s steps(1, end) infinite;
+  animation-delay: calc(var(--i) * 0.6s);
+}
+@keyframes sfx-arc {
+  0% {
+    opacity: 1;
+  }
+  3% {
+    opacity: 0.2;
+  }
+  5% {
+    opacity: 0.95;
+  }
+  9%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.sfx-watermark {
+  fill: hsl(var(--sfx-red) / 0.07);
+  stroke: hsl(var(--sfx-ember) / 0.16);
+  stroke-width: 0.6;
+  animation: sfx-watermark 14s ease-in-out infinite;
+}
+.sfx-root[data-sfx-mode='light'] .sfx-watermark {
+  fill: hsl(var(--sfx-red) / 0.05);
+}
+@keyframes sfx-watermark {
+  50% {
+    transform: translateY(-18px) rotate(4deg);
+  }
+}
+
+.sfx-kicker-bolt {
+  fill: currentColor;
+  animation: sfx-kicker-bolt 2.6s ease-in-out infinite;
+}
+@keyframes sfx-kicker-bolt {
+  0%,
+  70%,
+  100% {
+    transform: none;
+    filter: none;
+  }
+  76% {
+    transform: scale(1.35) rotate(-8deg);
+    filter: drop-shadow(0 0 6px hsl(var(--sfx-amber)));
+  }
+}
+.sfx-underline {
+  position: relative;
+  background: linear-gradient(to right, transparent, hsl(var(--sfx-red)), hsl(var(--sfx-ember)), hsl(var(--sfx-amber)), transparent);
+}
+.sfx-underline::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 18px;
+  height: 9px;
+  border-radius: 999px;
+  background: hsl(var(--sfx-spark));
+  box-shadow: 0 0 12px hsl(var(--sfx-amber));
+  animation: sfx-run 3.2s ease-in-out infinite;
+}
+@keyframes sfx-run {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 18px);
+    opacity: 0;
+  }
+}
+
+.sfx-sparkle {
+  animation: sfx-sparkle 4s linear infinite;
+}
+@keyframes sfx-sparkle {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.25);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.sfx-icon-float {
+  animation: sfx-icon-float 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.45s);
+}
+@keyframes sfx-icon-float {
+  50% {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+}
+
+.sfx-nav {
+  position: relative;
+}
+.sfx-nav::after {
+  content: '';
+  position: absolute;
+  inset-inline: 2rem;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0 40%, hsl(var(--sfx-amber)) 50%, transparent 60% 100%) no-repeat;
+  background-size: 40% 100%;
+  animation: sfx-nav-streak 6s linear infinite;
+}
+@keyframes sfx-nav-streak {
+  0% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: 160% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sfx-strike,
+  .sfx-arcs {
+    display: none;
+  }
+}
+html[data-motion='off'] .sfx-arcs,
+html[data-motion='off'] .sfx-strike {
+  display: none;
 }

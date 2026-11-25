@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react';
 import { useT } from '@/lib/i18n';
 import { HeroOrbit } from './hero-orbit';
 import { useSite } from './site-context';
+import { BoltWatermark } from './site-motion';
 
 /**
  * A line that rises into place letter by letter (word by word in Arabic, whose letters join). Screen readers get the
@@ -70,6 +71,7 @@ export function LandingHero() {
   const words = [t('Sell.'), t('Close.'), t('Grow.')];
   return (
     <section className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:pt-20" data-site-hero="">
+      <BoltWatermark className="-start-24 top-0 -z-10 h-[34rem] sm:-start-10" />
       <div>
         <motion.p
           initial={{ y: 12, scale: 0.9 }}

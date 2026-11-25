@@ -1,8 +1,9 @@
 'use client';
 
-import { Bot, FileSignature, GitBranch, HeartHandshake, KanbanSquare, LineChart, Megaphone, ShieldCheck, Zap } from 'lucide-react';
+import { Bot, FileSignature, GitBranch, HeartHandshake, KanbanSquare, LineChart, Megaphone, ShieldCheck } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import type { CSSProperties } from 'react';
+import { LogoMark } from '@/components/logo';
 import { Tr } from '@/lib/i18n';
 
 /** The eight modules on the hero's orbits: the same ones the page describes below, nothing invented. */
@@ -24,6 +25,16 @@ const COMETS = [
   { path: "path('M 250 -10 C 520 40, 470 330, 260 260 S 255 255, 0 0')", delay: '0s', dur: '5s' },
   { path: "path('M -240 120 C -300 -200, 60 -260, 40 -40 S 5 0, 0 0')", delay: '1.7s', dur: '5s' },
   { path: "path('M 40 260 C -260 300, -320 -60, -60 10 S -4 2, 0 0')", delay: '3.3s', dur: '5s' },
+];
+
+/** Jagged arcs leaving the core in six directions; each flickers in turn. */
+const ARCS = [
+  'M 0 -40 L 8 -55 L -4 -64 L 6 -80',
+  'M 36 -20 L 52 -22 L 58 -36 L 76 -38',
+  'M 36 22 L 50 34 L 66 30 L 74 46',
+  'M 0 42 L -9 56 L 4 66 L -5 82',
+  'M -36 20 L -52 26 L -58 42 L -76 44',
+  'M -36 -22 L -50 -32 L -66 -28 L -76 -46',
 ];
 
 function Ring({ size, dur, reverse, solid, items }: { size: number; dur: string; reverse?: boolean; solid?: boolean; items: typeof INNER }) {
@@ -81,8 +92,17 @@ export function HeroOrbit() {
         <div className="absolute left-1/2 top-1/2 -ml-12 -mt-12 size-24">
           <div className="sfx-core-pulse absolute inset-0 rounded-full" />
           <div className="sfx-core-pulse absolute inset-0 rounded-full [animation-delay:1.5s]" />
+          {/* Electric arcs crackling off the core. */}
+          <svg viewBox="-100 -100 200 200" className="sfx-arcs pointer-events-none absolute -inset-16 overflow-visible">
+            {ARCS.map((d, i) => (
+              <path key={d} d={d} className="sfx-arc" style={{ '--i': i } as CSSProperties} />
+            ))}
+          </svg>
+          {/* The SampForce bolt itself at the centre, on a glowing ember core. */}
           <div className="sfx-core grid size-full place-items-center rounded-full">
-            <Zap className="size-10 fill-white text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+            <span className="sf-logo-anim">
+              <LogoMark className="size-14 drop-shadow-[0_0_14px_rgba(255,200,87,0.85)]" />
+            </span>
           </div>
         </div>
         {/* Deals arriving. */}

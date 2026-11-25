@@ -11,14 +11,14 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { SecondFactor } from '@/app/(auth)/login/login-form';
 import { FloatingField } from '@/components/forms/floating-field';
-import { Logo } from '@/components/logo';
+import { SiteLogo } from './site-logo';
 import { markWelcome } from '@/components/sign-in/welcome-overlay';
 import { api, ApiError } from '@/lib/api';
 import { Tr, useT } from '@/lib/i18n';
 import { checkSignupStep, passwordChecks, passwordStrength, SIGNUP_STEPS, type SignupField, stepOfField } from '@/lib/signup-steps';
 import { type PortalFace, useSite } from './site-context';
 
-const STREAK_COLOURS = ['--sfx-violet', '--sfx-pink', '--sfx-cyan', '--sfx-lime'];
+const STREAK_COLOURS = ['--sfx-red', '--sfx-ember', '--sfx-amber', '--sfx-spark'];
 
 /** Light streaks rushing out from the centre, placed once per opening. */
 function useStreaks(n: number) {
@@ -70,7 +70,7 @@ export function AccessPortal({ face, onFace, onClose }: { face: PortalFace | nul
           ))}
         </div>
         <div className="fixed start-5 top-5 z-10">
-          <Logo animated />
+          <SiteLogo />
         </div>
         <DialogClose className="fixed end-5 top-5 z-10 grid size-11 place-items-center rounded-full border border-border bg-surface/70 text-foreground backdrop-blur transition hover:rotate-90 hover:border-primary">
           <X className="size-5" aria-hidden />
@@ -234,7 +234,7 @@ function SignInFace({ onLaunch }: { onLaunch: () => void }) {
 
 /* ── Create a workspace ───────────────────────────────────────────────────────────────────────────────────────── */
 
-const CONFETTI = ['--sfx-violet', '--sfx-pink', '--sfx-cyan', '--sfx-lime'];
+const CONFETTI = ['--sfx-red', '--sfx-ember', '--sfx-amber', '--sfx-spark'];
 
 function SignUpFace({ onLaunch }: { onLaunch: () => void }) {
   const t = useT();
