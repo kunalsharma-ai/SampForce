@@ -238,3 +238,133 @@ that moment, so update SampBidx straight away.
 - [ ] Readable error messages in `{"error": {"message": "…"}}`
 - [ ] Signed status callbacks to SampForce on every status change
 - [ ] HTTPS on a public address
+
+## Chat with the SampBidx team
+
+SampForce has a **Chat with SampBidx team** section inside Team chat (ADR 0078). It holds one general line to the
+SampBidx team and one chat per RFQ sent to SampBidx. Messages go both ways. Who in SampForce can chat is decided in
+SampForce: the Console Admin allows it for an organisation, its Super Workspace hands it down to Manager Workspaces,
+and they to Executive Workspaces. The same API key and callback signing secret as above are used, so nothing new
+needs to be set up.
+
+### SampForce → SampBidx: `POST /v1/messages`
+
+Each message a SampForce person writes is posted once, as multipart, with the Bearer key:
+
+```
+POST https://<sampbidx>/api/v1/messages
+Authorization: Bearer <key>
+Idempotency-Key: <messageId>
+X-SampForce-Message-Id: <messageId>
+Content-Type: multipart/form-data; boundary=…
+```
+
+- A `message` part holding JSON (below).
+- Zero to five `files` parts, one per attachment, with the file name and content type. Up to 10 MB each.
+
+```json
+{
+  "id": "0d3f5a0e-…",
+  "system": "SampForce",
+  "workspace": "Frequent Research Fieldwork Solutions",
+  "conversation": {
+    "type": "rfq",
+    "transferId": "6b0c4c1e-…",
+    "sampbidxId": "SBX-A78881",
+    "title": "RFQ: UK B2C grocery shoppers, n=1,000",
+    "rfq": { "number": "RFQ-0042", "projectName": "UK grocery tracker" },
+    "company": { "name": "Acme Panels" }
+  },
+  "author": { "id": "a1c…", "name": "Kunal Sharma", "email": "kunal@example.com", "role": "Owner", "workspace": "Sales UK" },
+  "text": "Can you confirm feasibility for n=1,000 at IR 40%?",
+  "sentAt": "2026-11-24T21:10:00.000Z",
+  "attachments": [{ "name": "brief.pdf", "contentType": "application/pdf", "sizeBytes": 18233, "sha256": "…" }]
+}
+```
+
+- `conversation` is `{ "type": "general" }` for the general line. For an RFQ chat it carries SampForce's
+  `transferId` and your `sampbidxId`, so you can put the message on the right bid. `rfq` and `company` can be `null`.
+- `text` can be empty when the message is only files.
+- Answer **200** or **201**, optionally with your own id: `{ "id": "MSG-991" }`.
+- **Same `Idempotency-Key` → answer 200 again and do not show the message twice.** SampForce retries.
+
+SampForce shows the sender "Delivered to SampBidx" once you answer. When a post fails it tries again by itself after
+30 s, 2 min, 10 min, 30 min and 2 h (six tries in all), and the sender can press **Try again** at any time. A 400,
+401, 403, 404 or 413 is not retried by itself, since trying again would get the same answer. Errors use the same
+table as above.
+
+### SampBidx → SampForce: `POST …/callbacks/<id>/messages`
+
+When someone in SampBidx writes, post JSON to the callback URL with `/messages` added, signed exactly like the status
+callbacks (same secret, same `X-SampBidx-Timestamp` and `X-SampBidx-Signature` headers, same 5-minute window):
+
+```
+POST https://<sampforce>/api/v1/apps/sampbidx/callbacks/<id>/messages
+```
+
+```json
+{
+  "id": "sbx-msg-1201",
+  "sampbidxId": "SBX-A78881",
+  "author": { "id": "u-7", "name": "Arjun Rao", "email": "arjun@sampbidx.example", "role": "Senior bidder" },
+  "text": "Feasible. We can deliver n=1,000 in 6 field days. Our feasibility note is attached.",
+  "sentAt": "2026-11-24T21:14:00.000Z",
+  "attachments": [{ "name": "feasibility.pdf", "contentType": "application/pdf", "data": "<base64>" }]
+}
+```
+
+- `id` is your message id, and is required. **SampForce keeps one message per id**, so a retry is safe.
+- Send `transferId` or `sampbidxId` (or both) for an RFQ chat. Leave both out for the general line.
+- `author.name` is required. `id`, `email` and `role` are optional but help: they show beside the message and in the
+  chat's people list.
+- `text` up to 4,000 characters. `sentAt` is optional (ISO time).
+- `attachments`: up to 5 files, base64 in `data`, 10 MB each and 20 MB in all.
+
+SampForce answers:
+
+| Status | Meaning |
+| --- | --- |
+| 200 `{"ok": true, "matched": true, "messageId": "…"}` | Shown in SampForce |
+| 200 `{"ok": true, "matched": true, "messageId": "…", "duplicate": true}` | Already had that `id`; nothing new shown |
+| 200 `{"ok": true, "matched": false, "messageId": null}` | No RFQ with that `transferId`/`sampbidxId`; do not retry |
+| 400 | Body not readable, or a required field is missing |
+| 401 | Missing, wrong or stale signature |
+| 403 `CHAT_OFF` | The Console Admin has not allowed SampBidx chat for this organisation |
+| 413 | Files too large |
+
+Retry a 5xx or timeout with a fresh timestamp and signature.
+
+When an RFQ's status changes (the status callback above), SampForce also puts a line about it in that RFQ's chat,
+so there is nothing extra to send.
+
+### SampBidx → SampForce: `GET …/callbacks/<id>/people`
+
+The SampForce people who may chat with you: everyone active whose workspace has SampBidx chat. Sign it like the
+others, with **an empty body** (`signature = "sha256=" + hex(HMAC_SHA256(secret, timestamp + "."))`).
+
+```
+GET https://<sampforce>/api/v1/apps/sampbidx/callbacks/<id>/people
+X-SampBidx-Timestamp: 1763286000
+X-SampBidx-Signature: sha256=<hex>
+```
+
+```json
+{
+  "workspace": "Frequent Research Fieldwork Solutions",
+  "people": [
+    { "id": "a1c…", "name": "Kunal Sharma", "email": "kunal@example.com", "role": "Owner", "workspace": "Frequent Research", "level": "SUPER" },
+    { "id": "b72…", "name": "Priya Shah", "email": "priya@example.com", "role": "Sales", "workspace": "Sales UK", "level": "MANAGER" }
+  ]
+}
+```
+
+Only name, email, role and workspace are shared. The list is empty while chat is switched off. Read it when you need
+it (for example once an hour, or when someone opens a chat) rather than storing it for good, since people come and
+go.
+
+### Chat checklist for the SampBidx team
+
+- [ ] `POST /v1/messages` reading the `message` part and the `files` parts, keyed by `Idempotency-Key`
+- [ ] Show SampForce messages on the general line or on the bid named by `sampbidxId`
+- [ ] Post your team's messages to `…/callbacks/<id>/messages`, signed, with your own message `id`
+- [ ] Read `…/callbacks/<id>/people` to show who in SampForce can be reached

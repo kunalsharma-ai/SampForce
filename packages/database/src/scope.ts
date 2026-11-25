@@ -112,7 +112,8 @@ const WORKER_ALL = new Set([
   'WorkflowExecution',
 ]);
 /** Collections the worker may only read across workspaces (`worker_scan` FOR SELECT). */
-const WORKER_READ = new Set(['Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'VisitorSettings', 'ZoomMeeting']);
+// ChatMessage: SampBidx chat messages waiting for their next try (ADR 0078); each is sent in its workspace's context.
+const WORKER_READ = new Set(['ChatMessage', 'Contract', 'CrmSettings', 'ProspectImport', 'Rfq', 'Subscription', 'Task', 'VisitorSettings', 'ZoomMeeting']);
 /** Collections the operator console may read across workspaces (`operator_scan`). */
 const OPERATOR_READ = new Set([
   'Tenant',

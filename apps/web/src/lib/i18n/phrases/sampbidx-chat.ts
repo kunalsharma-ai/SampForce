@@ -1,0 +1,42 @@
+import type { PhraseTable } from './types';
+
+/** Chat with the SampBidx team inside Team chat (ADR 0078). */
+export const sampbidxChat = {
+  'Chat with SampBidx team': ['Chat con el equipo de SampBidx', 'Discussion avec l’équipe SampBidx', 'Chat mit dem SampBidx-Team', 'الدردشة مع فريق SampBidx'],
+  'SampBidx team': ['Equipo de SampBidx', 'Équipe SampBidx', 'SampBidx-Team', 'فريق SampBidx'],
+  'Your team': ['Tu equipo', 'Votre équipe', 'Ihr Team', 'فريقك'],
+  'From your team': ['De tu equipo', 'De votre équipe', 'Aus Ihrem Team', 'من فريقك'],
+  'From SampBidx': ['De SampBidx', 'De SampBidx', 'Von SampBidx', 'من SampBidx'],
+  SampBidx: ['SampBidx', 'SampBidx', 'SampBidx', 'SampBidx'],
+  'SampBidx · {role}': ['SampBidx · {role}', 'SampBidx · {role}', 'SampBidx · {role}', 'SampBidx · {role}'],
+  'RFQ chat': ['Chat de RFQ', 'Discussion RFQ', 'RFQ-Chat', 'دردشة طلب العرض'],
+  'SampBidx bidding team · {names}': ['Equipo de ofertas de SampBidx · {names}', 'Équipe d’offres SampBidx · {names}', 'SampBidx-Angebotsteam · {names}', 'فريق العروض في SampBidx · {names}'],
+  'Your line to the SampBidx bidding team': ['Tu línea con el equipo de ofertas de SampBidx', 'Votre ligne avec l’équipe d’offres SampBidx', 'Ihr direkter Draht zum SampBidx-Angebotsteam', 'خطك المباشر مع فريق العروض في SampBidx'],
+  'with {names}': ['con {names}', 'avec {names}', 'mit {names}', 'مع {names}'],
+  'Signed link to SampBidx': ['Enlace firmado con SampBidx', 'Liaison signée avec SampBidx', 'Signierte Verbindung zu SampBidx', 'اتصال موقَّع مع SampBidx'],
+  'Delivered to SampBidx': ['Entregado a SampBidx', 'Remis à SampBidx', 'An SampBidx zugestellt', 'تم التسليم إلى SampBidx'],
+  'Trying SampBidx again…': ['Reintentando con SampBidx…', 'Nouvel essai vers SampBidx…', 'Erneuter Versuch bei SampBidx…', 'إعادة المحاولة مع SampBidx…'],
+  'Not delivered to SampBidx: {reason}': ['No entregado a SampBidx: {reason}', 'Non remis à SampBidx : {reason}', 'Nicht an SampBidx zugestellt: {reason}', 'لم يُسلَّم إلى SampBidx: {reason}'],
+  'Nobody from SampBidx has written here yet.': ['Nadie de SampBidx ha escrito aquí todavía.', 'Personne de SampBidx n’a encore écrit ici.', 'Hier hat noch niemand von SampBidx geschrieben.', 'لم يكتب أحد من SampBidx هنا بعد.'],
+  'Chat about an RFQ': ['Chat sobre una RFQ', 'Discussion sur une RFQ', 'Chat zu einer RFQ', 'دردشة حول طلب عرض'],
+  'Pick an RFQ you sent to SampBidx. Its bidders see your messages, and their answers come back here.': [
+    'Elige una RFQ que enviaste a SampBidx. Sus licitadores ven tus mensajes y sus respuestas llegan aquí.',
+    'Choisissez une RFQ envoyée à SampBidx. Ses soumissionnaires voient vos messages et leurs réponses arrivent ici.',
+    'Wählen Sie eine an SampBidx gesendete RFQ. Die Bieter sehen Ihre Nachrichten, und ihre Antworten kommen hier an.',
+    'اختر طلب عرض أرسلته إلى SampBidx. يرى مقدمو العروض رسائلك وتصل ردودهم إلى هنا.',
+  ],
+  'Search RFQs sent to SampBidx': ['Buscar RFQ enviadas a SampBidx', 'Rechercher les RFQ envoyées à SampBidx', 'An SampBidx gesendete RFQs suchen', 'ابحث في طلبات العروض المرسلة إلى SampBidx'],
+  'Could not load the RFQs.': ['No se pudieron cargar las RFQ.', 'Impossible de charger les RFQ.', 'Die RFQs konnten nicht geladen werden.', 'تعذّر تحميل طلبات العروض.'],
+  'No RFQ sent to SampBidx matches.': ['Ninguna RFQ enviada a SampBidx coincide.', 'Aucune RFQ envoyée à SampBidx ne correspond.', 'Keine an SampBidx gesendete RFQ passt.', 'لا يوجد طلب عرض مرسل إلى SampBidx يطابق البحث.'],
+  'Nothing sent to SampBidx yet. Send an RFQ first, then chat about it here.': [
+    'Aún no se ha enviado nada a SampBidx. Envía primero una RFQ y luego conversa sobre ella aquí.',
+    'Rien n’a encore été envoyé à SampBidx. Envoyez d’abord une RFQ, puis discutez-en ici.',
+    'Noch nichts an SampBidx gesendet. Senden Sie zuerst eine RFQ und chatten Sie dann hier darüber.',
+    'لم يُرسل شيء إلى SampBidx بعد. أرسل طلب عرض أولًا ثم تحدّث عنه هنا.',
+  ],
+  'Go to RFQs': ['Ir a las RFQ', 'Aller aux RFQ', 'Zu den RFQs', 'الانتقال إلى طلبات العروض'],
+  'Open chat': ['Abrir chat', 'Ouvrir la discussion', 'Chat öffnen', 'فتح الدردشة'],
+  'Could not open the chat.': ['No se pudo abrir el chat.', 'Impossible d’ouvrir la discussion.', 'Der Chat konnte nicht geöffnet werden.', 'تعذّر فتح الدردشة.'],
+  'Message the SampBidx team': ['Escribe al equipo de SampBidx', 'Écrire à l’équipe SampBidx', 'Nachricht an das SampBidx-Team', 'راسل فريق SampBidx'],
+  'Goes to the SampBidx team as well as your colleagues here': ['Llega al equipo de SampBidx y a tus colegas de aquí', 'Envoyé à l’équipe SampBidx et à vos collègues ici', 'Geht an das SampBidx-Team und an Ihre Kollegen hier', 'تصل إلى فريق SampBidx وإلى زملائك هنا'],
+} as const satisfies PhraseTable;

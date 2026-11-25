@@ -8,6 +8,7 @@
  *   { "action": "setPlan", "tenantId": "...", "planCode": "pro" }
  *   { "action": "inboundEmail", "tenantId": "...", "userId": "...", "from": "...", "subject": "...", "body": "...", "contactId"?: "..." }
  *   { "action": "meeting", "tenantId": "...", "userId": "...", "title": "...", "hoursFromNow": 2, "contactId": "...", "attendee": "...", "joinUrl"?: "..." }
+ *   { "action": "featureOverride", "tenantId": "...", "feature": "sampbidx_chat", "enabled": true }
  */
 import { randomUUID } from 'node:crypto';
 import { createPrismaClient, type TenantTx, withDbContext } from '@dealflow/database';
@@ -17,7 +18,8 @@ type Fixture =
   | { action: 'setPlan'; tenantId: string; planCode: string }
   | { action: 'inboundEmail'; tenantId: string; userId: string; from: string; subject: string; body: string; contactId?: string }
   | { action: 'meeting'; tenantId: string; userId: string; title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }
-  | { action: 'mobileApproved'; tenantId: string };
+  | { action: 'mobileApproved'; tenantId: string }
+  | { action: 'featureOverride'; tenantId: string; feature: string; enabled: boolean };
 
 const MAILBOX = 'me@seller.test';
 
@@ -68,6 +70,15 @@ async function main(): Promise<void> {
           where: { tenantId: f.tenantId },
           create: { tenantId: f.tenantId, status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date(), activatedById: null },
           update: { status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date() },
+        }),
+      );
+    } else if (f.action === 'featureOverride') {
+      // As if the Console Admin granted (or withheld) one feature for this organisation on its client page.
+      await withDbContext(prisma, { tenantId: f.tenantId }, (tx) =>
+        tx.tenantFeatureOverride.upsert({
+          where: { tenantId_feature: { tenantId: f.tenantId, feature: f.feature } },
+          create: { tenantId: f.tenantId, feature: f.feature, enabled: f.enabled, reason: 'e2e', updatedBy: 'e2e' },
+          update: { enabled: f.enabled },
         }),
       );
     } else {
