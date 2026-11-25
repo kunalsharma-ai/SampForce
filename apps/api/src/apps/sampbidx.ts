@@ -63,9 +63,9 @@ export class SampbidxClient {
     return this.accept(keys, '/v1/rfqs', transferId, [{ name: 'rfq', contentType: 'application/json', data: Buffer.from(JSON.stringify(rfq)) }, ...files]);
   }
 
-  /** POST /v1/rfq-emails (multipart): the email's details as JSON in "email", and the original file in "message" if there is one. */
-  sendEmail(keys: SampbidxKeys, transferId: string, email: unknown, message: Part | null): Promise<SampbidxAccepted> {
-    return this.accept(keys, '/v1/rfq-emails', transferId, [{ name: 'email', contentType: 'application/json', data: Buffer.from(JSON.stringify(email)) }, ...(message ? [message] : [])]);
+  /** POST /v1/rfq-emails (multipart): the email's details as JSON in "email", the original file in "message" if there is one, and files added next to pasted text as "files". */
+  sendEmail(keys: SampbidxKeys, transferId: string, email: unknown, message: Part | null, files: Part[] = []): Promise<SampbidxAccepted> {
+    return this.accept(keys, '/v1/rfq-emails', transferId, [{ name: 'email', contentType: 'application/json', data: Buffer.from(JSON.stringify(email)) }, ...(message ? [message] : []), ...files]);
   }
 
   /**

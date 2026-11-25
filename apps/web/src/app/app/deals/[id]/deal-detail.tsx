@@ -11,6 +11,7 @@ import { MeetingNotesButton, RecordMeetings } from '@/components/meetings/record
 import { RecordZoomMeetings } from '@/components/meetings/zoom-meetings';
 import { DealHealthTrend } from '@/components/crm/deal-health-trend';
 import { RecordConversations } from '@/components/crm/record-conversations';
+import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
 import { StageStepper } from '@/components/deals/stage-stepper';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
@@ -105,6 +106,7 @@ export function DealDetail({ id }: { id: string }) {
             </CardContent>
           </Card>
           <DealQuotes deal={{ id, name: d.name }} />
+          <RfqCapture source={{ type: 'deal', id }} companyId={d.company?.id ?? null} contactId={d.contact?.id ?? null} />
           <RecordConversations dealId={id} />
           <RecordMeetings target={{ dealId: id }} />
           <RecordZoomMeetings target={{ dealId: id }} />

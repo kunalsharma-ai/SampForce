@@ -7,7 +7,7 @@ import { CalendarClock, FileSignature, Handshake, Linkedin, Mail, MailOpen, Mess
 import Link from 'next/link';
 import * as React from 'react';
 import { InfoTip } from '@/components/info-tip';
-import { PasteRfqEmail, useSampbidxEnabled } from '@/components/sampbidx/sampbidx';
+import { RfqCapture } from '@/components/sampbidx/rfq-capture';
 import { fromLocalInput, toLocalInput, useInteractions, useLogInteraction, useRemoveInteraction, useUpdateInteraction } from '@/lib/company-work';
 import { useCompanyFiles } from '@/lib/company-leads';
 import { relativeTime } from '@/lib/format';
@@ -43,7 +43,6 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
   const remove = useRemoveInteraction();
   const [logging, setLogging] = React.useState(false);
   const [editing, setEditing] = React.useState<InteractionRow | null>(null);
-  const sampbidx = useSampbidxEnabled();
   useCompanyAction('logInteraction', canWrite ? () => setLogging(true) : null);
   return (
     <Card id="company-interactions">
@@ -59,7 +58,7 @@ export function CompanyInteractions({ company, employees }: { company: { id: str
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        {sampbidx && canWrite && <PasteRfqEmail company={company} />}
+        {canWrite && <RfqCapture source={{ type: 'company', id: company.id }} companyId={company.id} />}
         <div className="flex flex-wrap gap-2">
           <Select aria-label={t('Interaction type')} className="h-9 w-auto" value={kind} onChange={(e) => setKind(e.target.value as InteractionKind | '')}>
             <option value="">{t('All interaction types')}</option>

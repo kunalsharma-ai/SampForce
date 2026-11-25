@@ -148,6 +148,7 @@ test('RFQs go to SampBidx two ways: details and attachments, or the RFQ email it
   await page.goto('/app/rfqs');
   await main.getByRole('button', { name: 'Transfer RFQ email to SampBidx' }).click();
   await expect(dialog.getByRole('heading', { name: 'Transfer an RFQ email to SampBidx' })).toBeVisible();
+  await dialog.getByRole('tab', { name: 'From your mailbox' }).click();
   await dialog.getByRole('radio', { name: /UK consumer study/ }).check();
   await axe(page);
   await shotDialog(page, dialog, '38-transfer-email-from-mailbox');
