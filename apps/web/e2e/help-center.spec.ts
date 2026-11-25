@@ -22,6 +22,9 @@ async function shot(page: Page, name: string, fullPage = false) {
 async function axe(page: Page) {
   // A pointer left over a button after a click would check its hover colour instead.
   await page.mouse.move(0, 0);
+  // Switching views is a client navigation (router.replace) that puts the page's <title> back once it settles;
+  // a scan that starts before then reports "document-title". A title that never comes back still fails here.
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
