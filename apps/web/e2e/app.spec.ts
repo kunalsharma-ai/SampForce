@@ -53,8 +53,10 @@ test('updates workspace settings and records them in the audit log', async ({ pa
   const name = page.getByLabel('Workspace name');
   await expect(name).toHaveValue('Settings Org');
   await name.fill('Settings Org Renamed');
-  await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByRole('status')).toHaveText('Saved.');
+  // Settings shows more than one card with a status line (the sales profile has its own).
+  const form = page.locator('form').filter({ has: name });
+  await form.getByRole('button', { name: 'Save changes' }).click();
+  await expect(form.getByRole('status')).toHaveText('Saved.');
   await page.goto('/app/administration');
   await expect(page.getByRole('cell', { name: 'tenant.updated' })).toBeVisible();
 });
