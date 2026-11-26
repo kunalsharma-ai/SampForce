@@ -244,6 +244,10 @@ export const notifications = {
   'New task: {title}': ['Nueva tarea: {title}', 'Nouvelle tâche : {title}', 'Neue Aufgabe: {title}', 'مهمة جديدة: {title}'],
   'Task changed: {title}': ['Tarea modificada: {title}', 'Tâche modifiée : {title}', 'Aufgabe geändert: {title}', 'تم تغيير المهمة: {title}'],
   'Task completed: {title}': ['Tarea completada: {title}', 'Tâche terminée : {title}', 'Aufgabe erledigt: {title}', 'اكتملت المهمة: {title}'],
+  // Task progress (redesign R7, ADR 0091)
+  'Task acknowledged: {title}': ['Tarea confirmada: {title}', 'Tâche prise en compte : {title}', 'Aufgabe bestätigt: {title}', 'تم استلام المهمة: {title}'],
+  'Task in progress: {title}': ['Tarea en curso: {title}', 'Tâche en cours : {title}', 'Aufgabe in Arbeit: {title}', 'المهمة قيد التنفيذ: {title}'],
+  'Task blocked: {title}': ['Tarea bloqueada: {title}', 'Tâche bloquée : {title}', 'Aufgabe blockiert: {title}', 'المهمة متوقفة: {title}'],
   'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
   'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
   '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
