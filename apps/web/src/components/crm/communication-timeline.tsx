@@ -18,6 +18,8 @@ const SOURCE_LABEL: Record<StageChangeSource, MessageKey> = {
   SAMPBIDX: 'SampBidx confirmed the transfer',
   RFQ_OUTCOME: 'RFQ outcome recorded',
   CALL_SCHEDULED: 'Call scheduled',
+  EMAIL: 'Email sent or received',
+  CADENCE: 'Follow-up cadence',
 };
 
 const KIND_ICON: Record<CommunicationEventKind, LucideIcon> = {
@@ -78,7 +80,7 @@ export function CommunicationTimeline({ events, pending, error }: { events: Comm
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   {e.kind === 'STAGE' ? (
                     <>
-                      {e.from && <StageChip stage={e.from} className="opacity-70" />}
+                      {e.from && <StageChip stage={e.from} />}
                       {e.from && <ArrowRight aria-label={t('to')} className="size-3.5 shrink-0 text-muted-foreground rtl:-scale-x-100" />}
                       <StageChip stage={e.to} />
                     </>

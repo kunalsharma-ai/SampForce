@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { cadenceStates } from './cadence-state';
 import { type Prisma, type TenantTx } from '@dealflow/database';
 import {
   ACTIVE_CONTRIBUTOR_DAYS,
@@ -61,7 +62,7 @@ export class EmployeeStagesService {
     return this.prisma.run(auth, async (tx) => this.stageRows(tx, auth.tenantId));
   }
 
-  /** The workspace's stages, creating the 20 built-in ones the first time. */
+  /** The workspace's stages, creating the built-in ones the first time and any a later release added. */
   async ensureStages(tx: TenantTx, tenantId: string): Promise<StageModel[]> {
     let rows = await tx.crmStatus.findMany({ where: { tenantId, kind: 'STAGE' }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
     if (!rows.length) {
@@ -71,6 +72,21 @@ export class EmployeeStagesService {
         })),
       });
       rows = await tx.crmStatus.findMany({ where: { tenantId, kind: 'STAGE' }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
+    } else {
+      // Built-in stages added by a later release (Fresh Email Pending and Initial Email Sent, ADR 0083) join a
+      // workspace's existing list next to the built-in stage before them, keeping the workspace's own order.
+      const have = new Set(rows.map((r) => r.key).filter(Boolean));
+      const missing = DEFAULT_STATUSES.STAGE.filter((s) => s.key && !have.has(s.key));
+      if (missing.length) {
+        for (const m of missing) {
+          const i = DEFAULT_STATUSES.STAGE.indexOf(m);
+          const before = DEFAULT_STATUSES.STAGE.slice(0, i).reverse().find((s) => rows.some((r) => r.key === s.key));
+          const at = before ? rows.find((r) => r.key === before.key)!.position + 1 : 0;
+          await tx.crmStatus.updateMany({ where: { tenantId, kind: 'STAGE', position: { gte: at } }, data: { position: { increment: 1 } } });
+          await tx.crmStatus.create({ data: { tenantId, kind: 'STAGE', name: m.name, color: m.color, meaning: m.meaning, key: m.key ?? null, phase: m.phase ?? null, position: at, isDefault: false, description: null, archivedAt: null } });
+          rows = await tx.crmStatus.findMany({ where: { tenantId, kind: 'STAGE' }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
+        }
+      }
     }
     return rows;
   }
@@ -176,6 +192,7 @@ export class EmployeeStagesService {
     ]);
     const sentRfq = await tx.sampbidxTransfer.findMany({ where: { tenantId: tid, delivery: 'SENT', rfqId: { in: rfqs.map((r) => r.id) } }, select: { rfqId: true } });
     const people = await personRefs(tx, tid, contacts.flatMap((c) => [c.ownerId, c.rfqContributorById]));
+    const cadence = await cadenceStates(tx, tid, ids);
     const stageById = new Map(stages.map((s) => [s.id, s]));
     const now = Date.now();
     return contacts.map((c) => {
@@ -213,6 +230,7 @@ export class EmployeeStagesService {
         nextFollowUpAt: next?.toISOString() ?? null,
         followUpsOverdue: open.filter((d) => d.getTime() < now).length,
         followUpsCompleted: myTasks.filter((t) => t.status === 'DONE').length,
+        cadence: cadence.get(c.id) ?? null,
         owner: c.ownerId ? (people.get(c.ownerId) ?? null) : null,
         details: canSee,
       };

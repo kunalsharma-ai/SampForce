@@ -31,6 +31,7 @@ import { useCrmStatuses, useDepartments, useDesignations, useLeadNumbering, useO
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { AttributionSection, CurrencySection, DashboardsSection, ExportSection, NotificationsSection, OptionsSection } from './admin-sections';
+import { FollowUpCadenceSection } from './cadence-section';
 import { CustomFieldsSection } from './custom-fields-section';
 
 type Tab =
@@ -44,12 +45,13 @@ type Tab =
   | 'rfq-statuses'
   | 'deal-statuses'
   | 'follow-up-types'
+  | 'follow-up-cadence'
   | 'notifications'
   | 'currency'
   | 'exports'
   | 'dashboards'
   | 'attribution';
-const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
+const TABS: Tab[] = ['numbering', 'company', 'employee', 'stages', 'departments', 'designations', 'fields', 'rfq-statuses', 'deal-statuses', 'follow-up-types', 'follow-up-cadence', 'notifications', 'currency', 'exports', 'dashboards', 'attribution'];
 /** Sections only administrators can open (their settings are not readable by everyone). */
 const ADMIN_ONLY: Tab[] = ['notifications', 'exports', 'dashboards', 'attribution'];
 
@@ -69,6 +71,7 @@ export function CrmConfiguration() {
   const t = useT();
   const canManage = useCan('crm:configure');
   const stagesOn = useHasFeature('rfq_contributors');
+  const cadenceOn = useHasFeature('follow_up_management');
   const [tab, setTabState] = useState<Tab>('numbering');
   // A link can open a section directly: /app/settings/crm?section=fields (read after mount, so the server render matches).
   useEffect(() => {
@@ -100,6 +103,7 @@ export function CrmConfiguration() {
           { value: 'rfq-statuses', label: t('RFQ statuses') },
           { value: 'deal-statuses', label: t('Deal statuses') },
           { value: 'follow-up-types', label: t('Follow-up categories') },
+          ...(cadenceOn ? ([{ value: 'follow-up-cadence', label: t('Follow-up cadence') }] as const) : []),
           { value: 'currency', label: t('Currency') },
           ...(canManage
             ? ([
@@ -121,6 +125,7 @@ export function CrmConfiguration() {
       {tab === 'rfq-statuses' && <OptionsSection kind="RFQ_STATUS" canManage={canManage} />}
       {tab === 'deal-statuses' && <OptionsSection kind="DEAL_STATUS" canManage={canManage} />}
       {tab === 'follow-up-types' && <OptionsSection kind="FOLLOW_UP_TYPE" canManage={canManage} />}
+      {cadenceOn && tab === 'follow-up-cadence' && <FollowUpCadenceSection />}
       {tab === 'currency' && <CurrencySection canManage={canManage} />}
       {canManage && tab === 'notifications' && <NotificationsSection />}
       {canManage && tab === 'exports' && <ExportSection />}

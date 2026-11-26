@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, diff, iso, notFound, ownerRefs } from './crm-helpers';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 
 export interface TaskListQuery {
   scope: 'mine' | 'all';
@@ -23,6 +24,7 @@ export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   /** Open tasks sort by due date (overdue first, undated last); finished tasks by completion time. */
@@ -118,6 +120,8 @@ export class TasksService {
         data.completedAt = input.status === 'DONE' ? new Date() : null;
       }
       const row = await tx.task.update({ where: { id }, data });
+      // A cadence follow-up completed from the task list plans the next one too (ADR 0083).
+      if (data.status === 'DONE') await this.cadence.followUpCompleted(tx, auth, row);
       const changes = diff(before, input);
       await this.audit.record(tx, {
         tenantId: auth.tenantId, actorUserId: auth.userId,

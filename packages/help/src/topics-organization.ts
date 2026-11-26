@@ -2140,6 +2140,30 @@ export const organizationHelp = {
       'يُرسل كل تذكير مرة واحدة بلغة الشخص، داخل التطبيق وعبر القنوات التي اختارها.',
     ],
   },
+  'crm.followUpCadence': {
+    title: 'Follow-up cadence',
+    what: [
+      'How many follow-ups each new contact gets after the first email, and how many days apart. New contacts start in Fresh Email Pending.',
+      'Cuántos seguimientos recibe cada contacto nuevo después del primer correo y con cuántos días de separación. Los contactos nuevos empiezan en Correo inicial pendiente.',
+      'Combien de relances chaque nouveau contact reçoit après le premier e-mail, et à combien de jours d’intervalle. Les nouveaux contacts commencent en E-mail initial en attente.',
+      'Wie viele Nachverfolgungen jeder neue Kontakt nach der ersten E-Mail bekommt und im Abstand von wie vielen Tagen. Neue Kontakte beginnen mit Erste E-Mail ausstehend.',
+      'عدد المتابعات التي يحصل عليها كل جهة اتصال جديدة بعد البريد الأول، وعدد الأيام بينها. تبدأ جهات الاتصال الجديدة في مرحلة البريد الأول قيد الانتظار.',
+    ],
+    how: [
+      'The first email sent, synced or logged moves the contact to Initial Email Sent and plans follow-up 1. Completing one plans the next. A reply, a call or an RFQ stops it.',
+      'El primer correo enviado, sincronizado o registrado pasa el contacto a Correo inicial enviado y planifica el seguimiento 1. Completar uno planifica el siguiente. Una respuesta, una llamada o una RFQ lo detienen.',
+      'Le premier e-mail envoyé, synchronisé ou consigné passe le contact en E-mail initial envoyé et planifie la relance 1. En terminer une planifie la suivante. Une réponse, un appel ou une RFQ l’arrête.',
+      'Die erste gesendete, synchronisierte oder erfasste E-Mail setzt den Kontakt auf Erste E-Mail gesendet und plant Nachverfolgung 1. Wer eine erledigt, plant die nächste. Eine Antwort, ein Anruf oder eine RFQ stoppt sie.',
+      'أول بريد يُرسل أو يُزامن أو يُسجّل ينقل جهة الاتصال إلى البريد الأول مُرسل ويخطط للمتابعة 1. إكمال متابعة يخطط للتالية. الرد أو المكالمة أو طلب عرض السعر يوقفها.',
+    ],
+    where: [
+      'Only the Super Workspace changes it. Everyone gets a morning summary of follow-ups due today and overdue.',
+      'Solo el espacio Super lo cambia. Cada persona recibe por la mañana un resumen de los seguimientos de hoy y atrasados.',
+      'Seul l’espace Super le modifie. Chacun reçoit le matin un résumé des relances du jour et en retard.',
+      'Nur der Super-Arbeitsbereich ändert sie. Jede Person erhält morgens eine Übersicht der heute fälligen und überfälligen Nachverfolgungen.',
+      'مساحة المدير الأعلى وحدها تغيّره. يحصل الجميع صباحًا على ملخص للمتابعات المستحقة اليوم والمتأخرة.',
+    ],
+  },
   'crm.currency': {
     title: 'Base currency',
     what: [

@@ -1022,6 +1022,10 @@ model Contact {
   /// Marked as an RFQ contributor by hand, for RFQs from before SampForce. Real RFQs make one without a mark.
   rfqContributorAt   DateTime?       @map("rfq_contributor_at")
   rfqContributorById String?         @map("rfq_contributor_by_id")
+  /// The follow-up cadence (ADR 0083): when the first email reached the employee, and when and why it stopped.
+  initialEmailAt     DateTime?       @map("initial_email_at")
+  cadenceStoppedAt   DateTime?       @map("cadence_stopped_at")
+  cadenceStopReason  String?         @map("cadence_stop_reason")
   createdById       String?          @map("created_by_id")
   updatedById       String?          @map("updated_by_id")
   /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
@@ -1735,6 +1739,8 @@ model Task {
   nextAction        String?      @map("next_action")
   remarks           String?
   rescheduleCount   Int          @default(0) @map("reschedule_count")
+  /// Redesign R3 (ADR 0083): the n-th follow-up of an employee's outreach cadence, planned by SampForce.
+  cadenceStep       Int?         @map("cadence_step")
   rescheduledAt     DateTime?    @map("rescheduled_at")
   outcome           String?
   rfqId             String?      @map("rfq_id")
@@ -4684,6 +4690,8 @@ model CrmSettings {
   exportPolicy      Json?    @map("export_policy")
   dashboardPolicies Json?    @map("dashboard_policies")
   enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  /// { followUps, intervalDays, updatedAt, updatedById } (ADR 0083); null = 5 follow-ups 7 days apart.
+  followUpCadence   Json?    @map("follow_up_cadence")
   updatedById       String?  @map("updated_by_id")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

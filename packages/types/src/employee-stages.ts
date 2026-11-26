@@ -1,3 +1,4 @@
+import type { ContactCadence } from './follow-up-cadence';
 import { z } from 'zod';
 import type { PersonRef } from './crm';
 
@@ -6,7 +7,7 @@ import type { PersonRef } from './crm';
  *
  * Every employee (a Contact at a company) has their own communication stage, apart from the employee status. Stages
  * are CrmStatus rows of kind STAGE, so a workspace can rename, recolour, add and retire them in CRM configuration.
- * The 20 built-in stages carry a `key`, which is how SampForce moves an employee on by itself (an RFQ arrives, a
+ * The 22 built-in stages carry a `key`, which is how SampForce moves an employee on by itself (an RFQ arrives, a
  * follow-up is done, SampBidx confirms a transfer). Every stage has a `phase`, which the filters and dashboards use,
  * so a stage a workspace adds later is counted with the built-in ones of the same phase.
  */
@@ -16,6 +17,9 @@ export type StagePhase = (typeof STAGE_PHASES)[number];
 
 export const STAGE_KEYS = [
   'NEW_CONTACT',
+  // Redesign R3 (ADR 0083): the outreach cadence. A new employee waits for the first email, then follow-ups run.
+  'FRESH_EMAIL_PENDING',
+  'INITIAL_EMAIL_SENT',
   'RFQ_RECEIVED',
   'RFQ_REVIEW',
   'RFQ_QUALIFICATION',
@@ -52,6 +56,8 @@ export interface BuiltInStage {
  */
 export const BUILT_IN_STAGES: readonly BuiltInStage[] = [
   { key: 'NEW_CONTACT', name: 'New Contact', color: '#6b7280', phase: 'NEW' },
+  { key: 'FRESH_EMAIL_PENDING', name: 'Fresh Email Pending', color: '#0891b2', phase: 'NEW' },
+  { key: 'INITIAL_EMAIL_SENT', name: 'Initial Email Sent', color: '#7c3aed', phase: 'NEW' },
   { key: 'RFQ_RECEIVED', name: 'RFQ Received', color: '#2563eb', phase: 'RFQ' },
   { key: 'RFQ_REVIEW', name: 'RFQ Under Review', color: '#4f46e5', phase: 'RFQ' },
   { key: 'RFQ_QUALIFICATION', name: 'RFQ Qualification', color: '#8b5cf6', phase: 'RFQ' },
@@ -219,7 +225,7 @@ export type StageChangeInput = z.infer<typeof stageChangeSchema>;
 export const contributorMarkSchema = z.object({ marked: z.boolean() });
 
 /** Where an automatic stage change came from. MANUAL is a person picking the stage. */
-export const STAGE_CHANGE_SOURCES = ['MANUAL', 'RFQ', 'FOLLOW_UP', 'INTERACTION', 'SAMPBIDX', 'RFQ_OUTCOME', 'CALL_SCHEDULED'] as const;
+export const STAGE_CHANGE_SOURCES = ['MANUAL', 'RFQ', 'FOLLOW_UP', 'INTERACTION', 'SAMPBIDX', 'RFQ_OUTCOME', 'CALL_SCHEDULED', 'EMAIL', 'CADENCE'] as const;
 export type StageChangeSource = (typeof STAGE_CHANGE_SOURCES)[number];
 
 export interface EmployeeActivityRow {
@@ -245,6 +251,8 @@ export interface EmployeeActivityRow {
   nextFollowUpAt: string | null;
   followUpsOverdue: number;
   followUpsCompleted: number;
+  /** Where the employee is in the follow-up cadence (ADR 0083): "Follow-up 2 of 5". */
+  cadence: ContactCadence | null;
   owner: PersonRef | null;
   /** False when the caller's role may not see this employee's contact details. */
   details: boolean;

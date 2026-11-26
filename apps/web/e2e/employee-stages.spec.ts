@@ -184,11 +184,11 @@ test('employees get communication stages and RFQ contributor marks, and a compan
   // The workspace adds its own stage in CRM settings.
   await page.goto('/app/settings/crm?section=stages');
   const list = page.getByRole('list', { name: 'Communication stages' });
-  await expect(list.getByRole('listitem')).toHaveCount(20);
+  await expect(list.getByRole('listitem')).toHaveCount(22);
   await page.getByLabel('Name').fill('Pilot running');
   await page.getByLabel('Part of').selectOption('NEGOTIATION');
   await page.getByRole('button', { name: 'Add status' }).click();
-  await expect(list.getByRole('listitem')).toHaveCount(21);
+  await expect(list.getByRole('listitem')).toHaveCount(23);
   await expect(list).toContainText('Pilot running');
   await axe(page);
   if (PREVIEW_DIR) await page.screenshot({ path: `${PREVIEW_DIR}/09-crm-stages.png`, fullPage: true });

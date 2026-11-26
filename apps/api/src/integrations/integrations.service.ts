@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, Logger } fr
 import { randomBytes } from 'node:crypto';
 import { type IntegrationConnection, type TenantTx } from '@dealflow/database';
 import { INTEGRATION_PROVIDERS, type IntegrationProviderKey, type ProviderStatus } from '@dealflow/types';
+import { FollowUpCadenceService } from '../crm/follow-up-cadence.service';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { SECRET_BOX, type SecretBox, signToken, verifyToken } from '../common/crypto';
@@ -46,6 +47,7 @@ export class IntegrationsService {
     private readonly notifications: NotificationsService,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly cadence: FollowUpCadenceService,
   ) {
     this.adapters = { GOOGLE: googleAdapter(env), MICROSOFT: microsoftAdapter(env) };
   }
@@ -229,7 +231,11 @@ export class IntegrationsService {
                 contactId: hit.contactId ?? null,
                 leadId: hit.contactId ? null : (hit.leadId ?? null),
               });
-            if (r) emails++;
+            if (r) {
+              emails++;
+              // The follow-up cadence (ADR 0083): a first email starts it, a reply stops it.
+              await this.cadence.emailStored(tx, { tenantId, userId: conn.userId }, r);
+            }
           }
 
           let meetings = 0;

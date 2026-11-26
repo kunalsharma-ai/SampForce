@@ -39,6 +39,7 @@ import { CrmAdminService } from './crm-admin.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { DealsService } from './deals.service';
 import { EmployeeStagesService } from './employee-stages.service';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { RevenueRecordsService } from './revenue-records.service';
 import { badRef, notFound } from './crm-helpers';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from './visibility';
@@ -58,6 +59,16 @@ const unset = (field: string) => [{ [field]: null }, { [field]: { isSet: false }
  * records; logged emails and emails synced from a mailbox are counted apart, and receiving an RFQ is never revenue.
  * Access follows the caller's record visibility: a company they cannot see has no dashboard, interactions or RFQs.
  */
+/** Interactions that mean the employee answered, which stops their follow-up cadence (ADR 0083), with the reason shown. */
+const CADENCE_STOPPERS: Partial<Record<InteractionInput['kind'], string>> = {
+  EMAIL_RECEIVED: 'the contact replied',
+  CALL_OUTGOING: 'a call took place',
+  CALL_INCOMING: 'the contact called',
+  MEETING: 'a meeting took place',
+  NEGOTIATION: 'negotiation started',
+  RFQ_RECEIVED: 'an RFQ arrived',
+};
+
 @Injectable()
 export class CompanyWorkService {
   constructor(
@@ -69,6 +80,7 @@ export class CompanyWorkService {
     private readonly admin: CrmAdminService,
     private readonly revenue: RevenueRecordsService,
     private readonly stages: EmployeeStagesService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   // ─── Company dashboard ───
@@ -308,6 +320,11 @@ export class CompanyWorkService {
       await this.assertCompanyChildren(tx, auth.tenantId, input.companyId, { contactId: input.contactId, fileId: input.fileId, rfqId: input.rfqId });
       const id = await this.logIn(tx, auth, input);
       await this.stages.interactionLogged(tx, auth, input);
+      // The follow-up cadence (ADR 0083): the first email starts it, any answer from the employee stops it.
+      if (input.contactId) {
+        if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'INTERACTION');
+        else if (CADENCE_STOPPERS[input.kind]) await this.cadence.stop(tx, auth.tenantId, input.contactId, CADENCE_STOPPERS[input.kind]!);
+      }
       if (input.followUpAt) {
         await this.createFollowUpIn(tx, auth, {
           companyId: input.companyId,
@@ -507,6 +524,7 @@ export class CompanyWorkService {
       if (before.status !== 'OPEN') throw notOpen();
       const row = await tx.task.update({ where: { id }, data: { status: 'DONE', completedAt: new Date(), outcome: outcome ?? null } });
       await this.stages.followUpDone(tx, auth, row);
+      await this.cadence.followUpCompleted(tx, auth, row);
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.completed', entityType: 'task', entityId: id, metadata: { followUp: true }, meta });
       return (await this.followUpRowsFor(tx, auth, [row], new Date(), 'UTC'))[0]!;
     });
@@ -732,6 +750,7 @@ export class CompanyWorkService {
       await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_RECEIVED', subject: `${row.number}: ${row.projectName}`, occurredAt: receivedAt.toISOString(), rfqId: row.id });
       // The employee who shared it starts a new cycle at "RFQ Received" (ADR 0080).
       await this.stages.advance(tx, auth, row.contactId, 'RFQ_RECEIVED', { source: 'RFQ', rfqId: row.id, override: true });
+      await this.cadence.stop(tx, auth.tenantId, row.contactId, 'an RFQ arrived');
       if (row.status !== 'RECEIVED') await this.stages.rfqStatusChanged(tx, auth, row);
       if (row.ownerId && row.ownerId !== auth.userId) {
         await this.notifications.send(tx, auth.tenantId, [row.ownerId], { type: 'rfq.assigned', title: `RFQ assigned to you: ${`${row.number} ${row.projectName}`}`, body: null, link: `/app/rfqs?open=${row.id}` });
@@ -769,7 +788,10 @@ export class CompanyWorkService {
       }
       const row = await tx.rfq.update({ where: { id }, data });
       if (customFields) await this.fields.claimFiles(tx, auth.tenantId, 'RFQ', id, customFields);
-      if (input.contactId && input.contactId !== before.contactId) await this.stages.advance(tx, auth, input.contactId, 'RFQ_RECEIVED', { source: 'RFQ', rfqId: id, override: true });
+      if (input.contactId && input.contactId !== before.contactId) {
+        await this.stages.advance(tx, auth, input.contactId, 'RFQ_RECEIVED', { source: 'RFQ', rfqId: id, override: true });
+        await this.cadence.stop(tx, auth.tenantId, input.contactId, 'an RFQ arrived');
+      }
       if (statusChanged) await this.stages.rfqStatusChanged(tx, auth, row);
       if (statusChanged && input.status === 'QUOTATION_SUBMITTED') {
         await this.logIn(tx, auth, { companyId: row.companyId, contactId: row.contactId, kind: 'RFQ_SUBMITTED', subject: `${row.number}: quotation submitted`, rfqId: row.id });

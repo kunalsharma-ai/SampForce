@@ -6,6 +6,7 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, diff, notFound, orderBy, paging, consentFields } from './crm-helpers';
 import { CustomFieldsService } from './custom-fields.service';
+import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { assertStatus, defaultStatusId, reasons, statusRefs, withOnePrimary } from './companies.service';
 import { canSeeDetails, contactScope, personRefs, visibility, type Visibility } from './visibility';
 
@@ -19,6 +20,7 @@ export class ContactsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly fields: CustomFieldsService,
+    private readonly cadence: FollowUpCadenceService,
   ) {}
 
   list(auth: AuthContext, q: ListQuery, f: { statusId?: string; cf?: CustomFieldFilter[] } = {}): Promise<Page<ContactRow>> {
@@ -99,6 +101,7 @@ export class ContactsService {
       include,
     });
     await this.fields.claimFiles(tx, auth.tenantId, 'CONTACT', row.id, customFields);
+    await this.cadence.contactCreated(tx, auth, row);
     await this.audit.record(tx, {
       tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.created', entityType: 'contact', entityId: row.id, meta,
     });

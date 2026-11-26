@@ -3,6 +3,8 @@
 import { type ContributorStatus, type EmployeeStageRow, STAGE_PHASES, type StageKey, type StagePhase, type StageRef, stageTones } from '@dealflow/types';
 import { cn, Popover, PopoverContent, PopoverTrigger } from '@dealflow/ui';
 import {
+  MailCheck,
+  MailQuestion,
   Ban,
   BadgeCheck,
   CalendarClock,
@@ -35,6 +37,8 @@ import { type MessageKey, useT } from '@/lib/i18n';
 
 const KEY_ICON: Record<StageKey, LucideIcon> = {
   NEW_CONTACT: UserPlus,
+  FRESH_EMAIL_PENDING: MailQuestion,
+  INITIAL_EMAIL_SENT: MailCheck,
   RFQ_RECEIVED: Inbox,
   RFQ_REVIEW: ScanSearch,
   RFQ_QUALIFICATION: ListChecks,
