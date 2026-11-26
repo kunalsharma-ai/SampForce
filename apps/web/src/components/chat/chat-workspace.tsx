@@ -31,12 +31,14 @@ import {
   Search,
   SendHorizontal,
   Smile,
+  SmilePlus,
   Trash2,
   UserPlus,
   Users,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { EmojiPicker, QUICK_EMOJI } from './emoji-picker';
 import * as React from 'react';
 import { formatBytes } from '@/components/forms/upload-zone';
 import { Select, Textarea } from '@/components/crm/select';
@@ -535,7 +537,7 @@ function Ticks({ status, onPrimary }: { status: Status | 'pending' | 'failed'; o
   return <CheckCheck className={cn('size-3.5', read ? (onPrimary ? 'stroke-[3] opacity-100' : 'text-info') : 'opacity-60')} aria-label={read ? t('Seen') : t('Delivered')} />;
 }
 
-function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm: ChatRealm; id: string; onBack: () => void; onGone: () => void; details: boolean; onToggleDetails: () => void }) {
+export function Thread({ realm, id, onBack, onGone, details, onToggleDetails, embedded = false }: { realm: ChatRealm; id: string; onBack: () => void; onGone: () => void; details: boolean; onToggleDetails: () => void; embedded?: boolean }) {
   const t = useT();
   const conv = useConversation(realm, id);
   const messages = useMessages(realm, id);
@@ -670,7 +672,7 @@ function Thread({ realm, id, onBack, onGone, details, onToggleDetails }: { realm
   return (
     <>
       <header className={cn('flex items-center gap-3 border-b border-border p-3 backdrop-blur', isSampbidx(c) ? 'bg-gradient-to-r from-warning/15 via-surface/80 to-surface/80' : 'bg-surface/80')}>
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onBack} aria-label={t('Back to conversations')}>
+        <Button variant="ghost" size="icon" className={embedded ? 'hidden' : 'lg:hidden'} onClick={onBack} aria-label={t('Back to conversations')}>
           <ArrowLeft aria-hidden />
         </Button>
         {c.kind === 'DIRECT' ? <Avatar name={c.title} online={otherPresence?.online ?? false} /> : <GroupAvatar c={c} />}
@@ -855,8 +857,14 @@ function ReadReceipt({ c, last, selfId, others }: { c: ChatConversationRow; last
 
 function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m: ChatMessageRow; mine: boolean; grouped: boolean; status?: Status }) {
   const t = useT();
-  const { edit, remove } = useChatMutations(realm);
+  const { edit, remove, react } = useChatMutations(realm);
   const [editing, setEditing] = React.useState(false);
+  const [reacting, setReacting] = React.useState(false);
+  const canReact = !m.deleted && !m.system && !m.sampbidxDelivery && !m.external;
+  const toggle = (emoji: string, on: boolean) => {
+    setReacting(false);
+    react.mutate({ message: m, emoji, on });
+  };
   const [text, setText] = React.useState(m.body);
   const name = m.author?.name ?? m.external?.name ?? t('Someone');
   const onlyEmoji = !!m.body && m.body.length <= 8 && /^(?:\p{Extended_Pictographic}|‍|️|\s)+$/u.test(m.body);
@@ -935,11 +943,52 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
                 {mine && status && <Ticks status={status} />}
               </span>
             )}
+            {(m.reactions?.length ?? 0) > 0 && (
+              <ul className={cn('flex max-w-full flex-wrap gap-1', mine && 'justify-end')} aria-label={t('Reactions')} data-reactions="">
+                {m.reactions!.map((r) => (
+                  <li key={r.emoji}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(r.emoji, !r.mine)}
+                      aria-pressed={r.mine}
+                      aria-label={t('{emoji} {count}, {names}', { emoji: r.emoji, count: r.count, names: r.names.join(', ') })}
+                      title={r.names.join(', ')}
+                      data-reaction={r.emoji}
+                      className={cn('inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-xs tabular transition-colors', r.mine ? 'border-primary/60 bg-primary/10 text-primary' : 'border-border bg-surface hover:bg-muted')}
+                    >
+                      <span className="text-sm leading-none">{r.emoji}</span>
+                      {r.count}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {reacting && (
+              <div className="relative z-20">
+                <div className="flex gap-1 rounded-full border border-border bg-popover px-2 py-1 shadow-md" role="group" aria-label={t('Quick reactions')}>
+                  {QUICK_EMOJI.slice(0, 6).map((e) => (
+                    <button key={e} type="button" className="rounded-full p-0.5 text-lg transition-transform hover:scale-125 motion-reduce:hover:scale-100" onClick={() => toggle(e, !(m.reactions ?? []).some((r) => r.emoji === e && r.mine))} aria-label={t('React with {emoji}', { emoji: e })}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <EmojiPicker label={t('Pick a reaction')} onPick={(e) => toggle(e, true)} className={cn('mt-1', mine ? 'ms-auto' : '')} />
+              </div>
+            )}
             {mine && <SampbidxDeliveryLine m={m} />}
             {m.writtenAt && <p className="px-1 text-[11px] text-muted-foreground">{t('Written at {time} while offline', { time: `${shortWhen(m.writtenAt)} ${time(m.writtenAt)}`.trim() })}</p>}
           </>
         )}
       </div>
+      {!editing && (canReact || (mine && !m.deleted && !m.sampbidxDelivery)) && (
+        <div className="flex shrink-0 gap-0.5 self-center opacity-100 transition-opacity focus-within:opacity-100 group-hover:opacity-100 lg:opacity-0">
+          {canReact && (
+            <button type="button" className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-md px-1.5 text-xs text-muted-foreground hover:bg-muted" onClick={() => setReacting((v) => !v)} aria-label={t('React')} aria-expanded={reacting}>
+              <SmilePlus className="size-3.5" aria-hidden />
+            </button>
+          )}
+        </div>
+      )}
       {mine && !m.deleted && !editing && !m.sampbidxDelivery && (
         <div className="flex shrink-0 gap-0.5 self-center opacity-100 transition-opacity focus-within:opacity-100 group-hover:opacity-100 lg:opacity-0">
           {m.body && (
@@ -997,8 +1046,6 @@ function OutboxLine({ realm, item }: { realm: ChatRealm; item: OutboxItem }) {
   );
 }
 
-const EMOJI = ['👍', '🙏', '🎉', '✅', '👀', '😊', '😂', '❤️', '🔥', '🚀', '👏', '🤝', '💡', '📌', '⏰', '📞', '📈', '💰', '❗', '❓', '🙌', '😅', '🤔', '👋'];
-
 function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow }) {
   const t = useT();
   const qc = useQueryClient();
@@ -1011,6 +1058,8 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
   const [error, setError] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const area = React.useRef<HTMLTextAreaElement>(null);
+  // Team chat (direct messages and channels) is text and emoji only (redesign R9); the support line keeps files.
+  const textOnly = realm.kind === 'user' && (conv.kind === 'DIRECT' || conv.kind === 'CHANNEL');
   // Grow with the text, up to about eight lines.
   React.useLayoutEffect(() => {
     const el = area.current;
@@ -1060,14 +1109,14 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
     <div
       className={cn('relative space-y-2 border-t border-border bg-surface p-3', dragging && 'ring-2 ring-inset ring-primary')}
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('Files')) {
+        if (!textOnly && e.dataTransfer.types.includes('Files')) {
           e.preventDefault();
           setDragging(true);
         }
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
-        if (!e.dataTransfer.files.length) return;
+        if (textOnly || !e.dataTransfer.files.length) return;
         e.preventDefault();
         setDragging(false);
         addFiles(e.dataTransfer.files);
@@ -1092,15 +1141,7 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
           {error}
         </p>
       )}
-      {emoji && (
-        <div className="grid grid-cols-8 gap-1 rounded-xl border border-border bg-popover p-2 shadow-lg animate-in fade-in slide-in-from-bottom-2 sm:max-w-sm" role="group" aria-label={t('Emoji')}>
-          {EMOJI.map((e) => (
-            <button key={e} type="button" className="rounded-md p-1 text-xl transition-transform hover:scale-125 hover:bg-muted motion-reduce:hover:scale-100" onClick={() => insert(e)} aria-label={e}>
-              {e}
-            </button>
-          ))}
-        </div>
-      )}
+      {emoji && <EmojiPicker label={t('Emoji')} onPick={insert} className="animate-in fade-in slide-in-from-bottom-2" />}
       <form
         className="flex items-end gap-1.5 rounded-2xl border border-input bg-background p-1.5 shadow-sm transition-shadow focus-within:border-primary focus-within:shadow-glow"
         onSubmit={(e) => {
@@ -1108,11 +1149,15 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
           void send();
         }}
       >
-        <input ref={fileRef} type="file" multiple className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} data-chat-file-input="" />
-        <Button type="button" variant="ghost" size="icon" className="shrink-0 rounded-full" onClick={() => fileRef.current?.click()} aria-label={t('Attach a file')}>
-          <Paperclip aria-hidden />
-        </Button>
-        {realm.kind === 'user' && !isSampbidx(conv) && (
+        {!textOnly && (
+          <>
+            <input ref={fileRef} type="file" multiple className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} data-chat-file-input="" />
+            <Button type="button" variant="ghost" size="icon" className="shrink-0 rounded-full" onClick={() => fileRef.current?.click()} aria-label={t('Attach a file')}>
+              <Paperclip aria-hidden />
+            </Button>
+          </>
+        )}
+        {realm.kind === 'user' && !isSampbidx(conv) && !textOnly && (
           <Button type="button" variant="ghost" size="icon" className="hidden shrink-0 rounded-full sm:inline-flex" onClick={() => setPicking(true)} aria-label={t('Link a company, RFQ or deal')}>
             <Link2 aria-hidden />
           </Button>
@@ -1134,7 +1179,7 @@ function Composer({ realm, conv }: { realm: ChatRealm; conv: ChatConversationRow
             }
           }}
           onPaste={(e) => {
-            if (e.clipboardData.files.length) {
+            if (!textOnly && e.clipboardData.files.length) {
               e.preventDefault();
               addFiles(e.clipboardData.files);
             }
@@ -1398,8 +1443,9 @@ function ChannelDialog({ realm, conv, onClose, onOpen }: { realm: ChatRealm; con
     e.preventDefault();
     if (!name.trim()) return setError(t('Give the channel a name.'));
     const fail = (err: Error) => setError(t.maybe(err.message));
-    if (conv) update.mutate({ id: conv.id, patch: { name: name.trim(), topic: topic.trim() || null, link: link ? { type: link.type, id: link.id } : null } }, { onSuccess: onClose, onError: fail });
-    else create.mutate({ kind: 'CHANNEL', name: name.trim(), topic: topic.trim() || null, memberIds: members, link: link ? { type: link.type, id: link.id } : null }, { onSuccess: (c) => { onOpen?.(c.id); onClose(); }, onError: fail });
+    // Channels take no record links since R9; a link set earlier stays as it is.
+    if (conv) update.mutate({ id: conv.id, patch: { name: name.trim(), topic: topic.trim() || null } }, { onSuccess: onClose, onError: fail });
+    else create.mutate({ kind: 'CHANNEL', name: name.trim(), topic: topic.trim() || null, memberIds: members }, { onSuccess: (c) => { onOpen?.(c.id); onClose(); }, onError: fail });
   };
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -1413,14 +1459,6 @@ function ChannelDialog({ realm, conv, onClose, onOpen }: { realm: ChatRealm; con
           <Field id="chat-channel-topic" label={t('What it is about')}>
             <Input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={300} />
           </Field>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t('Linked record')}</p>
-            {link ? <LinkChip link={link} onRemove={() => setLink(null)} /> : (
-              <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)}>
-                <Link2 aria-hidden /> {t('Link a company, RFQ or deal')}
-              </Button>
-            )}
-          </div>
           {!conv && (
             <div className="space-y-2">
               <p className="text-sm font-medium">{t('People')}</p>
