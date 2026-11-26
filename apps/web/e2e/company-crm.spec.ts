@@ -267,7 +267,7 @@ test('a company lead is created step by step with branches, employees and owners
   await shot(page, '21-company-page-after-changes');
 
   // The employee profile with relationship numbers.
-  await main.getByRole('link', { name: 'Priya Nair' }).click();
+  await main.getByRole('table', { name: 'Employees / POCs' }).getByRole('link', { name: 'Priya Nair' }).click();
   await page.waitForURL(/\/app\/contacts\//);
   await expect(main.getByText('Emails sent')).toBeVisible();
   await expect(main.getByText('Procurement Lead').first()).toBeVisible();
