@@ -18,6 +18,8 @@ export const companyLeads = {
   'Employees / POCs': ['Empleados / contactos', 'Employés / interlocuteurs', 'Mitarbeiter / Ansprechpartner', 'الموظفون / جهات الاتصال'],
   'Lead ownership & POC assignment': ['Responsable del lead y contacto asignado', 'Responsable du prospect et interlocuteur', 'Lead-Verantwortung und Ansprechpartner', 'مسؤولية العميل المحتمل وتعيين جهة الاتصال'],
   'Lead status': ['Estado del lead', 'Statut du prospect', 'Lead-Status', 'حالة العميل المحتمل'],
+  'Or pick': ['O elige', 'Ou choisissez', 'Oder auswählen', 'أو اختر'],
+  'More about this company': ['Más sobre esta empresa', 'En savoir plus sur cette entreprise', 'Mehr über dieses Unternehmen', 'المزيد عن هذه الشركة'],
   'Remarks & attachments': ['Observaciones y adjuntos', 'Remarques et pièces jointes', 'Anmerkungen und Anhänge', 'الملاحظات والمرفقات'],
   'Review & save': ['Revisar y guardar', 'Vérifier et enregistrer', 'Prüfen und speichern', 'المراجعة والحفظ'],
   'Company name *': ['Nombre de la empresa *', 'Nom de l’entreprise *', 'Unternehmensname *', 'اسم الشركة *'],
