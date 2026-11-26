@@ -41,6 +41,7 @@
     "@prisma/instrumentation": "6.19.3",
     "bidi-js": "1.0.3",
     "cookie-parser": "1.4.7",
+    "date-holidays": "3.38.0",
     "domhandler": "5.0.3",
     "exceljs": "4.4.0",
     "express": "5.2.1",

@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, normalizeWorkingHours, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -324,6 +324,8 @@ function normalise(input: Partial<CompanyInput>, before?: Prisma.CompanyGetPaylo
   sync('websites', 'website');
   sync('linkedinUrls', 'linkedinUrl');
   if (input.addresses !== undefined) out.addresses = input.addresses as unknown as Prisma.InputJsonValue;
+  // Hours typed through the API or a form are the user's, whatever source the request named (null clears them).
+  if (input.workingHours) out.workingHours = { ...input.workingHours, source: 'user' };
   // The old domain field (used by integrations and enrichment) follows the website.
   if (out.website !== undefined && input.domain === undefined) out.domain = out.website ? new URL(String(out.website)).hostname.replace(/^www\./, '') : (before?.domain ?? null);
   if (input.name !== undefined) out.nameKey = companyNameKey(input.name);
@@ -460,6 +462,7 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     address: hide(r.address, null),
     postalCode: hide(r.postalCode, null),
     timezone: r.timezone,
+    workingHours: normalizeWorkingHours(r.workingHours),
     notes: hide(r.notes, null),
     emails: hide(points(r.emails), []),
     phones: hide(points(r.phones), []),

@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import {
   type Appearance,
   appearanceSchema,
+  type ContactTimes,
+  contactTimesSchema,
   type DashboardLayout,
   dashboardLayoutSchema,
   type Regional,
@@ -61,6 +63,23 @@ export class PreferencesController {
   @Delete('regional')
   resetRegional(@Auth() auth: AuthContext) {
     return this.prefs.resetRegional(auth);
+  }
+
+  /** My own time zone and calling hours, for the client-time card and the "good time to contact?" check. */
+  @Get('contact-times')
+  getContactTimes(@Auth() auth: AuthContext) {
+    return this.prefs.getContactTimes(auth);
+  }
+
+  @Put('contact-times')
+  saveContactTimes(@Auth() auth: AuthContext, @Body(new ZodPipe(contactTimesSchema)) body: ContactTimes) {
+    return this.prefs.saveContactTimes(auth, body);
+  }
+
+  @NoPasswordConfirmation('A personal or display setting goes back to its default')
+  @Delete('contact-times')
+  resetContactTimes(@Auth() auth: AuthContext) {
+    return this.prefs.resetContactTimes(auth);
   }
 
   @Get('themes')

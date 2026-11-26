@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type WorkingHours, workingHoursSchema } from './client-time';
 import { customFieldFiltersParam } from './custom-fields';
 import { type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
 
@@ -159,6 +160,8 @@ export const companyInputSchema = z.object({
   address: optionalText(500),
   postalCode: optionalText(20),
   timezone: optionalText(64),
+  /** Office hours on the company's clock (ADR 0088); null goes back to the country's usual day. */
+  workingHours: workingHoursSchema.nullable().optional(),
   notes: optionalText(5000),
   emails: pointList(requiredEmail),
   phones: pointList(requiredPhone),
@@ -241,6 +244,7 @@ export interface CompanyRow {
   address: string | null;
   postalCode: string | null;
   timezone: string | null;
+  workingHours: WorkingHours | null;
   notes: string | null;
   emails: ContactPoint[];
   phones: ContactPoint[];
@@ -298,6 +302,8 @@ export const contactInputSchema = z.object({
   jobTitle: optionalText(160),
   country: countryCode,
   timezone: optionalText(64),
+  /** This person's own office hours (ADR 0088); null uses their company's. */
+  workingHours: workingHoursSchema.nullable().optional(),
   companyId: uuidRef,
   ownerId: uuidRef,
   marketingConsent: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
@@ -326,6 +332,7 @@ export interface ContactRow {
   jobTitle: string | null;
   country: string | null;
   timezone: string | null;
+  workingHours: WorkingHours | null;
   company: { id: string; name: string } | null;
   owner: OwnerRef | null;
   marketingConsent: 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';

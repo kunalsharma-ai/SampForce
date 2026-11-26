@@ -174,6 +174,7 @@ export class CompanyClosureService {
         await tx.userPhoto.deleteMany({ where: { userId } });
         await tx.userPreference.deleteMany({ where: { userId } });
         await tx.userRegionalSetting.deleteMany({ where: { userId } });
+        await tx.userContactTimes.deleteMany({ where: { userId } });
         await tx.userSavedTheme.deleteMany({ where: { userId } });
         await tx.user.update({
           where: { id: userId },

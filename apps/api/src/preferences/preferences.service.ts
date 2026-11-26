@@ -1,6 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   type Appearance,
+  type ContactTimes,
+  type ContactTimesResponse,
+  contactTimesSchema,
+  DEFAULT_CONTACT_TIMES,
   MAX_SAVED_THEMES,
   normalizeAppearance,
   type PreferencesResponse,
@@ -92,6 +96,24 @@ export class PreferencesService {
   async resetRegional(auth: AuthContext): Promise<RegionalResponse> {
     await this.prisma.userRegionalSetting.deleteMany({ where: { userId: auth.userId } });
     return this.getRegional(auth);
+  }
+
+  /** The person's own zone and calling hours (ADR 0088); IST, 09:00-23:00 and "ask first" until they choose. */
+  async getContactTimes(auth: AuthContext): Promise<ContactTimesResponse> {
+    const row = await this.prisma.userContactTimes.findUnique({ where: { userId: auth.userId } });
+    if (!row) return { contactTimes: DEFAULT_CONTACT_TIMES, source: 'default' };
+    const parsed = contactTimesSchema.safeParse({ timeZone: row.timeZone, start: row.start, end: row.end, confirmBeforeContact: row.confirmBeforeContact });
+    return { contactTimes: parsed.success ? parsed.data : DEFAULT_CONTACT_TIMES, source: 'user' };
+  }
+
+  async saveContactTimes(auth: AuthContext, body: ContactTimes): Promise<ContactTimesResponse> {
+    await this.prisma.userContactTimes.upsert({ where: { userId: auth.userId }, create: { userId: auth.userId, ...body }, update: body });
+    return this.getContactTimes(auth);
+  }
+
+  async resetContactTimes(auth: AuthContext): Promise<ContactTimesResponse> {
+    await this.prisma.userContactTimes.deleteMany({ where: { userId: auth.userId } });
+    return this.getContactTimes(auth);
   }
 
   async listThemes(auth: AuthContext): Promise<SavedTheme[]> {

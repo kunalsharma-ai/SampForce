@@ -1,8 +1,10 @@
 import type { CompanyAddress, ContactPoint, MoreDetail, SocialLink, SocialPlatform } from '@dealflow/types';
+import { resolveZone } from '@dealflow/types';
 import { socialPlatformOf, tidySocialUrl } from '@dealflow/types';
 import { DomUtils, parseDocument } from 'htmlparser2';
 import type { AnyNode, Document, Element } from 'domhandler';
-import { type Candidate, candidate, clean, clip, countryCodeOf, countryFromDomain, countryIn, singleTimezone, sizeBand } from './candidates';
+import { type Candidate, candidate, clean, clip, countryCodeOf, countryFromDomain, countryIn, sizeBand } from './candidates';
+import { openingHoursOf } from './opening-hours';
 
 /*
  * Reads company facts from the company's own web pages (ADR 0076). Pure: pages in, candidates out. The fetching (public
@@ -408,6 +410,8 @@ function fromJsonLd(nodes: Json[], url: string, domain: string): Candidate[] {
   detail('LEI code', org.leiCode);
   detail('Areas served', org.areaServed);
   if (more.length) out.push(candidate('moreDetails', more, S, url, 'high'));
+  const hours = openingHoursOf(org);
+  if (hours) out.push(candidate('workingHours', hours, S, url, 'high'));
   const knows = arr(org.knowsAbout).map(nameOf).filter((n): n is string => !!n && n.length <= 80);
   if (knows.length) out.push(candidate('specialties', knows.slice(0, 15).join(', '), S, url, 'high'));
   return out;
@@ -515,8 +519,9 @@ function addressCandidates(offices: Office[], source: 'SCHEMA_ORG' | 'WEBSITE', 
   if (hq.postalCode) out.push(candidate('postalCode', hq.postalCode.slice(0, 20), source, hq.page, hqConfidence));
   if (hq.country) {
     out.push(candidate('country', hq.country, source, hq.page, hqConfidence));
-    const tz = singleTimezone(hq.country);
-    if (tz) out.push(candidate('timezone', tz, source, hq.page, hqConfidence));
+    // The zone from the country, state or city (ADR 0088); a country with several zones and no state gives none.
+    const tz = resolveZone({ country: hq.country, state: hq.state, city: hq.city });
+    if (tz.zone && tz.exact) out.push(candidate('timezone', tz.zone, source, hq.page, hqConfidence));
   }
   const place = [hq.city, hq.country ? countryName(hq.country) : null].filter(Boolean).join(', ');
   if (place) out.push(candidate('headquarters', place.slice(0, 200), source, hq.page, hqConfidence));
