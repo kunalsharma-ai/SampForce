@@ -223,12 +223,14 @@ export interface AssignedTaskRow {
   /** The creator and the levels above may change everything; the assignee may change the status. */
   canEdit: boolean;
   canChangeStatus: boolean;
+  /** Whether the caller is the one doing it, so may acknowledge, start or block it. */
+  canProgress: boolean;
 }
 
 export interface TaskHistoryRow {
   id: string;
   actor: WorkPerson | null;
-  kind: 'created' | 'updated' | 'commented';
+  kind: 'created' | 'updated' | 'commented' | 'progress';
   changes: { field: string; from: string | null; to: string | null }[];
   createdAt: string;
 }
