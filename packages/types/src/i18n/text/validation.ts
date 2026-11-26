@@ -345,4 +345,8 @@ export const validation = {
     'لا تقبل الرسائل في دردشة SampBidx التفاعلات، لأن SampBidx لن يراها.',
   ],
   'Pick a time zone': ['Elige una zona horaria', 'Choisissez un fuseau horaire', 'Wählen Sie eine Zeitzone', 'اختر منطقة زمنية'],
+  // Client time and the best time to connect (ADR 0089)
+  'Use a 24-hour time such as 09:00': ['Usa una hora de 24 horas, como 09:00', 'Utilisez une heure au format 24 h, par exemple 09:00', 'Verwenden Sie eine 24-Stunden-Zeit wie 09:00', 'استخدم وقتًا بنظام 24 ساعة مثل 09:00'],
+  'The day must end after it starts': ['El día debe terminar después de empezar', 'La journée doit finir après son début', 'Der Tag muss nach seinem Beginn enden', 'يجب أن ينتهي اليوم بعد أن يبدأ'],
+  'Choose a time zone from the list': ['Elige una zona horaria de la lista', 'Choisissez un fuseau horaire dans la liste', 'Wählen Sie eine Zeitzone aus der Liste', 'اختر منطقة زمنية من القائمة'],
 } as const satisfies TextTable;

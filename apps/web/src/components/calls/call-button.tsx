@@ -13,7 +13,9 @@ import { useCan } from '@/lib/session';
  */
 export function CallButton({ companyId, contactId, name, variant = 'icon', className }: { companyId?: string | null; contactId?: string | null; name: string; variant?: 'icon' | 'chip'; className?: string }) {
   const t = useT();
-  const allowed = useCan('activities:write') && useHasFeature('interactions');
+  const canWrite = useCan('activities:write');
+  const hasInteractions = useHasFeature('interactions');
+  const allowed = canWrite && hasInteractions;
   if (!allowed || (!companyId && !contactId)) return null;
   const qs = new URLSearchParams();
   if (companyId) qs.set('company', companyId);

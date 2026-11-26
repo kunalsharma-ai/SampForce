@@ -1,6 +1,6 @@
 'use client';
 
-import { CALL_OUTCOME_LABELS, CALL_OUTCOMES, CALL_REACHED, CALL_WINDOW_LABELS, type CallDetails, type CallOutcome, type CallRow, type CallTarget, type CallWindow } from '@dealflow/types';
+import { CALL_OUTCOME_LABELS, CALL_OUTCOMES, CALL_REACHED, CALL_WINDOW_LABELS, type CallOutcome, type CallRow, type CallTarget, type CallWindow } from '@dealflow/types';
 import { Badge, Button, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import {
   ArrowUpRight,

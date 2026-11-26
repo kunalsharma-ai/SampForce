@@ -103,7 +103,6 @@ export const calls = {
   'Lunch time there': ['Hora de comer allí', 'Heure du déjeuner là-bas', 'Dort ist Mittagspause', 'وقت الغداء هناك'],
   'Too early there': ['Demasiado temprano allí', 'Trop tôt là-bas', 'Dort ist es zu früh', 'الوقت مبكر جدًا هناك'],
   'After office hours there': ['Fuera de horario allí', 'Après les heures de bureau là-bas', 'Dort nach Büroschluss', 'بعد ساعات العمل هناك'],
-  'Weekend there': ['Fin de semana allí', 'Week-end là-bas', 'Dort ist Wochenende', 'عطلة نهاية الأسبوع هناك'],
   'In your dialer': ['En tu marcador', 'Dans votre composeur', 'In Ihrem Dialer', 'في برنامج الاتصال'],
   'Ringing': ['Sonando', 'Sonnerie', 'Klingelt', 'يرن'],
   'Logged': ['Registrada', 'Noté', 'Erfasst', 'مسجلة'],

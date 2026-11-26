@@ -1447,8 +1447,6 @@ function ChannelDialog({ realm, conv, onClose, onOpen }: { realm: ChatRealm; con
   const [name, setName] = React.useState(conv?.title ?? '');
   const [topic, setTopic] = React.useState(conv?.topic ?? '');
   const [members, setMembers] = React.useState<string[]>([]);
-  const [link, setLink] = React.useState<ChatLinkOption | null>(conv?.link ? { type: conv.link.type, id: conv.link.id, label: conv.link.label } : null);
-  const [picking, setPicking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const pending = create.isPending || update.isPending;
   const submit = (e: React.FormEvent) => {
@@ -1488,7 +1486,6 @@ function ChannelDialog({ realm, conv, onClose, onOpen }: { realm: ChatRealm; con
             </Button>
           </div>
         </form>
-        {picking && <LinkPicker onPick={(o) => { setLink(o); setPicking(false); }} onClose={() => setPicking(false)} />}
       </DialogContent>
     </Dialog>
   );
