@@ -15,6 +15,7 @@ import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
 import { CompanyWonButton } from '@/components/crm/company-won';
+import { CompanyJourneyCard } from '@/components/crm/journey';
 import { CustomFieldList, DetailError, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { RelatedDeals } from '@/components/crm/related-deals';
@@ -76,6 +77,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </div>
           <div className="min-w-0 space-y-4">
             <CompanyLeadCard company={c} />
+            <CompanyJourneyCard companyId={id} />
             <CompanyAutofill company={c} />
             <CompanyFollowUps company={ref} employees={people} />
             <CompanyOwnership company={c} />

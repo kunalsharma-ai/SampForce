@@ -79,6 +79,10 @@ export const BUILT_IN_STAGES: readonly BuiltInStage[] = [
   { key: 'ON_HOLD', name: 'On Hold', color: '#c2803f', phase: 'ON_HOLD' },
 ];
 
+/** The phase of a built-in stage key. */
+const KEY_PHASE = Object.fromEntries(BUILT_IN_STAGES.map((s) => [s.key, s.phase])) as Record<StageKey, StagePhase>;
+export const stagePhaseOf = (key: StageKey): StagePhase => KEY_PHASE[key];
+
 /** How far along the pipeline a stage is. Automatic changes only move an employee forward (see stageRank). */
 const KEY_RANK: Record<StageKey, number> = Object.fromEntries(STAGE_KEYS.map((k, i) => [k, i])) as Record<StageKey, number>;
 const PHASE_RANK: Record<StagePhase, number> = {

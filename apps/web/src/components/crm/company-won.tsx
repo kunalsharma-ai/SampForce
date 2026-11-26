@@ -24,7 +24,7 @@ export function CompanyWonButton({ company }: { company: Pick<CompanyRow, 'id' |
   const win = useMutation({
     mutationFn: () => api<CompanyWonResult>(`/companies/${company.id}/won`, { method: 'POST', json: {} }),
     onSuccess: () =>
-      Promise.all(['companies', 'deals', 'rfqs', 'employee-activity', 'company-dashboard', 'notifications'].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
+      Promise.all(['companies', 'deals', 'rfqs', 'employee-activity', 'company-dashboard', 'notifications', 'company-journey', 'journey-board'].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
   });
   const dealId = win.data?.deal?.id ?? company.wonDealId;
   if (dealId && !open) {

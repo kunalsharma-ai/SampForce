@@ -19,6 +19,8 @@ import { EmployeeStagesService } from './employee-stages.service';
 import { FollowUpCadenceService } from './follow-up-cadence.service';
 import { CompanyDealsController } from './company-deals.controller';
 import { CompanyDealsService } from './company-deals.service';
+import { JourneyController } from './journey.controller';
+import { JourneyService } from './journey.service';
 import { FollowUpCadenceController } from './follow-up-cadence.controller';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
@@ -49,6 +51,7 @@ import {
 @Module({
   imports: [GeoModule],
   controllers: [
+    JourneyController,
     CompanyDealsController,
     EmployeeStagesController,
     FollowUpCadenceController,
@@ -86,6 +89,7 @@ import {
     CrmAdminService,
     CompaniesService,
     CompanyDealsService,
+    JourneyService,
     ContactsService,
     LeadsService,
     DealsService,
