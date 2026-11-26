@@ -98,10 +98,10 @@ export async function transactionLock(tx: TenantTx, key: string): Promise<void> 
  * Increments a counter inside the transaction. A counter created just now (outside the transaction) is not in the
  * transaction's snapshot, so the first use of a new counter restarts the transaction once.
  */
-async function bumpCounter(tx: TenantTx, id: string): Promise<number> {
+async function bumpCounter(tx: TenantTx, id: string, by = 1): Promise<number> {
   await ensureCounter(id);
   try {
-    const row = await tx.counter.update({ where: { id }, data: { value: { increment: 1 } } });
+    const row = await tx.counter.update({ where: { id }, data: { value: { increment: by } } });
     return row.value;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') throw new RetryableDuplicateError();
@@ -112,4 +112,9 @@ async function bumpCounter(tx: TenantTx, id: string): Promise<number> {
 /** The next value of a named sequence, inside the current transaction (was nextval). Starts at 1. */
 export async function nextSequenceValue(tx: TenantTx, name: string): Promise<number> {
   return bumpCounter(tx, `seq:${name}`);
+}
+
+/** Reserves `count` consecutive values of a named sequence in one write and returns the first of them. */
+export async function nextSequenceBlock(tx: TenantTx, name: string, count: number): Promise<number> {
+  return (await bumpCounter(tx, `seq:${name}`, count)) - count + 1;
 }

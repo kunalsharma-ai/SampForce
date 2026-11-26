@@ -610,3 +610,20 @@ export const rawDate = (d: Date): { $date: string } => ({ $date: d.toISOString()
 export async function aggregate<T>(delegate: { aggregateRaw(args: { pipeline: object[] }): unknown }, pipeline: object[]): Promise<T[]> {
   return (await delegate.aggregateRaw({ pipeline })) as unknown as T[];
 }
+
+/** A date read back from a raw aggregation (extended JSON `{ $date }`, or a Date). */
+export function fromRawDate(v: unknown): Date | null {
+  if (v instanceof Date) return v;
+  if (v && typeof v === 'object' && '$date' in v) {
+    const d = (v as { $date: string | { $numberLong: string } }).$date;
+    return new Date(typeof d === 'string' ? d : Number(d.$numberLong));
+  }
+  return typeof v === 'string' ? new Date(v) : null;
+}
+
+/**
+ * Prisma writes `{ field: { in: list } }` for MongoDB as one `$or` branch per value inside `$expr`, so MongoDB compares
+ * every document with every value: with a few thousand ids a read takes seconds (2,666 ids: 1.4 s, against 53 ms as
+ * a native `$in`). Reads over lists that can grow that long use a raw `$in` through `aggregate` instead.
+ */
+export const LARGE_IN_LIST = 200;

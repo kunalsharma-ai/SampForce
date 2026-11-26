@@ -15,9 +15,26 @@ import { canSeeDetails, companyScope, personRefs, reportingTree, scopeOf, visibi
 const SORTABLE = ['name', 'domain', 'createdAt', 'updatedAt', 'industry', 'country', 'leadSeq', 'statusChangedAt'] as const;
 const include = {
   parent: { select: { id: true, name: true } },
-  _count: { select: { contacts: { where: { deletedAt: null } }, opportunities: { where: { deletedAt: null, status: 'OPEN' as const } } } },
 } satisfies Prisma.CompanyInclude;
-type CompanyWith = Prisma.CompanyGetPayload<{ include: typeof include }>;
+/**
+ * A company with its contact and open deal counts. The counts are read for the rows being shown only (see
+ * `withCounts`): a relation `_count` in the query made MongoDB count the contacts and deals of every company in the
+ * workspace before it sorted and cut the page.
+ */
+type CompanyWith = Prisma.CompanyGetPayload<{ include: typeof include }> & { _count: { contacts: number; opportunities: number } };
+
+/** Adds the live contact and open deal counts of these companies, in two grouped reads. */
+export async function withCounts<R extends { id: string }>(tx: TenantTx, tenantId: string, rows: R[]): Promise<(R & { _count: CompanyWith['_count'] })[]> {
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const [contacts, deals] = await Promise.all([
+    tx.contact.groupBy({ by: ['companyId'], where: { tenantId, companyId: { in: ids }, deletedAt: null }, _count: { _all: true } }),
+    tx.opportunity.groupBy({ by: ['companyId'], where: { tenantId, companyId: { in: ids }, deletedAt: null, status: 'OPEN' }, _count: { _all: true } }),
+  ]);
+  const c = new Map(contacts.map((g) => [g.companyId, g._count._all]));
+  const d = new Map(deals.map((g) => [g.companyId, g._count._all]));
+  return rows.map((r) => ({ ...r, _count: { contacts: c.get(r.id) ?? 0, opportunities: d.get(r.id) ?? 0 } }));
+}
 
 /** Extra filters of the company list (on top of ListQuery). */
 export interface CompanyFilters {
@@ -92,12 +109,15 @@ export class CompaniesService {
         ...(f.country ? { country: f.country.toUpperCase() } : {}),
         ...(f.industry ? { industry: { equals: f.industry, mode: 'insensitive' as const } } : {}),
         // "customer" powers the Accounts view: companies with at least one won deal.
+        // "customer" powers the Accounts view: companies with at least one won deal. The deals' company_id index keeps
+        // this lookup fast (without it, each company scanned every deal and a large workspace timed out).
         ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
       };
-      const [rows, total] = await Promise.all([
+      const [found, total] = await Promise.all([
         tx.company.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.company.count({ where }),
       ]);
+      const rows = await withCounts(tx, auth.tenantId, found);
       const ctx = await this.context(tx, auth, rows, v);
       return { items: rows.map((r) => toRow(r, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
@@ -106,9 +126,10 @@ export class CompaniesService {
   get(auth: AuthContext, id: string): Promise<CompanyRow> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
-      const row = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
-      if (!row) throw notFound('Company');
-      return toRow(row, await this.context(tx, auth, [row], v));
+      const found = await tx.company.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...companyScope(v) }, include });
+      if (!found) throw notFound('Company');
+      const [row] = await withCounts(tx, auth.tenantId, [found]);
+      return toRow(row!, await this.context(tx, auth, [row!], v));
     });
   }
 
@@ -160,8 +181,8 @@ export class CompaniesService {
 
   /** The company as the caller sees it, inside their transaction. */
   async rowIn(tx: TenantTx, auth: AuthContext, id: string): Promise<CompanyRow> {
-    const row = await tx.company.findUniqueOrThrow({ where: { id }, include });
-    return toRow(row, await this.context(tx, auth, [row], await visibility(tx, auth)));
+    const [row] = await withCounts(tx, auth.tenantId, [await tx.company.findUniqueOrThrow({ where: { id }, include })]);
+    return toRow(row!, await this.context(tx, auth, [row!], await visibility(tx, auth)));
   }
 
   /**
@@ -251,7 +272,8 @@ export class CompaniesService {
         });
         await this.recordOwnerChange(tx, auth, row, before.ownerId, input.ownerId ?? null, extra?.reason ?? 'REASSIGNED', extra?.note ?? null);
       }
-      return toRow(row, await this.context(tx, auth, [row], v));
+      const [counted] = await withCounts(tx, auth.tenantId, [row]);
+      return toRow(counted!, await this.context(tx, auth, [counted!], v));
     });
   }
 

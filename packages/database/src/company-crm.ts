@@ -11,7 +11,7 @@ import {
   matchKeys,
   type ContactPoint,
 } from '@dealflow/types';
-import { nextSequenceValue, withDbContext, type TenantTx } from './client';
+import { nextSequenceBlock, withDbContext, type TenantTx } from './client';
 
 /*
  * Company-centric CRM data (ADR 0060): workspace defaults, lead numbers and the one-off upgrade of existing data.
@@ -46,7 +46,7 @@ export async function leadNumbering(tx: TenantTx, tenantId: string): Promise<{ p
  * Gives every company of the workspace that has no lead number one, oldest first, from the workspace's counter. A
  * number is never reused (deleted companies keep theirs) and the unique index stops two companies sharing one.
  */
-export async function assignLeadNumbers(tx: TenantTx, tenantId: string, limit = 500): Promise<number> {
+export async function assignLeadNumbers(tx: TenantTx, tenantId: string, limit = 100): Promise<number> {
   const pending = await tx.company.findMany({
     where: { tenantId, OR: [{ leadSeq: null }, { leadSeq: { isSet: false } }] },
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -55,8 +55,10 @@ export async function assignLeadNumbers(tx: TenantTx, tenantId: string, limit = 
   });
   if (!pending.length) return 0;
   const { prefix, digits } = await leadNumbering(tx, tenantId);
-  for (const c of pending) {
-    const seq = await nextSequenceValue(tx, `lead:${tenantId}`);
+  // One counter write for the whole batch (was one per company, which made a large batch outlast its transaction).
+  const first = await nextSequenceBlock(tx, `lead:${tenantId}`, pending.length);
+  for (const [i, c] of pending.entries()) {
+    const seq = first + i;
     await tx.company.update({ where: { id: c.id }, data: { leadSeq: seq, leadNumber: formatLeadNumber(prefix, seq, digits) } });
   }
   return pending.length;
