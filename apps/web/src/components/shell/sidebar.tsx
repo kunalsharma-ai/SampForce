@@ -2,7 +2,7 @@
 
 import { featureForPath, type NavItem } from '@dealflow/types';
 import { Badge, cn, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
-import { ChevronDown, ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
+import { ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -20,8 +20,8 @@ import { useChatUnreadTotal } from './chat-button';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
 /**
- * Redesign R2 (ADR 0082): the sidebar opens with the daily sales work only (the Workspace group) and Settings. Every
- * other section sits under More, which the person opens and closes; it opens by itself on a page that is inside it.
+ * Every section shows directly (Workspace, Engage, Intelligence, Organisation), each in its own colours. Redesign R2
+ * folded all but Workspace under a More button; Kunal wants them all in view.
  */
 /** Each section's palette (redesign, menu): its items take the colours in turn, the heading the first two. */
 const PALETTE: Record<ModuleDef['group'] | 'Favourites', string[]> = {
@@ -37,8 +37,6 @@ function tone(group: keyof typeof PALETTE, i: number): React.CSSProperties {
   return { ...stageStyle(p[i % p.length]!), '--tone-b': p[(i + 1) % p.length] } as React.CSSProperties;
 }
 
-const PRIMARY_GROUP: ModuleDef['group'] = 'Workspace';
-const ALWAYS_SHOWN = new Set(['settings']);
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/app' ? pathname === '/app' : pathname === href || pathname.startsWith(`${href}/`);
@@ -153,13 +151,6 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const bySection = useNotificationSummary(features.ready && features.has('notifications')).data?.bySection;
   // Unread team chat messages, on Team chat (the header no longer has a chat button, redesign R1).
   const chatUnread = useChatUnreadTotal();
-  const moreOpenPref = usePreferences((s) => s.navMoreOpen);
-  const setMoreOpen = usePreferences((s) => s.setNavMoreOpen);
-  const inMore = (m: ModuleDef) => m.group !== PRIMARY_GROUP && !ALWAYS_SHOWN.has(m.slug);
-  const moreModules = modules.filter(inMore);
-  const hereInMore = moreModules.some((m) => isActive(pathname, moduleHref(m)));
-  const moreOpen = moreOpenPref || hereInMore;
-  const unreadInMore = bySection ? moreModules.reduce((n, m) => n + ((bySection as Record<string, number | undefined>)[m.slug] ?? 0), 0) : 0;
 
   const renderGroup = (group: ModuleDef['group'], list: ModuleDef[], i = GROUPS.indexOf(group)) => {
     if (list.length === 0) return null;
@@ -245,33 +236,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
           </ul>
         </section>
       )}
-      {GROUPS.map((group) => renderGroup(group, modules.filter((m) => m.group === group && !inMore(m))))}
-      {moreModules.length > 0 && (
-        <section data-nav-section="more" aria-label={t('More')}>
-          <button
-            type="button"
-            onClick={() => setMoreOpen(!moreOpen)}
-            aria-expanded={moreOpen}
-            aria-controls={`${idPrefix}-more`}
-            disabled={hereInMore}
-            data-nav-more=""
-            title={collapsed ? t('More') : undefined}
-            className={cn('flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-default disabled:hover:bg-transparent', collapsed && 'justify-center')}
-          >
-            <ChevronDown className={cn('size-4 shrink-0 transition-transform', moreOpen && 'rotate-180')} aria-hidden />
-            <span className={cn('flex-1 truncate text-start', collapsed && 'sr-only')}>{t('More')}</span>
-            {!moreOpen && unreadInMore > 0 && (
-              <span className="grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular" data-nav-more-unread="">
-                <span aria-hidden>{unreadInMore > 99 ? '99+' : unreadInMore}</span>
-                <span className="sr-only">{t('New in {section}: {n}', { section: t('More'), n: unreadInMore })}</span>
-              </span>
-            )}
-          </button>
-          <div id={`${idPrefix}-more`} hidden={!moreOpen} className="mt-3 space-y-5">
-            {GROUPS.map((group, i) => renderGroup(group, moreModules.filter((m) => m.group === group), i))}
-          </div>
-        </section>
-      )}
+      {GROUPS.map((group) => renderGroup(group, modules.filter((m) => m.group === group)))}
     </nav>
   );
 }

@@ -39,8 +39,6 @@ test('every sidebar entry leads to a working page', async ({ page }) => {
   await signUp(page);
   // Module sections only: Favourites repeats some of the same links.
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');
-  // Everything beyond the daily sales work sits under More (ADR 0082).
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).click();
   for (const label of SIDEBAR) {
     await nav.getByRole('link', { name: new RegExp(`^${label.replace(/[&]/g, '\\&')}`) }).click();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

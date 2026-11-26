@@ -39,24 +39,13 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await expect(nav.getByRole('link', { name: /^Accounts/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
 
-  // ── More holds everything else, and remembers that it is open ──
-  const more = nav.getByRole('button', { name: 'More' });
-  await expect(more).toHaveAttribute('aria-expanded', 'false');
-  await expect(nav.getByRole('link', { name: 'Reports & Analytics' })).toBeHidden();
-  await shot(page, '01-sidebar-short');
-  await more.click();
-  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  // ── Every other section shows directly too, with no More button ──
+  await expect(nav.getByRole('button', { name: 'More' })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Reports & Analytics' })).toBeVisible();
-  await shot(page, '02-sidebar-more-open', true);
+  await expect(nav.getByRole('link', { name: 'Team Management' })).toBeVisible();
+  await shot(page, '01-sidebar-all-sections', true);
   const a11y = await new AxeBuilder({ page }).include('[data-shell="sidebar"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(a11y.violations.map((v) => `${v.id} ${v.nodes[0]?.target}`)).toEqual([]);
-  await page.reload();
-  await expect(sidebar(page).getByRole('button', { name: 'More' })).toHaveAttribute('aria-expanded', 'true');
-  await sidebar(page).getByRole('button', { name: 'More' }).click();
-  await expect(sidebar(page).getByRole('link', { name: 'Reports & Analytics' })).toBeHidden();
-  // A page inside More opens it by itself.
-  await page.goto('/app/reports');
-  await expect(sidebar(page).getByRole('link', { name: 'Reports & Analytics' })).toBeVisible();
 
   // ── Search and shortcuts leave the switched-off pages out ──
   await page.goto('/app');

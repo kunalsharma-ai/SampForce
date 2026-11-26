@@ -26,11 +26,8 @@ test('each menu section has its own colours, and the current page is marked in i
   await page.goto('/app');
   const nav = page.getByRole('navigation', { name: 'Main' });
   await expect(nav.getByRole('link', { name: 'Companies' })).toBeVisible();
-  const more = nav.getByRole('button', { name: 'More' });
-  if ((await more.getAttribute('aria-expanded')) === 'false') await more.click();
 
   // Every section heading and every item carries its own colour.
-  // (Organisation appears twice: Settings stays on top, the rest is under More.)
   const headings = new Map(await nav.locator('[data-nav-heading]').evaluateAll((els) => els.map((e) => [e.getAttribute('data-nav-heading'), getComputedStyle(e).getPropertyValue('--st-dot').trim()] as const)));
   expect(headings.size).toBeGreaterThanOrEqual(4);
   expect(new Set(headings.values()).size).toBe(headings.size);
