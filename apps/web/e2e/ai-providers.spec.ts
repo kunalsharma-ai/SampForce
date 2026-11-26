@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { E2E_DATABASE_URL, signUp } from './helpers';
+import { E2E_DATABASE_URL, signUp, openCopilot } from './helpers';
 
 /** Set PREVIEW_DIR to save screenshots of the new screens (used for previews). */
 const PREVIEW_DIR = process.env.PREVIEW_DIR;
@@ -77,7 +77,7 @@ test('operator adds free AI keys, sets the fallback order, and Copilot answers t
     await expect(page.getByText('Groq', { exact: true })).toBeVisible();
     await expect(page.getByText(/Falls back to: Anthropic Claude \(claude-opus-5-5\), Google Gemini \(gemini-2.5-flash\)/)).toBeVisible();
     await shot(page, '03-workspace-ai-provider');
-    await page.getByRole('button', { name: 'Copilot', exact: true }).click();
+    await openCopilot(page);
     const panel = page.getByRole('dialog', { name: 'SampForce Copilot' });
     await panel.getByRole('button', { name: 'Summarise my open pipeline.' }).click();
     await expect(panel.getByText(/This is a rule-based projection/)).toBeVisible();

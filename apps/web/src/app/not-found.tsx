@@ -12,7 +12,7 @@ export default function NotFound() {
         <p className="text-sm font-medium text-primary">404</p>
         <h1 className="text-2xl font-semibold">{t('This page does not exist')}</h1>
         <Button asChild>
-          <Link href="/app">{t('Back to the Command Center')}</Link>
+          <Link href="/app">{t('Back to the Dashboard')}</Link>
         </Button>
       </div>
     </main>

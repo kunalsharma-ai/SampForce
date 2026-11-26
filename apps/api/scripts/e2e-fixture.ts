@@ -9,6 +9,7 @@
  *   { "action": "inboundEmail", "tenantId": "...", "userId": "...", "from": "...", "subject": "...", "body": "...", "contactId"?: "..." }
  *   { "action": "meeting", "tenantId": "...", "userId": "...", "title": "...", "hoursFromNow": 2, "contactId": "...", "attendee": "...", "joinUrl"?: "..." }
  *   { "action": "featureOverride", "tenantId": "...", "feature": "sampbidx_chat", "enabled": true }
+ *   { "action": "featureOverrides", "tenantId": "...", "features": { "leads_section": true, "accounts_section": true } }
  */
 import { randomUUID } from 'node:crypto';
 import { createPrismaClient, type TenantTx, withDbContext } from '@dealflow/database';
@@ -19,7 +20,8 @@ type Fixture =
   | { action: 'inboundEmail'; tenantId: string; userId: string; from: string; subject: string; body: string; contactId?: string }
   | { action: 'meeting'; tenantId: string; userId: string; title: string; hoursFromNow: number; contactId: string; attendee: string; joinUrl?: string }
   | { action: 'mobileApproved'; tenantId: string }
-  | { action: 'featureOverride'; tenantId: string; feature: string; enabled: boolean };
+  | { action: 'featureOverride'; tenantId: string; feature: string; enabled: boolean }
+  | { action: 'featureOverrides'; tenantId: string; features: Record<string, boolean> };
 
 const MAILBOX = 'me@seller.test';
 
@@ -81,6 +83,17 @@ async function main(): Promise<void> {
           update: { enabled: f.enabled },
         }),
       );
+    } else if (f.action === 'featureOverrides') {
+      // Several features at once, in one transaction (signUp switches on the Leads and Accounts pages this way).
+      await withDbContext(prisma, { tenantId: f.tenantId }, async (tx) => {
+        for (const [feature, enabled] of Object.entries(f.features)) {
+          await tx.tenantFeatureOverride.upsert({
+            where: { tenantId_feature: { tenantId: f.tenantId, feature } },
+            create: { tenantId: f.tenantId, feature, enabled, reason: 'e2e', updatedBy: 'e2e' },
+            update: { enabled },
+          });
+        }
+      });
     } else {
       throw new Error(`Unknown fixture ${(f as { action?: string }).action}`);
     }

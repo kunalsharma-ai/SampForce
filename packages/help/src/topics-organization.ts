@@ -746,6 +746,30 @@ export const organizationHelp = {
       'استخدمه في بداية كل فترة وتابعه في لوحتك.',
     ],
   },
+  'page.teamStatus': {
+    title: 'Team status',
+    what: [
+      'Who is working, available, on a break, away or checked out right now, with today’s check-in, working time and breaks.',
+      'Quién está trabajando, disponible, en pausa, ausente o ha fichado la salida ahora mismo, con la entrada, el tiempo trabajado y las pausas de hoy.',
+      'Qui travaille, est disponible, en pause, absent ou parti en ce moment, avec l’arrivée, le temps de travail et les pauses du jour.',
+      'Wer gerade arbeitet, verfügbar ist, Pause macht, abwesend oder ausgecheckt ist, mit dem heutigen Check-in, der Arbeitszeit und den Pausen.',
+      'من يعمل الآن أو متاح أو في استراحة أو غير موجود أو انصرف، مع وقت الحضور ووقت العمل والاستراحات اليوم.',
+    ],
+    how: [
+      'Everyone checks in, takes breaks and checks out from the status button in the header. Tap a status above the cards to see only those people.',
+      'Cada persona ficha la entrada, hace pausas y ficha la salida con el botón de estado del encabezado. Toca un estado sobre las tarjetas para ver solo a esas personas.',
+      'Chacun pointe son arrivée, prend ses pauses et pointe son départ avec le bouton de statut de l’en-tête. Touchez un statut au-dessus des cartes pour ne voir que ces personnes.',
+      'Alle checken über die Status-Schaltfläche in der Kopfzeile ein, machen Pausen und checken aus. Tippen Sie über den Karten auf einen Status, um nur diese Personen zu sehen.',
+      'يسجّل الجميع الحضور والاستراحات والانصراف من زر الحالة في الترويسة. اضغط على حالة فوق البطاقات لترى هؤلاء الأشخاص فقط.',
+    ],
+    where: [
+      'The Super Workspace sees everyone, a manager sees its team, and an executive sees themself.',
+      'El espacio principal ve a todos, un gerente ve a su equipo y un ejecutivo se ve a sí mismo.',
+      'L’espace principal voit tout le monde, un manager voit son équipe et un commercial se voit lui-même.',
+      'Der Super-Arbeitsbereich sieht alle, ein Manager sein Team und ein Executive sich selbst.',
+      'ترى المساحة الرئيسية الجميع، ويرى المدير فريقه، ويرى التنفيذي نفسه.',
+    ],
+  },
   'page.workspaces': {
     title: 'Workspaces',
     what: [

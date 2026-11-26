@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, openAccountMenu } from './helpers';
 
 /**
  * Companies and their contacts in one place, and the smart import (ADR 0066). Set PREVIEW_DIR to save screenshots.
@@ -151,7 +151,7 @@ test('companies and contacts in one place: see, add, edit, move and remove a com
 test('a new company is created with its employees in one go', async ({ page }) => {
   await signUp(page, 'Quick Create');
   await page.goto('/app/companies');
-  await page.getByRole('button', { name: 'Quick create' }).click();
+  await openAccountMenu(page);
   await page.getByRole('menuitem', { name: 'Company' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Company name *').fill('Helios Data');

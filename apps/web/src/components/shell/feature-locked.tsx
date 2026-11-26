@@ -26,6 +26,20 @@ export function FeatureLocked({ feature }: { feature: FeatureKey }) {
   const def = FEATURE_BY_KEY[feature];
   const withheld = useWithheldByWorkspace(feature);
   const from = plans.data ? cheapestPlanWith(feature, Object.fromEntries(plans.data.plans.map((p) => [p.code, p.entitlements.features]))) : null;
+  // A section the Console Admin switches on deliberately (ADR 0082): not a plan matter, so no upgrade button.
+  if (def.optIn && !withheld)
+    return (
+      <Card className="mx-auto mt-8 max-w-lg" data-feature-locked={feature} data-opt-in="">
+        <CardHeader>
+          <div className="mb-2 grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Lock className="size-5" aria-hidden />
+          </div>
+          <CardTitle>{t('{feature} is switched off', { feature: t.maybe(def.label) })}</CardTitle>
+          <CardDescription>{t.maybe(def.description)}</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">{t('Your SampForce administrator can switch it on for your organisation.')}</CardContent>
+      </Card>
+    );
   if (withheld)
     return (
       <Card className="mx-auto mt-8 max-w-lg" data-feature-locked={feature} data-withheld="workspace">

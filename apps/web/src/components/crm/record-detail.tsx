@@ -204,7 +204,7 @@ export function DetailError({ error }: { error: Error }) {
           {notFound ? t('This record does not exist or was deleted.') : error.message}
         </p>
         <Button asChild variant="outline" size="sm">
-          <Link href="/app">{t('Back to the Command Center')}</Link>
+          <Link href="/app">{t('Back to the Dashboard')}</Link>
         </Button>
       </CardContent>
     </Card>

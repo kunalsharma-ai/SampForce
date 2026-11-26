@@ -73,7 +73,7 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
           </div>
           <Button asChild variant="outline">
             <Link href="/app">
-              <Tr text="Back to the Command Center" />
+              <Tr text="Back to the Dashboard" />
             </Link>
           </Button>
         </CardContent>

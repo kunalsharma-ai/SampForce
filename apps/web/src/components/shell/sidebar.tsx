@@ -2,11 +2,11 @@
 
 import { featureForPath, type NavItem } from '@dealflow/types';
 import { Badge, cn, Tooltip, TooltipContent, TooltipTrigger } from '@dealflow/ui';
-import { ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
+import { ChevronDown, ChevronsLeft, FileText, Handshake, Lock, type LucideIcon, SlidersHorizontal, UserPlus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useFeatures } from '@/lib/features';
+import { useFeatures, useSwitchedOff } from '@/lib/features';
 import { useNotificationSummary } from '@/lib/notification-center';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { type ModuleDef, moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
@@ -14,8 +14,15 @@ import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav
 import { usePreferences } from '@/stores/preferences';
 import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
+import { useChatUnreadTotal } from './chat-button';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
+/**
+ * Redesign R2 (ADR 0082): the sidebar opens with the daily sales work only (the Workspace group) and Settings. Every
+ * other section sits under More, which the person opens and closes; it opens by itself on a page that is inside it.
+ */
+const PRIMARY_GROUP: ModuleDef['group'] = 'Workspace';
+const ALWAYS_SHOWN = new Set(['settings']);
 
 function isActive(pathname: string, href: string): boolean {
   return href === '/app' ? pathname === '/app' : pathname === href || pathname.startsWith(`${href}/`);
@@ -114,11 +121,87 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const pathname = usePathname();
   const { nav } = useNavigation();
   const pins = useTogglePin();
-  const modules = orderedModules(nav);
+  const switchedOff = useSwitchedOff();
+  const modules = orderedModules(nav).filter((m) => !switchedOff(moduleHref(m)));
   const t = useT();
   const features = useFeatures();
   // Unread notifications per section (ADR 0075), next to the section they come from.
   const bySection = useNotificationSummary(features.ready && features.has('notifications')).data?.bySection;
+  // Unread team chat messages, on Team chat (the header no longer has a chat button, redesign R1).
+  const chatUnread = useChatUnreadTotal();
+  const moreOpenPref = usePreferences((s) => s.navMoreOpen);
+  const setMoreOpen = usePreferences((s) => s.setNavMoreOpen);
+  const inMore = (m: ModuleDef) => m.group !== PRIMARY_GROUP && !ALWAYS_SHOWN.has(m.slug);
+  const moreModules = modules.filter(inMore);
+  const hereInMore = moreModules.some((m) => isActive(pathname, moduleHref(m)));
+  const moreOpen = moreOpenPref || hereInMore;
+  const unreadInMore = bySection ? moreModules.reduce((n, m) => n + ((bySection as Record<string, number | undefined>)[m.slug] ?? 0), 0) : 0;
+
+  const renderGroup = (group: ModuleDef['group'], list: ModuleDef[]) => {
+    if (list.length === 0) return null;
+    return (
+      <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules">
+        <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`}>
+          {t(`nav.group.${group}`)}
+        </GroupHeading>
+        <ul className="space-y-0.5">
+          {list.map((m) => {
+            const href = moduleHref(m);
+            const feature = featureForPath(href);
+            const locked = !!feature && !features.has(feature);
+            return (
+              <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
+                <NavLink
+                  href={href}
+                  label={t(moduleKey(m) as MessageKey)}
+                  icon={m.icon}
+                  active={isActive(pathname, href)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                  layoutId={`${idPrefix}-active`}
+                  badge={
+                    m.slug === 'chat' && chatUnread !== null && !locked ? (
+                      chatUnread === 0 ? (
+                        <span className="sr-only" data-chat-unread={0}>
+                          {t('Team chat, {n} unread', { n: 0 })}
+                        </span>
+                      ) : (
+                        <span
+                          className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                          data-chat-unread={chatUnread}
+                        >
+                          <span aria-hidden>{chatUnread > 99 ? '99+' : chatUnread}</span>
+                          <span className="sr-only">{t('Team chat, {n} unread', { n: chatUnread })}</span>
+                        </span>
+                      )
+                    ) : m.status === 'planned' ? (
+                      <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
+                        {phaseLabel(m.phase, true)}
+                      </Badge>
+                    ) : !locked && bySection && (bySection as Record<string, number | undefined>)[m.slug] ? (
+                      <span
+                        className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                        data-nav-unread={m.slug}
+                        title={t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}
+                      >
+                        <span aria-hidden>{(bySection as Record<string, number>)[m.slug]! > 99 ? '99+' : (bySection as Record<string, number>)[m.slug]}</span>
+                        <span className="sr-only">{t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}</span>
+                      </span>
+                    ) : locked ? (
+                      <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
+                        <Lock className="size-3.5" aria-hidden />
+                        <span className="sr-only">{t('Not in your plan')}</span>
+                      </span>
+                    ) : null
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    );
+  };
 
   return (
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
@@ -137,58 +220,33 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
           </ul>
         </section>
       )}
-      {GROUPS.map((group) => {
-        const list = modules.filter((m) => m.group === group);
-        if (list.length === 0) return null;
-        return (
-          <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules">
-            <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`}>
-              {t(`nav.group.${group}`)}
-            </GroupHeading>
-            <ul className="space-y-0.5">
-              {list.map((m) => {
-                const href = moduleHref(m);
-                const feature = featureForPath(href);
-                const locked = !!feature && !features.has(feature);
-                return (
-                  <li key={m.slug || 'home'} className="group/row flex items-center gap-1">
-                    <NavLink
-                      href={href}
-                      label={t(moduleKey(m) as MessageKey)}
-                      icon={m.icon}
-                      active={isActive(pathname, href)}
-                      collapsed={collapsed}
-                      onNavigate={onNavigate}
-                      layoutId={`${idPrefix}-active`}
-                      badge={
-                        m.status === 'planned' ? (
-                          <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
-                            {phaseLabel(m.phase, true)}
-                          </Badge>
-                        ) : !locked && bySection && (bySection as Record<string, number | undefined>)[m.slug] ? (
-                          <span
-                            className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
-                            data-nav-unread={m.slug}
-                            title={t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}
-                          >
-                            <span aria-hidden>{(bySection as Record<string, number>)[m.slug]! > 99 ? '99+' : (bySection as Record<string, number>)[m.slug]}</span>
-                            <span className="sr-only">{t('New in {section}: {n}', { section: t(moduleKey(m) as MessageKey), n: (bySection as Record<string, number>)[m.slug]! })}</span>
-                          </span>
-                        ) : locked ? (
-                          <span className="relative text-muted-foreground" title={t('Not in your plan')} data-nav-locked="">
-                            <Lock className="size-3.5" aria-hidden />
-                            <span className="sr-only">{t('Not in your plan')}</span>
-                          </span>
-                        ) : null
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
+      {GROUPS.map((group) => renderGroup(group, modules.filter((m) => m.group === group && !inMore(m))))}
+      {moreModules.length > 0 && (
+        <section data-nav-section="more" aria-label={t('More')}>
+          <button
+            type="button"
+            onClick={() => setMoreOpen(!moreOpen)}
+            aria-expanded={moreOpen}
+            aria-controls={`${idPrefix}-more`}
+            disabled={hereInMore}
+            data-nav-more=""
+            title={collapsed ? t('More') : undefined}
+            className={cn('flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-default disabled:hover:bg-transparent', collapsed && 'justify-center')}
+          >
+            <ChevronDown className={cn('size-4 shrink-0 transition-transform', moreOpen && 'rotate-180')} aria-hidden />
+            <span className={cn('flex-1 truncate text-start', collapsed && 'sr-only')}>{t('More')}</span>
+            {!moreOpen && unreadInMore > 0 && (
+              <span className="grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular" data-nav-more-unread="">
+                <span aria-hidden>{unreadInMore > 99 ? '99+' : unreadInMore}</span>
+                <span className="sr-only">{t('New in {section}: {n}', { section: t('More'), n: unreadInMore })}</span>
+              </span>
+            )}
+          </button>
+          <div id={`${idPrefix}-more`} hidden={!moreOpen} className="mt-3 space-y-5">
+            {GROUPS.map((group) => renderGroup(group, moreModules.filter((m) => m.group === group)))}
+          </div>
+        </section>
+      )}
     </nav>
   );
 }

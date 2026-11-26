@@ -5323,3 +5323,48 @@ model HelpSettings {
 
   @@map("help_settings")
 }
+
+/// A person's working day (redesign R1, ADR 0081): from check-in to check-out, with its breaks. At most one open
+/// session per person; one left open for a whole day is closed at the person's last sign of life.
+model WorkSession {
+  id              String    @id @default(uuid()) @map("_id")
+  tenantId        String    @map("tenant_id")
+  userId          String    @map("user_id")
+  /// The workspace the person was in when they checked in (for the team boards).
+  workspaceNodeId String?   @map("workspace_node_id")
+  checkedInAt     DateTime  @map("checked_in_at")
+  checkedOutAt    DateTime? @map("checked_out_at")
+  /// [{ start, end }] as ISO strings; the last one has end null while the break runs.
+  breaks          Json      @default("[]")
+  /// The status the person chose while checked in: AVAILABLE, WORKING or AWAY.
+  chosenStatus    String    @default("WORKING") @map("chosen_status")
+  /// When the shown status last changed (check-in, break, resume, choice).
+  statusSince     DateTime  @map("status_since")
+  /// Refreshed while the person has a SampForce page open; Away shows when it gets old.
+  lastSeenAt      DateTime  @map("last_seen_at")
+  /// Set when SampForce closed a forgotten session by itself.
+  autoClosed      Boolean   @default(false) @map("auto_closed")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, userId, checkedInAt(sort: Desc)])
+  @@index([tenantId, checkedOutAt])
+  @@map("work_sessions")
+}
+
+/// Append-only log of check-ins, breaks, status changes and check-outs (ADR 0081).
+model AvailabilityEvent {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  sessionId String   @map("session_id")
+  /// CHECK_IN, BREAK_START, BREAK_END, STATUS, CHECK_OUT or AUTO_CHECK_OUT.
+  kind      String
+  /// The status shown after the event.
+  status    String
+  at        DateTime @default(now())
+
+  @@index([tenantId, userId, at(sort: Desc)])
+  @@index([tenantId, sessionId])
+  @@map("availability_events")
+}

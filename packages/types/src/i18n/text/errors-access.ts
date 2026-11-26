@@ -172,4 +172,10 @@ export const errorsAccess = {
   'Too many wrong passwords. Try again in 15 minutes.': ['Demasiadas contraseñas incorrectas. Inténtalo de nuevo en 15 minutos.', 'Trop de mots de passe incorrects. Réessayez dans 15 minutes.', 'Zu viele falsche Passwörter. Versuchen Sie es in 15 Minuten erneut.', 'عدد كبير جدًا من كلمات المرور الخاطئة. حاول مرة أخرى بعد 15 دقيقة.'],
   'That password is not right.': ['Esa contraseña no es correcta.', 'Ce mot de passe est incorrect.', 'Dieses Passwort ist nicht richtig.', 'كلمة المرور هذه غير صحيحة.'],
   'That code is not right.': ['Ese código no es correcto.', 'Ce code est incorrect.', 'Dieser Code ist nicht richtig.', 'هذا الرمز غير صحيح.'],
+  // Working status (ADR 0081)
+  'You are already checked in.': ['Ya has fichado la entrada.', 'Vous avez déjà pointé votre arrivée.', 'Sie sind bereits eingecheckt.', 'لقد سجّلت الحضور بالفعل.'],
+  'You are already on a break.': ['Ya estás en una pausa.', 'Vous êtes déjà en pause.', 'Sie machen bereits eine Pause.', 'أنت في استراحة بالفعل.'],
+  'You are not on a break.': ['No estás en una pausa.', 'Vous n’êtes pas en pause.', 'Sie machen gerade keine Pause.', 'لست في استراحة.'],
+  'Check in first.': ['Ficha la entrada primero.', 'Pointez d’abord votre arrivée.', 'Checken Sie zuerst ein.', 'سجّل الحضور أولًا.'],
+  'That workspace is not one you can see.': ['No puedes ver ese espacio de trabajo.', 'Vous ne pouvez pas voir cet espace de travail.', 'Diesen Arbeitsbereich können Sie nicht sehen.', 'لا يمكنك رؤية مساحة العمل هذه.'],
 } as const satisfies TextTable;

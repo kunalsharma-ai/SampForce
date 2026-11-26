@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, openAccountMenu } from './helpers';
 
 const rootVar = (page: Page, name: string) => page.evaluate((n) => document.documentElement.style.getPropertyValue(n).trim(), name);
 const previewVar = (page: Page, name: string) => page.getByTestId('theme-preview').evaluate((el, n) => (el as HTMLElement).style.getPropertyValue(n).trim(), name);
@@ -49,14 +49,14 @@ test('Discard throws the draft away and the top bar switcher applies a theme at 
   await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'signature');
 
-  await page.getByRole('button', { name: /^Theme: / }).click();
-  await page.getByRole('menuitemradio', { name: 'Light' }).click();
-  await expect(page.locator('html')).not.toHaveClass(/dark/);
-  await page.getByRole('button', { name: /^Theme: / }).click();
-  await page.getByRole('menuitemradio', { name: 'Cyber Graphite' }).click();
+  // Light and dark switch from the account menu (redesign R1); themes are picked in the studio.
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name: /Switch to (light|dark) mode/ }).click();
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name: /Switch to (light|dark) mode/ }).click();
+  await page.getByText('Cyber Graphite', { exact: true }).click();
+  await page.getByRole('button', { name: 'Apply' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'cyber');
-  await expect(page.getByRole('button', { name: 'Theme: Cyber Graphite' })).toBeVisible();
-  // The studio's draft follows a change made elsewhere while it is untouched.
   await expect(page.getByRole('radio', { name: 'Cyber Graphite' })).toBeChecked();
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'cyber');
