@@ -7,6 +7,8 @@ import type { TextTable } from '../catalogue';
 export const errorsRecords = {
   // "… not found." (written whole, so each language can use its own grammar)
   'Website message not found.': ['No se encontró el mensaje del sitio web.', 'Message du site web introuvable.', 'Website-Nachricht nicht gefunden.', 'لم يُعثر على رسالة الموقع.'],
+  'Account not found.': ['No se encontró la cuenta.', 'Compte introuvable.', 'Konto nicht gefunden.', 'لم يُعثر على الحساب.'],
+  'Person not found.': ['No se encontró a la persona.', 'Personne introuvable.', 'Person nicht gefunden.', 'لم يُعثر على الشخص.'],
   'Lead not found.': ['No se encontró el lead.', 'Prospect introuvable.', 'Lead nicht gefunden.', 'لم يُعثر على العميل المحتمل.'],
   'Deal not found.': ['No se encontró la oportunidad.', 'Opportunité introuvable.', 'Verkaufschance nicht gefunden.', 'لم يُعثر على الصفقة.'],
   'Contact not found.': ['No se encontró el contacto.', 'Contact introuvable.', 'Kontakt nicht gefunden.', 'لم يُعثر على جهة الاتصال.'],
