@@ -12,6 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { ErrorText } from '@/components/revenue/tabs';
+import { AccessMatrix } from './access-matrix';
 import { api } from '@/lib/api';
 
 /*
@@ -71,6 +72,7 @@ export function RulesEditor({ value, onChange, disabled, name }: { value: Worksp
         </div>
         <p className="text-xs text-muted-foreground">People at that level who sign in with a password must set up two-step sign-in before they can work.</p>
       </fieldset>
+      <AccessMatrix value={value} onChange={onChange} disabled={disabled} name={name} />
     </div>
   );
 }
@@ -82,6 +84,8 @@ export function overrideFrom(base: WorkspaceRules, next: WorkspaceRules): Worksp
   if (next.executiveDelete !== base.executiveDelete) out.executiveDelete = next.executiveDelete;
   if (next.managerModules.join() !== base.managerModules.join()) out.managerModules = next.managerModules;
   if (next.executiveModules.join() !== base.executiveModules.join()) out.executiveModules = next.executiveModules;
+  for (const k of ['managerHiddenSections', 'executiveHiddenSections'] as const) if ([...next[k]].sort().join() !== [...base[k]].sort().join()) out[k] = next[k];
+  for (const k of ['managerHiddenFields', 'executiveHiddenFields'] as const) if ([...next[k]].sort().join() !== [...base[k]].sort().join()) out[k] = next[k];
   const mfa = (['SUPER', 'MANAGER', 'EXECUTIVE'] as const).filter((l) => next.mfaRequired[l] !== base.mfaRequired[l]);
   if (mfa.length) out.mfaRequired = Object.fromEntries(mfa.map((l) => [l, next.mfaRequired[l]]));
   return Object.keys(out).length ? out : null;
@@ -96,6 +100,8 @@ function describe(o: WorkspaceRulesOverride | null): string {
   if (o.managerModules) parts.push('own manager modules');
   if (o.executiveModules) parts.push('own executive modules');
   if (o.mfaRequired) parts.push('own two-step sign-in rule');
+  if (o.managerHiddenSections || o.managerHiddenFields) parts.push('own manager access');
+  if (o.executiveHiddenSections || o.executiveHiddenFields) parts.push('own executive access');
   return `Differs from its plan: ${parts.join(', ')}`;
 }
 

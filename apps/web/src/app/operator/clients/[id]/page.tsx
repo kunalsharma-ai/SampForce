@@ -55,6 +55,7 @@ import {
   UsageMeter,
 } from '../../console-ui';
 import { can, useOperator } from '../../operator-shell';
+import { ClientMenuSectionsCard } from '../../workspace-rules/access-matrix';
 import { ClientWorkspaceRulesCard } from '../../workspace-rules/rules-editor';
 
 type Dialogs = 'subscription' | 'renew' | 'state' | 'invite' | 'reopen' | null;
@@ -280,6 +281,7 @@ export default function ConsoleClientPage() {
 
       <Authority client={c} admin={admin} />
       <ClientWorkspaceRulesCard tenantId={c.id} admin={can(me.data, 'workspaces.manage')} />
+      <ClientMenuSectionsCard tenantId={c.id} admin={can(me.data, 'workspaces.manage')} />
       <HelpAccess tenantId={c.id} admin={canHelp} />
       <History client={c} />
 

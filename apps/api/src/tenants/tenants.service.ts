@@ -1,12 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { TenantTx } from '@dealflow/database';
-import { type MenuSections, type MenuSectionsInput, type MemberOrgInput, type MemberRow, type SalesProfile, type SalesProfileInput, salesProfileSchema, type TenantDetails, type UpdateTenantInput } from '@dealflow/types';
+import { type MenuSections, type MemberOrgInput, type MemberRow, type SalesProfile, type SalesProfileInput, salesProfileSchema, type TenantDetails, type UpdateTenantInput } from '@dealflow/types';
 import { reportingTree } from '../crm/visibility';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertCanGrant } from './roles.service';
 import { workspaceLevelOf } from '../workspaces/access';
+import { readMenuSections } from './menu-sections';
 
 @Injectable()
 export class TenantsService {
@@ -15,41 +16,9 @@ export class TenantsService {
     private readonly audit: AuditService,
   ) {}
 
-  /** Whether the Leads and Accounts pages are shown in this organisation (redesign, menu). */
+  /** Whether the Leads and Accounts pages are shown in this organisation (redesign, menu). Set in the Console (R8). */
   async menuSections(auth: AuthContext): Promise<MenuSections> {
-    return this.prisma.run(auth, async (tx) => {
-      const rows = await tx.tenantFeatureOverride.findMany({ where: { tenantId: auth.tenantId, feature: { in: ['leads_section', 'accounts_section'] } } });
-      const on = (f: string) => rows.some((r) => r.feature === f && r.enabled);
-      return { leads: on('leads_section'), accounts: on('accounts_section') };
-    });
-  }
-
-  /**
-   * The Super Workspace shows or hides the Leads and Accounts pages for the whole organisation: the switch applies to
-   * the organisation and to every Manager and Executive Workspace in it, so nobody has to hand it down one by one.
-   */
-  async setMenuSections(auth: AuthContext, input: MenuSectionsInput, meta: RequestMeta): Promise<MenuSections> {
-    return this.prisma.run(auth, async (tx) => {
-      if ((await workspaceLevelOf(tx, auth.tenantId, auth.membershipId)) !== 'SUPER')
-        throw new ForbiddenException({ code: 'SUPER_WORKSPACE_ONLY', message: 'Only the Super Workspace can show or hide these sections.' });
-      const wanted = { leads_section: input.leads, accounts_section: input.accounts } as const;
-      const user = await tx.user.findUnique({ where: { id: auth.userId }, select: { email: true } });
-      for (const [feature, enabled] of Object.entries(wanted)) {
-        await tx.tenantFeatureOverride.upsert({
-          where: { tenantId_feature: { tenantId: auth.tenantId, feature } },
-          create: { tenantId: auth.tenantId, feature, enabled, reason: 'Super Workspace menu sections', updatedBy: user?.email ?? auth.userId },
-          update: { enabled, reason: 'Super Workspace menu sections', updatedBy: user?.email ?? auth.userId },
-        });
-      }
-      const nodes = await tx.workspaceNode.findMany({ where: { tenantId: auth.tenantId }, select: { id: true, features: true } });
-      for (const n of nodes) {
-        const features = n.features.filter((f) => !(f in wanted));
-        for (const [feature, enabled] of Object.entries(wanted)) if (enabled) features.push(feature);
-        if (features.length !== n.features.length || features.some((f, i) => f !== n.features[i])) await tx.workspaceNode.update({ where: { id: n.id }, data: { features } });
-      }
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'tenant.menu_sections', entityType: 'tenant', entityId: auth.tenantId, metadata: { ...input }, meta });
-      return { leads: input.leads, accounts: input.accounts };
-    });
+    return this.prisma.run(auth, (tx) => readMenuSections(tx, auth.tenantId));
   }
 
   async current(auth: AuthContext): Promise<TenantDetails> {

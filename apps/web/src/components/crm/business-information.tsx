@@ -55,7 +55,7 @@ import { InfoTip } from '@/components/info-tip';
 import { api, ApiError } from '@/lib/api';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
-import { useCan } from '@/lib/session';
+import { useCan, useHiddenKeys } from '@/lib/session';
 import { Select, Textarea } from './select';
 import { BRAND_MARKS } from './brand-marks';
 import { INSTAGRAM_GRADIENT, profileLinks } from './social-icons';
@@ -585,13 +585,15 @@ function BusinessInfoDialog({ company: c, open, onOpenChange }: { company: Compa
     }
   }, [open, before]);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  // Fields the Console hides from this level are left out (R8); the server ignores them anyway.
+  const hiddenKeys = useHiddenKeys('company');
   const label = (f: EnrichField) => t.maybe(ENRICH_FIELD_LABELS[f]);
-  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) => (
+  const input = (k: keyof Form & EnrichField, type = 'text', extra: { hint?: string; label?: string } = {}) => hiddenKeys.has(k) ? null : (
     <Field id={`bi-${k}`} label={extra.label ?? label(k)} error={errors[k]} hint={extra.hint}>
       <Input type={type} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
     </Field>
   );
-  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) => (
+  const area = (k: keyof Form, fieldLabel: string, hint?: string, rows = 3) => hiddenKeys.has(k) ? null : (
     <Field id={`bi-${k}`} label={fieldLabel} error={errors[k]} hint={hint}>
       <Textarea rows={rows} value={form[k] as string} onChange={(e) => set(k, e.target.value as never)} />
     </Field>

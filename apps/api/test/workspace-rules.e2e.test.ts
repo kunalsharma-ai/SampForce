@@ -26,7 +26,7 @@ describe('Console workspace rules', () => {
     post: (url: string, body: object) => agent.post(`/api/v1/operator${url}`).set('origin', ORIGIN).send(body),
     put: (url: string, body: object) => agent.put(`/api/v1/operator${url}`).set('origin', ORIGIN).send(body),
   });
-  const all = { managerDelete: true, executiveDelete: true, managerModules: [...FEATURE_GROUPS], executiveModules: [...FEATURE_GROUPS], mfaRequired: { SUPER: false, MANAGER: false, EXECUTIVE: false } };
+  const all = { managerDelete: true, executiveDelete: true, managerModules: [...FEATURE_GROUPS], executiveModules: [...FEATURE_GROUPS], mfaRequired: { SUPER: false, MANAGER: false, EXECUTIVE: false }, managerHiddenSections: [], executiveHiddenSections: [], managerHiddenFields: [], executiveHiddenFields: [] };
   const salesFeature = FEATURES.find((f) => f.group === 'Sales')!.key;
 
   beforeAll(async () => {
