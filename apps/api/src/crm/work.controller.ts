@@ -19,6 +19,7 @@ import {
   taskInputSchema,
   taskListQuerySchema,
   taskUpdateSchema,
+  listQuerySchema,
   z,
 } from '@dealflow/types';
 import { ApiKeyAccess, Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature, RequireAction } from '../common/auth-context';
@@ -27,6 +28,8 @@ import { fileFrom, readUpload, sendFile } from '../portal/portal-documents';
 import { ActivitiesService } from './activities.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { EXPORT_ENTITIES, type ExportEntity, ImportExportService, xlsxToCsv } from './import-export.service';
+import { COMPANY_EXPORT_PARTS, CompanyExportService, type ExportFile } from './company-export.service';
+import { companyFiltersSchema } from './records.controller';
 import { IMPORT_FIELDS, ImportService } from './import.service';
 import { SearchService } from './search.service';
 import { TasksService } from './tasks.service';
@@ -61,6 +64,12 @@ const ENTITY_PERMISSION: Record<ExportEntity, { read: Permission; write: Permiss
   rfqs: { read: 'companies:read', write: 'companies:write' },
 };
 const exportQuery = z.object({ format: z.enum(EXPORT_FORMATS).default('csv') });
+/** Company exports (ADR 0079) take the company list's filters, so the file matches the list on screen. */
+const companyExportQuery = listQuerySchema
+  .pick({ q: true, sort: true, order: true, ownerId: true, status: true, cf: true })
+  .merge(companyFiltersSchema)
+  .extend({ format: z.enum(EXPORT_FORMATS).default('csv'), part: z.enum(COMPANY_EXPORT_PARTS).optional() });
+const singleCompanyExportQuery = z.object({ format: z.enum(EXPORT_FORMATS).default('xlsx'), part: z.enum(COMPANY_EXPORT_PARTS).optional() });
 
 function requirePermission(auth: AuthContext, permission: Permission) {
   if (!auth.permissions.includes(permission)) {
@@ -210,6 +219,7 @@ export class ImportExportController {
   constructor(
     private readonly io: ImportExportService,
     private readonly importer: ImportService,
+    private readonly companyExport: CompanyExportService,
   ) {}
 
   @Get('imports/fields')
@@ -249,16 +259,41 @@ export class ImportExportController {
     @Auth() auth: AuthContext,
     @Param('entity', new ZodPipe(z.enum(EXPORT_ENTITIES))) entity: ExportEntity,
     @Query(new ZodPipe(exportQuery)) q: z.infer<typeof exportQuery>,
+    @Query() query: Record<string, unknown>,
     @Meta() meta: RequestMeta,
     @Res({ passthrough: true }) res: Response,
   ): Promise<string | StreamableFile> {
     requirePermission(auth, ENTITY_PERMISSION[entity].read);
+    if (entity === 'companies') {
+      // Every company field, employees, branches and interactions, filtered like the list (ADR 0079).
+      const c = new ZodPipe(companyExportQuery).transform(query) as z.output<typeof companyExportQuery>;
+      const { format, part, q: search, sort, order, ownerId, status, cf, ...f } = c;
+      return send(res, await this.companyExport.export(auth, { format, part, q: { q: search, sort, order, ownerId, status }, f: { ...f, cf } }, meta));
+    }
     const { data, rows, contentType, extension } = await this.io.export(auth, entity, meta, q.format);
-    res.setHeader('content-type', contentType);
-    res.setHeader('content-disposition', `attachment; filename="sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.${extension}"`);
-    res.setHeader('x-row-count', String(rows));
-    res.setHeader('cache-control', 'no-store');
-    // A Buffer would be sent as JSON; a StreamableFile is sent as the bytes.
-    return typeof data === 'string' ? data : new StreamableFile(data);
+    return send(res, { data, rows, contentType, extension, filename: `sampforce-${entity}-${new Date().toISOString().slice(0, 10)}.${extension}` });
   }
+
+  /** One company from its page: every field, its employees, branches and interactions (ADR 0079). */
+  @Get('companies/:id/export')
+  @RequireAction('export')
+  @RequirePermissions('data:export', 'companies:read')
+  async exportCompany(
+    @Auth() auth: AuthContext,
+    @Param('id', uuid) id: string,
+    @Query(new ZodPipe(singleCompanyExportQuery)) q: z.infer<typeof singleCompanyExportQuery>,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string | StreamableFile> {
+    return send(res, await this.companyExport.export(auth, { format: q.format, part: q.part, companyId: id }, meta));
+  }
+}
+
+function send(res: Response, file: ExportFile): string | StreamableFile {
+  res.setHeader('content-type', file.contentType);
+  res.setHeader('content-disposition', `attachment; filename="${file.filename.replace(/[^\w.-]/g, '_')}"`);
+  res.setHeader('x-row-count', String(file.rows));
+  res.setHeader('cache-control', 'no-store');
+  // A Buffer would be sent as JSON; a StreamableFile is sent as the bytes.
+  return typeof file.data === 'string' ? file.data : new StreamableFile(file.data);
 }

@@ -9,6 +9,7 @@ import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } f
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { BusinessInformation } from '@/components/crm/business-information';
 import { CompanyEmailAssistant } from '@/components/crm/company-email-assistant';
+import { CompanyExportMenu } from '@/components/crm/company-export';
 import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/crm/company-parts';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
@@ -41,7 +42,7 @@ export function CompanyDetail({ id }: { id: string }) {
   return (
     <CompanyActionsProvider>
       <div className="max-w-7xl">
-        <CompanyHero company={c} actions={<RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />} />
+        <CompanyHero company={c} actions={<RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} actions={<CompanyExportMenu companyId={id} />} />} />
         {uploadFailed && (
           <p role="alert" className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm">
             {t('The lead was saved, but these files could not be uploaded: {names}. Add them again below.', { names: uploadFailed })}

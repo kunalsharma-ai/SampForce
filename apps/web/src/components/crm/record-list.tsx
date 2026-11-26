@@ -23,6 +23,7 @@ import { CompanyLogo } from './company-logo';
 import { CountryFlag, StatusChip } from './status-chip';
 import { Select } from './select';
 import { PriorityBadge, RiskIndicator } from '@/components/deals/deal-badges';
+import { CompanyExportMenu } from './company-export';
 
 /** Column headers are catalogue phrases; the table translates them when it renders. */
 const h = (key: MessageKey): string => key;
@@ -123,7 +124,8 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
   const canWrite = useCan(`${entity}:write` as 'leads:write');
   const canExport = useCan('data:export');
   const excel = useHasFeature('excel_export');
-  const list = useRecordList<{ id: string }>(entity, { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined }, !hideTable);
+  const listParams = { ...view.params, status: fixedStatus ?? view.params.status, cf: cf.length ? JSON.stringify(cf) : undefined };
+  const list = useRecordList<{ id: string }>(entity, listParams, !hideTable);
   const exportAs = (format: 'csv' | 'xlsx') => {
     setExporting(format);
     setExportError(null);
@@ -150,12 +152,13 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
                 </Link>
               </Button>
             )}
-            {canExport && (
+            {entity === 'companies' && <CompanyExportMenu filters={listParams} />}
+            {canExport && entity !== 'companies' && (
               <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('csv')}>
                 <Download aria-hidden /> {exporting === 'csv' ? t('Exporting…') : t('Export CSV')}
               </Button>
             )}
-            {canExport && excel && (
+            {canExport && excel && entity !== 'companies' && (
               <Button variant="outline" size="sm" disabled={!!exporting} onClick={() => exportAs('xlsx')}>
                 <FileSpreadsheet aria-hidden /> {exporting === 'xlsx' ? t('Exporting…') : t('Export Excel')}
               </Button>
