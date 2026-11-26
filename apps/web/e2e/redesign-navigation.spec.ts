@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { setFeatures, signUp } from './helpers';
+import { signUp } from './helpers';
 import { expectCleanLayout, LAYOUT_SIZES, setMode } from './layout-check';
 
 /** Set PREVIEW_DIR to save screenshots of each screen (redesign previews). */
@@ -78,8 +78,15 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await page.goto('/app/accounts');
   await expect(page.locator('[data-feature-locked="accounts_section"]')).toBeVisible();
 
-  // ── The Console Admin switches them on: they come back ──
-  await setFeatures(page, { leads_section: true, accounts_section: true });
+  // ── The Super Workspace shows them again from Settings: they come back ──
+  await page.goto('/app/settings');
+  const hidden = page.locator('[data-menu-sections]');
+  await expect(hidden.getByRole('switch', { name: /Show the Leads page/ })).not.toBeChecked();
+  await hidden.getByRole('switch', { name: /Show the Leads page/ }).click();
+  await expect(hidden.getByRole('switch', { name: /Show the Leads page/ })).toBeChecked();
+  await hidden.getByRole('switch', { name: /Show the Accounts page/ }).click();
+  await expect(hidden.getByRole('switch', { name: /Show the Accounts page/ })).toBeChecked();
+  await shot(page, '03b-settings-hidden-sections');
   await page.goto('/app/leads');
   await expect(page.locator('[data-feature-locked]')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Leads' })).toBeVisible();

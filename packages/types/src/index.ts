@@ -48,6 +48,7 @@ export * from './company-deal';
 export * from './journey';
 export * from './company-enrichment';
 export * from './company-email';
+export * from './menu-sections';
 export * from './attribution';
 export * from './command-center';
 export * from './custom-fields';

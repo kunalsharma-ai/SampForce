@@ -25,6 +25,7 @@ import { PageHeader } from '@/components/page-header';
 import { Tr } from '@/lib/i18n';
 import { AppearanceSettings } from './appearance-settings';
 import { CloseCompanyCard } from './close-company';
+import { MenuSectionsSettings } from './menu-sections-settings';
 import { RegionalSettings } from './regional-settings';
 import { SalesProfileSettings } from './sales-profile-settings';
 import { SettingsJump } from './settings-jump';
@@ -128,6 +129,7 @@ export default function SettingsPage() {
         </div>
         <WorkspaceSettings />
         <SalesProfileSettings />
+        <MenuSectionsSettings />
         <AppearanceSettings />
         <RegionalSettings />
         <CloseCompanyCard />

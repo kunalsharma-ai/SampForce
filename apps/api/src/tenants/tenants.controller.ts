@@ -18,6 +18,8 @@ import {
   removeMemberSchema,
   type SalesProfileInput,
   salesProfileSchema,
+  type MenuSectionsInput,
+  menuSectionsSchema,
 } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, type RequestMeta, RequirePermissions, AlsoRequireFeature } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
@@ -62,6 +64,18 @@ export class TenantsController {
   @RequirePermissions('members:manage')
   removeTeam(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Meta() meta: RequestMeta) {
     return this.teams.remove(auth, id, meta);
+  }
+
+  @Get('menu-sections')
+  @RequirePermissions('tenant:read')
+  menuSections(@Auth() auth: AuthContext) {
+    return this.tenants.menuSections(auth);
+  }
+
+  @Put('menu-sections')
+  @RequirePermissions('tenant:manage')
+  setMenuSections(@Auth() auth: AuthContext, @Body(new ZodPipe(menuSectionsSchema)) body: MenuSectionsInput, @Meta() meta: RequestMeta) {
+    return this.tenants.setMenuSections(auth, body, meta);
   }
 
   @Get()
