@@ -39,6 +39,7 @@ export const es: Messages = {
   'module.pipelines': 'Embudos',
   'module.accounts': 'Cuentas',
   'module.follow-ups': 'Seguimientos',
+  'module.calls': 'Llamadas',
   'module.tasks': 'Tareas',
   'module.targets': 'Objetivos',
   'module.rfqs': 'RFQs',

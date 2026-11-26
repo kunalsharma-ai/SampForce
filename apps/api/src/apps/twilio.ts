@@ -69,6 +69,32 @@ export class TwilioClient {
   }
 
   /**
+   * A click-to-call bridge (ADR 0088), Programmable Voice: Twilio first rings the caller's own phone (`agentPhone`)
+   * from the workspace number, and when they answer it dials `to` with the workspace number as caller id. Both legs
+   * report their status to `statusCallback` (with ?leg=agent or ?leg=party added).
+   */
+  async placeCall(keys: TwilioKeys, input: { agentPhone: string; to: string; statusCallback: string }): Promise<{ sid: string; status: string }> {
+    const x = (v: string) => v.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    const party = `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=party`;
+    const twiml =
+      `<Response><Say>Connecting your SampForce call.</Say>` +
+      `<Dial callerId="${x(keys.fromNumber)}" answerOnBridge="true"><Number statusCallbackEvent="answered completed" statusCallback="${x(party)}">${x(input.to)}</Number></Dial></Response>`;
+    const agent = `${input.statusCallback}${input.statusCallback.includes('?') ? '&' : '?'}leg=agent`;
+    const r = await this.call<{ sid?: string; status?: string }>(keys, 'POST', `/2010-04-01/Accounts/${keys.accountSid}/Calls.json`, [
+      ['To', input.agentPhone],
+      ['From', keys.fromNumber],
+      ['Twiml', twiml],
+      ['StatusCallback', agent],
+      ['StatusCallbackEvent', 'initiated'],
+      ['StatusCallbackEvent', 'ringing'],
+      ['StatusCallbackEvent', 'answered'],
+      ['StatusCallbackEvent', 'completed'],
+    ]);
+    if (!r.sid) throw new TwilioError('no_sid', 'Twilio did not return a call id.');
+    return { sid: r.sid, status: r.status ?? 'queued' };
+  }
+
+  /**
    * Twilio's request signature: base64 HMAC-SHA1, keyed with the Auth Token, of the full URL Twilio called followed
    * by each POST parameter name and value, sorted by name.
    */
@@ -80,7 +106,7 @@ export class TwilioClient {
     return a.length === b.length && timingSafeEqual(a, b);
   }
 
-  private async call<T>(keys: TwilioKeys, method: 'GET' | 'POST', path: string, form?: Record<string, string>): Promise<T> {
+  private async call<T>(keys: TwilioKeys, method: 'GET' | 'POST', path: string, form?: Record<string, string> | [string, string][]): Promise<T> {
     let res: Response;
     try {
       res = await fetch(`${this.env.TWILIO_API_BASE_URL.replace(/\/$/, '')}${path}`, {
@@ -118,6 +144,10 @@ export function describeTwilioError(code: number | undefined, detail?: string | 
   switch (code) {
     case 21211:
       return 'That phone number is not valid.';
+    case 21215:
+      return 'This Twilio account is not allowed to call that country. Enable it under Voice, Geo permissions in the Twilio console.';
+    case 21219:
+      return 'Twilio trial accounts can only call numbers verified in the Twilio console.';
     case 21408:
       return 'This Twilio account is not allowed to send SMS to that country. Enable it under Messaging, Geo permissions in the Twilio console.';
     case 21608:

@@ -314,14 +314,18 @@ export class CompanyWorkService {
     });
   }
 
-  logInteraction(auth: AuthContext, input: InteractionInput, meta: RequestMeta): Promise<InteractionRow> {
+  /**
+   * `attempt`: a call nobody answered (ADR 0088, Calls). It is logged, but it is not a conversation, so it neither
+   * moves the employee's stage nor stops their follow-up cadence.
+   */
+  logInteraction(auth: AuthContext, input: InteractionInput, meta: RequestMeta, opts: { attempt?: boolean } = {}): Promise<InteractionRow> {
     return this.prisma.run(auth, async (tx) => {
       const company = await this.editableCompany(tx, auth, input.companyId);
       await this.assertCompanyChildren(tx, auth.tenantId, input.companyId, { contactId: input.contactId, fileId: input.fileId, rfqId: input.rfqId });
       const id = await this.logIn(tx, auth, input);
-      await this.stages.interactionLogged(tx, auth, input);
+      if (!opts.attempt) await this.stages.interactionLogged(tx, auth, input);
       // The follow-up cadence (ADR 0083): the first email starts it, any answer from the employee stops it.
-      if (input.contactId) {
+      if (input.contactId && !opts.attempt) {
         if (input.kind === 'EMAIL_SENT') await this.cadence.initialEmailSent(tx, auth, input.contactId, input.occurredAt ? new Date(input.occurredAt) : new Date(), 'INTERACTION');
         else if (CADENCE_STOPPERS[input.kind]) await this.cadence.stop(tx, auth.tenantId, input.contactId, CADENCE_STOPPERS[input.kind]!);
       }
@@ -593,7 +597,7 @@ export class CompanyWorkService {
 
   /** Follow-ups the caller may list: by scope, and only for companies they can see. */
   private async followUpWhere(tx: TenantTx, auth: AuthContext, q: FollowUpQuery): Promise<Prisma.TaskWhereInput> {
-    const base: Prisma.TaskWhereInput = { tenantId: auth.tenantId, deletedAt: null, followUpType: { not: null } };
+    const base: Prisma.TaskWhereInput = { tenantId: auth.tenantId, deletedAt: null, followUpType: q.type ? q.type : { not: null } };
     if (q.companyId) {
       await this.visibleCompany(tx, auth, q.companyId);
       return { ...base, companyId: q.companyId, ...(q.contactId ? { contactId: q.contactId } : {}) };

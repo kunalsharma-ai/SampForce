@@ -13,6 +13,7 @@ import { useCan } from '@/lib/session';
 import { CadenceStatus } from './cadence-status';
 import { CommunicationTimeline } from './communication-timeline';
 import { ContributorBadge, StageChip, StagePicker, StageSpread, stageStyle, STAGE_DOT } from './stage-chip';
+import { CallButton } from '@/components/calls/call-button';
 
 /*
  * The company's employees by RFQ activity and communication stage (ADR 0080, Part 7): who shares RFQs, who needs a
@@ -218,9 +219,12 @@ function EmployeeLine({ row: r, stages, canWrite, onHistory }: { row: EmployeeAc
               </a>
             )}
             {r.phone && (
-              <a href={`tel:${r.phone}`} className="inline-flex min-h-6 items-center gap-1 hover:underline">
-                <Phone aria-hidden className="size-3.5 shrink-0" /> {r.phone}
-              </a>
+              <span className="inline-flex min-h-6 items-center gap-1.5">
+                <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 hover:underline">
+                  <Phone aria-hidden className="size-3.5 shrink-0" /> {r.phone}
+                </a>
+                <CallButton companyId={r.company.id || null} contactId={r.id} name={r.name} className="size-6" />
+              </span>
             )}
             {!r.details && <span className="text-muted-foreground">{t('Details hidden')}</span>}
           </div>

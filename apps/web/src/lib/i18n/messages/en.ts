@@ -45,6 +45,7 @@ export const en = {
   'module.pipelines': 'Pipelines',
   'module.accounts': 'Accounts',
   'module.follow-ups': 'Follow-ups',
+  'module.calls': 'Calls',
   'module.tasks': 'Tasks',
   'module.targets': 'Targets',
   'module.rfqs': 'RFQs',

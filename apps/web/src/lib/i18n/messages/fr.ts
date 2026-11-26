@@ -39,6 +39,7 @@ export const fr: Messages = {
   'module.pipelines': 'Pipelines',
   'module.accounts': 'Comptes',
   'module.follow-ups': 'Relances',
+  'module.calls': 'Appels',
   'module.tasks': 'Tâches',
   'module.targets': 'Objectifs',
   'module.rfqs': 'RFQ',

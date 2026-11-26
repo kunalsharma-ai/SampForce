@@ -43,6 +43,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.rfqs': 'deals',
   'page.activities': 'work',
   'page.followUps': 'work',
+  'page.calls': 'work',
   'page.tasks': 'work',
   'page.targets': 'work',
   'page.teamStatus': 'work',
