@@ -36,7 +36,8 @@ export class CrmRemindersService {
 
   /**
    * The morning summary (redesign R3, ADR 0083): from 8:00 in the workspace's time zone, everyone with follow-ups due
-   * today or overdue gets one notification saying how many. Once a day per person (the event id carries the date).
+   * today or overdue gets one notification saying how many. Once a day per person and workspace (the event id carries the workspace and the date: one person can be in several
+   * workspaces, and notification event ids are unique per person across all of them).
    */
   async dailyDigest(now = new Date()): Promise<number> {
     const candidates = await scanTenants(this.prisma.task, { status: 'OPEN', deletedAt: null, followUpType: { not: null }, assigneeId: { not: null }, dueAt: { not: null, lte: new Date(now.getTime() + DAY) } });
@@ -75,7 +76,7 @@ export class CrmRemindersService {
           let n = 0;
           for (const [userId, c] of per) {
             await this.notifications.send(tx, tenantId, [userId], {
-              type: 'followup.daily', title: `Follow-ups for today: ${c.today} due, ${c.overdue} overdue`, body: null, link: c.overdue ? '/app/follow-ups?bucket=overdue' : '/app/follow-ups?bucket=today', eventId: `digest:${userId}:${date}`,
+              type: 'followup.daily', title: `Follow-ups for today: ${c.today} due, ${c.overdue} overdue`, body: null, link: c.overdue ? '/app/follow-ups?bucket=overdue' : '/app/follow-ups?bucket=today', eventId: `digest:${tenantId}:${userId}:${date}`,
             });
             n++;
           }

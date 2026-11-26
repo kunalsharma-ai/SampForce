@@ -1,6 +1,7 @@
 'use client';
 
 import type { CompanyRow } from '@dealflow/types';
+import { Card } from '@dealflow/ui';
 import {
   Activity,
   BarChart3,
@@ -23,34 +24,36 @@ import {
   UserCheck,
   Users,
   Wand2,
+  ChevronDown,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CompanyActionsProvider } from '@/components/crm/company-actions';
-import { CompanyAutofill } from '@/components/crm/company-autofill';
 import {
   CompanyBusiness,
   CompanyEmployeeDirectory,
   CompanyHero,
   CompanyKpis,
 } from '@/components/crm/company-dashboard';
-import { CompanyLeadCard } from '@/components/crm/company-lead-card';
+import { CompanyStatusBar } from '@/components/crm/company-lead-card';
+import { CompanyAutofill } from '@/components/crm/company-autofill';
+import { CompanyFollowUps } from '@/components/crm/follow-ups';
+import { CompanyConcerns } from '@/components/command-center/concerns';
+import { CompanyJourneyCard } from '@/components/crm/journey';
+import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { BusinessInformation } from '@/components/crm/business-information';
 import { CompanyEmailAssistant } from '@/components/crm/company-email-assistant';
 import { EmployeeActivitySection } from '@/components/crm/employee-activity';
 import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/crm/company-parts';
-import { CompanyFollowUps } from '@/components/crm/follow-ups';
-import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
 import { CompanyWonButton } from '@/components/crm/company-won';
-import { CompanyJourneyCard } from '@/components/crm/journey';
 import {
   CustomFieldList,
   DetailError,
   DetailSkeleton,
   RecordHeader,
 } from '@/components/crm/record-detail';
-import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { CompanyRfqs } from '@/components/crm/rfqs';
 import { CompanyPortal } from '@/components/portal/company-portal';
@@ -67,12 +70,37 @@ import { useT } from '@/lib/i18n';
  * The company dashboard (ADR 0060, Phase 3): the profile header with quick actions, the company KPIs, then the
  * relationship in detail. There is deliberately no "recent history" panel: interactions are their own log.
  */
+const MORE_KEY = 'sf.companyMore';
+/** Whether "More about this company" was left open on this device (closed until someone opens it). */
+function useMoreOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setOpen(localStorage.getItem(MORE_KEY) === 'open');
+    } catch {
+      /* private window: stays closed */
+    }
+  }, []);
+  return [
+    open,
+    (next) => {
+      setOpen(next);
+      try {
+        localStorage.setItem(MORE_KEY, next ? 'open' : 'closed');
+      } catch {
+        /* not remembered */
+      }
+    },
+  ];
+}
+
 export function CompanyDetail({ id }: { id: string }) {
   const company = useRecord<CompanyRow>('companies', id);
   const employees = useCompanyEmployees(id);
   const t = useT();
   const stages = useHasFeature('rfq_contributors');
   const uploadFailed = useSearchParams().get('uploadFailed');
+  const [moreOpen, rememberMore] = useMoreOpen();
   if (company.isPending) return <DetailSkeleton />;
   if (company.error) return <DetailError error={company.error} />;
   const c = company.data;
@@ -114,8 +142,13 @@ export function CompanyDetail({ id }: { id: string }) {
           </p>
         )}
         <CompanyKpis companyId={id} />
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="min-w-0 space-y-5 lg:col-span-2">
+        {/* The right-hand column is gone (Kunal, redesign): the page is one column, with the lead status in the middle. */}
+        <div className="space-y-5">
+          <SectionTone color="#e11d48" second="#ea580c" icon={Target} name="lead-status">
+            <Card className="p-5 sm:p-6">
+              <CompanyStatusBar company={c} />
+            </Card>
+          </SectionTone>
             <SectionTone
               color="#4f46e5"
               second="#0891b2"
@@ -168,11 +201,14 @@ export function CompanyDetail({ id }: { id: string }) {
             <SectionTone color="#db2777" second="#9333ea" icon={Mic} name="voice-notes">
               <RecordVoiceNotes record={{ type: 'company', id, name: c.name }} />
             </SectionTone>
-          </div>
-          <div className="min-w-0 space-y-5">
-            <SectionTone color="#e11d48" second="#ea580c" icon={Target} name="lead">
-              <CompanyLeadCard company={c} />
-            </SectionTone>
+        </div>
+        {/* The rest stays one click away, closed (Kunal, redesign): the quick actions above still open these. */}
+        <details id="company-more" data-company-more="" open={moreOpen} onToggle={(e) => rememberMore(e.currentTarget.open)} className="group mt-6 rounded-2xl border border-dashed border-border bg-surface/60 p-4">
+          <summary className="flex cursor-pointer list-none items-center justify-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+            <ChevronDown aria-hidden className="size-4 transition-transform group-open:rotate-180" />
+            {t('More about this company')}
+          </summary>
+          <div className="mt-4 grid gap-5 lg:grid-cols-2">
             <SectionTone color="#2563eb" second="#7c3aed" icon={Route} name="journey">
               <CompanyJourneyCard companyId={id} />
             </SectionTone>
@@ -214,7 +250,7 @@ export function CompanyDetail({ id }: { id: string }) {
               <CustomFieldList entity="companies" values={c.customFields} />
             </SectionTone>
           </div>
-        </div>
+        </details>
       </div>
     </CompanyActionsProvider>
   );
