@@ -13,6 +13,7 @@ import {
   type LeadNumberingInput,
   type LeadNumberingRow,
   type StatusMeaning,
+  phaseMeaning,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
@@ -37,6 +38,7 @@ export class CrmConfigService {
   statuses(auth: AuthContext, kind: CrmStatusKind): Promise<CrmStatusRow[]> {
     return this.prisma.run(auth, async (tx) => {
       await ensureDefaults(tx, auth.tenantId);
+      if (kind === 'STAGE') await ensureCompanyCrmDefaults(tx, auth.tenantId);
       const rows = await tx.crmStatus.findMany({ where: { tenantId: auth.tenantId, kind }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] });
       const counts = await statusCounts(tx, auth.tenantId, kind);
       return rows.map((r) => toStatusRow(r, counts.get(r.id) ?? 0));
@@ -51,7 +53,10 @@ export class CrmConfigService {
       if (input.isDefault) await tx.crmStatus.updateMany({ where: { tenantId: auth.tenantId, kind: input.kind }, data: { isDefault: false } });
       const row = await tx.crmStatus.create({
         data: {
-          tenantId: auth.tenantId, kind: input.kind, name: input.name, description: input.description ?? null, color: input.color, meaning: input.meaning,
+          tenantId: auth.tenantId, kind: input.kind, name: input.name, description: input.description ?? null, color: input.color,
+          // A stage's meaning follows its phase; a workspace's own stage has no built-in key.
+          meaning: input.kind === 'STAGE' ? phaseMeaning(input.phase ?? 'DISCUSSION') : input.meaning,
+          ...(input.kind === 'STAGE' ? { key: null, phase: input.phase ?? 'DISCUSSION' } : {}),
           position: (last?.position ?? -1) + 1, isDefault: !!input.isDefault && !input.archived, archivedAt: input.archived ? new Date() : null,
         },
       });
@@ -77,7 +82,8 @@ export class CrmConfigService {
           ...(input.name !== undefined ? { name: input.name } : {}),
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.color !== undefined ? { color: input.color } : {}),
-          ...(input.meaning !== undefined ? { meaning: input.meaning } : {}),
+          ...(input.meaning !== undefined && before.kind !== 'STAGE' ? { meaning: input.meaning } : {}),
+          ...(input.phase !== undefined && before.kind === 'STAGE' ? { phase: input.phase, meaning: phaseMeaning(input.phase) } : {}),
           ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
           ...(input.archived !== undefined ? { archivedAt: input.archived ? (before.archivedAt ?? new Date()) : null } : {}),
         },
@@ -249,13 +255,16 @@ async function statusCounts(tx: TenantTx, tenantId: string, kind: CrmStatusKind)
   const groups =
     kind === 'COMPANY'
       ? await tx.company.groupBy({ by: ['statusId'], where: { tenantId, deletedAt: null }, _count: { _all: true } })
-      : await tx.contact.groupBy({ by: ['statusId'], where: { tenantId, deletedAt: null }, _count: { _all: true } });
+      : kind === 'STAGE'
+        ? (await tx.contact.groupBy({ by: ['stageId'], where: { tenantId, deletedAt: null }, _count: { _all: true } })).map((g) => ({ statusId: g.stageId, _count: g._count }))
+        : await tx.contact.groupBy({ by: ['statusId'], where: { tenantId, deletedAt: null }, _count: { _all: true } });
   return new Map(groups.filter((g) => g.statusId).map((g) => [g.statusId!, g._count._all]));
 }
 
-function toStatusRow(r: { id: string; kind: string; name: string; description: string | null; color: string; meaning: string | null; position: number; isDefault: boolean; archivedAt: Date | null }, inUse: number): CrmStatusRow {
+function toStatusRow(r: { id: string; kind: string; name: string; description: string | null; color: string; meaning: string | null; key?: string | null; phase?: string | null; position: number; isDefault: boolean; archivedAt: Date | null }, inUse: number): CrmStatusRow {
   return {
     id: r.id, kind: r.kind as CrmStatusKind, name: r.name, description: r.description, color: r.color, meaning: (r.meaning ?? 'ACTIVE') as StatusMeaning,
+    ...(r.kind === 'STAGE' ? { key: (r.key ?? null) as CrmStatusRow['key'], phase: (r.phase ?? 'NEW') as CrmStatusRow['phase'] } : {}),
     position: r.position, isDefault: r.isDefault, archived: !!r.archivedAt, inUse,
   };
 }

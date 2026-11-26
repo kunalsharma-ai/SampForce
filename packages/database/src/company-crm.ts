@@ -23,7 +23,7 @@ export async function ensureCompanyCrmDefaults(tx: TenantTx, tenantId: string, s
     if (await tx.crmStatus.count({ where: { tenantId, kind } })) continue;
     await tx.crmStatus.createMany({
       data: DEFAULT_STATUSES[kind].map((s, position) => ({
-        tenantId, kind, name: say(s.name), color: s.color, meaning: s.meaning, position, isDefault: position === 0, description: null, archivedAt: null,
+        tenantId, kind, name: say(s.name), color: s.color, meaning: s.meaning, key: s.key ?? null, phase: s.phase ?? null, position, isDefault: position === 0, description: null, archivedAt: null,
       })),
     });
   }

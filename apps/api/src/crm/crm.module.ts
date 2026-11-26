@@ -14,6 +14,8 @@ import { CompanyAutofillPreviewController, CompanyEnrichmentController } from '.
 import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CompanyDashboardController, FollowUpsController, InteractionsController, RfqsController } from './company-work.controller';
 import { CompanyWorkService } from './company-work.service';
+import { EmployeeStagesController } from './employee-stages.controller';
+import { EmployeeStagesService } from './employee-stages.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
 import { CustomFieldsService } from './custom-fields.service';
@@ -43,6 +45,7 @@ import {
 @Module({
   imports: [GeoModule],
   controllers: [
+    EmployeeStagesController,
     LeadsController,
     ContactsController,
     CompaniesController,
@@ -91,12 +94,13 @@ import {
     CompanyLogosService,
     CompanyEnrichmentService,
     CompanyWorkService,
+    EmployeeStagesService,
     NotificationsService,
     RevenueRecordsService,
     LeadTransfersService,
     InstructionsService,
     ClientConcernsService,
   ],
-  exports: [CrmConfigService, CompanyLeadsService, CompanyLogosService, CompanyEnrichmentService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
+  exports: [EmployeeStagesService, CrmConfigService, CompanyLeadsService, CompanyLogosService, CompanyEnrichmentService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

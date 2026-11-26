@@ -17,6 +17,8 @@ import {
   sampbidxSendPastedEmailSchema,
   type SampbidxSendRfqInput,
   sampbidxSendRfqSchema,
+  sampbidxCompanyPreviewQuerySchema,
+  sampbidxSendCompanySchema,
   type SampbidxTransferListQuery,
   sampbidxTransferListQuerySchema,
 } from '@dealflow/types';
@@ -96,6 +98,22 @@ export class SampbidxController {
   @RequirePermissions('companies:write')
   sendRfq(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxSendRfqSchema)) body: SampbidxSendRfqInput, @Meta() meta: RequestMeta) {
     return this.sampbidx.sendRfq(auth, body, meta);
+  }
+
+  /** "Send to SampBidx" on a company (ADR 0080): the client, employees, chosen RFQ, and what blocks sending. */
+  @Get('companies/:companyId/preview')
+  @RequirePermissions('companies:read', 'contacts:read')
+  companyPreview(@Auth() auth: AuthContext, @Param('companyId', uuid) companyId: string, @Query(new ZodPipe(sampbidxCompanyPreviewQuerySchema)) q: z.output<typeof sampbidxCompanyPreviewQuerySchema>) {
+    return this.sampbidx.companyPreview(auth, companyId, q);
+  }
+
+  /** Sends the company as a SampBidx client with the picked employees, then the chosen RFQ. */
+  @Post('transfers/company')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @RequirePermissions('companies:write', 'contacts:write')
+  sendCompany(@Auth() auth: AuthContext, @Body(new ZodPipe(sampbidxSendCompanySchema)) body: z.output<typeof sampbidxSendCompanySchema>, @Meta() meta: RequestMeta) {
+    return this.sampbidx.sendCompany(auth, body, meta);
   }
 
   /** Emails from the person's own connected mailboxes, to choose one to transfer. */

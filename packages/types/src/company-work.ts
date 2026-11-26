@@ -200,6 +200,24 @@ export const RFQ_SUBMITTED_STATUSES: readonly RfqStatus[] = ['QUOTATION_SUBMITTE
 
 const currency = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a 3-letter ISO currency code');
 
+/** How SampBidx files a bid (ADR 0080): the service category and the service. */
+export const RFQ_SERVICE_CATEGORIES = ['QUANTITATIVE', 'QUALITATIVE'] as const;
+export type RfqServiceCategory = (typeof RFQ_SERVICE_CATEGORIES)[number];
+export const RFQ_SERVICES = ['CAWI', 'CATI', 'CAPI', 'F2F', 'IDI', 'FGD', 'ONLINE_COMMUNITY', 'OTHER'] as const;
+export type RfqService = (typeof RFQ_SERVICES)[number];
+
+/** One country and target group of an RFQ, exactly as the client asked. Rows are never merged. */
+export const rfqLineSchema = z.object({
+  country: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Pick a country'),
+  targetGroup: z.string().trim().min(1, 'Enter the target group').max(300),
+  quota: optionalNumber(0, 100_000_000).transform((v) => (v == null ? null : Math.round(v))),
+  loi: optionalNumber(0, 10_000),
+  ir: optionalNumber(0, 100),
+  cpi: optionalNumber(0, 1e9),
+  description: optionalText(1_000),
+});
+export type RfqLine = { country: string; targetGroup: string; quota: number | null; loi: number | null; ir: number | null; cpi: number | null; description: string | null };
+
 export const rfqInputSchema = z.object({
   companyId: z.string().uuid(),
   contactId: uuidRef,
@@ -209,6 +227,10 @@ export const rfqInputSchema = z.object({
   market: optionalText(100),
   industry: optionalText(120),
   targetAudience: optionalText(500),
+  serviceCategory: z.enum(RFQ_SERVICE_CATEGORIES).nullable().optional().or(z.literal('').transform(() => null)),
+  service: z.enum(RFQ_SERVICES).nullable().optional().or(z.literal('').transform(() => null)),
+  /** One row per country and target group; at most 50. */
+  lines: z.array(rfqLineSchema).max(50).optional(),
   sampleSize: optionalNumber(0, 100_000_000).transform((v) => (v == null ? v : Math.round(v))),
   loi: optionalNumber(0, 10_000),
   ir: optionalNumber(0, 100),
@@ -254,6 +276,10 @@ export interface RfqRow {
   market: string | null;
   industry: string | null;
   targetAudience: string | null;
+  serviceCategory: RfqServiceCategory | null;
+  service: RfqService | null;
+  /** Country and target-group rows; empty when the RFQ has one market (the fields above). */
+  lines: RfqLine[];
   sampleSize: number | null;
   loi: number | null;
   ir: number | null;

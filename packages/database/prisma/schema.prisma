@@ -565,6 +565,8 @@ model Tenant {
   leadDrafts             LeadDraft[]
   sampbidxTransfers      SampbidxTransfer[]
   sampbidxAttachments    SampbidxAttachment[]
+  contactStageChanges    ContactStageChange[]
+  sampbidxClients        SampbidxClient[]
   rfqs                   Rfq[]
   chatConversations      ChatConversation[]
   supportTickets         SupportTicket[]
@@ -1013,6 +1015,13 @@ model Contact {
   city              String?
   remarks           String?
   nextFollowUpAt    DateTime?        @map("next_follow_up_at")
+  /// The employee's communication stage (a CrmStatus of kind STAGE, ADR 0080), apart from the employee status.
+  stageId           String?          @map("stage_id")
+  stageChangedAt    DateTime?        @map("stage_changed_at")
+  stageChangedById  String?          @map("stage_changed_by_id")
+  /// Marked as an RFQ contributor by hand, for RFQs from before SampForce. Real RFQs make one without a mark.
+  rfqContributorAt   DateTime?       @map("rfq_contributor_at")
+  rfqContributorById String?         @map("rfq_contributor_by_id")
   createdById       String?          @map("created_by_id")
   updatedById       String?          @map("updated_by_id")
   /// [{ value, label?, primary }]; the primary entries are mirrored in email and phone.
@@ -1044,6 +1053,7 @@ model Contact {
   @@index([tenantId, companyId])
   @@index([tenantId, matchKeys])
   @@index([tenantId, statusId])
+  @@index([tenantId, stageId])
   @@map("contacts")
 }
 
@@ -1187,7 +1197,7 @@ model CompanyLogo {
 model SampbidxTransfer {
   id              String    @id @default(uuid()) @map("_id")
   tenantId        String    @map("tenant_id")
-  /// RFQ, MAILBOX_EMAIL, EMAIL_FILE or PASTED_EMAIL.
+  /// RFQ, MAILBOX_EMAIL, EMAIL_FILE, PASTED_EMAIL or CLIENT (a company sent as a SampBidx client, ADR 0080).
   kind            String
   title           String
   rfqId           String?   @map("rfq_id")
@@ -1216,6 +1226,9 @@ model SampbidxTransfer {
   fileIds         String[]  @map("file_ids")
   /// Names and sizes of everything sent, for the history list.
   files           Json      @default("[]")
+  /// The employee chosen as the one who shared the RFQ (company sends, ADR 0080), and the details that went with
+  /// the send, as checked on the preview, so the history shows exactly what SampBidx got.
+  sentPayload     Json?     @map("sent_payload")
   note            String?
   /// SENDING, SENT or FAILED.
   delivery        String    @default("SENDING")
@@ -1240,6 +1253,49 @@ model SampbidxTransfer {
   @@index([tenantId, remoteId])
   @@index([tenantId, emailTextHash])
   @@map("sampbidx_transfers")
+}
+
+/// One change of an employee's communication stage (ADR 0080). Never edited or deleted: it is the stage history.
+model ContactStageChange {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  contactId   String   @map("contact_id")
+  companyId   String?  @map("company_id")
+  fromStageId String?  @map("from_stage_id")
+  toStageId   String   @map("to_stage_id")
+  /// MANUAL, RFQ, FOLLOW_UP, INTERACTION, SAMPBIDX, RFQ_OUTCOME or CALL_SCHEDULED (STAGE_CHANGE_SOURCES).
+  source      String
+  note        String?
+  rfqId       String?  @map("rfq_id")
+  /// The person who changed it, or whose action (an RFQ, a follow-up, a send) moved it.
+  changedById String?  @map("changed_by_id")
+  at          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, contactId, at(sort: Desc)])
+  @@index([tenantId, companyId])
+  @@map("contact_stage_changes")
+}
+
+/// A SampForce company as a client in SampBidx (ADR 0080): one per company, kept so the same client is updated,
+/// never created twice. Each employee sent along is listed with SampBidx's id for them.
+model SampbidxClient {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  companyId    String    @map("company_id")
+  remoteId     String?   @map("remote_id")
+  remoteUrl    String?   @map("remote_url")
+  /// [{ contactId, remoteId }]
+  contacts     Json      @default("[]")
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, companyId])
+  @@map("sampbidx_clients")
 }
 
 /// A file added next to pasted RFQ email text, kept so the send (and any retry) carries it to SampBidx (ADR 0061).
@@ -1277,6 +1333,12 @@ model Rfq {
   market          String?
   industry        String?
   targetAudience  String?   @map("target_audience")
+  /// QUANTITATIVE or QUALITATIVE, and the service (CAWI, CATI, CAPI...), as SampBidx files a bid (ADR 0080).
+  serviceCategory String?   @map("service_category")
+  service         String?
+  /// One row per country and target group, exactly as the client asked:
+  /// [{ country, targetGroup, quota, loi, ir, cpi, description }]. Empty = the single market/sample/LOI/IR/CPI above.
+  lines           Json      @default("[]")
   sampleSize      Int?      @map("sample_size")
   /// Length of interview in minutes, incidence rate in percent, cost per interview in `currency`.
   loi             Float?
@@ -1385,6 +1447,10 @@ model CrmStatus {
   isDefault   Boolean   @default(false) @map("is_default")
   /// What the status means to reports: NEW, ACTIVE, CLIENT, CONCERN, ON_HOLD, LOST (null = ACTIVE).
   meaning     String?
+  /// Communication stages (kind STAGE) only: the built-in stage it is (NEW_CONTACT, RFQ_RECEIVED, FOLLOW_UP_1...),
+  /// which SampForce uses to move employees on by itself, and its phase (STAGE_PHASES) for filters and dashboards.
+  key         String?
+  phase       String?
   /// Deactivated statuses stay on the records that have them but cannot be picked.
   archivedAt  DateTime? @map("archived_at")
   createdAt   DateTime  @default(now()) @map("created_at")

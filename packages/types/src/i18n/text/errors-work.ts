@@ -252,4 +252,9 @@ export const errorsWork = {
   'Enter a value': ['Introduce un valor', 'Saisissez une valeur', 'Geben Sie einen Wert ein', 'أدخل قيمة'],
   'Employee not found.': ['No se encontró el empleado.', 'Employé introuvable.', 'Mitarbeiter nicht gefunden.', 'لم يُعثر على الموظف.'],
   'Only the Super Workspace can change the sales profile.': ['Solo el Super Workspace puede cambiar el perfil de ventas.', 'Seul le Super Workspace peut modifier le profil commercial.', 'Nur der Super Workspace kann das Vertriebsprofil ändern.', 'لا يمكن تغيير ملف المبيعات إلا من مساحة العمل الرئيسية (Super Workspace).'],
+  'That RFQ is not from this company.': ['Esa RFQ no es de esta empresa.', 'Cette RFQ ne provient pas de cette entreprise.', 'Diese RFQ stammt nicht von diesem Unternehmen.', 'طلب عرض السعر هذا ليس من هذه الشركة.'],
+  'One of the chosen employees is not at this company.': ['Uno de los empleados elegidos no pertenece a esta empresa.', 'L’un des employés choisis ne fait pas partie de cette entreprise.', 'Einer der ausgewählten Mitarbeitenden gehört nicht zu diesem Unternehmen.', 'أحد الموظفين المختارين لا ينتمي إلى هذه الشركة.'],
+  'Fill in the details SampBidx requires before sending.': ['Completa los datos que SampBidx exige antes de enviar.', 'Complétez les informations exigées par SampBidx avant l’envoi.', 'Ergänzen Sie die von SampBidx verlangten Angaben vor dem Senden.', 'أكمل البيانات التي يطلبها SampBidx قبل الإرسال.'],
+  'Pick one of the communication stages.': ['Elige una de las etapas de comunicación.', 'Choisissez l’une des étapes de communication.', 'Wählen Sie eine der Kommunikationsphasen.', 'اختر إحدى مراحل التواصل.'],
+  'That stage is no longer used. Pick another one.': ['Esa etapa ya no se usa. Elige otra.', 'Cette étape n’est plus utilisée. Choisissez-en une autre.', 'Diese Phase wird nicht mehr verwendet. Wählen Sie eine andere.', 'لم تعد هذه المرحلة مستخدمة. اختر مرحلة أخرى.'],
 } as const satisfies TextTable;

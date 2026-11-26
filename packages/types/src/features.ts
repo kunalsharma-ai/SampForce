@@ -92,6 +92,8 @@ export const FEATURE_KEYS = [
   'sales_pipeline',
   'activity_tracking',
   'interactions',
+  // ADR 0080
+  'rfq_contributors',
   'follow_up_management',
   'follow_up_rescheduling',
   'record_timeline',
@@ -212,6 +214,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'sales_pipeline', group: 'CRM', label: 'Sales pipelines', description: 'Pipelines and their stages.', defaultFrom: 'free', paths: ['/app/pipelines'], since: 2 },
   { key: 'activity_tracking', group: 'CRM', label: 'Calls and activities', description: 'Calls, meetings, emails and notes logged on records.', defaultFrom: 'free', paths: ['/app/activities'], since: 2 },
   { key: 'interactions', group: 'CRM', label: 'Client interactions', description: 'Interactions recorded on a company with their outcome.', defaultFrom: 'free', paths: [], parent: 'activity_tracking', since: 2 },
+  { key: 'rfq_contributors', group: 'CRM', label: 'RFQ contributors and communication stages', description: 'Mark which employees share RFQs, give each employee a colour-coded communication stage with its history, and filter a company’s employees by RFQ activity and follow-ups.', defaultFrom: 'free', paths: [], parent: 'contact_management', since: 5 },
   { key: 'follow_up_management', group: 'CRM', label: 'Follow-up management', description: 'Follow-ups with type, due date, reminders and outcome.', defaultFrom: 'free', paths: ['/app/follow-ups'], since: 2 },
   { key: 'follow_up_rescheduling', group: 'CRM', label: 'Follow-up rescheduling', description: 'Move a follow-up to a new date, counted on the follow-up.', defaultFrom: 'free', paths: [], parent: 'follow_up_management', since: 2 },
   { key: 'record_timeline', group: 'CRM', label: 'Record timeline', description: 'The history of everything that happened on a record.', defaultFrom: 'free', paths: [], since: 2 },
@@ -230,7 +233,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 /** The catalogue version this release writes with every plan list it saves (see FeatureDef.since). */
-export const FEATURE_CATALOG_VERSION = 4;
+export const FEATURE_CATALOG_VERSION = 5;
 
 /** Subfeatures of a feature, in catalogue order. */
 export function subfeaturesOf(feature: FeatureKey): FeatureKey[] {

@@ -323,4 +323,9 @@ export const validation = {
   // Edit everywhere (ADR 0065)
   'set by the interaction kind': ['lo determina el tipo de interacción', 'défini par le type d’interaction', 'durch die Art der Interaktion festgelegt', 'يحدده نوع التفاعل'],
   'Enter a file name': ['Introduce un nombre de archivo', 'Saisissez un nom de fichier', 'Geben Sie einen Dateinamen ein', 'أدخل اسم الملف'],
+  'is not a stage': ['no es una etapa', 'n’est pas une étape', 'ist keine Phase', 'ليست مرحلة'],
+  'is not from this company': ['no es de esta empresa', 'ne provient pas de cette entreprise', 'stammt nicht von diesem Unternehmen', 'ليس من هذه الشركة'],
+  'Pick a country': ['Elige un país', 'Choisissez un pays', 'Wählen Sie ein Land', 'اختر دولة'],
+  'Enter the target group': ['Introduce el grupo objetivo', 'Saisissez le groupe cible', 'Geben Sie die Zielgruppe ein', 'أدخل الفئة المستهدفة'],
+  'Pick a time zone': ['Elige una zona horaria', 'Choisissez un fuseau horaire', 'Wählen Sie eine Zeitzone', 'اختر منطقة زمنية'],
 } as const satisfies TextTable;

@@ -30,6 +30,13 @@ import {
   type SampbidxTransferKind,
   type SampbidxTransferListQuery,
   type SampbidxTransferRow,
+  type SampbidxCompanyPreview,
+  type SampbidxCompanySendResult,
+  type SampbidxPreviewContact,
+  type SampbidxSendCompanyInput,
+  type sampbidxSendCompanySchema,
+  contributorStatus,
+  type z,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import { hasFeature } from '../billing/entitlements';
@@ -38,6 +45,8 @@ import { SECRET_BOX, type SecretBox } from '../common/crypto';
 import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { CompanyWorkService } from '../crm/company-work.service';
+import { EmployeeStagesService } from '../crm/employee-stages.service';
+import { clientPayload, missingContactFields, previewContact, rfqLinesOut, value, website } from './sampbidx-company';
 import { personRefs } from '../crm/visibility';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AppError, AppsService } from './apps.service';
@@ -62,6 +71,7 @@ export class SampbidxService {
     private readonly apps: AppsService,
     private readonly client: SampbidxClient,
     private readonly work: CompanyWorkService,
+    private readonly stages: EmployeeStagesService,
     private readonly notifications: NotificationsService,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
@@ -503,6 +513,213 @@ export class SampbidxService {
     return m.id;
   }
 
+  // ─── Send a company (client) and its RFQ (ADR 0080) ───
+
+  /**
+   * The preview of "Send to SampBidx" on a company: the client, the employees to pick from (RFQ contributors first),
+   * the chosen employee(s) as SampBidx contacts, the chosen RFQ with its country rows, and what still blocks sending.
+   */
+  async companyPreview(auth: AuthContext, companyId: string, q: { contactId?: string; rfqId?: string; contactIds?: string }): Promise<SampbidxCompanyPreview> {
+    await this.work.assertEditable(auth, companyId);
+    const extra = (q.contactIds ?? '').split(',').map((x) => x.trim()).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+    const ctx = await this.companyContext(auth, companyId, q.contactId ?? null, extra);
+    const conn = await this.prisma.run(auth, (tx) => tx.appConnection.findUnique({ where: { tenantId_provider: { tenantId: auth.tenantId, provider: 'SAMPBIDX' } } }));
+    const tid = auth.tenantId;
+    const { company, link, employees, chosen } = ctx;
+    const [allRfqs, sentRfqs, contactRfqs, looseRfq, stageRows] = await this.prisma.run(auth, async (tx) =>
+      Promise.all([
+        tx.rfq.findMany({ where: { tenantId: tid, companyId, deletedAt: null }, orderBy: { receivedAt: 'desc' }, take: 200 }),
+        tx.sampbidxTransfer.findMany({ where: { tenantId: tid, companyId, kind: 'RFQ', delivery: 'SENT' }, select: { rfqId: true } }),
+        tx.rfq.findMany({ where: { tenantId: tid, companyId, deletedAt: null, contactId: { not: null } }, select: { contactId: true, receivedAt: true } }),
+        tx.activity.findMany({ where: { tenantId: tid, companyId, deletedAt: null, interaction: 'RFQ_RECEIVED', contactId: { not: null }, OR: [{ rfqId: null }, { rfqId: { isSet: false } }] }, select: { contactId: true, occurredAt: true } }),
+        this.stages.ensureStages(tx, tid),
+      ]),
+    );
+    const contributorOf = (e: (typeof employees)[number]) => {
+      const dates = [...contactRfqs.filter((r) => r.contactId === e.id).map((r) => r.receivedAt), ...looseRfq.filter((a) => a.contactId === e.id).map((a) => a.occurredAt)].sort((a, b) => b.getTime() - a.getTime());
+      return { rfqCount: dates.length, status: contributorStatus({ rfqCount: dates.length, lastRfqAt: dates[0] ?? null, markedAt: e.rfqContributorAt }) };
+    };
+    const rank = { ACTIVE: 0, CONTRIBUTOR: 1, NONE: 2 } as const;
+    const employeeRows = employees
+      .map((e) => {
+        const k = contributorOf(e);
+        const st = e.stageId ? stageRows.find((s) => s.id === e.stageId) : undefined;
+        return {
+          id: e.id, name: [e.firstName, e.lastName].filter(Boolean).join(' '), jobTitle: e.jobTitle, email: e.email, contributor: k.status, rfqCount: k.rfqCount,
+          stage: st ? { name: st.name, color: st.color, key: st.key, phase: st.phase ?? 'NEW' } : null,
+        };
+      })
+      .sort((a, b) => rank[a.contributor] - rank[b.contributor] || b.rfqCount - a.rfqCount || a.name.localeCompare(b.name));
+    const sentIds = new Set(sentRfqs.map((r) => r.rfqId));
+    const nameOf = (id: string | null) => {
+      const e = id ? employees.find((x) => x.id === id) : undefined;
+      return e ? { id: e.id, name: [e.firstName, e.lastName].filter(Boolean).join(' ') } : null;
+    };
+    const rfqList = allRfqs
+      .map((r) => ({ id: r.id, number: r.number, projectName: r.projectName, status: r.status, receivedAt: r.receivedAt.toISOString(), contact: nameOf(r.contactId), alreadySent: sentIds.has(r.id) }))
+      .sort((a, b) => Number(b.contact?.id === q.contactId) - Number(a.contact?.id === q.contactId));
+    let rfq: SampbidxCompanyPreview['rfq'] = null;
+    if (q.rfqId) {
+      const r = await this.work.getRfq(auth, q.rfqId);
+      if (r.company.id !== companyId) throw new BadRequestException({ code: 'INVALID_RFQ', message: 'That RFQ is not from this company.' });
+      rfq = {
+        id: r.id, number: r.number, projectName: r.projectName, description: r.description, serviceCategory: r.serviceCategory, service: r.service, methodology: r.methodology,
+        currency: r.currency, receivedAt: r.receivedAt, deadlineAt: r.deadlineAt,
+        lines: rfqLinesOut(r).map((l) => ({ country: l.country, targetGroup: l.targetGroup, quota: l.quota, loi: l.loiMinutes, ir: l.incidenceRatePercent, cpi: l.cpi, description: l.description })),
+        totalQuotation: r.totalQuotation, missing: missingFields(r), files: r.files,
+        contactMismatch: r.contact && q.contactId && r.contact.id !== q.contactId ? r.contact : null,
+      };
+    }
+    const blockers: string[] = [];
+    if (!conn || conn.status === 'DISCONNECTED') blockers.push('SampBidx is not connected. A workspace admin connects it in Integrations.');
+    if (!chosen.length) blockers.push('Pick the employee who shared the RFQ.');
+    for (const p of chosen) for (const f of missingContactFields(p)) blockers.push(`${p.name.value || 'An employee'}: ${CONTACT_FIELD_LABEL[f]} is required by SampBidx.`);
+    if (rfq?.missing.length) blockers.push(`${rfq.number} is missing ${rfq.missing.map((m) => RFQ_FIELD_LABEL[m]).join(', ')}. Fill these in on the RFQ.`);
+    return {
+      connected: !!conn && conn.status !== 'DISCONNECTED',
+      company: {
+        id: company.id,
+        name: value(company.name, true),
+        website: value(website(company), false),
+        industry: value(company.industry, false),
+        leadNumber: company.leadNumber,
+        logoUrl: null,
+        office: { label: 'Head office', country: value(company.country, false), city: value(company.city, false), address: value(company.address, false) },
+      },
+      client: link ? { remoteId: link.remoteId, remoteUrl: link.remoteUrl, lastSyncedAt: link.lastSyncedAt?.toISOString() ?? null } : null,
+      employees: employeeRows,
+      contacts: chosen,
+      rfqs: rfqList,
+      rfq,
+      blockers,
+      transfers: await this.list(auth, { companyId, limit: 30 }),
+    };
+  }
+
+  /**
+   * Sends the company to SampBidx as a client with the picked employees, then (if one is picked) the RFQ from the
+   * employee who shared it. Gaps typed on the preview are saved to the SampForce records first. The RFQ goes only
+   * after SampBidx confirms the client, so the bid can be linked to it.
+   */
+  async sendCompany(auth: AuthContext, input: z.output<typeof sampbidxSendCompanySchema>, meta: RequestMeta): Promise<SampbidxCompanySendResult> {
+    const conn = await this.usableConnection(auth.tenantId);
+    await this.work.assertEditable(auth, input.companyId, input.rfqId ?? null);
+    const contactIds = [...new Set([input.contactId, ...input.extraContactIds])];
+    await this.saveCompletion(auth, input, contactIds, meta);
+    const ctx = await this.companyContext(auth, input.companyId, input.contactId, input.extraContactIds);
+    if (ctx.chosen.length !== contactIds.length) throw new BadRequestException({ code: 'INVALID_CONTACT', message: 'One of the chosen employees is not at this company.' });
+    const gaps = ctx.chosen.flatMap((p) => missingContactFields(p).map((f) => ({ path: `contacts.${p.id}.${f}`, message: 'is required' })));
+    if (gaps.length) throw new BadRequestException({ code: 'SAMPBIDX_INCOMPLETE', message: 'Fill in the details SampBidx requires before sending.', details: gaps });
+    let rfq: RfqRow | null = null;
+    if (input.rfqId) {
+      rfq = await this.work.editableRfq(auth, input.rfqId);
+      const missing = missingFields(rfq);
+      if (missing.length) throw new BadRequestException({ code: 'SAMPBIDX_INCOMPLETE', message: 'Fill in the missing RFQ details before sending it to SampBidx.', details: missing.map((m) => ({ path: `rfq.${m}`, message: 'is required' })) });
+      await this.prisma.run(auth, (tx) => this.assertNotDuplicate(tx, auth.tenantId, { rfqId: rfq!.id, kind: 'RFQ' }, input.resend, `${rfq!.number} is already with SampBidx. Send it again only if SampBidx should get a second copy.`));
+    }
+    const companyName = ctx.company.name;
+    const clientTransfer = await this.prisma.run(auth, async (tx) => {
+      const t = await tx.sampbidxTransfer.create({
+        data: {
+          tenantId: auth.tenantId,
+          kind: 'CLIENT',
+          title: `Client ${companyName}`,
+          companyId: input.companyId,
+          contactId: input.contactId,
+          rfqId: input.rfqId ?? null,
+          note: input.note ?? null,
+          sentPayload: { contactIds, mayReceiveQuotes: input.mayReceiveQuotes } as Prisma.InputJsonValue,
+          createdById: auth.userId,
+        },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sampbidx.client_sent', entityType: 'company', entityId: input.companyId, metadata: { transferId: t.id, contacts: contactIds.length, rfqId: input.rfqId ?? null }, meta });
+      return t;
+    });
+    const client = await this.deliver(auth, conn, clientTransfer);
+    if (client.delivery !== 'SENT' || !rfq) return { client, rfq: null };
+    // The RFQ goes with the employee the person picked as the one who shared it.
+    if (rfq.contact?.id !== input.contactId) {
+      await this.work.updateRfq(auth, rfq.id, { contactId: input.contactId }, meta);
+      rfq = await this.work.getRfq(auth, rfq.id);
+    }
+    const files = await this.prisma.run(auth, (tx) =>
+      tx.companyFile.findMany({ where: { tenantId: auth.tenantId, rfqId: rfq!.id, ...(input.fileIds ? { id: { in: input.fileIds } } : {}) }, select: { id: true, name: true, sizeBytes: true }, orderBy: { createdAt: 'asc' } }),
+    );
+    if (input.fileIds && files.length !== new Set(input.fileIds).size) throw new BadRequestException({ code: 'INVALID_FILE', message: 'One of the chosen files is not attached to this RFQ.' });
+    checkFileLimits(files);
+    const rfqTransfer = await this.prisma.run(auth, async (tx) => {
+      const t = await tx.sampbidxTransfer.create({
+        data: {
+          tenantId: auth.tenantId,
+          kind: 'RFQ',
+          title: `${rfq!.number} ${rfq!.projectName}`,
+          rfqId: rfq!.id,
+          companyId: input.companyId,
+          contactId: input.contactId,
+          fileIds: files.map((f) => f.id),
+          files: files.map((f) => ({ name: f.name, sizeBytes: f.sizeBytes })),
+          note: input.note ?? null,
+          sentPayload: { withClient: true } as Prisma.InputJsonValue,
+          createdById: auth.userId,
+        },
+      });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'sampbidx.rfq_sent', entityType: 'rfq', entityId: rfq!.id, metadata: { transferId: t.id, files: files.length, withClient: true }, meta });
+      return t;
+    });
+    return { client, rfq: await this.deliver(auth, conn, rfqTransfer) };
+  }
+
+  /** Saves what the person typed on the preview into the company and employee records (audited like any edit). */
+  private async saveCompletion(auth: AuthContext, input: z.output<typeof sampbidxSendCompanySchema>, contactIds: string[], meta: RequestMeta) {
+    const done = input.completion;
+    if (!done) return;
+    await this.prisma.run(auth, async (tx) => {
+      const co = done.company ?? {};
+      const companyData: Prisma.CompanyUpdateInput = {};
+      if (co.website !== undefined && co.website) companyData.website = co.website;
+      if (co.industry !== undefined && co.industry) companyData.industry = co.industry;
+      if (co.country) companyData.country = co.country;
+      if (co.city !== undefined && co.city) companyData.city = co.city;
+      if (Object.keys(companyData).length) {
+        await tx.company.update({ where: { id: input.companyId }, data: { ...companyData, updatedById: auth.userId } });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.updated', entityType: 'company', entityId: input.companyId, metadata: { fields: Object.keys(companyData), via: 'sampbidx_preview' }, meta });
+      }
+      for (const [id, c] of Object.entries(done.contacts ?? {})) {
+        if (!contactIds.includes(id)) continue;
+        const exists = await tx.contact.findFirst({ where: { id, tenantId: auth.tenantId, companyId: input.companyId, deletedAt: null }, select: { id: true } });
+        if (!exists) throw new BadRequestException({ code: 'INVALID_CONTACT', message: 'One of the chosen employees is not at this company.' });
+        const data: Prisma.ContactUpdateInput = {};
+        if (c.email) data.email = c.email;
+        if (c.jobTitle) data.jobTitle = c.jobTitle;
+        if (c.phone) data.phone = c.phone;
+        if (c.country) data.country = c.country;
+        if (c.timeZone) data.timezone = c.timeZone;
+        if (!Object.keys(data).length) continue;
+        await tx.contact.update({ where: { id }, data: { ...data, updatedById: auth.userId } });
+        await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'contact.updated', entityType: 'contact', entityId: id, metadata: { fields: Object.keys(data), via: 'sampbidx_preview' }, meta });
+      }
+    });
+  }
+
+  /** The company, its link to a SampBidx client, its employees, and the chosen ones as SampBidx contacts. */
+  private async companyContext(auth: AuthContext, companyId: string, contactId: string | null, extra: string[]) {
+    return this.prisma.run(auth, async (tx) => {
+      const company = await tx.company.findFirst({ where: { id: companyId, tenantId: auth.tenantId, deletedAt: null } });
+      if (!company) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Company not found.' });
+      const [link, employees] = await Promise.all([
+        tx.sampbidxClient.findUnique({ where: { tenantId_companyId: { tenantId: auth.tenantId, companyId } } }),
+        tx.contact.findMany({ where: { tenantId: auth.tenantId, companyId, deletedAt: null }, orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }], take: 1000 }),
+      ]);
+      const remote = new Map(((link?.contacts as { contactId: string; remoteId: string }[] | null) ?? []).map((c) => [c.contactId, c.remoteId]));
+      const ids = [...new Set([contactId, ...extra].filter((x): x is string => !!x))];
+      const chosen: SampbidxPreviewContact[] = ids
+        .map((id) => employees.find((e) => e.id === id))
+        .filter((e): e is (typeof employees)[number] => !!e)
+        .map((e) => previewContact(e, company, remote.get(e.id) ?? null));
+      return { company, link, employees, chosen };
+    });
+  }
+
   // ─── History and retries ───
 
   async list(auth: AuthContext, q: Partial<SampbidxTransferListQuery>): Promise<SampbidxTransferRow[]> {
@@ -598,7 +815,7 @@ export class SampbidxService {
   private async deliver(auth: AuthContext, conn: AppConnection, t: SampbidxTransfer | Omit<SampbidxTransfer, 'emailFileData'>): Promise<SampbidxTransferRow> {
     const keys = this.keys(conn);
     await this.prisma.run(auth, (tx) => tx.sampbidxTransfer.update({ where: { id: t.id }, data: { delivery: 'SENDING', attempts: { increment: 1 } } }));
-    let accepted: { id: string; url: string | null; status: string | null } | null = null;
+    let accepted: { id: string; url: string | null; status: string | null; contacts?: { externalId: string; id: string }[] } | null = null;
     let failure: string | null = null;
     try {
       accepted = await this.send(auth, keys, t.id);
@@ -620,6 +837,23 @@ export class SampbidxService {
         omit: { emailFileData: true },
       });
       if (accepted) await tx.appConnection.update({ where: { id: conn.id }, data: { lastUsedAt: new Date(), status: 'CONNECTED', lastError: null } });
+      if (accepted && t.kind === 'CLIENT' && t.companyId) {
+        // One SampBidx client per company: later sends update it. Contacts SampBidx named are remembered by id.
+        const prev = await tx.sampbidxClient.findUnique({ where: { tenantId_companyId: { tenantId: auth.tenantId, companyId: t.companyId } } });
+        const known = new Map(((prev?.contacts as { contactId: string; remoteId: string }[] | null) ?? []).map((c) => [c.contactId, c.remoteId]));
+        for (const c of (accepted as { contacts?: { externalId: string; id: string }[] }).contacts ?? []) known.set(c.externalId, c.id);
+        const contacts = [...known.entries()].map(([contactId, remoteId]) => ({ contactId, remoteId })) as Prisma.InputJsonValue;
+        await tx.sampbidxClient.upsert({
+          where: { tenantId_companyId: { tenantId: auth.tenantId, companyId: t.companyId } },
+          create: { tenantId: auth.tenantId, companyId: t.companyId, remoteId: accepted.id, remoteUrl: accepted.url, contacts, lastSyncedAt: new Date() },
+          update: { remoteId: accepted.id, remoteUrl: accepted.url ?? prev?.remoteUrl ?? null, contacts, lastSyncedAt: new Date() },
+        });
+      }
+      if (accepted && t.kind !== 'CLIENT') {
+        // SampBidx confirmed it: the employee who shared the RFQ moves to "RFQ Sent to SampBidx" (ADR 0080).
+        const contactId = t.contactId ?? (t.rfqId ? (await tx.rfq.findFirst({ where: { id: t.rfqId, tenantId: auth.tenantId }, select: { contactId: true } }))?.contactId : null);
+        await this.stages.advance(tx, auth, contactId, 'RFQ_SENT_SAMPBIDX', { source: 'SAMPBIDX', rfqId: t.rfqId, note: `SampBidx reference ${accepted.id}` });
+      }
       return (await this.rows(tx, auth.tenantId, [updated]))[0]!;
     });
     await this.apps.recordEvent(auth.tenantId, conn, {
@@ -641,11 +875,20 @@ export class SampbidxService {
     const team = await this.clientTeam(auth, t.createdById, t.companyId);
     // sentBy is the person who sent it (also on a retry by someone else); clientTeam is who looks after the client.
     const source = { system: 'SampForce', workspace: tenant.name, transferId: t.id, sentBy: team.sentBy, clientTeam: team.clientTeam, note: t.note };
+    if (t.kind === 'CLIENT') {
+      const saved = (t.sentPayload ?? {}) as { contactIds?: string[]; mayReceiveQuotes?: boolean };
+      const ids = saved.contactIds ?? (t.contactId ? [t.contactId] : []);
+      const ctx = await this.companyContext(auth, t.companyId!, ids[0] ?? null, ids.slice(1));
+      const gap = ctx.chosen.find((p) => missingContactFields(p).length);
+      if (gap) throw new SampbidxError('invalid_local', `${gap.name.value || 'An employee'} is missing ${missingContactFields(gap).map((f) => CONTACT_FIELD_LABEL[f as keyof typeof CONTACT_FIELD_LABEL]).join(', ')}.`);
+      return this.client.upsertClient(keys, t.companyId!, t.id, { ...clientPayload({ workspace: tenant.name, transferId: t.id, company: ctx.company, contacts: ctx.chosen, mayReceiveQuotes: saved.mayReceiveQuotes ?? true }), sentBy: team.sentBy, clientTeam: team.clientTeam, note: t.note });
+    }
     if (t.kind === 'RFQ') {
       const rfq = await this.work.getRfq(auth, t.rfqId!);
       const files = await this.prisma.run(auth, (tx) => tx.companyFile.findMany({ where: { tenantId: auth.tenantId, id: { in: t.fileIds }, rfqId: t.rfqId }, orderBy: { createdAt: 'asc' } }));
       const parts: Part[] = files.map((f) => ({ name: 'files', filename: f.name, contentType: f.contentType || 'application/octet-stream', data: Buffer.from(f.data) }));
-      return this.client.sendRfq(keys, t.id, { ...source, rfq: rfqPayload(rfq), attachments: files.map((f) => ({ name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes, sha256: f.sha256 })) }, parts);
+      const withClient = await this.clientRefs(auth, rfq.company.id, t.contactId ?? rfq.contact?.id ?? null);
+      return this.client.sendRfq(keys, t.id, { ...source, ...withClient, rfq: rfqPayload(rfq), attachments: files.map((f) => ({ name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes, sha256: f.sha256 })) }, parts);
     }
     const links = await this.linkPayload(auth, t);
     if (t.kind === 'MAILBOX_EMAIL') {
@@ -693,6 +936,21 @@ export class SampbidxService {
   }
 
   // ─── Helpers ───
+
+  /** The SampBidx client and the employee who shared the RFQ, with SampBidx's ids where known (ADR 0080). */
+  private async clientRefs(auth: AuthContext, companyId: string, contactId: string | null) {
+    return this.prisma.run(auth, async (tx) => {
+      const [link, c] = await Promise.all([
+        tx.sampbidxClient.findUnique({ where: { tenantId_companyId: { tenantId: auth.tenantId, companyId } } }),
+        contactId ? tx.contact.findFirst({ where: { id: contactId, tenantId: auth.tenantId } }) : null,
+      ]);
+      const remote = ((link?.contacts as { contactId: string; remoteId: string }[] | null) ?? []).find((x) => x.contactId === contactId)?.remoteId ?? null;
+      return {
+        client: link ? { id: link.remoteId, externalId: companyId } : null,
+        contact: c ? { id: remote, externalId: c.id, name: [c.firstName, c.lastName].filter(Boolean).join(' '), email: c.email, jobTitle: c.jobTitle, phone: c.phone } : null,
+      };
+    });
+  }
 
   private async linkPayload(auth: AuthContext, t: Pick<SampbidxTransfer, 'companyId' | 'rfqId'>) {
     const company = t.companyId ? await this.prisma.run(auth, (tx) => tx.company.findFirst({ where: { id: t.companyId!, tenantId: auth.tenantId }, select: { id: true, name: true, leadNumber: true, country: true } })) : null;
@@ -905,6 +1163,10 @@ function rfqPayload(r: RfqRow) {
     market: r.market,
     industry: r.industry,
     targetAudience: r.targetAudience,
+    serviceCategory: r.serviceCategory,
+    service: r.service,
+    countries: [...new Set(rfqLinesOut(r).map((l) => l.country))],
+    lines: rfqLinesOut(r),
     sampleSize: r.sampleSize,
     loiMinutes: r.loi,
     incidenceRatePercent: r.ir,
@@ -919,3 +1181,6 @@ function rfqPayload(r: RfqRow) {
     manager: r.manager ? { name: r.manager.name } : null,
   };
 }
+
+const CONTACT_FIELD_LABEL = { name: 'name', email: 'email', country: 'country', timeZone: 'time zone' } as const;
+const RFQ_FIELD_LABEL: Record<SampbidxRequiredField, string> = { projectName: 'project name', methodology: 'methodology', market: 'country/market', sampleSize: 'sample size', deadlineAt: 'submission deadline' };
