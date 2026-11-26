@@ -107,6 +107,10 @@ export const ENRICH_SITES: Record<string, Record<string, { type: string; body: s
               email: 'contact@globex-analytics.example',
               telephone: '+44 20 7000 1000',
               slogan: 'Know your audience',
+              openingHoursSpecification: [
+                { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'], opens: '08:30', closes: '17:30' },
+                { '@type': 'OpeningHoursSpecification', dayOfWeek: 'https://schema.org/Friday', opens: '08:30', closes: '17:30' },
+              ],
               address: { '@type': 'PostalAddress', streetAddress: '1 Riverside Walk', addressLocality: 'London', postalCode: 'SE1 9PG', addressCountry: 'GB' },
               contactPoint: [{ '@type': 'ContactPoint', contactType: 'sales', email: 'sales@globex-analytics.example', telephone: '+44 20 7000 1001' }],
               sameAs: ['https://www.linkedin.com/company/globex-analytics', 'https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv'],

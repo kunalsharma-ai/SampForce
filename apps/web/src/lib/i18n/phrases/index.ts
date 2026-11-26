@@ -45,15 +45,14 @@ import { security } from './security';
 import type { PhraseTable } from './types';
 import { notifications } from './notifications';
 import { site } from './site';
-import { employeeStages } from './employee-stages';
-import { journey } from './journey';
-import { welcome } from './welcome';
-import { redesign } from './redesign';
-import { roleDashboards } from './role-dashboards';
 export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, sampbidxChat, crmAdmin, chat, importPhrases, ownServers, edit, companyLogos, companyAutofill, companyEmail, workspaces, levelDashboards, audit, security, mobile, notifications, site, employeeStages, journey, redesign, roleDashboards, teamChat, tasksTargets, welcome, achievements, menuSections, calls } as const satisfies Record<string, PhraseTable>;
+
+export const PHRASES = {  } as const;
 
 export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, sampbidxChat, crmAdmin, chat, importPhrases, ownServers, edit, companyLogos, companyAutofill, companyEmail, workspaces, levelDashboards, audit, security, mobile, notifications, site, profiles } as const satisfies Record<string, PhraseTable>;
 
-export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...sampbidx, ...sampbidxChat, ...crmAdmin, ...chat, ...importPhrases, ...ownServers, ...edit, ...companyLogos, ...companyAutofill, ...companyEmail, ...workspaces, ...levelDashboards, ...audit, ...security, ...mobile, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...teamChat, ...tasksTargets, ...welcome, ...achievements, ...menuSections, ...calls, ...profiles } as const;
+export const PHRASE_TABLES = { dashboard, table, crm, deals, auth, settings, activities, territories, sequences, communication, meetings, quotes, contracts, reports, revenue, administration, automation, integrations, growth, engagement, publicPages, messaging, help, plans, companyCrm, companyLeads, companyWork, commandCenter, sampbidx, sampbidxChat, crmAdmin, chat, importPhrases, ownServers, edit, companyLogos, companyAutofill, companyEmail, workspaces, levelDashboards, audit, security, mobile, notifications, site, clientTime } as const satisfies Record<string, PhraseTable>;
+
+export const PHRASES = { ...dashboard, ...table, ...crm, ...deals, ...auth, ...settings, ...activities, ...territories, ...sequences, ...communication, ...meetings, ...quotes, ...contracts, ...reports, ...revenue, ...administration, ...automation, ...integrations, ...growth, ...engagement, ...publicPages, ...messaging, ...help, ...plans, ...companyCrm, ...companyLeads, ...companyWork, ...commandCenter, ...sampbidx, ...sampbidxChat, ...crmAdmin, ...chat, ...importPhrases, ...ownServers, ...edit, ...companyLogos, ...companyAutofill, ...companyEmail, ...workspaces, ...levelDashboards, ...audit, ...security, ...mobile, ...notifications, ...site, ...employeeStages, ...journey, ...redesign, ...roleDashboards, ...teamChat, ...tasksTargets, ...welcome, ...achievements, ...menuSections, ...calls, ...profiles, ...clientTime } as const;
 export type PhraseKey = keyof typeof PHRASES;
 export type { PhraseRow, PhraseTable } from './types';

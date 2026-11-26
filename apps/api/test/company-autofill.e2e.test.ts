@@ -146,6 +146,10 @@ describe('company auto-fill', () => {
       { label: 'Stock ticker', value: 'London Stock Exchange: GBXA' },
     ]);
     expect(c.fieldSources.ceo).toMatchObject({ source: 'WIKIDATA', url: 'https://www.wikidata.org/wiki/Q990001' });
+    // Office hours the company publishes (ADR 0089), and the zone from its London address.
+    expect(c.workingHours).toEqual({ days: [1, 2, 3, 4, 5], start: '08:30', end: '17:30', source: 'website' });
+    expect(c.fieldSources.workingHours).toMatchObject({ source: 'SCHEMA_ORG', confidence: 'high' });
+    expect(c.timezone).toBe('Europe/London');
     // LinkedIn from the site, X from Wikidata: one link per platform.
     expect(c.socialLinks).toEqual([
       { platform: 'linkedin', url: 'https://www.linkedin.com/company/globex-analytics' },

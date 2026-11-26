@@ -32,6 +32,20 @@ What the licences ask of us:
 
 `country-state-city` was not used because it is GPL-3.0.
 
+## Time zones (ADR 0089)
+
+`build-zone-data.mjs` writes `packages/types/src/geo-zones.ts`: alpha-3 codes, UN subregions, the zone of each state and
+of each city of 100,000+ people in countries with several zones. It reads dr5hn `countries.json` and `states.json`
+(ODbL 1.0, same credit as above) and the cities file above:
+
+```sh
+curl -LO https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/countries.json
+node scripts/geo/build-zone-data.mjs countries.json states.json
+```
+
+Public holidays come from [date-holidays](https://github.com/commenthol/date-holidays) (ISC code, CC BY-SA 4.0 data),
+an API dependency.
+
 ## Rebuilding
 
 ```sh

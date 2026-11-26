@@ -36,6 +36,7 @@ import {
 } from '@/components/crm/company-dashboard';
 import { CompanyStatusBar } from '@/components/crm/company-lead-card';
 import { CompanyAutofill } from '@/components/crm/company-autofill';
+import { ClientTimeCard, type ClientTimeSubject, ConnectCheck } from '@/components/crm/client-time';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyJourneyCard } from '@/components/crm/journey';
@@ -111,8 +112,18 @@ export function CompanyDetail({ id }: { id: string }) {
     ownerId: c.ownerPerson?.id ?? c.owner?.id ?? null,
     restricted: c.restricted,
   };
+  // Their local time and the best time to connect (ADR 0089), from the head-office address.
+  const timeSubject: ClientTimeSubject = {
+    kind: 'company',
+    id,
+    name: c.name,
+    place: { country: c.country, state: c.state, city: c.city, headquarters: c.headquarters, timezone: c.timezone },
+    hours: c.workingHours,
+    offices: c.addresses,
+  };
   return (
     <CompanyActionsProvider>
+      <ConnectCheck subject={timeSubject}>
       <div className="max-w-7xl">
         <CompanyHero
           company={c}
@@ -130,6 +141,7 @@ export function CompanyDetail({ id }: { id: string }) {
             </div>
           }
         />
+        <ClientTimeCard subject={timeSubject} />
         {uploadFailed && (
           <p
             role="alert"
@@ -252,6 +264,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </div>
         </details>
       </div>
+      </ConnectCheck>
     </CompanyActionsProvider>
   );
 }

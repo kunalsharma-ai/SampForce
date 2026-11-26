@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { contactMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, type Page, type PersonRef } from '@dealflow/types';
+import { type ContactDuplicateCheck, type ContactInput, type ContactPoint, type ContactRow, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EmailStatus, type ListQuery, matchKeys, normalizeWorkingHours, type Page, type PersonRef } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -184,6 +184,8 @@ async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.Conta
 /** Primary entries mirror email and phone (which sequences, WhatsApp and SMS matching read); keys follow. */
 function normaliseContact(input: Partial<ContactInput>, before?: Prisma.ContactGetPayload<object>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...input };
+  // Hours typed through the API or a form are the user's, whatever source the request named (null clears them).
+  if (input.workingHours) out.workingHours = { ...input.workingHours, source: 'user' };
   const sync = (list: 'emails' | 'phones', field: 'email' | 'phone') => {
     if (input[list] !== undefined) {
       const items = withOnePrimary(input[list] as ContactPoint[], input[field] ?? undefined);
@@ -256,6 +258,7 @@ export function toContactRow(r: ContactWith, owners: Map<string, { id: string; n
     jobTitle: r.jobTitle,
     country: r.country,
     timezone: r.timezone,
+    workingHours: normalizeWorkingHours(r.workingHours),
     company: r.company,
     owner: r.ownerId ? (owners.get(r.ownerId) ?? null) : null,
     marketingConsent: r.marketingConsent,

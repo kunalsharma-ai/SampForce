@@ -1,4 +1,4 @@
-import { COMPANY_SIZES, type CompanyAddress, type ContactPoint, type EnrichField, type FieldConfidence, type FieldSourceKind, GEO_COUNTRIES, geoCountry, type Leader, type MoreDetail, type SocialLink } from '@dealflow/types';
+import { type WorkingHours, COMPANY_SIZES, type CompanyAddress, type ContactPoint, type EnrichField, type FieldConfidence, type FieldSourceKind, GEO_COUNTRIES, geoCountry, type Leader, type MoreDetail, type SocialLink } from '@dealflow/types';
 
 /** The value types each auto-fill field takes. */
 export interface FieldValues {
@@ -29,6 +29,7 @@ export interface FieldValues {
   address: string;
   postalCode: string;
   timezone: string;
+  workingHours: WorkingHours;
   addresses: CompanyAddress[];
   primaryEmail: string;
   emails: ContactPoint[];
@@ -164,6 +165,10 @@ export function display(field: EnrichField, value: unknown): string {
       return o.title ? `${String(o.name)} (${String(o.title)})` : String(o.name);
     case 'moreDetails':
       return `${String(o.label)}: ${String(o.value)}`;
+    case 'workingHours': {
+      const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return `${(o.days as number[]).map((d) => names[d]).join(', ')} ${String(o.start)}-${String(o.end)}`;
+    }
     default:
       return JSON.stringify(value);
   }

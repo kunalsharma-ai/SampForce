@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { geoCountry, type GeoCity, type GeoRegion } from '@dealflow/types';
+import Holidays from 'date-holidays';
+import { foldName, geoCountry, type GeoCity, type GeoRegion, type PublicHoliday } from '@dealflow/types';
 import { PrismaService } from '../common/prisma.service';
 
 /** apps/api/assets/geo, built by scripts/geo/build-geo-data.mjs (sources and licences in scripts/geo/README.md). */
@@ -82,6 +83,37 @@ export class GeoService {
       if (out.length >= limit) break;
     }
     return out;
+  }
+
+  /**
+   * Public holidays on the country's (and, where the data has them, the state's) calendar, from the open date-holidays
+   * data (ADR 0089). Only days the data marks as public holidays: bank and optional observances are left out. A
+   * country the data does not cover returns an empty list, and the card says holidays are not checked.
+   */
+  holidays(country: string, state: string | null, from: string, days: number): { covered: boolean; holidays: PublicHoliday[] } {
+    const code = this.country(country);
+    const hd = new Holidays();
+    if (!hd.getCountries()[code]) return { covered: false, holidays: [] };
+    let region: string | undefined;
+    if (state) {
+      const wanted = foldName(state);
+      const subs = hd.getStates(code) ?? {};
+      const fromList = this.regions(code).find((r) => foldName(r.name) === wanted || r.code.toUpperCase() === state.trim().toUpperCase());
+      region = Object.keys(subs).find((k) => k === fromList?.code.toUpperCase() || k === state.trim().toUpperCase() || foldName(subs[k] ?? '') === wanted);
+    }
+    const cal = new Holidays(code, region ?? '', { types: ['public'] });
+    const start = new Date(`${from}T00:00:00Z`);
+    const end = new Date(start.getTime() + days * 86_400_000);
+    const out = new Map<string, PublicHoliday>();
+    for (let year = start.getUTCFullYear(); year <= end.getUTCFullYear(); year++) {
+      for (const h of cal.getHolidays(year) || []) {
+        if (h.type !== 'public') continue;
+        const date = h.date.slice(0, 10);
+        if (date < from || date >= end.toISOString().slice(0, 10) || out.has(date)) continue;
+        out.set(date, { date, name: h.name });
+      }
+    }
+    return { covered: true, holidays: [...out.values()].sort((a, b) => a.date.localeCompare(b.date)) };
   }
 
   private country(code: string): string {
