@@ -78,6 +78,7 @@ export const notifications = {
   // Assignments, tasks and workflows
   '{name} was assigned to you': ['Se te asignó {name}', '{name} vous a été attribué', '{name} wurde Ihnen zugewiesen', 'أُسند إليك {name}'],
   'New task for you: {title}': ['Nueva tarea para ti: {title}', 'Nouvelle tâche pour vous : {title}', 'Neue Aufgabe für Sie: {title}', 'مهمة جديدة لك: {title}'],
+  'Deal lost: {deal}': ['Oportunidad perdida: {deal}', 'Opportunité perdue : {deal}', 'Verkaufschance verloren: {deal}', 'صفقة خاسرة: {deal}'],
   'Deal won: {deal}': ['Oportunidad ganada: {deal}', 'Opportunité gagnée : {deal}', 'Verkaufschance gewonnen: {deal}', 'صفقة مربوحة: {deal}'],
   'Client won: deal {deal} created for {company}': ['Cliente ganado: oportunidad {deal} creada para {company}', 'Client gagné : opportunité {deal} créée pour {company}', 'Kunde gewonnen: Verkaufschance {deal} für {company} angelegt', 'تم كسب العميل: أُنشئت الصفقة {deal} لـ {company}'],
   'Workflow "{name}" failed': ['Falló el flujo de trabajo «{name}»', 'Le workflow « {name} » a échoué', 'Workflow „{name}“ ist fehlgeschlagen', 'فشل سير العمل «{name}»'],
