@@ -63,8 +63,8 @@ export function WelcomeBanner({
     >
       <Scene part={part} />
       <div className="relative space-y-4 p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="sf-welcome-in flex min-w-0 flex-1 items-start gap-4 sm:pe-40">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="sf-welcome-in flex min-w-0 flex-1 items-start gap-3 pe-16 sm:gap-4 sm:pe-40">
             <span aria-hidden className="sf-welcome-avatar">
               {initials}
             </span>
@@ -73,7 +73,7 @@ export function WelcomeBanner({
                 {badge}
                 <span data-welcome-date>{date}</span>
               </div>
-              <p className="text-3xl font-black leading-tight tracking-tight sm:text-4xl" data-welcome-hello>
+              <p className="text-2xl font-black leading-tight tracking-tight sm:text-4xl" data-welcome-hello>
                 {hello}, <span className="text-foreground">{name}</span>{' '}
                 <span aria-hidden className="sf-welcome-wave">
                   👋

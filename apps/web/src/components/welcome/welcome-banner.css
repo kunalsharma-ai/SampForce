@@ -37,8 +37,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   flex-shrink: 0;
   border-radius: 999px;
   font-weight: 800;
@@ -99,3 +99,7 @@
 @keyframes sf-wb-drift { from { transform: translateX(-6px); } to { transform: translateX(10px); } }
 @keyframes sf-wb-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes sf-wb-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (min-width: 640px) {
+  .sf-welcome-avatar { width: 3.5rem; height: 3.5rem; }
+}

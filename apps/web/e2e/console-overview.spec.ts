@@ -59,8 +59,8 @@ test('Console Overview: figures follow the platform, charts, Action Required and
   });
 
   // ── Hero: greeting, date and status, quick actions ──
-  await expect(ops.locator('[data-overview-greeting]')).toHaveText(
-    /^Good (morning|afternoon|evening), Ola$/,
+  await expect(ops.locator('[data-welcome-hello]')).toHaveText(
+    /^(Good (morning|afternoon|evening)|Working late), Ola/,
   );
   await expect(ops.locator('[data-overview-status]')).toHaveText(
     /All systems normal|providers? needs? attention/,
