@@ -1,11 +1,39 @@
 'use client';
 
 import type { CompanyRow } from '@dealflow/types';
+import {
+  Activity,
+  BarChart3,
+  Brain,
+  Building2,
+  CalendarClock,
+  FileSignature,
+  FileText,
+  GitBranch,
+  Globe,
+  Handshake,
+  MessagesSquare,
+  Mic,
+  Paperclip,
+  Route,
+  ShieldAlert,
+  SlidersHorizontal,
+  Sparkles,
+  Target,
+  UserCheck,
+  Users,
+  Wand2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CompanyActionsProvider } from '@/components/crm/company-actions';
 import { CompanyAutofill } from '@/components/crm/company-autofill';
-import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } from '@/components/crm/company-dashboard';
+import {
+  CompanyBusiness,
+  CompanyEmployeeDirectory,
+  CompanyHero,
+  CompanyKpis,
+} from '@/components/crm/company-dashboard';
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { BusinessInformation } from '@/components/crm/business-information';
 import { CompanyEmailAssistant } from '@/components/crm/company-email-assistant';
@@ -16,7 +44,12 @@ import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
 import { CompanyWonButton } from '@/components/crm/company-won';
 import { CompanyJourneyCard } from '@/components/crm/journey';
-import { CustomFieldList, DetailError, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
+import {
+  CustomFieldList,
+  DetailError,
+  DetailSkeleton,
+  RecordHeader,
+} from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { CompanyRfqs } from '@/components/crm/rfqs';
@@ -24,6 +57,7 @@ import { CompanyPortal } from '@/components/portal/company-portal';
 import { SendCompanyButton } from '@/components/sampbidx/send-company';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
+import { SectionTone } from '@/components/crm/section-tone';
 import { useCompanyEmployees } from '@/lib/company-work';
 import { useRecord } from '@/lib/crm';
 import { useHasFeature } from '@/lib/features';
@@ -43,53 +77,142 @@ export function CompanyDetail({ id }: { id: string }) {
   if (company.error) return <DetailError error={company.error} />;
   const c = company.data;
   const people = (employees.data ?? []).map((e) => ({ id: e.id, name: e.name }));
-  const ref = { id, name: c.name, ownerId: c.ownerPerson?.id ?? c.owner?.id ?? null, restricted: c.restricted };
+  const ref = {
+    id,
+    name: c.name,
+    ownerId: c.ownerPerson?.id ?? c.owner?.id ?? null,
+    restricted: c.restricted,
+  };
   return (
     <CompanyActionsProvider>
       <div className="max-w-7xl">
-        <CompanyHero company={c} actions={
+        <CompanyHero
+          company={c}
+          actions={
             <div className="flex flex-wrap items-center gap-2">
               <CompanyWonButton company={c} />
               <SendCompanyButton company={{ id, name: c.name }} />
-              <RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />
+              <RecordHeader
+                bare
+                entity="companies"
+                id={id}
+                title={c.name}
+                row={c as unknown as Record<string, unknown>}
+              />
             </div>
-          } />
+          }
+        />
         {uploadFailed && (
-          <p role="alert" className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm">
-            {t('The lead was saved, but these files could not be uploaded: {names}. Add them again below.', { names: uploadFailed })}
+          <p
+            role="alert"
+            className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm"
+          >
+            {t(
+              'The lead was saved, but these files could not be uploaded: {names}. Add them again below.',
+              { names: uploadFailed },
+            )}
           </p>
         )}
         <CompanyKpis companyId={id} />
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="min-w-0 space-y-4 lg:col-span-2">
-            <BusinessInformation company={c} />
-            <CompanyEmailAssistant company={c} />
-            <CompanyBusiness companyId={id} />
-            <CompanyEmployeeDirectory company={c} />
-            {stages && <EmployeeActivitySection companyId={id} companyName={c.name} restricted={c.restricted} />}
-            <CompanyInteractions company={ref} employees={people} />
-            <CompanyRfqs company={ref} employees={people} />
-            <RelatedDeals filter={{ companyId: id }} />
-            <CompanyBranches company={c} />
-            <CompanyCommercial company={{ id, name: c.name }} />
-            <CompanyPortal company={{ id, name: c.name }} />
-            <RecordVoiceNotes record={{ type: 'company', id, name: c.name }} />
+          <div className="min-w-0 space-y-5 lg:col-span-2">
+            <SectionTone
+              color="#4f46e5"
+              second="#0891b2"
+              icon={Building2}
+              name="business-information"
+            >
+              <BusinessInformation company={c} />
+            </SectionTone>
+            <SectionTone color="#9333ea" second="#db2777" icon={Sparkles} name="email-assistant">
+              <CompanyEmailAssistant company={c} />
+            </SectionTone>
+            <SectionTone color="#0d9488" second="#16a34a" icon={BarChart3} name="business-overview">
+              <CompanyBusiness companyId={id} />
+            </SectionTone>
+            <SectionTone color="#0284c7" second="#4f46e5" icon={Users} name="employees">
+              <CompanyEmployeeDirectory company={c} />
+            </SectionTone>
+            {stages && (
+              <SectionTone
+                color="#7c3aed"
+                second="#db2777"
+                icon={Activity}
+                name="employee-activity"
+              >
+                <EmployeeActivitySection
+                  companyId={id}
+                  companyName={c.name}
+                  restricted={c.restricted}
+                />
+              </SectionTone>
+            )}
+            <SectionTone color="#0891b2" second="#2563eb" icon={MessagesSquare} name="interactions">
+              <CompanyInteractions company={ref} employees={people} />
+            </SectionTone>
+            <SectionTone color="#ea580c" second="#d97706" icon={FileText} name="rfqs">
+              <CompanyRfqs company={ref} employees={people} />
+            </SectionTone>
+            <SectionTone color="#16a34a" second="#0d9488" icon={Handshake} name="deals">
+              <RelatedDeals filter={{ companyId: id }} />
+            </SectionTone>
+            <SectionTone color="#4f46e5" second="#7c3aed" icon={GitBranch} name="branches">
+              <CompanyBranches company={c} />
+            </SectionTone>
+            <SectionTone color="#ca8a04" second="#ea580c" icon={FileSignature} name="commercial">
+              <CompanyCommercial company={{ id, name: c.name }} />
+            </SectionTone>
+            <SectionTone color="#2563eb" second="#0891b2" icon={Globe} name="portal">
+              <CompanyPortal company={{ id, name: c.name }} />
+            </SectionTone>
+            <SectionTone color="#db2777" second="#9333ea" icon={Mic} name="voice-notes">
+              <RecordVoiceNotes record={{ type: 'company', id, name: c.name }} />
+            </SectionTone>
           </div>
-          <div className="min-w-0 space-y-4">
-            <CompanyLeadCard company={c} />
-            <CompanyJourneyCard companyId={id} />
-            <CompanyAutofill company={c} />
-            <CompanyFollowUps company={ref} employees={people} />
-            <CompanyOwnership company={c} />
-            <CompanyConcerns company={ref} employees={people} />
-            <CompanyFiles company={c} />
-            <RecordIntelligencePanel entity="company" id={id} name={c.name} />
+          <div className="min-w-0 space-y-5">
+            <SectionTone color="#e11d48" second="#ea580c" icon={Target} name="lead">
+              <CompanyLeadCard company={c} />
+            </SectionTone>
+            <SectionTone color="#2563eb" second="#7c3aed" icon={Route} name="journey">
+              <CompanyJourneyCard companyId={id} />
+            </SectionTone>
+            <SectionTone color="#7c3aed" second="#2563eb" icon={Wand2} name="autofill">
+              <CompanyAutofill company={c} />
+            </SectionTone>
+            <SectionTone color="#d97706" second="#e11d48" icon={CalendarClock} name="follow-ups">
+              <CompanyFollowUps company={ref} employees={people} />
+            </SectionTone>
+            <SectionTone color="#0d9488" second="#0284c7" icon={UserCheck} name="ownership">
+              <CompanyOwnership company={c} />
+            </SectionTone>
+            <SectionTone color="#dc2626" second="#ea580c" icon={ShieldAlert} name="concerns">
+              <CompanyConcerns company={ref} employees={people} />
+            </SectionTone>
+            <SectionTone color="#0284c7" second="#0d9488" icon={Paperclip} name="files">
+              <CompanyFiles company={c} />
+            </SectionTone>
+            <SectionTone color="#9333ea" second="#4f46e5" icon={Brain} name="intelligence">
+              <RecordIntelligencePanel entity="company" id={id} name={c.name} />
+            </SectionTone>
             {c.parentCompany && (
               <p className="text-sm">
-                {t('Parent company')}: <Link className="text-primary hover:underline" href={`/app/companies/${c.parentCompany.id}`}>{c.parentCompany.name}</Link>
+                {t('Parent company')}:{' '}
+                <Link
+                  className="text-primary hover:underline"
+                  href={`/app/companies/${c.parentCompany.id}`}
+                >
+                  {c.parentCompany.name}
+                </Link>
               </p>
             )}
-            <CustomFieldList entity="companies" values={c.customFields} />
+            <SectionTone
+              color="#64748b"
+              second="#0891b2"
+              icon={SlidersHorizontal}
+              name="custom-fields"
+            >
+              <CustomFieldList entity="companies" values={c.customFields} />
+            </SectionTone>
           </div>
         </div>
       </div>
