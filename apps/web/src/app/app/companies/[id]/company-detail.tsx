@@ -9,6 +9,7 @@ import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } f
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { BusinessInformation } from '@/components/crm/business-information';
 import { CompanyEmailAssistant } from '@/components/crm/company-email-assistant';
+import { EmployeeActivitySection } from '@/components/crm/employee-activity';
 import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/crm/company-parts';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
@@ -18,10 +19,12 @@ import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { CompanyRfqs } from '@/components/crm/rfqs';
 import { CompanyPortal } from '@/components/portal/company-portal';
+import { SendCompanyButton } from '@/components/sampbidx/send-company';
 import { CompanyCommercial } from '@/components/revenue/record-commercial';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { useCompanyEmployees } from '@/lib/company-work';
 import { useRecord } from '@/lib/crm';
+import { useHasFeature } from '@/lib/features';
 import { useT } from '@/lib/i18n';
 
 /**
@@ -32,6 +35,7 @@ export function CompanyDetail({ id }: { id: string }) {
   const company = useRecord<CompanyRow>('companies', id);
   const employees = useCompanyEmployees(id);
   const t = useT();
+  const stages = useHasFeature('rfq_contributors');
   const uploadFailed = useSearchParams().get('uploadFailed');
   if (company.isPending) return <DetailSkeleton />;
   if (company.error) return <DetailError error={company.error} />;
@@ -41,7 +45,12 @@ export function CompanyDetail({ id }: { id: string }) {
   return (
     <CompanyActionsProvider>
       <div className="max-w-7xl">
-        <CompanyHero company={c} actions={<RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />} />
+        <CompanyHero company={c} actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <SendCompanyButton company={{ id, name: c.name }} />
+              <RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />
+            </div>
+          } />
         {uploadFailed && (
           <p role="alert" className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm">
             {t('The lead was saved, but these files could not be uploaded: {names}. Add them again below.', { names: uploadFailed })}
@@ -54,6 +63,7 @@ export function CompanyDetail({ id }: { id: string }) {
             <CompanyEmailAssistant company={c} />
             <CompanyBusiness companyId={id} />
             <CompanyEmployeeDirectory company={c} />
+            {stages && <EmployeeActivitySection companyId={id} companyName={c.name} restricted={c.restricted} />}
             <CompanyInteractions company={ref} employees={people} />
             <CompanyRfqs company={ref} employees={people} />
             <RelatedDeals filter={{ companyId: id }} />

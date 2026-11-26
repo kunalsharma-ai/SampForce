@@ -14,16 +14,19 @@ import { RecordSequences } from '@/components/crm/record-sequences';
 import { RelatedDeals } from '@/components/crm/related-deals';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { EmailStatusBadge } from '@/components/crm/email-status';
+import { EmployeeCommunicationCard } from '@/components/crm/employee-activity';
 import { EmployeeDetails, EmployeeRelationship } from '@/components/crm/employee-profile';
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
 import { formatDate, useRecord } from '@/lib/crm';
+import { useHasFeature } from '@/lib/features';
 import { useT } from '@/lib/i18n';
 
 export function ContactDetail({ id }: { id: string }) {
   const contact = useRecord<ContactRow>('contacts', id);
   const t = useT();
+  const stages = useHasFeature('rfq_contributors');
   if (contact.isPending) return <DetailSkeleton />;
   if (contact.error) return <DetailError error={contact.error} />;
   const c = contact.data;
@@ -39,6 +42,7 @@ export function ContactDetail({ id }: { id: string }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <EmployeeRelationship contact={c} />
+          {stages && <EmployeeCommunicationCard contactId={id} restricted={c.restricted} />}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('Details')}</CardTitle>

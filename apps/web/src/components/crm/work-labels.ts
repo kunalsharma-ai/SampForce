@@ -1,4 +1,4 @@
-import type { FollowUpBucket, FollowUpDue, FollowUpType, InteractionKind, RfqStatus } from '@dealflow/types';
+import type { FollowUpBucket, FollowUpDue, FollowUpType, InteractionKind, RfqService, RfqServiceCategory, RfqStatus } from '@dealflow/types';
 import type { MessageKey } from '@/lib/i18n';
 
 /** Labels for interaction kinds, follow-up types and states, and RFQ statuses (ADR 0060, Phase 3). */
@@ -87,4 +87,13 @@ export const RFQ_STATUS_TONE: Record<RfqStatus, 'primary' | 'accent' | 'warning'
 export function optionLabel(row: { label: string } | null | undefined, value: string, builtIn: Record<string, MessageKey>, t: { maybe: (s: string) => string; (k: MessageKey): string }): string {
   if (row) return t.maybe(row.label);
   return value in builtIn ? t(builtIn[value]!) : value;
+}
+
+export const RFQ_SERVICE_CATEGORY_LABEL = { QUANTITATIVE: 'Quantitative', QUALITATIVE: 'Qualitative' } as const satisfies Record<RfqServiceCategory, MessageKey>;
+
+/** Research services: the industry abbreviations stay as they are in every language. */
+export function rfqServiceLabel(s: RfqService | string, t: (k: MessageKey) => string): string {
+  if (s === 'ONLINE_COMMUNITY') return t('Online community');
+  if (s === 'OTHER') return t('Other');
+  return s === 'F2F' ? 'F2F' : s;
 }

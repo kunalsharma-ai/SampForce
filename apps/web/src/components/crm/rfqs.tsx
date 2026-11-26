@@ -1,6 +1,6 @@
 'use client';
 
-import { type CustomFieldDef, PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_STATUSES, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
+import { type CustomFieldDef, PORTAL_DOCUMENT_MAX_BYTES, PORTAL_DOCUMENT_TYPES, RFQ_SERVICE_CATEGORIES, RFQ_SERVICES, RFQ_STATUSES, type RfqService, type RfqServiceCategory, type RfqRow, type RfqStatus, rfqInputSchema } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input, Skeleton } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, FileText, Handshake, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -23,7 +23,8 @@ import { useOptionLookup, useOptions } from '@/lib/crm-admin';
 import { ApiError } from '@/lib/api';
 import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue, useFieldDefs } from './custom-field-input';
 import { CustomFieldSummary } from './follow-ups';
-import { optionLabel, RFQ_STATUS_LABEL, RFQ_STATUS_TONE } from './work-labels';
+import { lineDrafts, linesPayload, type RfqLineDraft, RfqLinesEditor } from './rfq-lines';
+import { optionLabel, RFQ_SERVICE_CATEGORY_LABEL, RFQ_STATUS_LABEL, RFQ_STATUS_TONE, rfqServiceLabel } from './work-labels';
 
 /** The workspace's name for an RFQ status (renamed in CRM configuration, or the built-in name). */
 export function useRfqStatusName() {
@@ -116,6 +117,9 @@ interface RfqForm {
   projectName: string;
   description: string;
   methodology: string;
+  serviceCategory: RfqServiceCategory | '';
+  service: RfqService | '';
+  lines: RfqLineDraft[];
   market: string;
   industry: string;
   targetAudience: string;
@@ -143,6 +147,9 @@ function formOf(r: RfqRow | null, defaults: { ownerId?: string | null; currency?
     projectName: r?.projectName ?? '',
     description: r?.description ?? '',
     methodology: r?.methodology ?? '',
+    serviceCategory: r?.serviceCategory ?? '',
+    service: r?.service ?? '',
+    lines: lineDrafts(r?.lines),
     market: r?.market ?? '',
     industry: r?.industry ?? '',
     targetAudience: r?.targetAudience ?? '',
@@ -224,6 +231,9 @@ export function RfqDialog({
       projectName: v.projectName,
       description: v.description || null,
       methodology: v.methodology || null,
+      serviceCategory: v.serviceCategory || null,
+      service: v.service || null,
+      lines: linesPayload(v.lines),
       market: v.market || null,
       industry: v.industry || null,
       targetAudience: v.targetAudience || null,
@@ -254,7 +264,7 @@ export function RfqDialog({
     const parsed = rfqInputSchema.safeParse(body);
     if (!parsed.success) {
       const out: Record<string, string> = {};
-      for (const i of parsed.error.issues) out[String(i.path[0])] ??= t.maybe(i.message);
+      for (const i of parsed.error.issues) out[i.path[0] === 'lines' ? i.path.join('.') : String(i.path[0])] ??= t.maybe(i.message);
       setErrors(out);
       requestAnimationFrame(() => (document.querySelector('[role="dialog"] [aria-invalid="true"]') as HTMLElement | null)?.focus());
       return;
@@ -286,7 +296,7 @@ export function RfqDialog({
       setUploading(false);
     }
   };
-  const text = (key: keyof RfqForm, label: Parameters<typeof t>[0], props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+  const text = (key: Exclude<keyof RfqForm, 'lines'>, label: Parameters<typeof t>[0], props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <Field id={`rfq-${key}`} label={t(label)} error={errors[key]}>
       <Input value={v[key]} onChange={(e) => set({ [key]: e.target.value } as Partial<RfqForm>)} {...props} />
     </Field>
@@ -340,6 +350,31 @@ export function RfqDialog({
             {text('sampleSize', 'Sample size', { inputMode: 'numeric' })}
             {text('loi', 'LOI (minutes)', { inputMode: 'decimal' })}
             {text('ir', 'IR (%)', { inputMode: 'decimal' })}
+            <Field id="rfq-serviceCategory" label={t('Service category')}>
+              <Select value={v.serviceCategory} onChange={(e) => set({ serviceCategory: e.target.value as RfqServiceCategory | '' })}>
+                <option value="">{t('Not set')}</option>
+                {RFQ_SERVICE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(RFQ_SERVICE_CATEGORY_LABEL[c])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="rfq-service" label={t('Service')}>
+              <Select value={v.service} onChange={(e) => set({ service: e.target.value as RfqService | '' })}>
+                <option value="">{t('Not set')}</option>
+                {RFQ_SERVICES.map((c) => (
+                  <option key={c} value={c}>
+                    {rfqServiceLabel(c, t)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </fieldset>
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-semibold">{t('Countries and target groups')}</legend>
+            <p className="text-xs text-muted-foreground">{t('One row per country and target group. Rows are kept apart, never merged.')}</p>
+            <RfqLinesEditor rows={v.lines} onChange={(lines) => set({ lines })} errors={errors} currency={v.currency} />
           </fieldset>
           <fieldset className="grid gap-4 sm:grid-cols-3">
             <legend className="mb-2 text-sm font-semibold">{t('Pricing')}</legend>

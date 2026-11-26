@@ -83,7 +83,8 @@ export class CrmConfigService {
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.color !== undefined ? { color: input.color } : {}),
           ...(input.meaning !== undefined && before.kind !== 'STAGE' ? { meaning: input.meaning } : {}),
-          ...(input.phase !== undefined && before.kind === 'STAGE' ? { phase: input.phase, meaning: phaseMeaning(input.phase) } : {}),
+          // A built-in stage keeps its phase: the automatic moves rely on it.
+          ...(input.phase !== undefined && before.kind === 'STAGE' && !before.key ? { phase: input.phase, meaning: phaseMeaning(input.phase) } : {}),
           ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
           ...(input.archived !== undefined ? { archivedAt: input.archived ? (before.archivedAt ?? new Date()) : null } : {}),
         },
