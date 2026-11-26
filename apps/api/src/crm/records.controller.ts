@@ -29,7 +29,7 @@ import { ConfirmPassword } from '../common/password-confirmation';
 
 const uuid = new ParseUUIDPipe();
 const mergeSchema = z.object({ duplicateId: z.string().uuid() });
-const companyFiltersSchema = z.object({
+export const companyFiltersSchema = z.object({
   statusId: z.string().uuid().optional(),
   createdById: z.string().uuid().optional(),
   managerId: z.string().uuid().optional(),

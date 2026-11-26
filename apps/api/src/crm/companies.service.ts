@@ -83,39 +83,7 @@ export class CompaniesService {
   list(auth: AuthContext, q: ListQuery, f: CompanyFilters = {}): Promise<Page<CompanyRow>> {
     return this.prisma.run(auth, async (tx) => {
       const v = await visibility(tx, auth);
-      const search = q.q?.trim();
-      const cfFilter = await this.fields.rawFilter(tx, auth, 'COMPANY', f.cf);
-      const cfIds = cfFilter ? await this.fields.matchingIds(tx.company, cfFilter) : null;
-      const where: Prisma.CompanyWhereInput = {
-        tenantId: auth.tenantId,
-        deletedAt: null,
-        AND: [
-          companyScope(v),
-          ...(cfIds ? [{ id: { in: cfIds } }] : []),
-          ...(search
-            ? [
-                {
-                  OR: [
-                    { name: { contains: search, mode: 'insensitive' as const } },
-                    { domain: { contains: search, mode: 'insensitive' as const } },
-                    { leadNumber: { equals: search.toUpperCase() } },
-                    { matchKeys: { hasSome: matchKeys({ emails: [search], phones: [search], websites: [search], linkedin: [search] }) } },
-                  ],
-                },
-              ]
-            : []),
-        ],
-        ...(q.ownerId ? { ownerId: q.ownerId } : {}),
-        ...(f.statusId ? { statusId: f.statusId } : {}),
-        ...(f.createdById ? { createdById: f.createdById } : {}),
-        ...(f.managerId ? { managerId: f.managerId } : {}),
-        ...(f.country ? { country: f.country.toUpperCase() } : {}),
-        ...(f.industry ? { industry: { equals: f.industry, mode: 'insensitive' as const } } : {}),
-        // "customer" powers the Accounts view: companies with at least one won deal.
-        // "customer" powers the Accounts view: companies with at least one won deal. The deals' company_id index keeps
-        // this lookup fast (without it, each company scanned every deal and a large workspace timed out).
-        ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
-      };
+      const where = await this.listWhere(tx, auth, v, q, f);
       const [found, total] = await Promise.all([
         tx.company.findMany({ where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), ...paging(q) }),
         tx.company.count({ where }),
@@ -124,6 +92,56 @@ export class CompaniesService {
       const ctx = await this.context(tx, auth, rows, v);
       return { items: rows.map((r) => toRow(r, ctx)), total, page: q.page, pageSize: q.pageSize };
     });
+  }
+
+  /**
+   * The companies the list shows for these filters, in its order, as the caller sees them (hidden details blank),
+   * up to `take` rows: the company export (ADR 0079) reads this so it always matches the list on screen.
+   * With `companyId`, only that company (still subject to visibility).
+   */
+  async rowsForExport(tx: TenantTx, auth: AuthContext, v: Visibility, q: Pick<ListQuery, 'q' | 'sort' | 'order' | 'ownerId' | 'status'>, f: CompanyFilters, take: number, companyId?: string): Promise<CompanyRow[]> {
+    const where = await this.listWhere(tx, auth, v, q, f);
+    const found = await tx.company.findMany({ where: companyId ? { AND: [where, { id: companyId }] } : where, include, orderBy: orderBy(q, SORTABLE, 'createdAt'), take });
+    const rows = await withCounts(tx, auth.tenantId, found);
+    // No logo look-ups are queued from an export.
+    const ctx = await rowContext(tx, auth.tenantId, rows, v, await this.fields.reader(tx, auth, 'COMPANY'), new Map());
+    return rows.map((r) => toRow(r, ctx));
+  }
+
+  /** The company list's filter: visibility, search, owner, status, organisation and custom field filters. */
+  private async listWhere(tx: TenantTx, auth: AuthContext, v: Visibility, q: Pick<ListQuery, 'q' | 'ownerId' | 'status'>, f: CompanyFilters): Promise<Prisma.CompanyWhereInput> {
+    const search = q.q?.trim();
+    const cfFilter = await this.fields.rawFilter(tx, auth, 'COMPANY', f.cf);
+    const cfIds = cfFilter ? await this.fields.matchingIds(tx.company, cfFilter) : null;
+    return {
+      tenantId: auth.tenantId,
+      deletedAt: null,
+      AND: [
+        companyScope(v),
+        ...(cfIds ? [{ id: { in: cfIds } }] : []),
+        ...(search
+          ? [
+              {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' as const } },
+                  { domain: { contains: search, mode: 'insensitive' as const } },
+                  { leadNumber: { equals: search.toUpperCase() } },
+                  { matchKeys: { hasSome: matchKeys({ emails: [search], phones: [search], websites: [search], linkedin: [search] }) } },
+                ],
+              },
+            ]
+          : []),
+      ],
+      ...(q.ownerId ? { ownerId: q.ownerId } : {}),
+      ...(f.statusId ? { statusId: f.statusId } : {}),
+      ...(f.createdById ? { createdById: f.createdById } : {}),
+      ...(f.managerId ? { managerId: f.managerId } : {}),
+      ...(f.country ? { country: f.country.toUpperCase() } : {}),
+      ...(f.industry ? { industry: { equals: f.industry, mode: 'insensitive' as const } } : {}),
+      // "customer" powers the Accounts view: companies with at least one won deal. The deals' company_id index keeps
+      // this lookup fast (without it, each company scanned every deal and a large workspace timed out).
+      ...(q.status === 'customer' ? { opportunities: { some: { status: 'WON' as const, deletedAt: null } } } : {}),
+    };
   }
 
   get(auth: AuthContext, id: string): Promise<CompanyRow> {

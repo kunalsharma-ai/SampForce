@@ -11,8 +11,9 @@ import { assertStatus, defaultStatusId, reasons, statusRefs, withOnePrimary } fr
 import { canSeeDetails, contactScope, personRefs, visibility, type Visibility } from './visibility';
 
 const SORTABLE = ['firstName', 'lastName', 'email', 'jobTitle', 'createdAt', 'updatedAt', 'nextFollowUpAt', 'statusChangedAt'] as const;
-const include = { company: { select: { id: true, name: true } } } satisfies Prisma.ContactInclude;
-type ContactWith = Prisma.ContactGetPayload<{ include: typeof include }>;
+export const contactInclude = { company: { select: { id: true, name: true } } } satisfies Prisma.ContactInclude;
+const include = contactInclude;
+export type ContactWith = Prisma.ContactGetPayload<{ include: typeof include }>;
 
 @Injectable()
 export class ContactsService {
@@ -164,7 +165,7 @@ export class ContactsService {
   }
 }
 
-interface ContactContext {
+export interface ContactContext {
   owners: Map<string, { id: string; name: string }>;
   people: Map<string, PersonRef>;
   statuses: Map<string, CrmStatusRef>;
@@ -173,7 +174,7 @@ interface ContactContext {
   cf?: (values: unknown) => Record<string, unknown>;
 }
 
-async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility, cf: ContactContext['cf']): Promise<ContactContext> {
+export async function contactContext(tx: TenantTx, tenantId: string, rows: Prisma.ContactGetPayload<object>[], v: Visibility, cf: ContactContext['cf']): Promise<ContactContext> {
   const [people, statuses] = await Promise.all([
     personRefs(tx, tenantId, rows.flatMap((r) => [r.ownerId, r.createdById, r.statusChangedById])),
     statusRefs(tx, tenantId, rows.map((r) => r.statusId)),

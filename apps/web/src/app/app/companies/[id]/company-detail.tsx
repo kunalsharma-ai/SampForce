@@ -37,6 +37,7 @@ import {
 import { CompanyStatusBar } from '@/components/crm/company-lead-card';
 import { CompanyAutofill } from '@/components/crm/company-autofill';
 import { ClientTimeCard, type ClientTimeSubject, ConnectCheck } from '@/components/crm/client-time';
+import { CompanyExportMenu } from '@/components/crm/company-export';
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyJourneyCard } from '@/components/crm/journey';
@@ -137,6 +138,7 @@ export function CompanyDetail({ id }: { id: string }) {
                 id={id}
                 title={c.name}
                 row={c as unknown as Record<string, unknown>}
+                actions={<CompanyExportMenu companyId={id} />}
               />
             </div>
           }
