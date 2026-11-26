@@ -96,6 +96,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/administration': 'page.administration',
   '/app/administration/security': 'page.workspaceSecurity',
   '/app/account/security': 'page.accountSecurity',
+  '/app/profile': 'page.myProfile',
   '/app/help': 'page.help',
   '/app/help/queries': 'page.helpQueries',
   '/app/marketplace': 'page.marketplace',

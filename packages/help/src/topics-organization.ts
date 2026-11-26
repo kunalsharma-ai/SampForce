@@ -986,6 +986,30 @@ export const organizationHelp = {
       'استخدمه في الشركات الكبيرة ليفقد المغادرون الوصول في اليوم نفسه.',
     ],
   },
+  'page.myProfile': {
+    title: 'My profile',
+    what: [
+      'Your profile for the people in your organisation: photo, cover, mood, headline, favourite quote, bio, phone, LinkedIn and topics to ask you about.',
+      'Tu perfil para las personas de tu organización: foto, portada, estado de ánimo, titular, cita favorita, biografía, teléfono, LinkedIn y temas sobre los que preguntarte.',
+      'Votre profil pour les membres de votre organisation : photo, couverture, humeur, titre, citation, biographie, téléphone, LinkedIn et sujets sur lesquels vous interroger.',
+      'Ihr Profil für die Personen in Ihrer Organisation: Foto, Titelbild, Stimmung, Überschrift, Lieblingszitat, Über mich, Telefon, LinkedIn und Themen, zu denen man Sie fragen kann.',
+      'ملفك الشخصي لأعضاء مؤسستك: الصورة والغلاف والمزاج والعنوان التعريفي والاقتباس المفضّل والسيرة والهاتف وLinkedIn والمواضيع التي يمكن سؤالك عنها.',
+    ],
+    how: [
+      'Press the camera to add and crop a photo, pick a cover, set your mood with an emoji, fill in the rest and press Save profile.',
+      'Pulsa la cámara para añadir y recortar una foto, elige una portada, indica tu estado de ánimo con un emoji, completa el resto y pulsa Guardar perfil.',
+      'Appuyez sur l’appareil photo pour ajouter et recadrer une photo, choisissez une couverture, indiquez votre humeur par un emoji, complétez le reste et enregistrez.',
+      'Tippen Sie auf die Kamera, um ein Foto hinzuzufügen und zuzuschneiden, wählen Sie ein Titelbild und eine Stimmung, füllen Sie den Rest aus und speichern Sie.',
+      'اضغط الكاميرا لإضافة صورة وقصّها، واختر غلافًا، وحدّد مزاجك برمز تعبيري، وأكمل الباقي ثم اضغط حفظ الملف الشخصي.',
+    ],
+    where: [
+      'Your photo and mood show on your avatar across SampForce; teammates open your card from Team Management and team chat.',
+      'Tu foto y tu estado de ánimo aparecen en tu avatar en todo SampForce; tu equipo abre tu tarjeta desde Gestión del equipo y el chat.',
+      'Votre photo et votre humeur s’affichent sur votre avatar partout ; vos collègues ouvrent votre carte depuis la gestion d’équipe et le chat.',
+      'Foto und Stimmung erscheinen überall auf Ihrem Avatar; Kollegen öffnen Ihre Karte aus der Teamverwaltung und dem Team-Chat.',
+      'تظهر صورتك ومزاجك على صورتك الرمزية في كل SampForce، ويفتح زملاؤك بطاقتك من إدارة الفريق ودردشة الفريق.',
+    ],
+  },
   'page.accountSecurity': {
     title: 'Account security',
     what: [

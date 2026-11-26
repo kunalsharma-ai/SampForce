@@ -172,6 +172,7 @@ export class CompanyClosureService {
         await tx.passwordResetToken.deleteMany({ where: { userId } });
         await tx.mfaRecoveryCode.deleteMany({ where: { userId } });
         await tx.userPhoto.deleteMany({ where: { userId } });
+        await tx.userProfile.deleteMany({ where: { userId } });
         await tx.userPreference.deleteMany({ where: { userId } });
         await tx.userRegionalSetting.deleteMany({ where: { userId } });
         await tx.userSavedTheme.deleteMany({ where: { userId } });

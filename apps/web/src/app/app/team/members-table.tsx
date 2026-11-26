@@ -12,6 +12,8 @@ import { RolesManager } from './roles-manager';
 import { fmtLocale } from '@/lib/i18n/locale';
 import { useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
+import { PersonPopover } from '@/components/people/person-popover';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { useDepartments, useDesignations, useSetMemberOrg } from '@/lib/company-crm';
 
 interface RoleRow {
@@ -90,11 +92,20 @@ export function MembersTable() {
                 {members.data?.map((m) => (
                   <tr key={m.membershipId} className="border-t border-border">
                     <td className="py-2.5 font-medium">
-                      {m.name} {m.userId === me?.user.id && <Badge className="ms-1">{t('You')}</Badge>}
-                      <span className="mt-1 flex flex-wrap gap-1">
-                        {m.status === 'SUSPENDED' && <Badge tone="warning">{t('Suspended')}</Badge>}
-                        {m.mfaEnabled ? <Badge tone="success">{t('Two-step on')}</Badge> : <Badge>{t('Two-step off')}</Badge>}
-                        {m.provisioned && <Badge tone="accent">SCIM</Badge>}
+                      <span className="flex items-start gap-2.5">
+                        <PersonPopover userId={m.userId} name={m.name}>
+                          <button type="button" aria-label={t('View the profile of {name}', { name: m.name })} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <UserAvatar userId={m.userId} name={m.name} className="size-9 text-[11px]" />
+                          </button>
+                        </PersonPopover>
+                        <span className="min-w-[8rem]">
+                          <span className="whitespace-nowrap">{m.name}</span> {m.userId === me?.user.id && <Badge className="ms-1">{t('You')}</Badge>}
+                          <span className="mt-1 flex flex-wrap gap-1">
+                            {m.status === 'SUSPENDED' && <Badge tone="warning">{t('Suspended')}</Badge>}
+                            {m.mfaEnabled ? <Badge tone="success">{t('Two-step on')}</Badge> : <Badge>{t('Two-step off')}</Badge>}
+                            {m.provisioned && <Badge tone="accent">SCIM</Badge>}
+                          </span>
+                        </span>
                       </span>
                     </td>
                     <td className="py-2.5 text-muted-foreground">{m.email}</td>

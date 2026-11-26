@@ -10,7 +10,8 @@ import { type DealViewFilter, useDealForecast, useDealsClosing, usePriorityDeals
 import { countryName } from '@/components/forms/locale-data';
 import { useCan } from '@/lib/session';
 import { useIsPhone } from '@/lib/use-is-phone';
-import { initials, PriorityBadge, RiskIndicator } from './deal-badges';
+import { PriorityBadge, RiskIndicator } from './deal-badges';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { DealPanel } from './deal-panel';
 import { Tr, useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
@@ -50,9 +51,7 @@ function Owner({ deal }: { deal: DealRow }) {
   if (!deal.owner) return <span className="text-xs text-muted-foreground"><Tr text="Unassigned" /></span>;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span className="grid size-5 place-items-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary" aria-hidden>
-        {initials(deal.owner.name)}
-      </span>
+      <UserAvatar userId={deal.owner.id} name={deal.owner.name} showMood={false} className="size-5 text-[9px] ring-0" />
       {deal.owner.name}
     </span>
   );
@@ -239,9 +238,7 @@ function TerritoryCard({ s, currency, onOpen, children }: { s: TerritorySummary;
           <ul className="flex flex-wrap gap-1.5" aria-label={t('Owners of open deals')}>
             {s.owners.map((o) => (
               <li key={o.owner?.id ?? 'none'} className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs">
-                <span className="grid size-4 place-items-center rounded-full bg-primary/15 text-[9px] font-semibold text-primary" aria-hidden>
-                  {o.owner ? initials(o.owner.name) : '?'}
-                </span>
+                <UserAvatar userId={o.owner?.id} name={o.owner?.name ?? '?'} showMood={false} className="size-4 text-[8px] ring-0" />
                 {o.owner?.name ?? t('Unassigned')} · {o.count}
               </li>
             ))}

@@ -67,6 +67,8 @@ import {
   useTypingStore,
 } from '@/lib/chat';
 import { fmtLocale, useT } from '@/lib/i18n';
+import { PersonPopover } from '@/components/people/person-popover';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { isSampbidx, RemoteStatus, SampbidxAvatar, SampbidxDeliveryLine, SampbidxHeaderExtras, SampbidxPeople, SampbidxPersonAvatar, SampbidxSection, SampbidxSystemLine, sampbidxSubtitle } from './sampbidx-chat';
 
 // ─── Small pieces ───
@@ -87,9 +89,11 @@ function tone(name: string): string {
   return AVATAR_TONES[h % AVATAR_TONES.length]!;
 }
 
-function Avatar({ name, operator, online, className }: { name: string; operator?: boolean; online?: boolean; className?: string }) {
+function Avatar({ name, operator, online, className, userId, photoUrl }: { name: string; operator?: boolean; online?: boolean; className?: string; userId?: string | null; photoUrl?: string | null }) {
+  // Workspace people show their photo and mood (ADR 0072, 0087); a super admin keeps the Console's badge colour.
+  if (!operator) return <UserAvatar userId={userId} name={name} photoUrl={photoUrl} online={online} className={className} tone={tone(name)} />;
   return (
-    <span aria-hidden className={cn('relative grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold shadow-sm ring-2 ring-surface', operator ? 'bg-warning text-background' : tone(name), className)}>
+    <span aria-hidden className={cn('relative grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold shadow-sm ring-2 ring-surface', 'bg-warning text-background', className)}>
       {initials(name) || '?'}
       {online !== undefined && <span className={cn('absolute -bottom-0.5 -end-0.5 size-3 rounded-full ring-2 ring-surface transition-colors', online ? 'bg-success' : 'bg-muted-foreground/50')} />}
     </span>
@@ -286,7 +290,7 @@ export function ChatWorkspace({ realm, header, initialId }: { realm: ChatRealm; 
         )}
       >
         {c.unread > 0 && <span aria-hidden className={cn('absolute inset-y-3 start-0 w-1 rounded-full', isSampbidx(c) ? 'bg-warning' : 'bg-primary')} />}
-        {c.kind === 'DIRECT' ? <Avatar name={c.title} online={other ? presence.get(other.id)?.online ?? false : undefined} /> : <GroupAvatar c={c} />}
+        {c.kind === 'DIRECT' ? <Avatar name={c.title} userId={other?.id} photoUrl={other?.photoUrl} online={other ? presence.get(other.id)?.online ?? false : undefined} /> : <GroupAvatar c={c} />}
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
             <span className={cn('truncate text-sm', c.unread ? 'font-semibold text-foreground' : 'font-medium')}>{realm.kind === 'operator' ? c.workspace : c.kind === 'SUPPORT' ? t('SampForce support') : c.sampbidx?.scope === 'general' ? t('SampBidx team') : c.title}</span>
@@ -407,7 +411,7 @@ export function ChatWorkspace({ realm, header, initialId }: { realm: ChatRealm; 
                           onClick={() => create.mutate({ kind: 'DIRECT', userId: p.id }, { onSuccess: (c) => { setQ(''); setSelected(c.id); } })}
                           className="flex w-full items-center gap-3 rounded-xl p-2.5 text-start hover:bg-muted/70"
                         >
-                          <Avatar name={p.name} online={presence.get(p.id)?.online ?? p.online} />
+                          <Avatar name={p.name} userId={p.id} photoUrl={p.photoUrl} online={presence.get(p.id)?.online ?? p.online} />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium">{p.name}</span>
                             <span className="block truncate text-xs text-muted-foreground">{[p.role, p.email].filter(Boolean).join(' · ')}</span>
@@ -675,7 +679,7 @@ export function Thread({ realm, id, onBack, onGone, details, onToggleDetails, em
         <Button variant="ghost" size="icon" className={embedded ? 'hidden' : 'lg:hidden'} onClick={onBack} aria-label={t('Back to conversations')}>
           <ArrowLeft aria-hidden />
         </Button>
-        {c.kind === 'DIRECT' ? <Avatar name={c.title} online={otherPresence?.online ?? false} /> : <GroupAvatar c={c} />}
+        {c.kind === 'DIRECT' ? <Avatar name={c.title} userId={other?.id} photoUrl={other?.photoUrl} online={otherPresence?.online ?? false} /> : <GroupAvatar c={c} />}
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold">{title}</h2>
           <p className={cn('truncate text-xs', typers.length ? 'font-medium text-primary' : c.kind === 'DIRECT' && otherPresence?.online ? 'text-success' : 'text-muted-foreground')} data-chat-subtitle="">
@@ -870,7 +874,15 @@ function MessageItem({ realm, m, mine, grouped, status }: { realm: ChatRealm; m:
   const onlyEmoji = !!m.body && m.body.length <= 8 && /^(?:\p{Extended_Pictographic}|‍|️|\s)+$/u.test(m.body);
   return (
     <li className={cn('group flex items-end gap-2', mine && 'flex-row-reverse', grouped ? 'pt-0.5' : 'pt-3')} data-message={m.id}>
-      {grouped ? <span className="size-8 shrink-0" /> : m.external ? <SampbidxPersonAvatar name={name} className="size-8 text-[10px]" /> : <Avatar name={name} operator={m.author?.operator} className="size-8 text-[10px]" />}
+      {grouped ? <span className="size-8 shrink-0" /> : m.external ? <SampbidxPersonAvatar name={name} className="size-8 text-[10px]" /> : m.author && !m.author.operator ? (
+        <PersonPopover userId={m.author.id} name={name}>
+          <button type="button" aria-label={t('View the profile of {name}', { name })} className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Avatar name={name} userId={m.author.id} photoUrl={m.author.photoUrl} className="size-8 text-[10px]" />
+          </button>
+        </PersonPopover>
+      ) : (
+        <Avatar name={name} operator={m.author?.operator} className="size-8 text-[10px]" />
+      )}
       <div className={cn('flex min-w-0 max-w-[85%] flex-col gap-1 sm:max-w-[70%]', mine ? 'items-end' : 'items-start')}>
         {!grouped && (
           <div className={cn('flex flex-wrap items-baseline gap-2 px-1 text-xs text-muted-foreground', mine && 'justify-end')}>
@@ -1235,7 +1247,7 @@ function DetailsPanel({ realm, id, onClose }: { realm: ChatRealm; id: string; on
               const p = presence.get(m.person.id);
               return (
                 <li key={m.person.id} className="flex items-center gap-2 text-sm">
-                  <Avatar name={m.person.name} operator={m.person.operator} online={m.person.operator ? undefined : m.person.id === realm.selfId || (p?.online ?? false)} className="size-8 text-[10px]" />
+                  <Avatar name={m.person.name} operator={m.person.operator} userId={m.person.id} photoUrl={m.person.photoUrl} online={m.person.operator ? undefined : m.person.id === realm.selfId || (p?.online ?? false)} className="size-8 text-[10px]" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{m.person.id === realm.selfId ? t('{name} (you)', { name: m.person.name }) : m.person.name}</span>
                     {!m.person.operator && m.person.id !== realm.selfId && <span className="block truncate text-xs text-muted-foreground">{p?.online ? t('Online') : lastSeen(p?.lastSeenAt ?? null, t)}</span>}
@@ -1303,7 +1315,7 @@ function NewChatDialog({ realm, onClose, onOpen }: { realm: ChatRealm; onClose: 
           <div className="mb-3 flex flex-wrap gap-1.5">
             {picked.map((p) => (
               <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 py-0.5 pe-1 ps-1 text-xs font-medium text-primary animate-in zoom-in-95">
-                <Avatar name={p.name} className="size-5 text-[8px] ring-0" />
+                <Avatar name={p.name} userId={p.id} photoUrl={p.photoUrl} className="size-5 text-[8px] ring-0" />
                 {p.name}
                 <button type="button" className="rounded-full p-0.5 hover:bg-primary/20" onClick={() => toggle(p)} aria-label={t('Remove {name}', { name: p.name })}>
                   <X className="size-3" aria-hidden />
@@ -1329,7 +1341,7 @@ function NewChatDialog({ realm, onClose, onOpen }: { realm: ChatRealm; onClose: 
                   disabled={create.isPending}
                   onClick={() => (picked.length ? toggle(p) : start([p]))}
                 >
-                  <Avatar name={p.name} online={online} className="size-9" />
+                  <Avatar name={p.name} userId={p.id} photoUrl={p.photoUrl} online={online} className="size-9" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{p.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">{[online ? t('Online') : null, p.role, p.email].filter(Boolean).join(' · ')}</span>
@@ -1418,7 +1430,7 @@ function PeopleChecklist({ selected, onChange, exclude }: { selected: string[]; 
           <li key={p.id}>
             <label className="flex cursor-pointer items-center gap-2 rounded p-1.5 text-sm hover:bg-muted">
               <input type="checkbox" checked={selected.includes(p.id)} onChange={(e) => onChange(e.target.checked ? [...selected, p.id] : selected.filter((x) => x !== p.id))} />
-              <Avatar name={p.name} className="size-6 text-[10px]" />
+              <Avatar name={p.name} userId={p.id} photoUrl={p.photoUrl} className="size-6 text-[10px]" />
               {p.name}
             </label>
           </li>
@@ -1495,7 +1507,7 @@ function AddPeopleDialog({ realm, conv, onClose }: { realm: ChatRealm; conv: Cha
         <ul className="mb-4 space-y-1">
           {conv.members.map((m) => (
             <li key={m.person.id} className="flex items-center gap-2 text-sm">
-              <Avatar name={m.person.name} operator={m.person.operator} className="size-6 text-[10px]" />
+              <Avatar name={m.person.name} operator={m.person.operator} userId={m.person.id} photoUrl={m.person.photoUrl} className="size-6 text-[10px]" />
               <span className="flex-1">{m.person.name}</span>
               {m.person.operator && <Badge tone="warning">{t('Super admin')}</Badge>}
               {m.role === 'OWNER' && <Badge>{t('Owner')}</Badge>}
