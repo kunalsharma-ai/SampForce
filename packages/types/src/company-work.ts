@@ -152,6 +152,8 @@ export const followUpListQuerySchema = z.object({
   scope: z.enum(['mine', 'team', 'all']).default('mine'),
   companyId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),
+  /** Only follow-ups of this type, such as CALL for the next calls on the Calls page (ADR 0088). */
+  type: followUpType.optional(),
   tz: timeZone.default('UTC'),
 });
 

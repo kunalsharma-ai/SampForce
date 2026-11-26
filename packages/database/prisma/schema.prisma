@@ -5370,3 +5370,80 @@ model AvailabilityEvent {
   @@index([tenantId, sessionId])
   @@map("availability_events")
 }
+
+/// A person's own dialer for the Calls section (ADR 0088): a link it opens (tel:, callto:, sip:, an app scheme or a
+/// web dialer, with {placeholders} for the call details) or the workspace's Twilio number ringing their phone first.
+/// Optionally every call's details are also posted, signed, to the dialer's webhook.
+model Dialer {
+  id                     String    @id @default(uuid()) @map("_id")
+  tenantId               String    @map("tenant_id")
+  userId                 String    @map("user_id")
+  name                   String
+  /// LINK or TWILIO
+  kind                   String
+  urlTemplate            String?   @map("url_template")
+  webhookUrl             String?   @map("webhook_url")
+  /// HMAC-SHA256 key for the webhook's X-SampForce-Signature, sealed with ENCRYPTION_KEY.
+  webhookSecretEncrypted String?   @map("webhook_secret_encrypted")
+  /// TWILIO: the person's own phone, rung first.
+  agentPhone             String?   @map("agent_phone")
+  isDefault              Boolean   @default(false) @map("is_default")
+  lastUsedAt             DateTime? @map("last_used_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  deletedAt              DateTime? @map("deleted_at")
+
+  @@index([tenantId, userId])
+  @@map("dialers")
+}
+
+/// One call placed from the Calls section (ADR 0088), with the details handed to the dialer, what happened, the
+/// remarks and talk time. Logging it writes a call interaction on the company (activityId) and, when a next call is
+/// chosen, a call follow-up (followUpId).
+model PhoneCall {
+  id            String    @id @default(uuid()) @map("_id")
+  tenantId      String    @map("tenant_id")
+  userId        String    @map("user_id")
+  companyId     String?   @map("company_id")
+  contactId     String?   @map("contact_id")
+  /// The number as dialled, and EMPLOYEE, COMPANY or OTHER (typed on the keypad).
+  number        String
+  numberSource  String    @map("number_source")
+  dialerId      String?   @map("dialer_id")
+  dialerName    String    @map("dialer_name")
+  dialerKind    String    @map("dialer_kind")
+  /// OPEN, RINGING, IN_PROGRESS, ENDED, FAILED or LOGGED
+  status        String
+  /// CALL_OUTCOMES in packages/types/src/calls.ts; null until logged.
+  outcome       String?
+  /// The details handed to the dialer: { companyName, companyPhone, employeeName, designation, email, employeePhone }.
+  details       Json
+  /// Lower-case company name, employee name and number, for the history search.
+  searchText    String    @map("search_text")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  answeredAt    DateTime? @map("answered_at")
+  endedAt       DateTime? @map("ended_at")
+  durationSec   Int?      @map("duration_sec")
+  remarks       String?
+  sentiment     String?
+  activityId    String?   @map("activity_id")
+  followUpId    String?   @map("follow_up_id")
+  /// The webhook delivery: SENT or FAILED, when, and why it failed.
+  webhookStatus String?   @map("webhook_status")
+  webhookAt     DateTime? @map("webhook_at")
+  webhookError  String?   @map("webhook_error")
+  /// Twilio's call SID and its last status (queued, ringing, in-progress, completed, busy, no-answer, failed, canceled).
+  twilioSid     String?   @map("twilio_sid")
+  twilioStatus  String?   @map("twilio_status")
+  error         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  @@index([tenantId, userId, startedAt(sort: Desc)])
+  @@index([tenantId, startedAt(sort: Desc)])
+  @@index([tenantId, contactId, startedAt(sort: Desc)])
+  @@index([tenantId, companyId, startedAt(sort: Desc)])
+  @@index([tenantId, twilioSid])
+  @@map("phone_calls")
+}

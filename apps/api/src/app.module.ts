@@ -19,6 +19,7 @@ import { PasswordConfirmationGuard } from './common/password-confirmation';
 import { ChatModule } from './chat/chat.module';
 import { SupportModule } from './support/support.module';
 import { CrmModule } from './crm/crm.module';
+import { CallsModule } from './calls/calls.module';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { MarketingModule } from './marketing/marketing.module';
 import { OriginGuard } from './common/origin.guard';
@@ -83,6 +84,7 @@ import { AuditRequiredInterceptor } from './operator/audit-required.interceptor'
     DashboardModule,
     CommandCenterModule,
     CrmModule,
+    CallsModule,
     ChatModule,
     SupportModule,
     AutomationModule,
