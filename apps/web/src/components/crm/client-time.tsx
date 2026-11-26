@@ -53,7 +53,7 @@ function sky(minutes: number): { background: string; icon: typeof Sun; label: Me
   const h = minutes / 60;
   if (h >= 5 && h < 7.5) return { background: 'linear-gradient(135deg,#9a3412 0%,#be185d 100%)', icon: Sunrise, label: 'Morning' };
   if (h >= 7.5 && h < 17) return { background: 'linear-gradient(135deg,#0369a1 0%,#1e40af 100%)', icon: Sun, label: 'Daytime' };
-  if (h >= 17 && h < 19.5) return { background: 'linear-gradient(135deg,#86198f 0%,#9a3412 100%)', icon: Sunset, label: 'Evening' };
+  if (h >= 17 && h < 20) return { background: 'linear-gradient(135deg,#86198f 0%,#9a3412 100%)', icon: Sunset, label: 'Evening' };
   return { background: 'linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%)', icon: Moon, label: 'Night' };
 }
 
@@ -169,8 +169,8 @@ function DayStrip({ ct, now }: { ct: ClientTime; now: Date }) {
         {segments(a.best).map((s, i) => (
           <span key={`b${i}`} aria-hidden className="absolute inset-y-2 rounded bg-success" style={{ insetInlineStart: `${s.left}%`, width: `${s.width}%` }} />
         ))}
-        <span aria-hidden className="absolute inset-y-0 w-0.5 bg-critical shadow-[0_0_6px] shadow-critical" style={{ insetInlineStart: `${nowPct}%` }}>
-          <span className="absolute -top-0.5 start-1 rounded bg-critical px-1 text-[10px] font-bold leading-4 text-white">{t('Now')}</span>
+        <span aria-hidden className="absolute inset-y-0 w-0.5" style={{ insetInlineStart: `${nowPct}%`, background: '#b91c1c', boxShadow: '0 0 6px #ef4444' }}>
+          <span className={cn('absolute -top-0.5 whitespace-nowrap rounded px-1 text-[10px] font-bold leading-4 text-white', nowPct > 90 ? 'end-1' : 'start-1')} style={{ background: '#b91c1c' }}>{t('Now')}</span>
         </span>
       </div>
       <div aria-hidden className="flex justify-between text-[11px] tabular-nums text-muted-foreground">
@@ -243,7 +243,7 @@ export function ClientTimeCard({ subject }: { subject: ClientTimeSubject }) {
   const [editing, setEditing] = useState(false);
   const now = new Date();
   const profile = countryProfile(place.country, t.formatLocale);
-  const placeName = [place.city, place.state, profile?.name].filter(Boolean).join(', ') || profile?.name || '';
+  const placeName = [...new Set([place.city, place.state, profile?.name].filter(Boolean))].join(', ') || profile?.name || '';
 
   if (!profile || !ct.zone.zone || !ct.advice) {
     return (
@@ -371,12 +371,12 @@ export function ClientTimeCard({ subject }: { subject: ClientTimeSubject }) {
           <Fact icon={AlarmClock} label={t('Public holidays')} wide>
             <Holidays ct={ct} />
           </Fact>
-          {!ct.zone.exact && (
-            <p className="text-xs text-warning sm:col-span-2 lg:col-span-4" data-testid="zone-guess">
-              {t('{country} has several time zones. Add the state or city for an exact time; this shows {zone}.', { country: profile.name, zone: a.clientZone })}
-            </p>
-          )}
         </dl>
+        {!ct.zone.exact && (
+          <p className="text-xs font-medium text-warning" data-testid="zone-guess">
+            {t('{country} has several time zones. Add the state or city for an exact time; this shows {zone}.', { country: profile.name, zone: a.clientZone })}
+          </p>
+        )}
       </div>
       {editing && <WorkingHoursDialog subject={subject} hours={ct.hoursFrom === 'record' ? h : null} fallback={standardHours(place.country)} onClose={() => setEditing(false)} />}
     </section>
@@ -397,14 +397,14 @@ function Holidays({ ct }: { ct: ClientTime }) {
 
 function Fact({ icon: Icon, label, children, wide }: { icon: typeof Sun; label: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className={cn('flex min-w-0 gap-2.5 rounded-xl border border-border bg-background/60 p-3', wide && 'lg:col-span-2')}>
-      <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="text-sm font-medium">{children}</dd>
-      </div>
+    <div className={cn('min-w-0 space-y-1 rounded-xl border border-border bg-background/60 p-3', wide && 'lg:col-span-2')}>
+      <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-4" />
+        </span>
+        {label}
+      </dt>
+      <dd className="text-sm font-medium">{children}</dd>
     </div>
   );
 }
