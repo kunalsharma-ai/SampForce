@@ -277,7 +277,7 @@ export class TargetsService {
     const now = new Date();
     const m = new Metrics(tx, { tenantId: auth.tenantId, users, start, end, now, todayStart: now, tomorrowStart: now }, ctx.currency, ctx.rates);
     if (metric === 'LEADS') return (await m.leadsGenerated()).length;
-    // Redesign R7 (ADR 0087): counted by the same Metrics as the dashboards, so the numbers agree.
+    // Redesign R7 (ADR 0091): counted by the same Metrics as the dashboards, so the numbers agree.
     if (metric === 'EMAILS_SENT') {
       const e = await m.emailsSent();
       return e.logged.length + e.synced.length;

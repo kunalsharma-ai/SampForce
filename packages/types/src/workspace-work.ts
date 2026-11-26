@@ -9,7 +9,7 @@ import type { WorkspaceLevel } from './workspaces';
 
 // ───────────── Targets ─────────────
 
-/** The redesign (R7, ADR 0087) adds emails sent, follow-ups completed, meetings, RFQs and conversions. */
+/** The redesign (R7, ADR 0091) adds emails sent, follow-ups completed, meetings, RFQs and conversions. */
 export const TARGET_METRICS = ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE', 'EMAILS_SENT', 'FOLLOW_UPS_DONE', 'MEETINGS', 'RFQS', 'CONVERSIONS'] as const;
 export type TargetMetric = (typeof TARGET_METRICS)[number];
 export const TARGET_METRIC_LABEL: Record<TargetMetric, string> = {
@@ -150,7 +150,7 @@ export const ASSIGNED_TASK_STATUSES = ['OPEN', 'DONE', 'CANCELED'] as const;
 export type AssignedTaskStatus = (typeof ASSIGNED_TASK_STATUSES)[number];
 
 /**
- * Where an open task stands (redesign R7, ADR 0087): the assignee acknowledges it, starts it or marks it blocked (with
+ * Where an open task stands (redesign R7, ADR 0091): the assignee acknowledges it, starts it or marks it blocked (with
  * the reason), then completes it; the assigner hears about each step. A finished task keeps its last step.
  */
 export const TASK_PROGRESS = ['NEW', 'ACKNOWLEDGED', 'IN_PROGRESS', 'BLOCKED'] as const;

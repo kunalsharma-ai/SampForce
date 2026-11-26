@@ -1,6 +1,6 @@
 import type { PhraseTable } from './types';
 
-/** Task progress, comment reactions and the new target periods and metrics (redesign R7, ADR 0087). */
+/** Task progress, comment reactions and the new target periods and metrics (redesign R7, ADR 0091). */
 export const tasksTargets = {
   'Not acknowledged': ['Sin confirmar', 'Non pris en compte', 'Nicht bestätigt', 'لم يُستلم بعد'],
   Acknowledged: ['Confirmada', 'Prise en compte', 'Bestätigt', 'تم الاستلام'],
