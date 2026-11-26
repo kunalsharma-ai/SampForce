@@ -219,7 +219,7 @@ export class TargetsService {
 
   private async rows(tx: TenantTx, auth: AuthContext, org: Org, me: NodeAccess, rows: Stored[], ctx: Awaited<ReturnType<TargetsService['context']>>): Promise<TargetRow[]> {
     if (!rows.length) return [];
-    if (rows.some((r) => r.metric === 'REVENUE' || r.metric === 'DEALS_WON')) await this.revenue.reconcile(tx, auth.tenantId);
+    if (rows.some((r) => r.metric === 'REVENUE' || r.metric === 'DEALS_WON' || r.metric === 'CONVERSIONS')) await this.revenue.reconcile(tx, auth.tenantId);
     const setters = await tx.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.setById).filter((x): x is string => !!x))] } }, select: { id: true, name: true } });
     const setterName = new Map(setters.map((u) => [u.id, u.name]));
     const parts = await tx.workspaceTarget.findMany({ where: { tenantId: auth.tenantId, parentTargetId: { in: rows.map((r) => r.id) }, archivedAt: null }, select: { parentTargetId: true, amount: true } });
@@ -277,6 +277,24 @@ export class TargetsService {
     const now = new Date();
     const m = new Metrics(tx, { tenantId: auth.tenantId, users, start, end, now, todayStart: now, tomorrowStart: now }, ctx.currency, ctx.rates);
     if (metric === 'LEADS') return (await m.leadsGenerated()).length;
+    // Redesign R7 (ADR 0087): counted by the same Metrics as the dashboards, so the numbers agree.
+    if (metric === 'EMAILS_SENT') {
+      const e = await m.emailsSent();
+      return e.logged.length + e.synced.length;
+    }
+    if (metric === 'RFQS') return (await m.rfqsReceived()).length;
+    if (metric === 'CONVERSIONS') return (await m.clientsConverted()).length;
+    if (metric === 'FOLLOW_UPS_DONE') {
+      return tx.task.count({ where: { tenantId: auth.tenantId, deletedAt: null, followUpType: { not: null }, status: 'DONE', assigneeId: { in: users }, completedAt: { gte: start, lt: end } } });
+    }
+    if (metric === 'MEETINGS') {
+      return tx.activity.count({
+        where: {
+          tenantId: auth.tenantId, deletedAt: null, ownerId: { in: users }, occurredAt: { gte: start, lt: end },
+          OR: [{ interaction: 'MEETING' }, { AND: [{ OR: [{ interaction: null }, { interaction: { isSet: false } }] }, { type: 'MEETING' }] }],
+        },
+      });
+    }
     const rev = await m.revenue();
     return metric === 'REVENUE' ? r2(rev.amount) : rev.deals;
   }
