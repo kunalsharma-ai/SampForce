@@ -16,6 +16,8 @@ async function shot(page: Page, name: string) {
 
 async function axe(page: Page) {
   await expect(page).toHaveTitle(/\S/);
+  // Fades still run with reduced motion (only movement stops), so wait for the finite ones to end before scanning.
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity));
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 }
