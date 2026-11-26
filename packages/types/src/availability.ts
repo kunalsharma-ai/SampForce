@@ -30,7 +30,8 @@ export const AVAILABILITY_BEAT_MS = 60_000;
 /** A session left open this long (someone forgot to check out) is closed at the person's last sign of life. */
 export const STALE_SESSION_MS = 18 * 60 * 60_000;
 
-export const AVAILABILITY_EVENT_KINDS = ['CHECK_IN', 'BREAK_START', 'BREAK_END', 'STATUS', 'CHECK_OUT', 'AUTO_CHECK_OUT'] as const;
+/** AWAY_ENDED: the person came back after Away had come by itself (no page open), an unplanned interruption (ADR 0090). */
+export const AVAILABILITY_EVENT_KINDS = ['CHECK_IN', 'BREAK_START', 'BREAK_END', 'STATUS', 'CHECK_OUT', 'AUTO_CHECK_OUT', 'AWAY_ENDED'] as const;
 export type AvailabilityEventKind = (typeof AVAILABILITY_EVENT_KINDS)[number];
 
 export const availabilityStatusSchema = z.object({ status: z.enum(CHOOSABLE_STATUSES) }).strict();

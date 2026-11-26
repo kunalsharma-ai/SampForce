@@ -92,6 +92,8 @@ export const MODULES: ModuleDef[] = [
   { slug: 'chat', label: 'Team chat', icon: MessagesSquare, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Direct messages, channels and the support line to super admins, served by your own SampForce server.',
     capabilities: ['Works on an office network without internet', 'Messages wait on your device while offline', 'Read receipts, files, search and record links'] },
+  { slug: 'achievements', label: 'My achievements', icon: Trophy, group: 'Workspace', status: 'available', phase: 2,
+    summary: 'Your achievements, lead and sales target progress, badges and celebration settings.', capabilities: [] },
   { slug: 'team-status', label: 'Team status', icon: UserCheck, group: 'Workspace', status: 'available', phase: 2,
     summary: 'Who is working, on a break, away or checked out, with today’s check-in times (redesign R1).', capabilities: [] },
   { slug: 'leads', label: 'Leads', icon: UserPlus, group: 'Workspace', status: 'available', phase: 2,

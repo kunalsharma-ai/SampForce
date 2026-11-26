@@ -3,6 +3,9 @@ import { RetryableDuplicateError } from './duplicates';
 import { currentDbContext, type DbContext, dbContextStorage, workspaceGuard } from './scope';
 
 const ROOT_CLIENT = Symbol('sampforce.rootClient');
+const BEFORE_COMMIT = Symbol('sampforce.beforeCommit');
+
+type CommitHook = (tx: TenantTx) => Promise<void>;
 
 export type { DbContext } from './scope';
 
@@ -53,8 +56,17 @@ export async function withDbContext<T>(
   const client = prisma as unknown as PrismaClient;
   for (let attempt = 1; ; attempt++) {
     try {
-      return await dbContextStorage.run({ ...ctx, [ROOT_CLIENT]: client } as DbContext, () =>
-        client.$transaction(async (tx) => await fn(tx), { timeout: options?.timeoutMs ?? 10_000, maxWait: 10_000 }),
+      const hooks: CommitHook[] = [];
+      return await dbContextStorage.run({ ...ctx, [ROOT_CLIENT]: client, [BEFORE_COMMIT]: hooks } as DbContext, () =>
+        client.$transaction(
+          async (tx) => {
+            const out = await fn(tx);
+            // Work queued with beforeCommit runs last, inside the same transaction, after every change of `fn`.
+            for (let hook = hooks.shift(); hook; hook = hooks.shift()) await hook(tx);
+            return out;
+          },
+          { timeout: options?.timeoutMs ?? 10_000, maxWait: 10_000 },
+        ),
       );
     } catch (err) {
       if (attempt >= MAX_ATTEMPTS || !isRetryable(err)) throw err;
@@ -63,6 +75,18 @@ export async function withDbContext<T>(
       await new Promise((r) => setTimeout(r, Math.floor(ceiling / 2 + Math.random() * (ceiling / 2))));
     }
   }
+}
+
+/**
+ * Queues `hook` to run at the end of the current withDbContext transaction, after the rest of its changes and before
+ * it commits, so it sees the transaction's final state and commits (or rolls back) with it. Returns false when there
+ * is no such transaction (the caller then decides what to do instead). Hooks queued by a hook run too.
+ */
+export function beforeCommit(hook: CommitHook): boolean {
+  const hooks = (currentDbContext() as Record<symbol, unknown> | undefined)?.[BEFORE_COMMIT] as CommitHook[] | undefined;
+  if (!hooks) return false;
+  hooks.push(hook);
+  return true;
 }
 
 /** Runs `fn` with the workspace context set but without a transaction (for long read-only scans). */

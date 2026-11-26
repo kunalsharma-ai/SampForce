@@ -22,6 +22,7 @@ import { useRegionalSync } from '@/lib/regional-sync';
 import { useSession, useSignOut } from '@/lib/session';
 import { useLockedFeature } from '@/lib/features';
 import { useShell } from '@/stores/shell';
+import { CelebrationHost } from '../achievements/celebration-host';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
 import { SectionNotices } from '../notifications/section-notices';
@@ -127,6 +128,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         {data && <QuickCreateHost />}
+        {/* Celebrations for real achievements (ADR 0090), never during a security restriction. */}
+        {data && !data.restriction && <CelebrationHost />}
         {data && !data.restriction && <MobileBottomNav />}
         {data && <CustomizeMenuDialog />}
         <KeyboardShortcuts />
