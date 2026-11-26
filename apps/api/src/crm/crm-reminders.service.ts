@@ -39,7 +39,21 @@ export class CrmRemindersService {
    * today or overdue gets one notification saying how many. Once a day per person (the event id carries the date).
    */
   async dailyDigest(now = new Date()): Promise<number> {
-    const due = await scanTenants(this.prisma.task, { status: 'OPEN', deletedAt: null, followUpType: { not: null }, assigneeId: { not: null }, dueAt: { not: null, lte: new Date(now.getTime() + DAY) } });
+    const candidates = await scanTenants(this.prisma.task, { status: 'OPEN', deletedAt: null, followUpType: { not: null }, assigneeId: { not: null }, dueAt: { not: null, lte: new Date(now.getTime() + DAY) } });
+    if (!candidates.length) return 0;
+    // Cheap filters first, in bulk, so a sweep never opens a transaction per organisation for nothing: those where it
+    // is not yet 8:00, and those already summarised today (stored, so every worker and restart knows).
+    const [zones, settings] = (await Promise.all([
+      scan(() => this.prisma.tenant.findMany({ where: { id: { in: candidates } }, select: { id: true, defaultTimezone: true } })),
+      scan(() => this.prisma.crmSettings.findMany({ where: { tenantId: { in: candidates } }, select: { tenantId: true, digestDate: true } })),
+    ])) as [Array<{ id: string; defaultTimezone: string | null }>, Array<{ tenantId: string; digestDate: string | null }>];
+    const last = new Map(settings.map((s) => [s.tenantId, s.digestDate]));
+    const due = zones
+      .filter((z) => {
+        const { date, hour } = localDay(now, z.defaultTimezone ?? 'UTC');
+        return hour >= 8 && this.digested.get(z.id) !== date && last.get(z.id) !== date;
+      })
+      .map((z) => z.id);
     let sent = 0;
     for (const tenantId of due) {
       try {
@@ -66,6 +80,7 @@ export class CrmRemindersService {
             n++;
           }
           this.digested.set(tenantId, date);
+          await tx.crmSettings.upsert({ where: { tenantId }, create: { tenantId, digestDate: date }, update: { digestDate: date } });
           return n;
         });
       } catch (err) {
