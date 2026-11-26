@@ -35,7 +35,7 @@ export function CustomizeMenuDialog() {
 
   // Sections switched off for the organisation (ADR 0082) are not in the menu, so they are not listed here either.
   const switchedOff = useSwitchedOff();
-  const all = orderedModules({ moduleOrder: order, hiddenModules: [] }, true).filter((m) => !switchedOff(moduleHref(m)));
+  const all = orderedModules({ moduleOrder: order, hiddenModules: [] }, true).filter((m) => m.inMenu !== false && !switchedOff(moduleHref(m)));
   const move = (m: ModuleDef, dir: -1 | 1) => {
     const peers = all.filter((x) => x.group === m.group).map(key);
     const i = peers.indexOf(key(m));

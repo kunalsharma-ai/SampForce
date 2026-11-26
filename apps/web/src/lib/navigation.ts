@@ -53,6 +53,11 @@ export interface ModuleDef {
   summary: string;
   /** Planned capabilities, shown on the module page until it ships. */
   capabilities: string[];
+  /**
+   * false keeps the module out of the sidebar (redesign, menu: Kunal removed the Revenue section). The pages, data
+   * and links from records stay, and the command palette still finds them.
+   */
+  inMenu?: false;
 }
 
 /** The 30 sidebar modules. Every entry routes to a real page: either the module or its roadmap. */
@@ -130,10 +135,10 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['First-touch attribution', 'Cost per lead and won ÷ budget', 'A/B testing (later phase)'] },
   { slug: 'quotes', label: 'Quotes & Proposals', icon: FileText, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Catalogue, price books and versioned quotes with discount approvals and PDFs.',
-    capabilities: ['Price books per currency', 'Discount approvals (no self-approval)', 'Quote versions and PDF download'] },
+    capabilities: ['Price books per currency', 'Discount approvals (no self-approval)', 'Quote versions and PDF download'], inMenu: false },
   { slug: 'contracts', label: 'Contracts', icon: FileSignature, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Contract register with recorded signatures, renewals and reminders.',
-    capabilities: ['Renewal reminders and expiry', 'Linked renewals', 'E-signature provider adapters (later phase, needs provider credentials)'] },
+    capabilities: ['Renewal reminders and expiry', 'Linked renewals', 'E-signature provider adapters (later phase, needs provider credentials)'], inMenu: false },
   { slug: 'revenue', label: 'Revenue Intelligence', icon: LineChart, group: 'Intelligence', status: 'available', phase: 5,
     summary: 'Quarterly revenue analytics computed from your records, with targets and exchange rates.',
     capabilities: ['Won revenue by owner, source and product', 'Win rate, velocity and loss reasons', 'Forecast against actual'] },
@@ -142,10 +147,10 @@ export const MODULES: ModuleDef[] = [
     capabilities: ['Best/base/worst scenarios', 'Reproducible snapshots and comparisons', 'AI explanations of what changed'] },
   { slug: 'portal', label: 'Client Portal', icon: DoorOpen, group: 'Revenue', status: 'available', phase: 9,
     summary: 'A branded, signed-in space where customers follow projects, approve proposals, share documents and ask for help.',
-    capabilities: ['Invitations per company with viewer and approver access', 'Proposal approval with a recorded decision', 'Requests, messages and shared documents', 'Milestones you choose to share'] },
+    capabilities: ['Invitations per company with viewer and approver access', 'Proposal approval with a recorded decision', 'Requests, messages and shared documents', 'Milestones you choose to share'], inMenu: false },
   { slug: 'customer-success', label: 'Customer Success', icon: HeartHandshake, group: 'Revenue', status: 'available', phase: 5,
     summary: 'Explained health scores, escalations, renewals and churn-risk alerts.',
-    capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'] },
+    capabilities: ['Rule-based health scoring', 'Escalations', 'Churn-risk alerts', 'Onboarding plans (later phase)'], inMenu: false },
   { slug: 'reports', label: 'Reports & Analytics', icon: BarChart3, group: 'Intelligence', status: 'available', phase: 7,
     summary: 'Report builder, dashboards, Relationship Galaxy, Revenue Globe, pipeline flow and replays.',
     capabilities: ['Report builder over eight record types', 'Custom dashboards', 'CSV export (audited)', '3D views with 2D fallbacks', 'Scheduled exports (later phase)'] },

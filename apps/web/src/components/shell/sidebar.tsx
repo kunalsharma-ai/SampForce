@@ -14,6 +14,8 @@ import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav
 import { usePreferences } from '@/stores/preferences';
 import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
+import { stageStyle } from '../crm/stage-chip';
+import './nav-tone.css';
 import { useChatUnreadTotal } from './chat-button';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
@@ -21,6 +23,20 @@ const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Re
  * Redesign R2 (ADR 0082): the sidebar opens with the daily sales work only (the Workspace group) and Settings. Every
  * other section sits under More, which the person opens and closes; it opens by itself on a page that is inside it.
  */
+/** Each section's palette (redesign, menu): its items take the colours in turn, the heading the first two. */
+const PALETTE: Record<ModuleDef['group'] | 'Favourites', string[]> = {
+  Workspace: ['#4f46e5', '#2563eb', '#0891b2', '#0d9488', '#7c3aed', '#0284c7'],
+  Engage: ['#db2777', '#e11d48', '#ea580c', '#c026d3', '#9333ea'],
+  Intelligence: ['#7c3aed', '#6366f1', '#2563eb', '#9333ea', '#0891b2'],
+  Revenue: ['#16a34a', '#0d9488', '#059669', '#ca8a04', '#65a30d'],
+  Organization: ['#d97706', '#ea580c', '#dc2626', '#b45309', '#64748b'],
+  Favourites: ['#ca8a04', '#d97706', '#ea580c'],
+};
+function tone(group: keyof typeof PALETTE, i: number): React.CSSProperties {
+  const p = PALETTE[group];
+  return { ...stageStyle(p[i % p.length]!), '--tone-b': p[(i + 1) % p.length] } as React.CSSProperties;
+}
+
 const PRIMARY_GROUP: ModuleDef['group'] = 'Workspace';
 const ALWAYS_SHOWN = new Set(['settings']);
 
@@ -44,6 +60,7 @@ function NavLink({
   onNavigate,
   badge,
   layoutId,
+  style,
 }: {
   href: string;
   label: string;
@@ -53,6 +70,7 @@ function NavLink({
   onNavigate?: () => void;
   badge?: React.ReactNode;
   layoutId?: string;
+  style?: React.CSSProperties;
 }) {
   const { dir } = useT();
   const link = (
@@ -60,16 +78,20 @@ function NavLink({
       href={href}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
+      style={style}
+      data-nav-tone=""
       className={cn(
-        'relative flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
-        active ? 'text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        'sf-nav-link relative flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1.5 py-1 text-sm transition-colors',
+        active ? '' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
         collapsed && 'justify-center',
       )}
     >
-      {active && layoutId && (
-        <motion.span layoutId={layoutId} className="absolute inset-0 rounded-md bg-primary/10 ring-1 ring-primary/30" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />
+      {active && (
+        <motion.span layoutId={layoutId} className="sf-nav-active" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
       )}
-      <Icon className={cn('relative size-4 shrink-0', active && 'text-primary')} aria-hidden />
+      <span className="sf-nav-ico">
+        <Icon className="size-4" aria-hidden />
+      </span>
       {collapsed ? (
         <span className="sr-only">{label}</span>
       ) : (
@@ -105,14 +127,16 @@ function UnpinButton({ item, onToggle }: { item: NavItem; onToggle: (i: NavItem)
   );
 }
 
-function GroupHeading({ children, collapsed, id }: { children: React.ReactNode; collapsed: boolean; id: string }) {
+function GroupHeading({ children, collapsed, id, group }: { children: React.ReactNode; collapsed: boolean; id: string; group: keyof typeof PALETTE }) {
   return collapsed ? (
     <h2 id={id} className="sr-only">
       {children}
     </h2>
   ) : (
-    <h2 id={id} className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <h2 id={id} style={tone(group, 0)} data-nav-heading={group} className="sf-nav-heading flex items-center gap-2 px-2 pb-1.5 text-[11px] font-bold uppercase tracking-wider">
+      <span aria-hidden className="sf-nav-heading-dot" />
       {children}
+      <span aria-hidden className="sf-nav-heading-rule" />
     </h2>
   );
 }
@@ -122,7 +146,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const { nav } = useNavigation();
   const pins = useTogglePin();
   const switchedOff = useSwitchedOff();
-  const modules = orderedModules(nav).filter((m) => !switchedOff(moduleHref(m)));
+  const modules = orderedModules(nav).filter((m) => m.inMenu !== false && !switchedOff(moduleHref(m)));
   const t = useT();
   const features = useFeatures();
   // Unread notifications per section (ADR 0075), next to the section they come from.
@@ -137,15 +161,15 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const moreOpen = moreOpenPref || hereInMore;
   const unreadInMore = bySection ? moreModules.reduce((n, m) => n + ((bySection as Record<string, number | undefined>)[m.slug] ?? 0), 0) : 0;
 
-  const renderGroup = (group: ModuleDef['group'], list: ModuleDef[]) => {
+  const renderGroup = (group: ModuleDef['group'], list: ModuleDef[], i = GROUPS.indexOf(group)) => {
     if (list.length === 0) return null;
     return (
-      <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules">
-        <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`}>
+      <section key={group} aria-labelledby={`${idPrefix}-${group}`} data-nav-section="modules" className="sf-nav-section" style={{ '--i': i } as React.CSSProperties}>
+        <GroupHeading collapsed={collapsed} id={`${idPrefix}-${group}`} group={group}>
           {t(`nav.group.${group}`)}
         </GroupHeading>
         <ul className="space-y-0.5">
-          {list.map((m) => {
+          {list.map((m, n) => {
             const href = moduleHref(m);
             const feature = featureForPath(href);
             const locked = !!feature && !features.has(feature);
@@ -159,6 +183,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
                   collapsed={collapsed}
                   onNavigate={onNavigate}
                   layoutId={`${idPrefix}-active`}
+                  style={tone(group, n)}
                   badge={
                     m.slug === 'chat' && chatUnread !== null && !locked ? (
                       chatUnread === 0 ? (
@@ -207,13 +232,13 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
       {nav.pinned.length > 0 && (
         <section aria-labelledby={`${idPrefix}-fav`} data-nav-section="favourites">
-          <GroupHeading collapsed={collapsed} id={`${idPrefix}-fav`}>
+          <GroupHeading collapsed={collapsed} id={`${idPrefix}-fav`} group="Favourites">
             {t('nav.favourites')}
           </GroupHeading>
           <ul className="space-y-0.5">
-            {nav.pinned.map((p) => (
+            {nav.pinned.map((p, n) => (
               <li key={p.href} className="group/row flex items-center gap-1">
-                <NavLink href={p.href} label={p.label} icon={itemIcon(p)} active={pathname === p.href} collapsed={collapsed} onNavigate={onNavigate} />
+                <NavLink href={p.href} label={p.label} icon={itemIcon(p)} active={pathname === p.href} collapsed={collapsed} onNavigate={onNavigate} layoutId={`${idPrefix}-active`} style={tone('Favourites', n)} />
                 {!collapsed && <UnpinButton item={p} onToggle={pins.toggle} />}
               </li>
             ))}
@@ -243,7 +268,7 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
             )}
           </button>
           <div id={`${idPrefix}-more`} hidden={!moreOpen} className="mt-3 space-y-5">
-            {GROUPS.map((group) => renderGroup(group, moreModules.filter((m) => m.group === group)))}
+            {GROUPS.map((group, i) => renderGroup(group, moreModules.filter((m) => m.group === group), i))}
           </div>
         </section>
       )}
