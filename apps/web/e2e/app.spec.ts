@@ -95,6 +95,8 @@ for (const theme of ['dark', 'light'] as const) {
   test(`has no WCAG 2.2 A/AA violations on key pages (${theme})`, async ({ page }) => {
     // Visits 22 pages with a full axe scan each; under a parallel run that takes longer than the default 30 s.
     test.setTimeout(120_000);
+    // The public pages animate cards in; scan them at rest, not mid-fade.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/login');
     await page.evaluate((t) => localStorage.setItem('dealflow:preferences', JSON.stringify({ state: { theme: t, motion: 'off' }, version: 0 })), theme);
     for (const path of ['/', '/pricing', '/login', '/signup']) {
