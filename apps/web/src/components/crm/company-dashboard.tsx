@@ -49,6 +49,7 @@ import { personLabel } from '@/lib/company-leads';
 import { formatMoneyList, useCompanyDashboard, useCompanyEmployees } from '@/lib/company-work';
 import { formatDate } from '@/lib/crm';
 import { useHasFeature } from '@/lib/features';
+import { CallButton } from '@/components/calls/call-button';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { type CompanyAction, useCompanyAction, useCompanyActions } from './company-actions';
@@ -186,8 +187,12 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
                 </a>
               </li>
             ))}
+            <li>
+              <CallButton companyId={c.id} name={c.name} variant="chip" className="min-h-8 text-sm" />
+            </li>
           </ul>
         )}
+          {contact.length === 0 && <CallButton companyId={c.id} name={c.name} variant="chip" className="min-h-8 text-sm" />}
           <SocialIconRow company={c} />
         </div>
         <dl className="grid gap-2 sm:grid-cols-3">
@@ -500,9 +505,12 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
                         </a>
                       )}
                       {r.phone && (
-                        <a className="flex min-h-6 items-center gap-1 hover:underline" href={`tel:${r.phone}`}>
-                          <Phone aria-hidden className="size-3.5 shrink-0" /> {r.phone}
-                        </a>
+                        <span className="flex min-h-6 items-center gap-1.5">
+                          <a className="flex items-center gap-1 hover:underline" href={`tel:${r.phone}`}>
+                            <Phone aria-hidden className="size-3.5 shrink-0" /> {r.phone}
+                          </a>
+                          <CallButton companyId={company.id} contactId={r.id} name={r.name} className="size-6" />
+                        </span>
                       )}
                       {r.linkedinUrl && (
                         <a className="flex min-h-6 items-center gap-1 text-primary hover:underline" href={r.linkedinUrl} target="_blank" rel="noopener noreferrer">

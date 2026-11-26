@@ -77,6 +77,8 @@ export interface FollowUpFilter {
   scope?: 'mine' | 'team' | 'all';
   companyId?: string;
   contactId?: string;
+  /** Only this follow-up type, such as CALL for the next calls on the Calls page. */
+  type?: string;
 }
 
 function followUpQuery(f: FollowUpFilter): string {

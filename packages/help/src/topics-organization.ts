@@ -1804,6 +1804,30 @@ export const organizationHelp = {
       'يعني «فريقي» أنت وكل من يتبع لك. تظهر المواعيد بمنطقتك الزمنية.',
     ],
   },
+  'page.calls': {
+    title: 'Calls',
+    what: [
+      'Call any company or employee through your own dialer. The call card shows the company, employee, designation, email and both numbers; every call is kept with its outcome and remarks.',
+      'Llama a cualquier empresa o empleado con tu propio marcador. La ficha muestra la empresa, el empleado, su cargo, su correo y los dos teléfonos; cada llamada se guarda con su resultado y comentarios.',
+      'Appelez toute entreprise ou tout employé avec votre composeur. La fiche affiche l’entreprise, l’employé, sa fonction, son e-mail et les deux numéros ; chaque appel garde son résultat et ses remarques.',
+      'Rufen Sie jedes Unternehmen und jeden Mitarbeiter über Ihren Dialer an. Die Anrufkarte zeigt Unternehmen, Mitarbeiter, Position, E-Mail und beide Nummern; jeder Anruf bleibt mit Ergebnis und Bemerkungen.',
+      'اتصل بأي شركة أو موظف عبر برنامج الاتصال الخاص بك. تعرض البطاقة الشركة والموظف ومسماه وبريده والرقمين، وتُحفظ كل مكالمة مع نتيجتها وملاحظاتها.',
+    ],
+    how: [
+      'Search for a company or employee, or press Call on their page, then call. When it ends, choose what happened, add remarks and the date of the next call.',
+      'Busca una empresa o un empleado, o pulsa Llamar en su página, y llama. Al terminar, elige qué pasó, añade comentarios y la fecha de la próxima llamada.',
+      'Cherchez une entreprise ou un employé, ou appuyez sur Appeler sur sa page, puis appelez. À la fin, choisissez ce qui s’est passé, ajoutez des remarques et la date du prochain appel.',
+      'Suchen Sie ein Unternehmen oder einen Mitarbeiter oder tippen Sie auf dessen Seite auf Anrufen. Wählen Sie danach das Ergebnis, ergänzen Sie Bemerkungen und den nächsten Anruf.',
+      'ابحث عن شركة أو موظف، أو اضغط «اتصال» في صفحته، ثم اتصل. عند الانتهاء اختر ما حدث وأضف ملاحظاتك وموعد المكالمة التالية.',
+    ],
+    where: [
+      'Add my dialer: the phone app, a softphone, any dialer opened from a link with the call details, a webhook, or Twilio. Logged calls show in the company’s interactions.',
+      'Añadir mi marcador: la app de teléfono, un softphone, cualquier marcador que se abra con un enlace con los datos, un webhook o Twilio. Las llamadas aparecen en las interacciones.',
+      'Ajouter mon composeur : l’application téléphone, un softphone, tout composeur ouvert par un lien avec les détails, un webhook ou Twilio. Les appels figurent dans les interactions.',
+      'Meinen Dialer hinzufügen: Telefon-App, Softphone, jeder Dialer per Link mit den Anrufdaten, ein Webhook oder Twilio. Erfasste Anrufe stehen in den Interaktionen.',
+      'إضافة برنامج الاتصال: تطبيق الهاتف أو هاتف برمجي أو أي برنامج يُفتح برابط ببيانات المكالمة أو Webhook أو Twilio. تظهر المكالمات المسجلة في تفاعلات الشركة.',
+    ],
+  },
   'page.rfqs': {
     title: 'RFQs',
     what: [
