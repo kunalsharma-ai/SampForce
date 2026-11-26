@@ -57,7 +57,7 @@ test('the corner logo animates in workspaces and the Console, and stays still un
   await closeUp(app, logo, '53-logo-hover');
   await app.mouse.move(700, 500);
   // Keyboard focus on the logo's link does the same.
-  await app.getByRole('link', { name: 'SampForce Command Center' }).focus();
+  await app.getByRole('link', { name: 'SampForce Dashboard' }).focus();
   await app.keyboard.press('Shift+Tab');
   await app.keyboard.press('Tab');
   await expect.poll(() => running(logo)).toContain('sf-jolt');

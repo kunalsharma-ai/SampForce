@@ -19,7 +19,7 @@ test('every page title has an i button that explains the page, by mouse and by k
 
   // Pages with a PageHeader and pages that draw their own title all get the button.
   for (const [path, topic, title] of [
-    ['/app', 'page.commandCenter', 'Command Center'],
+    ['/app', 'page.commandCenter', 'Dashboard'],
     ['/app/leads', 'page.leads', 'Leads'],
     ['/app/deals', 'page.deals', 'Deals'],
     ['/app/quotes', 'page.quotes', 'Quotes & Proposals'],

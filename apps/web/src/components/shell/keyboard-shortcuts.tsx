@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@dealflow/ui';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { useLeadsSectionOn, useSwitchedOff } from '@/lib/features';
 import { CREATE, GO_TO, isTypingTarget, resolveShortcut, SINGLE } from '@/lib/shortcuts';
 import { usePreferences } from '@/stores/preferences';
 import { useQuickCreate } from '@/stores/quick-create';
@@ -26,6 +27,13 @@ export function KeyboardShortcuts() {
   const open = useShell((s) => s.shortcutsOpen);
   const setOpen = useShell((s) => s.setShortcutsOpen);
   const prefix = useRef<{ key: 'g' | 'n'; at: number } | null>(null);
+  // Sections switched off for the organisation (ADR 0082) have no shortcut.
+  const switchedOff = useSwitchedOff();
+  const leadsOn = useLeadsSectionOn();
+  const allowed = useRef({ switchedOff, leadsOn });
+  allowed.current = { switchedOff, leadsOn };
+  const goTo = GO_TO.filter((g) => !switchedOff(g.href));
+  const create = CREATE.filter((c) => c.kind !== 'leads' || leadsOn);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,9 +62,11 @@ export function KeyboardShortcuts() {
           shell.setShortcutsOpen(true);
           return;
         case 'go':
+          if (allowed.current.switchedOff(action.href)) return;
           router.push(action.href);
           return;
         case 'create':
+          if (action.kind === 'leads' && !allowed.current.leadsOn) return;
           useQuickCreate.getState().open(action.kind);
       }
     };
@@ -88,7 +98,7 @@ export function KeyboardShortcuts() {
             </dl>
             <h3 className="pb-2 pt-4 text-sm font-semibold">Create</h3>
             <dl className="space-y-1.5 text-sm">
-              {CREATE.map((s) => (
+              {create.map((s) => (
                 <div key={s.key} className="flex items-center justify-between gap-3">
                   <dt>{s.label}</dt>
                   <dd>
@@ -103,7 +113,7 @@ export function KeyboardShortcuts() {
               Go to
             </h3>
             <dl className="space-y-1.5 text-sm">
-              {GO_TO.map((s) => (
+              {goTo.map((s) => (
                 <div key={s.key} className="flex items-center justify-between gap-3">
                   <dt>{s.label}</dt>
                   <dd>

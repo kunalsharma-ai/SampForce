@@ -14,6 +14,9 @@ interface Preferences {
   /** True when settings changed on this device and have not reached the server yet. */
   dirty: boolean;
   sidebarCollapsed: boolean;
+  /** Whether the sidebar shows the sections under More (redesign R2, ADR 0082). Kept on this device. */
+  navMoreOpen: boolean;
+  setNavMoreOpen: (open: boolean) => void;
   /** The workspace brand colour, used as the primary colour unless the person picked their own. Not persisted. */
   brandColor: string | null;
   setBrandColor: (c: string | null) => void;
@@ -41,6 +44,8 @@ export const usePreferences = create<Preferences>()(
       appearance: DEFAULT_APPEARANCE,
       dirty: false,
       sidebarCollapsed: false,
+      navMoreOpen: false,
+      setNavMoreOpen: (navMoreOpen) => set({ navMoreOpen }),
       brandColor: null,
       setBrandColor: (brandColor) => set({ brandColor }),
       update: (patch) => set((s) => ({ appearance: normalizeAppearance({ ...s.appearance, ...patch }), dirty: true })),
@@ -55,7 +60,7 @@ export const usePreferences = create<Preferences>()(
       name: 'dealflow:preferences',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ appearance: s.appearance, dirty: s.dirty, sidebarCollapsed: s.sidebarCollapsed }),
+      partialize: (s) => ({ appearance: s.appearance, dirty: s.dirty, sidebarCollapsed: s.sidebarCollapsed, navMoreOpen: s.navMoreOpen }),
       migrate: (persisted, version) => {
         const old = (persisted ?? {}) as Record<string, unknown>;
         if (version === 0) {

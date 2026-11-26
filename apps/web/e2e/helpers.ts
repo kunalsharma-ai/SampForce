@@ -18,7 +18,12 @@ export async function autoConfirmDeletion(page: Page, password: string) {
   });
 }
 
-export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus', autoConfirm = true }: { plan?: string; autoConfirm?: boolean } = {}) {
+/**
+ * The separate Leads and Accounts pages are off for a new organisation until the Console Admin switches them on
+ * (ADR 0082). Specs written for those pages get them switched on by default; pass `{ sections: false }` to start as a
+ * real new organisation does.
+ */
+export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_plus', autoConfirm = true, sections = true }: { plan?: string; autoConfirm?: boolean; sections?: boolean } = {}) {
   const id = Math.random().toString(36).slice(2, 10);
   const email = `e2e-${id}@example.com`;
   await page.goto('/signup');
@@ -29,8 +34,9 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
   await page.getByRole('button', { name: 'Start free' }).click();
   await expect(page).toHaveURL(/\/app/);
   await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
-  if (plan !== 'free') {
-    await setPlan(page, plan);
+  if (plan !== 'free' || sections) {
+    if (plan !== 'free') await setPlan(page, plan);
+    if (sections) await setFeatures(page, { leads_section: true, accounts_section: true });
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
   }
@@ -70,6 +76,12 @@ export async function seedInboundEmail(page: Page, email: { from: string; subjec
 export async function setFeature(page: Page, feature: string, enabled: boolean) {
   const me = await (await page.request.get('/api/v1/auth/me')).json();
   await fixture({ action: 'featureOverride', tenantId: me.tenant.id, feature, enabled });
+}
+
+/** Grants (true) or withholds (false) several features at once for the signed-in organisation. */
+export async function setFeatures(page: Page, features: Record<string, boolean>) {
+  const me = await (await page.request.get('/api/v1/auth/me')).json();
+  await fixture({ action: 'featureOverrides', tenantId: me.tenant.id, features });
 }
 
 /** Approves the signed-in workspace for the mobile app and switches it on (ADR 0072). */

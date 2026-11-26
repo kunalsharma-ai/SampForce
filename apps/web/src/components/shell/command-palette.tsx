@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { fuzzyFilter } from '@/lib/fuzzy';
 import { type MessageKey, useT } from '@/lib/i18n';
+import { useLeadsSectionOn, useSwitchedOff } from '@/lib/features';
 import { moduleHref, moduleKey, MODULES, phaseLabel } from '@/lib/navigation';
 import { useSession } from '@/lib/session';
 import { useNavigation } from '@/lib/workspace-nav';
@@ -46,6 +47,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const { data: me } = useSession();
   const openCreate = useQuickCreate((s) => s.open);
   const { nav } = useNavigation();
+  const switchedOff = useSwitchedOff();
+  const leadsOn = useLeadsSectionOn();
   const ask = useCopilot((s) => s.ask);
   const mode = usePreferences((s) => s.appearance.mode);
   const setMode = usePreferences((s) => s.setTheme);
@@ -93,12 +96,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   ];
   const favs = fuzzyFilter(nav.pinned, q, (p) => p.label);
   const creates = fuzzyFilter(
-    CREATE.filter((c) => me?.permissions.includes(c.permission)),
+    CREATE.filter((c) => me?.permissions.includes(c.permission) && (c.kind !== 'leads' || leadsOn)),
     q,
     (c) => c.label,
   );
   // Matches the translated name and the English one, so either finds the module.
-  const modules = fuzzyFilter(MODULES, q, (m) => `${t(moduleKey(m) as MessageKey)} ${m.label} ${m.summary}`);
+  const modules = fuzzyFilter(MODULES.filter((m) => !switchedOff(moduleHref(m))), q, (m) => `${t(moduleKey(m) as MessageKey)} ${m.label} ${m.summary}`);
   const acts = fuzzyFilter(actions, q, (a) => a.label);
 
   return (

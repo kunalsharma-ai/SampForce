@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Command Center', 'Leads', 'Contacts', 'Companies', 'Deals', 'Pipelines', 'Accounts', 'Follow-ups', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'Sales Activities',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Website Visitors', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Quotes & Proposals', 'Contracts', 'Revenue Intelligence', 'Forecasting', 'Client Portal', 'Customer Success',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
@@ -39,6 +39,8 @@ test('every sidebar entry leads to a working page', async ({ page }) => {
   await signUp(page);
   // Module sections only: Favourites repeats some of the same links.
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('[data-nav-section="modules"]');
+  // Everything beyond the daily sales work sits under More (ADR 0082).
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'More' }).click();
   for (const label of SIDEBAR) {
     await nav.getByRole('link', { name: new RegExp(`^${label.replace(/[&]/g, '\\&')}`) }).click();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

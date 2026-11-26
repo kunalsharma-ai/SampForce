@@ -317,4 +317,19 @@ export const features = {
   'Instructions from managers to their team, acknowledged and completed by the people who receive them.': ['Instrucciones de los gerentes a su equipo, que quienes las reciben confirman y completan.', 'Des consignes des managers à leur équipe, accusées et réalisées par les personnes qui les reçoivent.', 'Anweisungen von Führungskräften an ihr Team, die von den Empfängern bestätigt und erledigt werden.', 'تعليمات من المديرين إلى فرقهم، يقرّ بها مستلموها وينجزونها.'],
   'Client concerns': ['Inquietudes de clientes', 'Préoccupations des clients', 'Kundenanliegen', 'مخاوف العملاء'],
   'Client concerns and rejections with severity, deadlines and escalation to senior management.': ['Inquietudes y rechazos de clientes con gravedad, plazos y escalado a la alta dirección.', 'Préoccupations et refus des clients avec gravité, échéances et remontée à la direction.', 'Kundenanliegen und Absagen mit Schweregrad, Fristen und Eskalation an die Geschäftsleitung.', 'مخاوف العملاء ورفضهم مع الخطورة والمواعيد النهائية والتصعيد إلى الإدارة العليا.'],
+  // ADR 0082: the Leads and Accounts pages, switched on by the Console Admin
+  'Leads page': ['Página de leads', 'Page des prospects', 'Leads-Seite', 'صفحة العملاء المحتملين'],
+  'The separate Leads page for inbound leads. Hidden unless the Console Admin switches it on; companies and contacts hold the leads otherwise.': [
+    'La página de leads aparte para los leads entrantes. Oculta salvo que el administrador de la consola la active; si no, las empresas y los contactos guardan los leads.',
+    'La page distincte des prospects entrants. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, les entreprises et les contacts portent les prospects.',
+    'Die eigene Leads-Seite für eingehende Leads. Ausgeblendet, bis der Console-Administrator sie einschaltet; sonst stehen die Leads bei Unternehmen und Kontakten.',
+    'صفحة مستقلة للعملاء المحتملين الواردين. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا فالعملاء المحتملون ضمن الشركات وجهات الاتصال.',
+  ],
+  'Accounts page': ['Página de cuentas', 'Page des comptes', 'Accounts-Seite', 'صفحة الحسابات'],
+  'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.': [
+    'La página de cuentas aparte. Oculta salvo que el administrador de la consola la active; si no, Empresas es la lista de cuentas.',
+    'La page distincte des comptes. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, Entreprises est la liste des comptes.',
+    'Die eigene Accounts-Seite. Ausgeblendet, bis der Console-Administrator sie einschaltet; sonst ist Unternehmen die Kontenliste.',
+    'صفحة الحسابات المستقلة. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا فقائمة الشركات هي قائمة الحسابات.',
+  ],
 } satisfies TextTable;

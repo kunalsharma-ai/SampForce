@@ -4,7 +4,7 @@ import type { HelpTable } from './types';
 export const workspaceHelp = {
   // ── Pages ────────────────────────────────────────────────────────────────────────────────────────────────────────
   'page.commandCenter': {
-    title: 'Command Center',
+    title: 'Dashboard',
     what: [
       'Your home screen: live sales numbers, pipeline health, your next actions and recent team activity in one place.',
       'Tu pantalla de inicio: cifras de ventas en vivo, salud del pipeline, tus próximas acciones y la actividad reciente del equipo en un solo lugar.',
