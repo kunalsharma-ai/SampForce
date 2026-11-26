@@ -189,6 +189,12 @@ function CleanSweep({ done }: { done: number }) {
   );
 }
 
+/** The percent's font size: as large as fits inside the ring's hole (about 62% of its width) for that many characters. */
+function ringFont(size: number, text: string): number {
+  const hole = size * 0.62;
+  return Math.max(10, Math.min(Math.round(size * 0.22), Math.floor(hole / (text.length * 0.62))));
+}
+
 /** A ring with marks at 25, 50 and 75 percent; fills from the previous milestone to this one. */
 export function ProgressRing({ percent, from = 0, size = 104, still, label, light = true }: { percent: number; from?: number; size?: number; still: boolean; label: string; light?: boolean }) {
   const r = 42;
@@ -198,7 +204,8 @@ export function ProgressRing({ percent, from = 0, size = 104, still, label, ligh
   const track = light ? 'rgba(255,255,255,0.25)' : 'color-mix(in srgb, var(--c1) 18%, transparent)';
   const fill = light ? '#fff' : 'var(--c1)';
   return (
-    <div className="relative" style={{ width: size, height: size }} aria-hidden>
+    // shrink-0: inside a flex row the ring keeps its size, so the label always fits inside it.
+    <div className="relative shrink-0" style={{ width: size, height: size }} aria-hidden data-progress-ring>
       <svg viewBox="0 0 100 100" className="size-full -rotate-90">
         <circle cx="50" cy="50" r={r} fill="none" stroke={track} strokeWidth="9" />
         <circle
@@ -221,9 +228,9 @@ export function ProgressRing({ percent, from = 0, size = 104, still, label, ligh
         )}
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
-        <div>
-          <div className={`font-extrabold tabular-nums leading-none ${light ? 'text-white' : 'sfc-accent'}`} style={{ fontSize: Math.round(size * (shown >= 100 ? 0.17 : 0.21)) }}>{shown}%</div>
-          <div className={`mt-0.5 text-[10px] font-semibold uppercase tracking-wide ${light ? 'text-white/85' : 'text-muted-foreground'}`}>{label}</div>
+        <div className="max-w-[62%]">
+          <div data-ring-percent className={`font-extrabold tabular-nums leading-none ${light ? 'text-white' : 'sfc-accent'}`} style={{ fontSize: ringFont(size, `${shown}%`) }}>{shown}%</div>
+          <div className={`mt-0.5 max-w-full truncate font-semibold uppercase tracking-wide ${light ? 'text-white/85' : 'text-muted-foreground'}`} style={{ fontSize: Math.max(9, Math.min(11, Math.round(size * 0.11))) }}>{label}</div>
         </div>
       </div>
     </div>

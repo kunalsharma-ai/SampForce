@@ -268,6 +268,17 @@ test('the daily lead target counts only valid new companies, with 25, 50 and 75 
       await page.reload();
       await expect(page.locator('[data-my-achievements] [data-badge]').first()).toBeVisible();
       await expectCleanLayout(page, 'main');
+      // Each ring keeps its size, and its percent sits inside the ring's hole.
+      const rings = await page.locator('main [data-progress-ring]').evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect();
+          const t = el.querySelector('[data-ring-percent]')!.getBoundingClientRect();
+          const hole = r.width * 0.16;
+          return { size: Math.round(r.width), inside: t.left >= r.left + hole && t.right <= r.right - hole && t.top >= r.top + hole && t.bottom <= r.bottom - hole };
+        }),
+      );
+      expect(rings.length).toBeGreaterThan(0);
+      for (const ring of rings) expect(ring, `${mode} ${size.name}`).toEqual({ size: 88, inside: true });
       if (PREVIEW_DIR && mode === 'dark' && size.name === 'phone') await page.screenshot({ path: `${PREVIEW_DIR}/14-my-achievements-phone-dark.png`, fullPage: true });
     }
   }
