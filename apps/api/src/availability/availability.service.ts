@@ -1,5 +1,6 @@
 import type { TenantTx } from '@dealflow/database';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { AchievementsService } from '../achievements/achievements.service';
 import {
   AVAILABILITY_STATUSES,
   type AvailabilityEventKind,
@@ -68,6 +69,7 @@ export class AvailabilityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly achievements?: AchievementsService,
   ) {}
 
   /** The person's open session, closing it first when it was forgotten for a whole day. */
@@ -116,6 +118,8 @@ export class AvailabilityService {
       if (open) {
         const wasAway = statusOf(open, now).autoAway;
         const row = await tx.workSession.update({ where: { id: open.id }, data: { lastSeenAt: now, ...(wasAway ? { statusSince: now } : {}) } });
+        // Coming back after Away came by itself is an unplanned interruption, kept so the day can be judged fairly (ADR 0090).
+        if (wasAway) await tx.availabilityEvent.create({ data: { tenantId: auth.tenantId, userId: auth.userId, sessionId: open.id, kind: 'AWAY_ENDED', status: statusOf(row, now).status, at: now } });
         return this.meOf(row, now);
       }
       return this.meOf(await this.todaySession(tx, auth.tenantId, auth.userId, now), now);
@@ -168,6 +172,7 @@ export class AvailabilityService {
     return this.change(auth, 'CHECK_OUT', async (tx, open, now) => {
       const s = this.mustBeOpen(open);
       const breaks = breaksOf(s.breaks).map((b) => (b.end ? b : { ...b, end: now }));
+      this.achievements?.checkedOut(tx, auth.tenantId, auth.userId, s.id);
       return tx.workSession.update({ where: { id: s.id }, data: { checkedOutAt: now, breaks: breaksJson(breaks), statusSince: now } });
     });
   }

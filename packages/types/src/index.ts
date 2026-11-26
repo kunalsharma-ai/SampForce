@@ -80,3 +80,4 @@ export * from './console-activity';
 export * from './console-notifications';
 export * from './notification-center';
 export * from './availability';
+export * from './achievements';

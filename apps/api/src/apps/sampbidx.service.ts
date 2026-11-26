@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional, UnauthorizedException } from '@nestjs/common';
+import { AchievementsService } from '../achievements/achievements.service';
 import { createHash, randomBytes } from 'node:crypto';
 import { type AppConnection, Prisma, type SampbidxTransfer } from '@dealflow/database';
 import {
@@ -74,6 +75,7 @@ export class SampbidxService {
     private readonly notifications: NotificationsService,
     @Inject(SECRET_BOX) private readonly box: SecretBox,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    @Optional() private readonly achievements?: AchievementsService,
   ) {}
 
   // ─── Connection ───
@@ -852,6 +854,8 @@ export class SampbidxService {
         // SampBidx confirmed it: the employee who shared the RFQ moves to "RFQ Sent to SampBidx" (ADR 0080).
         const contactId = t.contactId ?? (t.rfqId ? (await tx.rfq.findFirst({ where: { id: t.rfqId, tenantId: auth.tenantId }, select: { contactId: true } }))?.contactId : null);
         await this.stages.advance(tx, auth, contactId, 'RFQ_SENT_SAMPBIDX', { source: 'SAMPBIDX', rfqId: t.rfqId, note: `SampBidx reference ${accepted.id}` });
+        // Only now, with SampBidx's confirmation, is it an achievement (ADR 0090): never for drafts, failures or while sending.
+        this.achievements?.rfqDelivered(tx, auth.tenantId, t.createdById ?? auth.userId, t.id);
       }
       return (await this.rows(tx, auth.tenantId, [updated]))[0]!;
     });
