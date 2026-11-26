@@ -100,6 +100,7 @@ model User {
   savedViews         SavedView[]
   managedTerritories Territory[]
   photo              UserPhoto?
+  profile            UserProfile?
 
   @@map("users")
 }
@@ -150,6 +151,30 @@ model UserPhoto {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("user_photos")
+}
+
+/// A person's own profile (ADR 0086): headline, quote, bio, LinkedIn, "ask me about" tags, a cover and their current
+/// mood. One per person, like the photo, and shown to the people in each organisation they belong to. The name and
+/// phone stay on the user.
+model UserProfile {
+  userId        String    @id @map("_id")
+  headline      String?
+  quote         String?
+  bio           String?
+  linkedinUrl   String?   @map("linkedin_url")
+  cover         String?
+  tags          String[]  @default([])
+  moodEmoji     String?   @map("mood_emoji")
+  moodText      String?   @map("mood_text")
+  moodSetAt     DateTime? @map("mood_set_at")
+  /// The mood clears itself after this time; null keeps it until it is changed.
+  moodExpiresAt DateTime? @map("mood_expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("user_profiles")
 }
 
 /// A person's own interface settings (theme, density, motion...). Follows the person across devices and workspaces.
