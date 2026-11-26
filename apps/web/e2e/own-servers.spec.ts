@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, openCopilot } from './helpers';
 
 /** Set PREVIEW_DIR to save screenshots of the new screens (used for previews). */
 const PREVIEW_DIR = process.env.PREVIEW_DIR;
@@ -61,7 +61,7 @@ test('a workspace admin adds its own AI key and email server, and both are used 
   await expect(page.getByText(/Falls back to: .*Anthropic Claude/)).toBeVisible();
   await expect(page.getByText(/own AI providers answer first, at no cost in AI credits/)).toBeVisible();
   await shot(page, '03-agents-own-provider-first');
-  await page.getByRole('button', { name: 'Copilot', exact: true }).click();
+  await openCopilot(page);
   const panel = page.getByRole('dialog', { name: 'SampForce Copilot' });
   await panel.getByRole('button', { name: 'Summarise my open pipeline.' }).click();
   await expect(panel.getByText(/This is a rule-based projection/)).toBeVisible();

@@ -246,4 +246,12 @@ export const notifications = {
   'New comment on {title}': ['Nuevo comentario en {title}', 'Nouveau commentaire sur {title}', 'Neuer Kommentar zu {title}', 'تعليق جديد على {title}'],
   'Due {date}.': ['Vence el {date}.', 'Échéance : {date}.', 'Fällig am {date}.', 'الاستحقاق: {date}.'],
   '{metric}: {amount}, {start} to {end}.': ['{metric}: {amount}, del {start} al {end}.', '{metric} : {amount}, du {start} au {end}.', '{metric}: {amount}, {start} bis {end}.', '{metric}: {amount}، من {start} إلى {end}.'],
+  // Working status (ADR 0081)
+  '{name} checked in': ['{name} ha fichado la entrada', '{name} a pointé son arrivée', '{name} hat eingecheckt', 'سجّل {name} الحضور'],
+  '{name} is on a break': ['{name} está en una pausa', '{name} est en pause', '{name} macht eine Pause', '{name} في استراحة'],
+  '{name} is back at work': ['{name} ha vuelto al trabajo', '{name} a repris le travail', '{name} arbeitet wieder', 'عاد {name} إلى العمل'],
+  '{name} is working': ['{name} está trabajando', '{name} travaille', '{name} arbeitet', '{name} يعمل الآن'],
+  '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
+  '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
+  '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
 } satisfies TextTable;

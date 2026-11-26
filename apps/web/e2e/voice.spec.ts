@@ -10,7 +10,6 @@ test('a typed voice note becomes a task and a note only after the person confirm
   const lead = (await post(page, '/leads', { fullName: 'Priya Shah', companyName: 'Acme', email: 'priya@acme.test' })).lead;
 
   await page.goto(`/app/leads/${lead.id}`);
-  await expect(page.getByRole('button', { name: 'Quick voice note' })).toBeVisible();
   const card = page.getByText('No voice notes yet.');
   await expect(card).toBeVisible();
   await page.getByRole('button', { name: 'New voice note' }).click();

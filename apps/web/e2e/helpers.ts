@@ -89,3 +89,15 @@ export async function workspaceAction(page: Page, workspace: string, action: 'Ed
   await page.getByRole('button', { name: `Actions for ${workspace}`, exact: true }).click();
   await page.getByRole('menuitem', { name: action, exact: true }).click();
 }
+
+/** Opens the header's account menu (redesign R1: Copilot, favourites, theme, help and Quick create live there). */
+export async function openAccountMenu(page: Page) {
+  await page.getByRole('button', { name: 'Account menu' }).click();
+  await expect(page.getByRole('menu')).toBeVisible();
+}
+
+/** Opens Copilot from the account menu. */
+export async function openCopilot(page: Page) {
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name: 'Copilot' }).click();
+}

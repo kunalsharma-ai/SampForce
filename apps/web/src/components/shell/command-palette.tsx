@@ -103,7 +103,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideClose className="overflow-hidden p-0">
+      {/* The search box is a combobox, which the dialog leaves Escape to; Escape here closes the search itself. */}
+      <DialogContent hideClose className="overflow-hidden p-0" onEscapeKeyDown={() => onOpenChange(false)}>
         <DialogTitle className="sr-only">Search SampForce</DialogTitle>
         <Command label="Search SampForce" shouldFilter={false} className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-muted-foreground">
           <Command.Input

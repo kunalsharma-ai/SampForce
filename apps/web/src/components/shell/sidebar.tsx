@@ -14,6 +14,7 @@ import { orderedModules, useNavigation, useTogglePin } from '@/lib/workspace-nav
 import { usePreferences } from '@/stores/preferences';
 import { useShell } from '@/stores/shell';
 import { Logo } from '../logo';
+import { useChatUnreadTotal } from './chat-button';
 
 const GROUPS: ModuleDef['group'][] = ['Workspace', 'Engage', 'Intelligence', 'Revenue', 'Organization'];
 
@@ -119,6 +120,8 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
   const features = useFeatures();
   // Unread notifications per section (ADR 0075), next to the section they come from.
   const bySection = useNotificationSummary(features.ready && features.has('notifications')).data?.bySection;
+  // Unread team chat messages, on Team chat (the header no longer has a chat button, redesign R1).
+  const chatUnread = useChatUnreadTotal();
 
   return (
     <nav aria-label={t('nav.main')} className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
@@ -161,7 +164,21 @@ export function SidebarNav({ collapsed = false, onNavigate, idPrefix = 'nav' }: 
                       onNavigate={onNavigate}
                       layoutId={`${idPrefix}-active`}
                       badge={
-                        m.status === 'planned' ? (
+                        m.slug === 'chat' && chatUnread !== null && !locked ? (
+                          chatUnread === 0 ? (
+                            <span className="sr-only" data-chat-unread={0}>
+                              {t('Team chat, {n} unread', { n: 0 })}
+                            </span>
+                          ) : (
+                            <span
+                              className="relative grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-[hsl(var(--sf-red))] px-1 text-[10px] font-bold text-white tabular"
+                              data-chat-unread={chatUnread}
+                            >
+                              <span aria-hidden>{chatUnread > 99 ? '99+' : chatUnread}</span>
+                              <span className="sr-only">{t('Team chat, {n} unread', { n: chatUnread })}</span>
+                            </span>
+                          )
+                        ) : m.status === 'planned' ? (
                           <Badge className="relative px-1.5 py-0 text-[10px]" title={`Planned: ${phaseLabel(m.phase)}`}>
                             {phaseLabel(m.phase, true)}
                           </Badge>

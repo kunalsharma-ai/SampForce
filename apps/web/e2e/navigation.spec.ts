@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { signUp, openAccountMenu } from './helpers';
 
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 const section = (page: Page, name: 'favourites' | 'modules') => sidebar(page).locator(`[data-nav-section="${name}"]`);
@@ -19,9 +19,12 @@ test('favourites are saved to the account and show in the sidebar and search; vi
 
   await page.goto('/app/deals');
   await expect(page.getByRole('heading', { level: 1, name: 'Deals' })).toBeVisible();
-  await page.getByRole('button', { name: 'Add this page to favourites' }).click();
+  await openAccountMenu(page);
+  await page.getByRole('menuitem', { name: 'Add this page to favourites' }).click();
   await expect(section(page, 'favourites').getByRole('link', { name: 'Deals' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Remove this page from favourites' })).toHaveAttribute('aria-pressed', 'true');
+  await openAccountMenu(page);
+  await expect(page.getByRole('menuitem', { name: 'Remove this page from favourites' })).toBeVisible();
+  await page.keyboard.press('Escape');
 
   // Visiting pages leaves no history: nothing is sent to the server and the sidebar has no Recent section.
   const visits: string[] = [];
@@ -110,7 +113,6 @@ test('keyboard shortcuts, Focus Workspace and search actions', async ({ page }) 
   await page.keyboard.press('Control+.');
   await expect(page.locator('html')).toHaveAttribute('data-focus', 'on');
   await expect(sidebar(page)).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Keyboard shortcuts' })).toBeHidden();
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-focus', 'on');
   await page.getByRole('button', { name: /Exit focus/ }).click();
