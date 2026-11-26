@@ -150,7 +150,7 @@ export function EmployeeActivitySection({ companyId, companyName, restricted = f
               </span>
             </div>
             <div role="table" aria-label={t('Employee RFQ activity')} className="divide-y divide-border rounded-xl border border-border">
-              <div role="row" className="hidden bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground lg:grid lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1.1fr)_minmax(0,1.7fr)_minmax(0,1.3fr)_auto] lg:gap-3">
+              <div role="row" className="hidden bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground 2xl:grid 2xl:grid-cols-[minmax(0,2.3fr)_minmax(0,1.1fr)_minmax(0,1.7fr)_minmax(0,1.3fr)_auto] 2xl:gap-3">
                 <span role="columnheader">{t('Employee')}</span>
                 <span role="columnheader">{t('RFQ activity')}</span>
                 <span role="columnheader">{t('Current stage')}</span>
@@ -188,7 +188,7 @@ function EmployeeLine({ row: r, stages, canWrite, onHistory }: { row: EmployeeAc
   const overdue = r.followUpsOverdue > 0;
   const editable = canWrite && r.details;
   return (
-    <div role="row" className={cn('grid grid-cols-1 gap-3 px-3 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-2 lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1.1fr)_minmax(0,1.7fr)_minmax(0,1.3fr)_auto] lg:items-center', r.contributor === 'ACTIVE' && 'bg-amber-50/40 dark:bg-amber-400/[0.04]')} data-employee={r.id}>
+    <div role="row" className={cn('grid grid-cols-1 gap-3 px-3 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-2 2xl:grid-cols-[minmax(0,2.3fr)_minmax(0,1.1fr)_minmax(0,1.7fr)_minmax(0,1.3fr)_auto] 2xl:items-center', r.contributor === 'ACTIVE' && 'bg-amber-50/40 dark:bg-amber-400/[0.04]')} data-employee={r.id}>
       <div role="cell" className="flex min-w-0 items-start gap-3">
         <span
           aria-hidden
@@ -297,7 +297,7 @@ function EmployeeLine({ row: r, stages, canWrite, onHistory }: { row: EmployeeAc
           </p>
         )}
       </div>
-      <div role="cell" className="flex items-center gap-1 sm:col-span-2 lg:col-span-1 lg:justify-end">
+      <div role="cell" className="flex items-center gap-1 sm:col-span-2 2xl:col-span-1 2xl:justify-end">
         <Button size="sm" variant="outline" onClick={onHistory} aria-label={t('History of {name}', { name: r.name })}>
           <History aria-hidden /> {t('History')}
         </Button>

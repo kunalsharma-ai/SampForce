@@ -109,7 +109,7 @@ export function StageIcon({ stage, className }: { stage: Pick<StageRef, 'key' | 
   return <Icon aria-hidden className={cn('size-3.5 shrink-0', className)} />;
 }
 
-/** A communication stage as a chip. `size="lg"` for headers. Long names truncate with the full name on hover. */
+/** A communication stage as a chip. `size="lg"` for headers. Long names wrap rather than being cut off. */
 export function StageChip({ stage, size = 'sm', className, animate }: { stage: Pick<StageRef, 'name' | 'color' | 'key' | 'phase'> | null | undefined; size?: 'sm' | 'lg'; className?: string; animate?: boolean }) {
   const t = useT();
   if (!stage) {
@@ -122,7 +122,7 @@ export function StageChip({ stage, size = 'sm', className, animate }: { stage: P
       title={name}
       data-stage={stage.key ?? stage.phase}
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full font-medium',
+        'inline-flex max-w-full items-center gap-1.5 rounded-full text-start font-medium leading-snug',
         size === 'lg' ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs',
         STAGE_CHIP,
         animate && 'duration-300 animate-in fade-in zoom-in-95',
@@ -130,7 +130,7 @@ export function StageChip({ stage, size = 'sm', className, animate }: { stage: P
       )}
     >
       <StageIcon stage={stage} />
-      <span className="truncate">{name}</span>
+      <span className="min-w-0 break-words">{name}</span>
     </span>
   );
 }
@@ -154,9 +154,9 @@ export function ContributorBadge({ status, className }: { status: ContributorSta
   const t = useT();
   const c = CONTRIBUTOR[status];
   return (
-    <span data-contributor={status} className={cn('inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold', c.cls, className)}>
+    <span data-contributor={status} className={cn('inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-start text-xs font-semibold leading-snug', c.cls, className)}>
       {c.icon && <c.icon aria-hidden className="size-3.5 shrink-0" />}
-      <span className="truncate">{t(c.label)}</span>
+      <span className="min-w-0 break-words">{t(c.label)}</span>
     </span>
   );
 }
@@ -210,13 +210,14 @@ export function StagePicker({
             return (
               <div key={phase} className="mb-1.5">
                 <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t(PHASE_LABEL[phase])}</p>
-                <ul className="flex flex-wrap gap-1.5 px-1" role="listbox" aria-label={t(PHASE_LABEL[phase])}>
+                <ul className="flex flex-wrap gap-1.5 px-1" aria-label={t(PHASE_LABEL[phase])}>
                   {list.map((s) => {
                     const on = s.id === current?.id;
                     return (
-                      <li key={s.id} role="option" aria-selected={on}>
+                      <li key={s.id}>
                         <button
                           type="button"
+                          aria-pressed={on}
                           onClick={() => pick(s.id)}
                           className={cn('relative inline-flex min-h-7 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', on && 'ring-2 ring-foreground/60 ring-offset-1 ring-offset-popover')}
                         >

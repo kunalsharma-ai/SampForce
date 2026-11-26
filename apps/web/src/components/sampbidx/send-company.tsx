@@ -223,11 +223,11 @@ function ChooseStep({
         {!p.employees.length ? (
           <p className="text-sm text-muted-foreground">{t('Add the employee who shared the RFQ to this company first.')}</p>
         ) : (
-          <ul role="radiogroup" aria-labelledby="who-shared" className="max-h-80 space-y-1.5 overflow-y-auto pe-1">
+          <div role="radiogroup" aria-labelledby="who-shared" className="max-h-80 space-y-1.5 overflow-y-auto pe-1">
             {people.map((e) => {
               const on = e.id === contactId;
               return (
-                <li key={e.id}>
+                <div key={e.id}>
                   <button
                     type="button"
                     role="radio"
@@ -252,10 +252,10 @@ function ChooseStep({
                       </span>
                     </span>
                   </button>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
         {chosen && p.employees.length > 1 && (
           <details className="rounded-xl border border-border bg-surface px-3 py-2">
@@ -282,12 +282,12 @@ function ChooseStep({
         <h3 id="which-rfq" className="text-sm font-semibold">
           {t('Which RFQ?')}
         </h3>
-        <ul role="radiogroup" aria-labelledby="which-rfq" className="max-h-96 space-y-1.5 overflow-y-auto pe-1">
-          <li>
+        <div role="radiogroup" aria-labelledby="which-rfq" className="max-h-96 space-y-1.5 overflow-y-auto pe-1">
+          <div>
             <RfqOption on={!rfqId} onClick={() => setRfqId(null)} title={t('Client details only')} sub={t('Create or update the client in SampBidx without an RFQ.')} />
-          </li>
+          </div>
           {p.rfqs.map((r) => (
-            <li key={r.id}>
+            <div key={r.id}>
               <RfqOption
                 on={r.id === rfqId}
                 onClick={() => setRfqId(r.id)}
@@ -296,9 +296,9 @@ function ChooseStep({
                 badge={r.alreadySent ? t('Already in SampBidx') : r.contact?.id === contactId ? t('From this employee') : null}
                 badgeTone={r.alreadySent ? 'teal' : 'primary'}
               />
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
         {!p.rfqs.length && <p className="text-xs text-muted-foreground">{t('This company has no RFQs yet. Record the RFQ first, or send the client details only.')}</p>}
         {chosenRfq?.alreadySent && (
           <label className="flex min-h-7 items-center gap-2 text-sm">
@@ -358,10 +358,10 @@ function RfqOption({ on, onClick, title, sub, badge, badgeTone }: { on: boolean;
 }
 
 /** A labelled value: shown as read, or as an input when SampBidx needs it and SampForce has none. */
-function FieldRow({ label, v, required, children, from }: { label: string; v: React.ReactNode; required?: boolean; children?: React.ReactNode; from?: SampbidxPreviewValue['from'] | null }) {
+function FieldRow({ label, v, required, children, from, done }: { label: string; v: React.ReactNode; required?: boolean; children?: React.ReactNode; from?: SampbidxPreviewValue['from'] | null; done?: boolean }) {
   const t = useT();
   return (
-    <div className={cn('grid min-w-0 gap-1 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-center sm:gap-3', children && required && 'rounded-lg bg-critical/[0.06] p-1.5 ring-1 ring-critical/40')}>
+    <div className={cn('grid min-w-0 gap-1 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-center sm:gap-3', children && required && !done && 'rounded-lg bg-critical/[0.06] p-1.5 ring-1 ring-critical/40')}>
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
         {required && <span className="text-critical"> *</span>}
@@ -484,7 +484,7 @@ function ReviewStep({
                 {pc.remoteId && <span className="font-mono text-[11px] text-muted-foreground">{pc.remoteId}</span>}
               </p>
               <dl className="space-y-2">
-                <FieldRow label={t('Email')} v={contactValue(pc, 'email')} required>
+                <FieldRow label={t('Email')} v={contactValue(pc, 'email')} required done={!!contactValue(pc, 'email')}>
                   {!pc.email.value ? <Input aria-label={t('Email of {name}', { name: String(pc.name.value ?? '') })} type="email" className="h-8" value={contactValue(pc, 'email') ?? ''} onChange={(e) => setFixContact(pc.id, { email: e.target.value })} /> : undefined}
                 </FieldRow>
                 <FieldRow label={t('Job title')} v={contactValue(pc, 'jobTitle')}>
@@ -493,10 +493,10 @@ function ReviewStep({
                 <FieldRow label={t('Phone')} v={contactValue(pc, 'phone')}>
                   {!pc.phone.value ? <Input aria-label={t('Phone of {name}', { name: String(pc.name.value ?? '') })} className="h-8" value={contactValue(pc, 'phone') ?? ''} onChange={(e) => setFixContact(pc.id, { phone: e.target.value })} /> : undefined}
                 </FieldRow>
-                <FieldRow label={t('Country')} v={pc.country.value ? <span className="inline-flex items-center gap-1.5"><CountryFlag code={String(pc.country.value)} decorative />{countryName(String(pc.country.value), t.formatLocale)}</span> : null} required from={pc.country.from}>
+                <FieldRow label={t('Country')} v={pc.country.value ? <span className="inline-flex items-center gap-1.5"><CountryFlag code={String(pc.country.value)} decorative />{countryName(String(pc.country.value), t.formatLocale)}</span> : null} required from={pc.country.from} done={!!contactValue(pc, 'country')}>
                   {!pc.country.value ? <CountrySelect aria-label={t('Country of {name}', { name: String(pc.name.value ?? '') })} value={contactValue(pc, 'country') ?? ''} onChange={(v) => setFixContact(pc.id, { country: v || undefined })} /> : undefined}
                 </FieldRow>
-                <FieldRow label={t('Time zone')} v={pc.timeZone.value ? String(pc.timeZone.value) : null} required from={pc.timeZone.from}>
+                <FieldRow label={t('Time zone')} v={pc.timeZone.value ? String(pc.timeZone.value) : null} required from={pc.timeZone.from} done={!!contactValue(pc, 'timeZone')}>
                   {!pc.timeZone.value ? <TimeZoneSelect aria-label={t('Time zone of {name}', { name: String(pc.name.value ?? '') })} value={contactValue(pc, 'timeZone') ?? ''} onChange={(v) => setFixContact(pc.id, { timeZone: v || undefined })} /> : undefined}
                 </FieldRow>
                 <FieldRow label={t('Marketing consent')} v={pc.marketingConsent ? t('Given') : t('Not recorded')} />
