@@ -606,8 +606,10 @@ export class CompanyWorkService {
     const scope = scopeOf(auth);
     if (q.scope === 'all' && scope === 'ALL') return base;
     if (q.scope === 'mine') return { ...base, assigneeId: auth.userId };
-    // Team: me and everyone reporting to me. Roles limited to their own records see only their own follow-ups.
-    const team = scope === 'OWN' ? [] : await reportingTree(tx, auth.tenantId, auth.userId);
+    // Team: me and everyone reporting to me, or in a Manager Workspace everyone in its branch (ADR 0071), as record
+    // visibility decides. Roles limited to their own records see only their own follow-ups.
+    const v = await visibility(tx, auth);
+    const team = scope === 'OWN' ? [] : v.all ? await reportingTree(tx, auth.tenantId, auth.userId) : v.userIds.filter((id) => id !== auth.userId);
     return { ...base, OR: [{ assigneeId: { in: [auth.userId, ...team] } }, { managerId: auth.userId }] };
   }
 

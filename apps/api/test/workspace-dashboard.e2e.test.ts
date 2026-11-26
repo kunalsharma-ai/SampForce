@@ -30,6 +30,7 @@ describe('workspace dashboards', () => {
   let northId: string;
   let southId: string;
   let priyaId: string;
+  let companyId: string;
   const db = ownerClient();
   const stamp = Date.now();
 
@@ -55,6 +56,7 @@ describe('workspace dashboards', () => {
 
     // Priya records a lead and a call; Arjun records nothing.
     const company = (await api(priya).post('/companies', { name: `Kantar Panels ${stamp}` }).expect(201)).body;
+    companyId = company.id;
     await api(priya).post('/activities', { type: 'CALL', subject: 'Intro call', companyId: company.id }).expect(201);
   });
 
@@ -98,6 +100,36 @@ describe('workspace dashboards', () => {
     expect(d.topManager.workspace.name).toBe('North India Sales');
     expect(d.topExecutive).toMatchObject({ workspace: { name: 'Priya Sharma' }, manager: { name: 'North India Sales' } });
     expect(d.work).toEqual(expect.objectContaining({ openTasks: expect.any(Number), overdueFollowUps: expect.any(Number) }));
+  });
+
+  it('adds what the role dashboards need: new companies, active deals, tasks, workload and where the executive left off (R6)', async () => {
+    const company = { id: companyId };
+    await api(priya).post('/deals', { name: 'Kantar tracker', amount: 4200, companyId: company.id, customFields: {} }).expect(201);
+    await api(north).post('/assigned-tasks', { title: 'Call the Kantar panel team', workspaceId: priyaId, dueAt: new Date(Date.now() + 3 * 86_400_000).toISOString() }).expect(201);
+
+    const day = (await api(priya).get('/workspace-dashboard').expect(200)).body;
+    expect(day.recent[0]).toMatchObject({ id: company.id, name: `Kantar Panels ${stamp}` });
+    expect(day.tasks).toEqual({ open: 1, overdue: 0, doneInPeriod: 0 });
+
+    const team = (await api(north).get('/workspace-dashboard').expect(200)).body;
+    expect(team.extras.newCompanies).toMatchObject({ count: 1, latest: [{ id: company.id }] });
+    expect(team.extras.activeDeals).toMatchObject({ count: 1, top: [{ name: 'Kantar tracker', amount: 4200, company: { id: company.id } }] });
+    expect(team.extras.tasks.open).toBe(1);
+    // Busiest first: Priya has the open task.
+    expect(team.extras.workload.map((w: { workspace: { name: string }; work: { openTasks: number } }) => [w.workspace.name, w.work.openTasks])).toEqual([['Priya Sharma', 1], ['Arjun Mehta', 0]]);
+
+    // The manager's team follow-up queue holds the executives' follow-ups (the workspace branch is the team).
+    await api(priya).post('/follow-ups', { companyId, type: 'CALL', title: 'Call Kantar back', dueAt: new Date(Date.now() - 3_600_000).toISOString() }).expect(201);
+    const queue = (await api(north).get('/follow-ups?scope=team&bucket=overdue').expect(200)).body as { title: string; assignee: { name: string } }[];
+    expect(queue.map((f) => [f.title, f.assignee.name])).toContainEqual(['Call Kantar back', 'Priya Sharma']);
+    expect(((await api(arjun).get('/follow-ups?scope=team&bucket=overdue').expect(200)).body as unknown[]).length).toBe(0);
+
+    const org = (await api(superAdmin).get('/workspace-dashboard').expect(200)).body;
+    expect(org.extras.newCompanies.count).toBe(1);
+    expect(org.extras.activeDeals.count).toBe(1);
+    expect(org.extras.workload.map((w: { workspace: { name: string } }) => w.workspace.name)).toEqual(['North India Sales', 'South India Sales']);
+    // Arjun's own day stays empty.
+    expect((await api(arjun).get('/workspace-dashboard').expect(200)).body).toMatchObject({ recent: [], tasks: { open: 0 } });
   });
 
   it('keeps the organisation’s figures to its administrators', async () => {

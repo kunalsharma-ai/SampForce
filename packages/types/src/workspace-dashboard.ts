@@ -58,6 +58,46 @@ export interface WorkCounts {
   overdueFollowUps: number;
 }
 
+/** A company as the role dashboards list it (redesign R6, ADR 0086). */
+export interface DashboardCompanyRef {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  /** When it was created (new companies) or last worked on by the caller (continue where you left off). */
+  at: string;
+}
+
+export interface DashboardDealRef {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  company: { id: string; name: string } | null;
+}
+
+/** Open, overdue and finished-in-the-period tasks handed down the hierarchy. */
+export interface TaskCounts {
+  open: number;
+  overdue: number;
+  doneInPeriod: number;
+}
+
+/** How much open work a workspace below the caller carries. */
+export interface WorkspaceWorkload {
+  workspace: DashboardWorkspace;
+  people: number;
+  work: WorkCounts;
+}
+
+/** What the manager and Super dashboards add for the team or organisation (redesign R6). */
+export interface TeamExtras {
+  newCompanies: { count: number; latest: DashboardCompanyRef[] };
+  activeDeals: { count: number; value: number; top: DashboardDealRef[] };
+  tasks: TaskCounts;
+  /** Per executive for a manager, per manager team for the Super Workspace, busiest first. */
+  workload: WorkspaceWorkload[];
+}
+
 interface DashboardBase {
   period: WorkspaceDashboardPeriod;
   start: string;
@@ -79,6 +119,7 @@ export interface SuperDashboard extends DashboardBase {
   topManager: WorkspacePerformance | null;
   topExecutive: WorkspacePerformance | null;
   work: WorkCounts;
+  extras: TeamExtras;
 }
 
 /** Leads, calls, deals and revenue for today, this week and this month: the manager's daily, weekly, monthly report. */
@@ -111,6 +152,7 @@ export interface ManagerDashboardView extends DashboardBase {
   trend: WorkspaceTrendPoint[];
   /** Other Manager Workspaces' figures, only when the Super Workspace allows it (never their records). */
   otherManagers: WorkspacePerformance[] | null;
+  extras: TeamExtras;
 }
 
 export interface UpcomingFollowUp {
@@ -137,6 +179,9 @@ export interface ExecutiveDay extends DashboardBase {
   targets: TargetTotal[];
   work: WorkCounts;
   upcoming: UpcomingFollowUp[];
+  tasks: TaskCounts;
+  /** The companies the executive worked on last, newest first: "continue where you left off". */
+  recent: DashboardCompanyRef[];
 }
 
 export type WorkspaceDashboard = SuperDashboard | ManagerDashboardView | ExecutiveDay;

@@ -4,6 +4,7 @@ import type { JourneyCard, JourneyStep, JourneyStageRow } from '@dealflow/types'
 import { Button, Card, CardContent, CardHeader, CardTitle, cn, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
 import { AlarmClock, CalendarClock, Check, CircleDot, CirclePause, CircleX, Inbox, Repeat, Search, Trophy, UsersRound } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { formatDate } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
@@ -20,7 +21,9 @@ export function JourneyBoardView() {
   const t = useT();
   const [q, setQ] = React.useState('');
   const [query, setQuery] = React.useState('');
-  const [mine, setMine] = React.useState(false);
+  // ?mine=true opens on the person's own companies (the dashboard's pipeline strip links here).
+  const params = useSearchParams();
+  const [mine, setMine] = React.useState(params.get('mine') === 'true');
   const [open, setOpen] = React.useState<JourneyCard | null>(null);
   React.useEffect(() => {
     const id = window.setTimeout(() => setQuery(q), 250);

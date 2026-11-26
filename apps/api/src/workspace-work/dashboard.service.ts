@@ -1,7 +1,12 @@
 import type { TenantTx } from '@dealflow/database';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import type {
+  DashboardCompanyRef,
+  DashboardDealRef,
   DashboardWorkspace,
+  TaskCounts,
+  TeamExtras,
+  WorkspaceWorkload,
   ExecutiveDay,
   ManagerDashboardView,
   PeriodReport,
@@ -20,6 +25,7 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { Metrics, r2 } from '../command-center/metrics';
 import { loadRates } from '../revenue/fx';
+import { CompanyLogosService } from '../crm/company-logos.service';
 import { RevenueRecordsService } from '../crm/revenue-records.service';
 import { branchIds, type NodeAccess, resolveOrganisation } from '../workspaces/access';
 import { WorkspacesService } from '../workspaces/workspaces.service';
@@ -56,6 +62,7 @@ export class WorkspaceDashboardService {
     private readonly targets: TargetsService,
     private readonly workspaces: WorkspacesService,
     private readonly revenue: RevenueRecordsService,
+    private readonly logos: CompanyLogosService,
   ) {}
 
   async dashboard(auth: AuthContext, period: WorkspaceDashboardPeriod): Promise<WorkspaceDashboard> {
@@ -68,7 +75,7 @@ export class WorkspaceDashboardService {
       const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, select: { name: true, defaultCurrency: true } });
       const now = new Date();
       const range = periodRange(period, now);
-      const c = new Counter(tx, auth.tenantId, tenant.defaultCurrency, await loadRates(tx, auth.tenantId), now);
+      const c = new Counter(tx, auth.tenantId, tenant.defaultCurrency, await loadRates(tx, auth.tenantId), now, (ids) => this.logos.refsIn(tx, auth.tenantId, ids));
       const running = targetRows.filter((t) => new Date(`${t.startsOn}T00:00:00Z`) <= now && now < new Date(new Date(`${t.endsOn}T00:00:00Z`).getTime() + DAY));
       const base = { period, start: range.start.toISOString(), end: range.end.toISOString(), currency: tenant.defaultCurrency };
       const ref = (a: NodeAccess): DashboardWorkspace => refOf(a, org, tenant.name);
@@ -92,6 +99,24 @@ export class WorkspaceDashboardService {
         };
       };
 
+      const nodes = [...org.byId.values()].map((a) => a.node);
+      /** Open work of each workspace below the caller, busiest first. */
+      const workload = async (list: NodeAccess[]): Promise<WorkspaceWorkload[]> => {
+        const rows = await Promise.all(
+          list.map(async (a) => {
+            const users = await c.branchUsers(org, a.node.id);
+            return { workspace: ref(a), people: users.length, work: await c.work(users, [...branchIds(nodes, a.node.id)]) };
+          }),
+        );
+        const load = (w: WorkspaceWorkload) => w.work.overdueTasks + w.work.overdueFollowUps;
+        const all = (w: WorkspaceWorkload) => w.work.openTasks + w.work.pendingFollowUps;
+        return rows.sort((x, y) => load(y) - load(x) || all(y) - all(x) || x.workspace.name.localeCompare(y.workspace.name));
+      };
+      const extras = async (users: string[] | null, nodeIds: string[] | null, below: NodeAccess[]): Promise<TeamExtras> => {
+        const [newCompanies, activeDeals, tasks, load] = await Promise.all([c.newCompanies(users, range.start, range.end), c.activeDeals(users), c.tasks(nodeIds, range.start, range.end), workload(below)]);
+        return { newCompanies, activeDeals, tasks, workload: load };
+      };
+
       if (me.level === 'SUPER') {
         // The organisation's figures are for its administrators; other Super Workspace members keep their own dashboards.
         if (!auth.permissions.includes('members:manage')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to do that.' });
@@ -102,6 +127,7 @@ export class WorkspaceDashboardService {
           Promise.all(live('EXECUTIVE').map(perf)),
           c.work(null, null),
         ]);
+        const orgExtras = await extras(null, null, live('MANAGER'));
         const view: SuperDashboard = {
           ...base,
           level: 'SUPER',
@@ -113,6 +139,7 @@ export class WorkspaceDashboardService {
           topManager: best(managers),
           topExecutive: best(executives),
           work,
+          extras: orgExtras,
         };
         return view;
       }
@@ -143,6 +170,7 @@ export class WorkspaceDashboardService {
           trend: await c.trend(users, now),
           // Figures only: other managers' records stay behind record visibility.
           otherManagers: others,
+          extras: await extras(users, [...branch], live('EXECUTIVE', me.node.id)),
         };
         return view;
       }
@@ -163,6 +191,8 @@ export class WorkspaceDashboardService {
         targets: totals_(mine),
         work: await c.work(users, [me.node.id]),
         upcoming: await c.upcoming(auth.userId, now),
+        tasks: await c.tasks([me.node.id], range.start, range.end),
+        recent: await c.recent(auth.userId),
       };
       return view;
     });
@@ -179,7 +209,80 @@ class Counter {
     private readonly currency: string,
     private readonly rates: Rates,
     private readonly now: Date,
+    private readonly logoRefs: (companyIds: string[]) => Promise<Map<string, { url: string | null }>>,
   ) {}
+
+  private async withLogos(rows: { id: string; name: string; at: Date }[]): Promise<DashboardCompanyRef[]> {
+    const logos = await this.logoRefs(rows.map((r) => r.id));
+    return rows.map((r) => ({ id: r.id, name: r.name, logoUrl: logos.get(r.id)?.url ?? null, at: r.at.toISOString() }));
+  }
+
+  /** Companies created by the people in scope in the period, and the latest five. */
+  async newCompanies(users: string[] | null, start: Date, end: Date): Promise<TeamExtras['newCompanies']> {
+    if (users && !users.length) return { count: 0, latest: [] };
+    const where = { tenantId: this.tenantId, deletedAt: null, createdAt: { gte: start, lt: end }, ...(users ? { createdById: { in: users } } : {}) };
+    const [count, rows] = await Promise.all([
+      this.tx.company.count({ where }),
+      this.tx.company.findMany({ where, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, name: true, createdAt: true } }),
+    ]);
+    return { count, latest: await this.withLogos(rows.map((r) => ({ id: r.id, name: r.name, at: r.createdAt }))) };
+  }
+
+  /** Open deals of the people in scope: how many, their value in the workspace currency, and the five largest. */
+  async activeDeals(users: string[] | null): Promise<TeamExtras['activeDeals']> {
+    if (users && !users.length) return { count: 0, value: 0, top: [] };
+    const m = this.metrics(users, this.now, this.now);
+    const open = await m.openDeals();
+    const value = await m.pipelineValue();
+    const top = await this.tx.opportunity.findMany({
+      where: { tenantId: this.tenantId, deletedAt: null, status: 'OPEN', ...(users ? { ownerId: { in: users } } : {}) },
+      orderBy: { amount: 'desc' },
+      take: 5,
+      select: { id: true, name: true, amount: true, currency: true, companyId: true },
+    });
+    const companyIds = [...new Set(top.map((d) => d.companyId).filter((x): x is string => !!x))];
+    const companies = companyIds.length ? await this.tx.company.findMany({ where: { tenantId: this.tenantId, id: { in: companyIds } }, select: { id: true, name: true } }) : [];
+    const name = new Map(companies.map((x) => [x.id, x.name]));
+    const refs: DashboardDealRef[] = top.map((d) => ({ id: d.id, name: d.name, amount: r2(d.amount), currency: d.currency, company: d.companyId && name.has(d.companyId) ? { id: d.companyId, name: name.get(d.companyId)! } : null }));
+    return { count: open.length, value, top: refs };
+  }
+
+  /** Tasks handed down the hierarchy to these workspaces (null = all): open, overdue, and finished in the period. */
+  async tasks(nodeIds: string[] | null, start: Date, end: Date): Promise<TaskCounts> {
+    const base = { tenantId: this.tenantId, deletedAt: null, workspaceNodeId: nodeIds ? { in: nodeIds } : { not: null } };
+    const [open, overdue, doneInPeriod] = await Promise.all([
+      this.tx.task.count({ where: { ...base, status: 'OPEN' } }),
+      this.tx.task.count({ where: { ...base, status: 'OPEN', dueAt: { lt: this.now } } }),
+      this.tx.task.count({ where: { ...base, status: 'DONE', completedAt: { gte: start, lt: end } } }),
+    ]);
+    return { open, overdue, doneInPeriod };
+  }
+
+  /** The companies a person last worked on (from the audit trail), else the ones they own updated last. */
+  async recent(userId: string): Promise<DashboardCompanyRef[]> {
+    const logs = await this.tx.auditLog.findMany({
+      where: { tenantId: this.tenantId, actorUserId: userId, entityType: 'company', entityId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: { entityId: true, createdAt: true },
+    });
+    const touched = new Map<string, Date>();
+    for (const l of logs) if (l.entityId && !touched.has(l.entityId)) touched.set(l.entityId, l.createdAt);
+    const ids = [...touched.keys()];
+    const alive = ids.length ? await this.tx.company.findMany({ where: { tenantId: this.tenantId, deletedAt: null, id: { in: ids } }, select: { id: true, name: true } }) : [];
+    const byId = new Map(alive.map((x) => [x.id, x.name]));
+    let rows = ids.filter((id) => byId.has(id)).slice(0, 4).map((id) => ({ id, name: byId.get(id)!, at: touched.get(id)! }));
+    if (rows.length < 4) {
+      const owned = await this.tx.company.findMany({
+        where: { tenantId: this.tenantId, deletedAt: null, ownerId: userId, id: { notIn: rows.map((r) => r.id) } },
+        orderBy: { updatedAt: 'desc' },
+        take: 4 - rows.length,
+        select: { id: true, name: true, updatedAt: true },
+      });
+      rows = [...rows, ...owned.map((o) => ({ id: o.id, name: o.name, at: o.updatedAt }))];
+    }
+    return this.withLogos(rows);
+  }
 
   /** People working in a workspace and everything below it. */
   async branchUsers(org: Org, nodeId: string): Promise<string[]> {

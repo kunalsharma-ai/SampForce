@@ -33,12 +33,12 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
   await page.getByLabel('Organization name').fill(org);
   await page.getByRole('button', { name: 'Start free' }).click();
   await expect(page).toHaveURL(/\/app/);
-  await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What is happening across the organisation?', level: 1 })).toBeVisible();
   if (plan !== 'free' || sections) {
     if (plan !== 'free') await setPlan(page, plan);
     if (sections) await setFeatures(page, { leads_section: true, accounts_section: true });
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Organisation overview', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What is happening across the organisation?', level: 1 })).toBeVisible();
   }
   if (autoConfirm) await autoConfirmDeletion(page, 'correcthorse1');
   return { email, password: 'correcthorse1' };
