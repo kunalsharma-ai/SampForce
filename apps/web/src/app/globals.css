@@ -14,6 +14,10 @@
   html.dark {
     color-scheme: dark;
   }
+  /* A page in Spanish, French, German or Arabic waits (at most 4 s) for its text, so it never flashes English. */
+  html[data-language-pending] body {
+    visibility: hidden;
+  }
   body {
     @apply bg-background font-sans text-foreground antialiased;
     font-feature-settings: 'cv11', 'ss01';

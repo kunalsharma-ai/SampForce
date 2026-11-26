@@ -190,7 +190,9 @@ export function useNotificationLive(enabled: boolean) {
     const hold = typeof navigator !== 'undefined' && navigator.webdriver ? 0 : 25;
     const loop = async () => {
       let backoff = 2_000;
-      latest = (await api<NotificationSummary>('/notifications/summary', { signal: stop.signal }).catch(() => null))?.latestAt ?? null;
+      // Shares the bell's own summary read (same query), so opening a page asks for the summary once, not twice.
+      latest = (await qc.fetchQuery({ queryKey: SUMMARY_KEY, queryFn: () => api<NotificationSummary>('/notifications/summary'), staleTime: 10_000 }).catch(() => null))?.latestAt ?? null;
+      if (stop.signal.aborted) return;
       heard = Math.max(readHeard(), latest ? Date.parse(latest) : 0);
       while (!stop.signal.aborted) {
         try {

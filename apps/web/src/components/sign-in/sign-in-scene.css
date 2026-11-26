@@ -146,8 +146,8 @@
 @keyframes sfs-confetti { 0% { transform: scale(0); } 6% { transform: scale(1); } 60%, 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0); } }
 
 /* The welcome after signing in: the card lifts in, the overlay steps aside. */
-.sfs-welcome-card { animation: sfs-lift 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
-.sfs-welcome-leave { animation: sfs-leave 0.7s cubic-bezier(0.7, 0, 0.3, 1) both; }
+.sfs-welcome-card { animation: sfs-lift 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.sfs-welcome-leave { animation: sfs-leave 0.4s cubic-bezier(0.7, 0, 0.3, 1) both; }
 @keyframes sfs-lift { from { transform: translateY(24px) scale(0.96); } to { transform: none; } }
 @keyframes sfs-leave { from { clip-path: circle(150% at 50% 50%); } to { clip-path: circle(0% at 50% 50%); transform: scale(1.04); } }
 
@@ -385,7 +385,11 @@
   color: transparent;
   animation: sfs-reveal 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.45s both, sfs-name-shine 2.4s ease-in-out 1.2s both;
 }
-.sfs-welcome-progress { transform-origin: 0 50%; animation: sfs-progress 2.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
+.sfs-welcome-progress { transform-origin: 0 50%; animation: sfs-progress 0.9s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both; }
+/* The welcome lasts about 1.5 s (welcome-overlay.tsx), so its text arrives quicker than on the sign-in page. */
+.sfs-welcome-card .sfs-greet { animation: sfs-reveal 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.05s both; }
+.sfs-welcome-card .sfs-headline, .sfs-welcome-card .sfs-sub { animation: sfs-reveal 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+.sfs-welcome-card .sfs-welcome-name { animation: sfs-reveal 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both, sfs-name-shine 0.9s ease-in-out 0.3s both; }
 [dir='rtl'] .sfs-welcome-progress { transform-origin: 100% 50%; }
 @keyframes sfs-sparkle { 0% { transform: translate(0, 0) scale(0); } 25% { transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.4)) scale(1.2) rotate(45deg); } 100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(180deg); } }
 @keyframes sfs-name-shine { from { background-position: 100% 0; } to { background-position: 0% 0; } }

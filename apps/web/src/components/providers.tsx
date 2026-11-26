@@ -5,7 +5,7 @@ import { DirectionProvider, TooltipProvider } from '@dealflow/ui';
 import { MotionConfig } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { useActiveLocale } from '@/lib/i18n';
+import { useActiveLocale, useCatalogueVersion } from '@/lib/i18n';
 import { translateData } from '@/lib/i18n/translate';
 import { applyPaint, computePaint, isDarkMode, PAINT_CACHE_KEY } from '@/lib/appearance-engine';
 import { usePreferences } from '@/stores/preferences';
@@ -61,6 +61,7 @@ function useRefetchOnLanguageChange(client: QueryClient) {
  */
 function useTranslatedTitle() {
   const { language, formatLocale } = useActiveLocale();
+  const loaded = useCatalogueVersion();
   useEffect(() => {
     if (language === 'en') return;
     let english = document.title;
@@ -81,7 +82,7 @@ function useTranslatedTitle() {
       observer.disconnect();
       if (document.title === shown) document.title = english;
     };
-  }, [language, formatLocale]);
+  }, [language, formatLocale, loaded]);
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
