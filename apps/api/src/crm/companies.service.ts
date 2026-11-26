@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { assignLeadNumbers, companyMatchKeys, points, Prisma, type TenantTx } from '@dealflow/database';
-import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, normalizeWorkingHours, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
+import { companyNameKey, type CompanyAddress, type CompanyDuplicateCheck, type CompanyLogoRef, type CompanyInput, type CompanyRow, type ContactPoint, type CrmStatusRef, type CustomFieldFilter, type DuplicateMatch, type EnrichField, type FieldSource, type Leader, type ListQuery, matchKeys, type MoreDetail, normalizeWorkingHours, type Page, type PersonRef, type SocialLink } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
@@ -144,7 +144,7 @@ export class CompaniesService {
   }
 
   /** Creates a company lead inside the caller's transaction (also used by the lead form). Returns its id. */
-  async createIn(tx: TenantTx, auth: AuthContext, input: CompanyInput, meta: RequestMeta): Promise<string> {
+  async createIn(tx: TenantTx, auth: AuthContext, input: CompanyInput, meta: RequestMeta, autofillSkip: EnrichField[] = []): Promise<string> {
     const ownerId = input.ownerId ?? auth.userId;
     await assertRefs(tx, auth.tenantId, { ownerId, parentCompanyId: input.parentCompanyId });
     await assertCompanyRefs(tx, auth.tenantId, input);
@@ -165,6 +165,10 @@ export class CompaniesService {
         updatedById: auth.userId,
         tenantId: auth.tenantId,
         customFields: (customFields ?? {}) as Prisma.InputJsonValue,
+        // Found details the person unticked when creating it: marked as their choice, so auto-fill never writes them.
+        ...(autofillSkip.length
+          ? { fieldSources: Object.fromEntries(autofillSkip.map((f) => [f, { source: 'USER', url: null, at: new Date().toISOString(), confidence: 'high', runId: null } satisfies FieldSource])) as Prisma.InputJsonValue }
+          : {}),
       },
     });
     await this.fields.claimFiles(tx, auth.tenantId, 'COMPANY', row.id, customFields);

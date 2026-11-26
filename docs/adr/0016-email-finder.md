@@ -15,7 +15,7 @@ whose terms forbid it.
      significant word of the name.
   2. *Pages*: the home page plus same-site contact/about/team/people/impressum links and common paths, at most 8
      pages, each under 1 MB and 6 seconds, only what `robots.txt` allows (`User-agent: *` or `SampForceBot`), only
-     public https addresses (the webhook SSRF guard, re-checked on every redirect). User agent `SampForceBot/1.0`.
+     public https addresses (the webhook SSRF guard, re-checked on every redirect). User agent `SampForceBot/1.0` (since ADR 0079: an ordinary Chrome user agent, robots.txt `User-agent: *` rules still honoured).
   3. *Addresses*: `mailto:` links and visible text (including "name [at] company [dot] com") at that domain or its
      subdomains. Other companies' and personal addresses are dropped.
   4. *Pattern*: from published addresses with a name (`first.last`, `flast`, …), and how many addresses support it.

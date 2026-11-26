@@ -36,10 +36,12 @@ const api = (params: Record<string, string>) => `${WIKIDATA_API}?${new URLSearch
 /** The company's item: by name, checked against the website; else by its website directly. */
 export async function findItem(get: JsonGet, company: { name: string; domain: string | null }): Promise<{ entity: Entity; byName: boolean } | null> {
   const ids = new Set<string>();
-  const search = (await get(api({ action: 'wbsearchentities', search: company.name.slice(0, 200), language: 'en', uselang: 'en', type: 'item', limit: '7' }))) as Json | null;
+  // Searched without its legal ending ("Pureprofile Ltd" -> "Pureprofile"); names compare without case or endings.
+  const short = withoutLegalEnding(company.name) || company.name;
+  const search = (await get(api({ action: 'wbsearchentities', search: short.slice(0, 200), language: 'en', uselang: 'en', type: 'item', limit: '7' }))) as Json | null;
   const hits = Array.isArray(search?.search) ? (search.search as Json[]) : [];
   for (const h of hits) if (typeof h.id === 'string' && /^Q\d+$/.test(h.id)) ids.add(h.id);
-  const exactName = new Set(hits.filter((h) => typeof h.label === 'string' && norm(h.label) === norm(company.name)).map((h) => String(h.id)));
+  const exactName = new Set(hits.filter((h) => typeof h.label === 'string' && sameName(h.label, company.name)).map((h) => String(h.id)));
   if (company.domain) {
     // Items whose official website is exactly the domain (with or without www, http or https).
     const variants = [`https://${company.domain}`, `https://www.${company.domain}`, `http://${company.domain}`, `http://www.${company.domain}`].flatMap((v) => [v, `${v}/`]);
@@ -161,6 +163,19 @@ export async function readItem(get: JsonGet, entity: Entity, byName: boolean): P
 // ───────────── claim helpers ─────────────
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/** Legal endings that do not tell companies apart: "Private Limited", "Pvt. Ltd.", "Inc.", "GmbH", "Pty Ltd" ... */
+const LEGAL_ENDING = /[\s,]+(?:(?:private|pvt|pte|pty|public)\.?\s+)?(?:limited|ltd|llc|l\.l\.c|llp|plc|inc|incorporated|corp|corporation|co|company|gmbh|ag|sa|s\.a|sas|sarl|bv|b\.v|nv|n\.v|oy|ab|as|spa|s\.p\.a|srl|kk|k\.k|pte|pty)\.?\s*$/i;
+
+/** The name without its legal ending (applied twice: "Acme Holdings Pty. Ltd." -> "Acme Holdings"). */
+export function withoutLegalEnding(name: string): string {
+  let s = name.trim();
+  for (let i = 0; i < 2; i++) s = s.replace(LEGAL_ENDING, '').trim();
+  return s;
+}
+
+/** Same company name, ignoring case, punctuation and legal endings. */
+export const sameName = (a: string, b: string) => norm(withoutLegalEnding(a)) === norm(withoutLegalEnding(b));
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const rankOrder = { preferred: 0, normal: 1, deprecated: 2 } as const;
 const byRank = (a: Claim, b: Claim) => rankOrder[a.rank ?? 'normal'] - rankOrder[b.rank ?? 'normal'];

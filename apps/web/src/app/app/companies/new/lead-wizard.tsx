@@ -5,6 +5,7 @@ import {
   companyLeadSchema,
   type CustomFieldDef,
   type DuplicateMatch,
+  type EnrichField,
   LEAD_FORM_STEPS,
   type LeadDraftRow,
   type LeadFormStep,
@@ -49,6 +50,7 @@ import { useTeams } from '@/lib/gamification';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { AutofillFinder } from './autofill-finder';
+import { employeeFromPerson } from '@/components/crm/found-people';
 
 const STEP_LABELS = {
   company: 'Company information',
@@ -108,6 +110,8 @@ interface LeadForm {
   company: CompanyValue;
   branches: BranchValue[];
   employees: EmployeeValue[];
+  /** Found details the person unticked in Find details: auto-fill leaves them out after saving. */
+  autofillSkip?: EnrichField[];
 }
 
 const one = (): PointValue[] => [{ value: '', primary: true }];
@@ -128,6 +132,7 @@ function fromDraft(d: LeadDraftRow): LeadForm {
     company: { ...base.company, ...(data.company ?? {}) },
     branches: (data.branches ?? []).map((b) => ({ ...emptyBranch(), ...b })),
     employees: (data.employees ?? []).map((e) => ({ ...emptyEmployee(), ...e })),
+    autofillSkip: data.autofillSkip ?? [],
   };
 }
 
@@ -145,6 +150,7 @@ function payload(form: LeadForm, draftId: string | null, fields: CustomFieldDef[
   );
   return {
     ...(draftId ? { draftId } : {}),
+    ...(form.autofillSkip?.length ? { autofillSkip: form.autofillSkip } : {}),
     company: {
       name: c.name,
       websites: filledPoints(c.websites),
@@ -355,7 +361,20 @@ export function LeadWizard() {
                 <div className="sm:col-span-2">
                   <PointsEditor id="lead-websites" label={t('Official website URL')} kind="url" values={c.websites} onChange={(websites) => setCompany({ websites })} errors={pointErrors(ce, 'websites')} addLabel={t('Add website')} />
                 </div>
-                <AutofillFinder company={c} onApply={setCompany} />
+                <AutofillFinder
+                  company={c}
+                  onApply={setCompany}
+                  skip={form.autofillSkip ?? []}
+                  onSkip={(autofillSkip) => setForm((f) => ({ ...f, autofillSkip }))}
+                  employeeNames={form.employees.map((e) => `${e.firstName} ${e.lastName}`.trim()).filter(Boolean)}
+                  onAddPeople={(people) =>
+                    setForm((f) => ({
+                      ...f,
+                      // A blank employee row left from the form's start is replaced, not kept above the found people.
+                      employees: [...f.employees.filter((e) => e.firstName.trim() || e.lastName.trim() || e.emails.some((p) => p.value.trim())), ...people.map((p) => employeeFromPerson(p))],
+                    }))
+                  }
+                />
                 <div className="sm:col-span-2">
                   <PointsEditor id="lead-linkedin" label={t('Company LinkedIn URL')} kind="url" values={c.linkedinUrls} onChange={(linkedinUrls) => setCompany({ linkedinUrls })} errors={pointErrors(ce, 'linkedinUrls')} addLabel={t('Add LinkedIn page')} />
                 </div>

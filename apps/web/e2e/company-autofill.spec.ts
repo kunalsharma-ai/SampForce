@@ -187,9 +187,11 @@ test('Create Company finds the details before saving; the person picks what to u
   const found = finder.getByRole('group', { name: /Found for this form/ });
   await expect(found).toContainText('2009');
   await expect(found.getByRole('checkbox', { name: /Description/ })).toBeChecked();
-  // Everything the form has no place for is added after saving.
-  await expect(finder).toContainText('Added after you save, with their sources');
-  await expect(finder).toContainText('Certifications');
+  // Everything the form has no place for is shown too, ticked, and added after saving; unticked ones are left out.
+  const later = finder.getByRole('group', { name: /Added when you save/ });
+  await expect(later.getByRole('checkbox', { name: /Certifications/ })).toBeChecked();
+  await expect(later).toContainText('ISO 27001');
+  await later.getByRole('checkbox', { name: /Social profiles/ }).uncheck();
   // Leave the industry guess out.
   await found.getByRole('checkbox', { name: /Industry/ }).uncheck();
   await axe(page);
@@ -212,6 +214,9 @@ test('Create Company finds the details before saving; the person picks what to u
   const saved = await (await page.request.get(`/api/v1/companies/${id}`)).json();
   expect(saved.certifications).toContain('ISO 27001');
   expect(saved.industry).toBe('Market research');
+  // The unticked profiles were not added, and auto-fill will not add them later either.
+  expect(saved.socialLinks ?? []).toEqual([]);
+  expect(saved.fieldSources.socialLinks.source).toBe('USER');
 });
 
 test('the AI email assistant writes for your own organisation from its sales profile, editable before sending', async ({ page }) => {
@@ -287,4 +292,36 @@ test('the AI email assistant writes for your own organisation from its sales pro
   await shot(page, '10-ai-email-open-in-email');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+});
+
+test('Find people lists the people a company publishes and adds the ticked ones as employees', async ({ page }) => {
+  test.setTimeout(90_000);
+  await signUp(page, 'Autofill People Org');
+  const res = await page.request.post('/api/v1/companies', { data: { name: 'Ashgrove Research', website: 'https://ashgrove-research.example' }, headers: ORIGIN });
+  expect(res.ok(), await res.text()).toBe(true);
+  const { id } = await res.json();
+
+  await page.goto(`/app/companies/${id}`);
+  const employees = page.locator('#company-employees');
+  await employees.getByRole('button', { name: 'Find people' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Find people at Ashgrove Research' });
+  const found = dialog.getByRole('group', { name: /People found/ });
+  await expect(found).toBeVisible({ timeout: 30_000 });
+  for (const name of ['Helen Marsh', 'Gareth Lowe', 'Priti Desai']) await expect(found.getByText(name, { exact: true })).toBeVisible();
+  await expect(found.getByText('Tom Baker')).toHaveCount(0);
+  await axe(page);
+  await shot(page, '06-find-people', dialog);
+  // Everyone is ticked; untick one and add the rest.
+  await found.getByRole('checkbox').first().uncheck();
+  const count = (await found.getByRole('checkbox').count()) - 1;
+  await dialog.getByRole('button', { name: `Add ${count} as employees` }).click();
+  await expect(dialog.getByRole('status')).toContainText(`Added ${count} people as employees.`);
+  // The ones added are not offered again.
+  await expect(found.getByRole('checkbox')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(employees.getByRole('row').filter({ hasText: /Marsh|Lowe|Desai/ })).toHaveCount(count);
+  await shot(page, '07-employees-added', employees);
+  const rows = (await (await page.request.get(`/api/v1/companies/${id}/employees`)).json()) as { remarks: string | null }[];
+  expect(rows.length).toBe(count);
+  for (const r of rows) expect(r.remarks).toMatch(/^Found by auto-fill on https:\/\/ashgrove-research\.example\//);
 });

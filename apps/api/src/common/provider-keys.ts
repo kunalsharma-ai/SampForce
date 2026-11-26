@@ -64,6 +64,7 @@ export const MANAGED_KEYS = {
   AI_PROVIDER_ORDER: { secret: false },
   TRUSTED_PRIVATE_HOSTS: { secret: false },
   COMPANY_AUTOFILL_WIKIDATA: { secret: false },
+  COMPANY_AUTOFILL_BROWSER: { secret: false },
   ONLINE_PAYMENTS_ENABLED: { secret: false },
   STRIPE_PRICES: { secret: false },
   STRIPE_AUTOMATIC_TAX: { secret: false },

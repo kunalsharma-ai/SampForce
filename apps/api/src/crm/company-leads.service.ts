@@ -48,7 +48,7 @@ export class CompanyLeadsService {
   /** Saves the company, its branches and employees together: all of it or nothing. */
   create(auth: AuthContext, input: CompanyLead, meta: RequestMeta): Promise<CompanyLeadResult> {
     return this.prisma.run(auth, async (tx) => {
-      const companyId = await this.companies.createIn(tx, auth, input.company as CompanyInput, meta);
+      const companyId = await this.companies.createIn(tx, auth, input.company as CompanyInput, meta, input.autofillSkip);
       const branchIds: string[] = [];
       for (const b of input.branches) {
         const row = await tx.companyBranch.create({ data: { ...b, tenantId: auth.tenantId, companyId } });

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import type { Prisma, TenantTx } from '@dealflow/database';
 import {
   type CompanyEnrichmentState,
@@ -10,8 +10,10 @@ import {
   type EnrichmentPreview,
   type EnrichmentPreviewRequest,
   type FieldSource,
+  type FoundPerson,
 } from '@dealflow/types';
 import { AuditService } from '../audit/audit.service';
+import { HunterClient } from '../finder/hunter';
 import { featureNotIncluded, hasFeature } from '../billing/entitlements';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { API_ENV, type ApiEnv } from '../common/env';
@@ -22,15 +24,20 @@ import { CompanyLogosService } from './company-logos.service';
 import { notFound } from './crm-helpers';
 import type { Candidate } from './enrichment/candidates';
 import { type CompanyNow, merge, sourcesOf, type StoredFill, undo, userEdits } from './enrichment/merge';
-import { type Page, pagesToRead, readWebsite } from './enrichment/website';
+import { looksLikeName, mergePeople, peopleFromCandidates, peopleOnPages } from './enrichment/people';
+import { readSitePages } from './enrichment/site-reader';
+import { readWebsite } from './enrichment/website';
 import { findItem, readItem } from './enrichment/wikidata';
-import { siteFetcher } from './site-fetch';
+import { findBrowser, PageRenderer } from './page-renderer';
+import { BROWSER_USER_AGENT, siteFetcher, WIKIDATA_USER_AGENT } from './site-fetch';
 import { canSeeDetails, companyScope, visibility } from './visibility';
 
-export const AUTOFILL_USER_AGENT = 'SampForceBot/1.0 (company details from public pages; reads a few pages per company)';
 const TIMEOUT_MS = 8000;
 const PAGE_MAX_BYTES = 1_500_000;
-const RUN_DEADLINE_MS = 45_000;
+/** Time for the whole look-up; pages opened in the hidden browser take a few seconds each. */
+const RUN_DEADLINE_MS = 60_000;
+/** Time for one page in the hidden browser. */
+const RENDER_TIMEOUT_MS = 15_000;
 const BATCH = 4;
 /** Runs that reached nothing are tried again after these waits, then given up (FAILED). */
 const RETRY_AFTER_MS = [10 * 60_000, 6 * 60 * 60_000];
@@ -43,7 +50,7 @@ const MANUAL_COOLDOWN_MS = 60_000;
 /** Look-ups before a company is saved, per person per minute. */
 const PREVIEWS_PER_MINUTE = 6;
 
-type Collected = { candidates: Candidate[]; sources: { url: string; kind: 'WEBSITE' | 'WIKIDATA' }[]; reached: boolean; error: string | null };
+type Collected = { candidates: Candidate[]; sources: { url: string; kind: 'WEBSITE' | 'WIKIDATA' }[]; reached: boolean; error: string | null; people: FoundPerson[] };
 
 /**
  * Company auto-fill (ADR 0076). Runs are queued when a company is created or imported, when its website changes and
@@ -51,16 +58,18 @@ type Collected = { candidates: Candidate[]; sources: { url: string; kind: 'WEBSI
  * (enrichment/merge.ts). Each run keeps what it wrote, so it can be undone field by field.
  */
 @Injectable()
-export class CompanyEnrichmentService {
+export class CompanyEnrichmentService implements OnModuleDestroy {
   private readonly log = new Logger(CompanyEnrichmentService.name);
   private inFlight: Promise<unknown> | null = null;
   /** When each person last looked companies up before saving them (rate limit). */
   private readonly previews = new Map<string, number[]>();
+  private browser: { path: string; renderer: PageRenderer } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly logos: CompanyLogosService,
+    private readonly hunter: HunterClient,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
@@ -127,7 +136,38 @@ export class CompanyEnrichmentService {
       .then(() => this.state(auth, companyId));
   }
 
-  /** Undoes a run, or some of its fields. */
+  /** A few look-ups a minute per person (Find details and Find people together). */
+  private throttle(auth: AuthContext): void {
+    const key = auth.userId || auth.tenantId;
+    const now = Date.now();
+    const recent = (this.previews.get(key) ?? []).filter((at) => now - at < 60_000);
+    if (recent.length >= PREVIEWS_PER_MINUTE) {
+      throw new HttpException({ code: 'TOO_SOON', message: 'You are looking up companies too quickly. Try again in a minute.' }, HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.previews.set(key, [...recent, now]);
+  }
+
+  /**
+   * People a saved company publishes (team page, leadership, Wikidata, a data provider), for "Find people" on its page.
+   * Nothing is stored: the person picks who to add, and they are added as employees through the contacts API.
+   */
+  async findPeople(auth: AuthContext, companyId: string): Promise<{ people: FoundPerson[]; error: string | null }> {
+    if (!auth.permissions.includes('contacts:write')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot add employees (contacts:write).' });
+    const company = await this.prisma.run(auth, async (tx) => {
+      if (!(await hasFeature(tx, auth.tenantId, 'company_enrichment'))) throw featureNotIncluded('company_enrichment');
+      return this.visibleCompany(tx, auth, companyId);
+    });
+    const domain = logoDomain(company.domain);
+    if (!domain && !this.wikidataOn()) throw new ConflictException({ code: 'NO_WEBSITE', message: 'Add the company’s website first.' });
+    this.throttle(auth);
+    const collected = await Promise.race([
+      this.collect(company.name, domain),
+      new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.', people: [] }), RUN_DEADLINE_MS).unref()),
+    ]);
+    const people = mergePeople([...collected.people, ...(domain ? await this.providerPeople(domain) : [])]);
+    return { people, error: people.length ? null : (collected.error ?? 'No people are listed on the company’s website or the other public sources.') };
+  }
+
   /**
    * Looks a company up before it is saved, for the review step of Create Company. Nothing is stored: the details are
    * filled into the form, and the run queued when the company is saved writes them with their sources.
@@ -139,23 +179,19 @@ export class CompanyEnrichmentService {
     });
     const domain = logoDomain(req.website ?? null);
     if (!domain && !this.wikidataOn()) throw new ConflictException({ code: 'NO_WEBSITE', message: 'Add the company’s website first.' });
-    const key = auth.userId || auth.tenantId;
-    const now = Date.now();
-    const recent = (this.previews.get(key) ?? []).filter((at) => now - at < 60_000);
-    if (recent.length >= PREVIEWS_PER_MINUTE) {
-      throw new HttpException({ code: 'TOO_SOON', message: 'You are looking up companies too quickly. Try again in a minute.' }, HttpStatus.TOO_MANY_REQUESTS);
-    }
-    this.previews.set(key, [...recent, now]);
+    this.throttle(auth);
     const collected = await Promise.race([
       this.collect(req.name, domain),
-      new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.' }), RUN_DEADLINE_MS).unref()),
+      new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.', people: [] }), RUN_DEADLINE_MS).unref()),
     ]);
     const blank: CompanyNow = { name: req.name, fieldSources: {}, website: domain ? `https://${domain}` : null, domain };
     const result = merge(blank, collected.candidates, 'preview', new Date());
+    const people = mergePeople([...collected.people, ...(domain ? await this.providerPeople(domain) : [])]);
     return {
       found: result.fills.map(({ undone: _undone, ...f }) => f),
+      people,
       sources: collected.sources,
-      error: result.fills.length ? null : collected.error,
+      error: result.fills.length || people.length ? null : collected.error,
     };
   }
 
@@ -189,6 +225,43 @@ export class CompanyEnrichmentService {
   private async editableCompany(tx: TenantTx, auth: AuthContext, id: string) {
     if (!auth.permissions.includes('companies:write')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Your role cannot change companies (companies:write).' });
     return this.visibleCompany(tx, auth, id);
+  }
+
+  /**
+   * People a data provider the operator set up knows at the domain, with the work email it found (Hunter.io's Domain
+   * Search). Only for Find details, where someone asked; a failing or unset provider gives none. Apollo is not asked:
+   * its search hides surnames and emails, and revealing them spends credits per person.
+   */
+  private async providerPeople(domain: string): Promise<FoundPerson[]> {
+    if (!this.hunter.configured) return [];
+    try {
+      const { emails } = await this.hunter.domainSearch({ domain });
+      return emails
+        .filter((e) => e.name && looksLikeName(e.name))
+        .map((e) => ({ name: e.name!, title: e.position, email: e.email, linkedinUrl: null, source: 'HUNTER' as const, url: null }));
+    } catch (err) {
+      this.log.warn({ err: errorMessage(err) }, 'hunter domain search failed');
+      return [];
+    }
+  }
+
+  /**
+   * The hidden browser for sites built by JavaScript (ADR 0079), or null when it is switched off or no Chromium is
+   * installed. One per process, started on first use and closed when idle.
+   */
+  private renderer(): PageRenderer | null {
+    if (this.env.COMPANY_AUTOFILL_BROWSER === false) return null;
+    const path = findBrowser(this.env.COMPANY_AUTOFILL_BROWSER_PATH);
+    if (!path) return null;
+    if (this.browser?.path !== path) {
+      void this.browser?.renderer.close();
+      this.browser = { path, renderer: new PageRenderer(path) };
+    }
+    return this.browser.renderer;
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.browser?.renderer.close();
   }
 
   private wikidataOn(): boolean {
@@ -236,7 +309,7 @@ export class CompanyEnrichmentService {
       const domain = logoDomain(company.domain) ?? c.domain;
       const collected = await Promise.race([
         this.collect(company.name, domain),
-        new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.' }), RUN_DEADLINE_MS).unref()),
+        new Promise<Collected>((resolve) => setTimeout(() => resolve({ candidates: [], sources: [], reached: false, error: 'The website took too long to answer.', people: [] }), RUN_DEADLINE_MS).unref()),
       ]);
       const attempts = c.attempts + 1;
       if (!collected.reached && !collected.candidates.length) {
@@ -259,11 +332,12 @@ export class CompanyEnrichmentService {
 
   /** Reads the website (and Wikidata), returning everything they offer. Never throws. */
   async collect(name: string, domain: string | null): Promise<Collected> {
-    const net = siteFetcher({ userAgent: AUTOFILL_USER_AGENT, timeoutMs: TIMEOUT_MS, pageMaxBytes: PAGE_MAX_BYTES, fixtureUrl: this.env.LOGO_FIXTURE_URL });
+    const net = siteFetcher({ userAgent: BROWSER_USER_AGENT, jsonUserAgent: WIKIDATA_USER_AGENT, timeoutMs: TIMEOUT_MS, pageMaxBytes: PAGE_MAX_BYTES, fixtureUrl: this.env.LOGO_FIXTURE_URL });
     const sources: Collected['sources'] = [];
     const candidates: Candidate[] = [];
     let error: string | null = null;
     let wikidataFailed = false;
+    const people: FoundPerson[] = [];
     const wikidata = async (d: string | null) => {
       if (!this.wikidataOn()) return null;
       try {
@@ -289,19 +363,20 @@ export class CompanyEnrichmentService {
     }
     let reached = false;
     if (site) {
-      let home: Page | null = null;
-      for (const start of [`https://${site}/`, `https://www.${site}/`]) {
-        home = await net.page(start).catch(() => null);
-        if (home) break;
-      }
-      if (home) {
+      const renderer = this.renderer();
+      const read = await readSitePages(
+        {
+          page: (u) => net.page(u),
+          file: (u, accept, max) => net.file(u, accept, max),
+          render: renderer ? (u) => renderer.render(u, net, RENDER_TIMEOUT_MS) : null,
+        },
+        site,
+      );
+      if (read) {
         reached = true;
-        sources.push({ url: home.url, kind: 'WEBSITE' });
-        const links = pagesToRead(home, site);
-        const extra = (await Promise.all([links.about, links.contact, links.offices].filter((u): u is string => !!u && u !== home.url).map((u) => net.page(u).catch(() => null)))).filter((p): p is Page => !!p);
-        for (const p of extra) sources.push({ url: p.url, kind: 'WEBSITE' });
-        const contactPage = extra.find((p) => p.url === links.contact)?.url ?? links.contact;
-        candidates.push(...readWebsite([home, ...extra], site, contactPage));
+        for (const p of read.pages) sources.push({ url: p.url, kind: 'WEBSITE' });
+        candidates.push(...readWebsite(read.pages, site, read.contactPage));
+        people.push(...peopleOnPages(read.pages, site));
       } else {
         error = `Could not reach ${site}`;
       }
@@ -311,7 +386,7 @@ export class CompanyEnrichmentService {
     // No website, and Wikidata answered without a match: there is nothing to retry.
     if (!site && !wikidataFailed) reached = true;
     if (!site && !candidates.length) error = 'No website, and Wikidata has no company with exactly this name.';
-    return { candidates, sources, reached, error };
+    return { candidates, sources, reached, error, people: mergePeople([...people, ...peopleFromCandidates(candidates)]) };
   }
 
   private async apply(c: { id: string; tenantId: string; companyId: string }, collected: Collected, attempts: number): Promise<void> {

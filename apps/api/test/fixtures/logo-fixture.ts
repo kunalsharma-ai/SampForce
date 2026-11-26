@@ -56,7 +56,7 @@ const mark = (from: string, to: string, inner: string) =>
 
 const html = (head: string) => `<!doctype html><html><head><title>Site</title>${head}</head><body>Made-up site</body></html>`;
 
-type Entry = { type: string; body: Buffer | string } | { redirect: string };
+type Entry = { type: string; body: Buffer | string; status?: number } | { redirect: string };
 
 /**
  * Stand-in company websites for logo look-ups. The API reaches them through LOGO_FIXTURE_URL as /site/<host>/<path>.
@@ -140,7 +140,7 @@ export async function startLogoFixture(port = 0): Promise<LogoFixture> {
       res.writeHead(301, { location: entry.redirect }).end();
       return;
     }
-    res.writeHead(200, { 'content-type': entry.type }).end(entry.body);
+    res.writeHead(entry.status ?? 200, { 'content-type': entry.type }).end(entry.body);
   });
   await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
   const bound = (server.address() as AddressInfo).port;
