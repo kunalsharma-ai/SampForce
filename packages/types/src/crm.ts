@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { customFieldFiltersParam } from './custom-fields';
-import { type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
+import { ENRICH_FIELDS, type FieldSource, type Leader, leaderSchema, type MoreDetail, moreDetailSchema, OPERATING_STATUSES, type SocialLink, socialLinkSchema } from './company-enrichment';
 
 // ───────────── Shared building blocks ─────────────
 
@@ -399,6 +399,8 @@ export const companyLeadSchema = z.object({
   employees: z.array(leadEmployeeSchema).max(50).default([]),
   /** The draft this lead was written in; it is deleted once the lead is saved. */
   draftId: z.string().uuid().optional(),
+  /** Details Find details found that the person unticked: auto-fill never writes them (ADR 0079). */
+  autofillSkip: z.array(z.enum(ENRICH_FIELDS)).max(ENRICH_FIELDS.length).optional(),
 });
 export type CompanyLeadInput = z.input<typeof companyLeadSchema>;
 

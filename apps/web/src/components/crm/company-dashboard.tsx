@@ -39,6 +39,7 @@ import {
   MessageSquareWarning,
   Link2,
   UserMinus,
+  UserSearch,
 } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
@@ -53,6 +54,7 @@ import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { type CompanyAction, useCompanyAction, useCompanyActions } from './company-actions';
 import { AddEmployeeDialog, LinkContactDialog } from './company-parts';
+import { FindPeopleDialog } from './found-people';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatDateTime } from './follow-ups';
@@ -362,6 +364,8 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
   const rows = useCompanyEmployees(company.id);
   const [adding, setAdding] = React.useState(false);
   const [linking, setLinking] = React.useState(false);
+  const [finding, setFinding] = React.useState(false);
+  const enrichment = useHasFeature('company_enrichment');
   const [editId, setEditId] = React.useState<string | null>(null);
   const [removing, setRemoving] = React.useState<string | null>(null);
   const [removeError, setRemoveError] = React.useState<string | null>(null);
@@ -413,6 +417,11 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
         </CardTitle>
         {canWrite && (
           <div className="flex flex-wrap gap-2">
+            {enrichment && (
+              <Button size="sm" variant="outline" onClick={() => setFinding(true)}>
+                <UserSearch aria-hidden /> {t('Find people')}
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setLinking(true)}>
               <Link2 aria-hidden /> {t('Add an existing contact')}
             </Button>
@@ -548,6 +557,7 @@ export function CompanyEmployeeDirectory({ company, compact = false }: { company
       <AddEmployeeDialog company={company} open={adding} onOpenChange={setAdding} />
       <AddEmployeeDialog company={company} open={!!editId} contactId={editId} onOpenChange={(o) => !o && setEditId(null)} />
       <LinkContactDialog company={company} open={linking} onOpenChange={setLinking} />
+      {enrichment && <FindPeopleDialog company={company} open={finding} onOpenChange={setFinding} knownNames={(rows.data ?? []).map((r) => r.name)} />}
     </Card>
   );
 }

@@ -1,8 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
+import type { FoundPerson } from '@dealflow/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { API_ENV, type ApiEnv } from '../src/common/env';
 import { CompanyEnrichmentService } from '../src/crm/company-enrichment.service';
 import { CompanyLogosService } from '../src/crm/company-logos.service';
 import { type AiFixture, createAiFixture } from './fixtures/ai-fixture';
+import { startFinderFixture } from './fixtures/finder-fixture';
 import { type LogoFixture, startLogoFixture } from './fixtures/logo-fixture';
 import { api, asTenant, inviteMember, registerUser, startApp, type TestUser } from './helpers';
 
@@ -129,6 +132,115 @@ describe('company auto-fill', () => {
     // A few look-ups a minute per person.
     for (let i = 0; i < 4; i++) await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(200);
     await http.post('/companies/autofill-preview', { name: 'Offline Co', website: 'offline-co.example' }).expect(429);
+  });
+
+  describe('sites that hide their details (ADR 0079)', () => {
+    let finder: ReturnType<typeof api>;
+    beforeAll(async () => {
+      // Previews are limited per person, so these use their own person.
+      finder = api(await registerUser(app, 'Autofill Finder Org'));
+    });
+    const preview = async (name: string, website: string) => {
+      const res = (await finder.post('/companies/autofill-preview', { name, website }).expect(200)).body as { found: { field: string; value: unknown; url: string | null }[]; sources: { url: string }[]; people: FoundPerson[] };
+      return { ...res, by: Object.fromEntries(res.found.map((f) => [f.field, f.value])) as Record<string, unknown> };
+    };
+
+    it('opens a site built by JavaScript in the hidden browser and reads what it draws', async () => {
+      const r = await preview('BrightSignal', 'https://brightsignal.example');
+      expect(r.by).toMatchObject({
+        primaryEmail: 'contact@brightsignal.example',
+        primaryPhone: '+1 415 555 0132',
+        linkedinUrl: 'https://www.linkedin.com/company/brightsignal-insights',
+        foundedYear: 2016,
+        city: 'San Francisco',
+        country: 'US',
+        services: ['Concept testing', 'Brand tracking', 'Shopper research'],
+      });
+      // About and Contact answer 404 to a plain request; in the browser they draw, so they are read.
+      expect(r.sources.map((s) => s.url)).toEqual(expect.arrayContaining(['https://brightsignal.example/', 'https://brightsignal.example/about', 'https://brightsignal.example/contact']));
+      // The page's own request for its data went through the server too.
+      expect(fixture.hits).toContain('brightsignal.example/api/site.json');
+      // The "Meet the team" section the browser drew: name, designation, email and LinkedIn as the page shows them.
+      expect(r.people).toEqual([
+        { name: 'Maya Okonkwo', title: 'Founder & CEO', email: 'maya.okonkwo@brightsignal.example', linkedinUrl: 'https://www.linkedin.com/in/maya-okonkwo-example', source: 'WEBSITE', url: 'https://brightsignal.example/about' },
+        { name: 'Daniel Reyes', title: 'Head of Research', email: 'daniel.reyes@brightsignal.example', linkedinUrl: 'https://www.linkedin.com/in/daniel-reyes-example', source: 'WEBSITE', url: 'https://brightsignal.example/about' },
+        { name: 'Aisha Rahman', title: 'Senior Project Manager', email: null, linkedinUrl: 'https://www.linkedin.com/in/aisha-rahman-example', source: 'WEBSITE', url: 'https://brightsignal.example/about' },
+      ]);
+    });
+
+    it('reads only the empty shell with the browser switched off', async () => {
+      // The console switch (ADR 0053 settings are read live from the environment object).
+      const env = app.get<ApiEnv>(API_ENV);
+      env.COMPANY_AUTOFILL_BROWSER = false;
+      try {
+        const r = await preview('BrightSignal', 'https://brightsignal.example');
+        expect(r.by.primaryEmail).toBeUndefined();
+        expect(r.by.primaryPhone).toBeUndefined();
+      } finally {
+        env.COMPANY_AUTOFILL_BROWSER = undefined;
+      }
+    });
+
+    it('reads the business sub-site and its contact page when the home page is for consumers', async () => {
+      const r = await preview('Pollpocket', 'https://pollpocket.example');
+      expect(r.sources.map((s) => s.url)).toEqual(['https://pollpocket.example/', 'https://business.pollpocket.example/', 'https://business.pollpocket.example/contact-us']);
+      expect(r.by).toMatchObject({ primaryEmail: 'sales@pollpocket.example', city: 'Pune', state: 'Maharashtra', postalCode: '411014', country: 'IN', foundedYear: 2015 });
+      // Phones shown without a label, and the US office written over two lines without its country.
+      expect((r.by.phones as { value: string }[]).map((p) => p.value)).toEqual(expect.arrayContaining(['+91 20 6123 4567', '+1 206 555 0182']));
+      expect(r.by.addresses).toEqual(expect.arrayContaining([expect.objectContaining({ label: 'US Office', country: 'US', city: 'Seattle', postalCode: '98101' })]));
+    });
+
+    it('finds About and Contact pages in the sitemap when the menu has no links', async () => {
+      const r = await preview('Stillwater Labs', 'https://stillwater-labs.example');
+      expect(r.sources.map((s) => s.url)).toEqual(['https://stillwater-labs.example/', 'https://stillwater-labs.example/company/about-stillwater', 'https://stillwater-labs.example/get-in-touch']);
+      expect(r.by).toMatchObject({ foundedYear: 2004, primaryEmail: 'info@stillwater-labs.example', primaryPhone: '+31 20 555 0199', contactPageUrl: 'https://stillwater-labs.example/get-in-touch' });
+    });
+
+    it('tries the usual contact address when there are no links and no sitemap, and reads the people page', async () => {
+      const r = await preview('Ashgrove Research', 'https://ashgrove-research.example');
+      expect(r.by).toMatchObject({ primaryEmail: 'hello@ashgrove-research.example', primaryPhone: '+44 113 496 0555' });
+      expect(r.people.map((p) => [p.name, p.title, p.email, p.linkedinUrl, p.source])).toEqual([
+        ['Gareth Lowe', 'Research Director', null, 'https://www.linkedin.com/in/gareth-lowe-example', 'SCHEMA_ORG'],
+        ['Helen Marsh', 'Managing Director', null, null, 'WEBSITE'],
+        ['Priti Desai', 'Senior Research Consultant', 'priti.desai@ashgrove-research.example', null, 'WEBSITE'],
+      ]);
+    });
+
+    it('adds the people a data provider knows, when the operator set one up', async () => {
+      const env = app.get<ApiEnv>(API_ENV);
+      const finderFixture = await startFinderFixture();
+      Object.assign(env, { HUNTER_API_KEY: 'hunter-test-key', HUNTER_API_BASE_URL: `${finderFixture.url}/hunter` });
+      try {
+        const other = api(await registerUser(app, 'Autofill Hunter Org'));
+        const r = (await other.post('/companies/autofill-preview', { name: 'Bluefin Logistics', website: 'https://bluefin-logistics.com' }).expect(200)).body as { people: FoundPerson[]; error: string | null };
+        expect(r.people).toEqual([{ name: 'Ana Ruiz', title: 'COO', email: 'ana.ruiz@bluefin-logistics.com', linkedinUrl: null, source: 'HUNTER', url: null }]);
+        expect(r.error).toBeNull();
+        expect(r.people.every((p) => p.source === 'HUNTER' && p.email?.endsWith('@bluefin-logistics.com'))).toBe(true);
+      } finally {
+        Object.assign(env, { HUNTER_API_KEY: undefined });
+        await finderFixture.close();
+      }
+    });
+
+    it('finds the people a saved company lists, for adding as employees, and stores nothing by itself', async () => {
+      const finderUser = await registerUser(app, 'Autofill People Org');
+      const finder = api(finderUser);
+      const created = (await finder.post('/companies', { name: 'Ashgrove People Co', website: 'https://ashgrove-research.example' }).expect(201)).body as { id: string };
+      const contactsBefore = await asTenant(finderUser.tenantId, (tx) => tx.contact.count());
+      const r = (await finder.post(`/companies/${created.id}/find-people`).expect(200)).body as { people: FoundPerson[]; error: string | null };
+      expect(r.error).toBeNull();
+      expect(r.people.map((p) => p.name)).toEqual(expect.arrayContaining(['Helen Marsh', 'Gareth Lowe', 'Priti Desai']));
+      expect(r.people.some((p) => p.name === 'Tom Baker')).toBe(false);
+      expect(await asTenant(finderUser.tenantId, (tx) => tx.contact.count())).toBe(contactsBefore);
+      // A role that cannot add employees is refused.
+      const viewer = await inviteMember(app, finderUser, 'viewer');
+      await api(viewer).post(`/companies/${created.id}/find-people`).expect(403);
+      // A company whose site lists nobody says so.
+      const empty = (await finder.post('/companies', { name: 'Offline People Co', website: 'offline-co.example' }).expect(201)).body as { id: string };
+      const none = (await finder.post(`/companies/${empty.id}/find-people`).expect(200)).body as { people: FoundPerson[]; error: string | null };
+      expect(none.people).toEqual([]);
+      expect(none.error).toBeTruthy();
+    });
   });
 
   it('combines the company’s own data with Wikidata, the company’s statement winning', async () => {

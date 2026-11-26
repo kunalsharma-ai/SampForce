@@ -27,6 +27,14 @@ export class CompanyEnrichmentController {
     return this.enrichment.enrich(auth, id, meta);
   }
 
+  /** People the company publishes, to add as employees (ADR 0079). Nothing is stored. */
+  @Post('find-people')
+  @HttpCode(200)
+  @RequirePermissions('contacts:write')
+  findPeople(@Auth() auth: AuthContext, @Param('id', uuid) id: string) {
+    return this.enrichment.findPeople(auth, id);
+  }
+
   /** Undoes what a run filled: every field, or the ones named. */
   @Post('enrichment/:runId/undo')
   @HttpCode(200)

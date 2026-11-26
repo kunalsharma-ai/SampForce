@@ -127,8 +127,87 @@ export function pagesToRead(home: Page, domain: string): SiteLinks {
       if (!out[k.kind] && (k.text.test(a.text) || k.path.test(path))) out[k.kind] = a.href.split('#')[0]!;
     }
   }
+  // No About page, but a link to the company's business or corporate site (pureprofile.com is a sign-up page for
+  // survey takers; business.pureprofile.com is the company): read that instead.
+  if (!out.about) {
+    for (const a of anchors(doc, home.url)) {
+      if (!sameSite(a.href, domain)) continue;
+      const u = new URL(a.href);
+      const label = u.hostname.toLowerCase().replace(/^www\./, '').slice(0, -(domain.length + 1));
+      if (BUSINESS_SUBDOMAIN.test(label) && u.hostname !== new URL(home.url).hostname) {
+        out.about = `${u.origin}/`;
+        break;
+      }
+    }
+  }
   if (out.about && out.about === out.contact) out.contact = null;
   return out;
+}
+
+/** The page listing the company's people ("Our team", "Leadership", /team, /people ...), linked from `page`. */
+export function teamPageLink(page: Page, domain: string): string | null {
+  const doc = parseDocument(page.html);
+  for (const a of anchors(doc, page.url)) {
+    if (!sameSite(a.href, domain)) continue;
+    const path = new URL(a.href).pathname;
+    if (TEAM_TEXT.test(a.text) || TEAM_PATH.test(path)) return a.href.split('#')[0]!;
+  }
+  return null;
+}
+const TEAM_TEXT = /^(our |the |meet (the |our )?)?(team|people|leadership( team)?|management( team)?|board( of directors)?|founders|experts)$/i;
+const TEAM_PATH = /\/(team|our-team|the-team|meet-the-team|meet-our-team|people|our-people|leadership|leadership-team|management|management-team|board|board-of-directors|founders)\/?$/i;
+
+/** Sub-sites that speak for the company itself rather than its consumers or shop. */
+const BUSINESS_SUBDOMAIN = /^(business|corporate|corp|company|about|investors?|ir|group|b2b|enterprise)$/;
+
+/** Fills the About, Contact and Offices pages that are still missing from a list of the site's page addresses (its sitemap). */
+export function pagesFromList(urls: string[], domain: string, have: SiteLinks): SiteLinks {
+  const out = { ...have };
+  for (const k of LINK_KINDS) {
+    if (out[k.kind]) continue;
+    // The shortest matching address is the main page ("/contact", not "/contact/thank-you").
+    const hit = urls
+      .filter((u) => sameSite(u, domain))
+      .filter((u) => {
+        try {
+          return k.path.test(new URL(u).pathname);
+        } catch {
+          return false;
+        }
+      })
+      .sort((a, b) => a.length - b.length)[0];
+    if (hit) out[k.kind] = hit.split('#')[0]!;
+  }
+  if (out.about && out.about === out.contact) out.contact = null;
+  return out;
+}
+
+/** The page addresses (<loc>) in a sitemap, and whether it is an index of other sitemaps. */
+export function sitemapEntries(xml: string): { urls: string[]; index: boolean } {
+  const urls = [...xml.matchAll(/<loc>\s*(?:<!\[CDATA\[)?\s*([^<\]\s]+)\s*(?:\]\]>)?\s*<\/loc>/gi)].map((m) => m[1]!.replace(/&amp;/g, '&')).slice(0, 5000);
+  return { urls, index: /<sitemapindex[\s>]/i.test(xml) };
+}
+
+/** The sitemaps robots.txt names. */
+export function sitemapsInRobots(txt: string): string[] {
+  return [...txt.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]!).slice(0, 5);
+}
+
+/**
+ * How much a page shows without running its scripts: the visible text length and the number of links. A page built
+ * by JavaScript (React, Vue, Angular, Wix ...) sends an almost empty body and shows little of either.
+ */
+export function pageWeight(html: string): { text: number; links: number } {
+  const doc = parseDocument(html);
+  const body = DomUtils.getElementsByTagName('body', doc)[0];
+  if (!body) return { text: 0, links: 0 };
+  return { text: clean(textWithBreaks(body)).length, links: DomUtils.getElementsByTagName('a', body).length };
+}
+
+/** True when a page probably needs its scripts to show its content. */
+export function looksEmpty(html: string): boolean {
+  const w = pageWeight(html);
+  return w.text < 400 || (w.links < 4 && w.text < 1500);
 }
 
 /** Everything the pages say about the company, as candidates. `pages[0]` is the home page. */
@@ -228,6 +307,14 @@ export function readWebsite(pages: Page[], domain: string, contactPageUrl: strin
     for (const m of b.text.matchAll(labelled)) {
       const num = tidyPhone(m[1]!);
       if (num && !phones.has(digitsKey(num))) phones.set(digitsKey(num), { point: { value: num, label: null }, page: b.page });
+    }
+    // Numbers shown without a label: an international number ("+91 120 456 7890") in a short block, such as a
+    // footer line, or a block that is nothing but a number. Long paragraphs are left alone (figures, not phones).
+    if (b.text.length <= 200) {
+      for (const raw of unlabelledPhones(b.text)) {
+        const num = tidyPhone(raw);
+        if (num && !phones.has(digitsKey(num))) phones.set(digitsKey(num), { point: { value: num, label: null }, page: b.page });
+      }
     }
   }
   if (emails.size) {
@@ -435,12 +522,15 @@ function officeAddresses(pages: (Page & { doc: Document })[]): Office[] {
   const out: Office[] = [];
   const seen = new Set<string>();
   for (const p of pages) {
-    for (const b of textBlocks(p.doc)) {
+    // Single blocks first ("12 Road, City 411001, India"), then addresses split over several lines or elements.
+    for (const b of [...textBlocks(p.doc), ...splitAddressBlocks(p.doc)]) {
       const text = b.text;
       if (text.length < 15 || text.length > 320) continue;
       const looksLikeAddress = b.tag === 'address' || (/\d/.test(text) && (text.match(/,/g) ?? []).length >= 2);
       if (!looksLikeAddress) continue;
-      const country = countryIn(text);
+      // Many addresses leave the country out; a US state with a ZIP code, an Indian state with a PIN code or a UK
+      // postcode says it.
+      const country = countryIn(text) ?? impliedCountry(text);
       if (!country) continue;
       // Not a sentence: addresses have few words per comma and no verbs like "we", "our".
       if (/\b(we|our|you|your|is|are|have|has|offer|provide)\b/i.test(text) && b.tag !== 'address') continue;
@@ -569,6 +659,52 @@ function textBlocks(doc: Document): Block[] {
 }
 
 /** Text with <br> and nested blocks turned into line breaks, so address lines stay apart. */
+/**
+ * Addresses written over several elements ("<div><p>Tower B, 9th Floor</p><p>Sector 62</p><p>Noida 201301</p></div>"):
+ * a container whose two to eight short lines together look like one address, joined with commas.
+ */
+function splitAddressBlocks(doc: Document): Block[] {
+  const out: Block[] = [];
+  for (const el of DomUtils.findAll((e) => ['div', 'address', 'li', 'p', 'td', 'section'].includes(e.name.toLowerCase()), doc.children)) {
+    if (!el.children.some((c) => c.type === 'tag' && BLOCK_TAGS.has((c as Element).name.toLowerCase()))) continue;
+    const lines = textWithBreaks(el)
+      .split(/\n+/)
+      .map((l) => clean(l).replace(/^[,\s]+|[,\s]+$/g, ''))
+      .filter(Boolean);
+    // A first line without digits ("Head Office", "India Office") is the office's name, not part of the address.
+    const heading = lines.length >= 2 && !/\d/.test(lines[0]!) && lines[0]!.split(' ').length <= 5 ? lines.shift()! : null;
+    if (lines.length < 2 || lines.length > 8 || lines.some((l) => l.length > 120)) continue;
+    const text = lines.join(', ');
+    if (text.length <= 320) out.push({ tag: el.name.toLowerCase() === 'address' ? 'address' : 'joined', text, heading });
+  }
+  return out;
+}
+
+const US_STATES = 'AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
+const INDIAN_STATES =
+  'Andhra Pradesh|Arunachal Pradesh|Assam|Bihar|Chhattisgarh|Goa|Gujarat|Haryana|Himachal Pradesh|Jharkhand|Karnataka|Kerala|Madhya Pradesh|Maharashtra|Manipur|Meghalaya|Mizoram|Nagaland|Odisha|Punjab|Rajasthan|Sikkim|Tamil Nadu|Telangana|Tripura|Uttar Pradesh|Uttarakhand|West Bengal|Delhi|New Delhi|Chandigarh|Puducherry|Jammu and Kashmir|Ladakh|Noida|Gurugram|Gurgaon|Mumbai|Bengaluru|Bangalore|Chennai|Hyderabad|Kolkata|Pune|Ahmedabad';
+const US_ADDRESS = new RegExp(`(?:,|\\s)\\s*(?:${US_STATES})\\s+\\d{5}(?:-\\d{4})?\\b`);
+const IN_ADDRESS = new RegExp(`\\b(?:${INDIAN_STATES})\\b[^\\d]{0,40}\\b\\d{3}\\s?\\d{3}\\b|\\b\\d{3}\\s?\\d{3}\\b[^\\d]{0,10}\\b(?:${INDIAN_STATES})\\b`, 'i');
+const UK_POSTCODE = /\b(?:[A-Z]{1,2}\d[A-Z\d]?)\s\d[A-Z]{2}\b/;
+
+/** The country an address implies without naming it, or null. */
+export function impliedCountry(text: string): { code: string; match: string } | null {
+  if (US_ADDRESS.test(text)) return { code: 'US', match: '' };
+  if (IN_ADDRESS.test(text)) return { code: 'IN', match: '' };
+  if (UK_POSTCODE.test(text) && /\b(London|Manchester|Birmingham|Leeds|Glasgow|Edinburgh|Bristol|Liverpool|Cambridge|Oxford|Reading|England|Scotland|Wales)\b/i.test(text)) return { code: 'GB', match: '' };
+  return null;
+}
+
+/** Phone numbers without a "Phone:" label: international numbers, or a block that is only a number. */
+export function unlabelledPhones(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/(?<![\w+/.-])\+\d{1,3}[\s.-]?\(?\d{1,5}\)?(?:[\s.-]?\d{2,5}){1,5}(?![\w/.-]*\d)/g)) out.push(m[0]);
+  // "020 4000 1234" or "(212) 555-0147" standing alone (after an icon or a word like "Call").
+  const alone = /^(?:call(?: us)?|phone|tel|mobile|whatsapp)?[\s:]*(\(?\d{2,5}\)?(?:[\s.-]\d{2,5}){2,4})$/i.exec(text.trim());
+  if (alone && alone[1]!.replace(/\D/g, '').length >= 9) out.push(alone[1]!);
+  return out;
+}
+
 function textWithBreaks(node: AnyNode): string {
   if (node.type === 'text') return (node as unknown as { data: string }).data;
   if (node.type !== 'tag') return '';

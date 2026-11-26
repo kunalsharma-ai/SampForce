@@ -11,6 +11,7 @@ import { CompanyLeadsService } from './company-leads.service';
 import { CompanyLogosController } from './company-logos.controller';
 import { CompanyLogosService } from './company-logos.service';
 import { CompanyAutofillPreviewController, CompanyEnrichmentController } from './company-enrichment.controller';
+import { HunterClient } from '../finder/hunter';
 import { CompanyEnrichmentService } from './company-enrichment.service';
 import { CompanyDashboardController, FollowUpsController, InteractionsController, RfqsController } from './company-work.controller';
 import { CompanyWorkService } from './company-work.service';
@@ -90,6 +91,7 @@ import {
     CompanyLeadsService,
     CompanyLogosService,
     CompanyEnrichmentService,
+    HunterClient,
     CompanyWorkService,
     NotificationsService,
     RevenueRecordsService,
