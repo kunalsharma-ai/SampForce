@@ -5,7 +5,7 @@ import { NoPasswordConfirmation } from '../common/password-confirmation';
 import { ZodPipe } from '../common/zod.pipe';
 import { ProfilesService } from './profiles.service';
 
-/** Personal profiles (ADR 0086): your own profile and mood, and your teammates' profiles. */
+/** Personal profiles (ADR 0087): your own profile and mood, and your teammates' profiles. */
 @MobileAccess()
 @Controller()
 export class ProfilesController {

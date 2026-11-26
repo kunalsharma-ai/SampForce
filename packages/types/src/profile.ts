@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * A person's own profile (ADR 0086): their photo (ADR 0072), a headline, a favourite quote, a short bio, contact
+ * A person's own profile (ADR 0087): their photo (ADR 0072), a headline, a favourite quote, a short bio, contact
  * details, a few "ask me about" tags, a cover colour and their current mood. One profile per person, shown in every
  * organisation they belong to, to the people in that organisation.
  */

@@ -9,6 +9,10 @@ export const validation = {
   Required: ['Obligatorio', 'Obligatoire', 'Pflichtfeld', 'مطلوب'],
   Invalid: ['No válido', 'Non valide', 'Ungültig', 'غير صالح'],
   'Give a phone number to be called on.': ['Indica un número de teléfono para llamarte.', 'Indiquez un numéro où vous rappeler.', 'Geben Sie eine Telefonnummer für den Rückruf an.', 'أدخل رقم هاتف للاتصال بك.'],
+  // Personal profiles (ADR 0087).
+  'Enter a LinkedIn address, such as linkedin.com/in/your-name': ['Introduce una dirección de LinkedIn, como linkedin.com/in/tu-nombre', 'Saisissez une adresse LinkedIn, par exemple linkedin.com/in/votre-nom', 'Geben Sie eine LinkedIn-Adresse ein, z. B. linkedin.com/in/ihr-name', 'أدخل عنوان LinkedIn، مثل linkedin.com/in/your-name'],
+  'Pick one emoji for your mood': ['Elige un emoji para tu estado de ánimo', 'Choisissez un emoji pour votre humeur', 'Wählen Sie ein Emoji für Ihre Stimmung', 'اختر رمزًا تعبيريًا واحدًا لمزاجك'],
+  'must be in the next 30 days': ['debe ser en los próximos 30 días', 'doit être dans les 30 prochains jours', 'muss in den nächsten 30 Tagen liegen', 'يجب أن يكون خلال الأيام الثلاثين القادمة'],
   'Invalid input': ['Dato no válido', 'Saisie non valide', 'Ungültige Eingabe', 'إدخال غير صالح'],
   'Invalid date': ['Fecha no válida', 'Date non valide', 'Ungültiges Datum', 'تاريخ غير صالح'],
   'Invalid email': ['Correo no válido', 'E-mail non valide', 'Ungültige E-Mail-Adresse', 'بريد إلكتروني غير صالح'],

@@ -3,7 +3,7 @@ import type { MyProfile, PersonCard, PersonProfile } from '@dealflow/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { api, inviteMember, ownerClient, registerUser, startApp, type TestUser } from './helpers';
 
-/** Personal profiles (ADR 0086): your own headline, quote, bio, contact details, tags, cover and mood. */
+/** Personal profiles (ADR 0087): your own headline, quote, bio, contact details, tags, cover and mood. */
 describe('personal profiles', () => {
   let app: INestApplication;
   let owner: TestUser;

@@ -220,7 +220,9 @@ test('profile photos are set on the web and the phone and shown on both', async 
   // The web: Account security has the photo; the account menu shows it once set.
   await page.goto('/app/account/security');
   await expect(page.getByRole('img', { name: 'No photo yet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add a photo' }).click();
   await page.getByLabel('Choose a photo').setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: picture });
+  await page.getByRole('button', { name: 'Save photo' }).click();
   await expect(page.getByRole('img', { name: 'Your photo' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Account menu' }).locator('img')).toBeVisible();
   const first = ((await (await page.request.get('/api/v1/auth/me')).json()) as { user: { photoUrl: string } }).user.photoUrl;

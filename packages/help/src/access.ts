@@ -19,6 +19,7 @@ export const GUIDE_CATEGORY: Readonly<Partial<Record<HelpId, HelpCategoryId>>> =
   'page.help': 'start',
   'page.notifications': 'start',
   'page.accountSecurity': 'account',
+  'page.myProfile': 'account',
   'page.themeStudio': 'account',
   'page.workspaces': 'workspaces',
   'page.mobileAccess': 'mobile',
@@ -211,7 +212,7 @@ const SECTION_PAGES: Readonly<Record<string, HelpId[]>> = {
   theme: ['page.themeStudio'],
   admin: ['page.administration'],
   security: ['page.workspaceSecurity'],
-  account: ['page.accountSecurity'],
+  account: ['page.myProfile', 'page.accountSecurity'],
 };
 
 /** Every guide entry once, in category order, with the sections of each page. */

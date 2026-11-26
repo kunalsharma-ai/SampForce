@@ -53,6 +53,7 @@ import { WorkspaceBadge, WorkspaceIdentityBlock } from './workspace-badge';
 import { ThemeSwitcher } from './theme-switcher';
 import { SidebarNav } from './sidebar';
 import { HelpMenu } from './help-menu';
+import { AccountAvatar, AccountProfileItems } from '../people/account-profile';
 
 const QUICK_CREATE: { kind: QuickCreateKind; permission: Permission }[] = [
   { kind: 'leads', permission: 'leads:write' },
@@ -94,13 +95,6 @@ export function Topbar() {
   const [navOpen, setNavOpen] = useState(false);
   const t = useT();
 
-
-  const initials = data?.user.name
-    .split(/\s+/)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border/70 bg-background/70 px-4 backdrop-blur-xl">
@@ -196,23 +190,15 @@ export function Topbar() {
             <button
               type="button"
               aria-label={t('top.account')}
-              className="ms-1 grid size-9 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-background"
+              className="ms-1 grid size-9 place-items-center rounded-full"
             >
-              {data?.user.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- a private, signed-in image that Next cannot optimise
-                <img src={data.user.photoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                (initials ?? '…')
-              )}
+              <AccountAvatar />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             {data && (
               <>
-                <div className="px-2 py-2">
-                  <p className="truncate text-sm font-medium">{data.user.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{data.user.email}</p>
-                </div>
+                <AccountProfileItems />
                 <DropdownMenuSeparator />
                 <WorkspaceIdentityBlock />
                 <DropdownMenuSeparator />

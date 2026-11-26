@@ -48,7 +48,7 @@ const userSelect = {
 } as const;
 
 /**
- * Personal profiles (ADR 0086). Each person edits their own; people in the same organisation can read it, and see
+ * Personal profiles (ADR 0087). Each person edits their own; people in the same organisation can read it, and see
  * everyone's photo, headline and mood on avatars across the app.
  */
 @Injectable()
