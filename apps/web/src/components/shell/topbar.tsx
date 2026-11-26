@@ -174,7 +174,7 @@ export function Topbar() {
         >
           <Search className="size-4 shrink-0 transition-colors group-hover:text-primary" aria-hidden />
           <span className="hidden min-w-0 flex-1 truncate text-start sm:block">{t('Search companies, contacts, deals, tasks...')}</span>
-          <kbd className="ms-auto hidden shrink-0 rounded border border-border px-1.5 text-[10px] md:inline">Ctrl K</kbd>
+          <kbd className="ms-auto hidden shrink-0 items-center whitespace-nowrap rounded-md border border-border bg-muted/60 px-1.5 py-0.5 font-sans text-[10px] font-medium leading-none lg:inline-flex" data-search-shortcut="">Ctrl K</kbd>
         </button>
       </div>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />

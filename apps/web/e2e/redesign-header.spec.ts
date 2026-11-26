@@ -151,6 +151,13 @@ test('an executive checks in, takes a break and checks out; the manager sees it 
       await manager.goto('/app/team-status');
       await expect(manager.locator('[data-person="Rahul Verma"]')).toBeVisible();
       await expectCleanLayout(manager, 'header[data-header="workspace"]');
+      // The Ctrl K hint stays on one line inside the search box, or is left out where the box is narrow.
+      const hint = manager.locator('[data-search-shortcut]');
+      if (await hint.isVisible()) {
+        const [k, box] = await Promise.all([hint.boundingBox(), manager.locator('[data-header-search]').boundingBox()]);
+        expect(k!.height, size.name).toBeLessThanOrEqual(22);
+        expect(k!.x + k!.width, size.name).toBeLessThanOrEqual(box!.x + box!.width);
+      }
       await expectCleanLayout(manager, 'main');
       await shot(manager, `07-team-status-${mode}-${size.name}`);
     }
