@@ -26,7 +26,8 @@ async function axe(page: Page) {
  */
 test('the home page: light and dark, the sign-up portal step by step, and signing in', async ({ browser }) => {
   test.setTimeout(120_000);
-  const ctx = await browser.newContext({ colorScheme: 'light' });
+  // Reduced motion: axe must not scan cards that are still fading in (their colours are mid-blend).
+  const ctx = await browser.newContext({ colorScheme: 'light', reducedMotion: 'reduce' });
   const page = await ctx.newPage();
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Close smarter.');
