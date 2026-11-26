@@ -73,8 +73,16 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       err?.details,
     );
   }
+  // A change went through: tell the celebration host, which asks the API whether it earned an achievement (ADR 0090).
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && typeof window !== 'undefined' && !QUIET_CHANGES.test(path)) window.dispatchEvent(new Event(CHANGE_EVENT));
   return body as T;
 }
+
+/** Fired on window after every successful change (POST, PUT, PATCH, DELETE) made through api(). */
+export const CHANGE_EVENT = 'sampforce:changed';
+/** Calls that change nothing a person would celebrate (presence beats, reading notifications, the claim itself). */
+const QUIET_CHANGES = /^\/(achievements\/claim|availability\/beat|notifications\/|chat\/|auth\/)/;
 
 /** Downloads a CSV export through the same refresh-aware path as JSON calls. */
 export async function downloadFile(path: string, fallbackName: string): Promise<void> {

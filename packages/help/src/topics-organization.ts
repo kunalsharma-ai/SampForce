@@ -770,6 +770,30 @@ export const organizationHelp = {
       'ترى المساحة الرئيسية الجميع، ويرى المدير فريقه، ويرى التنفيذي نفسه.',
     ],
   },
+  'page.achievements': {
+    title: 'My achievements',
+    what: [
+      'Your real achievements: companies converted into deals, RFQs SampBidx confirmed, lead and sales targets reached, cleared days and milestones, with your progress today.',
+      'Tus logros reales: empresas convertidas en oportunidades, RFQ confirmadas por SampBidx, objetivos de leads y de ventas alcanzados, días completados e hitos, con tu progreso de hoy.',
+      'Vos vraies réussites : entreprises converties en opportunités, RFQ confirmées par SampBidx, objectifs de prospects et de ventes atteints, journées bouclées et jalons, avec votre progression du jour.',
+      'Ihre echten Erfolge: in Deals umgewandelte Unternehmen, von SampBidx bestätigte RFQs, erreichte Lead- und Umsatzziele, erledigte Tage und Meilensteine, mit Ihrem heutigen Fortschritt.',
+      'إنجازاتك الحقيقية: شركات تحوّلت إلى صفقات، وطلبات عروض أكّدتها SampBidx، وأهداف عملاء محتملين ومبيعات تحققت، وأيام أنجزتها ومحطات مهمة، مع تقدّمك اليوم.',
+    ],
+    how: [
+      'SampForce records each achievement once, after the work is confirmed, and celebrates it once. Open an item to see it again without the animation. Celebration settings are at the bottom.',
+      'SampForce registra cada logro una vez, cuando el trabajo está confirmado, y lo celebra una vez. Abre un elemento para verlo de nuevo sin la animación. Los ajustes de celebración están abajo.',
+      'SampForce enregistre chaque réussite une fois, quand le travail est confirmé, et la célèbre une fois. Ouvrez un élément pour le revoir sans l’animation. Les réglages des célébrations sont en bas.',
+      'SampForce erfasst jeden Erfolg einmal, sobald die Arbeit bestätigt ist, und feiert ihn einmal. Öffnen Sie einen Eintrag, um ihn ohne Animation erneut zu sehen. Die Feier-Einstellungen stehen unten.',
+      'يسجّل SampForce كل إنجاز مرة واحدة بعد تأكيد العمل، ويحتفل به مرة واحدة. افتح أي عنصر لتراه مجددًا دون الحركة. إعدادات الاحتفال في الأسفل.',
+    ],
+    where: [
+      'Only you see your achievements. A target set by your manager replaces your personal target while it runs.',
+      'Solo tú ves tus logros. Un objetivo fijado por tu gerente sustituye a tu objetivo personal mientras dura.',
+      'Vous seul voyez vos réussites. Un objectif fixé par votre manager remplace votre objectif personnel pendant sa durée.',
+      'Nur Sie sehen Ihre Erfolge. Ein Ziel Ihres Managers ersetzt Ihr persönliches Ziel, solange es läuft.',
+      'أنت وحدك ترى إنجازاتك. الهدف الذي يحدده مديرك يحلّ محل هدفك الشخصي طوال مدته.',
+    ],
+  },
   'page.workspaces': {
     title: 'Workspaces',
     what: [
