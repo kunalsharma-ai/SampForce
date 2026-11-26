@@ -37,6 +37,7 @@ test('every panel of the company page has its own colour and icon, in light, dar
   });
   await post(page, '/rfqs', { companyId: lead.company.id, contactId: lead.employeeIds[0], projectName: 'UK drivers survey', currency: 'GBP' });
 
+  await page.evaluate(() => localStorage.removeItem('sf.companyMore'));
   await page.goto(`/app/companies/${lead.company.id}`);
   await expect(page.getByRole('heading', { name: /RFQs/ }).first()).toBeVisible();
   await expect(page.locator('[data-tone="voice-notes"] .df-card').first()).toBeVisible();
@@ -46,13 +47,32 @@ test('every panel of the company page has its own colour and icon, in light, dar
     els.map((e) => ({ name: e.getAttribute('data-tone'), dot: getComputedStyle(e).getPropertyValue('--st-dot').trim(), card: !!e.querySelector(':scope > .df-card, :scope > section, :scope > div:not(.sf-tone-medal)') })),
   );
   const names = tones.map((t) => t.name);
-  for (const n of ['business-information', 'business-overview', 'employees', 'interactions', 'rfqs', 'deals', 'branches', 'commercial', 'portal', 'voice-notes', 'lead', 'follow-ups', 'ownership', 'concerns', 'files', 'intelligence'])
+  for (const n of ['lead-status', 'business-information', 'business-overview', 'employees', 'interactions', 'rfqs', 'deals', 'branches', 'commercial', 'portal', 'voice-notes'])
     expect(names, n).toContain(n);
   expect(tones.every((t) => t.card && t.dot)).toBe(true);
-  for (const col of [['business-overview', 'employees', 'interactions', 'rfqs', 'deals'], ['lead', 'follow-ups', 'ownership', 'concerns', 'files']]) {
+  for (const col of [['lead-status', 'business-information', 'business-overview', 'employees', 'interactions', 'rfqs', 'deals']]) {
     const dots = col.map((n) => tones.find((t) => t.name === n)!.dot);
     expect(new Set(dots).size).toBe(dots.length);
   }
+
+  // One column, no right-hand panels; the header names the website once (the round icon) and no phone.
+  const hero = page.locator('section[aria-labelledby="company-name"]');
+  await expect(hero.getByRole('list', { name: 'Contact details' }).getByRole('link', { name: /Website|Phone/ })).toHaveCount(0);
+  await expect(page.locator('[data-tone="lead"], [data-tone="ownership"]').filter({ visible: true })).toHaveCount(0);
+
+  // The lead status is changed from the middle of the page with one click.
+  const bar = page.locator('#company-lead');
+  await bar.getByRole('button', { name: 'Discussion Phase' }).click();
+  await expect(bar.getByRole('button', { name: 'Discussion Phase' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(bar.getByText(/^Since /)).toBeVisible();
+
+  // The other panels are one click away, closed, and the quick actions still open them.
+  const more = page.locator('[data-company-more]');
+  await expect(more).not.toHaveAttribute('open', '');
+  await page.getByRole('toolbar', { name: 'Quick actions' }).getByRole('button', { name: 'Upload document' }).click();
+  await expect(more).toHaveAttribute('open', '');
+  await expect(page.locator('[data-tone="files"]')).toBeVisible();
+  await more.locator('summary').click();
 
   // The panels still work: an RFQ added earlier is listed in its toned panel.
   await expect(page.locator('[data-tone="rfqs"]').getByText('UK drivers survey')).toBeVisible();
@@ -60,6 +80,7 @@ test('every panel of the company page has its own colour and icon, in light, dar
   const a11y = await new AxeBuilder({ page }).include('[data-tone]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(a11y.violations.map((v) => `${v.id} ${v.nodes[0]?.target} ${v.nodes[0]?.failureSummary}`)).toEqual([]);
 
+  await shoot(page, 'lead-status', '00-status-light.png');
   await shoot(page, 'business-information', '01-top-light.png');
   await shoot(page, 'business-overview', '02-overview-employees-interactions-light.png');
   await shoot(page, 'rfqs', '03-rfqs-deals-branches-light.png');
@@ -68,7 +89,7 @@ test('every panel of the company page has its own colour and icon, in light, dar
   await setTheme(page, 'dark');
   await page.reload();
   await expect(page.locator('[data-tone="rfqs"]').getByText('UK drivers survey')).toBeVisible();
-  await shoot(page, 'business-information', '05-top-dark.png');
+  await shoot(page, 'lead-status', '05-top-dark.png');
   await shoot(page, 'business-overview', '06-overview-dark.png');
   await shoot(page, 'rfqs', '07-rfqs-deals-dark.png');
 

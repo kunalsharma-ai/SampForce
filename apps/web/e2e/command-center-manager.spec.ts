@@ -114,6 +114,8 @@ test('a manager runs their team from the manager dashboard: instructions, follow
 
   // Rahul sees it on his dashboard and in the bell, acknowledges it and marks it done.
   const rp = await people.rahul!.ctx.newPage();
+  // The company page's lower panels (client concerns) start open for this suite, as signUp does for the owner.
+  await rp.addInitScript(() => localStorage.setItem('sf.companyMore', 'open'));
   await rp.goto('/app');
   const received = rp.getByTestId('instructions-received');
   await expect(received).toContainText('Call Priya today and confirm the sample size');
