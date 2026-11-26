@@ -79,6 +79,7 @@ export const notifications = {
   '{name} was assigned to you': ['Se te asignó {name}', '{name} vous a été attribué', '{name} wurde Ihnen zugewiesen', 'أُسند إليك {name}'],
   'New task for you: {title}': ['Nueva tarea para ti: {title}', 'Nouvelle tâche pour vous : {title}', 'Neue Aufgabe für Sie: {title}', 'مهمة جديدة لك: {title}'],
   'Deal won: {deal}': ['Oportunidad ganada: {deal}', 'Opportunité gagnée : {deal}', 'Verkaufschance gewonnen: {deal}', 'صفقة مربوحة: {deal}'],
+  'Client won: deal {deal} created for {company}': ['Cliente ganado: oportunidad {deal} creada para {company}', 'Client gagné : opportunité {deal} créée pour {company}', 'Kunde gewonnen: Verkaufschance {deal} für {company} angelegt', 'تم كسب العميل: أُنشئت الصفقة {deal} لـ {company}'],
   'Workflow "{name}" failed': ['Falló el flujo de trabajo «{name}»', 'Le workflow « {name} » a échoué', 'Workflow „{name}“ ist fehlgeschlagen', 'فشل سير العمل «{name}»'],
   'Approval needed: {title}': ['Se necesita aprobación: {title}', 'Approbation requise : {title}', 'Freigabe erforderlich: {title}', 'مطلوب اعتماد: {title}'],
   'A conversation was assigned to you': ['Se te asignó una conversación', 'Une conversation vous a été attribuée', 'Ihnen wurde eine Unterhaltung zugewiesen', 'أُسندت إليك محادثة'],

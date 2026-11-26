@@ -6,6 +6,8 @@ import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, notFound, orderBy, paging } from './crm-helpers';
 import { NotificationsService } from '../notifications/notifications.service';
+import { isClientStatus } from './company-deal-sync';
+import { CompanyDealsService } from './company-deals.service';
 import { CustomFieldsService } from './custom-fields.service';
 import { CompanyLogosService } from './company-logos.service';
 import { CompanyEnrichmentService, publicSources } from './company-enrichment.service';
@@ -51,6 +53,7 @@ export class CompaniesService {
     private readonly notifications: NotificationsService,
     private readonly logos: CompanyLogosService,
     private readonly enrichment: CompanyEnrichmentService,
+    private readonly companyDeals: CompanyDealsService,
   ) {}
 
   /** The row context, with logo references; companies with a website that were never looked up are queued. */
@@ -243,6 +246,8 @@ export class CompaniesService {
           tenantId: auth.tenantId, actorUserId: auth.userId, action: 'company.status_changed', entityType: 'company', entityId: id,
           metadata: { from: before.statusId, to: input.statusId }, meta,
         });
+        // Becoming a client moves the company to Deals (ADR 0084).
+        if ((await isClientStatus(tx, auth.tenantId, input.statusId)) && !(await isClientStatus(tx, auth.tenantId, before.statusId))) await this.companyDeals.companyWon(tx, auth, id, meta);
       }
       if (ownerChanged) {
         await this.audit.record(tx, {
@@ -437,6 +442,8 @@ function toRow(r: CompanyWith, ctx: RowContext): CompanyRow {
     leadNumber: r.leadNumber,
     status: r.statusId ? (ctx.statuses.get(r.statusId) ?? null) : null,
     statusChangedAt: r.statusChangedAt?.toISOString() ?? null,
+    wonDealId: r.wonDealId ?? null,
+    wonAt: r.wonAt?.toISOString() ?? null,
     createdBy: person(r.createdById),
     updatedBy: person(r.updatedById),
     manager: person(r.managerId),

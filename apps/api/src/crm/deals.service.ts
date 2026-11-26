@@ -5,6 +5,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { assertRefs, badRef, diff, iso, notFound, orderBy, ownerRefs, paging, recordStageEvent } from './crm-helpers';
+import { companyWonByDeal } from './company-deal-sync';
 import { CustomFieldsService } from './custom-fields.service';
 import { reportingManagerOf } from './companies.service';
 import { RevenueRecordsService } from './revenue-records.service';
@@ -214,7 +215,12 @@ export class DealsService {
   }
 
   create(auth: AuthContext, input: DealInput, meta: RequestMeta): Promise<DealRow> {
-    return this.prisma.run(auth, async (tx) => {
+    return this.prisma.run(auth, (tx) => this.createIn(tx, auth, input, meta));
+  }
+
+  /** Creates a deal inside a running transaction (the company-won automation, ADR 0084, uses it too). */
+  async createIn(tx: TenantTx, auth: AuthContext, input: DealInput, meta: RequestMeta): Promise<DealRow> {
+    {
       const ownerId = input.ownerId ?? auth.userId;
       await assertRefs(tx, auth.tenantId, { ownerId, companyId: input.companyId, contactId: input.contactId });
       await this.assertPeople(tx, auth.tenantId, input);
@@ -255,8 +261,9 @@ export class DealsService {
         metadata: { amount: input.amount, stage: stage.name }, meta,
       });
       await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: row.id, pipelineId, fromStageId: null, toStageId: stage.id, actorUserId: auth.userId });
+      if (row.status === 'WON' && row.companyId) await companyWonByDeal(tx, this.audit, auth, row.companyId, row.id, meta);
       return toDealRow(row, await ownerRefs(tx, [row.ownerId]), await this.fields.reader(tx, auth, 'OPPORTUNITY'));
-    });
+    }
   }
 
   update(auth: AuthContext, id: string, input: Partial<DealInput>, meta: RequestMeta): Promise<DealRow> {
@@ -297,6 +304,11 @@ export class DealsService {
     });
   }
 
+  /** Moves a deal inside a running transaction (the company-won automation closes an open deal as won). */
+  moveIn(tx: TenantTx, auth: AuthContext, id: string, input: DealMoveInput, meta: RequestMeta): Promise<DealWith> {
+    return this.moveInTx(tx, auth, id, input, meta);
+  }
+
   private async moveInTx(tx: TenantTx, auth: AuthContext, id: string, input: DealMoveInput, meta: RequestMeta): Promise<DealWith> {
     const before = await tx.opportunity.findFirst({ where: { id, tenantId: auth.tenantId, deletedAt: null, ...(await this.scope(tx, auth)) }, include: { stage: true } });
     if (!before) throw notFound('Deal');
@@ -326,6 +338,8 @@ export class DealsService {
       await recordStageEvent(tx, { tenantId: auth.tenantId, opportunityId: id, pipelineId: before.pipelineId, fromStageId: before.stageId, toStageId: stage.id, actorUserId: auth.userId });
     }
     await this.revenue.reconcile(tx, auth.tenantId, { opportunityIds: [id] });
+    // A won deal makes its company a client (ADR 0084).
+    if (stage.category === 'WON' && before.status !== 'WON' && row.companyId) await companyWonByDeal(tx, this.audit, auth, row.companyId, id, meta);
     return row;
   }
 

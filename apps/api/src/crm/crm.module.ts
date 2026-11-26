@@ -17,6 +17,8 @@ import { CompanyWorkService } from './company-work.service';
 import { EmployeeStagesController } from './employee-stages.controller';
 import { EmployeeStagesService } from './employee-stages.service';
 import { FollowUpCadenceService } from './follow-up-cadence.service';
+import { CompanyDealsController } from './company-deals.controller';
+import { CompanyDealsService } from './company-deals.service';
 import { FollowUpCadenceController } from './follow-up-cadence.controller';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ContactsService } from './contacts.service';
@@ -47,6 +49,7 @@ import {
 @Module({
   imports: [GeoModule],
   controllers: [
+    CompanyDealsController,
     EmployeeStagesController,
     FollowUpCadenceController,
     LeadsController,
@@ -82,6 +85,7 @@ import {
     CustomFieldsService,
     CrmAdminService,
     CompaniesService,
+    CompanyDealsService,
     ContactsService,
     LeadsService,
     DealsService,
@@ -105,6 +109,6 @@ import {
     InstructionsService,
     ClientConcernsService,
   ],
-  exports: [EmployeeStagesService, FollowUpCadenceService, CrmConfigService, CompanyLeadsService, CompanyLogosService, CompanyEnrichmentService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
+  exports: [EmployeeStagesService, FollowUpCadenceService, CrmConfigService, CompanyLeadsService, CompanyLogosService, CompanyEnrichmentService, RevenueRecordsService, LeadTransfersService, InstructionsService, ClientConcernsService, CompanyWorkService, CompaniesService, CompanyDealsService, ContactsService, LeadsService, DealsService, ActivitiesService, TasksService, SearchService, PipelinesService, CrmAdminService, CustomFieldsService],
 })
 export class CrmModule {}

@@ -14,6 +14,7 @@ import { CompanyBranches, CompanyFiles, CompanyOwnership } from '@/components/cr
 import { CompanyFollowUps } from '@/components/crm/follow-ups';
 import { CompanyConcerns } from '@/components/command-center/concerns';
 import { CompanyInteractions } from '@/components/crm/interactions';
+import { CompanyWonButton } from '@/components/crm/company-won';
 import { CustomFieldList, DetailError, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordIntelligencePanel } from '@/components/crm/record-intelligence';
 import { RelatedDeals } from '@/components/crm/related-deals';
@@ -47,6 +48,7 @@ export function CompanyDetail({ id }: { id: string }) {
       <div className="max-w-7xl">
         <CompanyHero company={c} actions={
             <div className="flex flex-wrap items-center gap-2">
+              <CompanyWonButton company={c} />
               <SendCompanyButton company={{ id, name: c.name }} />
               <RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />
             </div>

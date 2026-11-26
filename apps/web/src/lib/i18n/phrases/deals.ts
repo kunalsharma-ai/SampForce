@@ -2,6 +2,23 @@ import type { PhraseTable } from './types';
 
 /** Deals: views, board, panel, health, sales intelligence, and labels that arrive from the API. */
 export const deals = {
+  // Company to Deal (ADR 0084)
+  'Mark as won': ['Marcar como ganada', 'Marquer comme gagnée', 'Als gewonnen markieren', 'وضع علامة كمربوحة'],
+  'Mark {company} as won?': ['¿Marcar {company} como ganada?', 'Marquer {company} comme gagnée ?', '{company} als gewonnen markieren?', 'وضع علامة على {company} كمربوحة؟'],
+  'The company becomes a client and moves to Deals: its open deal is closed as won, or a won deal is made from its RFQs and contact. The RFQs are linked to the deal.': [
+    'La empresa pasa a ser cliente y se mueve a Oportunidades: su oportunidad abierta se cierra como ganada, o se crea una oportunidad ganada a partir de sus RFQ y su contacto. Las RFQ se vinculan a la oportunidad.',
+    'L’entreprise devient cliente et passe dans les Opportunités : son opportunité ouverte est clôturée comme gagnée, ou une opportunité gagnée est créée à partir de ses RFQ et de son contact. Les RFQ sont liées à l’opportunité.',
+    'Das Unternehmen wird Kunde und wechselt zu den Verkaufschancen: Die offene Verkaufschance wird als gewonnen abgeschlossen, oder eine gewonnene wird aus den RFQs und dem Kontakt angelegt. Die RFQs werden damit verknüpft.',
+    'تصبح الشركة عميلًا وتنتقل إلى الصفقات: تُغلق صفقتها المفتوحة كمربوحة، أو تُنشأ صفقة مربوحة من طلبات عروض الأسعار وجهة الاتصال. وتُربط الطلبات بالصفقة.',
+  ],
+  'Deal {deal} was made and marked won.': ['Se creó la oportunidad {deal} y se marcó como ganada.', 'L’opportunité {deal} a été créée et marquée gagnée.', 'Verkaufschance {deal} wurde angelegt und als gewonnen markiert.', 'أُنشئت الصفقة {deal} ووُضعت كمربوحة.'],
+  'Deal {deal} is marked won.': ['La oportunidad {deal} está marcada como ganada.', 'L’opportunité {deal} est marquée gagnée.', 'Verkaufschance {deal} ist als gewonnen markiert.', 'الصفقة {deal} موضوعة كمربوحة.'],
+  'The company is now a client. No deal was made because the workspace has no deal pipeline with a won stage.': [
+    'La empresa ya es cliente. No se creó ninguna oportunidad porque el espacio de trabajo no tiene un embudo con una etapa ganada.',
+    'L’entreprise est désormais cliente. Aucune opportunité n’a été créée car l’espace de travail n’a pas de pipeline avec une étape gagnée.',
+    'Das Unternehmen ist jetzt Kunde. Es wurde keine Verkaufschance angelegt, weil der Workspace keine Pipeline mit einer Gewonnen-Phase hat.',
+    'أصبحت الشركة عميلًا. لم تُنشأ صفقة لأن مساحة العمل لا تحتوي على مسار صفقات بمرحلة ربح.',
+  ],
   // Deals page and view switcher
   Board: ['Tablero', 'Tableau', 'Board', 'اللوحة'],
   Split: ['Dividida', 'Partagée', 'Geteilt', 'مقسّمة'],
