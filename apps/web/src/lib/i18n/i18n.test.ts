@@ -63,7 +63,7 @@ import {
   SEGMENT_FIELDS,
   SEGMENT_OP_LABELS,
 } from '@dealflow/types';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ENTITY_LABEL, titleCase } from '@/lib/crm';
 import { MODULES, moduleKey } from '@/lib/navigation';
 import { MOBILE_LEVEL_LABEL, MOBILE_NOTIFICATION_LABEL, MOBILE_PHONE_ACTION_LABEL } from '@/lib/mobile';
@@ -72,10 +72,18 @@ import { visitorLanguage } from '@/stores/regional';
 import { ACTION_LABELS, CONDITION_FIELDS, EMAIL_TEMPLATES, OP_LABELS, TEMPLATES } from '@/app/app/automation/workflow-model';
 import { en } from './messages/en';
 import { PHRASE_TABLES, PHRASES } from './phrases';
-import { CATALOGUES, translate, translateData, translatePlural } from './translate';
+import { allCatalogues } from './foreign';
+import { loadCatalogue, translate, translateData, translatePlural } from './translate';
+
+const CATALOGUES = allCatalogues();
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 const PLURAL = /_(zero|one|two|few|many|other)$/;
+
+// translate() reads the other languages from the chunk loaded on demand; the tests load them all first.
+beforeAll(async () => {
+  for (const l of LANGUAGES) await loadCatalogue(l.code);
+});
 
 describe('message catalogues', () => {
   it('has a catalogue for every language the API accepts', () => {

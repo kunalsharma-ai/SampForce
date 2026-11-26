@@ -4,7 +4,7 @@ import { FORMAT_LOCALES, LANGUAGES, type LanguageCode, languageDir, type Regiona
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
 import { Languages } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
-import { useT } from '@/lib/i18n';
+import { loadCatalogue, useCatalogueVersion, useT } from '@/lib/i18n';
 import { translatePlural } from '@/lib/i18n/translate';
 import { regionalSaves, useRegionalQuery, useResetRegional, useSaveRegional } from '@/lib/regional-sync';
 import { InfoTip } from '@/components/info-tip';
@@ -51,7 +51,13 @@ export function RegionalSettings() {
     if (query.data && !draft) setDraft(query.data.regional);
   }, [query.data, draft]);
 
-  const p = useMemo(() => (draft ? preview(draft) : null), [draft]);
+  // The preview speaks the language being picked, so its text is fetched as soon as it is chosen.
+  const loaded = useCatalogueVersion();
+  useEffect(() => {
+    if (draft) void loadCatalogue(draft.language).catch(() => undefined);
+  }, [draft]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `loaded` re-renders the preview when the language arrives
+  const p = useMemo(() => (draft ? preview(draft) : null), [draft, loaded]);
   const autoLocale = useMemo(() => (draft ? resolveFormatLocale({ ...draft, formatLocale: null }, typeof navigator === 'undefined' ? [] : navigator.languages ?? []) : ''), [draft]);
   const changed = !!draft && !!query.data && (draft.language !== query.data.regional.language || draft.formatLocale !== query.data.regional.formatLocale);
   const busy = save.isPending || reset.isPending;

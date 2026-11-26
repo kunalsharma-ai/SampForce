@@ -2,6 +2,7 @@
 
 import { LANGUAGES, type LanguageCode } from '@dealflow/types';
 import { Languages } from 'lucide-react';
+import { useEffect } from 'react';
 import { useT } from '@/lib/i18n';
 import { useRegional } from '@/stores/regional';
 
@@ -12,6 +13,13 @@ import { useRegional } from '@/stores/regional';
 export function AuthLanguage() {
   const t = useT();
   const choose = useRegional((s) => s.chooseSignedOut);
+  // A language picked before the page's code had started (the layout's bootstrap script notes it) still applies.
+  useEffect(() => {
+    const w = window as { __sfEarlyLanguage?: string };
+    const early = w.__sfEarlyLanguage;
+    delete w.__sfEarlyLanguage;
+    if (early && LANGUAGES.some((l) => l.code === early)) choose(early as LanguageCode);
+  }, [choose]);
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <Languages className="size-4" aria-hidden />

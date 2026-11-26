@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 import pkg from './package.json';
 
 const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:4000';
@@ -19,7 +20,19 @@ const config: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   poweredByHeader: false,
   output: 'standalone',
-  transpilePackages: ['@dealflow/ui'],
+  transpilePackages: ['@dealflow/ui', '@dealflow/types', '@dealflow/help'],
+  webpack: (webpackConfig) => {
+    // The browser bundle compiles @dealflow/types (and @dealflow/help) from its ES module source rather than the CommonJS build the API
+    // uses, so only what a page imports is shipped: the CommonJS build put the whole package (the server's text in
+    // four languages, every schema) on every page, the sign-in page included.
+    // @dealflow/help too, because its CommonJS build required the whole of @dealflow/types again.
+    webpackConfig.resolve.alias = {
+      ...webpackConfig.resolve.alias,
+      '@dealflow/types$': path.resolve(__dirname, '../../packages/types/src/index.ts'),
+      '@dealflow/help$': path.resolve(__dirname, '../../packages/help/src/index.ts'),
+    };
+    return webpackConfig;
+  },
   // Sent with support queries, so the support team knows which build the person was on.
   env: { NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION ?? pkg.version },
   // The browser talks to the API through this origin, so auth cookies stay first-party.

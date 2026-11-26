@@ -34,7 +34,10 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   const style = useSignInStyle();
   const params = useSearchParams();
   const pathname = usePathname();
-  const [variant, setVariant] = useState<Exclude<SceneVariant, 'console'> | null>(null);
+  // The first render (on the server too) already shows a scene, the one the link names or the default, so the
+  // greeting, the stage and the workspace badge are there from the first frame and the form does not jump down
+  // while someone starts typing. This device's last level, which only the browser knows, then takes over.
+  const [variant, setVariant] = useState<Exclude<SceneVariant, 'console'> | null>(() => LEVELS[params.get('workspace')?.toLowerCase() ?? ''] ?? 'executive');
   useEffect(() => setVariant(pickScene(params.get('workspace'))), [params]);
   const copy = variant ? SCENE_COPY[variant] : null;
   // The welcome is for signing in; the other pages (sign-up, reset) keep the scene with a shorter line.

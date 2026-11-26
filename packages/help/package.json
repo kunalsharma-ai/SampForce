@@ -5,6 +5,7 @@
   "description": "In-app help: the feature guide, FAQs and help search shared by the web app, the API and the mobile app (ADR 0073).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

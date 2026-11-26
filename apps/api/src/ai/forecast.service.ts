@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { TenantTx } from '@dealflow/database';
+import { aggregate, type TenantTx } from '@dealflow/database';
 import {
   categoryOf,
   compareLines,
@@ -91,10 +91,15 @@ export class ForecastService {
       select: { id: true, status: true },
     });
     const statusOf = new Map(closed.map((o) => [o.id, o.status]));
-    const reached = await tx.dealStageEvent.findMany({
-      where: { tenantId, opportunityId: { in: closed.map((o) => o.id) } },
-      select: { opportunityId: true, toStageId: true },
-    });
+    // A native $in: the list holds every deal closed in the history window (see LARGE_IN_LIST).
+    const reached = (
+      closed.length
+        ? await aggregate<{ opportunity_id: string; to_stage_id: string }>(tx.dealStageEvent, [
+            { $match: { opportunity_id: { $in: closed.map((o) => o.id) } } },
+            { $project: { _id: 0, opportunity_id: 1, to_stage_id: 1 } },
+          ])
+        : []
+    ).map((e) => ({ opportunityId: e.opportunity_id, toStageId: e.to_stage_id }));
     // A deal counts once per stage it reached, however often it moved there.
     const byStage = new Map<string, { won: number; lost: number }>();
     const seen = new Set<string>();

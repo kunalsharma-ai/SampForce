@@ -1,10 +1,35 @@
 'use client';
 
 import type { LanguageCode, TextDirection } from '@dealflow/types';
-import { createElement, Fragment, type ReactNode, useCallback, useMemo } from 'react';
+import { createElement, Fragment, type ReactNode, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useRegional } from '@/stores/regional';
 import { type ActiveLocale, activeLocaleFor } from './locale';
-import { type MessageKey, type PluralKey, translate, translateData, translatePlural, type Vars } from './translate';
+import { catalogueReady, catalogueVersion, loadCatalogue, type MessageKey, type PluralKey, subscribeCatalogues, translate, translateData, translatePlural, type Vars } from './translate';
+
+export { catalogueReady, loadCatalogue } from './translate';
+
+/** Which languages' text has arrived; components that translate re-render when it changes. */
+export function useCatalogueVersion(): number {
+  return useSyncExternalStore(subscribeCatalogues, catalogueVersion, () => 0);
+}
+
+/** The data-attribute the layout's bootstrap script sets while a non-English page waits for its text. */
+export const LANGUAGE_PENDING_ATTR = 'data-language-pending';
+
+if (typeof window !== 'undefined') {
+  // Start fetching the person's language as soon as the app's code runs, not after the first render; and again
+  // whenever they switch language. Once it has arrived the page is shown (see app/layout.tsx).
+  const ready = () => document.documentElement.removeAttribute(LANGUAGE_PENDING_ATTR);
+  const want = (language: LanguageCode) => {
+    if (catalogueReady(language)) return ready();
+    // A failed load shows the page in English rather than leaving it hidden.
+    loadCatalogue(language).then(ready, ready);
+  };
+  want(useRegional.getState().regional.language);
+  useRegional.subscribe((s, prev) => {
+    if (s.regional.language !== prev.regional.language) want(s.regional.language);
+  });
+}
 
 export type { ActiveLocale, MessageKey, PluralKey };
 export { activeLocaleFor, fmtLocale } from './locale';
@@ -30,7 +55,9 @@ export interface Translator {
 /** `t('nav.favourites')`, `t('nav.removeFavourite', { label })`, `t.plural('regional.days', 3)`. */
 export function useT(): Translator {
   const { language, formatLocale, dir } = useActiveLocale();
-  const base = useCallback((key: MessageKey, vars?: Vars) => translate(language, key, vars, formatLocale), [language, formatLocale]);
+  const loaded = useCatalogueVersion();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `loaded` makes a new translator when a language arrives
+  const base = useCallback((key: MessageKey, vars?: Vars) => translate(language, key, vars, formatLocale), [language, formatLocale, loaded]);
   return useMemo(
     () => Object.assign(base, {
         plural: (key: PluralKey, count: number, vars?: Vars) => translatePlural(language, key, count, vars, formatLocale),

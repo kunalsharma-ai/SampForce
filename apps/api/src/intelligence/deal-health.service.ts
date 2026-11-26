@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma, type TenantTx } from '@dealflow/database';
+import { aggregate, fromRawDate, LARGE_IN_LIST, Prisma, rawDate, type TenantTx } from '@dealflow/database';
 import type { DealHealthDetail, DealHealthQuery, DealHealthRow, DealHealthSummary, DealRisk, Signal } from '@dealflow/types';
 import { dealHealth, type DealFacts } from '../ai/scoring';
 import { AuditService } from '../audit/audit.service';
@@ -12,6 +12,8 @@ import { SlicedSweep } from '../worker/sliced-sweep';
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
+/** Deals whose scores are stored per transaction in the hourly sweep. */
+const SWEEP_BATCH = 250;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 interface FactRow {
@@ -52,21 +54,41 @@ export async function loadDealFacts(tx: TenantTx, tenantId: string, dealId?: str
   const dealIds = deals.map((d) => d.id);
   const contactIds = [...new Set(deals.flatMap((d) => (d.contactId ? [d.contactId] : [])))];
   const companyIds = [...new Set(deals.flatMap((d) => (d.companyId ? [d.companyId] : [])))];
-  const people = await tx.contact.findMany({
-    where: { tenantId, deletedAt: null, OR: [{ id: { in: contactIds } }, { companyId: { in: companyIds } }] },
-    select: { id: true, companyId: true },
-  });
+  // Native $in reads (see LARGE_IN_LIST): a sweep passes every open deal of the workspace and every person at their
+  // companies, and Prisma's own `in` made the sweep outlast its transaction on large workspaces.
+  const people = (
+    await aggregate<{ _id: string; company_id: string | null }>(tx.contact, [
+      { $match: { deleted_at: null, $or: [{ _id: { $in: contactIds } }, { company_id: { $in: companyIds } }] } },
+      { $project: { company_id: 1 } },
+    ])
+  ).map((p) => ({ id: p._id, companyId: p.company_id }));
   const allPeople = people.map((p) => p.id);
+  const since60 = rawDate(ago(60));
   const [stageEvents, lastActs, tasks, acts, emails, lastMail] = await Promise.all([
-    tx.dealStageEvent.groupBy({ by: ['opportunityId', 'toStageId'], where: { tenantId, opportunityId: { in: dealIds } }, _max: { occurredAt: true } }),
-    tx.activity.groupBy({ by: ['opportunityId'], where: { tenantId, deletedAt: null, opportunityId: { in: dealIds } }, _max: { occurredAt: true } }),
-    tx.task.findMany({ where: { tenantId, deletedAt: null, status: 'OPEN', opportunityId: { in: dealIds } }, select: { opportunityId: true, dueAt: true } }),
-    tx.activity.findMany({
-      where: { tenantId, deletedAt: null, occurredAt: { gte: ago(60) }, OR: [{ opportunityId: { in: dealIds } }, { contactId: { in: allPeople } }] },
-      select: { id: true, opportunityId: true, contactId: true, occurredAt: true },
-    }),
-    tx.emailMessage.findMany({ where: { tenantId, contactId: { in: allPeople }, sentAt: { gte: ago(60) } }, select: { contactId: true, direction: true, sentAt: true } }),
-    tx.emailMessage.groupBy({ by: ['contactId', 'direction'], where: { tenantId, contactId: { in: allPeople } }, _max: { sentAt: true } }),
+    aggregate<{ _id: { o: string; s: string }; at: unknown }>(tx.dealStageEvent, [
+      { $match: { opportunity_id: { $in: dealIds } } },
+      { $group: { _id: { o: '$opportunity_id', s: '$to_stage_id' }, at: { $max: '$occurred_at' } } },
+    ]),
+    aggregate<{ _id: string; at: unknown }>(tx.activity, [
+      { $match: { deleted_at: null, opportunity_id: { $in: dealIds } } },
+      { $group: { _id: '$opportunity_id', at: { $max: '$occurred_at' } } },
+    ]),
+    aggregate<{ opportunity_id: string; due_at: unknown }>(tx.task, [
+      { $match: { deleted_at: null, status: 'OPEN', opportunity_id: { $in: dealIds } } },
+      { $project: { _id: 0, opportunity_id: 1, due_at: 1 } },
+    ]),
+    aggregate<{ _id: string; opportunity_id: string | null; contact_id: string | null; occurred_at: unknown }>(tx.activity, [
+      { $match: { deleted_at: null, occurred_at: { $gte: since60 }, $or: [{ opportunity_id: { $in: dealIds } }, { contact_id: { $in: allPeople } }] } },
+      { $project: { opportunity_id: 1, contact_id: 1, occurred_at: 1 } },
+    ]),
+    aggregate<{ contact_id: string; direction: string; sent_at: unknown }>(tx.emailMessage, [
+      { $match: { contact_id: { $in: allPeople }, sent_at: { $gte: since60 } } },
+      { $project: { _id: 0, contact_id: 1, direction: 1, sent_at: 1 } },
+    ]),
+    aggregate<{ _id: { c: string; d: string }; at: unknown }>(tx.emailMessage, [
+      { $match: { contact_id: { $in: allPeople } } },
+      { $group: { _id: { c: '$contact_id', d: '$direction' }, at: { $max: '$sent_at' } } },
+    ]),
   ]);
   const t14 = now - 14 * DAY, t28 = now - 28 * DAY, t30 = now - 30 * DAY, t60 = now - 60 * DAY;
   const maxDate = (ds: Array<Date | null | undefined>): Date | null => {
@@ -74,21 +96,58 @@ export async function loadDealFacts(tx: TenantTx, tenantId: string, dealId?: str
     for (const d of ds) if (d && (!m || d > m)) m = d;
     return m;
   };
+  // Indexed once, so each deal reads its own rows instead of filtering every row of the workspace.
+  const group = <T, K>(rows: T[], key: (r: T) => K | null | undefined): Map<K, T[]> => {
+    const m = new Map<K, T[]>();
+    for (const r of rows) {
+      const k = key(r);
+      if (k === null || k === undefined) continue;
+      const list = m.get(k);
+      if (list) list.push(r);
+      else m.set(k, [r]);
+    }
+    return m;
+  };
+  const personIds = new Set(allPeople);
+  const peopleByCompany = group(people, (p) => p.companyId);
+  const actRows = acts.map((a) => ({ id: a._id, opportunityId: a.opportunity_id, contactId: a.contact_id, occurredAt: fromRawDate(a.occurred_at)! }));
+  const actsByDeal = group(actRows, (a) => a.opportunityId);
+  const actsByPerson = group(actRows, (a) => a.contactId);
+  const mailByPerson = group(
+    emails.map((m) => ({ contactId: m.contact_id, direction: m.direction, sentAt: fromRawDate(m.sent_at)! })),
+    (m) => m.contactId,
+  );
+  const lastMailByPerson = group(
+    lastMail.map((g) => ({ contactId: g._id.c, direction: g._id.d, at: fromRawDate(g.at) })),
+    (g) => g.contactId,
+  );
+  const tasksByDeal = group(tasks.map((t) => ({ opportunityId: t.opportunity_id, dueAt: fromRawDate(t.due_at) })), (t) => t.opportunityId);
+  const stageEntered = new Map(stageEvents.map((e) => [`${e._id.o}:${e._id.s}`, fromRawDate(e.at)]));
+  const lastActivity = new Map(lastActs.map((g) => [g._id, fromRawDate(g.at)]));
   return deals.map((o) => {
-    const ids = new Set(people.filter((p) => p.id === o.contactId || (o.companyId && p.companyId === o.companyId)).map((p) => p.id));
-    const myActs = acts.filter((a) => a.opportunityId === o.id || (a.contactId && ids.has(a.contactId)));
-    const myMail = emails.filter((m) => m.contactId && ids.has(m.contactId));
+    const ids = new Set<string>();
+    if (o.contactId && personIds.has(o.contactId)) ids.add(o.contactId);
+    if (o.companyId) for (const p of peopleByCompany.get(o.companyId) ?? []) ids.add(p.id);
+    const seen = new Set<string>();
+    const myActs: typeof actRows = [];
+    for (const a of [...(actsByDeal.get(o.id) ?? []), ...[...ids].flatMap((id) => actsByPerson.get(id) ?? [])]) {
+      if (seen.has(a.id)) continue;
+      seen.add(a.id);
+      myActs.push(a);
+    }
+    const myMail = [...ids].flatMap((id) => mailByPerson.get(id) ?? []);
     const inWindow = (t: number, from: number, to = Infinity) => t >= from && t < to;
     const touches = (from: number, to?: number) =>
       myActs.filter((a) => inWindow(a.occurredAt.getTime(), from, to)).length + myMail.filter((m) => inWindow(m.sentAt.getTime(), from, to)).length;
     const peopleIn = (from: number, to?: number) => {
       const set = new Set<string>();
       for (const a of myActs) if (a.contactId && ids.has(a.contactId) && inWindow(a.occurredAt.getTime(), from, to)) set.add(a.contactId);
-      for (const m of myMail) if (m.direction === 'INBOUND' && inWindow(m.sentAt.getTime(), from, to)) set.add(m.contactId!);
+      for (const m of myMail) if (m.direction === 'INBOUND' && inWindow(m.sentAt.getTime(), from, to)) set.add(m.contactId);
       return set.size;
     };
-    const last = (dir: 'INBOUND' | 'OUTBOUND') => maxDate(lastMail.filter((g) => g.direction === dir && g.contactId && ids.has(g.contactId)).map((g) => g._max.sentAt));
-    const myTasks = tasks.filter((t) => t.opportunityId === o.id);
+    const myLastMail = [...ids].flatMap((id) => lastMailByPerson.get(id) ?? []);
+    const last = (dir: 'INBOUND' | 'OUTBOUND') => maxDate(myLastMail.filter((g) => g.direction === dir).map((g) => g.at));
+    const myTasks = tasksByDeal.get(o.id) ?? [];
     return {
       id: o.id,
       name: o.name,
@@ -100,8 +159,8 @@ export async function loadDealFacts(tx: TenantTx, tenantId: string, dealId?: str
       contact_id: o.contactId,
       owner_id: o.ownerId,
       stage_name: o.stage.name,
-      stage_entered_at: stageEvents.find((e) => e.opportunityId === o.id && e.toStageId === o.stageId)?._max.occurredAt ?? null,
-      last_activity_at: lastActs.find((g) => g.opportunityId === o.id)?._max.occurredAt ?? null,
+      stage_entered_at: stageEntered.get(`${o.id}:${o.stageId}`) ?? null,
+      last_activity_at: lastActivity.get(o.id) ?? null,
       open_tasks: myTasks.length,
       overdue_tasks: myTasks.filter((t) => t.dueAt && t.dueAt.getTime() < now).length,
       touches14: touches(t14),
@@ -156,10 +215,31 @@ export class DealHealthService {
   /** Scores every open deal in one workspace (or one deal) and stores the result. Returns the number scored. */
   async refresh(tx: TenantTx, tenantId: string, dealId?: string, now = new Date()): Promise<number> {
     const rows = await loadDealFacts(tx, tenantId, dealId);
+    await this.store(tx, tenantId, rows, now);
+    return rows.length;
+  }
+
+  /**
+   * Stores the scores of these deals. A score or day row that did not change is not written again (only the time it
+   * was scored moves on, in one write), so an hourly sweep of thousands of unchanged deals is a handful of writes.
+   */
+  private async store(tx: TenantTx, tenantId: string, rows: FactRow[], now: Date): Promise<void> {
+    if (!rows.length) return;
     const day = new Date(`${ymd(now)}T00:00:00Z`);
-    const previous = new Map(
-      (await tx.dealHealthScore.findMany({ where: { tenantId, dealId: { in: rows.map((r) => r.id) } }, select: { dealId: true, risk: true, alertedAt: true } })).map((p) => [p.dealId, p]),
-    );
+    const ids = rows.map((r) => r.id);
+    const [previousRows, todayRows] = await Promise.all([
+      aggregate<{ _id: string; health: number; risk: string; signals: unknown; alerted_at: unknown }>(tx.dealHealthScore, [
+        { $match: { _id: { $in: ids } } },
+        { $project: { health: 1, risk: 1, signals: 1, alerted_at: 1 } },
+      ]),
+      aggregate<{ deal_id: string; health: number; risk: string }>(tx.dealHealthDaily, [
+        { $match: { day: rawDate(day), deal_id: { $in: ids } } },
+        { $project: { _id: 0, deal_id: 1, health: 1, risk: 1 } },
+      ]),
+    ]);
+    const previous = new Map(previousRows.map((p) => [p._id, { risk: p.risk, health: p.health, signals: JSON.stringify(p.signals ?? null), alertedAt: fromRawDate(p.alerted_at) }]));
+    const today = new Map(todayRows.map((d) => [d.deal_id, d]));
+    const unchanged: string[] = [];
     for (const r of rows) {
       if (r.status !== 'OPEN') {
         await tx.dealHealthScore.deleteMany({ where: { dealId: r.id } });
@@ -169,16 +249,21 @@ export class DealHealthService {
       const before = previous.get(r.id);
       const alert = h.risk === 'high' && !before?.alertedAt;
       const signals = h.signals as unknown as Prisma.InputJsonValue;
-      await tx.dealHealthScore.upsert({
-        where: { dealId: r.id },
-        create: { dealId: r.id, tenantId, health: h.health, risk: h.risk, signals, computedAt: now, alertedAt: alert ? now : null },
-        update: { health: h.health, risk: h.risk, signals, computedAt: now, ...(alert ? { alertedAt: now } : h.risk !== 'high' ? { alertedAt: null } : {}) },
-      });
-      await tx.dealHealthDaily.upsert({
-        where: { dealId_day: { dealId: r.id, day } },
-        create: { dealId: r.id, day, tenantId, health: h.health, risk: h.risk },
-        update: { health: h.health, risk: h.risk },
-      });
+      const clearsAlert = h.risk !== 'high' && !!before?.alertedAt;
+      if (before && !alert && !clearsAlert && before.health === h.health && before.risk === h.risk && before.signals === JSON.stringify(signals)) unchanged.push(r.id);
+      else
+        await tx.dealHealthScore.upsert({
+          where: { dealId: r.id },
+          create: { dealId: r.id, tenantId, health: h.health, risk: h.risk, signals, computedAt: now, alertedAt: alert ? now : null },
+          update: { health: h.health, risk: h.risk, signals, computedAt: now, ...(alert ? { alertedAt: now } : h.risk !== 'high' ? { alertedAt: null } : {}) },
+        });
+      const kept = today.get(r.id);
+      if (!kept || kept.health !== h.health || kept.risk !== h.risk)
+        await tx.dealHealthDaily.upsert({
+          where: { dealId_day: { dealId: r.id, day } },
+          create: { dealId: r.id, day, tenantId, health: h.health, risk: h.risk },
+          update: { health: h.health, risk: h.risk },
+        });
       if (alert) {
         await this.notifications.send(tx, tenantId, [r.owner_id], {
           type: 'deal.health_dropped',
@@ -193,17 +278,22 @@ export class DealHealthService {
         });
       }
     }
-    return rows.length;
+    for (let i = 0; i < unchanged.length; i += LARGE_IN_LIST)
+      await tx.dealHealthScore.updateMany({ where: { tenantId, dealId: { in: unchanged.slice(i, i + LARGE_IN_LIST) } }, data: { computedAt: now } });
   }
 
-  /** Worker job, at most hourly: rescore open deals in every workspace. */
+  /**
+   * Worker job, at most hourly: rescore open deals in every workspace. The facts are read in one transaction and the
+   * scores stored in batches, each in its own short transaction, so a workspace with thousands of open deals never
+   * outlasts a transaction's time limit (it used to fail every hour on such workspaces).
+   */
   async sweep(force = false): Promise<number> {
     return this.sweeper.run(
       force,
       () => scanTenants(this.prisma.subscription, {}, 5000),
       async (tenantId) => {
         try {
-          await this.prisma.run({ tenantId }, (tx) => this.refresh(tx, tenantId));
+          await this.rescore({ tenantId }, tenantId);
         } catch (err) {
           this.log.error({ err: errorMessage(err), tenantId }, 'deal health sweep failed');
         }
@@ -211,9 +301,19 @@ export class DealHealthService {
     );
   }
 
+  /** Rescores every open deal of a workspace: facts in one read, scores stored in batches of short transactions. */
+  private async rescore(ctx: { tenantId: string }, tenantId: string): Promise<void> {
+    const now = new Date();
+    const rows = await this.prisma.run(ctx, (tx) => loadDealFacts(tx, tenantId), { timeoutMs: 30_000 });
+    for (let i = 0; i < rows.length; i += SWEEP_BATCH) {
+      const batch = rows.slice(i, i + SWEEP_BATCH);
+      await this.prisma.run(ctx, (tx) => this.store(tx, tenantId, batch, now), { timeoutMs: 30_000 });
+    }
+  }
+
   /** "Rescore now" from the at-risk page. */
   async refreshNow(auth: AuthContext): Promise<DealHealthSummary> {
-    await this.prisma.run(auth, (tx) => this.refresh(tx, auth.tenantId));
+    await this.rescore(auth, auth.tenantId);
     return this.summary(auth);
   }
 

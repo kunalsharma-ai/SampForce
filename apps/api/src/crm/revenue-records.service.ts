@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma, TenantTx } from '@dealflow/database';
 import {
@@ -112,7 +113,15 @@ export class RevenueRecordsService {
     const keyOf = (r: RecordModel) => (r.source === 'DEAL' ? `DEAL:${r.opportunityId}` : `RFQ:${r.rfqId}`);
     const byKey = new Map(active.map((r) => [keyOf(r), r]));
     const rule = attributionRuleOf((await tx.tenant.findUnique({ where: { id: tenantId }, select: { revenueAttribution: true } }))?.revenueAttribution);
+    // Every current credit in one read (was one read per won deal, which made a workspace with hundreds of wins take
+    // longer than a transaction may last).
+    const currentCredits = await this.creditsOf(tx, tenantId, only ? active.map((r) => r.id) : null);
 
+    const newRecords: Prisma.RevenueRecordCreateManyInput[] = [];
+    const newCredits: Prisma.RevenueCreditCreateManyInput[] = [];
+    const rewrite: string[] = [];
+    const creditRows = (recordId: string, closedAt: Date, credits: Credit[]) =>
+      credits.map((c) => ({ tenantId, recordId, userId: c.userId, roles: c.roles, percent: c.percent, closedAt }));
     for (const w of wins) {
       const cur = byKey.get(w.key);
       byKey.delete(w.key);
@@ -122,8 +131,9 @@ export class RevenueRecordsService {
       };
       const credits = attributionCredits(rule, { creatorId: w.leadCreatorId, ownerId: w.accountOwnerId, closerId: w.closerId, supporters: w.supporters });
       if (!cur) {
-        const rec = await tx.revenueRecord.create({ data: { tenantId, source: w.source, opportunityId: w.opportunityId, rfqId: w.rfqId, ...data } });
-        await this.writeCredits(tx, tenantId, rec.id, w.closedAt, credits);
+        const id = randomUUID();
+        newRecords.push({ id, tenantId, source: w.source, opportunityId: w.opportunityId, rfqId: w.rfqId, ...data });
+        newCredits.push(...creditRows(id, w.closedAt, credits));
         continue;
       }
       const changed = (Object.keys(data) as (keyof typeof data)[]).some((k) => {
@@ -131,15 +141,21 @@ export class RevenueRecordsService {
         const b = cur[k];
         return a instanceof Date ? a.getTime() !== (b as Date).getTime() : (a ?? null) !== (b ?? null);
       });
-      if (!changed && !(await this.creditsDiffer(tx, tenantId, cur, credits))) continue;
+      if (!changed && !creditsDiffer(cur, currentCredits.get(cur.id) ?? [], credits)) continue;
       await tx.revenueRecord.update({ where: { id: cur.id }, data });
-      if (!cur.manual) await this.writeCredits(tx, tenantId, cur.id, w.closedAt, credits);
-      else await tx.revenueCredit.updateMany({ where: { tenantId, recordId: cur.id }, data: { closedAt: w.closedAt } });
+      if (!cur.manual) {
+        rewrite.push(cur.id);
+        newCredits.push(...creditRows(cur.id, w.closedAt, credits));
+      } else await tx.revenueCredit.updateMany({ where: { tenantId, recordId: cur.id }, data: { closedAt: w.closedAt } });
     }
+    if (rewrite.length) await tx.revenueCredit.deleteMany({ where: { tenantId, recordId: { in: rewrite } } });
+    if (newRecords.length) await tx.revenueRecord.createMany({ data: newRecords });
+    if (newCredits.length) await tx.revenueCredit.createMany({ data: newCredits });
     // Whatever is left is no longer won (reopened, lost, deleted, or an RFQ that became a deal).
-    for (const gone of byKey.values()) {
-      await tx.revenueRecord.update({ where: { id: gone.id }, data: { voidedAt: new Date() } });
-      await tx.revenueCredit.updateMany({ where: { tenantId, recordId: gone.id }, data: { voided: true } });
+    const gone = [...byKey.values()].map((r) => r.id);
+    if (gone.length) {
+      await tx.revenueRecord.updateMany({ where: { tenantId, id: { in: gone } }, data: { voidedAt: new Date() } });
+      await tx.revenueCredit.updateMany({ where: { tenantId, recordId: { in: gone } }, data: { voided: true } });
     }
     if (!only) lastFull.set(tenantId, Date.now());
   }
@@ -149,11 +165,20 @@ export class RevenueRecordsService {
     lastFull.delete(tenantId);
   }
 
-  private async creditsDiffer(tx: TenantTx, tenantId: string, rec: RecordModel, next: Credit[]): Promise<boolean> {
-    if (rec.manual) return false;
-    const cur = await tx.revenueCredit.findMany({ where: { tenantId, recordId: rec.id }, select: { userId: true, percent: true } });
-    const key = (l: { userId: string | null; percent: number }[]) => l.map((c) => `${c.userId ?? ''}:${c.percent}`).sort().join('|');
-    return key(cur) !== key(next);
+  /** The live credits of the given records (or of every live record in the workspace), by record. */
+  private async creditsOf(tx: TenantTx, tenantId: string, recordIds: string[] | null): Promise<Map<string, { userId: string | null; percent: number }[]>> {
+    const out = new Map<string, { userId: string | null; percent: number }[]>();
+    if (recordIds && !recordIds.length) return out;
+    const rows = await tx.revenueCredit.findMany({
+      where: recordIds ? { tenantId, recordId: { in: recordIds } } : { tenantId, voided: false },
+      select: { recordId: true, userId: true, percent: true },
+    });
+    for (const r of rows) {
+      const list = out.get(r.recordId);
+      if (list) list.push(r);
+      else out.set(r.recordId, [r]);
+    }
+    return out;
   }
 
   private async writeCredits(tx: TenantTx, tenantId: string, recordId: string, closedAt: Date, credits: Credit[]): Promise<void> {
@@ -299,4 +324,11 @@ export class RevenueRecordsService {
       };
     });
   }
+}
+
+/** Whether the credits a rule gives now differ from the ones stored (credits entered by hand are never replaced). */
+function creditsDiffer(rec: RecordModel, cur: { userId: string | null; percent: number }[], next: Credit[]): boolean {
+  if (rec.manual) return false;
+  const key = (l: { userId: string | null; percent: number }[]) => l.map((c) => `${c.userId ?? ''}:${c.percent}`).sort().join('|');
+  return key(cur) !== key(next);
 }

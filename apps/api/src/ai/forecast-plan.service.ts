@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { TenantTx } from '@dealflow/database';
+import { aggregate, fromRawDate, type TenantTx } from '@dealflow/database';
 import {
   childPeriods,
   type ForecastPlan,
@@ -91,11 +91,12 @@ export class ForecastPlanService {
     const today = new Date().toISOString().slice(0, 10);
     const [last, health] = ids.length
       ? await Promise.all([
-          tx.activity.groupBy({ by: ['opportunityId'], where: { tenantId, opportunityId: { in: ids } }, _max: { occurredAt: true } }),
-          tx.dealHealthScore.findMany({ where: { tenantId, dealId: { in: ids }, risk: 'high' }, select: { dealId: true, health: true } }),
+          // Native $in reads: `ids` is every open deal of the period (see LARGE_IN_LIST).
+          aggregate<{ _id: string; at: unknown }>(tx.activity, [{ $match: { opportunity_id: { $in: ids } } }, { $group: { _id: '$opportunity_id', at: { $max: '$occurred_at' } } }]),
+          tx.dealHealthScore.findMany({ where: { tenantId, risk: 'high' }, select: { dealId: true, health: true } }),
         ])
       : [[], []];
-    const lastAt = new Map(last.map((a) => [a.opportunityId!, a._max.occurredAt]));
+    const lastAt = new Map(last.map((a) => [a._id, fromRawDate(a.at)]));
     const high = new Map(health.map((h) => [h.dealId, h.health]));
     const risk = (items: { l: (typeof open)[number]; detail: string }[]): PlanRisk => ({
       count: items.length,

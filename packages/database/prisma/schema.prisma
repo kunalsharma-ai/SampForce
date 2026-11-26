@@ -261,6 +261,8 @@ model WorkspaceNavigation {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenantId, userId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("workspace_navigation")
 }
 
@@ -282,6 +284,8 @@ model SavedView {
 
   @@unique([tenantId, userId, entity, name])
   @@index([tenantId, entity])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("saved_views")
 }
 
@@ -300,6 +304,8 @@ model Territory {
   countries TerritoryCountry[]
 
   @@unique([tenantId, name])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([managerId])
   @@map("territories")
 }
 
@@ -689,6 +695,8 @@ model Subscription {
 
   @@index([provider, providerCustomerId])
   @@index([pastDueSince])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([planCode])
   @@map("subscriptions")
 }
 
@@ -749,6 +757,8 @@ model Membership {
   @@unique([tenantId, externalId])
   @@index([userId])
   @@index([tenantId, workspaceNodeId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([roleId])
   @@map("memberships")
 }
 
@@ -869,6 +879,8 @@ model TeamMember {
 
   @@unique([teamId, membershipId])
   @@index([tenantId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([membershipId])
   @@map("team_members")
 }
 
@@ -1023,6 +1035,8 @@ model Company {
   @@index([tenantId, ownerId])
   @@index([tenantId, createdById])
   @@index([tenantId, leadSeq])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([parentCompanyId])
   @@map("companies")
 }
 
@@ -1105,6 +1119,8 @@ model Contact {
   @@index([tenantId, matchKeys])
   @@index([tenantId, statusId])
   @@index([tenantId, stageId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("contacts")
 }
 
@@ -1130,6 +1146,8 @@ model CompanyBranch {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, companyId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_branches")
 }
 
@@ -1151,6 +1169,8 @@ model LeadOwnerChange {
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
   @@index([tenantId, toUserId, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("lead_owner_changes")
 }
 
@@ -1173,6 +1193,8 @@ model CompanyFile {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, companyId, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_files")
 }
 
@@ -1207,6 +1229,8 @@ model CompanyEnrichment {
 
   @@index([tenantId, companyId, createdAt])
   @@index([status, nextRunAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("company_enrichments")
 }
 
@@ -1428,6 +1452,8 @@ model Rfq {
   @@index([tenantId, companyId, receivedAt(sort: Desc)])
   @@index([tenantId, status, deadlineAt])
   @@index([tenantId, ownerId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("rfqs")
 }
 
@@ -1576,6 +1602,8 @@ model Lead {
   @@index([tenantId, email])
   @@index([tenantId, ownerId])
   @@index([tenantId, phoneDigits])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("leads")
 }
 
@@ -1693,6 +1721,11 @@ model Opportunity {
   @@index([tenantId, stageId])
   @@index([tenantId, closedAt])
   @@index([tenantId, ownerId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([companyId])
+  @@index([contactId])
   @@map("opportunities")
 }
 
@@ -1747,6 +1780,11 @@ model Activity {
   @@index([tenantId, contactId])
   @@index([tenantId, companyId])
   @@index([tenantId, opportunityId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([opportunityId])
   @@map("activities")
 }
 
@@ -1822,6 +1860,11 @@ model Task {
   @@index([tenantId, companyId, status])
   @@index([tenantId, followUpType, status, dueAt])
   @@index([tenantId, workspaceNodeId, status])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([opportunityId])
+  @@index([companyId])
   @@map("tasks")
 }
 
@@ -1946,6 +1989,8 @@ model Invitation {
   role   Role   @relation(fields: [roleId], references: [id], onUpdate: NoAction)
 
   @@index([tenantId, email])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([roleId])
   @@map("invitations")
 }
 
@@ -2059,6 +2104,8 @@ model WorkflowExecution {
   @@unique([versionId, eventId])
   @@index([status, resumeAt])
   @@index([tenantId, workflowId, startedAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([workflowId])
   @@map("workflow_executions")
 }
 
@@ -2112,6 +2159,8 @@ model ApprovalRequest {
   execution WorkflowExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, status, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([executionId])
   @@map("approval_requests")
 }
 
@@ -2169,6 +2218,8 @@ model Webhook {
   deliveries WebhookDelivery[]
 
   @@index([tenantId, active])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([apiKeyId])
   @@map("webhooks")
 }
 
@@ -2535,6 +2586,8 @@ model PriceBookEntry {
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([priceBookId, productId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([productId])
   @@map("price_book_entries")
 }
 
@@ -2614,6 +2667,9 @@ model Quote {
   @@unique([tenantId, number, version])
   @@index([tenantId, opportunityId])
   @@index([tenantId, status, isLatest])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([opportunityId])
+  @@index([priceBookId])
   @@map("quotes")
 }
 
@@ -2639,6 +2695,8 @@ model QuoteLine {
   product Product @relation(fields: [productId], references: [id], onUpdate: NoAction)
 
   @@index([quoteId, position])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([productId])
   @@map("quote_lines")
 }
 
@@ -2690,6 +2748,10 @@ model Contract {
   @@unique([tenantId, number])
   @@index([tenantId, status, endDate])
   @@index([tenantId, companyId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([opportunityId])
+  @@index([quoteId])
   @@map("contracts")
 }
 
@@ -2768,6 +2830,8 @@ model LeadForm {
   campaign    Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   submissions FormSubmission[]
 
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("lead_forms")
 }
 
@@ -2873,6 +2937,9 @@ model Escalation {
   @@index([tenantId, status, severity])
   @@index([tenantId, companyId])
   @@index([tenantId, escalatedToId, status])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([contractId])
   @@map("escalations")
 }
 
@@ -3419,6 +3486,8 @@ model EmailTemplate {
 
   @@index([tenantId, ownerId])
   @@index([tenantId, category])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([campaignId])
   @@map("email_templates")
 }
 
@@ -3492,6 +3561,8 @@ model SequenceEnrollment {
   @@index([tenantId, email])
   @@index([tenantId, leadId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sequenceId])
   @@map("sequence_enrollments")
 }
 
@@ -3538,6 +3609,8 @@ model EmailEvent {
   message SequenceMessage @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, messageId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([messageId])
   @@map("email_events")
 }
 
@@ -3676,6 +3749,8 @@ model EmailThread {
   @@index([tenantId, lastMessageAt(sort: Desc)])
   @@index([tenantId, assignedToId])
   @@index([tenantId, dealId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([dealId])
   @@map("email_threads")
 }
 
@@ -3754,6 +3829,8 @@ model MeetingRecord {
   @@index([tenantId, occurredAt(sort: Desc)])
   @@index([tenantId, dealId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([dealId])
   @@map("meeting_records")
 }
 
@@ -3811,6 +3888,9 @@ model PortalUser {
 
   @@unique([tenantId, email])
   @@index([tenantId, companyId], map: "portal_users_company_idx")
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
+  @@index([contactId])
   @@map("portal_users")
 }
 
@@ -3850,6 +3930,8 @@ model PortalRequest {
   @@unique([tenantId, number])
   @@index([tenantId, status, updatedAt(sort: Desc)], map: "portal_requests_status_idx")
   @@index([tenantId, companyId], map: "portal_requests_company_idx")
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([companyId])
   @@map("portal_requests")
 }
 
@@ -3978,6 +4060,8 @@ model GamificationAward {
 
   @@unique([badgeId, userId, period])
   @@index([tenantId, userId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([userId])
   @@map("gamification_awards")
 }
 
@@ -4053,6 +4137,10 @@ model WebVisitor {
   @@index([tenantId, lastSeenAt])
   @@index([tenantId, leadId])
   @@index([tenantId, contactId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
+  @@index([campaignId])
   @@map("web_visitors")
 }
 
@@ -4097,6 +4185,8 @@ model WebEvent {
 
   @@index([tenantId, occurredAt])
   @@index([visitorId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sessionId])
   @@map("web_events")
 }
 
@@ -4162,6 +4252,9 @@ model Prospect {
   @@index([tenantId, listId, createdAt])
   @@index([listId, email])
   @@index([tenantId, email])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([leadId])
+  @@index([contactId])
   @@map("prospects")
 }
 
@@ -4179,6 +4272,8 @@ model ProspectOutreach {
   sequence Sequence     @relation(fields: [sequenceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([listId, sequenceId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([sequenceId])
   @@map("prospect_outreach")
 }
 
@@ -4198,6 +4293,8 @@ model ProspectImport {
   list   ProspectList @relation(fields: [listId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([listId])
   @@map("prospect_imports")
 }
 
@@ -4308,6 +4405,8 @@ model AppEvent {
   connection AppConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([tenantId, provider, createdAt(sort: Desc)])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
   @@map("app_events")
 }
 
@@ -4346,6 +4445,8 @@ model ZoomMeeting {
   @@unique([tenantId, zoomMeetingId])
   @@index([tenantId, startsAt])
   @@index([transcriptStatus])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
   @@map("zoom_meetings")
 }
 
@@ -4376,6 +4477,9 @@ model SignatureEnvelope {
 
   @@unique([tenantId, envelopeId])
   @@index([tenantId, contractId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contractId])
   @@map("signature_envelopes")
 }
 
@@ -4404,6 +4508,9 @@ model QuotePayment {
   quote      Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, quoteId])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([quoteId])
   @@map("quote_payments")
 }
 
@@ -4441,6 +4548,9 @@ model WhatsappMessage {
   @@unique([tenantId, waMessageId])
   @@index([tenantId, contactId, createdAt])
   @@index([tenantId, phone, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contactId])
   @@map("whatsapp_messages")
 }
 
@@ -4461,6 +4571,8 @@ model WhatsappConsent {
   contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, contactId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([contactId])
   @@map("whatsapp_consents")
 }
 
@@ -4495,6 +4607,9 @@ model SmsMessage {
   @@unique([tenantId, twilioSid])
   @@index([tenantId, phone, createdAt])
   @@index([tenantId, contactId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([connectionId])
+  @@index([contactId])
   @@map("sms_messages")
 }
 
@@ -4515,6 +4630,8 @@ model SmsConsent {
 
   @@index([tenantId, contactId, createdAt])
   @@index([tenantId, phone])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([contactId])
   @@map("sms_consents")
 }
 
@@ -5164,6 +5281,8 @@ model SupportTicketMessage {
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId, ticketId, createdAt])
+  /// Relation lookups (counts, "has any" filters) match on this field alone, so it needs its own index.
+  @@index([ticketId])
   @@map("support_ticket_messages")
 }
 
