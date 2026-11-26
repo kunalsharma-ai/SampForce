@@ -47,6 +47,7 @@ import { api } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { usePreferences } from '@/stores/preferences';
 import { can, useOperator } from './operator-shell';
+import { dayPart, lineOfTheDay, WelcomeBanner } from '@/components/welcome/welcome-banner';
 
 const KPI: Record<ConsoleKpiKey, { label: string; href: string; upIsBad?: boolean }> = {
   'clients.total': { label: 'Clients', href: '/operator/clients' },
@@ -395,9 +396,17 @@ function Hero({
   canBill: boolean;
 }) {
   const now = new Date();
-  const h = now.getHours();
-  const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  const first = name.includes('@') ? name : name.split(' ')[0];
+  const part = dayPart(now);
+  const first = name.includes('@') ? name : name.split(' ')[0]!;
+  const initials = (
+    name.includes('@')
+      ? name.slice(0, 2)
+      : name
+          .split(/\s+/)
+          .map((p) => p[0])
+          .slice(0, 2)
+          .join('')
+  ).toUpperCase();
   const quick = [
     ...(canCreate
       ? [{ label: 'New client', href: '/operator/clients?new=1', icon: UserPlus }]
@@ -407,63 +416,87 @@ function Hero({
       ? [{ label: 'Record payment', href: '/operator/clients?payment=PENDING', icon: CreditCard }]
       : []),
   ];
-  return (
-    <section
-      aria-labelledby="overview-title"
-      className="flex flex-wrap items-end justify-between gap-4"
+  const status = (
+    <span
+      data-overview-status
+      className={cn(
+        'inline-flex items-center gap-1 font-semibold',
+        providers ? 'text-critical' : 'text-success',
+      )}
     >
-      <div>
-        <h1 id="overview-title" className="text-2xl font-semibold">
+      {providers ? (
+        <AlertTriangle className="size-4" aria-hidden />
+      ) : (
+        <CheckCircle2 className="size-4" aria-hidden />
+      )}
+      {providers
+        ? `${providers} provider${providers === 1 ? '' : 's'} need${providers === 1 ? 's' : ''} attention`
+        : 'All systems normal'}
+    </span>
+  );
+  return (
+    <WelcomeBanner
+      part={part}
+      hello={CONSOLE_HELLO[part]}
+      name={first}
+      initials={initials}
+      colors={['#e11d48', '#f97316']}
+      headingId="overview-title"
+      badge={
+        <span
+          className="rounded-full border border-border bg-surface/80 px-2 py-0.5 font-semibold text-foreground"
+          data-welcome-level="platform"
+        >
+          Platform Console
+        </span>
+      }
+      date={now.toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })}
+      heading={
+        <h1 id="overview-title" className="text-lg font-semibold text-muted-foreground">
           Overview
         </h1>
-        <p className="mt-1 text-lg" data-overview-greeting>
-          {greeting}, {first}
-        </p>
-        <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span>
-            {now.toLocaleDateString(undefined, {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </span>
-          <span aria-hidden>·</span>
-          <span
-            data-overview-status
-            className={cn(
-              'inline-flex items-center gap-1',
-              providers ? 'text-critical' : 'text-success',
-            )}
-          >
-            {providers ? (
-              <AlertTriangle className="size-4" aria-hidden />
-            ) : (
-              <CheckCircle2 className="size-4" aria-hidden />
-            )}
-            {providers
-              ? `${providers} provider${providers === 1 ? '' : 's'} need${providers === 1 ? 's' : ''} attention`
-              : 'All systems normal'}
-          </span>
-        </p>
+      }
+      line={lineOfTheDay(CONSOLE_LINES, now)}
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        {status}
+        {quick.length > 0 && (
+          <nav aria-label="Quick actions" className="flex flex-wrap gap-2">
+            {quick.map((a) => (
+              <Link
+                key={a.label}
+                href={a.href}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card/80 px-3 text-sm font-medium shadow-sm backdrop-blur hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <a.icon className="size-4" aria-hidden />
+                {a.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
-      {quick.length > 0 && (
-        <nav aria-label="Quick actions" className="flex flex-wrap gap-2">
-          {quick.map((a) => (
-            <Link
-              key={a.label}
-              href={a.href}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <a.icon className="size-4" aria-hidden />
-              {a.label}
-            </Link>
-          ))}
-        </nav>
-      )}
-    </section>
+    </WelcomeBanner>
   );
 }
+
+const CONSOLE_HELLO = {
+  morning: 'Good morning',
+  afternoon: 'Good afternoon',
+  evening: 'Good evening',
+  night: 'Working late',
+} as const;
+const CONSOLE_LINES = [
+  'Every client you onboard today is a team that sells better tomorrow.',
+  'Healthy clients, quiet alerts: that is a good day on the platform.',
+  'Small fixes today keep every workspace running smoothly.',
+  'The platform is only as strong as the care behind it.',
+  'Check the alerts, thank a client, ship something good.',
+];
 
 function ActionRequired({ actions }: { actions: ConsoleDashboard['actions'] }) {
   const open = actions.filter((a) => a.count > 0);

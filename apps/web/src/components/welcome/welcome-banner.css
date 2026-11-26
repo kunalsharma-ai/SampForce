@@ -1,0 +1,105 @@
+/*
+ * The welcome banner (redesign, greeting): a scene for the time of day (sunrise, midday sun, sunset, moon and stars)
+ * drawn in SVG, a waving hand, a glowing avatar ring and a soft sheen, over the workspace's own colours. Everything
+ * is decoration: the text carries the meaning, and nothing moves under reduced motion.
+ */
+.sf-welcome {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid hsl(var(--border));
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--wb-sky-a) 55%, transparent), transparent 60%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--wb-a) 22%, transparent), transparent 65%),
+    linear-gradient(120deg, color-mix(in srgb, var(--wb-a) 10%, hsl(var(--surface))), color-mix(in srgb, var(--wb-b) 12%, hsl(var(--surface))));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 24px 48px -28px var(--wb-a);
+}
+.dark .sf-welcome {
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--wb-sky-a) 30%, transparent), transparent 60%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--wb-a) 20%, transparent), transparent 65%),
+    linear-gradient(120deg, color-mix(in srgb, var(--wb-a) 12%, hsl(var(--surface))), color-mix(in srgb, var(--wb-b) 14%, hsl(var(--surface))));
+}
+.sf-welcome::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.dark .sf-welcome::after {
+  background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.07) 50%, transparent 65%);
+}
+.sf-welcome-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--wb-a), var(--wb-b));
+  box-shadow: 0 8px 20px -8px var(--wb-a);
+}
+.sf-welcome-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, var(--wb-a), var(--wb-b), var(--wb-sky-a), var(--wb-a));
+}
+.sf-welcome-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: hsl(var(--surface));
+}
+.sf-welcome-wave {
+  display: inline-block;
+  transform-origin: 70% 70%;
+}
+.sf-welcome-scene .wb-ray { transform-origin: 60px 60px; }
+.sf-welcome-scene .wb-cloud { opacity: 0.9; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sf-welcome::after { animation: sf-wb-sheen 6s ease-in-out 1s infinite; }
+  .sf-welcome-wave { animation: sf-wb-wave 2.4s ease-in-out 0.4s 2; }
+  .sf-welcome-avatar::before { animation: sf-wb-spin 8s linear infinite; }
+  .sf-welcome-scene .wb-rays { animation: sf-wb-spin 40s linear infinite; transform-origin: 60px 60px; }
+  .sf-welcome-scene .wb-sun { animation: sf-wb-rise 1.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .sf-welcome-scene .wb-cloud-1 { animation: sf-wb-drift 14s ease-in-out infinite alternate; }
+  .sf-welcome-scene .wb-cloud-2 { animation: sf-wb-drift 18s ease-in-out -6s infinite alternate-reverse; }
+  .sf-welcome-scene .wb-star { animation: sf-wb-twinkle 2.6s ease-in-out infinite; }
+  .sf-welcome-scene .wb-star:nth-child(2n) { animation-delay: -1.1s; }
+  .sf-welcome-scene .wb-star:nth-child(3n) { animation-delay: -1.9s; animation-duration: 3.4s; }
+  .sf-welcome-in > * { animation: sf-wb-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .sf-welcome-in > *:nth-child(2) { animation-delay: 0.08s; }
+  .sf-welcome-in > *:nth-child(3) { animation-delay: 0.16s; }
+  .sf-welcome-in > *:nth-child(4) { animation-delay: 0.24s; }
+}
+
+@keyframes sf-wb-sheen { 0%, 60% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes sf-wb-wave {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(16deg); }
+  20%, 40% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
+}
+@keyframes sf-wb-spin { to { transform: rotate(360deg); } }
+@keyframes sf-wb-rise { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sf-wb-drift { from { transform: translateX(-6px); } to { transform: translateX(10px); } }
+@keyframes sf-wb-twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes sf-wb-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (min-width: 640px) {
+  .sf-welcome-avatar { width: 3.5rem; height: 3.5rem; }
+}
