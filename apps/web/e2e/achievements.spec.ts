@@ -186,6 +186,8 @@ test('converting a company, an RFQ SampBidx accepted and a cleared task list are
   const detail = page.getByRole('dialog');
   await expect(detail.locator('[data-celebration]')).toHaveAttribute('data-sfc-still', '');
   await expect(page.locator('[data-confetti]')).toHaveCount(0);
+  // Let the dialog finish fading in, so the contrast check reads the final colours.
+  await detail.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished)));
   await axe(page);
   await detail.getByRole('button', { name: 'Close celebration' }).click();
   await expectNoCelebration(page);
