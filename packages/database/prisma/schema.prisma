@@ -4690,6 +4690,8 @@ model CrmSettings {
   exportPolicy      Json?    @map("export_policy")
   dashboardPolicies Json?    @map("dashboard_policies")
   enabledCurrencies String[] @default([]) @map("enabled_currencies")
+  /// Redesign R3 (ADR 0083): the workspace's local date of the last morning follow-up summary, so it goes out once a day.
+  digestDate        String?  @map("digest_date")
   /// { followUps, intervalDays, updatedAt, updatedById } (ADR 0083); null = 5 follow-ups 7 days apart.
   followUpCadence   Json?    @map("follow_up_cadence")
   updatedById       String?  @map("updated_by_id")
