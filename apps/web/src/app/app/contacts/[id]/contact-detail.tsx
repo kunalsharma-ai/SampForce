@@ -2,7 +2,8 @@
 
 import { consentLabel } from '@/lib/crm-fields';
 import { Card, CardContent, CardHeader, CardTitle } from '@dealflow/ui';
-import type { ContactRow } from '@dealflow/types';
+import type { CompanyRow, ContactRow } from '@dealflow/types';
+import { ClientTimeCard, type ClientTimeSubject, ConnectCheck } from '@/components/crm/client-time';
 import { CustomFieldList, DetailError, DetailList, DetailSkeleton, RecordHeader } from '@/components/crm/record-detail';
 import { RecordEmails } from '@/components/crm/record-emails';
 import { RfqCapture } from '@/components/sampbidx/rfq-capture';
@@ -18,16 +19,45 @@ import { EmployeeDetails, EmployeeRelationship } from '@/components/crm/employee
 import { ActivityTimeline, RecordTasks } from '@/components/crm/timeline';
 import { RecordWebActivityCard } from '@/components/visitors/visitors';
 import { RecordVoiceNotes } from '@/components/voice/voice-note';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { formatDate, useRecord } from '@/lib/crm';
 import { useT } from '@/lib/i18n';
 
 export function ContactDetail({ id }: { id: string }) {
   const contact = useRecord<ContactRow>('contacts', id);
-  const t = useT();
   if (contact.isPending) return <DetailSkeleton />;
   if (contact.error) return <DetailError error={contact.error} />;
-  const c = contact.data;
+  return <ContactBody contact={contact.data} />;
+}
+
+/** The employee's own location wins; without a country, their company's head office is used (ADR 0088). */
+function useTimeSubject(c: ContactRow): ClientTimeSubject {
+  const company = useQuery({
+    enabled: !!c.company?.id,
+    queryKey: ['companies', 'detail', c.company?.id],
+    queryFn: () => api<CompanyRow>(`/companies/${c.company!.id}`),
+    retry: false,
+  });
+  const co = company.data;
+  const own = !!c.country;
+  return {
+    kind: 'contact',
+    id: c.id,
+    name: c.fullName,
+    place: own ? { country: c.country, state: c.state, city: c.city, timezone: c.timezone } : { country: co?.country, state: co?.state, city: co?.city, headquarters: co?.headquarters, timezone: c.timezone ?? co?.timezone },
+    placeFromCompany: !own,
+    hours: c.workingHours,
+    companyHours: co?.workingHours,
+  };
+}
+
+function ContactBody({ contact: c }: { contact: ContactRow }) {
+  const t = useT();
+  const id = c.id;
+  const timeSubject = useTimeSubject(c);
   return (
+    <ConnectCheck subject={timeSubject}>
     <div className="max-w-6xl">
       <RecordHeader
         entity="contacts"
@@ -36,6 +66,7 @@ export function ContactDetail({ id }: { id: string }) {
         subtitle={[c.jobTitle, c.company?.name].filter(Boolean).join(' · ') || undefined}
         row={c as unknown as Record<string, unknown>}
       />
+      <ClientTimeCard subject={timeSubject} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <EmployeeRelationship contact={c} />
@@ -76,5 +107,6 @@ export function ContactDetail({ id }: { id: string }) {
         </div>
       </div>
     </div>
+    </ConnectCheck>
   );
 }

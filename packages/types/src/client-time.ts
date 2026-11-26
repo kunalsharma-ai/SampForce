@@ -90,6 +90,13 @@ export function countryProfile(code: string | null | undefined, locale = 'en'): 
   };
 }
 
+/** The country a zone belongs to (Asia/Kolkata → IN), for naming my own clock. */
+export function countryOfZone(zone: string): string | null {
+  for (const [code, facts] of Object.entries(GEO_COUNTRY_FACTS)) if (facts[2] === zone) return code;
+  for (const r of GEO_COUNTRY_ROWS) if (r[4].includes(zone)) return r[0];
+  return null;
+}
+
 // ───────────── Which zone ─────────────
 
 export const foldName = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();

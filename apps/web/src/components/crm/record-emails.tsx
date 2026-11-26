@@ -35,7 +35,7 @@ export function RecordEmails({
           <InfoTip topic="record.emails" />
         </div>
         {canSend && email && connected && (
-          <Button size="sm" variant="outline" onClick={() => setCompose(true)}>
+          <Button size="sm" variant="outline" data-connect="email" onClick={() => setCompose(true)}>
             <Mail aria-hidden /> {t('Send email')}
           </Button>
         )}

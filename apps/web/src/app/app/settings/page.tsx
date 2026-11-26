@@ -26,6 +26,7 @@ import { Tr } from '@/lib/i18n';
 import { AppearanceSettings } from './appearance-settings';
 import { CloseCompanyCard } from './close-company';
 import { RegionalSettings } from './regional-settings';
+import { ContactTimesSettings } from './contact-times-settings';
 import { SalesProfileSettings } from './sales-profile-settings';
 import { SettingsJump } from './settings-jump';
 import { WorkspaceSettings } from './workspace-settings';
@@ -130,6 +131,7 @@ export default function SettingsPage() {
         <SalesProfileSettings />
         <AppearanceSettings />
         <RegionalSettings />
+        <ContactTimesSettings />
         <CloseCompanyCard />
       </section>
       {SECTIONS.map((s) => (

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CompanyActionsProvider } from '@/components/crm/company-actions';
 import { CompanyAutofill } from '@/components/crm/company-autofill';
+import { ClientTimeCard, type ClientTimeSubject, ConnectCheck } from '@/components/crm/client-time';
 import { CompanyBusiness, CompanyEmployeeDirectory, CompanyHero, CompanyKpis } from '@/components/crm/company-dashboard';
 import { CompanyLeadCard } from '@/components/crm/company-lead-card';
 import { BusinessInformation } from '@/components/crm/business-information';
@@ -38,10 +39,21 @@ export function CompanyDetail({ id }: { id: string }) {
   const c = company.data;
   const people = (employees.data ?? []).map((e) => ({ id: e.id, name: e.name }));
   const ref = { id, name: c.name, ownerId: c.ownerPerson?.id ?? c.owner?.id ?? null, restricted: c.restricted };
+  // Their local time and the best time to connect (ADR 0088), from the head-office address.
+  const timeSubject: ClientTimeSubject = {
+    kind: 'company',
+    id,
+    name: c.name,
+    place: { country: c.country, state: c.state, city: c.city, headquarters: c.headquarters, timezone: c.timezone },
+    hours: c.workingHours,
+    offices: c.addresses,
+  };
   return (
     <CompanyActionsProvider>
+      <ConnectCheck subject={timeSubject}>
       <div className="max-w-7xl">
         <CompanyHero company={c} actions={<RecordHeader bare entity="companies" id={id} title={c.name} row={c as unknown as Record<string, unknown>} />} />
+        <ClientTimeCard subject={timeSubject} />
         {uploadFailed && (
           <p role="alert" className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm">
             {t('The lead was saved, but these files could not be uploaded: {names}. Add them again below.', { names: uploadFailed })}
@@ -79,6 +91,7 @@ export function CompanyDetail({ id }: { id: string }) {
           </div>
         </div>
       </div>
+      </ConnectCheck>
     </CompanyActionsProvider>
   );
 }
