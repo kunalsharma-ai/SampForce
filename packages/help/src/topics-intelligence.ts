@@ -5,11 +5,11 @@ export const intelligenceHelp = {
   'page.agents': {
     title: 'AI Agents',
     what: [
-      'Your digital sales team: AI agents that draft emails, score leads, check deals and more, each with clear limits, approvals and a cost record.',
-      'Tu equipo de ventas digital: agentes de IA que redactan correos, puntúan leads, revisan oportunidades y más, cada uno con límites, aprobaciones y registro de coste.',
-      'Votre équipe commerciale numérique : des agents IA qui rédigent des e-mails, notent les prospects, vérifient les opportunités et plus, chacun avec limites, approbations et suivi des coûts.',
-      'Ihr digitales Vertriebsteam: KI-Agenten, die E-Mails entwerfen, Leads bewerten, Chancen prüfen und mehr, jeweils mit klaren Grenzen, Freigaben und Kostenübersicht.',
-      'فريق مبيعاتك الرقمي: وكلاء ذكاء اصطناعي يكتبون الرسائل ويقيّمون العملاء ويفحصون الصفقات وغير ذلك، لكل منهم حدود واضحة وموافقات وسجل تكلفة.',
+      'Your digital sales team: AI agents that draft emails, score contacts, check deals and more, each with clear limits, approvals and a cost record.',
+      'Tu equipo de ventas digital: agentes de IA que redactan correos, puntúan contactos, revisan oportunidades y más, cada uno con límites claros, aprobaciones y un registro de costes.',
+      'Votre équipe commerciale numérique : des agents IA qui rédigent des e-mails, notent les contacts, vérifient les opportunités et plus encore, chacun avec des limites claires, des approbations et un relevé des coûts.',
+      'Ihr digitales Vertriebsteam: KI-Agenten, die E-Mails entwerfen, Kontakte bewerten, Verkaufschancen prüfen und mehr, jeweils mit klaren Grenzen, Freigaben und Kostennachweis.',
+      'فريق مبيعاتك الرقمي: وكلاء ذكاء اصطناعي يكتبون مسودات الرسائل ويقيّمون جهات الاتصال ويفحصون الصفقات وغير ذلك، لكل منهم حدود وموافقات وسجل تكاليف واضح.',
     ],
     how: [
       'Turn each agent on or off, read what it may and may not do, and check recent runs. Agents propose; people decide.',
@@ -125,11 +125,11 @@ export const intelligenceHelp = {
   'page.automation': {
     title: 'Automation Studio',
     what: [
-      'Workflows that react to CRM events, such as a new lead or a deal changing stage, and then create tasks, update records or send messages.',
-      'Flujos que reaccionan a eventos del CRM, como un lead nuevo o un cambio de etapa, y crean tareas, actualizan fichas o envían mensajes.',
-      'Des workflows qui réagissent aux événements du CRM, comme un nouveau prospect ou un changement d’étape, puis créent des tâches, mettent à jour des fiches ou envoient des messages.',
-      'Workflows, die auf CRM-Ereignisse reagieren, etwa einen neuen Lead oder einen Phasenwechsel, und dann Aufgaben anlegen, Datensätze ändern oder Nachrichten senden.',
-      'سير عمل يتفاعل مع أحداث CRM، مثل عميل محتمل جديد أو تغيّر مرحلة صفقة، فينشئ مهام أو يحدّث السجلات أو يرسل رسائل.',
+      'Workflows that react to CRM events, such as a new company or a deal changing stage, and then create tasks, update records or send messages.',
+      'Flujos de trabajo que reaccionan a eventos del CRM, como una nueva empresa o una oportunidad que cambia de etapa, y luego crean tareas, actualizan registros o envían mensajes.',
+      'Des workflows qui réagissent aux événements du CRM, comme une nouvelle entreprise ou une opportunité qui change d’étape, puis créent des tâches, mettent à jour des enregistrements ou envoient des messages.',
+      'Workflows, die auf CRM-Ereignisse reagieren, etwa ein neues Unternehmen oder eine Verkaufschance, die die Phase wechselt, und dann Aufgaben anlegen, Datensätze aktualisieren oder Nachrichten senden.',
+      'مسارات عمل تستجيب لأحداث CRM، مثل شركة جديدة أو صفقة تغيّر مرحلتها، ثم تنشئ مهام أو تحدّث السجلات أو ترسل رسائل.',
     ],
     how: [
       'Start from a template or a blank workflow, choose a trigger, add conditions and actions, test it, then activate it.',
@@ -139,11 +139,11 @@ export const intelligenceHelp = {
       'ابدأ من قالب أو سير عمل فارغ، واختر مشغّلًا، وأضف الشروط والإجراءات، واختبره ثم فعّله.',
     ],
     where: [
-      'Use it for repetitive work, like assigning new leads or reminding owners of stuck deals. Emails and webhooks always wait for approval.',
-      'Úsalo para trabajo repetitivo, como asignar leads o recordar oportunidades estancadas. Correos y webhooks siempre esperan aprobación.',
-      'Utilisez-le pour les tâches répétitives, comme attribuer les prospects ou relancer les opportunités bloquées. E-mails et webhooks attendent toujours une approbation.',
-      'Nutzen Sie es für wiederkehrende Arbeit, etwa Leads zuweisen oder an festgefahrene Chancen erinnern. E-Mails und Webhooks warten immer auf Freigabe.',
-      'استخدمه للأعمال المتكررة، مثل توزيع العملاء الجدد أو تذكير المسؤولين بالصفقات المتوقفة. الرسائل وخطافات الويب تنتظر الموافقة دائمًا.',
+      'Use it for repetitive work, like assigning new contacts or reminding owners of stuck deals. Emails and webhooks always wait for approval.',
+      'Úsalo para trabajo repetitivo, como asignar contactos nuevos o recordar a los responsables las oportunidades estancadas. Los correos y webhooks siempre esperan aprobación.',
+      'Utilisez-le pour les tâches répétitives, comme attribuer les nouveaux contacts ou rappeler aux responsables les opportunités bloquées. Les e-mails et webhooks attendent toujours une approbation.',
+      'Nutzen Sie es für wiederkehrende Arbeit, etwa neue Kontakte zuweisen oder Verantwortliche an festgefahrene Verkaufschancen erinnern. E-Mails und Webhooks warten immer auf Freigabe.',
+      'استخدمه للأعمال المتكررة، مثل إسناد جهات الاتصال الجديدة أو تذكير المسؤولين بالصفقات المتعثرة. تنتظر الرسائل وخطافات الويب الموافقة دائمًا.',
     ],
   },
   'page.workflowEditor': {

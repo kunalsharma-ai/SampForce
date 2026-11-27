@@ -110,13 +110,13 @@ test('the app adds and edits leads, contacts, follow-ups and tasks', async ({ pa
   await expect(phone.getByText('Organisation performance')).toBeVisible();
 
   // A new lead from the Leads tab.
-  await phone.getByRole('tab', { name: /Leads and companies/ }).click();
+  await phone.getByRole('tab', { name: /Companies/ }).click();
   await expect(phone.getByText('Nothing here yet.')).toBeVisible();
-  await phone.getByRole('button', { name: 'Add Lead' }).click();
+  await phone.getByRole('button', { name: 'Add Company' }).click();
   await phone.getByLabel('Company name *').fill('Harbour Labs');
   await phone.getByLabel('City').fill('Leeds');
   await phone.getByLabel('Phone number').fill('+44 113 496 0000');
-  await phone.getByRole('radiogroup', { name: 'Lead status' }).getByRole('radio').first().click();
+  await phone.getByRole('radiogroup', { name: 'Company status' }).getByRole('radio').first().click();
   await shot(phone, '15-app-lead-form');
   await expectNoA11yViolations(phone);
   await phone.getByRole('button', { name: 'Save', exact: true }).click();
@@ -182,7 +182,7 @@ test('the app adds and edits leads, contacts, follow-ups and tasks', async ({ pa
 
   // The lead list finds it by name.
   await phone.goto(`${APP}/companies`);
-  await phone.getByLabel('Search leads and companies').fill('Harb');
+  await phone.getByLabel('Search companies').fill('Harb');
   await expect(phone.getByRole('button', { name: /Harbour Labs/ })).toBeVisible();
   await shot(phone, '19-app-leads');
 
@@ -193,7 +193,7 @@ test('the app adds and edits leads, contacts, follow-ups and tasks', async ({ pa
   const today = new Date().toISOString().slice(0, 10);
   expect((await page.request.post('/api/v1/targets', { data: { workspaceId: ((await team.json()) as { id: string }).id, metric: 'LEADS', period: 'MONTHLY', startsOn: today.slice(0, 8) + '01', amount: 4 }, headers: { origin: ORIGIN } })).status()).toBe(201);
   await phone.getByRole('tab', { name: /Dashboard/ }).click();
-  const leadsToday = phone.getByRole('button', { name: 'Leads today' });
+  const leadsToday = phone.getByRole('button', { name: 'Companies today' });
   await expect(leadsToday).toContainText('1');
   await expect(phone.getByRole('button', { name: 'Targets and achievement' })).toContainText('0 / 4');
   await shot(phone, '20-app-home-figures');

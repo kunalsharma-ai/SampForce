@@ -8,7 +8,7 @@ export default function CompaniesPage() {
   return (
     <>
       <CompaniesContactsTabs active="companies" />
-      <RecordList entity="companies" description="Company leads with their employees. Open the contacts count to add or edit a company’s people in place." />
+      <RecordList entity="companies" description="Companies with their employees. Open the contacts count to add or edit a company’s people in place." />
     </>
   );
 }

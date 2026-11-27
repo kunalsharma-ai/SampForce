@@ -152,7 +152,7 @@ function DescribeWithAi() {
             maxLength={2000}
             disabled={!!reason}
             onChange={(e) => setText(e.target.value)}
-            placeholder={t('When a lead from the website is worth more than 50,000, assign it to the sales lead and create a call task due tomorrow.')}
+            placeholder={t('When an inbound contact from the website is worth more than 50,000, assign it to the sales manager and create a call task due tomorrow.')}
             className="min-h-[72px]"
           />
           {reason && <p className="text-xs text-warning">{t.maybe(reason)}</p>}

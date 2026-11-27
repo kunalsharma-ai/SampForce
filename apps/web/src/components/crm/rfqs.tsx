@@ -396,10 +396,10 @@ export function RfqDialog({
           </fieldset>
           <fieldset className="grid gap-4 sm:grid-cols-2">
             <legend className="mb-2 text-sm font-semibold">{t('People and outcome')}</legend>
-            <Field id="rfq-owner" label={t('Deal owner')} hint={t('Left empty: the lead owner.')}>
+            <Field id="rfq-owner" label={t('Deal owner')} hint={t('Left empty: the company owner.')}>
               <PersonSelect value={v.ownerId} onChange={(id) => set({ ownerId: id })} />
             </Field>
-            <Field id="rfq-manager" label={t('Manager')} hint={t('Left empty: the lead’s assigned manager.')}>
+            <Field id="rfq-manager" label={t('Manager')} hint={t('Left empty: the company’s assigned manager.')}>
               <PersonSelect value={v.managerId} onChange={(id) => set({ managerId: id })} />
             </Field>
             <div className="sm:col-span-2">{text('outcomeReason', 'Won / lost reason')}</div>

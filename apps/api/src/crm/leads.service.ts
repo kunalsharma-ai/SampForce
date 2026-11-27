@@ -109,7 +109,7 @@ export class LeadsService {
     return this.prisma.run(auth, async (tx) => {
       const before = await this.find(tx, auth.tenantId, id, 'Lead', auth);
       if (before.status === 'CONVERTED') {
-        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted leads are read-only. Edit the contact or deal instead.' });
+        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted inbound contacts are read-only. Edit the contact or deal instead.' });
       }
       await assertRefs(tx, auth.tenantId, { ownerId: input.ownerId });
       await assertCampaign(tx, auth.tenantId, input.campaignId);
@@ -139,7 +139,7 @@ export class LeadsService {
     return this.prisma.run(auth, async (tx) => {
       await this.find(tx, auth.tenantId, id, 'Lead', auth);
       const { count } = await tx.lead.updateMany({ where: { id, tenantId: auth.tenantId, deletedAt: null }, data: { deletedAt: new Date() } });
-      if (count === 0) throw notFound('Lead');
+      if (count === 0) throw notFound('Inbound contact');
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'lead.deleted', entityType: 'lead', entityId: id, meta });
     });
   }
@@ -150,11 +150,11 @@ export class LeadsService {
 
   /** Merges `duplicateId` into `id`: fills empty fields, unions tags, re-links activities and tasks. */
   merge(auth: AuthContext, id: string, duplicateId: string, meta: RequestMeta): Promise<LeadRow> {
-    if (id === duplicateId) throw badRef('duplicateId', 'cannot merge a lead into itself');
+    if (id === duplicateId) throw badRef('duplicateId', 'cannot merge an inbound contact into itself');
     return this.prisma.run(auth, async (tx) => {
       const [primary, dup] = await Promise.all([this.find(tx, auth.tenantId, id, 'Lead', auth), this.find(tx, auth.tenantId, duplicateId, 'duplicateId', auth)]);
       if (primary.status === 'CONVERTED' || dup.status === 'CONVERTED') {
-        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted leads cannot be merged.' });
+        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'Converted inbound contacts cannot be merged.' });
       }
       const fill: Prisma.LeadUpdateInput = {};
       const keys = ['companyName', 'jobTitle', 'industry', 'email', 'phone', 'country', 'city', 'timezone', 'website', 'source', 'campaignSource', 'estimatedValue', 'currency'] as const;
@@ -177,10 +177,10 @@ export class LeadsService {
     return this.prisma.run(auth, async (tx) => {
       const lead = await this.find(tx, auth.tenantId, id, 'Lead', auth);
       if (lead.status === 'CONVERTED') {
-        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'This lead has already been converted.' });
+        throw new ConflictException({ code: 'LEAD_CONVERTED', message: 'This inbound contact has already been converted.' });
       }
       if (lead.status === 'UNQUALIFIED') {
-        throw new BadRequestException({ code: 'LEAD_UNQUALIFIED', message: 'Unqualified leads cannot be converted. Change the status first.' });
+        throw new BadRequestException({ code: 'LEAD_UNQUALIFIED', message: 'Unqualified inbound contacts cannot be converted. Change the status first.' });
       }
       await assertRefs(tx, auth.tenantId, { companyId: input.companyId });
       const ownerId = lead.ownerId ?? auth.userId;
@@ -276,7 +276,7 @@ export class LeadsService {
   private async find(tx: TenantTx, tenantId: string, id: string, field = 'Lead', auth?: AuthContext): Promise<LeadModel> {
     const scope = auth ? leadScope(await visibility(tx, auth)) : {};
     const row = await tx.lead.findFirst({ where: { id, tenantId, deletedAt: null, ...scope } });
-    if (!row) throw field === 'Lead' ? notFound('Lead') : badRef(field);
+    if (!row) throw field === 'Lead' ? notFound('Inbound contact') : badRef(field);
     return row;
   }
 

@@ -115,8 +115,8 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
   const place = [c.city, c.state, country].filter(Boolean).join(', ');
   const fullAddress = [c.address, c.city, c.state, c.postalCode, country].filter(Boolean).join(', ');
   const people: [MessageKey, string][] = [
-    ['Lead creator', personLabel(c.createdBy)],
-    ['Lead owner', personLabel(c.ownerPerson) || c.owner?.name || ''],
+    ['Company creator', personLabel(c.createdBy)],
+    ['Company owner', personLabel(c.ownerPerson) || c.owner?.name || ''],
     ['Assigned manager', personLabel(c.manager)],
   ];
   return (
@@ -133,7 +133,7 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
           <CompanyLogoEditor company={c} />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              {c.leadNumber && <span aria-label={t('Lead number')} className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
+              {c.leadNumber && <span aria-label={t('Company number')} className="rounded-full bg-primary px-2.5 py-0.5 font-mono text-xs font-semibold text-primary-foreground">{c.leadNumber}</span>}
               <StatusChip status={c.status} className="px-2.5 text-xs" />
               {c.statusChangedAt && <span className="text-xs text-muted-foreground">{t('Since {date}', { date: formatDate(c.statusChangedAt) })}</span>}
             </div>

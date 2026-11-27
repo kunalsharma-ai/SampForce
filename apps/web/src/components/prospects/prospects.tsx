@@ -460,7 +460,7 @@ export function ProspectListView({ id }: { id: string }) {
                     <td className="py-2 pe-2 tabular-nums">{p.companySize ?? '—'}</td>
                     <td className="py-2 pe-2">{p.sample ? <Badge tone="warning">{t('Sample')}</Badge> : t.maybe(PROSPECT_SOURCE_LABELS[p.source])}</td>
                     <td className="py-2">
-                      {p.crm ? <Link className="underline underline-offset-2" href={`/app/${p.crm.type === 'lead' ? 'leads' : 'contacts'}/${p.crm.id}`}>{p.crm.type === 'lead' ? t('Lead') : t('Contact')}</Link> : <span className="text-muted-foreground">{t('Not yet')}</span>}
+                      {p.crm ? <Link className="underline underline-offset-2" href={`/app/${p.crm.type === 'lead' ? 'leads' : 'contacts'}/${p.crm.id}`}>{p.crm.type === 'lead' ? t('Inbound contact') : t('Contact')}</Link> : <span className="text-muted-foreground">{t('Not yet')}</span>}
                     </td>
                   </tr>
                 ))}
@@ -502,7 +502,7 @@ function BulkBar({ listId, ids, onDone }: { listId: string; ids: string[]; onDon
   const toCrm = useProspectMutation(() => prospectsApi.toCrm(ids, sequenceId || undefined), (r) => {
     const n = (o: string) => r.results.filter((x) => x.outcome === o).length;
     setFailures(r.results.filter((x) => x.reason).map((x) => x.reason!).filter((v, i, a) => a.indexOf(v) === i));
-    onDone([t('Added {n} as leads.', { n: n('added') }), n('existing') ? t('{n} already in the CRM.', { n: n('existing') }) : '', n('skipped') ? t('{n} skipped.', { n: n('skipped') }) : '', n('failed') ? t('{n} failed.', { n: n('failed') }) : '', r.enrollment ? (r.enrollment.skipped.length ? t('Enrolled {n}, {skipped} not enrolled.', { n: r.enrollment.enrolled, skipped: r.enrollment.skipped.length }) : t('Enrolled {n}.', { n: r.enrollment.enrolled })) : ''].filter(Boolean).join(' '));
+    onDone([t('Added {n} as inbound contacts.', { n: n('added') }), n('existing') ? t('{n} already in the CRM.', { n: n('existing') }) : '', n('skipped') ? t('{n} skipped.', { n: n('skipped') }) : '', n('failed') ? t('{n} failed.', { n: n('failed') }) : '', r.enrollment ? (r.enrollment.skipped.length ? t('Enrolled {n}, {skipped} not enrolled.', { n: r.enrollment.enrolled, skipped: r.enrollment.skipped.length }) : t('Enrolled {n}.', { n: r.enrollment.enrolled })) : ''].filter(Boolean).join(' '));
   });
   const verify = useProspectMutation(() => prospectsApi.verify(ids), (r) => onDone(r.skipped ? t.plural('count.verifiedSkipped', r.checked, { skipped: r.skipped }) : t.plural('count.verified', r.checked)));
   const move = useProspectMutation((copy: boolean) => prospectsApi.move(ids, target, copy), (r) => onDone(r.duplicates ? t.plural('count.movedDuplicates', r.moved, { duplicates: r.duplicates }) : t.plural('count.moved', r.moved)));
@@ -526,7 +526,7 @@ function BulkBar({ listId, ids, onDone }: { listId: string; ids: string[]; onDon
               </Select>
             </label>
           )}
-          <Button size="sm" disabled={toCrm.isPending} onClick={() => toCrm.mutate(undefined)}>{sequenceId ? t('Add to CRM and enrol') : t('Add to CRM as leads')}</Button>
+          <Button size="sm" disabled={toCrm.isPending} onClick={() => toCrm.mutate(undefined)}>{sequenceId ? t('Add to CRM and enrol') : t('Add to CRM as inbound contacts')}</Button>
           {canSearch && <Button size="sm" variant="outline" disabled={verify.isPending} onClick={() => verify.mutate(undefined)}>{t('Verify emails')}</Button>}
           <label className="block space-y-1 text-xs">
             <span className="font-medium text-muted-foreground">{t('Other list')}</span>

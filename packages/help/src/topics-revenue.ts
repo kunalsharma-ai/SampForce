@@ -396,11 +396,11 @@ export const revenueHelp = {
       'تاريخا بدء العقد وانتهائه، وهل يتجدد تلقائيًا، ومتى تُذكَّر.',
     ],
     how: [
-      'Set the dates and the reminder lead time. Create the renewal from here when it is due.',
-      'Fija las fechas y la antelación del aviso. Crea la renovación desde aquí cuando toque.',
-      'Fixez les dates et le délai de rappel. Créez le renouvellement d’ici le moment venu.',
-      'Legen Sie Daten und Vorlaufzeit fest. Erstellen Sie die Verlängerung bei Fälligkeit hier.',
-      'حدد التواريخ ومهلة التذكير. أنشئ التجديد من هنا عند حلول موعده.',
+      'Set the dates and how early the reminder comes. Create the renewal from here when it is due.',
+      'Fija las fechas y con cuánta antelación llega el recordatorio. Crea la renovación desde aquí cuando venza.',
+      'Fixez les dates et le délai du rappel. Créez le renouvellement d’ici à l’échéance.',
+      'Legen Sie die Termine fest und wie früh die Erinnerung kommt. Legen Sie die Verlängerung hier an, wenn sie fällig ist.',
+      'حدّد التواريخ وموعد وصول التذكير مسبقًا. أنشئ التجديد من هنا عند استحقاقه.',
     ],
     where: [
       'Use it to start renewal talks early, before the customer looks elsewhere.',
@@ -531,13 +531,13 @@ export const revenueHelp = {
     ],
   },
   'revenue.funnel': {
-    title: 'Lead funnel',
+    title: 'Contact funnel',
     what: [
-      'How many leads became qualified, converted and won in the period.',
-      'Cuántos leads se calificaron, convirtieron y ganaron en el periodo.',
-      'Combien de prospects ont été qualifiés, convertis et gagnés sur la période.',
-      'Wie viele Leads im Zeitraum qualifiziert, umgewandelt und gewonnen wurden.',
-      'عدد العملاء المحتملين الذين تأهلوا وتحولوا وكُسبوا في الفترة.',
+      'How many companies became qualified, converted and won in the period.',
+      'Cuántas empresas se calificaron, convirtieron y ganaron en el periodo.',
+      'Combien d’entreprises ont été qualifiées, converties et gagnées sur la période.',
+      'Wie viele Unternehmen im Zeitraum qualifiziert, umgewandelt und gewonnen wurden.',
+      'كم شركة تأهلت وتحولت ورُبحت في الفترة.',
     ],
     how: [
       'Look for the biggest drop between two steps; that is where to improve first.',
@@ -547,11 +547,11 @@ export const revenueHelp = {
       'ابحث عن أكبر انخفاض بين خطوتين؛ فهناك تبدأ التحسين.',
     ],
     where: [
-      'Use it to judge lead quality and follow-up speed.',
-      'Úsalo para valorar la calidad de los leads y la rapidez del seguimiento.',
-      'Utilisez-le pour juger la qualité des prospects et la vitesse de relance.',
-      'Nutzen Sie es, um Lead-Qualität und Reaktionsgeschwindigkeit zu bewerten.',
-      'استخدمه لتقييم جودة العملاء المحتملين وسرعة المتابعة.',
+      'Use it to judge company quality and follow-up speed.',
+      'Úsalo para valorar la calidad de las empresas y la rapidez del seguimiento.',
+      'Utilisez-le pour juger la qualité des entreprises et la rapidité des relances.',
+      'Nutzen Sie es, um Qualität der Unternehmen und Tempo beim Nachfassen zu beurteilen.',
+      'استخدمه لتقييم جودة الشركات وسرعة المتابعة.',
     ],
   },
   'revenue.byOwner': {

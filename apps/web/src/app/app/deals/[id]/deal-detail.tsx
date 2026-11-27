@@ -101,7 +101,7 @@ export function DealDetail({ id }: { id: string }) {
                   ['Company', d.company && <Link className="text-primary hover:underline" href={`/app/companies/${d.company.id}`}>{d.company.name}</Link>],
                   ['Primary contact', d.contact && <Link className="text-primary hover:underline" href={`/app/contacts/${d.contact.id}`}>{d.contact.name}</Link>],
                   ['Owner', d.owner?.name],
-                  ['Source lead', d.sourceLeadId && <Link className="text-primary hover:underline" href={`/app/leads/${d.sourceLeadId}`}>{t('View lead')}</Link>],
+                  ['Source inbound contact', d.sourceLeadId && <Link className="text-primary hover:underline" href={`/app/leads/${d.sourceLeadId}`}>{t('View inbound contact')}</Link>],
                   ['Created', formatDate(d.createdAt)],
                   ['Deal source', d.source],
                   ['Products or services', d.products.length ? d.products.join(', ') : null],

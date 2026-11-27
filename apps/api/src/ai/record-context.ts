@@ -68,7 +68,7 @@ export class RecordContextBuilder {
     switch (type) {
       case 'lead': {
         const l = await tx.lead.findFirst({ where: { id, tenantId: t, deletedAt: null } });
-        if (!l) throw notFound('Lead');
+        if (!l) throw notFound('Inbound contact');
         return {
           citation: { entity: 'lead', id, label: l.fullName },
           untrusted: hasUntrusted,

@@ -319,8 +319,8 @@ export const EMAIL_TEMPLATES: Template[] = [
 export const TEMPLATES: Template[] = [
   {
     key: 'hot-leads',
-    name: 'Follow up on high-value leads',
-    description: 'When a lead worth 50,000 or more arrives, tag it, create a same-day call task and check back after two days.',
+    name: 'Follow up on high-value contacts',
+    description: 'When an inbound contact worth 50,000 or more arrives, tag it, create a same-day call task and check back after two days.',
     definition: {
       trigger: { event: 'lead.created', conditions: { match: 'all', rules: [{ field: 'record.estimatedValue', op: 'gte', value: 50000 }] } },
       start: 'action_1',

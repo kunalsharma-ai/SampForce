@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 /** Domain events a workflow can start from. Each is published by the API in the same transaction as the change. */
 export const TRIGGER_EVENTS = {
-  'lead.created': { label: 'Lead is created', entity: 'lead' },
-  'lead.updated': { label: 'Lead is updated', entity: 'lead' },
-  'lead.assigned': { label: 'Lead is assigned', entity: 'lead' },
-  'lead.converted': { label: 'Lead is converted', entity: 'lead' },
+  'lead.created': { label: 'Inbound contact is created', entity: 'lead' },
+  'lead.updated': { label: 'Inbound contact is updated', entity: 'lead' },
+  'lead.assigned': { label: 'Inbound contact is assigned', entity: 'lead' },
+  'lead.converted': { label: 'Inbound contact is converted', entity: 'lead' },
   'contact.created': { label: 'Contact is created', entity: 'contact' },
   'company.created': { label: 'Company is created', entity: 'company' },
   'deal.created': { label: 'Deal is created', entity: 'deal' },
@@ -209,10 +209,10 @@ export const workflowDefinitionSchema = z
         ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}" waits with nothing after it; add a step after the wait` });
       }
       if (n.type === 'action' && n.action.type === 'add_tag' && TRIGGER_EVENTS[def.trigger.event].entity !== 'lead') {
-        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": tags can only be added to leads` });
+        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": tags can only be added to inbound contacts` });
       }
       if (n.type === 'action' && PERSON_ACTIONS.has(n.action.type) && !['lead', 'contact', 'person'].includes(TRIGGER_EVENTS[def.trigger.event].entity)) {
-        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": this action needs a lead or contact, so use a lead, contact or email trigger` });
+        ctx.addIssue({ code: 'custom', path: ['nodes'], message: `Step "${n.id}": this action needs a contact, so use an inbound contact, contact or email trigger` });
       }
     }
   });

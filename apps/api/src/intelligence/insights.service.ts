@@ -89,7 +89,7 @@ export class InsightsService {
         ]);
         if (repliesNow || repliesBefore) {
           items.push({
-            key: 'emails_received', tone: 'info', title: one(repliesNow, '{n} email from leads and contacts', '{n} emails from leads and contacts'),
+            key: 'emails_received', tone: 'info', title: one(repliesNow, '{n} email from contacts', '{n} emails from contacts'),
             detail: tr('{n} the week before. Counts mail synced from connected mailboxes only.', { n: repliesBefore }), metric: { current: repliesNow, previous: repliesBefore, unit: 'count' }, href: '/app/communication',
           });
         }
@@ -101,7 +101,7 @@ export class InsightsService {
       if (can('leads:read')) {
         const untouched = await tx.lead.count({ where: { tenantId: t, deletedAt: null, ...owner, status: 'NEW', createdAt: { lt: new Date(now.getTime() - DAY) }, activities: { none: { deletedAt: null } } } });
         if (untouched) {
-          items.push({ key: 'untouched_leads', tone: 'attention', title: one(untouched, '{n} new lead with no contact yet', '{n} new leads with no contact yet'), detail: tr('Still New, nothing logged, added more than a day ago.'), metric: { current: untouched, previous: null, unit: 'count' }, href: '/app/leads?status=NEW' });
+          items.push({ key: 'untouched_leads', tone: 'attention', title: one(untouched, '{n} new inbound contact not reached yet', '{n} new inbound contacts not reached yet'), detail: tr('Still New, nothing logged, added more than a day ago.'), metric: { current: untouched, previous: null, unit: 'count' }, href: '/app/leads?status=NEW' });
         }
       }
 

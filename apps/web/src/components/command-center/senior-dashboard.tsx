@@ -228,7 +228,7 @@ function Departments({ data, onDepartment, onManager }: { data: SeniorData; onDe
               {t('Reporting employees')}
             </th>
             <th scope="col" className={TH}>
-              {t('Leads')}
+              {t('Companies')}
             </th>
             <th scope="col" className={TH}>
               {t('RFQs received')}
@@ -305,7 +305,7 @@ const RANK_VALUE: Record<RankBy, (r: OrgPersonRow) => number | null> = {
 const RANK_BY_LABEL: Record<RankBy, MessageKey> = {
   score: 'Balanced score',
   revenue: 'Revenue',
-  leads: 'Leads generated',
+  leads: 'Companies created',
   rfqs: 'RFQs received',
   conversions: 'Clients converted',
   responseRate: 'Response rate',
@@ -383,7 +383,7 @@ function Rankings({ data, onOpen }: { data: SeniorData; onOpen: (userId: string)
               </option>
             ))}
         </Select>
-        {by === 'score' && <p className="text-xs text-muted-foreground">{t('The balanced score weighs quality (conversion, win rate, response rate, follow-up completion, target) as well as volume, so lead count alone never decides the order.')}</p>}
+        {by === 'score' && <p className="text-xs text-muted-foreground">{t('The balanced score weighs quality (conversion, win rate, response rate, follow-up completion, target) as well as volume, so the number of companies alone never decides the order.')}</p>}
       </div>
       <Card className="overflow-x-auto p-0">
         <table className="w-full min-w-[1000px] text-sm" data-testid="org-ranking">
@@ -405,10 +405,10 @@ function Rankings({ data, onOpen }: { data: SeniorData; onOpen: (userId: string)
                 </th>
               )}
               <th scope="col" className={TH}>
-                {t('Leads')}
+                {t('Companies')}
               </th>
               <th scope="col" className={TH}>
-                {t('Lead conversion')}
+                {t('Company conversion')}
               </th>
               <th scope="col" className={TH}>
                 {t('RFQs received')}
@@ -644,7 +644,7 @@ function Insights({ data }: { data: SeniorData }) {
       case 'overdueFollowUps':
         return t('{count} overdue', { count: count(i.value) });
       case 'lowConversion':
-        return t('{count} leads, {percent} converted', { count: count(i.value), percent: pct(i.extra) });
+        return t('{count} companies, {percent} converted', { count: count(i.value), percent: pct(i.extra) });
       case 'repeatRfqs':
         return t('{count} RFQs in six months', { count: count(i.value) });
       case 'decliningEngagement':

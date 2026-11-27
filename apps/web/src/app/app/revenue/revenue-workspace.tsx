@@ -97,13 +97,13 @@ function Report({ a }: { a: RevenueAnalytics }) {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-1.5">
-              <CardTitle className="text-base">{t('Lead funnel')}</CardTitle>
+              <CardTitle className="text-base">{t('Contact funnel')}</CardTitle>
               <InfoTip topic="revenue.funnel" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p className="text-xs text-muted-foreground">{t('Leads created this quarter')}</p>
-            <Line label={t('Leads')} value={String(a.funnel.leads)} />
+            <p className="text-xs text-muted-foreground">{t('Inbound contacts created this quarter')}</p>
+            <Line label={t('Inbound contacts')} value={String(a.funnel.leads)} />
             <Line label={t('Qualified or converted')} value={String(a.funnel.qualified)} />
             <Line label={t('Converted')} value={String(a.funnel.converted)} />
             <Line label={t('Became won deals')} value={String(a.funnel.wonFromLeads)} />
@@ -154,7 +154,7 @@ function Report({ a }: { a: RevenueAnalytics }) {
         </CardContent>
       </Card>
       <div className="grid gap-4 lg:grid-cols-3">
-        <ListCard title={t('By lead source')} empty={t('No won deals.')} rows={a.bySource.map((s) => [t.maybe(s.source), `${money(s.won)} · ${s.deals}`])} />
+        <ListCard title={t('By contact source')} empty={t('No won deals.')} rows={a.bySource.map((s) => [t.maybe(s.source), `${money(s.won)} · ${s.deals}`])} />
         <ListCard title={t('By product (accepted quotes)')} empty={t('No accepted quotes on won deals.')} rows={a.byProduct.map((p) => [p.name, `${money(p.revenue)} · ${t('qty {n}', { n: p.quantity })}`])} />
         <ListCard title={t('Loss reasons')} empty={t('No lost deals.')} rows={a.lossReasons.map((l) => [t.maybe(l.reason), `${l.deals} · ${money(l.amount)}`])} />
       </div>

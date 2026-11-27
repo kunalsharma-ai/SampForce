@@ -50,7 +50,7 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
       add(t('Achieved'), when);
       return a.kind === 'DEAL_CONVERTED'
         ? { title: t('Company converted into a deal!'), message: t('Congratulations! You’ve successfully converted a new company into a deal!'), facts, linkLabel: t('View deal') }
-        : { title: t('Prospect converted!'), message: t('Your lead is now a deal in the pipeline.'), facts, linkLabel: t('View deal') };
+        : { title: t('Prospect converted!'), message: t('Your company is now a deal in the pipeline.'), facts, linkLabel: t('View deal') };
     case 'RFQ_SUBMITTED':
       add(t('Company'), d.companyName);
       add(t('RFQ'), d.rfqNumber ? `${d.rfqNumber} · ${d.rfqTitle ?? ''}` : d.rfqTitle);
@@ -65,15 +65,15 @@ export function achievementCopy(a: AchievementRow, t: Translator): AchievementCo
       add(t('Deadlines'), d.onTime ? t('All done before their deadlines') : t('All done'));
       return { title: t('All Tasks Completed!'), message: t('You’ve successfully cleared your daily workload.'), facts, linkLabel: t('View tasks') };
     case 'LEAD_MILESTONE':
-      add(t('Leads today'), t('{actual} of {target}', { actual: num(d.actual), target: num(d.target) }));
+      add(t('Companies today'), t('{actual} of {target}', { actual: num(d.actual), target: num(d.target) }));
       add(t('Still to go'), num(d.remaining));
-      return { title: t('{percent}% of today’s lead target', { percent: d.percent ?? 0 }), message: t('Keep going: {remaining} more qualified leads reach your target.', { remaining: num(d.remaining) }), facts, linkLabel: t('View my achievements') };
+      return { title: t('{percent}% of today’s company target', { percent: d.percent ?? 0 }), message: t('Keep going: {remaining} more qualified companies reach your target.', { remaining: num(d.remaining) }), facts, linkLabel: t('View my achievements') };
     case 'LEAD_TARGET': {
       add(t('Target'), num(d.target));
-      add(t('Valid leads added'), num(d.actual));
+      add(t('Valid companies added'), num(d.actual));
       add(t('Achieved'), when);
-      const title = d.period === 'WEEK' ? t('Weekly Lead Target Achieved!') : d.period === 'MONTH' ? t('Monthly Lead Target Achieved!') : t('Daily Lead Target Achieved!');
-      return { title, message: t('You’ve successfully reached your target of {target} qualified leads.', { target: num(d.target) }), facts, linkLabel: t('View my achievements') };
+      const title = d.period === 'WEEK' ? t('Weekly Company Target Achieved!') : d.period === 'MONTH' ? t('Monthly Company Target Achieved!') : t('Daily Company Target Achieved!');
+      return { title, message: t('You’ve successfully reached your target of {target} qualified companies.', { target: num(d.target) }), facts, linkLabel: t('View my achievements') };
     }
     case 'SALES_TARGET': {
       const value = (n: number | undefined) => (d.metric === 'REVENUE' ? (money(n, d.currency, loc) ?? num(n)) : t('{n} deals won', { n: num(n) }));

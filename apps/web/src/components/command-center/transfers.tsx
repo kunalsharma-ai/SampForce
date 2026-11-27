@@ -52,7 +52,7 @@ export function TransferRequests() {
     <Card className="p-0">
       <div
         role="tablist"
-        aria-label={t('Lead transfer requests')}
+        aria-label={t('Company transfer requests')}
         className="flex gap-1 border-b border-border px-3 pt-2"
       >
         {(
@@ -90,7 +90,7 @@ export function TransferRequests() {
           <p className="p-3 text-sm text-muted-foreground">
             {box === 'toDecide'
               ? t('No requests are waiting for you.')
-              : t('You have not asked to transfer a lead. Use Request transfer on a company page.')}
+              : t('You have not asked to transfer a company. Use Request transfer on a company page.')}
           </p>
         ) : (
           <ul className="divide-y divide-border" data-testid={`transfers-${box}`}>
@@ -172,7 +172,7 @@ function DecisionDialog({ row: r, onClose }: { row: LeadTransferRow; onClose: ()
   const [error, setError] = React.useState<string | null>(null);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (action === 'REASSIGN' && !toUserId) return setError(t('Choose who takes the lead.'));
+    if (action === 'REASSIGN' && !toUserId) return setError(t('Choose who takes the company.'));
     try {
       await decide.mutateAsync({
         id: r.id,
@@ -196,11 +196,11 @@ function DecisionDialog({ row: r, onClose }: { row: LeadTransferRow; onClose: ()
         </DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
           {r.proposed
-            ? t('{from} asks to give this lead to {to}.', {
+            ? t('{from} asks to give this company to {to}.', {
                 from: r.requestedBy?.name ?? '',
                 to: r.proposed.name,
               })
-            : t('{from} asks you to choose who takes this lead.', {
+            : t('{from} asks you to choose who takes this company.', {
                 from: r.requestedBy?.name ?? '',
               })}
         </DialogDescription>
@@ -229,7 +229,7 @@ function DecisionDialog({ row: r, onClose }: { row: LeadTransferRow; onClose: ()
             </div>
           </fieldset>
           {action === 'REASSIGN' && (
-            <Field id="transfer-to" label={t('Who takes the lead')} error={error ?? undefined}>
+            <Field id="transfer-to" label={t('Who takes the company')} error={error ?? undefined}>
               <PersonSelect assignableOnly value={toUserId} onChange={setToUserId} />
             </Field>
           )}
@@ -326,7 +326,7 @@ export function RequestTransferDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg p-6">
         <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-          <ArrowRightLeft className="size-5" aria-hidden /> {editing ? t('Edit transfer request') : t('Request a lead transfer')}
+          <ArrowRightLeft className="size-5" aria-hidden /> {editing ? t('Edit transfer request') : t('Request a company transfer')}
         </DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">
           {t('Your manager decides. You stay recorded as the person who created {name}.', {

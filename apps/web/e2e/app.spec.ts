@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { signUp } from './helpers';
 
 const SIDEBAR = [
-  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Leads', 'Accounts', 'Sales Activities',
+  'Dashboard', 'Companies', 'Contacts', 'Deals', 'Pipelines', 'Follow-ups', 'Calls', 'Tasks', 'Targets', 'RFQs', 'Team chat', 'My achievements', 'Team status', 'Inbound contacts', 'Accounts', 'Sales Activities',
   'Email & Communication', 'Email Sequences', 'Email Finder', 'Prospect Lists', 'Meetings', 'AI Agents', 'Automation Studio', 'Marketing', 'Campaigns',
   'Revenue Intelligence', 'Forecasting',
   'Reports & Analytics', 'Sales Gamification', 'Team Management', 'Integrations', 'Marketplace', 'Billing', 'Settings', 'Administration',
@@ -126,7 +126,7 @@ test('the browser extension privacy page is public and linked from the site foot
   await page.goto('/pricing');
   await page.getByRole('link', { name: 'Browser extension privacy' }).click();
   await expect(page).toHaveURL(/\/extension-privacy$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'SampForce lead capture: privacy' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'SampForce contact capture: privacy' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Where it sends it' })).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations).toEqual([]);

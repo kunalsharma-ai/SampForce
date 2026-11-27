@@ -13,8 +13,8 @@ import { rich, useT } from '@/lib/i18n';
 import { InfoTip } from '@/components/info-tip';
 
 const SCOPE_LABEL: Record<ApiKeyScope, string> = {
-  'leads:read': 'Read leads',
-  'leads:write': 'Create and change leads',
+  'leads:read': 'Read inbound contacts',
+  'leads:write': 'Create and change inbound contacts',
   'contacts:read': 'Read contacts',
   'contacts:write': 'Create and change contacts',
   'companies:read': 'Read companies',
@@ -69,7 +69,7 @@ export function ApiKeysAndZapier() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p className="text-muted-foreground">
-            {t('Start Zaps when leads, contacts, deals or tasks change, and create leads, contacts and tasks from other apps. Zaps connect with an API key from below, and start within seconds through webhooks rather than polling.')}
+            {t('Start Zaps when inbound contacts, contacts, deals or tasks change, and create inbound contacts, contacts and tasks from other apps. Zaps connect with an API key from below, and start within seconds through webhooks rather than polling.')}
           </p>
           {zapier.data && !zapier.data.inviteUrl && (
             <p className="text-xs text-muted-foreground">

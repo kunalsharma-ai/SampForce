@@ -44,7 +44,6 @@ export const meetings = {
   'Meeting link': ['Enlace de la reunión', 'Lien de la réunion', 'Meeting-Link', 'رابط الاجتماع'],
   'Delete these meeting notes? Tasks and timeline notes already created stay.': ['¿Eliminar estas notas de reunión? Las tareas y notas de la cronología ya creadas se conservan.', 'Supprimer ces notes de réunion ? Les tâches et notes de chronologie déjà créées restent.', 'Diese Meeting-Notizen löschen? Bereits erstellte Aufgaben und Verlaufsnotizen bleiben erhalten.', 'هل تريد حذف ملاحظات الاجتماع هذه؟ تبقى المهام وملاحظات الخط الزمني التي أُنشئت.'],
   'Delete notes': ['Eliminar notas', 'Supprimer les notes', 'Notizen löschen', 'حذف الملاحظات'],
-  'Linked lead': ['Lead vinculado', 'Prospect lié', 'Verknüpfter Lead', 'العميل المحتمل المرتبط'],
   'Not linked to a record.': ['Sin vincular a un registro.', 'Non liées à une fiche.', 'Mit keinem Datensatz verknüpft.', 'غير مرتبطة بسجل.'],
   'Notes and transcript': ['Notas y transcripción', 'Notes et transcription', 'Notizen und Transkript', 'الملاحظات والنص المكتوب'],
   Notes: ['Notas', 'Notes', 'Notizen', 'الملاحظات'],
@@ -167,7 +166,7 @@ export const meetings = {
   'the linked record': ['el registro vinculado', 'la fiche liée', 'den verknüpften Datensatz', 'السجل المرتبط'],
   'Add summary to {target}': ['Añadir el resumen a {target}', 'Ajouter le résumé à {target}', 'Zusammenfassung zu {target} hinzufügen', 'إضافة الملخص إلى {target}'],
   'Add summary to a record': ['Añadir el resumen a un registro', 'Ajouter le résumé à une fiche', 'Zusammenfassung zu einem Datensatz hinzufügen', 'إضافة الملخص إلى سجل'],
-  'Link a deal, contact or lead above first.': ['Primero vincula arriba un negocio, contacto o lead.', 'Liez d’abord une affaire, un contact ou un prospect ci-dessus.', 'Verknüpfen Sie zuerst oben einen Deal, Kontakt oder Lead.', 'اربط أولًا صفقة أو جهة اتصال أو عميلًا محتملًا أعلاه.'],
+  'Link a deal or contact above first.': ['Vincula primero una oportunidad o un contacto arriba.', 'Liez d’abord une opportunité ou un contact ci-dessus.', 'Verknüpfen Sie zuerst oben eine Verkaufschance oder einen Kontakt.', 'اربط صفقة أو جهة اتصال أعلاه أولًا.'],
   'Write follow-up email': ['Escribir correo de seguimiento', 'Rédiger l’e-mail de suivi', 'Folge-E-Mail schreiben', 'كتابة بريد المتابعة'],
 
   // Shared meeting fields
@@ -180,7 +179,7 @@ export const meetings = {
   'AI qualification': ['Calificación con IA', 'Qualification par IA', 'KI-Qualifizierung', 'التأهيل بالذكاء الاصطناعي'],
   'Scoring…': ['Puntuando…', 'Notation…', 'Wird bewertet…', 'جارٍ التقييم…'],
   'Re-score': ['Volver a puntuar', 'Renoter', 'Neu bewerten', 'إعادة التقييم'],
-  'Score lead': ['Puntuar lead', 'Noter le prospect', 'Lead bewerten', 'تقييم العميل المحتمل'],
+  'Score contact': ['Puntuar contacto', 'Noter le contact', 'Kontakt bewerten', 'تقييم جهة الاتصال'],
   'Not scored yet. The score comes from contact details, value, source and recent activity, and each point is explained.': [
     'Aún sin puntuar. La puntuación sale de los datos de contacto, el valor, el origen y la actividad reciente, y cada punto se explica.',
     'Pas encore noté. La note vient des coordonnées, de la valeur, de la source et de l’activité récente, et chaque point est expliqué.',

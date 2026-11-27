@@ -28,11 +28,11 @@ export const notifications = {
     '{n} غير مقروءة · {a} تتطلب إجراءً منك · {i} مهمة',
   ],
   'Unread by section': ['Sin leer por sección', 'Non lues par section', 'Ungelesen nach Bereich', 'غير المقروءة حسب القسم'],
-  'New leads, tasks, approvals and reminders appear here as they happen.': [
-    'Los nuevos leads, tareas, aprobaciones y recordatorios aparecen aquí en cuanto ocurren.',
-    'Les nouveaux leads, tâches, approbations et rappels apparaissent ici dès qu’ils arrivent.',
-    'Neue Leads, Aufgaben, Freigaben und Erinnerungen erscheinen hier, sobald sie eintreffen.',
-    'تظهر هنا العملاء المحتملون الجدد والمهام والموافقات والتذكيرات فور حدوثها.',
+  'New companies, tasks, approvals and reminders appear here as they happen.': [
+    'Las nuevas empresas, tareas, aprobaciones y recordatorios aparecen aquí al momento.',
+    'Les nouvelles entreprises, tâches, approbations et rappels apparaissent ici au fur et à mesure.',
+    'Neue Unternehmen, Aufgaben, Freigaben und Erinnerungen erscheinen hier, sobald sie entstehen.',
+    'تظهر هنا الشركات الجديدة والمهام والموافقات والتذكيرات فور حدوثها.',
   ],
 
   // In the section they come from
@@ -95,7 +95,7 @@ export const notifications = {
   'Welcome back, {name}': ['Bienvenido de nuevo, {name}', 'Bon retour, {name}', 'Willkommen zurück, {name}', 'مرحبًا بعودتك، {name}'],
   'You’re signing in to': ['Estás iniciando sesión en', 'Vous vous connectez à', 'Sie melden sich an bei', 'أنت تسجّل الدخول إلى'],
   'For owners and admins': ['Para propietarios y administradores', 'Pour les propriétaires et administrateurs', 'Für Inhaber und Administratoren', 'للمالكين والمسؤولين'],
-  'For team leads': ['Para líderes de equipo', 'Pour les responsables d’équipe', 'Für Teamleitungen', 'لقادة الفرق'],
+  'For team managers': ['Para responsables de equipo', 'Pour les responsables d’équipe', 'Für Teamleitungen', 'لمديري الفرق'],
   'For sales executives': ['Para ejecutivos de ventas', 'Pour les commerciaux', 'Für Vertriebsmitarbeitende', 'لمندوبي المبيعات'],
   'Good morning': ['Buenos días', 'Bonjour', 'Guten Morgen', 'صباح الخير'],
   'Good afternoon': ['Buenas tardes', 'Bon après-midi', 'Guten Tag', 'مساء الخير'],
@@ -123,7 +123,7 @@ export const notifications = {
     'Arbeitsbereiche, Teams, Ziele und jede Kundenbeziehung, von oben.',
     'مساحات العمل والفرق والأهداف وكل علاقة مع العملاء، من القمة.',
   ],
-  'Lead your team to the next win': ['Lleva a tu equipo a la próxima victoria', 'Menez votre équipe vers la prochaine victoire', 'Führen Sie Ihr Team zum nächsten Erfolg', 'قُد فريقك إلى الفوز التالي'],
+  'Guide your team to the next win': ['Guía a tu equipo hacia el próximo éxito', 'Menez votre équipe vers la prochaine réussite', 'Führen Sie Ihr Team zum nächsten Erfolg', 'قُد فريقك إلى الفوز التالي'],
   'Assign work, track targets and coach your executives as it happens.': [
     'Asigna trabajo, sigue los objetivos y guía a tus ejecutivos en el momento.',
     'Attribuez le travail, suivez les objectifs et accompagnez vos commerciaux en direct.',
@@ -131,10 +131,10 @@ export const notifications = {
     'وزّع العمل وتابع الأهداف ووجّه مندوبيك لحظة بلحظة.',
   ],
   'Ready to close? Let’s sell.': ['¿Listo para cerrar? A vender.', 'Prêt à conclure ? Vendons.', 'Bereit zum Abschluss? Los geht’s.', 'مستعد لإتمام الصفقة؟ لنبدأ البيع.'],
-  'Your leads, follow-ups and deals, ready the moment you sign in.': [
-    'Tus leads, seguimientos y oportunidades, listos en cuanto inicias sesión.',
-    'Vos leads, relances et affaires, prêts dès la connexion.',
-    'Ihre Leads, Nachfassaktionen und Deals, bereit, sobald Sie sich anmelden.',
-    'عملاؤك المحتملون ومتابعاتك وصفقاتك جاهزة لحظة تسجيل الدخول.',
+  'Your companies, follow-ups and deals, ready the moment you sign in.': [
+    'Tus empresas, seguimientos y oportunidades, listos en cuanto inicias sesión.',
+    'Vos entreprises, relances et opportunités, prêtes dès votre connexion.',
+    'Ihre Unternehmen, Nachfassaktionen und Verkaufschancen, bereit, sobald Sie sich anmelden.',
+    'شركاتك ومتابعاتك وصفقاتك، جاهزة لحظة تسجيل دخولك.',
   ],
 } as const satisfies PhraseTable;

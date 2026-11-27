@@ -18,7 +18,7 @@ import type { MessageKey } from '@/lib/i18n';
 /** Labels for the Command Center dashboards (ADR 0063). Every number names what it counts, in the card's tooltip. */
 
 export const METRIC_LABEL = {
-  leadsGenerated: 'Leads generated',
+  leadsGenerated: 'Companies created',
   activeCompanies: 'Active companies',
   employeesContacted: 'Employees contacted',
   emailsSent: 'Emails sent',
@@ -34,13 +34,13 @@ export const METRIC_LABEL = {
   clientsConverted: 'Clients converted',
   clientsRejected: 'Clients rejected',
   clientConcerns: 'Client concerns',
-  transfersToSenior: 'Leads transferred to seniors',
+  transfersToSenior: 'Companies transferred to seniors',
   revenue: 'Revenue generated',
   openOpportunities: 'Open opportunities',
   existingClients: 'Existing clients',
   companies: 'Companies',
   outstanding: 'Outstanding revenue',
-  unassignedLeads: 'Unassigned leads',
+  unassignedLeads: 'Unassigned companies',
   pipelineValue: 'Revenue pipeline',
   conversionRate: 'Overall conversion rate',
   targetAchievement: 'Target achievement',
@@ -56,8 +56,8 @@ export const METRIC_LABEL = {
 } as const satisfies Record<DrillMetric, MessageKey>;
 
 export const METRIC_DEFINITION: Partial<Record<DrillMetric, MessageKey>> = {
-  leadsGenerated: 'Company leads created in the period.',
-  activeCompanies: 'Company leads owned now whose status is not lost or on hold.',
+  leadsGenerated: 'Companies created in the period.',
+  activeCompanies: 'Companies owned now whose status is not lost or on hold.',
   employeesContacted:
     'Employees reached in the period by a logged email, call, meeting or message, or a synced email.',
   emailsSent: 'Logged sent emails plus emails synced from a connected mailbox, in the period.',
@@ -69,10 +69,10 @@ export const METRIC_DEFINITION: Partial<Record<DrillMetric, MessageKey>> = {
   rfqsReceived: 'RFQs received in the period.',
   rfqsSubmitted: 'Quotations submitted in the period.',
   clientsConverted: 'Companies whose first won deal or RFQ closed in the period.',
-  clientsRejected: 'Company leads moved to a rejected or not interested status in the period.',
+  clientsRejected: 'Companies moved to a rejected or not interested status in the period.',
   clientConcerns: 'Companies with a concern status or an open concern now.',
   transfersToSenior:
-    'Leads moved to a manager or senior person through an approved transfer in the period.',
+    'Companies moved to a manager or senior person through an approved transfer in the period.',
   revenue:
     'Revenue credited in the period: each won deal split by attribution, so nothing is counted twice.',
   companies: 'Companies in the CRM, whoever generated them.',
@@ -80,7 +80,7 @@ export const METRIC_DEFINITION: Partial<Record<DrillMetric, MessageKey>> = {
   openOpportunities: 'Deals open now.',
   pipelineValue: 'The value of the deals open now, in the workspace currency.',
   outstanding: 'Won value not yet recorded as collected.',
-  conversionRate: 'Leads generated in the period that have since become clients, as a share of those leads.',
+  conversionRate: 'Companies created in the period that have since become clients, as a share of those companies.',
   targetAchievement: 'Revenue in the period against the organisation target for it.',
 };
 
@@ -130,7 +130,7 @@ export const SECTION_LABEL = {
   'exec.pipeline': 'My pipeline',
   'exec.performance': 'Business performance',
   'exec.revenue': 'Revenue attribution',
-  'exec.transfers': 'Lead transfer requests',
+  'exec.transfers': 'Company transfer requests',
   'team.kpis': 'Team metrics',
   'team.table': 'Employee performance',
   'team.compare': 'Performance comparison',
@@ -153,8 +153,8 @@ export const MONITOR_LABEL = {
   teamAwaiting: 'Pending client responses',
   teamRfqDeadlines: 'RFQ deadlines',
   teamConcerns: 'Client concerns',
-  unassigned: 'Unassigned leads',
-  intervention: 'Leads needing senior intervention',
+  unassigned: 'Unassigned companies',
+  intervention: 'Companies needing senior intervention',
 } as const satisfies Record<MonitorSection, MessageKey>;
 
 export const PERFORMANCE_STATUS_LABEL = {
@@ -219,7 +219,7 @@ export const SEVERITY_LABEL = {
 export const SEVERITY_TONE = { LOW: 'neutral', MEDIUM: 'primary', HIGH: 'warning', CRITICAL: 'critical' } as const;
 
 export const CREDIT_ROLE_LABEL = {
-  LEAD_GENERATION: 'Lead generation',
+  LEAD_GENERATION: 'Company creation',
   DEAL_CLOSURE: 'Deal closure',
   ACCOUNT_OWNERSHIP: 'Account ownership',
   SUPPORT: 'Support',
@@ -255,7 +255,7 @@ export const PAYMENT_STATUS_LABEL = {
 
 export const RANKING_LABEL = {
   revenue: 'Highest revenue generator',
-  leads: 'Highest lead generator',
+  leads: 'Most companies created',
   rfqs: 'Highest RFQ generator',
   conversions: 'Highest client conversion',
   responseRate: 'Best response rate',
@@ -265,13 +265,13 @@ export const RANKING_LABEL = {
 
 export const INSIGHT_LABEL = {
   overdueFollowUps: 'Employees with too many overdue follow-ups',
-  lowConversion: 'Many leads, few conversions',
+  lowConversion: 'Many companies, few conversions',
   repeatRfqs: 'Companies sending repeated RFQs',
   decliningEngagement: 'Companies with declining engagement',
   stuckNegotiation: 'Opportunities stuck in negotiation',
   rfqDeadlines: 'RFQs close to their deadline',
   unresolvedConcerns: 'Clients with unresolved concerns',
   teamsBehind: 'Teams behind their targets',
-  unassignedLeads: 'Leads without an owner',
+  unassignedLeads: 'Companies without an owner',
   revenueConcentration: 'Revenue concentrated in few clients',
 } as const satisfies Record<InsightKind, MessageKey>;

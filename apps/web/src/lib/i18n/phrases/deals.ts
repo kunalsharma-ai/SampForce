@@ -262,14 +262,14 @@ export const deals = {
   'AI suggestion': ['Sugerencia de IA', 'Suggestion IA', 'KI-Vorschlag', 'اقتراح الذكاء الاصطناعي'],
 
   // KPI names (from the dashboard API)
-  'Total leads': ['Leads totales', 'Total des prospects', 'Leads gesamt', 'إجمالي العملاء المحتملين'],
-  'New leads': ['Leads nuevos', 'Nouveaux prospects', 'Neue Leads', 'العملاء المحتملون الجدد'],
-  'Qualified leads': ['Leads calificados', 'Prospects qualifiés', 'Qualifizierte Leads', 'العملاء المحتملون المؤهلون'],
+  'Total inbound contacts': ['Total de contactos entrantes', 'Total des contacts entrants', 'Eingangskontakte gesamt', 'إجمالي جهات الاتصال الواردة'],
+  'New inbound contacts': ['Nuevos contactos entrantes', 'Nouveaux contacts entrants', 'Neue Eingangskontakte', 'جهات الاتصال الواردة الجديدة'],
+  'Qualified contacts': ['Contactos calificados', 'Contacts qualifiés', 'Qualifizierte Kontakte', 'جهات الاتصال المؤهلة'],
   'Active opportunities': ['Oportunidades activas', 'Opportunités actives', 'Aktive Verkaufschancen', 'الفرص النشطة'],
   'Pipeline value': ['Valor del pipeline', 'Valeur du pipeline', 'Pipeline-Wert', 'قيمة المسار'],
   'Weighted pipeline': ['Pipeline ponderado', 'Pipeline pondéré', 'Gewichtete Pipeline', 'المسار المرجح'],
   'Closed-won revenue': ['Ingresos ganados', 'Chiffre d’affaires gagné', 'Gewonnener Umsatz', 'الإيرادات المكتسبة'],
-  'Lead conversion rate': ['Tasa de conversión de leads', 'Taux de conversion des prospects', 'Lead-Konversionsrate', 'معدل تحويل العملاء المحتملين'],
+  'Contact conversion rate': ['Tasa de conversión de contactos', 'Taux de conversion des contacts', 'Kontakt-Umwandlungsrate', 'معدل تحويل جهات الاتصال'],
   'Average deal size': ['Tamaño medio de oportunidad', 'Taille moyenne des opportunités', 'Durchschnittliche Abschlussgröße', 'متوسط حجم الصفقة'],
   'Average sales cycle': ['Ciclo de venta medio', 'Cycle de vente moyen', 'Durchschnittlicher Verkaufszyklus', 'متوسط دورة البيع'],
   'Quarter forecast': ['Previsión trimestral', 'Prévision trimestrielle', 'Quartalsprognose', 'توقعات الربع'],
@@ -285,7 +285,7 @@ export const deals = {
   'Set your workspace currency and time zone': ['Define la moneda y la zona horaria del espacio de trabajo', 'Définissez la devise et le fuseau horaire de l’espace de travail', 'Währung und Zeitzone des Arbeitsbereichs festlegen', 'حدّد عملة مساحة العمل ومنطقتها الزمنية'],
   'Shape your sales pipeline stages': ['Da forma a las etapas de tu pipeline', 'Configurez les étapes de votre pipeline', 'Phasen Ihrer Vertriebspipeline gestalten', 'صمّم مراحل مسار مبيعاتك'],
   'Invite a teammate': ['Invita a un compañero', 'Invitez un collègue', 'Teammitglied einladen', 'ادعُ زميلًا'],
-  'Add or import leads and contacts': ['Añade o importa leads y contactos', 'Ajoutez ou importez des prospects et des contacts', 'Leads und Kontakte hinzufügen oder importieren', 'أضف عملاء محتملين وجهات اتصال أو استوردها'],
+  'Add or import companies and contacts': ['Añade o importa empresas y contactos', 'Ajoutez ou importez des entreprises et des contacts', 'Unternehmen und Kontakte hinzufügen oder importieren', 'أضف الشركات وجهات الاتصال أو استوردها'],
   'Create your first deal': ['Crea tu primera oportunidad', 'Créez votre première opportunité', 'Erste Verkaufschance anlegen', 'أنشئ صفقتك الأولى'],
   'Automate a follow-up': ['Automatiza un seguimiento', 'Automatisez une relance', 'Eine Nachfassaktion automatisieren', 'أتمت متابعة'],
 } as const satisfies PhraseTable;

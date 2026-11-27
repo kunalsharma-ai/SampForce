@@ -99,8 +99,8 @@ export interface OptionRow {
  * are always sent.
  */
 export const NOTIFICATION_CATEGORIES = [
-  { key: 'lead_assigned', label: 'New lead assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
-  { key: 'lead_reassigned', label: 'Lead reassigned', types: ['company.reassigned', 'lead.reassigned'] },
+  { key: 'lead_assigned', label: 'New company assigned', types: ['lead.assigned', 'company.assigned', 'prospect_list.assigned'] },
+  { key: 'lead_reassigned', label: 'Company reassigned', types: ['company.reassigned', 'lead.reassigned'] },
   { key: 'follow_up_assigned', label: 'Follow-up assigned', types: ['followup.assigned', 'task.assigned'] },
   { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'followup.daily', 'task.due_soon'] },
   { key: 'follow_up_overdue', label: 'Follow-up overdue', types: ['followup.overdue', 'task.overdue'] },
@@ -109,7 +109,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'team_status', label: 'Team status: check-in, breaks and check-out', types: ['team.status'] },
   { key: 'manager_remarks', label: 'Manager remarks', types: ['remark.', 'manager_remark.'] },
   { key: 'instructions', label: 'Senior management instructions', types: ['instruction.'] },
-  { key: 'lead_transfers', label: 'Lead transfer requests and decisions', types: ['lead_transfer.', 'transfer.'] },
+  { key: 'lead_transfers', label: 'Company transfer requests and decisions', types: ['lead_transfer.', 'transfer.'] },
   { key: 'rfqs', label: 'RFQ assigned', types: ['rfq.assigned', 'rfq.received'] },
   { key: 'rfq_deadline', label: 'RFQ deadline reminder', types: ['rfq.deadline'] },
   { key: 'concerns', label: 'Client concern escalation', types: ['escalation.', 'concern.'] },

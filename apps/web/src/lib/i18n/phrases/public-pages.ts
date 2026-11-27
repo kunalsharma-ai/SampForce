@@ -388,11 +388,11 @@ export const publicPages = {
     'بالتحويل المصرفي مقابل فاتورة. اختر خطة من الفوترة في مساحة عملك للحصول على فاتورة ببيانات الدفع؛ تبدأ الخطة فور تأكيد الدفع. لا يطلب SampForce أرقام البطاقات أبدًا. الأسعار غير شاملة الضرائب.',
   ],
   'SampForce by Sampledge': ['SampForce de Sampledge', 'SampForce par Sampledge', 'SampForce von Sampledge', 'SampForce من Sampledge'],
-  'One workspace for leads, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.': [
-    'Un solo espacio de trabajo para leads, oportunidades, automatización, presupuestos y análisis de ingresos. La IA muestra su razonamiento, respeta los permisos de cada persona y pregunta antes de actuar.',
-    'Un seul espace de travail pour les prospects, les opportunités, l’automatisation, les devis et l’analyse du revenu. L’IA montre son raisonnement, reste dans les autorisations de chacun et demande avant d’agir.',
-    'Ein Arbeitsbereich für Leads, Verkaufschancen, Automatisierung, Angebote und Umsatzanalysen. Die KI zeigt ihre Begründung, bleibt in den Berechtigungen jeder Person und fragt, bevor sie handelt.',
-    'مساحة عمل واحدة للعملاء المحتملين والصفقات والأتمتة وعروض الأسعار وتحليلات الإيرادات. يعرض الذكاء الاصطناعي منطقه، ويلتزم بصلاحيات كل شخص، ويسأل قبل أن يتصرف.',
+  'One workspace for companies, contacts, deals, automation, quotes and revenue analytics. The AI shows its reasoning, stays inside each person’s permissions, and asks before it acts.': [
+    'Un espacio de trabajo para empresas, contactos, oportunidades, automatización, presupuestos y análisis de ingresos. La IA muestra su razonamiento, respeta los permisos de cada persona y pregunta antes de actuar.',
+    'Un espace de travail pour les entreprises, contacts, opportunités, l’automatisation, les devis et l’analyse du chiffre d’affaires. L’IA montre son raisonnement, respecte les autorisations de chacun et demande avant d’agir.',
+    'Ein Arbeitsbereich für Unternehmen, Kontakte, Verkaufschancen, Automatisierung, Angebote und Umsatzanalysen. Die KI zeigt ihre Begründung, bleibt in den Berechtigungen jeder Person und fragt, bevor sie handelt.',
+    'مساحة عمل واحدة للشركات وجهات الاتصال والصفقات والأتمتة وعروض الأسعار وتحليلات الإيرادات. يعرض الذكاء الاصطناعي منطقه ويلتزم بصلاحيات كل شخص ويسأل قبل أن يتصرف.',
   ],
   'See pricing': ['Ver precios', 'Voir les tarifs', 'Preise ansehen', 'عرض الأسعار'],
   'The Free plan covers 2 users with no card required.': [
@@ -409,11 +409,11 @@ export const publicPages = {
     'تستهلك ميزات الذكاء الاصطناعي حصة الرصيد الشهرية لكل خطة. عند نفادها تتوقف حتى الشهر التالي؛ ولا تُفرض أي رسوم تلقائيًا.',
   ],
   'Core CRM': ['CRM básico', 'CRM de base', 'CRM-Kern', 'إدارة علاقات العملاء الأساسية'],
-  'Leads, contacts, companies and deals with Kanban pipelines, custom fields, CSV import and export, and search.': [
-    'Leads, contactos, empresas y oportunidades con embudos Kanban, campos personalizados, importación y exportación CSV, y búsqueda.',
-    'Prospects, contacts, entreprises et opportunités avec pipelines Kanban, champs personnalisés, import et export CSV, et recherche.',
-    'Leads, Kontakte, Unternehmen und Verkaufschancen mit Kanban-Pipelines, eigenen Feldern, CSV-Import und -Export sowie Suche.',
-    'العملاء المحتملون وجهات الاتصال والشركات والصفقات مع مسارات كانبان وحقول مخصصة واستيراد وتصدير CSV والبحث.',
+  'Companies, contacts and deals with Kanban pipelines, custom fields, CSV import and export, and search.': [
+    'Empresas, contactos y oportunidades con embudos Kanban, campos personalizados, importación y exportación CSV y búsqueda.',
+    'Entreprises, contacts et opportunités avec pipelines Kanban, champs personnalisés, import et export CSV et recherche.',
+    'Unternehmen, Kontakte und Verkaufschancen mit Kanban-Pipelines, benutzerdefinierten Feldern, CSV-Import und -Export und Suche.',
+    'الشركات وجهات الاتصال والصفقات مع مسارات Kanban وحقول مخصصة واستيراد وتصدير CSV وبحث.',
   ],
   'Workflows with conditions, delays and approval steps, a simulator to test them first, and signed webhooks.': [
     'Flujos de trabajo con condiciones, esperas y pasos de aprobación, un simulador para probarlos antes y webhooks firmados.',
@@ -422,11 +422,11 @@ export const publicPages = {
     'سير عمل بشروط وفترات انتظار وخطوات موافقة، ومحاكٍ لاختبارها أولًا، وخطافات ويب موقّعة.',
   ],
   'Revenue Copilot': ['Revenue Copilot', 'Revenue Copilot', 'Revenue Copilot', 'Revenue Copilot'],
-  'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.': [
-    'Ayuda de IA para calificar leads, evaluar el riesgo de oportunidades y redactar, mostrando el razonamiento y con una persona que aprueba todo lo que sale de SampForce.',
-    'Une assistance IA pour qualifier les prospects, évaluer le risque des opportunités et rédiger, avec le raisonnement affiché et une personne qui approuve tout ce qui quitte SampForce.',
-    'KI-Unterstützung für Lead-Qualifizierung, Risiko von Verkaufschancen und Entwürfe, mit sichtbarer Begründung und einer Person, die alles freigibt, was SampForce verlässt.',
-    'مساعدة بالذكاء الاصطناعي في تأهيل العملاء المحتملين وتقييم مخاطر الصفقات والصياغة، مع عرض المنطق وموافقة شخص على كل ما يغادر SampForce.',
+  'AI assistance for contact qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.': [
+    'Asistencia de IA para calificar contactos, evaluar el riesgo de oportunidades y redactar, mostrando el razonamiento y con una persona que aprueba todo lo que sale de SampForce.',
+    'Assistance IA pour la qualification des contacts, le risque des opportunités et la rédaction, avec le raisonnement affiché et une personne qui approuve tout ce qui quitte SampForce.',
+    'KI-Unterstützung für Kontaktqualifizierung, Verkaufschancen-Risiko und Entwürfe, mit sichtbarer Begründung und einer Person, die alles freigibt, was SampForce verlässt.',
+    'مساعدة بالذكاء الاصطناعي لتأهيل جهات الاتصال ومخاطر الصفقات والصياغة، مع عرض المنطق وموافقة شخص على كل ما يغادر SampForce.',
   ],
   'Quotes and contracts': ['Presupuestos y contratos', 'Devis et contrats', 'Angebote und Verträge', 'عروض الأسعار والعقود'],
   'Product catalogue, price books, tax rates, discount approvals, versioned quotes and contract renewals.': [
@@ -435,11 +435,11 @@ export const publicPages = {
     'Produktkatalog, Preislisten, Steuersätze, Rabattfreigaben, versionierte Angebote und Vertragsverlängerungen.',
     'كتالوج المنتجات وقوائم الأسعار ونسب الضرائب والموافقة على الخصومات وعروض أسعار بإصدارات وتجديد العقود.',
   ],
-  'Consent-aware segments, hosted lead forms you can embed, and campaign attribution to leads and won deals.': [
-    'Segmentos que respetan el consentimiento, formularios de captación alojados que puedes insertar y atribución de campañas a leads y oportunidades ganadas.',
-    'Des segments respectueux du consentement, des formulaires hébergés à intégrer et l’attribution des campagnes aux prospects et aux opportunités gagnées.',
-    'Einwilligungsbewusste Segmente, gehostete Lead-Formulare zum Einbetten und Kampagnenzuordnung zu Leads und gewonnenen Verkaufschancen.',
-    'شرائح تراعي الموافقة، ونماذج مستضافة يمكنك تضمينها، وإسناد الحملات إلى العملاء المحتملين والصفقات المكسوبة.',
+  'Consent-aware segments, hosted contact forms you can embed, and campaign attribution to contacts and won deals.': [
+    'Segmentos que respetan el consentimiento, formularios de contacto alojados que puedes insertar y atribución de campañas a contactos y oportunidades ganadas.',
+    'Segments respectueux du consentement, formulaires de contact hébergés à intégrer et attribution des campagnes aux contacts et opportunités gagnées.',
+    'Einwilligungsbewusste Segmente, einbettbare gehostete Kontaktformulare und Kampagnenzuordnung zu Kontakten und gewonnenen Verkaufschancen.',
+    'شرائح تراعي الموافقة، ونماذج جهات اتصال مستضافة يمكنك تضمينها، ونسب الحملات إلى جهات الاتصال والصفقات المربوحة.',
   ],
   'Revenue intelligence': ['Inteligencia de ingresos', 'Intelligence du revenu', 'Umsatzanalyse', 'ذكاء الإيرادات'],
   'Forecasts with scenarios, targets, win rates and revenue by source, computed from your own records.': [

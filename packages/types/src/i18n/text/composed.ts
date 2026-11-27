@@ -60,8 +60,8 @@ export const composed = {
   '{n} the week before ({value}).': ['{n} la semana anterior ({value}).', '{n} la semaine précédente ({value}).', '{n} in der Woche davor ({value}).', '{n} في الأسبوع السابق ({value}).'],
   '{n} deal won, {value}': ['{n} oportunidad ganada, {value}', '{n} opportunité gagnée, {value}', '{n} Verkaufschance gewonnen, {value}', '{n} صفقة مربوحة، {value}'],
   '{n} deals won, {value}': ['{n} oportunidades ganadas, {value}', '{n} opportunités gagnées, {value}', '{n} Verkaufschancen gewonnen, {value}', '{n} صفقات مربوحة، {value}'],
-  '{n} email from leads and contacts': ['{n} correo de leads y contactos', '{n} e-mail de prospects et de contacts', '{n} E-Mail von Leads und Kontakten', '{n} رسالة من العملاء المحتملين وجهات الاتصال'],
-  '{n} emails from leads and contacts': ['{n} correos de leads y contactos', '{n} e-mails de prospects et de contacts', '{n} E-Mails von Leads und Kontakten', '{n} رسائل من العملاء المحتملين وجهات الاتصال'],
+  '{n} email from contacts': ['{n} correo de contactos', '{n} e-mail de contacts', '{n} E-Mail von Kontakten', '{n} رسالة من جهات الاتصال'],
+  '{n} emails from contacts': ['{n} correos de contactos', '{n} e-mails de contacts', '{n} E-Mails von Kontakten', '{n} رسائل من جهات الاتصال'],
   '{n} the week before. Counts mail synced from connected mailboxes only.': [
     '{n} la semana anterior. Solo cuenta el correo sincronizado desde buzones conectados.',
     '{n} la semaine précédente. Seuls les e-mails synchronisés depuis les boîtes connectées sont comptés.',
@@ -72,8 +72,8 @@ export const composed = {
   '{n} overdue tasks': ['{n} tareas vencidas', '{n} tâches en retard', '{n} überfällige Aufgaben', '{n} مهام متأخرة'],
   'Assigned to you.': ['Asignadas a ti.', 'Qui vous sont attribuées.', 'Ihnen zugewiesen.', 'مسندة إليك.'],
   'Across the team.': ['En todo el equipo.', 'Pour toute l’équipe.', 'Im ganzen Team.', 'على مستوى الفريق.'],
-  '{n} new lead with no contact yet': ['{n} lead nuevo sin contacto todavía', '{n} nouveau prospect pas encore contacté', '{n} neuer Lead ohne bisherigen Kontakt', '{n} عميل محتمل جديد لم يُتواصل معه بعد'],
-  '{n} new leads with no contact yet': ['{n} leads nuevos sin contacto todavía', '{n} nouveaux prospects pas encore contactés', '{n} neue Leads ohne bisherigen Kontakt', '{n} عملاء محتملين جدد لم يُتواصل معهم بعد'],
+  '{n} new inbound contact not reached yet': ['{n} contacto entrante nuevo aún sin contactar', '{n} nouveau contact entrant pas encore contacté', '{n} neuer Eingangskontakt noch nicht erreicht', '{n} جهة اتصال واردة جديدة لم يُتواصل معها بعد'],
+  '{n} new inbound contacts not reached yet': ['{n} contactos entrantes nuevos aún sin contactar', '{n} nouveaux contacts entrants pas encore contactés', '{n} neue Eingangskontakte noch nicht erreicht', '{n} جهات اتصال واردة جديدة لم يُتواصل معها بعد'],
   'Still New, nothing logged, added more than a day ago.': [
     'Siguen en Nuevo, sin nada registrado y añadidos hace más de un día.',
     'Toujours à Nouveau, rien de consigné, ajoutés il y a plus d’un jour.',

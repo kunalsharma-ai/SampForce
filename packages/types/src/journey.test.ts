@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type JourneyFacts, journeyProgressOf, journeyStageOf, journeyStagesOf, journeySettingsSchema, journeySteps, visibleJourneyKey } from './journey';
 
-const facts = (f: Partial<JourneyFacts>): JourneyFacts => ({ statusMeaning: 'NEW', statusName: 'New Lead', won: false, openDeal: false, openRfq: false, contactStages: [], ...f });
+const facts = (f: Partial<JourneyFacts>): JourneyFacts => ({ statusMeaning: 'NEW', statusName: 'New Company', won: false, openDeal: false, openRfq: false, contactStages: [], ...f });
 
 describe('company journey (ADR 0085)', () => {
   it('works the stage out from employees, RFQs, deals and the status', () => {

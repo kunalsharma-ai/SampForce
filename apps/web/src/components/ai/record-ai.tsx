@@ -78,7 +78,7 @@ function LeadQualificationCardPanel({ leadId, canRun }: { leadId: string; canRun
         </div>
         {canRun && (
           <Button size="sm" variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
-            {run.isPending ? t('Scoring…') : q ? t('Re-score') : t('Score lead')}
+            {run.isPending ? t('Scoring…') : q ? t('Re-score') : t('Score contact')}
           </Button>
         )}
       </CardHeader>

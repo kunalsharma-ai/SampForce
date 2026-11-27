@@ -92,7 +92,7 @@ export function ComposeDialog({
       <DialogContent className="p-6">
         <DialogTitle className="text-lg font-semibold">{t('New email')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
-          {t('Sent from your connected mailbox and logged on the matching contact or lead.')}
+          {t('Sent from your connected mailbox and logged on the matching contact.')}
         </DialogDescription>
         <form
           className="mt-4 space-y-3"

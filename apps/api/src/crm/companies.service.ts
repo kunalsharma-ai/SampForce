@@ -229,7 +229,7 @@ export class CompaniesService {
       const label = company.leadNumber ? `${company.leadNumber} ${company.name}` : company.name;
       await this.notifications.send(tx, auth.tenantId, [toUserId], {
         type: 'company.assigned',
-        title: `Lead assigned to you: ${label}`,
+        title: `Company assigned to you: ${label}`,
         body: note ? `${by}: ${note}` : `Assigned by ${by}.`,
         link: `/app/companies/${company.id}`,
       });
@@ -434,7 +434,7 @@ export async function assertAssignable(tx: TenantTx, auth: AuthContext, ownerId:
   if (ownerId === auth.userId) return;
   const allowed = await assignableUserIds(tx, auth);
   if (allowed !== 'all' && !allowed.includes(ownerId)) {
-    throw new ForbiddenException({ code: 'OWNER_NOT_ALLOWED', message: 'You can give leads only to yourself or to people who report to you.', details: [{ path: 'ownerId', message: 'not allowed' }] });
+    throw new ForbiddenException({ code: 'OWNER_NOT_ALLOWED', message: 'You can give companies only to yourself or to people who report to you.', details: [{ path: 'ownerId', message: 'not allowed' }] });
   }
 }
 

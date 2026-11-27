@@ -16,7 +16,7 @@ import { plainStore } from '../lib/storage';
 export type SceneVariant = 'super' | 'manager' | 'executive';
 export const VARIANT_OF: Record<MobileWorkspaceLevel, SceneVariant> = { SUPER: 'super', MANAGER: 'manager', EXECUTIVE: 'executive' };
 const LEVEL_OF: Record<SceneVariant, MobileWorkspaceLevel> = { super: 'SUPER', manager: 'MANAGER', executive: 'EXECUTIVE' };
-export const ROLE_OF: Record<SceneVariant, string> = { super: 'For owners and admins', manager: 'For team leads', executive: 'For sales executives' };
+export const ROLE_OF: Record<SceneVariant, string> = { super: 'For owners and admins', manager: 'For team managers', executive: 'For sales executives' };
 const ICON_OF: Record<SceneVariant, 'planet' | 'people' | 'rocket'> = { super: 'planet', manager: 'people', executive: 'rocket' };
 
 export const RED = '#E02424';

@@ -86,16 +86,16 @@ export const importPhrases = {
     'Fügen Sie die Personen hinzu, mit denen Sie bei diesem Unternehmen zu tun haben. Sie werden mit dem Unternehmen gespeichert und stehen auch unter Kontakte.',
     'أضف الأشخاص الذين تتعامل معهم في هذه الشركة. يُحفظون مع الشركة ويظهرون في جهات الاتصال أيضًا.',
   ],
-  'Company leads with their employees. Open the contacts count to add or edit a company’s people in place.': [
-    'Leads de empresa con sus empleados. Abre el número de contactos para añadir o editar a las personas de una empresa sin salir de la lista.',
-    'Prospects entreprises avec leurs employés. Ouvrez le nombre de contacts pour ajouter ou modifier les personnes d’une entreprise sur place.',
-    'Unternehmens-Leads mit ihren Mitarbeitenden. Öffnen Sie die Kontaktanzahl, um die Personen eines Unternehmens direkt hinzuzufügen oder zu bearbeiten.',
-    'عملاء الشركات المحتملون مع موظفيهم. افتح عدد جهات الاتصال لإضافة أشخاص الشركة أو تعديلهم في مكانهم.',
+  'Companies with their employees. Open the contacts count to add or edit a company’s people in place.': [
+    'Empresas con sus empleados. Abre el recuento de contactos para añadir o editar a las personas de una empresa ahí mismo.',
+    'Entreprises avec leurs employés. Ouvrez le nombre de contacts pour ajouter ou modifier les personnes d’une entreprise sur place.',
+    'Unternehmen mit ihren Mitarbeitern. Öffnen Sie die Kontaktanzahl, um die Personen eines Unternehmens direkt hinzuzufügen oder zu bearbeiten.',
+    'الشركات مع موظفيها. افتح عدد جهات الاتصال لإضافة أشخاص الشركة أو تعديلهم في مكانهم.',
   ],
-  'Bring in companies with their employees, leads, contacts or companies from a CSV or Excel file (up to 2 MB and 5,000 rows). Every file is checked before anything is saved.': [
-    'Importa empresas con sus empleados, leads, contactos o empresas desde un archivo CSV o Excel (hasta 2 MB y 5000 filas). Cada archivo se revisa antes de guardar nada.',
-    'Importez des entreprises avec leurs employés, des prospects, des contacts ou des entreprises depuis un fichier CSV ou Excel (jusqu’à 2 Mo et 5 000 lignes). Chaque fichier est vérifié avant tout enregistrement.',
-    'Importieren Sie Unternehmen mit ihren Mitarbeitenden, Leads, Kontakte oder Unternehmen aus einer CSV- oder Excel-Datei (bis 2 MB und 5.000 Zeilen). Jede Datei wird geprüft, bevor etwas gespeichert wird.',
-    'استورد الشركات مع موظفيها أو العملاء المحتملين أو جهات الاتصال أو الشركات من ملف CSV أو Excel (حتى 2 ميغابايت و5000 صف). يُفحص كل ملف قبل حفظ أي شيء.',
+  'Bring in companies with their employees, inbound contacts, contacts or companies from a CSV or Excel file (up to 2 MB and 5,000 rows). Every file is checked before anything is saved.': [
+    'Importa empresas con sus empleados, contactos entrantes, contactos o empresas desde un archivo CSV o Excel (hasta 2 MB y 5.000 filas). Cada archivo se revisa antes de guardar nada.',
+    'Importez des entreprises avec leurs employés, des contacts entrants, des contacts ou des entreprises depuis un fichier CSV ou Excel (jusqu’à 2 Mo et 5 000 lignes). Chaque fichier est vérifié avant tout enregistrement.',
+    'Importieren Sie Unternehmen mit ihren Mitarbeitern, Eingangskontakte, Kontakte oder Unternehmen aus einer CSV- oder Excel-Datei (bis 2 MB und 5.000 Zeilen). Jede Datei wird geprüft, bevor etwas gespeichert wird.',
+    'استورد الشركات مع موظفيها، أو جهات اتصال واردة أو جهات اتصال أو شركات من ملف CSV أو Excel (حتى 2 ميغابايت و5,000 صف). يُفحص كل ملف قبل حفظ أي شيء.',
   ],
 } as const satisfies PhraseTable;

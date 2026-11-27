@@ -69,9 +69,9 @@ test('companies sit in their journey stage, a card opens the journey, and the Su
   if (PREVIEW_DIR) await page.screenshot({ path: `${PREVIEW_DIR}/01-pipeline-journey-board.png` });
 
   // Search narrows the board.
-  await page.getByRole('textbox', { name: 'Search companies or lead numbers' }).fill('contoso');
+  await page.getByRole('textbox', { name: 'Search companies or company numbers' }).fill('contoso');
   await expect(board.getByRole('status')).toHaveText('1 company');
-  await page.getByRole('textbox', { name: 'Search companies or lead numbers' }).fill('');
+  await page.getByRole('textbox', { name: 'Search companies or company numbers' }).fill('');
   await expect(board.getByRole('status')).toHaveText('4 companies');
 
   // The card opens the visual journey.

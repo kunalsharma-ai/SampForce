@@ -73,14 +73,14 @@ export interface MobileTargetRow {
 
 /** The headline labels a card can carry; the phone translates them (data such as names and stages is shown as is). */
 export const MOBILE_STAT_LABELS = [
-  'Leads today',
+  'Companies today',
   'Target',
   'Still needed',
   'Calls today',
   'Due today',
   'Overdue',
   'Open',
-  'Leads',
+  'Companies',
   'Calls',
   'Deals won',
   'Revenue',
@@ -98,8 +98,8 @@ export type MobileStatLabel = (typeof MOBILE_STAT_LABELS)[number];
 
 /** Sentences a card shows when it has nothing to count; the phone translates them. */
 export const MOBILE_CARD_EMPTY = [
-  'No daily lead target is set for you.',
-  'No daily lead target is set for your team.',
+  'No daily company target is set for you.',
+  'No daily company target is set for your team.',
   'No targets are running for you.',
   'No targets are running.',
   'No Executive Workspaces yet.',

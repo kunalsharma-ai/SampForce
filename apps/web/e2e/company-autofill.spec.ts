@@ -203,7 +203,7 @@ test('Create Company finds the details before saving; the person picks what to u
   // Through the steps to save; the values are in the form to check on the way.
   for (let i = 0; i < 7; i++) await main.getByRole('button', { name: 'Next' }).click();
   await expect(main).toContainText('Pune');
-  await main.getByRole('button', { name: 'Save lead' }).click();
+  await main.getByRole('button', { name: 'Save company' }).click();
   await expect(page).toHaveURL(/\/app\/companies\/[0-9a-f-]{36}$/);
   const id = page.url().split('/').pop()!;
   // After saving, auto-fill adds the rest, and the values taken from the look-up keep their source.

@@ -95,7 +95,7 @@ const UPGRADE_MARKER = (tenantId: string) => `upgrade:company-crm-1:${tenantId}`
  * visibility are never undone. Nothing is deleted:
  *  - default statuses, designations and departments;
  *  - system roles get permissions added since they were created, and the default record visibility;
- *  - companies get lead numbers in creation order, a status (Existing Client with a won deal, else New Lead), a
+ *  - companies get lead numbers in creation order, a status (Existing Client with a won deal, else New Company), a
  *    creator (who created them according to the audit log, else the owner) and duplicate keys;
  *  - contacts get the default employee status, their email and phone as the primary entries, and duplicate keys.
  * Lead numbers are also assigned on later runs to any company that has none (records written by older code).
@@ -110,11 +110,26 @@ export async function upgradeCompanyCrm(prisma: PrismaClient, log: (line: string
       await upgradeTenant(prisma as unknown as TenantTx, tenantId);
       log(`upgraded ${tenantId} to the company-centric CRM`);
     }
+    if (await renameNewLeadStatus(prisma as unknown as TenantTx, tenantId)) log(`renamed the "New Lead" company status to "New Company" in ${tenantId}`);
     let numbered = 0;
     for (let n = 1; n > 0; numbered += n) n = await withDbContext(prisma, { system: true }, (tx) => assignLeadNumbers(tx, tenantId));
     if (!marker) await prisma.counter.create({ data: { id: UPGRADE_MARKER(tenantId), value: 1 } });
-    if (numbered) log(`numbered ${numbered} company leads in ${tenantId}`);
+    if (numbered) log(`numbered ${numbered} companies in ${tenantId}`);
   }
+}
+
+/**
+ * ADR 0096: SampForce no longer says "Lead". The default company status was seeded as "New Lead"; it becomes
+ * "New Company" in place (same record, so every company keeps its status). A workspace that already has its own
+ * "New Company" status, or renamed the default, is left alone. Runs on every deploy and does nothing once renamed.
+ */
+async function renameNewLeadStatus(tx: TenantTx, tenantId: string): Promise<boolean> {
+  const old = await tx.crmStatus.findFirst({ where: { tenantId, kind: 'COMPANY', name: 'New Lead' }, select: { id: true } });
+  if (!old) return false;
+  const taken = await tx.crmStatus.findFirst({ where: { tenantId, kind: 'COMPANY', name: 'New Company' }, select: { id: true } });
+  if (taken) return false;
+  await tx.crmStatus.update({ where: { id: old.id }, data: { name: 'New Company' } });
+  return true;
 }
 
 /** Permissions introduced by the company-centric CRM. */
@@ -132,7 +147,7 @@ async function upgradeTenant(tx: TenantTx, tenantId: string): Promise<void> {
   }
   const statuses = await tx.crmStatus.findMany({ where: { tenantId } });
   const pick = (kind: string, name: string) => statuses.find((s) => s.kind === kind && s.name === name) ?? statuses.find((s) => s.kind === kind && s.isDefault);
-  const newLead = pick('COMPANY', 'New Lead');
+  const newLead = pick('COMPANY', 'New Company');
   const client = pick('COMPANY', 'Existing Client');
   const newContact = pick('EMPLOYEE', 'New Contact');
 

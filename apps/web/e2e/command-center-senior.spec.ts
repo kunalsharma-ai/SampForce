@@ -81,7 +81,7 @@ test('senior management sees the organisation: departments, rankings, revenue do
   await expect(main.getByRole('heading', { name: 'Senior management dashboard', level: 1 })).toBeVisible();
   await expect(page.getByTestId('org-target')).toContainText('$23,000 of $50,000');
   const kpis = main.getByRole('list', { name: 'Organisation metrics' });
-  await expect(kpis.getByRole('button', { name: 'Leads generated: 8. Show the records' })).toBeVisible();
+  await expect(kpis.getByRole('button', { name: 'Companies created: 8. Show the records' })).toBeVisible();
   await expect(kpis.getByRole('button', { name: 'Revenue generated: $23,000. Show the records' })).toBeVisible();
   await expect(kpis.getByRole('button', { name: /^Overall conversion rate: 37\.5%/ })).toBeVisible();
   const depts = page.getByTestId('org-departments');
@@ -97,7 +97,7 @@ test('senior management sees the organisation: departments, rankings, revenue do
 
   // Rankings: the balanced score by default, or any single measure.
   await page.locator('[data-section="org.rankings"]').scrollIntoViewIfNeeded();
-  await main.getByLabel('Rank by').selectOption({ label: 'Leads generated' });
+  await main.getByLabel('Rank by').selectOption({ label: 'Companies created' });
   await expect(page.getByTestId('org-ranking').locator('tbody tr').first()).toContainText('Rahul Verma');
   await shot(page, '16-senior-rankings', false);
 

@@ -495,7 +495,7 @@ export function CurrencySection({ canManage }: { canManage: boolean }) {
 
 // ───────────── Export permissions ─────────────
 
-export const EXPORT_ENTITY_LABEL = { companies: 'Companies', contacts: 'Employees', leads: 'Inbound leads', deals: 'Deals', rfqs: 'RFQs' } as const satisfies Record<ExportEntityKey, MessageKey>;
+export const EXPORT_ENTITY_LABEL = { companies: 'Companies', contacts: 'Employees', leads: 'Inbound contacts', deals: 'Deals', rfqs: 'RFQs' } as const satisfies Record<ExportEntityKey, MessageKey>;
 const FORMAT_LABEL = { csv: 'CSV', xlsx: 'Excel' } as const satisfies Record<ExportFormat, MessageKey>;
 
 export function ExportSection() {
@@ -740,14 +740,14 @@ function DashboardPolicyForm({ policy, canManage }: { policy: DashboardPolicy; c
 // ───────────── Revenue attribution ─────────────
 
 const MODEL_LABEL = {
-  LEAD_GENERATION: 'Whoever generated the lead',
+  LEAD_GENERATION: 'Whoever created the company',
   DEAL_CLOSURE: 'Whoever closed the deal',
   ACCOUNT_OWNERSHIP: 'Whoever owns the account',
   SHARED: 'Shared between them',
 } as const satisfies Record<AttributionModel, MessageKey>;
 
 const SHARE_FIELDS = [
-  ['leadCreatorPct', 'Lead generator'],
+  ['leadCreatorPct', 'Company creator'],
   ['closerPct', 'Deal closer'],
   ['accountOwnerPct', 'Account owner'],
   ['supportersPct', 'Supporting colleagues'],

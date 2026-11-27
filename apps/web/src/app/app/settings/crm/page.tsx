@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'CRM configuration' };
 export default function CrmConfigurationPage() {
   return (
     <div className="max-w-4xl">
-      <PageHeader title="CRM configuration" description="Lead numbers, statuses, departments, designations, custom fields, notifications, currency, export permissions and dashboards for your sales team." />
+      <PageHeader title="CRM configuration" description="Company numbers, statuses, departments, designations, custom fields, notifications, currency, export permissions and dashboards for your sales team." />
       <CrmConfiguration />
     </div>
   );

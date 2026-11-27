@@ -106,8 +106,8 @@ test('saves people found on a company page as leads, without duplicates', async 
   const axe = await new AxeBuilder({ page: panel }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.map((v) => v.id)).toEqual([]);
 
-  await panel.getByRole('button', { name: 'Save 2 as leads' }).click();
-  await expect(panel.getByRole('status').filter({ hasText: 'Saved 2 new leads.' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Save 2 as inbound contacts' }).click();
+  await expect(panel.getByRole('status').filter({ hasText: 'Saved 2 new inbound contacts.' })).toBeVisible();
   await expect(panel.getByRole('link', { name: 'Open Jane Doe in SampForce' })).toBeVisible();
 
   const leads = await (await app.request.get('/api/v1/leads?q=globex')).json();
@@ -152,8 +152,8 @@ test('finds more people at the company through the email finder', async () => {
   await expect(panel.getByText('4 addresses found.')).toBeVisible();
   await expect(panel.getByLabel('Name for tomas.herrera@kestrel-analytics.com')).toHaveValue('Tomás Herrera');
   await expect(panel.getByRole('checkbox', { name: /priya.raman@kestrel-analytics.com.*On their site/ })).toBeChecked();
-  await panel.getByRole('button', { name: 'Save 4 as leads' }).click();
-  await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new leads.' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Save 4 as inbound contacts' }).click();
+  await expect(panel.getByRole('status').filter({ hasText: 'Saved 4 new inbound contacts.' })).toBeVisible();
   // The people found through the finder stay listed, now as leads.
   await expect(panel.getByRole('link', { name: 'Open Priya Raman in SampForce' })).toBeVisible();
 });
@@ -202,7 +202,7 @@ test('signs in with a password and imports prospects at the company on screen (M
   // Sample people are refused by the CRM.
   await prospects.getByLabel('Import to').selectOption('crm');
   await prospects.getByRole('button', { name: 'Import 3' }).click();
-  await expect(prospects.getByRole('status').filter({ hasText: 'Added 0 to the CRM as leads. 3 skipped.' })).toBeVisible();
+  await expect(prospects.getByRole('status').filter({ hasText: 'Added 0 to the CRM as inbound contacts. 3 skipped.' })).toBeVisible();
   await expect(prospects.getByRole('list', { name: 'Import notes' })).toContainText('Sample data from Mock Mode cannot be added to the CRM.');
 
   await app.goto('/app/prospects');

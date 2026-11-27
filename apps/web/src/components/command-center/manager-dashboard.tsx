@@ -261,7 +261,7 @@ function EmployeeTable({
 }) {
   const t = useT();
   const cols: { key: keyof TeamMemberRow; label: MessageKey; money?: boolean }[] = [
-    { key: 'leads', label: 'Leads' },
+    { key: 'leads', label: 'Companies' },
     { key: 'activeCompanies', label: 'Active companies' },
     { key: 'emailsSent', label: 'Emails sent' },
     { key: 'responses', label: 'Responses' },
@@ -340,7 +340,7 @@ function EmployeeTable({
 // ─── Comparison charts (12.4) ───
 
 const COMPARE: { key: 'leads' | 'responseRate' | 'rfqsReceived' | 'rfqConversion' | 'followUpCompletion' | 'wonDeals' | 'business' | 'achievement'; label: MessageKey; kind: 'count' | 'pct' | 'money' }[] = [
-  { key: 'leads', label: 'Leads generated', kind: 'count' },
+  { key: 'leads', label: 'Companies created', kind: 'count' },
   { key: 'responseRate', label: 'Response rate', kind: 'pct' },
   { key: 'rfqsReceived', label: 'RFQs received', kind: 'count' },
   { key: 'rfqConversion', label: 'RFQ conversion rate', kind: 'pct' },
@@ -376,7 +376,7 @@ function Comparison({ data }: { data: ManagerData }) {
       <ChartCard
         title={label}
         description={t('Each person in the team, for {period}.', { period: t(PERIOD_LABEL[data.range.period]) })}
-        summary={best ? t('Bar chart for {people} people; {name} leads with {value}.', { people: rows.length, name: best.name, value: fmt(best.raw) }) : label}
+        summary={best ? t('Bar chart for {people} people; {name} has the most companies with {value}.', { people: rows.length, name: best.name, value: fmt(best.raw) }) : label}
         filename={`team-${metric}.csv`}
         empty={rows.length === 0 ? t('No one in the team yet.') : null}
         table={{
@@ -426,7 +426,7 @@ function Monitor({
         {buckets.map((b) => (
           <Card key={b.id} data-monitor={b.id}>
             <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">{t(MONITOR_LABEL[b.id as MonitorSection] ?? 'Unassigned leads')}</CardTitle>
+              <CardTitle className="text-sm">{t(MONITOR_LABEL[b.id as MonitorSection] ?? 'Unassigned companies')}</CardTitle>
               <Badge tone={b.total ? (b.id === 'teamOverdue' || b.id === 'intervention' ? 'critical' : 'primary') : 'neutral'} aria-label={t('{count} items', { count: count(b.total) })}>
                 {count(b.total)}
               </Badge>
@@ -440,7 +440,7 @@ function Monitor({
                     const company = i.companyId ? { id: i.companyId, name: i.kind === 'company' ? i.title : '' } : null;
                     const actions: { label: string; run: () => void }[] = [];
                     if (i.kind === 'followUp') actions.push({ label: t('Reassign or change priority'), run: () => setReassigning(i) });
-                    if (i.kind === 'company') actions.push({ label: t('Assign the lead'), run: () => setAssigning(i) });
+                    if (i.kind === 'company') actions.push({ label: t('Assign the company'), run: () => setAssigning(i) });
                     if (i.kind === 'concern' && features.clientConcerns) actions.push({ label: t('Escalate'), run: () => setEscalating(i) });
                     if (i.companyId && i.kind !== 'followUp') actions.push({ label: t('Add follow-up'), run: () => setFollowUp({ companyId: i.companyId!, companyName: i.title, ownerId: i.assignee?.id ?? null }) });
                     if (features.instructions && i.assignee && recipients.some((r) => r.id === i.assignee!.id)) actions.push({ label: t('Send an instruction'), run: () => onInstruct(i.assignee!.id, company) });
@@ -558,10 +558,10 @@ function AssignLeadDialog({ item, onClose }: { item: WorkItem; onClose: () => vo
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md p-6">
-        <DialogTitle className="text-lg font-semibold">{t('Assign the lead')}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold">{t('Assign the company')}</DialogTitle>
         <DialogDescription className="mb-4 text-sm text-muted-foreground">{item.title}</DialogDescription>
         <form onSubmit={submit} noValidate className="space-y-4">
-          <Field id="al-owner" label={t('Lead owner')} error={error ?? undefined}>
+          <Field id="al-owner" label={t('Company owner')} error={error ?? undefined}>
             <PersonSelect value={ownerId} onChange={setOwnerId} assignableOnly />
           </Field>
           <div className="flex justify-end gap-2">

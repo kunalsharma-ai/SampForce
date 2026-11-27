@@ -36,7 +36,7 @@ test('a new Manager Workspace cannot delete until the Super Workspace turns Dele
   await manager.goto(`/app/leads/${lead.id}`);
   await expect(manager.getByRole('heading', { name: 'Ravi Menon', level: 1 })).toBeVisible();
   await expect(manager.getByRole('button', { name: 'Edit' })).toBeVisible();
-  await expect(manager.getByRole('button', { name: 'Delete lead' })).toHaveCount(0);
+  await expect(manager.getByRole('button', { name: 'Delete inbound contact' })).toHaveCount(0);
   await shot(manager, '04-manager-sees-no-delete');
   const direct = await manager.request.delete(`/api/v1/leads/${lead.id}`, { headers: ORIGIN });
   expect(direct.status()).toBe(403);
@@ -57,7 +57,7 @@ test('a new Manager Workspace cannot delete until the Super Workspace turns Dele
 
   // The manager now sees the button, and deleting still asks for the password.
   await manager.reload();
-  await manager.getByRole('button', { name: 'Delete lead' }).click();
+  await manager.getByRole('button', { name: 'Delete inbound contact' }).click();
   await manager.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(manager).toHaveURL(/\/app\/leads$/);
   expect((await manager.request.get(`/api/v1/leads/${lead.id}`, { headers: ORIGIN })).status()).toBe(404);

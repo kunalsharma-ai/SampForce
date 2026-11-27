@@ -156,8 +156,8 @@ function ControlsCard({ status, pending, onChange }: { status: AiStatus; pending
           </p>
         )}
         <Toggle
-          label={t('Qualify new leads automatically')}
-          description={t("When a lead is created, Lead Qualification scores it in the background. It never changes the lead's status or owner.")}
+          label={t('Qualify new inbound contacts automatically')}
+          description={t('When an inbound contact is created, Contact Qualification scores it in the background. It never changes the contact’s status or owner.')}
           checked={s.autoQualifyLeads}
           disabled={pending}
           onChange={(v) => onChange({ autoQualifyLeads: v })}

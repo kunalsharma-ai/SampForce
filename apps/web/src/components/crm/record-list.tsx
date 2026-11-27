@@ -57,7 +57,7 @@ const COLUMNS = {
   companies: [
     // The first column links to the record, so the name comes first.
     { id: 'name', header: h('Name'), sortKey: 'name', cell: (r) => r.name, text: (r) => r.name, icon: (r) => <CompanyLogo company={r} size="xs" />, size: 220 },
-    { id: 'leadNumber', header: h('Lead no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
+    { id: 'leadNumber', header: h('Company no.'), sortKey: 'leadSeq', cell: (r) => r.leadNumber ?? '—', text: (r) => r.leadNumber, size: 110 },
     { id: 'status', header: h('Status'), cell: (r) => <StatusChip status={r.status} />, size: 170 },
     {
       id: 'location',
@@ -174,7 +174,7 @@ export function RecordList({ entity, title, description, fixedStatus, headerExtr
               // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
               <Button asChild size="sm">
                 <Link href="/app/companies/new">
-                  <Plus aria-hidden /> {t('Create new lead')}
+                  <Plus aria-hidden /> {t('Create new company')}
                 </Link>
               </Button>
             ) : (

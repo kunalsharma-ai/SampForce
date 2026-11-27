@@ -452,7 +452,7 @@ export class ProspectsService {
   // ───── Into the CRM and outreach ─────
 
   async toCrm(auth: AuthContext, input: { prospectIds: string[]; sequenceId?: string }, meta: RequestMeta): Promise<ProspectBulkResult> {
-    if (!auth.permissions.includes('leads:write')) throw forbid('Your role does not allow adding leads.');
+    if (!auth.permissions.includes('leads:write')) throw forbid('Your role does not allow adding inbound contacts.');
     if (input.sequenceId) await this.checkSequence(auth, input.sequenceId);
     const rows = await this.prisma.run(auth, (tx) => this.owned(tx, auth.tenantId, input.prospectIds));
     const { out, suppressed } = await this.prisma.run(auth, (tx) => this.extension.matches(tx, auth.tenantId, rows.flatMap((r) => (r.email ? [r.email] : []))));
@@ -781,7 +781,7 @@ export class ProspectsService {
 
   /** Straight into the CRM as leads (through the extension's capture, so duplicates, workflows and enrolment rules apply). */
   private async extensionToCrm(auth: AuthContext, input: ExtensionProspectImport, sequenceId: string | undefined, meta: RequestMeta): Promise<ExtensionProspectImportResult> {
-    if (!auth.permissions.includes('leads:write')) throw forbid('Your role does not allow adding leads.');
+    if (!auth.permissions.includes('leads:write')) throw forbid('Your role does not allow adding inbound contacts.');
     if (sequenceId) await this.checkSequence(auth, sequenceId);
     const results: ExtensionProspectImportResult['results'] = [];
     const real = input.people.filter((p) => {
@@ -792,7 +792,7 @@ export class ProspectsService {
     const { people } = await this.reveal(auth, real, input.revealEmails);
     const withEmail = people.filter((p) => {
       if (p.email) return true;
-      results.push({ providerId: p.providerId, name: p.fullName, email: null, outcome: 'skipped', reason: 'No email address was found, so it was not added as a lead. Save it to a prospect list instead.' });
+      results.push({ providerId: p.providerId, name: p.fullName, email: null, outcome: 'skipped', reason: 'No email address was found, so it was not added as an inbound contact. Save it to a prospect list instead.' });
       return false;
     });
     let enrollment: ExtensionProspectImportResult['enrollment'];
@@ -819,7 +819,7 @@ export class ProspectsService {
         results.push({
           providerId: p.providerId, name: p.fullName, email: p.email,
           outcome: c.outcome === 'created' ? 'added' : c.outcome === 'existing' ? 'existing' : 'skipped',
-          ...(c.outcome === 'existing' ? { reason: `Already in SampForce as ${c.match?.entity === 'contact' ? 'a contact' : 'a lead'}.` } : {}),
+          ...(c.outcome === 'existing' ? { reason: `Already in SampForce as ${c.match?.entity === 'contact' ? 'a contact' : 'an inbound contact'}.` } : {}),
         });
       }
       if (captured.enrollment) {

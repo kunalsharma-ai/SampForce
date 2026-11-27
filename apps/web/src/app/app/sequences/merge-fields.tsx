@@ -129,9 +129,9 @@ export function PreviewPanel({ subject, body, design, idBase = 'tpl', test }: { 
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-56 flex-1">
           <label htmlFor={pickerId} className="text-xs font-medium">
-            {t('Preview for a lead')}
+            {t('Preview for a contact')}
           </label>
-          <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder={t('Search leads (optional)')} />
+          <RecordPicker id={pickerId} entity="leads" value={lead} onChange={setLead} placeholder={t('Search contacts (optional)')} />
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => preview.mutate()} disabled={preview.isPending || !ready}>
           {t('Preview')}
@@ -161,7 +161,7 @@ export function PreviewPanel({ subject, body, design, idBase = 'tpl', test }: { 
           )}
           <p className="font-medium">{preview.data.subject || <span className="text-muted-foreground">{t('(empty subject)')}</span>}</p>
           {preview.data.html ? (
-            <iframe title={preview.data.recipient ? t('Email preview for {name}', { name: preview.data.recipient.name }) : t('Email preview for a blank lead')} srcDoc={preview.data.html} sandbox="" className="h-[560px] w-full rounded border border-border bg-white" />
+            <iframe title={preview.data.recipient ? t('Email preview for {name}', { name: preview.data.recipient.name }) : t('Email preview for a blank contact')} srcDoc={preview.data.html} sandbox="" className="h-[560px] w-full rounded border border-border bg-white" />
           ) : (
             <p className="whitespace-pre-wrap">{preview.data.body}</p>
           )}

@@ -20,7 +20,7 @@ import { DeleteAllButton } from '@/components/delete-all-button';
 function relatedHref(r: { leadId: string | null; contactId: string | null; opportunityId: string | null; companyId?: string | null }): { href: string; label: MessageKey } | null {
   if (r.opportunityId) return { href: `/app/deals/${r.opportunityId}`, label: 'Deal' };
   if (r.contactId) return { href: `/app/contacts/${r.contactId}`, label: 'Contact' };
-  if (r.leadId) return { href: `/app/leads/${r.leadId}`, label: 'Lead' };
+  if (r.leadId) return { href: `/app/leads/${r.leadId}`, label: 'Inbound contact' };
   if (r.companyId) return { href: `/app/companies/${r.companyId}`, label: 'Company' };
   return null;
 }

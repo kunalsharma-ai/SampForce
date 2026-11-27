@@ -105,7 +105,7 @@ const RECORD_PATH: Record<SupportRecordType, string> = { lead: '/app/leads', con
 
 export function useRecordTypeLabel() {
   const t = useT();
-  const labels: Record<SupportRecordType, string> = { lead: t('Lead'), contact: t('Contact'), company: t('Company'), deal: t('Deal') };
+  const labels: Record<SupportRecordType, string> = { lead: t('Inbound contact'), contact: t('Contact'), company: t('Company'), deal: t('Deal') };
   return (type: SupportRecordType) => labels[type];
 }
 

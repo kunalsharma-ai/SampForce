@@ -6,7 +6,7 @@ import { fmtLocale } from '@/lib/i18n/locale';
 export type CrmEntity = 'leads' | 'contacts' | 'companies' | 'deals';
 
 export const ENTITY_LABEL: Record<CrmEntity, { one: string; many: string }> = {
-  leads: { one: 'Lead', many: 'Leads' },
+  leads: { one: 'Inbound contact', many: 'Inbound contacts' },
   contacts: { one: 'Contact', many: 'Contacts' },
   companies: { one: 'Company', many: 'Companies' },
   deals: { one: 'Deal', many: 'Deals' },

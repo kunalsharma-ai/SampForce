@@ -5,11 +5,11 @@ export const commandCenterHelp = {
   'cc.execKpis': {
     title: 'Key metrics',
     what: [
-      'Your numbers for the period, counted from real records: leads, contacts, emails, responses, follow-ups, RFQs, clients and revenue.',
-      'Tus cifras del periodo, contadas a partir de registros reales: leads, contactos, correos, respuestas, seguimientos, RFQs, clientes e ingresos.',
-      'Vos chiffres de la période, comptés à partir des vrais enregistrements : prospects, contacts, e-mails, réponses, relances, RFQ, clients et revenu.',
-      'Ihre Zahlen für den Zeitraum, aus echten Datensätzen gezählt: Leads, Kontakte, E-Mails, Antworten, Nachverfolgungen, RFQs, Kunden und Umsatz.',
-      'أرقامك للفترة، محسوبة من السجلات الفعلية: العملاء المحتملون والتواصل والبريد والردود والمتابعات وطلبات عروض الأسعار والعملاء والإيرادات.',
+      'Your numbers for the period, counted from real records: companies, contacts, emails, responses, follow-ups, RFQs, clients and revenue.',
+      'Tus cifras del periodo, contadas a partir de registros reales: empresas, contactos, correos, respuestas, seguimientos, RFQ, clientes e ingresos.',
+      'Vos chiffres sur la période, comptés à partir d’enregistrements réels : entreprises, contacts, e-mails, réponses, relances, RFQ, clients et chiffre d’affaires.',
+      'Ihre Zahlen im Zeitraum, gezählt aus echten Datensätzen: Unternehmen, Kontakte, E-Mails, Antworten, Nachfassaktionen, RFQs, Kunden und Umsatz.',
+      'أرقامك للفترة، محسوبة من سجلات حقيقية: الشركات وجهات الاتصال والرسائل والردود والمتابعات وطلبات عروض الأسعار والعملاء والإيرادات.',
     ],
     how: [
       'Choose a period at the top. Select a number to see the records behind it; the "i" next to each card says how it is counted.',
@@ -53,11 +53,11 @@ export const commandCenterHelp = {
   'cc.funnel': {
     title: 'My pipeline',
     what: [
-      'Your company leads at each stage from new to won or lost, with open opportunities, their potential value and conversion.',
-      'Tus leads de empresa en cada etapa, de nuevo a ganado o perdido, con las oportunidades abiertas, su valor potencial y la conversión.',
-      'Vos prospects d’entreprise à chaque étape, du nouveau au gagné ou perdu, avec les opportunités ouvertes, leur valeur potentielle et la conversion.',
-      'Ihre Unternehmens-Leads in jeder Stufe von neu bis gewonnen oder verloren, mit offenen Verkaufschancen, potenziellem Wert und Konversion.',
-      'عملاؤك المحتملون من الشركات في كل مرحلة من جديد إلى رابح أو خاسر، مع الفرص المفتوحة وقيمتها المحتملة ونسبة التحويل.',
+      'Your companies at each stage from new to won or lost, with open opportunities, their potential value and conversion.',
+      'Tus empresas en cada etapa, de nueva a ganada o perdida, con las oportunidades abiertas, su valor potencial y la conversión.',
+      'Vos entreprises à chaque étape, de nouvelle à gagnée ou perdue, avec les opportunités ouvertes, leur valeur potentielle et la conversion.',
+      'Ihre Unternehmen in jeder Phase von neu bis gewonnen oder verloren, mit offenen Verkaufschancen, ihrem möglichen Wert und der Umwandlung.',
+      'شركاتك في كل مرحلة من جديدة إلى مربوحة أو خاسرة، مع الفرص المفتوحة وقيمتها المحتملة والتحويل.',
     ],
     how: [
       'Select a stage to list its companies. A company sits at the furthest stage its status, RFQs and deals show.',
@@ -77,11 +77,11 @@ export const commandCenterHelp = {
   'cc.performance': {
     title: 'Business performance',
     what: [
-      'Leads by month, quarter, half-year and year, RFQs and their win rate, revenue against your target, lead conversion and average deal value.',
-      'Leads por mes, trimestre, semestre y año, RFQs y su tasa de éxito, ingresos frente a tu objetivo, conversión de leads y valor medio por venta.',
-      'Prospects par mois, trimestre, semestre et année, RFQ et taux de réussite, revenu face à votre objectif, conversion et valeur moyenne des affaires.',
-      'Leads nach Monat, Quartal, Halbjahr und Jahr, RFQs und Erfolgsquote, Umsatz gegen Ihr Ziel, Lead-Konversion und durchschnittlicher Abschlusswert.',
-      'العملاء المحتملون حسب الشهر والربع والنصف والسنة، وطلبات عروض الأسعار ونسبة الفوز، والإيرادات مقابل هدفك، وتحويل العملاء ومتوسط قيمة الصفقة.',
+      'Companies by month, quarter, half-year and year, RFQs and their win rate, revenue against your target, company conversion and average deal value.',
+      'Empresas por mes, trimestre, semestre y año, RFQ y su tasa de éxito, ingresos frente a tu objetivo, conversión de empresas y valor medio de las oportunidades.',
+      'Entreprises par mois, trimestre, semestre et année, RFQ et leur taux de réussite, chiffre d’affaires par rapport à votre objectif, conversion des entreprises et valeur moyenne des opportunités.',
+      'Unternehmen nach Monat, Quartal, Halbjahr und Jahr, RFQs und ihre Abschlussquote, Umsatz gegenüber Ihrem Ziel, Unternehmensumwandlung und durchschnittlicher Wert der Verkaufschancen.',
+      'الشركات حسب الشهر والربع ونصف السنة والسنة، وطلبات عروض الأسعار ومعدل فوزها، والإيرادات مقابل هدفك، وتحويل الشركات ومتوسط قيمة الصفقة.',
     ],
     how: [
       'The win rate is RFQs won out of RFQs won or lost in the period. Your manager sets your monthly target.',
@@ -123,27 +123,27 @@ export const commandCenterHelp = {
     ],
   },
   'cc.transfers': {
-    title: 'Lead transfer requests',
+    title: 'Company transfer requests',
     what: [
-      'Requests to move a lead to a manager or senior person: the ones you sent and the ones waiting for your decision.',
-      'Solicitudes para pasar un lead a un gerente o superior: las que enviaste y las que esperan tu decisión.',
-      'Les demandes de transfert d’un prospect à un manager ou un cadre : celles que vous avez envoyées et celles qui attendent votre décision.',
-      'Anfragen, einen Lead an eine Führungskraft zu übergeben: Ihre gesendeten und die, die auf Ihre Entscheidung warten.',
-      'طلبات نقل عميل محتمل إلى مدير أو مسؤول أعلى: ما أرسلته وما ينتظر قرارك.',
+      'Requests to move a company to a manager or senior person: the ones you sent and the ones waiting for your decision.',
+      'Solicitudes para pasar una empresa a un responsable o superior: las que enviaste y las que esperan tu decisión.',
+      'Demandes de transfert d’une entreprise à un responsable ou à une personne senior : celles que vous avez envoyées et celles qui attendent votre décision.',
+      'Anfragen, ein Unternehmen an eine Führungskraft oder Vorgesetzte zu übergeben: die von Ihnen gesendeten und die, die auf Ihre Entscheidung warten.',
+      'طلبات نقل شركة إلى مدير أو مسؤول أعلى: التي أرسلتها والتي تنتظر قرارك.',
     ],
     how: [
-      'Ask from a company page with Request transfer. Someone above you approves, rejects or gives the lead to someone else, with instructions.',
-      'Pídelo desde la página de la empresa con Solicitar traspaso. Alguien por encima de ti aprueba, rechaza o da el lead a otra persona, con instrucciones.',
-      'Demandez depuis la page de l’entreprise avec Demander un transfert. Un supérieur approuve, refuse ou confie le prospect à quelqu’un d’autre, avec des consignes.',
-      'Fragen Sie auf der Unternehmensseite mit Übergabe anfragen an. Eine vorgesetzte Person genehmigt, lehnt ab oder gibt den Lead mit Anweisungen weiter.',
-      'اطلبه من صفحة الشركة عبر «طلب نقل». ويوافق من هو أعلى منك أو يرفض أو يسند العميل المحتمل إلى شخص آخر مع تعليمات.',
+      'Ask from a company page with Request transfer. Someone above you approves, rejects or gives the company to someone else, with instructions.',
+      'Pídelo desde la página de una empresa con Solicitar transferencia. Alguien por encima de ti aprueba, rechaza o da la empresa a otra persona, con instrucciones.',
+      'Faites la demande depuis la page d’une entreprise avec Demander un transfert. Une personne au-dessus de vous approuve, rejette ou confie l’entreprise à quelqu’un d’autre, avec des instructions.',
+      'Fragen Sie auf einer Unternehmensseite über „Übertragung anfragen“. Jemand über Ihnen genehmigt, lehnt ab oder gibt das Unternehmen mit Anweisungen an jemand anderen.',
+      'اطلب ذلك من صفحة الشركة عبر طلب النقل. يوافق شخص أعلى منك أو يرفض أو يسند الشركة إلى شخص آخر مع تعليمات.',
     ],
     where: [
-      'The person who created the lead stays its creator whatever happens to ownership.',
-      'Quien creó el lead sigue siendo su creador pase lo que pase con el responsable.',
-      'La personne qui a créé le prospect en reste le créateur, quel que soit le responsable.',
-      'Wer den Lead angelegt hat, bleibt sein Ersteller, egal wer ihn betreut.',
-      'يبقى من أنشأ العميل المحتمل منشئه مهما تغيّر المسؤول عنه.',
+      'The person who created the company stays its creator whatever happens to ownership.',
+      'La persona que creó la empresa sigue siendo su creadora pase lo que pase con el responsable.',
+      'La personne qui a créé l’entreprise en reste la créatrice, quel que soit son responsable.',
+      'Wer das Unternehmen angelegt hat, bleibt sein Ersteller, egal wie sich die Zuständigkeit ändert.',
+      'يبقى من أنشأ الشركة منشئها مهما تغيّر مسؤولها.',
     ],
   },
   'cc.teamKpis': {
@@ -173,11 +173,11 @@ export const commandCenterHelp = {
   'cc.teamTable': {
     title: "Employee performance",
     what: [
-      "Each person's leads, emails, responses, follow-ups, RFQs, clients and business for the period, with their target achievement and status.",
-      "Los leads, correos, respuestas, seguimientos, RFQs, clientes y negocio de cada persona en el periodo, con su objetivo y estado.",
-      "Les prospects, e-mails, réponses, relances, RFQ, clients et affaires de chacun sur la période, avec l’atteinte de l’objectif et le statut.",
-      "Leads, E-Mails, Antworten, Nachverfolgungen, RFQs, Kunden und Geschäft jeder Person im Zeitraum, mit Zielerreichung und Status.",
-      "العملاء المحتملون والبريد والردود والمتابعات وطلبات العروض والعملاء والأعمال لكل شخص في الفترة، مع تحقيق الهدف والحالة.",
+      "Each person’s companies, emails, responses, follow-ups, RFQs, clients and business for the period, with their target achievement and status.",
+      "Las empresas, correos, respuestas, seguimientos, RFQ, clientes y negocio de cada persona en el periodo, con su cumplimiento de objetivos y estado.",
+      "Les entreprises, e-mails, réponses, relances, RFQ, clients et affaires de chaque personne sur la période, avec l’atteinte de ses objectifs et son statut.",
+      "Unternehmen, E-Mails, Antworten, Nachfassaktionen, RFQs, Kunden und Geschäft jeder Person im Zeitraum, mit Zielerreichung und Status.",
+      "شركات كل شخص ورسائله وردوده ومتابعاته وطلبات عروض الأسعار وعملاؤه وأعماله في الفترة، مع تحقيقه للأهداف وحالته.",
     ],
     how: [
       "Select a name to open that person's dashboard. The status compares achievement with how much of the period has gone.",
@@ -245,18 +245,18 @@ export const commandCenterHelp = {
   'cc.teamMonitor': {
     title: "Follow-up monitoring",
     what: [
-      "The team's work that needs your eye: today's and overdue follow-ups, meetings, clients awaiting a reply, RFQ deadlines, concerns, unassigned leads and requests for senior help.",
-      "El trabajo del equipo que necesita tu atención: seguimientos de hoy y vencidos, reuniones, clientes sin respuesta, plazos de RFQ, inquietudes, leads sin asignar y peticiones de ayuda.",
-      "Le travail de l’équipe qui demande votre attention : relances du jour et en retard, rendez-vous, clients en attente, échéances RFQ, préoccupations, prospects non attribués et demandes d’aide.",
-      "Die Arbeit des Teams, die Ihren Blick braucht: heutige und überfällige Nachverfolgungen, Meetings, wartende Kunden, RFQ-Fristen, Anliegen, nicht zugewiesene Leads und Bitten um Unterstützung.",
-      "عمل الفريق الذي يحتاج إلى انتباهك: متابعات اليوم والمتأخرة والاجتماعات والعملاء المنتظرون للرد ومواعيد طلبات العروض والملاحظات والعملاء غير المُسنَدين وطلبات تدخل الإدارة.",
+      "The team’s work that needs your eye: today’s and overdue follow-ups, meetings, clients awaiting a reply, RFQ deadlines, concerns, unassigned companies and requests for senior help.",
+      "El trabajo del equipo que necesita tu atención: seguimientos de hoy y vencidos, reuniones, clientes que esperan respuesta, plazos de RFQ, incidencias, empresas sin asignar y solicitudes de ayuda de un superior.",
+      "Le travail de l’équipe qui demande votre attention : relances du jour et en retard, réunions, clients en attente de réponse, échéances de RFQ, préoccupations, entreprises non attribuées et demandes d’aide d’un responsable.",
+      "Die Arbeit des Teams, die Ihren Blick braucht: heutige und überfällige Nachfassaktionen, Meetings, Kunden, die auf Antwort warten, RFQ-Fristen, Anliegen, nicht zugewiesene Unternehmen und Bitten um Hilfe von oben.",
+      "عمل الفريق الذي يحتاج إلى نظرك: متابعات اليوم والمتأخرة والاجتماعات والعملاء بانتظار رد ومواعيد طلبات عروض الأسعار والمخاوف والشركات غير المُسندة وطلبات مساعدة المسؤولين.",
     ],
     how: [
-      "Use the menu next to an item to reassign it, change its priority, assign a lead, add a follow-up, send an instruction or escalate. Transfer requests wait below for your decision.",
-      "Usa el menú de cada elemento para reasignarlo, cambiar su prioridad, asignar un lead, añadir un seguimiento, enviar una instrucción o escalar. Las solicitudes de traspaso esperan abajo.",
-      "Utilisez le menu de chaque élément pour le réattribuer, changer sa priorité, attribuer un prospect, ajouter une relance, envoyer une instruction ou remonter. Les demandes de transfert attendent en dessous.",
-      "Über das Menü neben einem Eintrag können Sie ihn neu zuweisen, die Priorität ändern, einen Lead zuweisen, eine Nachverfolgung anlegen, eine Anweisung senden oder eskalieren. Übergabeanfragen warten darunter.",
-      "استخدم القائمة بجانب كل عنصر لإعادة إسناده أو تغيير أولويته أو إسناد عميل محتمل أو إضافة متابعة أو إرسال تعليمات أو التصعيد. وتنتظر طلبات النقل في الأسفل.",
+      "Use the menu next to an item to reassign it, change its priority, assign a company, add a follow-up, send an instruction or escalate. Transfer requests wait below for your decision.",
+      "Usa el menú junto a un elemento para reasignarlo, cambiar su prioridad, asignar una empresa, añadir un seguimiento, enviar una instrucción o escalarlo. Las solicitudes de transferencia esperan abajo tu decisión.",
+      "Utilisez le menu à côté d’un élément pour le réattribuer, changer sa priorité, attribuer une entreprise, ajouter une relance, envoyer une instruction ou escalader. Les demandes de transfert attendent votre décision ci-dessous.",
+      "Über das Menü neben einem Eintrag können Sie ihn neu zuweisen, seine Priorität ändern, ein Unternehmen zuweisen, eine Nachfassaktion hinzufügen, eine Anweisung senden oder eskalieren. Übertragungsanfragen warten unten auf Ihre Entscheidung.",
+      "استخدم القائمة بجوار العنصر لإعادة إسناده أو تغيير أولويته أو إسناد شركة أو إضافة متابعة أو إرسال تعليمات أو التصعيد. تنتظر طلبات النقل قرارك أدناه.",
     ],
     where: [
       "Reorder or hide these sections with Customise.",
@@ -365,11 +365,11 @@ export const commandCenterHelp = {
   'cc.orgKpis': {
     title: "Organisation metrics",
     what: [
-      "The organisation's leads, companies, clients, RFQs, deals and revenue for the period, with the overall conversion rate and how far revenue has come against the organisation target.",
-      "Los leads, empresas, clientes, RFQ, ventas e ingresos de la organización en el periodo, con la tasa de conversión global y el avance frente al objetivo de la organización.",
-      "Les prospects, entreprises, clients, RFQ, affaires et revenus de l’organisation sur la période, avec le taux de conversion global et l’avancement par rapport à l’objectif de l’organisation.",
-      "Leads, Unternehmen, Kunden, RFQs, Geschäfte und Umsatz der Organisation im Zeitraum, mit der Gesamtumwandlungsquote und dem Stand gegenüber dem Ziel der Organisation.",
-      "العملاء المحتملون والشركات والعملاء وطلبات العروض والصفقات والإيرادات للمؤسسة في الفترة، مع معدل التحويل الإجمالي ومدى التقدم نحو هدف المؤسسة.",
+      "The organisation’s companies, clients, RFQs, deals and revenue for the period, with the overall conversion rate and how far revenue has come against the organisation target.",
+      "Las empresas, clientes, RFQ, oportunidades e ingresos de la organización en el periodo, con la tasa de conversión global y cuánto han avanzado los ingresos frente al objetivo de la organización.",
+      "Les entreprises, clients, RFQ, opportunités et chiffre d’affaires de l’organisation sur la période, avec le taux de conversion global et l’avancée du chiffre d’affaires par rapport à l’objectif de l’organisation.",
+      "Unternehmen, Kunden, RFQs, Verkaufschancen und Umsatz der Organisation im Zeitraum, mit Gesamtumwandlungsrate und Umsatzfortschritt gegenüber dem Organisationsziel.",
+      "شركات المؤسسة وعملاؤها وطلبات عروض الأسعار والصفقات والإيرادات في الفترة، مع معدل التحويل الإجمالي ومدى تقدم الإيرادات مقابل هدف المؤسسة.",
     ],
     how: [
       "Select a card to see the records it counts. Choose a department to see only its people.",
@@ -389,11 +389,11 @@ export const commandCenterHelp = {
   'cc.orgDepartments': {
     title: "Department and team performance",
     what: [
-      "Each department's totals, and under it each manager's team: their reporting employees, leads, RFQs, clients converted, business, target achievement and client touches per person.",
-      "Los totales de cada departamento y, debajo, el equipo de cada gerente: empleados a cargo, leads, RFQ, clientes convertidos, negocio, cumplimiento del objetivo y contactos con clientes por persona.",
-      "Les totaux de chaque service et, en dessous, l’équipe de chaque manager : collaborateurs rattachés, prospects, RFQ, clients convertis, affaires, atteinte de l’objectif et contacts clients par personne.",
-      "Die Summen jeder Abteilung und darunter das Team jeder Führungskraft: unterstellte Mitarbeiter, Leads, RFQs, gewonnene Kunden, Geschäft, Zielerreichung und Kundenkontakte pro Person.",
-      "إجماليات كل قسم، وتحته فريق كل مدير: الموظفون التابعون والعملاء المحتملون وطلبات العروض والعملاء المحوَّلون والأعمال وتحقيق الهدف والتواصل مع العملاء لكل شخص.",
+      "Each department’s totals, and under it each manager’s team: their reporting employees, companies, RFQs, clients converted, business, target achievement and client touches per person.",
+      "Los totales de cada departamento y, debajo, el equipo de cada responsable: sus empleados, empresas, RFQ, clientes convertidos, negocio, cumplimiento de objetivos y contactos con clientes por persona.",
+      "Les totaux de chaque service et, en dessous, l’équipe de chaque responsable : ses employés, entreprises, RFQ, clients convertis, affaires, atteinte des objectifs et contacts clients par personne.",
+      "Die Summen jeder Abteilung und darunter das Team jeder Führungskraft: unterstellte Mitarbeiter, Unternehmen, RFQs, gewonnene Kunden, Geschäft, Zielerreichung und Kundenkontakte pro Person.",
+      "إجماليات كل قسم، وتحتها فريق كل مدير: موظفوه التابعون والشركات وطلبات عروض الأسعار والعملاء المحوّلون والأعمال وتحقيق الأهداف والتواصل مع العملاء لكل شخص.",
     ],
     how: [
       "Select a department to see the deals behind its revenue, or a manager to open their team dashboard.",
@@ -413,11 +413,11 @@ export const commandCenterHelp = {
   'cc.orgRankings': {
     title: "Employee ranking",
     what: [
-      "Who leads the organisation on revenue, leads, RFQs, conversions, response rate, follow-up completion and target achievement, and everyone ranked by a balanced score or the measure you choose.",
-      "Quién lidera la organización en ingresos, leads, RFQ, conversiones, tasa de respuesta, seguimientos completados y cumplimiento del objetivo, y todas las personas clasificadas por una puntuación equilibrada o la medida que elijas.",
-      "Qui mène l’organisation en revenus, prospects, RFQ, conversions, taux de réponse, relances effectuées et atteinte de l’objectif, et tout le monde classé selon un score équilibré ou la mesure choisie.",
-      "Wer in der Organisation bei Umsatz, Leads, RFQs, Umwandlungen, Antwortquote, erledigten Nachfassaktionen und Zielerreichung vorn liegt, und alle gereiht nach einem ausgewogenen Wert oder dem gewählten Maß.",
-      "من يتصدر المؤسسة في الإيرادات والعملاء المحتملين وطلبات العروض والتحويلات ومعدل الرد وإنجاز المتابعات وتحقيق الهدف، والجميع مرتبون حسب درجة متوازنة أو المقياس الذي تختاره.",
+      "Who is ahead in the organisation on revenue, companies, RFQs, conversions, response rate, follow-up completion and target achievement, and everyone ranked by a balanced score or the measure you choose.",
+      "Quién va por delante en la organización en ingresos, empresas, RFQ, conversiones, tasa de respuesta, seguimientos completados y cumplimiento de objetivos, y todos ordenados por una puntuación equilibrada o la medida que elijas.",
+      "Qui est en tête dans l’organisation en chiffre d’affaires, entreprises, RFQ, conversions, taux de réponse, relances effectuées et atteinte des objectifs, et tout le monde classé par score équilibré ou selon la mesure choisie.",
+      "Wer in der Organisation bei Umsatz, Unternehmen, RFQs, Umwandlungen, Antwortquote, erledigten Nachfassaktionen und Zielerreichung vorne liegt, und alle nach ausgewogenem Wert oder der gewählten Kennzahl sortiert.",
+      "من في المقدمة في المؤسسة في الإيرادات والشركات وطلبات عروض الأسعار والتحويلات ومعدل الاستجابة وإتمام المتابعات وتحقيق الأهداف، والجميع مرتّبون حسب درجة متوازنة أو المقياس الذي تختاره.",
     ],
     how: [
       "Choose the period at the top, monthly to yearly or your own dates, and pick what to rank by.",
@@ -427,11 +427,11 @@ export const commandCenterHelp = {
       "اختر الفترة في الأعلى، من شهرية إلى سنوية أو تواريخك الخاصة، واختر أساس الترتيب.",
     ],
     where: [
-      "The balanced score averages each person's standing on seven measures, five about quality, so lead volume alone never decides. A rate counts only after enough activity, such as five emails for the response rate.",
-      "La puntuación equilibrada promedia la posición en siete medidas, cinco de calidad, así que el volumen de leads no decide solo. Una tasa cuenta solo con suficiente actividad, como cinco correos para la tasa de respuesta.",
-      "Le score équilibré fait la moyenne du rang de chacun sur sept mesures, dont cinq de qualité : le volume ne décide jamais seul. Un taux ne compte qu’après assez d’activité, par exemple cinq e-mails pour le taux de réponse.",
-      "Der ausgewogene Wert mittelt die Platzierung über sieben Maße, fünf davon zur Qualität, sodass die Lead-Menge nie allein entscheidet. Eine Quote zählt erst ab genug Aktivität, etwa fünf E-Mails für die Antwortquote.",
-      "تحسب الدرجة المتوازنة متوسط ترتيب كل شخص في سبعة مقاييس، خمسة منها للجودة، فلا يحدد الحجم الترتيب وحده. ولا يُحتسب المعدل إلا بعد نشاط كافٍ، مثل خمس رسائل لمعدل الرد.",
+      "The balanced score averages each person’s standing on seven measures, five about quality, so the number of companies alone never decides. A rate counts only after enough activity, such as five emails for the response rate.",
+      "La puntuación equilibrada promedia la posición de cada persona en siete medidas, cinco de calidad, así que el número de empresas nunca decide solo. Una tasa cuenta solo tras bastante actividad, como cinco correos para la tasa de respuesta.",
+      "Le score équilibré fait la moyenne du classement de chacun sur sept mesures, dont cinq de qualité : le nombre d’entreprises seul ne décide jamais. Un taux ne compte qu’après assez d’activité, par exemple cinq e-mails.",
+      "Der ausgewogene Wert mittelt die Position jeder Person in sieben Kennzahlen, fünf zur Qualität, sodass die Zahl der Unternehmen nie allein entscheidet. Eine Quote zählt erst nach genug Aktivität, etwa fünf E-Mails.",
+      "تحسب الدرجة المتوازنة متوسط ترتيب كل شخص في سبعة مقاييس، خمسة منها للجودة، فلا يحسم عدد الشركات وحده الترتيب أبدًا. لا يُحتسب المعدل إلا بعد نشاط كافٍ، مثل خمس رسائل لمعدل الاستجابة.",
     ],
   },
   'cc.orgRevenue': {
@@ -461,11 +461,11 @@ export const commandCenterHelp = {
   'cc.orgInsights': {
     title: "Business insights",
     what: [
-      "Patterns that need a senior eye: overdue follow-ups, leads that do not convert, repeat RFQs, fading engagement, stalled negotiations, near deadlines, open concerns, teams behind target, unowned leads and concentrated revenue.",
-      "Patrones a vigilar: seguimientos vencidos, leads sin conversión, RFQ repetidas, menos interacción, negociaciones estancadas, plazos cercanos, inquietudes abiertas, equipos rezagados, leads sin responsable e ingresos concentrados.",
-      "Signaux à surveiller : relances en retard, prospects non convertis, RFQ répétés, engagement en baisse, négociations bloquées, échéances proches, préoccupations ouvertes, équipes en retard, prospects sans responsable, revenus concentrés.",
-      "Muster: überfällige Nachfassaktionen, Leads ohne Umwandlung, wiederholte RFQs, nachlassender Kontakt, festgefahrene Verhandlungen, nahe Fristen, offene Anliegen, Teams im Rückstand, Leads ohne Zuständige, konzentrierter Umsatz.",
-      "أنماط تحتاج إلى نظر الإدارة: متابعات متأخرة، وعملاء محتملون لا يتحولون، وطلبات عروض متكررة، وتفاعل يتراجع، ومفاوضات متوقفة، ومواعيد قريبة، وملاحظات مفتوحة، وفرق متأخرة، وعملاء بلا مسؤول، وإيرادات مركزة.",
+      "Patterns that need a senior eye: overdue follow-ups, companies that do not convert, repeat RFQs, fading engagement, stalled negotiations, near deadlines, open concerns, teams behind target, unowned companies and concentrated revenue.",
+      "Patrones para un superior: seguimientos vencidos, empresas que no convierten, RFQ repetidas, menos interés, negociaciones estancadas, plazos cercanos, incidencias, equipos bajo objetivo, empresas sin responsable e ingresos concentrados.",
+      "Signaux pour un responsable : relances en retard, entreprises non converties, RFQ répétées, engagement en baisse, négociations bloquées, échéances proches, préoccupations, équipes sous l’objectif, entreprises sans responsable, CA concentré.",
+      "Muster für Vorgesetzte: überfällige Nachfassaktionen, Unternehmen ohne Umwandlung, wiederholte RFQs, sinkendes Engagement, stockende Verhandlungen, nahe Fristen, offene Anliegen, Teams unter Ziel, Unternehmen ohne Zuständige, Umsatzballung.",
+      "أنماط تحتاج إلى نظر مسؤول أعلى: متابعات متأخرة، وشركات لا تتحول، وطلبات عروض أسعار متكررة، وتفاعل يتراجع، ومفاوضات متعثرة، ومواعيد قريبة، ومخاوف مفتوحة، وفرق دون الهدف، وشركات بلا مسؤول، وإيرادات مركّزة.",
     ],
     how: [
       "Select an item to open the person, company, deal or RFQ behind it.",
@@ -475,11 +475,11 @@ export const commandCenterHelp = {
       "اختر عنصرًا لفتح الشخص أو الشركة أو الصفقة أو طلب العرض المرتبط به.",
     ],
     where: [
-      "Thresholds: 5+ overdue follow-ups; 5+ leads converting under half the organisation's rate; 2 RFQs in 6 months; interactions halved on the month before; 14 days in negotiation; deadlines within 7 days; one client at 30% of revenue.",
-      "Umbrales: 5+ seguimientos vencidos; 5+ leads con menos de la mitad de la conversión media; 2 RFQ en 6 meses; interacciones a la mitad; 14 días en negociación; plazos en 7 días; un cliente con el 30% de los ingresos.",
-      "Seuils : 5+ relances en retard ; 5+ prospects convertis à moins de la moitié du taux moyen ; 2 RFQ en 6 mois ; interactions divisées par deux ; 14 jours en négociation ; échéance sous 7 jours ; un client à 30 % des revenus.",
-      "Schwellen: 5+ überfällige Nachfassaktionen; 5+ Leads unter der halben Umwandlungsquote; 2 RFQs in 6 Monaten; halbierte Interaktionen; 14 Tage in Verhandlung; Fristen in 7 Tagen; ein Kunde mit 30 % des Umsatzes.",
-      "الحدود: 5+ متابعات متأخرة؛ 5+ عملاء محتملين بأقل من نصف معدل التحويل؛ طلبا عرض في 6 أشهر؛ تفاعلات انخفضت للنصف؛ 14 يومًا في التفاوض؛ مواعيد خلال 7 أيام؛ عميل واحد بنسبة 30% من الإيرادات.",
+      "Thresholds: 5+ overdue follow-ups; 5+ companies converting under half the organisation’s rate; 2 RFQs in 6 months; interactions halved on the month before; 14 days in negotiation; deadlines within 7 days; one client at 30% of revenue.",
+      "Umbrales: 5+ seguimientos vencidos; 5+ empresas bajo la mitad de la tasa de conversión de la organización; 2 RFQ en 6 meses; interacciones a la mitad; 14 días negociando; plazos en 7 días; un cliente con el 30% de ingresos.",
+      "Seuils : 5+ relances en retard ; 5+ entreprises sous la moitié du taux de conversion de l’organisation ; 2 RFQ en 6 mois ; interactions divisées par deux ; 14 jours en négociation ; échéances sous 7 jours ; un client à 30 % du CA.",
+      "Schwellen: 5+ überfällige Nachfassaktionen; 5+ Unternehmen unter der halben Umwandlungsrate der Organisation; 2 RFQs in 6 Monaten; Interaktionen zum Vormonat halbiert; 14 Tage Verhandlung; Fristen in 7 Tagen; ein Kunde mit 30 % Umsatz.",
+      "الحدود: 5 متابعات متأخرة أو أكثر؛ 5 شركات أو أكثر تتحول بأقل من نصف معدل المؤسسة؛ طلبا عرض أسعار في 6 أشهر؛ تراجع التفاعلات إلى النصف مقارنة بالشهر السابق؛ 14 يومًا في التفاوض؛ مواعيد خلال 7 أيام؛ عميل واحد بنسبة 30% من الإيرادات.",
     ],
   },
 } as const satisfies HelpTable;

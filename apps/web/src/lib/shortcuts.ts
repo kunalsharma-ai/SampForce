@@ -3,7 +3,7 @@ import type { QuickCreateKind } from '@/stores/quick-create';
 /** Two-key "go to" shortcuts: press g, then the letter. */
 export const GO_TO: { key: string; label: string; href: string }[] = [
   { key: 'h', label: 'Dashboard', href: '/app' },
-  { key: 'l', label: 'Leads', href: '/app/leads' },
+  { key: 'l', label: 'Inbound contacts', href: '/app/leads' },
   { key: 'c', label: 'Contacts', href: '/app/contacts' },
   { key: 'o', label: 'Companies', href: '/app/companies' },
   { key: 'd', label: 'Deals', href: '/app/deals' },
@@ -16,7 +16,7 @@ export const GO_TO: { key: string; label: string; href: string }[] = [
 
 /** Two-key "create" shortcuts: press n, then the letter. */
 export const CREATE: { key: string; label: string; kind: QuickCreateKind }[] = [
-  { key: 'l', label: 'New lead', kind: 'leads' },
+  { key: 'l', label: 'New inbound contact', kind: 'leads' },
   { key: 'c', label: 'New contact', kind: 'contacts' },
   { key: 'o', label: 'New company', kind: 'companies' },
   { key: 'd', label: 'New deal', kind: 'deals' },

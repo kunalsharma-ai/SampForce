@@ -62,7 +62,7 @@ export type CompanyEmailRecipient = (typeof COMPANY_EMAIL_RECIPIENTS)[number];
 export const COMPANY_EMAIL_RECIPIENT_LABELS: Record<CompanyEmailRecipient, string> = {
   decision_maker: 'Decision maker',
   procurement: 'Procurement',
-  technical: 'Technical lead',
+  technical: 'Technical contact',
   marketing: 'Marketing',
   operations: 'Operations',
   general_inbox: 'General inbox',

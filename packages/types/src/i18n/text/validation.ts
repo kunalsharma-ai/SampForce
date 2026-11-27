@@ -71,7 +71,7 @@ export const validation = {
   'has no open stage': ['no tiene ninguna etapa abierta', 'n’a aucune étape ouverte', 'hat keine offene Phase', 'لا يحتوي على مرحلة مفتوحة'],
   'is not a column in the file': ['no es una columna del archivo', 'n’est pas une colonne du fichier', 'ist keine Spalte der Datei', 'ليس عمودًا في الملف'],
   'cannot map to "{target}"': ['no se puede asignar a "{target}"', 'ne peut pas être associé à « {target} »', 'kann nicht „{target}“ zugeordnet werden', 'لا يمكن ربطه بـ "{target}"'],
-  'cannot merge a lead into itself': ['no se puede fusionar un lead consigo mismo', 'impossible de fusionner un prospect avec lui-même', 'ein Lead kann nicht mit sich selbst zusammengeführt werden', 'لا يمكن دمج عميل محتمل مع نفسه'],
+  'cannot merge an inbound contact into itself': ['no se puede fusionar un contacto entrante consigo mismo', 'impossible de fusionner un contact entrant avec lui-même', 'ein Eingangskontakt kann nicht mit sich selbst zusammengeführt werden', 'لا يمكن دمج جهة اتصال واردة مع نفسها'],
   'contains a stage from another pipeline': ['contiene una etapa de otro pipeline', 'contient une étape d’un autre pipeline', 'enthält eine Phase aus einer anderen Pipeline', 'يحتوي على مرحلة من مسار آخر'],
   '{country} is in {territory}': ['{country} está en {territory}', '{country} est dans {territory}', '{country} gehört zu {territory}', '{country} ضمن {territory}'],
   'is not an active member of this workspace': ['no es un miembro activo de este espacio de trabajo', 'n’est pas un membre actif de cet espace de travail', 'ist kein aktives Mitglied dieses Arbeitsbereichs', 'ليس عضوًا نشطًا في مساحة العمل هذه'],
@@ -97,7 +97,7 @@ export const validation = {
 
   // AI
   'Ask a question': ['Haz una pregunta', 'Posez une question', 'Stellen Sie eine Frage', 'اطرح سؤالًا'],
-  'Link the notes to a meeting, deal, contact or lead': ['Vincula las notas a una reunión, oportunidad, contacto o lead', 'Associez les notes à une réunion, une opportunité, un contact ou un prospect', 'Verknüpfen Sie die Notizen mit einem Meeting, einer Verkaufschance, einem Kontakt oder einem Lead', 'اربط الملاحظات باجتماع أو صفقة أو جهة اتصال أو عميل محتمل'],
+  'Link the notes to a meeting, deal or contact': ['Vincula las notas a una reunión, oportunidad o contacto', 'Liez les notes à une réunion, une opportunité ou un contact', 'Verknüpfen Sie die Notizen mit einem Meeting, einer Verkaufschance oder einem Kontakt', 'اربط الملاحظات باجتماع أو صفقة أو جهة اتصال'],
   'Paste at least a few lines of notes': ['Pega al menos unas líneas de notas', 'Collez au moins quelques lignes de notes', 'Fügen Sie mindestens ein paar Zeilen Notizen ein', 'الصق بضعة أسطر من الملاحظات على الأقل'],
   'Describe the workflow in a sentence or two': ['Describe el flujo de trabajo en una o dos frases', 'Décrivez le workflow en une ou deux phrases', 'Beschreiben Sie den Workflow in ein bis zwei Sätzen', 'صف سير العمل في جملة أو جملتين'],
   'Pick the email to reply to': ['Elige el correo al que responder', 'Choisissez l’e-mail auquel répondre', 'Wählen Sie die E-Mail, auf die Sie antworten möchten', 'اختر الرسالة التي تريد الرد عليها'],
@@ -124,7 +124,7 @@ export const validation = {
   // Workspace apps
   'Paste the full workflow URL': ['Pega la URL completa del flujo de trabajo', 'Collez l’URL complète du workflow', 'Fügen Sie die vollständige Workflow-URL ein', 'الصق رابط سير العمل كاملًا'],
   'Confirm that participants agree to the recording': ['Confirma que los participantes aceptan la grabación', 'Confirmez que les participants acceptent l’enregistrement', 'Bestätigen Sie, dass die Teilnehmenden der Aufzeichnung zustimmen', 'أكّد موافقة المشاركين على التسجيل'],
-  'Link the meeting to one lead, contact or deal': ['Vincula la reunión a un lead, contacto u oportunidad', 'Associez la réunion à un prospect, un contact ou une opportunité', 'Verknüpfen Sie das Meeting mit einem Lead, Kontakt oder einer Verkaufschance', 'اربط الاجتماع بعميل محتمل أو جهة اتصال أو صفقة واحدة'],
+  'Link the meeting to one contact or deal': ['Vincula la reunión a un contacto o una oportunidad', 'Liez la réunion à un contact ou une opportunité', 'Verknüpfen Sie das Meeting mit einem Kontakt oder einer Verkaufschance', 'اربط الاجتماع بجهة اتصال واحدة أو صفقة'],
   'Give a reason': ['Indica un motivo', 'Indiquez une raison', 'Geben Sie einen Grund an', 'اذكر سببًا'],
   'Paste a Stripe secret or restricted key (sk_… or rk_…)': ['Pega una clave secreta o restringida de Stripe (sk_… o rk_…)', 'Collez une clé secrète ou restreinte Stripe (sk_… ou rk_…)', 'Fügen Sie einen geheimen oder eingeschränkten Stripe-Schlüssel ein (sk_… oder rk_…)', 'الصق مفتاح Stripe السري أو المقيّد (sk_… أو rk_…)'],
   'Paste the webhook signing secret (whsec_…)': ['Pega el secreto de firma del webhook (whsec_…)', 'Collez le secret de signature du webhook (whsec_…)', 'Fügen Sie das Webhook-Signaturgeheimnis ein (whsec_…)', 'الصق سر توقيع الويب هوك (whsec_…)'],
@@ -143,12 +143,12 @@ export const validation = {
   'Step "{id}" points to missing step "{target}"': ['El paso "{id}" apunta al paso inexistente "{target}"', 'L’étape « {id} » renvoie à l’étape manquante « {target} »', 'Schritt „{id}“ verweist auf den fehlenden Schritt „{target}“', 'الخطوة "{id}" تشير إلى خطوة غير موجودة "{target}"'],
   'Step "{id}" cannot update "{field}" on a {entity}': ['El paso "{id}" no puede actualizar "{field}" en un registro de tipo {entity}', 'L’étape « {id} » ne peut pas modifier « {field} » sur un enregistrement de type {entity}', 'Schritt „{id}“ kann „{field}“ bei einem Datensatz vom Typ {entity} nicht ändern', 'لا يمكن للخطوة "{id}" تحديث "{field}" في سجل من نوع {entity}'],
   'Step "{id}" waits with nothing after it; add a step after the wait': ['El paso "{id}" espera sin nada después; añade un paso tras la espera', 'L’étape « {id} » attend sans rien après ; ajoutez une étape après l’attente', 'Schritt „{id}“ wartet, ohne dass danach etwas folgt; fügen Sie nach der Wartezeit einen Schritt hinzu', 'الخطوة "{id}" تنتظر دون أي خطوة بعدها؛ أضف خطوة بعد الانتظار'],
-  'Step "{id}": tags can only be added to leads': ['Paso "{id}": las etiquetas solo se pueden añadir a leads', 'Étape « {id} » : les étiquettes ne peuvent être ajoutées qu’aux prospects', 'Schritt „{id}“: Tags können nur Leads hinzugefügt werden', 'الخطوة "{id}": يمكن إضافة الوسوم إلى العملاء المحتملين فقط'],
-  'Step "{id}": this action needs a lead or contact, so use a lead, contact or email trigger': [
-    'Paso "{id}": esta acción necesita un lead o un contacto, así que usa un disparador de lead, contacto o correo',
-    'Étape « {id} » : cette action nécessite un prospect ou un contact ; utilisez un déclencheur de prospect, de contact ou d’e-mail',
-    'Schritt „{id}“: Diese Aktion braucht einen Lead oder Kontakt, verwenden Sie also einen Lead-, Kontakt- oder E-Mail-Auslöser',
-    'الخطوة "{id}": يحتاج هذا الإجراء إلى عميل محتمل أو جهة اتصال، لذا استخدم مشغّل عميل محتمل أو جهة اتصال أو بريد إلكتروني',
+  'Step "{id}": tags can only be added to inbound contacts': ['Paso "{id}": las etiquetas solo se pueden añadir a contactos entrantes', 'Étape "{id}" : les étiquettes ne peuvent être ajoutées qu’aux contacts entrants', 'Schritt "{id}": Tags können nur Eingangskontakten hinzugefügt werden', 'الخطوة "{id}": لا يمكن إضافة الوسوم إلا إلى جهات الاتصال الواردة'],
+  'Step "{id}": this action needs a contact, so use an inbound contact, contact or email trigger': [
+    'Paso "{id}": esta acción necesita un contacto, así que usa un disparador de contacto entrante, contacto o correo',
+    'Étape "{id}" : cette action nécessite un contact, utilisez donc un déclencheur de contact entrant, de contact ou d’e-mail',
+    'Schritt "{id}": Diese Aktion braucht einen Kontakt, verwenden Sie also einen Auslöser für Eingangskontakt, Kontakt oder E-Mail',
+    'الخطوة "{id}": يحتاج هذا الإجراء إلى جهة اتصال، فاستخدم مشغل جهة اتصال واردة أو جهة اتصال أو بريد',
   ],
   'Enter a full https:// URL': ['Introduce una URL https:// completa', 'Saisissez une URL https:// complète', 'Geben Sie eine vollständige https://-URL ein', 'أدخل رابط https://‎ كاملًا'],
 
@@ -301,13 +301,13 @@ export const validation = {
   'Enter the project name': ['Indica el nombre del proyecto', 'Saisissez le nom du projet', 'Geben Sie den Projektnamen ein', 'أدخل اسم المشروع'],
   // Command Center (ADR 0063, Phase 4)
   'contains people who are not in this workspace': ['incluye personas que no están en este espacio de trabajo', 'contient des personnes qui ne sont pas dans cet espace de travail', 'enthält Personen, die nicht in diesem Arbeitsbereich sind', 'يتضمن أشخاصًا ليسوا في مساحة العمل هذه'],
-  'already owns this lead': ['ya es responsable de este lead', 'est déjà responsable de ce prospect', 'ist bereits für diesen Lead verantwortlich', 'هو مالك هذا العميل المحتمل بالفعل'],
+  'already owns this company': ['ya es responsable de esta empresa', 'est déjà responsable de cette entreprise', 'betreut dieses Unternehmen bereits', 'يتولى هذه الشركة بالفعل'],
   'more than the won value': ['más que el valor ganado', 'plus que la valeur gagnée', 'mehr als der gewonnene Wert', 'أكثر من القيمة المربوحة'],
   'not a member': ['no es miembro', 'n’est pas membre', 'ist kein Mitglied', 'ليس عضوًا'],
   'The shares must add up to 100%': ['Las partes deben sumar 100 %', 'Les parts doivent totaliser 100 %', 'Die Anteile müssen zusammen 100 % ergeben', 'يجب أن يكون مجموع الحصص 100%'],
   'Each person can appear once': ['Cada persona puede aparecer una vez', 'Chaque personne ne peut apparaître qu’une fois', 'Jede Person darf nur einmal vorkommen', 'يمكن أن يظهر كل شخص مرة واحدة'],
   'Choose a start and end date, start first': ['Elige una fecha de inicio y de fin, primero el inicio', 'Choisissez une date de début et de fin, le début d’abord', 'Wählen Sie ein Start- und ein Enddatum, den Start zuerst', 'اختر تاريخ بداية ونهاية، والبداية أولًا'],
-  'Choose who takes the lead': ['Elige quién se queda con el lead', 'Choisissez qui reprend le prospect', 'Wählen Sie, wer den Lead übernimmt', 'اختر من يتولى العميل المحتمل'],
+  'Choose who takes the company': ['Elige quién se queda con la empresa', 'Choisissez qui reprend l’entreprise', 'Wählen Sie, wer das Unternehmen übernimmt', 'اختر من يتولى الشركة'],
   "cannot be yourself": ["no puedes ser tú", "ne peut pas être vous-même", "darf nicht Sie selbst sein", "لا يمكن أن يكون أنت"],
   "Write the instruction": ["Escribe la instrucción", "Rédigez l’instruction", "Schreiben Sie die Anweisung", "اكتب التعليمات"],
   "Enter a short title": ["Escribe un título breve", "Saisissez un titre court", "Geben Sie einen kurzen Titel ein", "أدخل عنوانًا قصيرًا"],

@@ -215,8 +215,8 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
                       <span className="block font-medium">{l === 'MANAGER' ? t('Manager Workspace') : t('Executive Workspace')}</span>
                       <span className="block text-muted-foreground">
                         {l === 'MANAGER'
-                          ? t('Leads a team: sees its executives’ work, sets their targets and tasks, and can be allowed to create Executive Workspaces.')
-                          : t('One salesperson: works their own leads, companies and tasks, and reports to a manager or to the Super Workspace.')}
+                          ? t('Runs a team: sees its executives’ work, sets their targets and tasks, and can be allowed to create Executive Workspaces.')
+                          : t('One salesperson: works their own companies, contacts and tasks, and reports to a manager or to the Super Workspace.')}
                       </span>
                       {!allowed && <span className="block text-xs text-warning">{t('Not available: the limit is reached or it has not been allowed.')}</span>}
                     </span>

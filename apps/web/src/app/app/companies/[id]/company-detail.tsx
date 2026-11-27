@@ -150,7 +150,7 @@ export function CompanyDetail({ id }: { id: string }) {
             className="mb-4 rounded-md border border-critical/40 bg-critical/10 p-3 text-sm"
           >
             {t(
-              'The lead was saved, but these files could not be uploaded: {names}. Add them again below.',
+              'The company was saved, but these files could not be uploaded: {names}. Add them again below.',
               { names: uploadFailed },
             )}
           </p>

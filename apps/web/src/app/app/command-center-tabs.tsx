@@ -120,7 +120,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Senior management dashboard"
-            description="The organisation's numbers for the period, how each department and team is doing, who leads, where revenue comes from, and what needs attention. Every number opens the records it counts."
+            description="The organisation’s numbers for the period, how each department and team is doing, who is ahead, where revenue comes from, and what needs attention. Every number opens the records it counts."
           />
           <OnboardingChecklist />
           <SeniorDashboard context={ctx.data} />
@@ -129,7 +129,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Manager dashboard"
-            description="Your team's leads, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
+            description="Your team’s companies, follow-ups, pipeline and revenue for the period, and the work that needs you. Every number opens the records it counts."
           />
           <ManagerDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>
@@ -137,7 +137,7 @@ export function CommandCenter() {
         <div className="space-y-2">
           <PageHeader
             title="Executive dashboard"
-            description="Your leads, work, pipeline and credited revenue for the period. Every number opens the records it counts."
+            description="Your companies, work, pipeline and credited revenue for the period. Every number opens the records it counts."
           />
           <ExecutiveDashboard key={params.get('person') ?? ''} context={ctx.data} />
         </div>

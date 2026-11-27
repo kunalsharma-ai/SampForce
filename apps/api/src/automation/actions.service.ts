@@ -119,7 +119,7 @@ export class WorkflowActions {
           const seq = await tx.sequence.findFirst({ where: { id: action.sequenceId, tenantId: actor.tenantId } });
           if (!seq || seq.status !== 'ACTIVE') throw new ActionError('The sequence is missing or not active. Start it, then retry.');
           const people = person.type === 'lead' ? await loadLeads(tx, actor.tenantId, [person.id]) : await loadContacts(tx, actor.tenantId, [person.id]);
-          if (!people.length) throw new ActionError('The lead or contact no longer exists.');
+          if (!people.length) throw new ActionError('The contact no longer exists.');
           // Emails go from the workflow owner's mailbox, under the sequence's own windows, limits and do-not-email checks.
           return sequences.enrollPeople(tx, actor.tenantId, seq, people, actor.userId, actor.userId);
         });
@@ -132,7 +132,7 @@ export class WorkflowActions {
         await this.prisma.run(actor, async (tx) => {
           const where = { id: person.id, tenantId: actor.tenantId, deletedAt: null };
           const n = person.type === 'lead' ? await tx.lead.updateMany({ where, data: { emailStatus: action.status } }) : await tx.contact.updateMany({ where, data: { emailStatus: action.status } });
-          if (!n.count) throw new ActionError('The lead or contact no longer exists.');
+          if (!n.count) throw new ActionError('The contact no longer exists.');
           await this.audit.record(tx, { tenantId: actor.tenantId, actorUserId: actor.userId, action: `${person.type}.email_flagged`, entityType: person.type, entityId: person.id, metadata: { status: action.status }, meta });
         });
         return { emailStatus: action.status };
@@ -146,7 +146,7 @@ export class WorkflowActions {
           const current = person.type === 'lead'
             ? await tx.lead.findFirst({ where, select: { engagementScore: true } })
             : await tx.contact.findFirst({ where, select: { engagementScore: true } });
-          if (!current) throw new ActionError('The lead or contact no longer exists.');
+          if (!current) throw new ActionError('The contact no longer exists.');
           const next = Math.min(100, Math.max(0, (current.engagementScore ?? 0) + action.points));
           if (person.type === 'lead') await tx.lead.update({ where: { id: person.id }, data: { engagementScore: next } });
           else await tx.contact.update({ where: { id: person.id }, data: { engagementScore: next } });
@@ -168,11 +168,11 @@ export class WorkflowActions {
         return { field: action.field, value: action.value };
       }
       case 'add_tag': {
-        if (entity !== 'lead' || !id) throw new ActionError('Tags can only be added to leads.');
+        if (entity !== 'lead' || !id) throw new ActionError('Tags can only be added to inbound contacts.');
         need('leads:write');
         const lead = await this.leads.get(actor, id);
         if (lead.tags.some((t) => t.toLowerCase() === action.tag.toLowerCase())) return { tag: action.tag, alreadyPresent: true };
-        if (lead.tags.length >= 20) throw new ActionError('The lead already has the maximum of 20 tags.');
+        if (lead.tags.length >= 20) throw new ActionError('The inbound contact already has the maximum of 20 tags.');
         await this.leads.update(actor, id, { tags: [...lead.tags, action.tag] }, meta);
         return { tag: action.tag };
       }
@@ -249,7 +249,7 @@ export class WorkflowActions {
   }
 
   private person(entity: string, id: string | null): { type: 'lead' | 'contact'; id: string; field: 'leadId' | 'contactId' } {
-    if (!id || (entity !== 'lead' && entity !== 'contact')) throw new ActionError('This step needs a lead or contact.');
+    if (!id || (entity !== 'lead' && entity !== 'contact')) throw new ActionError('This step needs a contact.');
     return { type: entity, id, field: entity === 'lead' ? 'leadId' : 'contactId' };
   }
 

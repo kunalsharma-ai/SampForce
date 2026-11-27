@@ -102,7 +102,7 @@ test('starts notes for a call outside the calendar and deletes them', async ({ p
   await page.getByRole('button', { name: 'Analyse with AI' }).click();
   await page.getByRole('button', { name: 'Save reviewed version' }).click();
   await expect(page.getByRole('button', { name: 'Add summary to a record' })).toBeDisabled();
-  await expect(page.getByText('Link a deal, contact or lead above first.')).toBeVisible();
+  await expect(page.getByText('Link a deal or contact above first.')).toBeVisible();
   await expectNoA11yViolations(page);
   page.once('dialog', (d) => void d.accept());
   await page.getByRole('button', { name: 'Delete notes' }).click();

@@ -416,7 +416,7 @@ export function EmployeeFields({ idPrefix, value, onChange, errors = {} }: { idP
       <Field id={id('nextFollowUpAt')} label={t('Next follow-up date')} error={errors.nextFollowUpAt}>
         <Input type="date" value={value.nextFollowUpAt} onChange={(e) => onChange({ nextFollowUpAt: e.target.value })} />
       </Field>
-      <Field id={id('ownerId')} label={t('Assigned sales executive')} error={errors.ownerId} hint={t('Leave empty to use the lead owner.')}>
+      <Field id={id('ownerId')} label={t('Assigned sales executive')} error={errors.ownerId} hint={t('Leave empty to use the company owner.')}>
         <PersonSelect value={value.ownerId} onChange={(ownerId) => onChange({ ownerId })} />
       </Field>
       <div className="sm:col-span-2">

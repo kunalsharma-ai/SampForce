@@ -38,10 +38,10 @@ export function CompanyLeadCard({ company: c }: { company: CompanyRow }) {
     <Card id="company-lead">
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          {t('Lead')}
+          {t('Company')}
           <InfoTip topic="crm.companyLead" />
         </CardTitle>
-        <span className="font-mono text-sm font-semibold" aria-label={t('Lead number')}>
+        <span className="font-mono text-sm font-semibold" aria-label={t('Company number')}>
           {c.leadNumber ?? '—'}
         </span>
       </CardHeader>
@@ -105,7 +105,7 @@ export function CompanyStatusBar({ company: c }: { company: CompanyRow }) {
   return (
     <section id="company-lead" aria-labelledby="company-lead-title" className="sf-status-bar mx-auto max-w-4xl text-center">
       <h2 id="company-lead-title" className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-        {t('Lead status')}
+        {t('Company status')}
         <InfoTip topic="crm.companyLead" />
       </h2>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">

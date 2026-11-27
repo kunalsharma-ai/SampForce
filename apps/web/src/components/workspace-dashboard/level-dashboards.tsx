@@ -180,7 +180,7 @@ function Leader({ icon: Icon, label, p, currency, tone }: { icon: LucideIcon; la
         <>
           <p className="mt-2 text-lg font-semibold">{p.workspace.name}</p>
           <p className="text-xs text-muted-foreground">
-            {[p.manager ? t('Team: {name}', { name: p.manager.name }) : null, t('Leads: {n}', { n: count(p.leads) }), money(p.revenue, currency), p.targetPercent !== null ? t('{p} of target', { p: pct(p.targetPercent) }) : null].filter(Boolean).join(' · ')}
+            {[p.manager ? t('Team: {name}', { name: p.manager.name }) : null, t('Companies: {n}', { n: count(p.leads) }), money(p.revenue, currency), p.targetPercent !== null ? t('{p} of target', { p: pct(p.targetPercent) }) : null].filter(Boolean).join(' · ')}
           </p>
         </>
       ) : (
@@ -201,7 +201,7 @@ function PerformanceTable({ rows, currency, caption, showManager }: { rows: Work
           <tr>
             <th scope="col" className="py-1 text-start font-medium">{t('Workspace')}</th>
             {showManager && <th scope="col" className="py-1 text-start font-medium">{t('Team')}</th>}
-            <th scope="col" className="py-1 text-end font-medium">{t('Leads')}</th>
+            <th scope="col" className="py-1 text-end font-medium">{t('Companies')}</th>
             <th scope="col" className="py-1 text-end font-medium">{t('Calls')}</th>
             <th scope="col" className="py-1 text-end font-medium">{t('Deals won')}</th>
             <th scope="col" className="py-1 text-end font-medium">{t('Revenue')}</th>
@@ -249,7 +249,7 @@ function PerformanceChart({ rows, currency, label }: { rows: WorkspacePerformanc
           <YAxis yAxisId="r" orientation="right" tick={axisTick} width={56} tickFormatter={(v: number) => money(v, currency)} />
           <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'hsl(var(--muted))' }} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar yAxisId="l" dataKey="leads" name={t('Leads')} fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+          <Bar yAxisId="l" dataKey="leads" name={t('Companies')} fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} isAnimationActive={false} />
           <Bar yAxisId="r" dataKey="revenue" name={t('Revenue')} fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
@@ -268,7 +268,7 @@ function SuperOverview({ d, picker }: { d: SuperDashboard; picker: React.ReactNo
       <section aria-label={t('Organisation figures')} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={Building2} label={t('Manager Workspaces')} value={`${count(d.workspaces.managers.used)}${d.workspaces.managers.max !== null ? ` / ${count(d.workspaces.managers.max)}` : ''}`} detail={left(d.workspaces.managers)} href="/app/settings/workspaces" tone={TONE.SUPER.accent} data="managers" />
         <Stat icon={Users} label={t('Executive Workspaces')} value={`${count(d.workspaces.executives.used)}${d.workspaces.executives.max !== null ? ` / ${count(d.workspaces.executives.max)}` : ''}`} detail={left(d.workspaces.executives)} href="/app/settings/workspaces" tone={TONE.SUPER.accent} data="executives" />
-        <Stat icon={UserPlus} label={t('Leads generated')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} href="/app/companies" tone={TONE.SUPER.accent} data="leads" />
+        <Stat icon={UserPlus} label={t('Companies created')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} href="/app/companies" tone={TONE.SUPER.accent} data="leads" />
         <Stat icon={CircleDollarSign} label={t('Sales achieved')} value={money(d.totals.revenue, d.currency)} detail={t('Deals won: {n}', { n: count(d.totals.dealsWon) })} href="/app/revenue" tone={TONE.SUPER.accent} data="revenue" />
       </section>
       <div className="grid gap-4 lg:grid-cols-3">
@@ -299,7 +299,7 @@ function TeamOverview({ d, picker }: { d: ManagerDashboardView; picker: React.Re
       <Hero level="MANAGER" title={t('Team overview: {name}', { name: d.team.name })} subtitle={t('How each executive is doing against their targets, the team’s reports and trend, and the follow-ups and tasks to chase.')} picker={picker} />
       <section aria-label={t('Team figures')} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={Users} label={t('Executives in your team')} value={count(d.executiveCount)} href="/app/settings/workspaces" tone={TONE.MANAGER.accent} data="executives" />
-        <Stat icon={UserPlus} label={t('Team leads')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} tone={TONE.MANAGER.accent} data="leads" />
+        <Stat icon={UserPlus} label={t('Companies')} value={count(d.totals.leads)} detail={t('Calls: {n}', { n: count(d.totals.calls) })} tone={TONE.MANAGER.accent} data="leads" />
         <Stat icon={CircleDollarSign} label={t('Team sales')} value={money(d.totals.revenue, d.currency)} detail={t('Deals won: {n}', { n: count(d.totals.dealsWon) })} tone={TONE.MANAGER.accent} data="revenue" />
         <Stat icon={PhoneCall} label={t('Team calls')} value={count(d.totals.calls)} tone={TONE.MANAGER.accent} data="calls" />
       </section>
@@ -320,7 +320,7 @@ function TeamOverview({ d, picker }: { d: ManagerDashboardView; picker: React.Re
             <thead className="text-xs text-muted-foreground">
               <tr>
                 <th scope="col" className="py-1 text-start font-medium">{t('Period')}</th>
-                <th scope="col" className="py-1 text-end font-medium">{t('Leads')}</th>
+                <th scope="col" className="py-1 text-end font-medium">{t('Companies')}</th>
                 <th scope="col" className="py-1 text-end font-medium">{t('Calls')}</th>
                 <th scope="col" className="py-1 text-end font-medium">{t('Deals won')}</th>
                 <th scope="col" className="py-1 text-end font-medium">{t('Revenue')}</th>
@@ -348,7 +348,7 @@ function TeamOverview({ d, picker }: { d: ManagerDashboardView; picker: React.Re
                 <XAxis dataKey="week" tick={axisTick} tickFormatter={(w: string) => w.slice(5)} />
                 <YAxis allowDecimals={false} tick={axisTick} width={32} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="leads" name={t('Leads')} stroke={TONE.MANAGER.ring} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="leads" name={t('Companies')} stroke={TONE.MANAGER.ring} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -391,17 +391,17 @@ function MyDay({ d, picker }: { d: ExecutiveDay; picker: React.ReactNode }) {
       <Hero level="EXECUTIVE" title={t('My day')} subtitle={t('Today’s target and what is left, your calls and sales, and the follow-ups waiting on you.')} picker={picker} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card className="flex flex-wrap items-center gap-6 p-5" data-my-day>
-          <Ring value={tday.leads} max={tday.leadTarget} label={tday.leadTarget === null ? t('{n} leads today', { n: count(tday.leads) }) : t('{done} of {total} leads today', { done: count(tday.leads), total: count(tday.leadTarget) })}>
+          <Ring value={tday.leads} max={tday.leadTarget} label={tday.leadTarget === null ? t('{n} companies today', { n: count(tday.leads) }) : t('{done} of {total} companies today', { done: count(tday.leads), total: count(tday.leadTarget) })}>
             <p className="text-3xl font-semibold tabular" data-today-leads>{count(tday.leads)}</p>
-            <p className="text-xs text-muted-foreground">{tday.leadTarget === null ? t('leads today') : t('of {n} leads', { n: count(tday.leadTarget) })}</p>
+            <p className="text-xs text-muted-foreground">{tday.leadTarget === null ? t('companies today') : t('of {n} companies', { n: count(tday.leadTarget) })}</p>
           </Ring>
           <dl className="grid flex-1 grid-cols-2 gap-4 text-sm">
             <div>
-              <dt className="text-muted-foreground">{t('Daily lead target')}</dt>
+              <dt className="text-muted-foreground">{t('Daily company target')}</dt>
               <dd className="text-xl font-semibold tabular" data-lead-target>{tday.leadTarget === null ? '—' : count(tday.leadTarget)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">{t('Leads still needed')}</dt>
+              <dt className="text-muted-foreground">{t('Companies still needed')}</dt>
               <dd className={cn('text-xl font-semibold tabular', tday.remaining ? TONE.EXECUTIVE.accent : 'text-success')} data-remaining>
                 {tday.remaining === null ? '—' : count(tday.remaining)}
               </dd>

@@ -15,11 +15,11 @@ test('creates a company and a linked contact', async ({ page }) => {
   await page.goto('/app/companies');
   await expect(page.getByText('No companies yet.')).toBeVisible();
   // A company is a lead: it is created with the step-by-step lead form (ADR 0060).
-  await page.getByRole('main').getByRole('link', { name: 'Create new lead' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Create new company' }).click();
   await page.getByLabel('Company name *').fill('Initech');
   await page.getByLabel('Official website URL 1', { exact: true }).fill('initech.test');
   await page.getByRole('button', { name: /Review & save/ }).click();
-  await page.getByRole('button', { name: 'Save lead' }).click();
+  await page.getByRole('button', { name: 'Save company' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Initech' })).toBeVisible();
 
   await page.goto('/app/contacts');
@@ -46,7 +46,7 @@ test('creates a company and a linked contact', async ({ page }) => {
 test('works a lead from capture to a won deal', async ({ page }) => {
   await signUp(page, 'Lead Flow');
   await page.goto('/app/leads');
-  await createViaDialog(page, 'New lead', { 'Full name *': 'Joan Clarke', Email: 'joan@hut8.test', Company: 'Hut Eight', 'Estimated value': '24000' });
+  await createViaDialog(page, 'New inbound contact', { 'Full name *': 'Joan Clarke', Email: 'joan@hut8.test', Company: 'Hut Eight', 'Estimated value': '24000' });
   await expect(page.getByRole('heading', { level: 1, name: /Joan Clarke/ })).toBeVisible();
 
   await page.getByLabel('Subject').fill('Intro call');
@@ -59,7 +59,7 @@ test('works a lead from capture to a won deal', async ({ page }) => {
   await expect(page.getByText('1 of 4 criteria confirmed')).toBeVisible();
 
   await page.getByRole('button', { name: 'Convert' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Convert lead' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Convert to contact' }).click();
   await expect(page).toHaveURL(/\/app\/deals\//);
   await expect(page.getByRole('heading', { level: 1, name: /Hut Eight deal/ })).toBeVisible();
   await expect(page.getByText('$24,000').first()).toBeVisible();
@@ -115,11 +115,11 @@ test('moves a deal on the board with the keyboard', async ({ page }) => {
 test('detects and merges duplicate leads', async ({ page }) => {
   await signUp(page, 'Dupes');
   await page.goto('/app/leads');
-  await createViaDialog(page, 'New lead', { 'Full name *': 'Ada King', Email: 'ada@engine.test' });
+  await createViaDialog(page, 'New inbound contact', { 'Full name *': 'Ada King', Email: 'ada@engine.test' });
   await page.goto('/app/leads');
-  await createViaDialog(page, 'New lead', { 'Full name *': 'Ada Lovelace', Email: 'ADA@engine.test', Phone: '+44 20 7946 0000' });
+  await createViaDialog(page, 'New inbound contact', { 'Full name *': 'Ada Lovelace', Email: 'ADA@engine.test', Phone: '+44 20 7946 0000' });
   await expect(page.getByText('Possible duplicates')).toBeVisible();
-  await page.getByRole('button', { name: 'Merge into this lead' }).click();
+  await page.getByRole('button', { name: 'Merge into this inbound contact' }).click();
   await expect(page.getByText('Possible duplicates')).toBeHidden();
   await page.goto('/app/leads');
   await expect(page.getByText('1–1 of 1')).toBeVisible();
@@ -156,11 +156,11 @@ test('adds a custom field that appears on the lead form', async ({ page }) => {
   await main.getByRole('button', { name: 'Add field' }).click();
   await expect(main.getByText('region', { exact: true })).toBeVisible();
   await page.goto('/app/leads');
-  await page.getByRole('button', { name: 'New lead' }).click();
+  await page.getByRole('button', { name: 'New inbound contact' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Full name *').fill('Field Test');
   await dialog.getByLabel('Region').selectOption('APAC');
-  await dialog.getByRole('button', { name: 'Create lead' }).click();
+  await dialog.getByRole('button', { name: 'Create inbound contact' }).click();
   await expect(page.getByText('APAC')).toBeVisible();
 });
 
@@ -195,12 +195,12 @@ test('record pages have no WCAG 2.2 A/AA violations', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('dealflow:preferences', JSON.stringify({ state: { theme: 'light', motion: 'off' }, version: 0 })));
   await signUp(page, 'A11y CRM');
   await page.goto('/app/leads');
-  await createViaDialog(page, 'New lead', { 'Full name *': 'Axe Lead', Company: 'Axe Co' });
+  await createViaDialog(page, 'New inbound contact', { 'Full name *': 'Axe Lead', Company: 'Axe Co' });
   await page.waitForLoadState('networkidle');
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(r.violations, r.violations.map((v) => `${v.id} ${v.nodes[0]?.target}`).join(', ')).toEqual([]);
   await page.getByRole('button', { name: 'Convert' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Convert lead' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Convert to contact' }).click();
   await expect(page).toHaveURL(/\/app\/deals\//);
   await page.waitForLoadState('networkidle');
   const r2 = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();

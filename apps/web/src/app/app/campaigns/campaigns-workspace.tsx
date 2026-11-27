@@ -44,12 +44,12 @@ export function CampaignsWorkspace() {
               <thead className="border-b border-border text-start text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 font-medium">{t('Campaign')}</th>
-                  <th className="px-4 py-2 text-end font-medium">{t('Leads')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Inbound contacts')}</th>
                   <th className="px-4 py-2 text-end font-medium">{t('Converted')}</th>
                   <th className="px-4 py-2 text-end font-medium">{t('Open pipeline')}</th>
                   <th className="px-4 py-2 text-end font-medium">{t('Won')}</th>
                   <th className="px-4 py-2 text-end font-medium">{t('Budget')}</th>
-                  <th className="px-4 py-2 text-end font-medium">{t('Cost per lead')}</th>
+                  <th className="px-4 py-2 text-end font-medium">{t('Cost per contact')}</th>
                   <th className="px-4 py-2 text-end font-medium">{t('Won ÷ budget')}</th>
                   {canManage && <th className="sr-only">{t('Edit')}</th>}
                 </tr>
@@ -164,7 +164,7 @@ function CampaignForm({ campaign, onDone }: { campaign: CampaignRow | null; onDo
           <Field id="camp-budget" label={t('Budget (workspace currency)')}>
             <Input id="camp-budget" value={v.budget} onChange={set('budget')} inputMode="decimal" />
           </Field>
-          <Field id="camp-utm" label={t('UTM campaign value')} hint={t('Leads whose campaign source matches this are attributed here.')}>
+          <Field id="camp-utm" label={t('UTM campaign value')} hint={t('Inbound contacts whose campaign source matches this are attributed here.')}>
             <Input id="camp-utm" value={v.utmCampaign} onChange={set('utmCampaign')} maxLength={120} />
           </Field>
           <div className="flex items-end gap-2 sm:col-span-2">

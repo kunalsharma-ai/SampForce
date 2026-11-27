@@ -460,7 +460,7 @@ function ReviewStep({
             >
               {!c.office.country.value ? <CountrySelect aria-label={t('Head office country')} value={fixCompany.country ?? ''} onChange={(v) => setFixCompany((f) => ({ ...f, country: v || undefined }))} /> : undefined}
             </FieldRow>
-            {c.leadNumber && <FieldRow label={t('Lead number')} v={<span className="font-mono">{c.leadNumber}</span>} />}
+            {c.leadNumber && <FieldRow label={t('Company number')} v={<span className="font-mono">{c.leadNumber}</span>} />}
             {p.client?.remoteId && (
               <FieldRow
                 label={t('In SampBidx')}

@@ -65,7 +65,7 @@ export const HELP_CATEGORIES = [
     audience: 'workspace',
     icon: 'building-2',
     tone: 4,
-    title: ['Leads, companies & contacts', 'Leads, empresas y contactos', 'Prospects, entreprises et contacts', 'Leads, Unternehmen & Kontakte', 'العملاء المحتملون والشركات وجهات الاتصال'],
+    title: ['Companies & contacts', 'Empresas y contactos', 'Entreprises et contacts', 'Unternehmen & Kontakte', 'الشركات وجهات الاتصال'],
     description: [
       'Create, find, qualify and convert the people and companies you sell to.',
       'Crea, busca, califica y convierte a las personas y empresas a las que vendes.',

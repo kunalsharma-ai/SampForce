@@ -65,7 +65,7 @@ export class ActivitiesService {
     if (!input.leadId && !input.contactId && !input.companyId && !input.opportunityId) {
       throw new BadRequestException({
         code: 'VALIDATION_FAILED',
-        message: 'Link the activity to a lead, contact, company or deal.',
+        message: 'Link the activity to a company, contact or deal.',
         details: [{ path: 'leadId', message: 'at least one related record is required' }],
       });
     }

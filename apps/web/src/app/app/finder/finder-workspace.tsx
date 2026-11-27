@@ -256,7 +256,7 @@ function Row({ e, person, checked, onToggle, disabled }: { e: FinderEmail; perso
       </div>
       {e.match && (
         <Link href={`/app/${e.match.entity === 'contact' ? 'contacts' : 'leads'}/${e.match.id}`} className="text-xs text-primary hover:underline">
-          {e.match.entity === 'contact' ? t('Already a contact: {name}', { name: e.match.label }) : t('Already a lead: {name}', { name: e.match.label })}
+          {e.match.entity === 'contact' ? t('Already a contact: {name}', { name: e.match.label }) : t('Already an inbound contact: {name}', { name: e.match.label })}
         </Link>
       )}
     </li>

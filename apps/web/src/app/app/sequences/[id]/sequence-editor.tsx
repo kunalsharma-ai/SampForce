@@ -430,7 +430,7 @@ function RuleCard({ on, rule, others, readOnly, onChange }: { on: EmailEvent; ru
         <div className="space-y-1">
           {box('set_lead_status', () => ({ type: 'set_lead_status', status: on === 'replied' ? 'CONTACTED' : 'UNQUALIFIED' }))}
           {status && (
-            <Select aria-label={t('New lead status')} disabled={readOnly} value={status.status} onChange={(e) => patch('set_lead_status', { status: e.target.value as typeof status.status })}>
+            <Select aria-label={t('New inbound contact status')} disabled={readOnly} value={status.status} onChange={(e) => patch('set_lead_status', { status: e.target.value as typeof status.status })}>
               {LEAD_STATUSES.filter((s) => s !== 'CONVERTED').map((s) => (
                 <option key={s} value={s}>
                   {t.maybe(titleCase(s))}
@@ -550,9 +550,9 @@ function PeopleTab({ seq }: { seq: SequenceRow }) {
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <label htmlFor="enrol-lead" className="text-sm font-medium">
-                    {t('A lead')}
+                    {t('An inbound contact')}
                   </label>
-                  <RecordPicker id="enrol-lead" entity="leads" value={lead} onChange={setLead} placeholder={t('Search leads')} />
+                  <RecordPicker id="enrol-lead" entity="leads" value={lead} onChange={setLead} placeholder={t('Search contacts')} />
                 </div>
                 <Button size="sm" disabled={!open || !lead || enroll.isPending} onClick={() => lead && enroll.mutate({ leadIds: [lead.id] })}>
                   {t('Enrol')}

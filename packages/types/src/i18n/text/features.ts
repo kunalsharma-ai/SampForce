@@ -60,7 +60,7 @@ export const features = {
   'Prospect lists': ['Listas de prospectos', 'Listes de prospection', 'Interessentenlisten', 'قوائم العملاء المستهدفين'],
   'Browser extension': ['Extensión del navegador', 'Extension de navigateur', 'Browsererweiterung', 'إضافة المتصفح'],
   'Website enquiries': ['Consultas del sitio web', 'Demandes du site web', 'Website-Anfragen', 'استفسارات الموقع الإلكتروني'],
-  'Segments and lead forms': ['Segmentos y formularios de leads', 'Segments et formulaires de prospects', 'Segmente und Lead-Formulare', 'الشرائح ونماذج العملاء المحتملين'],
+  'Segments and contact forms': ['Segmentos y formularios de contacto', 'Segments et formulaires de contact', 'Segmente und Kontaktformulare', 'الشرائح ونماذج جهات الاتصال'],
   'Meeting recordings': ['Grabaciones de reuniones', 'Enregistrements de réunions', 'Besprechungsaufzeichnungen', 'تسجيلات الاجتماعات'],
   'Voice to CRM': ['Voz al CRM', 'Voix vers le CRM', 'Sprache ins CRM', 'من الصوت إلى CRM'],
   'AI assistant and agents': ['Asistente y agentes de IA', 'Assistant et agents IA', 'KI-Assistent und Agenten', 'المساعد والوكلاء بالذكاء الاصطناعي'],
@@ -91,11 +91,11 @@ export const features = {
     'Angebotsanfragen mit LOI-, IR- und CPI-Preisen, Fristen, Berichten und Umwandlung in Deals.',
     'طلبات عروض الأسعار مع تسعير LOI وIR وCPI والمواعيد النهائية والتقارير والتحويل إلى صفقات.',
   ],
-  'Territories with rules that route leads and deals to their owners.': [
-    'Territorios con reglas que asignan leads y oportunidades a sus responsables.',
-    'Des territoires avec des règles qui attribuent prospects et affaires à leurs responsables.',
-    'Gebiete mit Regeln, die Leads und Deals ihren Verantwortlichen zuweisen.',
-    'مناطق بقواعد توجّه العملاء المحتملين والصفقات إلى أصحابها.',
+  'Territories with rules that route companies, contacts and deals to their owners.': [
+    'Territorios con reglas que dirigen empresas, contactos y oportunidades a sus responsables.',
+    'Territoires avec des règles qui orientent entreprises, contacts et opportunités vers leurs responsables.',
+    'Gebiete mit Regeln, die Unternehmen, Kontakte und Verkaufschancen ihren Verantwortlichen zuweisen.',
+    'مناطق بقواعد توجّه الشركات وجهات الاتصال والصفقات إلى مسؤوليها.',
   ],
   'Products, price books, quotes with approvals and PDFs, and the Quick Bid Studio.': [
     'Productos, listas de precios, presupuestos con aprobaciones y PDF, y el Quick Bid Studio.',
@@ -151,17 +151,17 @@ export const features = {
     'Interessentenlisten aus Dateien, der Erweiterung und Apollo.io.',
     'قوائم عملاء محتملين من الملفات والإضافة وApollo.io.',
   ],
-  'The SampForce browser extension for capturing leads from web pages.': [
-    'La extensión de navegador de SampForce para capturar leads desde páginas web.',
-    'L’extension de navigateur SampForce pour capturer des prospects depuis les pages web.',
-    'Die SampForce-Browsererweiterung, um Leads von Webseiten zu erfassen.',
-    'إضافة SampForce للمتصفح لالتقاط العملاء المحتملين من صفحات الويب.',
+  'The SampForce browser extension for capturing contacts from web pages.': [
+    'La extensión de navegador de SampForce para captar contactos de páginas web.',
+    'L’extension de navigateur SampForce pour capter des contacts depuis des pages web.',
+    'Die SampForce-Browsererweiterung zum Erfassen von Kontakten aus Webseiten.',
+    'إضافة متصفح SampForce لالتقاط جهات الاتصال من صفحات الويب.',
   ],
-  'Segments and hosted lead forms with recorded consent.': [
-    'Segmentos y formularios de leads alojados con consentimiento registrado.',
-    'Segments et formulaires de prospects hébergés avec consentement enregistré.',
-    'Segmente und gehostete Lead-Formulare mit dokumentierter Einwilligung.',
-    'شرائح ونماذج مستضافة للعملاء المحتملين مع تسجيل الموافقة.',
+  'Segments and hosted contact forms with recorded consent.': [
+    'Segmentos y formularios de contacto alojados con consentimiento registrado.',
+    'Segments et formulaires de contact hébergés avec consentement enregistré.',
+    'Segmente und gehostete Kontaktformulare mit erfasster Einwilligung.',
+    'الشرائح ونماذج جهات الاتصال المستضافة مع موافقة مسجّلة.',
   ],
   'Campaign tracking with first-touch attribution.': [
     'Seguimiento de campañas con atribución al primer contacto.',
@@ -292,15 +292,15 @@ export const features = {
     'Alle 14 Typen benutzerdefinierter Felder, Felder an Nachverfolgungen und RFQs sowie Felder, die nur bestimmte Positionen sehen oder bearbeiten.',
     'كل أنواع الحقول المخصصة الأربعة عشر، وحقول في المتابعات وطلبات عروض الأسعار، وحقول لا يراها أو يعدّلها إلا بعض المسميات الوظيفية.',
   ],
-  'Export companies, employees, leads, deals and RFQs as Excel workbooks.': [
-    'Exporta empresas, empleados, leads, oportunidades y RFQs como libros de Excel.',
-    'Exportez entreprises, employés, prospects, affaires et RFQ sous forme de classeurs Excel.',
-    'Exportieren Sie Unternehmen, Mitarbeiter, Leads, Deals und RFQs als Excel-Arbeitsmappen.',
-    'صدّر الشركات والموظفين والعملاء المحتملين والصفقات وطلبات عروض الأسعار كمصنفات Excel.',
+  'Export companies, employees, inbound contacts, deals and RFQs as Excel workbooks.': [
+    'Exporta empresas, empleados, contactos entrantes, oportunidades y RFQ como libros de Excel.',
+    'Exportez entreprises, employés, contacts entrants, opportunités et RFQ en classeurs Excel.',
+    'Exportieren Sie Unternehmen, Mitarbeiter, Eingangskontakte, Verkaufschancen und RFQs als Excel-Arbeitsmappen.',
+    'صدّر الشركات والموظفين وجهات الاتصال الواردة والصفقات وطلبات عروض الأسعار كمصنفات Excel.',
   ],
   // Command Center (ADR 0063)
-  'Lead transfers': ['Traspasos de leads', 'Transferts de prospects', 'Lead-Übergaben', 'نقل العملاء المحتملين'],
-  'Requests to move a lead to a manager or senior person, approved, rejected or reassigned by them.': ['Solicitudes para pasar un lead a un gerente o a una persona sénior, que lo aprueba, rechaza o reasigna.', 'Demandes de transfert d’un prospect à un manager ou à un cadre, qui l’approuve, le refuse ou le réattribue.', 'Anfragen, einen Lead an eine Führungskraft zu übergeben, die sie genehmigt, ablehnt oder neu zuweist.', 'طلبات نقل عميل محتمل إلى مدير أو شخص أعلى، يوافق عليها أو يرفضها أو يعيد إسنادها.'],
+  'Company transfers': ['Transferencias de empresas', 'Transferts d’entreprises', 'Unternehmensübertragungen', 'نقل الشركات'],
+  'Requests to move a company to a manager or senior person, approved, rejected or reassigned by them.': ['Solicitudes para pasar una empresa a un responsable o superior, que este aprueba, rechaza o reasigna.', 'Demandes de transfert d’une entreprise à un responsable ou à une personne senior, qui les approuve, les rejette ou les réattribue.', 'Anfragen, ein Unternehmen an eine Führungskraft oder Vorgesetzte zu übergeben, die sie genehmigt, ablehnt oder neu zuweist.', 'طلبات نقل شركة إلى مدير أو مسؤول أعلى، يوافق عليها أو يرفضها أو يعيد إسنادها.'],
   'Revenue attribution': ['Atribución de ingresos', 'Attribution des revenus', 'Umsatzzuordnung', 'نسب الإيرادات'],
   'Revenue records for won deals, split between the people who won them without counting anything twice.': ['Registros de ingresos de las oportunidades ganadas, repartidos entre quienes las ganaron sin contar nada dos veces.', 'Des enregistrements de revenus pour les opportunités gagnées, répartis entre les personnes qui les ont gagnées sans rien compter deux fois.', 'Umsatzdatensätze für gewonnene Verkaufschancen, aufgeteilt auf die Personen, die sie gewonnen haben, ohne etwas doppelt zu zählen.', 'سجلات إيرادات للصفقات المربوحة، موزعة على من ربحوها دون احتساب أي شيء مرتين.'],
   'Manager dashboard': ['Panel de gerente', 'Tableau de bord manager', 'Manager-Dashboard', 'لوحة المدير'],
@@ -319,12 +319,12 @@ export const features = {
     'حدّد الموظفين الذين يرسلون طلبات العروض، وامنح كل موظف مرحلة تواصل ملوّنة مع سجلّها، وصفِّ موظفي الشركة حسب نشاط طلبات العروض والمتابعات.',
   ],
   // ADR 0082: the Leads and Accounts pages, switched on by the Console Admin
-  'Leads page': ['Página de leads', 'Page des prospects', 'Leads-Seite', 'صفحة العملاء المحتملين'],
-  'The separate Leads page for inbound leads. Hidden unless the Console Admin switches it on; companies and contacts hold the leads otherwise.': [
-    'La página de leads aparte para los leads entrantes. Oculta salvo que el administrador de la consola la active; si no, las empresas y los contactos guardan los leads.',
-    'La page distincte des prospects entrants. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, les entreprises et les contacts portent les prospects.',
-    'Die eigene Leads-Seite für eingehende Leads. Ausgeblendet, bis der Console-Administrator sie einschaltet; sonst stehen die Leads bei Unternehmen und Kontakten.',
-    'صفحة مستقلة للعملاء المحتملين الواردين. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا فالعملاء المحتملون ضمن الشركات وجهات الاتصال.',
+  'Inbound contacts page': ['Página de contactos entrantes', 'Page des contacts entrants', 'Seite Eingangskontakte', 'صفحة جهات الاتصال الواردة'],
+  'The separate page for inbound contacts. Hidden unless the Console Admin switches it on; companies and contacts hold them otherwise.': [
+    'La página aparte de contactos entrantes. Oculta salvo que el administrador de la consola la active; si no, las empresas y los contactos los contienen.',
+    'La page séparée des contacts entrants. Masquée tant que l’administrateur de la console ne l’active pas ; sinon, les entreprises et contacts les regroupent.',
+    'Die separate Seite für Eingangskontakte. Ausgeblendet, bis der Konsolen-Admin sie einschaltet; sonst stehen sie bei Unternehmen und Kontakten.',
+    'الصفحة المستقلة لجهات الاتصال الواردة. مخفية ما لم يفعّلها مسؤول وحدة التحكم؛ وإلا تحفظها الشركات وجهات الاتصال.',
   ],
   'Accounts page': ['Página de cuentas', 'Page des comptes', 'Accounts-Seite', 'صفحة الحسابات'],
   'The separate Accounts page. Hidden unless the Console Admin switches it on; Companies is the account list otherwise.': [

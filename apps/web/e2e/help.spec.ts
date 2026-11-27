@@ -20,7 +20,7 @@ test('every page title has an i button that explains the page, by mouse and by k
   // Pages with a PageHeader and pages that draw their own title all get the button.
   for (const [path, topic, title] of [
     ['/app', 'page.commandCenter', 'Dashboard'],
-    ['/app/leads', 'page.leads', 'Leads'],
+    ['/app/leads', 'page.leads', 'Inbound contacts'],
     ['/app/deals', 'page.deals', 'Deals'],
     ['/app/quotes', 'page.quotes', 'Quotes & Proposals'],
     ['/app/reports', 'page.reports', 'Reports & Analytics'],
@@ -83,13 +83,13 @@ test('section headings have their own i buttons, and a record page explains itse
 
   // A lead record: the page button picks the record topic from the route.
   await page.goto('/app/leads');
-  await page.getByRole('button', { name: 'New lead' }).click();
+  await page.getByRole('button', { name: 'New inbound contact' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Full name *', { exact: true }).fill('Ada Lovelace');
-  await dialog.getByRole('button', { name: 'Create lead' }).click();
+  await dialog.getByRole('button', { name: 'Create inbound contact' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Ada Lovelace' })).toBeVisible();
   await infoButton(page.locator('main'), 'page.leadRecord').click();
-  await expect(page.getByRole('dialog', { name: 'Lead' })).toContainText('One lead’s full record');
+  await expect(page.getByRole('dialog', { name: 'Inbound contact' })).toContainText('One inbound contact’s full record');
   await page.keyboard.press('Escape');
   await infoButton(page, 'lead.qualification').click();
   await expect(page.getByRole('dialog', { name: 'Qualification' })).toContainText('BANT or MEDDICC');

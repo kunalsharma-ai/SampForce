@@ -10,7 +10,7 @@ export default function CampaignsPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Campaigns"
-        description="Track campaigns and the leads, deals and revenue they brought in. Attribution is first touch: a lead counts for the campaign whose form captured it, that it was linked to, or whose UTM value it carries."
+        description="Track campaigns and the contacts, deals and revenue they brought in. Attribution is first touch: an inbound contact counts for the campaign whose form captured it, that it was linked to, or whose UTM value it carries."
       />
       <RequirePermission permission="marketing:read">
         <CampaignsWorkspace />

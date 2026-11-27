@@ -10,7 +10,7 @@ import { Tr, useT } from '@/lib/i18n';
 
 /** Real capabilities only: these are all things SampForce does today. */
 const CAPABILITIES_A = ['Kanban pipelines', 'Custom fields', 'CSV import and export', 'Signed webhooks', 'Approval steps', 'Workflow simulator', 'Versioned quotes', 'Price books', 'Contract renewals'];
-const CAPABILITIES_B = ['Lead qualification', 'Deal risk', 'Forecast scenarios', 'Win rates', 'Health scores', 'Renewal reminders', 'Hosted lead forms', 'Append-only audit log', 'Roles and permissions'];
+const CAPABILITIES_B = ['Contact qualification', 'Deal risk', 'Forecast scenarios', 'Win rates', 'Health scores', 'Renewal reminders', 'Hosted contact forms', 'Append-only audit log', 'Roles and permissions'];
 
 function MarqueeRow({ items, reverse, dur }: { items: string[]; reverse?: boolean; dur: string }) {
   const row = (hidden: boolean) => (
@@ -47,7 +47,7 @@ export function CapabilityMarquee() {
 
 /* ── Flow board ───────────────────────────────────────────────────────────────────────────────────────────────── */
 
-const STAGES = ['Lead', 'Qualified', 'Proposal', 'Won'] as const;
+const STAGES = ['New', 'Qualified', 'Proposal', 'Won'] as const;
 
 interface SampleDeal {
   id: string;
@@ -153,11 +153,11 @@ export function FlowBoard() {
 
 /** Only modules that exist in the product today. No customer logos, ratings or usage numbers: there are none to show yet. */
 export const FEATURES = [
-  { icon: KanbanSquare, title: 'Core CRM', body: 'Leads, contacts, companies and deals with Kanban pipelines, custom fields, CSV import and export, and search.', span: 'lg:col-span-2' },
-  { icon: Bot, title: 'Revenue Copilot', body: 'AI assistance for lead qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.', span: 'lg:col-span-2 lg:row-span-2' },
+  { icon: KanbanSquare, title: 'Core CRM', body: 'Companies, contacts and deals with Kanban pipelines, custom fields, CSV import and export, and search.', span: 'lg:col-span-2' },
+  { icon: Bot, title: 'Revenue Copilot', body: 'AI assistance for contact qualification, deal risk and drafting, with the reasoning shown and a person approving anything that leaves SampForce.', span: 'lg:col-span-2 lg:row-span-2' },
   { icon: GitBranch, title: 'Automation Studio', body: 'Workflows with conditions, delays and approval steps, a simulator to test them first, and signed webhooks.', span: '' },
   { icon: FileSignature, title: 'Quotes and contracts', body: 'Product catalogue, price books, tax rates, discount approvals, versioned quotes and contract renewals.', span: '' },
-  { icon: Megaphone, title: 'Marketing', body: 'Consent-aware segments, hosted lead forms you can embed, and campaign attribution to leads and won deals.', span: '' },
+  { icon: Megaphone, title: 'Marketing', body: 'Consent-aware segments, hosted contact forms you can embed, and campaign attribution to contacts and won deals.', span: '' },
   { icon: LineChart, title: 'Revenue intelligence', body: 'Forecasts with scenarios, targets, win rates and revenue by source, computed from your own records.', span: 'lg:col-span-2' },
   { icon: HeartHandshake, title: 'Customer success', body: 'Rule-based health scores with the reasons listed, escalations and renewal reminders.', span: '' },
   { icon: ShieldCheck, title: 'Built for teams', body: 'Roles and permissions, an append-only audit log, and workspace isolation enforced in the database.', span: 'sm:col-span-2 lg:col-span-4' },

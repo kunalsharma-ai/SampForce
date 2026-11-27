@@ -57,7 +57,7 @@ export const REPORT_CATALOG: Record<ReportEntity, ReportEntityDef> = {
     ],
   },
   leads: {
-    key: 'leads', label: 'Leads', noun: 'lead', permission: 'leads:read',
+    key: 'leads', label: 'Inbound contacts', noun: 'inbound contact', permission: 'leads:read',
     fields: [
       { key: 'name', label: 'Name', kind: 'text' },
       { key: 'status', label: 'Status', kind: 'enum', options: ['NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'], groupable: true },
@@ -365,7 +365,7 @@ export interface DashboardRow {
 export const REPORT_TEMPLATES: { name: string; definition: ReportDefinition }[] = [
   { name: 'Open pipeline by stage', definition: { entity: 'deals', metric: { fn: 'sum', field: 'amount' }, groupBy: { field: 'stage' }, filters: [{ field: 'status', op: 'eq', value: 'OPEN' }], chart: 'bar', sort: 'value_desc', limit: 20 } },
   { name: 'Won revenue by month', definition: { entity: 'deals', metric: { fn: 'sum', field: 'amount' }, groupBy: { field: 'closedAt', bucket: 'month' }, filters: [{ field: 'status', op: 'eq', value: 'WON' }, { field: 'closedAt', op: 'last_n_days', value: 365 }], chart: 'line', sort: 'label_asc', limit: 24 } },
-  { name: 'Leads by source', definition: { entity: 'leads', metric: { fn: 'count' }, groupBy: { field: 'source' }, filters: [], chart: 'pie', sort: 'value_desc', limit: 10 } },
+  { name: 'Contacts by source', definition: { entity: 'leads', metric: { fn: 'count' }, groupBy: { field: 'source' }, filters: [], chart: 'pie', sort: 'value_desc', limit: 10 } },
   { name: 'Activities by owner, last 30 days', definition: { entity: 'activities', metric: { fn: 'count' }, groupBy: { field: 'owner' }, filters: [{ field: 'occurredAt', op: 'last_n_days', value: 30 }], chart: 'bar', sort: 'value_desc', limit: 20 } },
   { name: 'Loss reasons', definition: { entity: 'deals', metric: { fn: 'count' }, groupBy: { field: 'lossReason' }, filters: [{ field: 'status', op: 'eq', value: 'LOST' }], chart: 'table', sort: 'value_desc', limit: 20 } },
 ];

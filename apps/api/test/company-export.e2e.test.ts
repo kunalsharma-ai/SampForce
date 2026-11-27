@@ -122,7 +122,7 @@ describe('company export', () => {
     const acme = companies.rows.find((r) => r['Company name'] === 'Acme Panels')!;
     expect(acme).toMatchObject({
       'Legal name': 'Acme Panels Private Limited',
-      'Lead status': 'New Lead',
+      'Company status': 'New Company',
       'Operating status': 'Active',
       Description: 'Online panels across India.',
       Industry: 'Market research',
@@ -173,7 +173,7 @@ describe('company export', () => {
     expect(acme.Remarks).toBe('=HYPERLINK("http://evil.example") call on Monday');
     const remarks = wb.getWorksheet('Companies')!.getRow(companies.rows.indexOf(acme) + 2).getCell(companies.headers.indexOf('Remarks') + 1);
     expect(remarks.type).toBe(3); // ValueType.String
-    expect(acme['Lead number']).toMatch(/^[A-Z]+\d+$/);
+    expect(acme['Company number']).toMatch(/^[A-Z]+\d+$/);
     // The main profile columns are always there; others only when a company has one.
     expect(companies.headers).toEqual(expect.arrayContaining(['LinkedIn', 'X (Twitter)', 'Facebook', 'Instagram', 'YouTube', 'GitHub']));
     expect(companies.headers).not.toContain('TikTok');
@@ -181,7 +181,7 @@ describe('company export', () => {
     const employees = records(wb.getWorksheet('Employees')!);
     expect(employees.rows.find((r) => r['Full name'] === 'Priya Nair')).toMatchObject({
       'Company name': 'Acme Panels',
-      'Lead number': acme['Lead number'],
+      'Company number': acme['Company number'],
       Designation: 'Head of Research',
       Email: 'priya@acmepanels.example',
       LinkedIn: 'https://www.linkedin.com/in/priya-nair',
@@ -195,7 +195,7 @@ describe('company export', () => {
 
   it('exports companies and employees as separate CSV files that follow the list filters', async () => {
     const all = csvRows((await http.get('/exports/companies?format=csv&part=companies').expect(200)).text);
-    expect(all.header.startsWith('Lead number,Company name,Legal name')).toBe(true);
+    expect(all.header.startsWith('Company number,Company name,Legal name')).toBe(true);
     expect(all.lines.some((l) => l.includes('Acme Panels') && l.includes('Real answers'))).toBe(true);
     expect(all.lines.some((l) => l.includes('Zeta Fieldwork'))).toBe(true);
     expect(all.lines.find((l) => l.includes('Acme Panels'))).toContain(`"'=HYPERLINK(""http://evil.example"") call on Monday"`);

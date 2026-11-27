@@ -46,10 +46,10 @@ export function BrowserExtension() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Puzzle className="size-4" aria-hidden /> {t('SampForce lead capture for Chrome and Edge')}
+            <Puzzle className="size-4" aria-hidden /> {t('SampForce contact capture for Chrome and Edge')}
           </CardTitle>
           <CardDescription>
-            {t('Finds email addresses on the page you are reading and saves the people as leads, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.')}
+            {t('Finds email addresses on the page you are reading and saves the people as inbound contacts, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
@@ -66,7 +66,7 @@ export function BrowserExtension() {
               {rich(t('Open the extension, enter {address} and paste the code.'), { address: <code className="text-xs">{origin || t('your SampForce address')}</code> })}
             </li>
           </ol>
-          {!canSave && <p className="text-muted-foreground">{t('Your role can look people up with the extension but not save leads.')}</p>}
+          {!canSave && <p className="text-muted-foreground">{t('Your role can look people up with the extension but not save inbound contacts.')}</p>}
 
           <form
             className="flex flex-wrap items-end gap-2"
@@ -106,7 +106,7 @@ export function BrowserExtension() {
                 </Button>
                 {copied && <span className="text-xs text-muted-foreground">{t('Copied')}</span>}
               </div>
-              <p className="text-xs text-muted-foreground">{t('It lasts 90 days. Anyone with the code can save leads as you, so do not share it.')}</p>
+              <p className="text-xs text-muted-foreground">{t('It lasts 90 days. Anyone with the code can save inbound contacts as you, so do not share it.')}</p>
             </div>
           )}
 

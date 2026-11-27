@@ -94,7 +94,7 @@ test('keyboard shortcuts, Focus Workspace and search actions', async ({ page }) 
   await page.locator('body').press('?');
   const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText('New lead');
+  await expect(sheet).toContainText('New inbound contact');
   const a11y = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(a11y.violations.map((v) => v.id)).toEqual([]);
   await page.keyboard.press('Escape');

@@ -4,11 +4,11 @@ import type { PhraseTable } from './types';
 export const integrations = {
   'Zapier and API keys': ['Zapier y claves de API', 'Zapier et clés d’API', 'Zapier und API-Schlüssel', 'Zapier ومفاتيح API'],
   'Available': ['Disponible', 'Disponible', 'Verfügbar', 'متاح'],
-  'Start Zaps when leads, contacts, deals or tasks change, and create leads, contacts and tasks from other apps. Zaps connect with an API key from below, and start within seconds through webhooks rather than polling.': [
-    'Inicia Zaps cuando cambian prospectos, contactos, oportunidades o tareas, y crea prospectos, contactos y tareas desde otras aplicaciones. Los Zaps se conectan con una clave de API de abajo y se inician en segundos mediante webhooks, sin sondeo.',
-    'Déclenchez des Zaps quand des prospects, contacts, opportunités ou tâches changent, et créez des prospects, contacts et tâches depuis d’autres applications. Les Zaps se connectent avec une clé d’API ci-dessous et démarrent en quelques secondes via des webhooks plutôt que par interrogation.',
-    'Starten Sie Zaps, wenn sich Leads, Kontakte, Verkaufschancen oder Aufgaben ändern, und legen Sie Leads, Kontakte und Aufgaben aus anderen Apps an. Zaps verbinden sich mit einem API-Schlüssel von unten und starten innerhalb von Sekunden über Webhooks statt Abfragen.',
-    'شغّل Zaps عند تغيّر العملاء المحتملين أو جهات الاتصال أو الصفقات أو المهام، وأنشئ عملاء محتملين وجهات اتصال ومهام من تطبيقات أخرى. تتصل Zaps بمفتاح API من الأسفل، وتبدأ خلال ثوانٍ عبر خطافات الويب بدلًا من الاستطلاع.',
+  'Start Zaps when inbound contacts, contacts, deals or tasks change, and create inbound contacts, contacts and tasks from other apps. Zaps connect with an API key from below, and start within seconds through webhooks rather than polling.': [
+    'Inicia Zaps cuando cambian contactos entrantes, contactos, oportunidades o tareas, y crea contactos entrantes, contactos y tareas desde otras apps. Los Zaps se conectan con una clave de API de abajo y se inician en segundos mediante webhooks, sin sondeo.',
+    'Lancez des Zaps quand des contacts entrants, contacts, opportunités ou tâches changent, et créez des contacts entrants, contacts et tâches depuis d’autres applications. Les Zaps se connectent avec une clé d’API ci-dessous et démarrent en quelques secondes via des webhooks plutôt que par interrogation.',
+    'Starten Sie Zaps, wenn sich Eingangskontakte, Kontakte, Verkaufschancen oder Aufgaben ändern, und legen Sie Eingangskontakte, Kontakte und Aufgaben aus anderen Apps an. Zaps verbinden sich mit einem API-Schlüssel von unten und starten per Webhook binnen Sekunden statt per Abfrage.',
+    'شغّل Zaps عند تغيّر جهات الاتصال الواردة أو جهات الاتصال أو الصفقات أو المهام، وأنشئ جهات اتصال واردة وجهات اتصال ومهام من تطبيقات أخرى. تتصل Zaps بمفتاح API من الأسفل، وتبدأ خلال ثوانٍ عبر خطافات الويب بدلًا من الاستطلاع.',
   ],
   'The SampForce app for Zapier is not published on this installation yet. An operator deploys it from {path} and sets {variable}. API keys already work with Make, n8n and scripts.': [
     'La aplicación de SampForce para Zapier aún no está publicada en esta instalación. Un operador la despliega desde {path} y define {variable}. Las claves de API ya funcionan con Make, n8n y scripts.',
@@ -48,17 +48,17 @@ export const integrations = {
   'Scopes': ['Permisos', 'Portées', 'Bereiche', 'النطاقات'],
   'Create key': ['Crear clave', 'Créer la clé', 'Schlüssel erstellen', 'إنشاء مفتاح'],
   'Browser extension': ['Extensión del navegador', 'Extension de navigateur', 'Browsererweiterung', 'إضافة المتصفح'],
-  'SampForce lead capture for Chrome and Edge': [
-    'Captura de prospectos de SampForce para Chrome y Edge',
-    'Capture de prospects SampForce pour Chrome et Edge',
-    'SampForce-Lead-Erfassung für Chrome und Edge',
-    'التقاط العملاء المحتملين من SampForce لمتصفحي Chrome وEdge',
+  'SampForce contact capture for Chrome and Edge': [
+    'Captura de contactos de SampForce para Chrome y Edge',
+    'Capture de contacts SampForce pour Chrome et Edge',
+    'SampForce-Kontakterfassung für Chrome und Edge',
+    'التقاط جهات الاتصال من SampForce لمتصفحي Chrome وEdge',
   ],
-  'Finds email addresses on the page you are reading and saves the people as leads, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.': [
-    'Encuentra direcciones de correo en la página que estás leyendo y guarda a las personas como prospectos, comprobando primero SampForce para no añadir a nadie dos veces. También puedes inscribirlas en una secuencia o dejar que guarde personas nuevas automáticamente mientras navegas.',
-    'Trouve les adresses e-mail sur la page que vous lisez et enregistre les personnes comme prospects, en vérifiant d’abord SampForce pour que personne ne soit ajouté deux fois. Vous pouvez aussi les inscrire dans une séquence, ou laisser l’extension enregistrer automatiquement les nouvelles personnes pendant votre navigation.',
-    'Findet E-Mail-Adressen auf der Seite, die Sie lesen, und speichert die Personen als Leads, wobei zuerst SampForce geprüft wird, damit niemand doppelt angelegt wird. Sie können sie auch in eine Sequenz aufnehmen oder neue Personen beim Surfen automatisch speichern lassen.',
-    'تعثر على عناوين البريد الإلكتروني في الصفحة التي تقرؤها وتحفظ الأشخاص كعملاء محتملين، مع التحقق من SampForce أولًا حتى لا يُضاف أحد مرتين. يمكنك أيضًا تسجيلهم في تسلسل، أو السماح لها بحفظ الأشخاص الجدد تلقائيًا أثناء التصفح.',
+  'Finds email addresses on the page you are reading and saves the people as inbound contacts, checking SampForce first so nobody is added twice. You can also enrol them in a sequence, or let it save new people automatically as you browse.': [
+    'Encuentra direcciones de correo en la página que lees y guarda a las personas como contactos entrantes, comprobando antes SampForce para no añadir a nadie dos veces. También puedes inscribirlas en una secuencia o dejar que guarde personas nuevas automáticamente mientras navegas.',
+    'Trouve les adresses e-mail de la page que vous lisez et enregistre les personnes comme contacts entrants, en vérifiant d’abord SampForce pour que personne ne soit ajouté deux fois. Vous pouvez aussi les inscrire dans une séquence, ou le laisser enregistrer automatiquement les nouvelles personnes pendant votre navigation.',
+    'Findet E-Mail-Adressen auf der Seite, die Sie lesen, und speichert die Personen als Eingangskontakte, wobei zuerst SampForce geprüft wird, damit niemand doppelt angelegt wird. Sie können sie auch in eine Sequenz einschreiben oder neue Personen beim Surfen automatisch speichern lassen.',
+    'يعثر على عناوين البريد في الصفحة التي تقرؤها ويحفظ الأشخاص كجهات اتصال واردة، متحققًا من SampForce أولًا حتى لا يُضاف أحد مرتين. ويمكنك أيضًا تسجيلهم في تسلسل، أو تركه يحفظ الأشخاص الجدد تلقائيًا أثناء التصفح.',
   ],
   'Install the extension. It is not in the Chrome Web Store yet: your SampForce provider can share the package, which you load from {chrome} (or {edge}) with Developer mode on and {button}.': [
     'Instala la extensión. Aún no está en Chrome Web Store: tu proveedor de SampForce puede compartir el paquete, que cargas desde {chrome} (o {edge}) con el modo de desarrollador activado y {button}.',
@@ -80,11 +80,11 @@ export const integrations = {
     'افتح الإضافة، وأدخل {address} والصق الرمز.',
   ],
   'your SampForce address': ['tu dirección de SampForce', 'votre adresse SampForce', 'Ihre SampForce-Adresse', 'عنوان SampForce الخاص بك'],
-  'Your role can look people up with the extension but not save leads.': [
-    'Tu rol puede buscar personas con la extensión, pero no guardar prospectos.',
-    'Votre rôle peut rechercher des personnes avec l’extension, mais pas enregistrer de prospects.',
-    'Ihre Rolle kann mit der Erweiterung Personen nachschlagen, aber keine Leads speichern.',
-    'يمكن لدورك البحث عن الأشخاص بالإضافة، لكن لا يمكنه حفظ العملاء المحتملين.',
+  'Your role can look people up with the extension but not save inbound contacts.': [
+    'Tu rol puede buscar personas con la extensión, pero no guardar contactos entrantes.',
+    'Votre rôle peut rechercher des personnes avec l’extension, mais pas enregistrer de contacts entrants.',
+    'Ihre Rolle kann mit der Erweiterung Personen suchen, aber keine Eingangskontakte speichern.',
+    'يمكن لدورك البحث عن الأشخاص بالإضافة، لكن لا يمكنه حفظ جهات الاتصال الواردة.',
   ],
   'Name this connection': ['Nombra esta conexión', 'Nommez cette connexion', 'Benennen Sie diese Verbindung', 'سمِّ هذا الاتصال'],
   'Chrome on my laptop': ['Chrome en mi portátil', 'Chrome sur mon ordinateur portable', 'Chrome auf meinem Laptop', 'Chrome على حاسوبي المحمول'],
@@ -102,11 +102,11 @@ export const integrations = {
     'رمز الاتصال لـ «{name}»، يُعرض مرة واحدة. الصقه في الإضافة الآن.',
   ],
   'Copy connection code': ['Copiar código de conexión', 'Copier le code de connexion', 'Verbindungscode kopieren', 'نسخ رمز الاتصال'],
-  'It lasts 90 days. Anyone with the code can save leads as you, so do not share it.': [
-    'Dura 90 días. Cualquiera con el código puede guardar prospectos en tu nombre, así que no lo compartas.',
-    'Il est valable 90 jours. Toute personne disposant du code peut enregistrer des prospects en votre nom, ne le partagez donc pas.',
-    'Er gilt 90 Tage. Jeder mit dem Code kann in Ihrem Namen Leads speichern, teilen Sie ihn also nicht.',
-    'يدوم 90 يومًا. يمكن لأي شخص لديه الرمز حفظ العملاء المحتملين باسمك، فلا تشاركه.',
+  'It lasts 90 days. Anyone with the code can save inbound contacts as you, so do not share it.': [
+    'Dura 90 días. Cualquiera con el código puede guardar contactos entrantes en tu nombre, así que no lo compartas.',
+    'Il est valable 90 jours. Toute personne qui a le code peut enregistrer des contacts entrants en votre nom : ne le partagez pas.',
+    'Er gilt 90 Tage. Wer den Code hat, kann in Ihrem Namen Eingangskontakte speichern, also geben Sie ihn nicht weiter.',
+    'يبقى صالحًا 90 يومًا. يستطيع أي شخص لديه الرمز حفظ جهات اتصال واردة باسمك، فلا تشاركه.',
   ],
   'Extension connections': ['Conexiones de la extensión', 'Connexions de l’extension', 'Erweiterungsverbindungen', 'اتصالات الإضافة'],
   'Last used {time}': ['Último uso {time}', 'Dernière utilisation {time}', 'Zuletzt verwendet {time}', 'آخر استخدام {time}'],
@@ -138,11 +138,11 @@ export const integrations = {
     'Synchronisierung abgeschlossen: {emails} neue E-Mails, {meetings} Meetings aktualisiert.',
     'اكتملت المزامنة: {emails} رسائل جديدة، و{meetings} اجتماعات محدّثة.',
   ],
-  'Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts and leads, stores only those, and keeps tokens encrypted. Sending is limited per person per day.': [
-    'Cada persona conecta su propia cuenta. SampForce lee el correo y los eventos del calendario solo para encontrar conversaciones y reuniones con tus contactos y prospectos, guarda solo esos y mantiene los tokens cifrados. Los envíos están limitados por persona y día.',
-    'Chaque personne connecte son propre compte. SampForce lit les e-mails et les événements d’agenda uniquement pour trouver les conversations et réunions avec vos contacts et prospects, ne stocke que ceux-ci et chiffre les jetons. L’envoi est limité par personne et par jour.',
-    'Jede Person verbindet ihr eigenes Konto. SampForce liest E-Mails und Kalendertermine nur, um Gespräche und Meetings mit Ihren Kontakten und Leads zu finden, speichert nur diese und hält Tokens verschlüsselt. Der Versand ist pro Person und Tag begrenzt.',
-    'يربط كل شخص حسابه الخاص. يقرأ SampForce البريد وأحداث التقويم فقط للعثور على المحادثات والاجتماعات مع جهات اتصالك وعملائك المحتملين، ويخزّن تلك فقط، ويحتفظ بالرموز مشفّرة. الإرسال محدود لكل شخص يوميًا.',
+  'Each person connects their own account. SampForce reads mail and calendar events only to find conversations and meetings with your contacts, stores only those, and keeps tokens encrypted. Sending is limited per person per day.': [
+    'Cada persona conecta su propia cuenta. SampForce lee el correo y los eventos del calendario solo para encontrar conversaciones y reuniones con tus contactos, guarda solo esas y mantiene los tokens cifrados. El envío está limitado por persona y día.',
+    'Chacun connecte son propre compte. SampForce lit les e-mails et les événements d’agenda uniquement pour trouver les conversations et réunions avec vos contacts, ne stocke que celles-ci et garde les jetons chiffrés. L’envoi est limité par personne et par jour.',
+    'Jede Person verbindet ihr eigenes Konto. SampForce liest E-Mails und Kalendertermine nur, um Unterhaltungen und Meetings mit Ihren Kontakten zu finden, speichert nur diese und hält Tokens verschlüsselt. Der Versand ist pro Person und Tag begrenzt.',
+    'يربط كل شخص حسابه الخاص. يقرأ SampForce البريد وأحداث التقويم فقط للعثور على المحادثات والاجتماعات مع جهات اتصالك، ولا يخزّن سواها، ويحفظ الرموز مشفّرة. الإرسال محدود لكل شخص يوميًا.',
   ],
   'Not set up on this installation': ['No configurado en esta instalación', 'Non configuré sur cette installation', 'Auf dieser Installation nicht eingerichtet', 'غير مُعدّ على هذا التثبيت'],
   'Connected': ['Conectado', 'Connecté', 'Verbunden', 'متصل'],
@@ -391,7 +391,7 @@ export const integrations = {
   'Create and change companies': ['Crear y cambiar empresas', 'Créer et modifier des entreprises', 'Unternehmen anlegen und ändern', 'إنشاء الشركات وتغييرها'],
   'Create and change contacts': ['Crear y cambiar contactos', 'Créer et modifier des contacts', 'Kontakte anlegen und ändern', 'إنشاء جهات الاتصال وتغييرها'],
   'Create and change deals': ['Crear y cambiar oportunidades', 'Créer et modifier des opportunités', 'Verkaufschancen anlegen und ändern', 'إنشاء الصفقات وتغييرها'],
-  'Create and change leads': ['Crear y cambiar prospectos', 'Créer et modifier des prospects', 'Leads anlegen und ändern', 'إنشاء العملاء المحتملين وتغييرهم'],
+  'Create and change inbound contacts': ['Crear y cambiar contactos entrantes', 'Créer et modifier des contacts entrants', 'Eingangskontakte anlegen und ändern', 'إنشاء جهات الاتصال الواردة وتغييرها'],
   'Create and change tasks and activities': [
     'Crear y cambiar tareas y actividades',
     'Créer et modifier des tâches et activités',
@@ -458,7 +458,7 @@ export const integrations = {
   'Read companies': ['Leer empresas', 'Lire les entreprises', 'Unternehmen lesen', 'قراءة الشركات'],
   'Read contacts': ['Leer contactos', 'Lire les contacts', 'Kontakte lesen', 'قراءة جهات الاتصال'],
   'Read deals': ['Leer oportunidades', 'Lire les opportunités', 'Verkaufschancen lesen', 'قراءة الصفقات'],
-  'Read leads': ['Leer prospectos', 'Lire les prospects', 'Leads lesen', 'قراءة العملاء المحتملين'],
+  'Read inbound contacts': ['Leer contactos entrantes', 'Lire les contacts entrants', 'Eingangskontakte lesen', 'قراءة جهات الاتصال الواردة'],
   'Read pipelines and stages': ['Leer embudos y etapas', 'Lire les pipelines et les étapes', 'Pipelines und Phasen lesen', 'قراءة مسارات المبيعات والمراحل'],
   'Read tasks and activities': ['Leer tareas y actividades', 'Lire les tâches et activités', 'Aufgaben und Aktivitäten lesen', 'قراءة المهام والأنشطة'],
   'Red': ['Rojo', 'Rouge', 'Rot', 'أحمر'],

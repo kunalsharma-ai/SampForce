@@ -404,7 +404,7 @@ function Review({ note, onNote, onEdit, onClose }: { note: VoiceNote; onNote: (n
       )}
 
       {note.actions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('Nothing in this note looks like a task, note, lead or contact to save.')}</p>
+        <p className="text-sm text-muted-foreground">{t('Nothing in this note looks like a task, note or contact to save.')}</p>
       ) : (
         <ul className="space-y-3" aria-label={t('Suggested actions')}>
           {note.actions.map((s, i) => (

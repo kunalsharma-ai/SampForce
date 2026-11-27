@@ -82,7 +82,7 @@ export class SequenceRunner implements OnModuleInit {
       }
       if (!subject || !body) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'This email has no subject or body yet.' });
       const person = await loadPerson(tx, auth.tenantId, input);
-      if ((input.leadId || input.contactId) && !person) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'That lead or contact was not found.' });
+      if ((input.leadId || input.contactId) && !person) throw new BadRequestException({ code: 'VALIDATION_FAILED', message: 'That contact was not found.' });
       const conn = await this.communication.mailboxFor(tx, auth.tenantId, auth.userId);
       if (!conn) throw new ConflictException({ code: 'NOT_CONNECTED', message: 'Connect your Google or Microsoft mailbox in Integrations to send yourself a test.' });
       if ((await this.communication.sentInLastDay(tx, conn.id)) >= this.env.EMAIL_DAILY_SEND_LIMIT) {
@@ -184,7 +184,7 @@ export class SequenceRunner implements OnModuleInit {
       const suppressed = await tx.emailSuppression.findUnique({ where: { tenantId_email: { tenantId, email: e.email } } });
       if (suppressed) return { kind: 'stop' as const, stop: suppressed.reason === 'UNSUBSCRIBED' ? 'UNSUBSCRIBED' as const : 'STOPPED' as const, why: 'The address is on the do-not-email list.' };
       const person = await loadPerson(tx, tenantId, e);
-      if (!person) return { kind: 'stop' as const, stop: 'STOPPED' as const, why: 'The lead or contact was deleted.' };
+      if (!person) return { kind: 'stop' as const, stop: 'STOPPED' as const, why: 'The contact was deleted.' };
       if (person.consent === 'OPTED_OUT') return { kind: 'stop' as const, stop: 'UNSUBSCRIBED' as const, why: 'The person opted out of marketing.' };
       const conn = await this.communication.mailboxFor(tx, tenantId, e.senderId);
       if (!conn) return { kind: 'pause' as const, pause: "The sender's mailbox is not connected. Reconnect it in Integrations, then resume." };

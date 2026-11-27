@@ -13,7 +13,7 @@ import { NOTIFICATION_CATEGORIES, type NotificationCategoryKey } from './crm-adm
  * in "."). A notification in no section still shows in the bell and on the home dashboard.
  */
 export const NOTIFICATION_SECTIONS = [
-  { key: 'leads', label: 'Leads', href: '/app/leads', types: ['lead.', 'lead_transfer.'] },
+  { key: 'leads', label: 'Inbound contacts', href: '/app/leads', types: ['lead.', 'lead_transfer.'] },
   { key: 'companies', label: 'Companies', href: '/app/companies', types: ['company.', 'client_concern.', 'customer.'] },
   { key: 'contacts', label: 'Contacts', href: '/app/contacts', types: ['contact.'] },
   { key: 'prospects', label: 'Prospect lists', href: '/app/prospects', types: ['prospect_list.'] },

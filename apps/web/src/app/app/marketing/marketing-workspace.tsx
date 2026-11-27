@@ -33,7 +33,7 @@ export function MarketingWorkspace() {
   const [tab, setTab] = useState<'segments' | 'forms'>('segments');
   return (
     <>
-      <Tabs label={t('Marketing sections')} value={tab} onChange={setTab} tabs={[{ key: 'segments', label: t('Segments') }, { key: 'forms', label: t('Lead forms') }]} />
+      <Tabs label={t('Marketing sections')} value={tab} onChange={setTab} tabs={[{ key: 'segments', label: t('Segments') }, { key: 'forms', label: t('Contact forms') }]} />
       {tab === 'segments' ? <Segments /> : <Forms />}
     </>
   );
@@ -67,7 +67,7 @@ function Segments() {
                   <button type="button" className="w-full py-2 text-start hover:text-primary" onClick={() => setEditing(s)} aria-current={editing !== 'new' && editing?.id === s.id}>
                     <span className="font-medium">{s.name}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {s.entity === 'lead' ? t('Leads') : t('Contacts')} · {t.plural('count.rules', s.rules.rules.length)} · {t('updated {time}', { time: relativeTime(s.updatedAt) })}
+                      {s.entity === 'lead' ? t('Inbound contacts') : t('Contacts')} · {t.plural('count.rules', s.rules.rules.length)} · {t('updated {time}', { time: relativeTime(s.updatedAt) })}
                     </span>
                   </button>
                 </li>
@@ -143,7 +143,7 @@ function SegmentBuilder({ segment, onSaved }: { segment: SegmentRow | null; onSa
               }}
               className="w-36"
             >
-              <option value="lead">{t('Leads')}</option>
+              <option value="lead">{t('Inbound contacts')}</option>
               <option value="contact">{t('Contacts')}</option>
             </Select>
           </Field>
@@ -263,7 +263,7 @@ function Forms() {
       {forms.isPending ? (
         <Skeleton className="h-24" />
       ) : !forms.data?.length ? (
-        <p className="text-sm text-muted-foreground">{t('No lead forms yet.')}</p>
+        <p className="text-sm text-muted-foreground">{t('No contact forms yet.')}</p>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {forms.data.map((f) => (
@@ -369,14 +369,14 @@ function FormBuilder() {
   if (!open)
     return (
       <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus aria-hidden /> {t('New lead form')}
+        <Plus aria-hidden /> {t('New contact form')}
       </Button>
     );
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-1.5">
-          <CardTitle className="text-base">{t('New lead form')}</CardTitle>
+          <CardTitle className="text-base">{t('New contact form')}</CardTitle>
           <InfoTip topic="marketing.forms" />
         </div>
       </CardHeader>
