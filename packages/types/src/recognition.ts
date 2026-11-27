@@ -336,7 +336,7 @@ export interface RecognitionView {
   people: StaffCard[];
   targets: RecognitionTargetRow[];
   scopes: RecognitionScopeView[];
-  /** Earlier winners in reach, newest first. */
+  /** Winners in reach, the shown month included, newest first. */
   history: RecognitionAwardRow[];
   currency: string;
 }

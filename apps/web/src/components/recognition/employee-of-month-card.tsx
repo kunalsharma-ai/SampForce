@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { Confetti } from '@/components/achievements/confetti';
 import { UserAvatar } from '@/components/people/user-avatar';
 import { Ring, useReducedMotion } from '@/components/task-plans/progress-ring';
-import { downloadFile } from '@/lib/api';
+import { CHANGE_EVENT, downloadFile } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { monthLabel, useRecognitionCard } from '@/lib/recognition';
 import { GoalList } from './goal-list';
@@ -53,6 +53,12 @@ function CardBody({ c, manageLink, own, t }: { c: RecognitionCard; manageLink: b
     const h = window.setTimeout(() => setBurst(false), 4500);
     return () => window.clearTimeout(h);
   }, [mine, still]);
+
+  // Counting the card can record an achievement (eligible, or the award): ask the celebrations to look now, not at their next poll.
+  const moment = mine ? `won:${mine.id}` : target?.eligible ? `eligible:${target.id}` : null;
+  useEffect(() => {
+    if (moment) window.dispatchEvent(new Event(CHANGE_EVENT));
+  }, [moment]);
 
   const left = daysLeftInMonth(c.month);
   const status = mine ? 'AWARDED' : target?.status;

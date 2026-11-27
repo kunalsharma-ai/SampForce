@@ -69,10 +69,10 @@ function OpenPlan({ p }: { p: PipRow }) {
             <Fact label={t('Assigned by')} value={p.assignedBy.name} />
           </dl>
           {(p.currentLevel || p.requiredLevel) && (
-            <div className="grid gap-2 text-sm sm:grid-cols-2">
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
               {p.currentLevel && <Fact label={t('Current level')} value={p.currentLevel} />}
               {p.requiredLevel && <Fact label={t('Required level')} value={p.requiredLevel} />}
-            </div>
+            </dl>
           )}
           {p.areas.length > 0 && (
             <div className="flex flex-wrap gap-1.5" aria-label={t('Areas to improve')}>

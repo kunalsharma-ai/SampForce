@@ -136,7 +136,7 @@ export class RecognitionService {
         const org = awards.find((a) => !a.teamNodeId);
         if (org) scopes.push({ scope: 'ORGANISATION', team: null, award: this.awardRow(dir, org, auth.userId), candidates: [], canSelect: false, notice: null });
       }
-      const history = (await tx.recognitionAward.findMany({ where: { tenantId: auth.tenantId, month: { not: m } }, orderBy: { awardedAt: 'desc' }, take: 200 })).filter((a) => {
+      const history = (await tx.recognitionAward.findMany({ where: { tenantId: auth.tenantId }, orderBy: { awardedAt: 'desc' }, take: 200 })).filter((a) => {
         const p = dir.person(a.userId);
         return a.userId === auth.userId || (p ? sees(dir, p, auth.userId) : dir.isSuper);
       });
