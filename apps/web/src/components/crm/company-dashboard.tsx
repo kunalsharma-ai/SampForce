@@ -59,24 +59,35 @@ import { formatDateTime } from './follow-ups';
 import { CompanyLogoEditor } from './company-logo';
 import { CountryFlag, StatusChip } from './status-chip';
 import { SocialIconRow } from './social-icons';
+import { STAGE_CHIP, stageStyle } from './stage-chip';
 import { INTERACTION_LABEL } from './work-labels';
 
-const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Plus }[] = [
-  { action: 'edit', label: 'Edit company', icon: Pencil },
-  { action: 'enrich', label: 'Enrich', icon: Sparkles },
-  { action: 'aiEmail', label: 'Write email with AI', icon: MailPlus },
-  { action: 'addEmployee', label: 'Add employee', icon: UserPlus },
-  { action: 'addBranch', label: 'Add branch', icon: Building2 },
-  { action: 'addFollowUp', label: 'Add follow-up', icon: CalendarClock },
-  { action: 'logInteraction', label: 'Log interaction', icon: MessageSquarePlus },
-  { action: 'scheduleCall', label: 'Schedule call', icon: PhoneCall },
-  { action: 'addRfq', label: 'Add RFQ', icon: FilePlus2 },
-  { action: 'upload', label: 'Upload document', icon: Upload },
-  { action: 'changeStatus', label: 'Change status', icon: BadgeCheck },
-  { action: 'transfer', label: 'Transfer ownership', icon: UserRoundCog },
-  { action: 'requestTransfer', label: 'Request transfer', icon: ArrowRightLeft },
-  { action: 'raiseConcern', label: 'Raise concern', icon: MessageSquareWarning },
+const QUICK_ACTIONS: { action: CompanyAction; label: MessageKey; icon: typeof Plus; color: string }[] = [
+  { action: 'edit', color: '#2563eb', label: 'Edit company', icon: Pencil },
+  { action: 'enrich', color: '#9333ea', label: 'Enrich', icon: Sparkles },
+  { action: 'aiEmail', color: '#db2777', label: 'Write email with AI', icon: MailPlus },
+  { action: 'addEmployee', color: '#0d9488', label: 'Add employee', icon: UserPlus },
+  { action: 'addBranch', color: '#4f46e5', label: 'Add branch', icon: Building2 },
+  { action: 'addFollowUp', color: '#d97706', label: 'Add follow-up', icon: CalendarClock },
+  { action: 'logInteraction', color: '#0891b2', label: 'Log interaction', icon: MessageSquarePlus },
+  { action: 'scheduleCall', color: '#16a34a', label: 'Schedule call', icon: PhoneCall },
+  { action: 'addRfq', color: '#ea580c', label: 'Add RFQ', icon: FilePlus2 },
+  { action: 'upload', color: '#0284c7', label: 'Upload document', icon: Upload },
+  { action: 'changeStatus', color: '#65a30d', label: 'Change status', icon: BadgeCheck },
+  { action: 'transfer', color: '#7c3aed', label: 'Transfer ownership', icon: UserRoundCog },
+  { action: 'requestTransfer', color: '#c026d3', label: 'Request transfer', icon: ArrowRightLeft },
+  { action: 'raiseConcern', color: '#dc2626', label: 'Raise concern', icon: MessageSquareWarning },
 ];
+
+/*
+ * Each quick action and each KPI has its own colour (stageTones keeps the text 4.5:1 on its tint in light and dark),
+ * with its own icon and label, so nothing is told apart by colour alone.
+ */
+const ACTION_CHIP = cn(
+  'group inline-flex min-h-9 items-center gap-2 rounded-full py-1 pe-3.5 ps-1 text-sm font-semibold shadow-sm transition motion-safe:hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+  STAGE_CHIP,
+);
+const ACTION_ICON = 'flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--st-dot)] text-white shadow-sm transition group-hover:scale-110 dark:bg-[var(--st-dot-d)] dark:text-[#0b1120]';
 
 /**
  * The company profile header (section 7.1): the company name is the largest thing on the page, with its logo (and a
@@ -189,16 +200,20 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
         </dl>
         <div className="flex flex-wrap gap-2 border-t border-border pt-4" role="toolbar" aria-label={t('Quick actions')}>
           {QUICK_ACTIONS.filter((a) => quick.has(a.action)).map((a) => (
-            <Button key={a.action} size="sm" variant="outline" className="bg-surface" onClick={() => quick.run(a.action)}>
-              <a.icon aria-hidden /> {t(a.label)}
-            </Button>
+            <button key={a.action} type="button" data-quick-action={a.action} style={stageStyle(a.color)} className={ACTION_CHIP} onClick={() => quick.run(a.action)}>
+              <span aria-hidden className={ACTION_ICON}>
+                <a.icon className="size-3.5" />
+              </span>
+              {t(a.label)}
+            </button>
           ))}
           {c.primaryEmail && (
-            <Button asChild size="sm" variant="outline" className="bg-surface">
-              <a href={`mailto:${c.primaryEmail}`}>
-                <Send aria-hidden /> {t('Send email')}
-              </a>
-            </Button>
+            <a href={`mailto:${c.primaryEmail}`} data-quick-action="sendEmail" style={stageStyle('#e11d48')} className={ACTION_CHIP}>
+              <span aria-hidden className={ACTION_ICON}>
+                <Send className="size-3.5" />
+              </span>
+              {t('Send email')}
+            </a>
           )}
         </div>
       </div>
@@ -206,14 +221,6 @@ export function CompanyHero({ company: c, actions }: { company: CompanyRow; acti
   );
 }
 
-const TONES = {
-  primary: 'bg-primary/10 text-primary',
-  accent: 'bg-accent/10 text-accent',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  critical: 'bg-critical/10 text-critical',
-  info: 'bg-info/10 text-info',
-} as const;
 
 /** The twelve company KPIs (section 7.2), all counted from CRM records. */
 export function CompanyKpis({ companyId }: { companyId: string }) {
@@ -221,19 +228,19 @@ export function CompanyKpis({ companyId }: { companyId: string }) {
   const d = useCompanyDashboard(companyId);
   const rfqs = useHasFeature('rfqs');
   const k = d.data?.kpis;
-  const tiles: { label: MessageKey; value: React.ReactNode; icon: typeof Users; tone: keyof typeof TONES; note?: string | null; href?: string; rfq?: boolean }[] = [
-    { label: 'Employees added', value: k?.employees, icon: Users, tone: 'primary', href: '#company-employees' },
-    { label: 'Employees contacted', value: k?.employeesContacted, icon: UsersRound, tone: 'info', href: '#company-employees' },
-    { label: 'Emails sent', value: k?.emailsSent, icon: Mail, tone: 'primary', href: '#company-interactions' },
-    { label: 'Email responses', value: k?.responsesReceived, icon: MailOpen, tone: 'success', href: '#company-interactions', note: d.data?.syncedEmails.received ? t('{count} synced', { count: d.data.syncedEmails.received }) : null },
-    { label: 'Calls made', value: k?.calls, icon: PhoneCall, tone: 'accent', href: '#company-interactions' },
-    { label: 'Meetings', value: k?.meetings, icon: CalendarDays, tone: 'accent', href: '#company-interactions' },
-    { label: 'Follow-ups pending', value: k?.followUpsPending, icon: ClipboardList, tone: k?.followUpsOverdue ? 'critical' : 'warning', href: '#company-follow-ups', note: k?.followUpsOverdue ? t('{count} overdue', { count: k.followUpsOverdue }) : null },
-    { label: 'RFQs received', value: k?.rfqsReceived, icon: FileSignature, tone: 'info', href: '#company-rfqs', rfq: true },
-    { label: 'RFQs submitted', value: k?.rfqsSubmitted, icon: Send, tone: 'primary', href: '#company-rfqs', rfq: true },
-    { label: 'RFQs won', value: k?.rfqsWon, icon: Trophy, tone: 'success', href: '#company-rfqs', rfq: true },
-    { label: 'RFQs lost', value: k?.rfqsLost, icon: FileX2, tone: 'critical', href: '#company-rfqs', rfq: true },
-    { label: 'Business generated', value: k ? formatMoneyList(k.businessGenerated, t.formatLocale) : undefined, icon: Wallet, tone: 'success' },
+  const tiles: { label: MessageKey; value: React.ReactNode; icon: typeof Users; color: string; note?: string | null; href?: string; rfq?: boolean }[] = [
+    { label: 'Employees added', value: k?.employees, icon: Users, color: '#4f46e5', href: '#company-employees' },
+    { label: 'Employees contacted', value: k?.employeesContacted, icon: UsersRound, color: '#0891b2', href: '#company-employees' },
+    { label: 'Emails sent', value: k?.emailsSent, icon: Mail, color: '#2563eb', href: '#company-interactions' },
+    { label: 'Email responses', value: k?.responsesReceived, icon: MailOpen, color: '#059669', href: '#company-interactions', note: d.data?.syncedEmails.received ? t('{count} synced', { count: d.data.syncedEmails.received }) : null },
+    { label: 'Calls made', value: k?.calls, icon: PhoneCall, color: '#7c3aed', href: '#company-interactions' },
+    { label: 'Meetings', value: k?.meetings, icon: CalendarDays, color: '#c026d3', href: '#company-interactions' },
+    { label: 'Follow-ups pending', value: k?.followUpsPending, icon: ClipboardList, color: k?.followUpsOverdue ? '#dc2626' : '#d97706', href: '#company-follow-ups', note: k?.followUpsOverdue ? t('{count} overdue', { count: k.followUpsOverdue }) : null },
+    { label: 'RFQs received', value: k?.rfqsReceived, icon: FileSignature, color: '#0d9488', href: '#company-rfqs', rfq: true },
+    { label: 'RFQs submitted', value: k?.rfqsSubmitted, icon: Send, color: '#0284c7', href: '#company-rfqs', rfq: true },
+    { label: 'RFQs won', value: k?.rfqsWon, icon: Trophy, color: '#16a34a', href: '#company-rfqs', rfq: true },
+    { label: 'RFQs lost', value: k?.rfqsLost, icon: FileX2, color: '#e11d48', href: '#company-rfqs', rfq: true },
+    { label: 'Business generated', value: k ? formatMoneyList(k.businessGenerated, t.formatLocale) : undefined, icon: Wallet, color: '#ca8a04' },
   ];
   return (
     <section aria-labelledby="company-kpis" className="mb-4">
@@ -252,22 +259,27 @@ export function CompanyKpis({ companyId }: { companyId: string }) {
             .map((x) => {
               const body = (
                 <>
-                  <span className={cn('flex size-9 items-center justify-center rounded-lg', TONES[x.tone])}>
-                    <x.icon aria-hidden className="size-4.5" />
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-[var(--st-dot)] dark:bg-[var(--st-dot-d)]" />
+                  <x.icon aria-hidden className="pointer-events-none absolute -bottom-4 -end-4 size-20 text-[var(--st-fg)] opacity-[0.07] transition-transform duration-300 group-hover:scale-110 dark:text-[var(--st-fg-d)]" />
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--st-dot)] text-white shadow-md ring-4 ring-[var(--st-bg)] dark:bg-[var(--st-dot-d)] dark:text-[#0b1120] dark:ring-[var(--st-bg-d)]">
+                      <x.icon className="size-5" />
+                    </span>
                   </span>
-                  <span className="mt-2 block text-xs text-muted-foreground">{t(x.label)}</span>
-                  <span className="mt-0.5 block break-words text-2xl font-bold tabular-nums leading-tight">{d.isPending ? <Skeleton className="h-7 w-10" /> : (x.value ?? 0)}</span>
-                  {x.note && <span className="block text-xs font-medium text-critical">{x.note}</span>}
+                  <span className="relative mt-2.5 block text-xs font-semibold text-[var(--st-fg)] dark:text-[var(--st-fg-d)]">{t(x.label)}</span>
+                  <span className="relative mt-0.5 block break-words text-3xl font-extrabold tabular-nums leading-tight tracking-tight text-foreground">{d.isPending ? <Skeleton className="h-8 w-10" /> : (x.value ?? 0)}</span>
+                  {x.note && <span className="relative mt-0.5 block text-xs font-semibold text-critical">{x.note}</span>}
                 </>
               );
+              const tile = 'group relative block h-full overflow-hidden rounded-2xl border border-[var(--st-bd)] bg-gradient-to-br from-[var(--st-bg)] via-surface to-surface p-3.5 shadow-sm transition dark:border-[var(--st-bd-d)] dark:from-[var(--st-bg-d)]';
               return (
-                <li key={x.label} className="relative rounded-xl border border-border bg-surface p-3 shadow-sm transition hover:border-primary/40 hover:shadow">
+                <li key={x.label} style={stageStyle(x.color)} data-kpi={x.label}>
                   {x.href ? (
-                    <a href={x.href} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${t(x.label)}: ${typeof x.value === 'number' ? x.value : (x.value ?? 0)}`}>
+                    <a href={x.href} className={cn(tile, 'hover:shadow-lg motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring')} aria-label={`${t(x.label)}: ${typeof x.value === 'number' ? x.value : (x.value ?? 0)}`}>
                       {body}
                     </a>
                   ) : (
-                    body
+                    <div className={tile}>{body}</div>
                   )}
                 </li>
               );
