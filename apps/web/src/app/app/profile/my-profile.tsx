@@ -2,7 +2,7 @@
 
 import { PROFILE_COVERS, PROFILE_TAGS_MAX, type MyProfile, type MyProfileInput, type ProfileCover } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, Field, Input, Skeleton } from '@dealflow/ui';
-import { Camera, Check, Linkedin, Mail, Phone, Quote, Smile, Sparkles, X } from 'lucide-react';
+import { Cake, Camera, Check, Linkedin, Mail, Phone, Quote, Smile, Sparkles, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as React from 'react';
 import { Textarea } from '@/components/crm/select';
@@ -14,7 +14,19 @@ import { ApiError } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { useMyProfile, useSaveProfile } from '@/lib/people';
 
-type Draft = Required<Pick<MyProfileInput, 'name' | 'cover' | 'tags'>> & { phone: string; headline: string; quote: string; bio: string; linkedinUrl: string };
+type Draft = Required<Pick<MyProfileInput, 'name' | 'cover' | 'tags'>> & {
+  phone: string;
+  headline: string;
+  quote: string;
+  bio: string;
+  linkedinUrl: string;
+  /** Date of birth as typed: day and month numbers as text, the year optional. */
+  bDay: string;
+  bMonth: string;
+  bYear: string;
+  birthYearVisible: boolean;
+  celebrateBirthday: boolean;
+};
 
 const draftOf = (p: MyProfile): Draft => ({
   name: p.name,
@@ -25,7 +37,16 @@ const draftOf = (p: MyProfile): Draft => ({
   linkedinUrl: p.linkedinUrl ?? '',
   cover: p.cover,
   tags: p.tags,
+  bDay: p.birthday ? String(p.birthday.day) : '',
+  bMonth: p.birthday ? String(p.birthday.month) : '',
+  bYear: p.birthday?.year ? String(p.birthday.year) : '',
+  birthYearVisible: p.birthYearVisible,
+  celebrateBirthday: p.celebrateBirthday,
 });
+
+/** The birthday to save: none until both day and month are chosen. */
+const birthdayOf = (d: Draft): MyProfileInput['birthday'] =>
+  d.bDay && d.bMonth ? { day: Number(d.bDay), month: Number(d.bMonth), year: d.bYear.trim() ? Number(d.bYear) : null } : null;
 
 /** Quotes to start from, for anyone stuck on a blank box. */
 const QUOTE_IDEAS = ['Every no brings you closer to a yes.', 'Listen more than you talk.', 'Small wins, every single day.', 'Curious about people, serious about results.'];
@@ -82,7 +103,19 @@ export function MyProfilePage() {
     e.preventDefault();
     setErrors({});
     save.mutate(
-      { name: draft.name, phone: draft.phone, headline: draft.headline, quote: draft.quote, bio: draft.bio, linkedinUrl: draft.linkedinUrl, cover: draft.cover, tags: draft.tags },
+      {
+        name: draft.name,
+        phone: draft.phone,
+        headline: draft.headline,
+        quote: draft.quote,
+        bio: draft.bio,
+        linkedinUrl: draft.linkedinUrl,
+        cover: draft.cover,
+        tags: draft.tags,
+        birthday: birthdayOf(draft),
+        birthYearVisible: draft.birthYearVisible,
+        celebrateBirthday: draft.celebrateBirthday,
+      },
       {
         onSuccess: (next) => {
           setDraft(draftOf(next));
@@ -256,6 +289,8 @@ export function MyProfilePage() {
             </CardContent>
           </Card>
 
+          <BirthdayCard draft={draft} set={set} error={errors.birthday} />
+
           {errors.form && (
             <p role="alert" className="text-sm text-destructive">
               {errors.form}
@@ -361,5 +396,81 @@ function Ring({ value }: { value: number }) {
         {value}%
       </text>
     </svg>
+  );
+}
+
+const selectCls = 'h-10 w-full rounded-lg border border-input bg-surface px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+/** Date of birth (ADR 0087): day and month, an optional year, and who sees it. Teammates celebrate it on their dashboards. */
+function BirthdayCard({ draft, set, error }: { draft: Draft; set: <K extends keyof Draft>(k: K, v: Draft[K]) => void; error?: string }) {
+  const t = useT();
+  const months = React.useMemo(() => {
+    const f = new Intl.DateTimeFormat(t.formatLocale, { month: 'long', timeZone: 'UTC' });
+    return Array.from({ length: 12 }, (_, i) => f.format(new Date(Date.UTC(2024, i, 1))));
+  }, [t.formatLocale]);
+  const maxDay = draft.bMonth ? [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(draft.bMonth) - 1]! : 31;
+  return (
+    <Card data-profile-birthday>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Cake className="size-5 text-primary" aria-hidden /> {t('Your birthday')}
+        </CardTitle>
+        <CardDescription>{t('On your birthday, everyone in your organisation sees a celebration on their dashboard.')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-[6rem_1fr_8rem]">
+          <Field id="profile-birth-day" label={t('Day')}>
+            <select className={selectCls} value={draft.bDay} onChange={(e) => set('bDay', e.target.value)}>
+              <option value="">—</option>
+              {Array.from({ length: maxDay }, (_, i) => (
+                <option key={i + 1} value={String(i + 1)}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="profile-birth-month" label={t('Month')}>
+            <select
+              className={selectCls}
+              value={draft.bMonth}
+              onChange={(e) => {
+                set('bMonth', e.target.value);
+                const max = e.target.value ? [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(e.target.value) - 1]! : 31;
+                if (Number(draft.bDay) > max) set('bDay', String(max));
+              }}
+            >
+              <option value="">—</option>
+              {months.map((m, i) => (
+                <option key={m} value={String(i + 1)}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="profile-birth-year" label={t('Year (optional)')}>
+            <Input value={draft.bYear} inputMode="numeric" maxLength={4} placeholder="1990" onChange={(e) => set('bYear', e.target.value.replace(/\D/g, ''))} />
+          </Field>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={draft.birthYearVisible} onChange={(e) => set('birthYearVisible', e.target.checked)} />
+          <span>
+            <span className="block font-medium">{t('Show my birth year and age')}</span>
+            <span className="block text-muted-foreground">{t('Off: teammates see only the day and month.')}</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={draft.celebrateBirthday} onChange={(e) => set('celebrateBirthday', e.target.checked)} />
+          <span>
+            <span className="block font-medium">{t('Celebrate my birthday with my team')}</span>
+            <span className="block text-muted-foreground">{t('Off: your birthday stays private and only you see your celebration.')}</span>
+          </span>
+        </label>
+      </CardContent>
+    </Card>
   );
 }

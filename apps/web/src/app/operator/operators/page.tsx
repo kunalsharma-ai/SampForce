@@ -20,6 +20,7 @@ import { Copy, KeyRound, Link2, LogOut, MoreHorizontal, Plus, Power, ShieldCheck
 import { useState } from 'react';
 import { ConsoleDenied, ConsoleEmpty, ConsoleError, ConsoleLoading } from '@/components/console/console-states';
 import { PageHeader } from '@/components/page-header';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { ErrorText, Field } from '@/components/revenue/tabs';
 import { api } from '@/lib/api';
 import { fmtLocale } from '@/lib/i18n/locale';
@@ -38,13 +39,6 @@ const STATUS: Record<ConsoleOperatorRow['status'], { label: string; tone: 'succe
 const when = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(fmtLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : 'Never';
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
 /**
  * Console operators (ADR 0074): who can sign in to the Console, with which role. Operators are invited by a one-time
@@ -145,9 +139,7 @@ export default function ConsoleOperatorsPage() {
                   <tr key={o.id} className="border-t border-border" data-operator-row={o.email}>
                     <td className="p-3">
                       <span className="flex items-center gap-3">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-primary-foreground">
-                          {initials(o.name)}
-                        </span>
+                        <UserAvatar name={o.name} photoUrl={o.photoUrl ?? null} showMood={false} tone="from-primary to-accent" className="size-9 text-xs ring-0" />
                         <span className="min-w-0">
                           <span className="block font-medium">
                             {o.name}

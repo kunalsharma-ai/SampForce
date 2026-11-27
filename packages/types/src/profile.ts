@@ -36,6 +36,13 @@ export interface PersonMood {
   expiresAt: string | null;
 }
 
+/** A date of birth: the year is left out when the person keeps it to themselves. */
+export interface PersonBirthday {
+  day: number;
+  month: number;
+  year: number | null;
+}
+
 /** GET /me/profile: everything the person can edit about themselves. */
 export interface MyProfile {
   userId: string;
@@ -51,12 +58,17 @@ export interface MyProfile {
   cover: ProfileCover;
   tags: string[];
   mood: PersonMood | null;
+  birthday: PersonBirthday | null;
+  /** Teammates see the year (and so the age) only when this is on; off by default. */
+  birthYearVisible: boolean;
+  /** The birthday shows to teammates and is celebrated on their dashboards; on by default. */
+  celebrateBirthday: boolean;
   /** How much of the profile is filled in, 0 to 100, for the "complete your profile" meter. */
   completeness: number;
 }
 
 /** GET /people/:id/profile: a teammate's profile, for people in the same organisation. */
-export interface PersonProfile extends Omit<MyProfile, 'userId' | 'completeness'> {
+export interface PersonProfile extends Omit<MyProfile, 'userId' | 'completeness' | 'birthYearVisible' | 'celebrateBirthday'> {
   id: string;
   self: boolean;
   /** Their role, designation and department in the reader's workspace. */
@@ -64,6 +76,56 @@ export interface PersonProfile extends Omit<MyProfile, 'userId' | 'completeness'
   designation: string | null;
   department: string | null;
 }
+
+/** Someone whose birthday is today, for the celebration on the dashboards. */
+export interface BirthdayPerson {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  /** The age they turn today, only when they share their birth year. */
+  age: number | null;
+  /** The reader's own birthday. */
+  self: boolean;
+}
+
+/** GET /people/birthdays (and GET /operator/birthdays in the Console): today's birthdays for the reader's date. */
+export interface TodayBirthdays {
+  /** The reader's local date (YYYY-MM-DD) the list is for. */
+  date: string;
+  people: BirthdayPerson[];
+}
+
+/** /people/birthdays?date=YYYY-MM-DD, the reader's own local date. */
+export const birthdaysQuery = z
+  .object({ date: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, 'Send the date as YYYY-MM-DD.') })
+  .strict();
+
+const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+const daysIn = (month: number, year: number | null) => [31, year === null || isLeap(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]!;
+
+/** Whether a birthday falls on a date; 29 February is celebrated on 28 February in other years. */
+export function birthdayOn(b: { day: number; month: number }, date: string): boolean {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  if (b.month === m && b.day === d) return true;
+  return b.month === 2 && b.day === 29 && m === 2 && d === 28 && !isLeap(y);
+}
+
+/** The age someone turns on their birthday in the year of `date`. */
+export function ageOn(year: number, date: string): number {
+  return Number(date.slice(0, 4)) - year;
+}
+
+/** PUT /me/profile `birthday`: a real date; the year is optional, and must make the person at least 13. */
+export const birthdaySchema = z
+  .object({
+    day: z.number().int().min(1).max(31),
+    month: z.number().int().min(1).max(12),
+    year: z.number().int().min(1900).nullable().optional(),
+  })
+  .strict()
+  .refine((b) => b.day <= daysIn(b.month, b.year ?? null), 'Enter a date that exists')
+  .refine((b) => !b.year || b.year <= new Date().getUTCFullYear() - 13, 'Enter your real year of birth, or leave it out')
+  .transform((b) => ({ day: b.day, month: b.month, year: b.year ?? null }));
 
 /** GET /people/cards: the photo, mood and headline of everyone in the workspace, for avatars across the app. */
 export interface PersonCard {
@@ -122,6 +184,9 @@ export const myProfileSchema = z
       .max(PROFILE_TAGS_MAX)
       .transform((tags) => [...new Map(tags.map((t) => [t.toLowerCase(), t])).values()])
       .optional(),
+    birthday: birthdaySchema.nullable().optional(),
+    birthYearVisible: z.boolean().optional(),
+    celebrateBirthday: z.boolean().optional(),
   })
   .strict();
 export type MyProfileInput = z.infer<typeof myProfileSchema>;

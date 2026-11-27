@@ -25,6 +25,7 @@ import { MailerService } from '../mail/mailer.service';
 import { type OperatorContext, operatorContext } from './operator-auth';
 import { OperatorSessions } from './operator-sessions';
 import { writePlatformAudit, type PlatformAuditEntry } from './platform-audit';
+import { OperatorPhotosService } from './operator-photos';
 
 /** An invited operator has no password until they open their link; `!` marks a hash that can never match. */
 const INVITED_HASH = '!invited';
@@ -52,6 +53,7 @@ export class OperatorAdminService {
     private readonly mailer: MailerService,
     private readonly sessions: OperatorSessions,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly photos: OperatorPhotosService,
   ) {}
 
   // ───── Roles ─────
@@ -139,7 +141,8 @@ export class OperatorAdminService {
       this.prisma.operatorConsoleRole.findMany({ select: { id: true, name: true } }),
     ]);
     const names = new Map(custom.map((r) => [r.id, r.name]));
-    return ops.map((o) => this.row(o, names));
+    const photos = await this.photos.urls(ops);
+    return ops.map((o) => ({ ...this.row(o, names), photoUrl: photos.get(o.id) ?? null }));
   }
 
   private row(o: OperatorRecord & { mfaEnabledAt?: Date | null }, names: Map<string, string>): ConsoleOperatorRow {

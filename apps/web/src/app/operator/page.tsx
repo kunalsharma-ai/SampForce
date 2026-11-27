@@ -47,6 +47,7 @@ import { api } from '@/lib/api';
 import { formatDate, formatMinor } from '@/lib/billing';
 import { usePreferences } from '@/stores/preferences';
 import { can, useOperator } from './operator-shell';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
 import { dayPart, lineOfTheDay, WelcomeBanner } from '@/components/welcome/welcome-banner';
 
 const KPI: Record<ConsoleKpiKey, { label: string; href: string; upIsBad?: boolean }> = {
@@ -161,11 +162,13 @@ export default function ConsoleOverviewPage() {
     <div className="space-y-6" data-console-overview>
       <Hero
         name={me.data.name || me.data.email}
+        photoUrl={me.data.photoUrl ?? null}
         providers={d.actions.find((a) => a.key === 'providers')?.count ?? 0}
         canCreate={can(me.data, 'clients.edit')}
         canPlans={can(me.data, 'plans.manage')}
         canBill={can(me.data, 'billing.manage')}
       />
+      <BirthdayCelebration path="/operator/birthdays" wishes={false} />
       <ActionRequired actions={d.actions} />
       <section aria-labelledby="kpi-title">
         <h2 id="kpi-title" className="sr-only">
@@ -384,12 +387,14 @@ export default function ConsoleOverviewPage() {
 
 function Hero({
   name,
+  photoUrl,
   providers,
   canCreate,
   canPlans,
   canBill,
 }: {
   name: string;
+  photoUrl: string | null;
   providers: number;
   canCreate: boolean;
   canPlans: boolean;
@@ -440,6 +445,7 @@ function Hero({
       hello={CONSOLE_HELLO[part]}
       name={first}
       initials={initials}
+      photoUrl={photoUrl}
       colors={['#e11d48', '#f97316']}
       headingId="overview-title"
       badge={

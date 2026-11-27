@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Put } from '@nestjs/common';
-import { moodSchema, myProfileSchema, type MoodInput, type MyProfileInput } from '@dealflow/types';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Put, Query } from '@nestjs/common';
+import { birthdaysQuery, moodSchema, myProfileSchema, type MoodInput, type MyProfileInput } from '@dealflow/types';
 import { Auth, type AuthContext, Meta, MobileAccess, type RequestMeta } from '../common/auth-context';
 import { NoPasswordConfirmation } from '../common/password-confirmation';
 import { ZodPipe } from '../common/zod.pipe';
@@ -36,6 +36,12 @@ export class ProfilesController {
   @Get('people/cards')
   cards(@Auth() auth: AuthContext) {
     return this.profiles.cards(auth);
+  }
+
+  /** Today's birthdays in this workspace, for the reader's own local date. */
+  @Get('people/birthdays')
+  birthdays(@Auth() auth: AuthContext, @Query(new ZodPipe(birthdaysQuery)) q: { date: string }) {
+    return this.profiles.birthdays(auth, q.date);
   }
 
   @Get('people/:id/profile')

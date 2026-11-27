@@ -61,6 +61,15 @@ function PersonCardBody({ userId, name }: { userId: string; name: string }) {
                 <span className="truncate">{p.mood.text ? t.maybe(p.mood.text) : t('Current mood')}</span>
               </p>
             )}
+            {p.birthday && (
+              <p data-person-birthday className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span aria-hidden>🎂</span>
+                <span className="sr-only">{t('Birthday')}: </span>
+                {new Intl.DateTimeFormat(t.formatLocale, { day: 'numeric', month: 'long', ...(p.birthday.year ? { year: 'numeric' } : {}), timeZone: 'UTC' }).format(
+                  new Date(Date.UTC(p.birthday.year ?? 2000, p.birthday.month - 1, p.birthday.day)),
+                )}
+              </p>
+            )}
             {p.quote && (
               <blockquote className="mt-3 flex gap-2 text-sm italic text-foreground/90">
                 <Quote className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />

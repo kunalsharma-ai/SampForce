@@ -5,6 +5,7 @@ import type * as React from 'react';
 import { LiveClock } from './live-clock';
 import { SpecialDay, type SpecialDayLabels } from './special-day';
 import './welcome-banner.css';
+import { WelcomePhoto } from './welcome-photo';
 
 /** The part of the day, by the viewer's own clock: it picks the greeting, the sky and the scene. */
 export type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
@@ -32,6 +33,7 @@ export function WelcomeBanner({
   hello,
   name,
   initials,
+  photoUrl,
   badge,
   date,
   line,
@@ -50,6 +52,8 @@ export function WelcomeBanner({
   hello: string;
   name: string;
   initials: string;
+  /** The person's profile photo; their initials show without one, or when it fails to load. */
+  photoUrl?: string | null;
   badge?: React.ReactNode;
   date: string;
   line: string;
@@ -81,7 +85,7 @@ export function WelcomeBanner({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-4 sm:gap-x-4 xl:grid-cols-[minmax(0,1fr)_auto_auto]">
           <div className="sf-welcome-in col-start-1 row-start-1 flex min-w-0 items-start gap-3 sm:gap-4">
             <span aria-hidden className="sf-welcome-avatar">
-              {initials}
+              <WelcomePhoto initials={initials} photoUrl={photoUrl ?? null} />
             </span>
             <div className="min-w-0 space-y-1.5">
               <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">

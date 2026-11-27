@@ -5,6 +5,7 @@ import { DashboardCard } from '../../src/components/dashboard';
 import { HomeNotificationsCard } from '../../src/components/notification-center';
 import { LiveClock, SpecialDayCard } from '../../src/components/live-clock';
 import { Chips } from '../../src/components/records';
+import { BirthdayCard } from '../../src/components/birthdays';
 import { View } from 'react-native';
 import { Avatar, Body, Card, ErrorNote, Loading, Screen, Title } from '../../src/components/ui';
 import { t, tMaybe } from '../../src/lib/i18n';
@@ -49,6 +50,7 @@ export default function Dashboard() {
       <SpecialDayCard />
       {/* The second way to a notification (ADR 0075): the newest unread, on the home screen. */}
       {s.config.modules.some((m) => m.key === 'notifications') ? <HomeNotificationsCard /> : null}
+      <BirthdayCard />
       {s.config.dashboard.length === 0 ? (
         <Card>
           <Body muted>{t('Your administrator has not chosen any cards for your home screen.')}</Body>

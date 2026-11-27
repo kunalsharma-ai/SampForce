@@ -60,6 +60,8 @@ import { useCan, useSession } from '@/lib/session';
 import { useTargets } from '@/lib/workspace-work';
 import { useWorkspaceDashboard } from '@/lib/workspace-dashboard';
 import { useQuickCreate } from '@/stores/quick-create';
+import { BirthdayCelebration } from '@/components/welcome/birthday-celebration';
+import { useHasFeature } from '@/lib/features';
 
 /*
  * The three role dashboards (redesign R6, ADR 0086). Each answers one question: the executive's "What do I need to do
@@ -86,10 +88,12 @@ const QUESTION: Record<Level, MessageKey> = {
 export function RoleDashboard({ level }: { level: Level }) {
   const [period, setPeriod] = React.useState<WorkspaceDashboardPeriod>(level === 'EXECUTIVE' ? 'TODAY' : 'MONTH');
   const q = useWorkspaceDashboard(period);
+  const chat = useHasFeature('team_chat');
   const picker = level === 'EXECUTIVE' ? null : <PeriodTabs value={period} onChange={setPeriod} />;
   return (
     <div className="space-y-5" data-role-dashboard={level}>
       <Greeting level={level} picker={picker} />
+      <BirthdayCelebration wishes={chat} />
       {q.isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
@@ -157,6 +161,7 @@ function Greeting({ level, picker }: { level: Level; picker: React.ReactNode }) 
       hello={t(HELLO[part])}
       name={first}
       initials={initials}
+      photoUrl={session?.user.photoUrl ?? null}
       colors={[ROLE[level].a, ROLE[level].b]}
       date={new Intl.DateTimeFormat(t.formatLocale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
       badge={

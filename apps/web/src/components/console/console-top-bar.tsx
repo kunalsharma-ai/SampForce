@@ -33,6 +33,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import Link from 'next/link';
+import { UserAvatar } from '@/components/people/user-avatar';
 import { HelpSupportButton } from '@/components/help/help-panel';
 import type { Crumb } from './console-nav';
 import { NotificationBell } from './notifications';
@@ -177,12 +178,6 @@ export function ConsoleTopBar({
   onPreferences: (p: ConsolePreferencesUpdate) => void;
   onSignOut: () => void;
 }) {
-  const initials = me.name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
   return (
     <header className="df-glass sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-background/70 px-4 sm:px-6">
       <Button
@@ -240,9 +235,7 @@ export function ConsoleTopBar({
               className="ms-1 flex items-center gap-2 rounded-full p-0.5 pe-2 transition-colors hover:bg-muted"
               aria-label={`Account: ${me.name}`}
             >
-              <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-semibold text-primary-foreground">
-                {initials}
-              </span>
+              <UserAvatar name={me.name || me.email} photoUrl={me.photoUrl ?? null} showMood={false} tone="from-primary to-accent" className="size-8 text-xs ring-0" />
               <span className="hidden text-start leading-tight xl:block">
                 <span className="block text-sm font-medium">{me.name}</span>
                 <span className="block text-[11px] text-muted-foreground">
