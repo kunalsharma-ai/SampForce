@@ -382,7 +382,7 @@ export function RecordDetail({ module }: { module: MobileLiveRecordModule }) {
       try {
         await c.api.deleteConfirmed(path, password);
       } catch (e) {
-        // An Executive Workspace asks its manager first (ADR 0097): nothing is deleted, the request goes instead.
+        // An Executive Workspace asks its manager first (ADR 0098): nothing is deleted, the request goes instead.
         const need = approvalNeededOf(e, 'DELETE', path);
         if (!need) throw e;
         setConfirmDelete(false);
@@ -577,7 +577,7 @@ export function RecordForm({ module }: { module: MobileLiveRecordModule }) {
       else router.replace(`/${module}/${saved.id}`);
     } catch (e) {
       if (c.report(e)) return;
-      // When the Super Workspace asks executives to get edits approved (ADR 0097), the change goes to the manager.
+      // When the Super Workspace asks executives to get edits approved (ADR 0098), the change goes to the manager.
       const need = editing ? approvalNeededOf(e, 'PATCH', `${BASE}/${module}/${params.id}`, body) : null;
       if (need) return setAskManager(need);
       if (e instanceof ApiError && e.details.length) setFieldErrors(Object.fromEntries(e.details.map((d) => [d.path.replace(/^customFields\./, 'cf.'), d.message])));

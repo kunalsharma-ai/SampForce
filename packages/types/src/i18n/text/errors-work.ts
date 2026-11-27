@@ -299,7 +299,7 @@ export const errorsWork = {
   'Start the link with its scheme, for example tel:, callto:, sip: or https://': ['Empieza el enlace con su esquema, por ejemplo tel:, callto:, sip: o https://', 'Commencez le lien par son schéma, par exemple tel:, callto:, sip: ou https://', 'Beginnen Sie den Link mit seinem Schema, zum Beispiel tel:, callto:, sip: oder https://', 'ابدأ الرابط بمخططه، مثل tel: أو callto: أو sip: أو https://'],
   'This kind of link cannot place a call.': ['Este tipo de enlace no puede hacer llamadas.', 'Ce type de lien ne peut pas passer d’appel.', 'Diese Art Link kann keinen Anruf starten.', 'لا يمكن لهذا النوع من الروابط إجراء مكالمة.'],
   'Put {phoneE164}, {phone} or {phoneDigits} where the number goes.': ['Pon {phoneE164}, {phone} o {phoneDigits} donde va el número.', 'Placez {phoneE164}, {phone} ou {phoneDigits} à l’endroit du numéro.', 'Setzen Sie {phoneE164}, {phone} oder {phoneDigits} dort ein, wo die Nummer steht.', 'ضع {phoneE164} أو {phone} أو {phoneDigits} مكان الرقم.'],
-  // Team approvals and deleted items (ADR 0097)
+  // Team approvals and deleted items (ADR 0098)
   'Approval request not found.': ['No se encontró la solicitud de aprobación.', 'Demande d’approbation introuvable.', 'Genehmigungsanfrage nicht gefunden.', 'لم يُعثر على طلب الموافقة.'],
   'Deleted item not found.': ['No se encontró el elemento eliminado.', 'Élément supprimé introuvable.', 'Gelöschtes Element nicht gefunden.', 'لم يُعثر على العنصر المحذوف.'],
   'Only the Super Workspace changes approval rules.': ['Solo el Super Workspace cambia las reglas de aprobación.', 'Seul le Super Workspace modifie les règles d’approbation.', 'Nur der Super Workspace ändert die Genehmigungsregeln.', 'لا يغيّر قواعد الموافقة إلا Super Workspace.'],

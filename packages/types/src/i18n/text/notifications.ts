@@ -260,7 +260,7 @@ export const notifications = {
   '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
   '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
   '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
-  // Team approvals (ADR 0097)
+  // Team approvals (ADR 0098)
   '{name} asks for approval: {request}': ['{name} pide aprobación: {request}', '{name} demande une approbation : {request}', '{name} bittet um Genehmigung: {request}', 'يطلب {name} الموافقة: {request}'],
   'Approved: {request}': ['Aprobado: {request}', 'Approuvé : {request}', 'Genehmigt: {request}', 'تمت الموافقة: {request}'],
   'Not approved: {request}': ['No aprobado: {request}', 'Non approuvé : {request}', 'Nicht genehmigt: {request}', 'لم تتم الموافقة: {request}'],

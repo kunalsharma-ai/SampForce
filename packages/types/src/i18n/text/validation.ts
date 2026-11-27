@@ -350,7 +350,7 @@ export const validation = {
   'Use a 24-hour time such as 09:00': ['Usa una hora de 24 horas, como 09:00', 'Utilisez une heure au format 24 h, par exemple 09:00', 'Verwenden Sie eine 24-Stunden-Zeit wie 09:00', 'استخدم وقتًا بنظام 24 ساعة مثل 09:00'],
   'The day must end after it starts': ['El día debe terminar después de empezar', 'La journée doit finir après son début', 'Der Tag muss nach seinem Beginn enden', 'يجب أن ينتهي اليوم بعد أن يبدأ'],
   'Choose a time zone from the list': ['Elige una zona horaria de la lista', 'Choisissez un fuseau horaire dans la liste', 'Wählen Sie eine Zeitzone aus der Liste', 'اختر منطقة زمنية من القائمة'],
-  // Team approvals (ADR 0097)
+  // Team approvals (ADR 0098)
   'Say why, in a few words': ['Di por qué, en pocas palabras', 'Dites pourquoi, en quelques mots', 'Sagen Sie kurz, warum', 'اذكر السبب بكلمات قليلة'],
   'Describe what you are asking for': ['Describe lo que pides', 'Décrivez ce que vous demandez', 'Beschreiben Sie, worum Sie bitten', 'صف ما تطلبه'],
 } as const satisfies TextTable;

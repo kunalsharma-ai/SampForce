@@ -45,7 +45,7 @@ type Tab = 'decide' | 'mine' | 'all' | 'deleted' | 'automation' | 'rules';
 type T = ReturnType<typeof useT>;
 
 /**
- * The Approval section (ADR 0097), in every workspace: managers and the Super Workspace decide here, executives
+ * The Approval section (ADR 0098), in every workspace: managers and the Super Workspace decide here, executives
  * follow their requests and finish approved deletes here, everyone finds and restores what was deleted, and the
  * Super Workspace sets the rules. Automation and quote approvals keep their own tab.
  */
@@ -454,7 +454,8 @@ function DeletedItems() {
   const t = useT();
   const id = useId();
   const [q, setQ] = useState('');
-  const [state, setState] = useState<'kept' | 'restored' | 'any'>('kept');
+  // Everything by default: the deletion history, with restored items marked, so a restore stays in view with its result.
+  const [state, setState] = useState<'kept' | 'restored' | 'any'>('any');
   const list = useDeletedItems({ q: q.trim() || undefined, state });
   return (
     <div className="space-y-4">

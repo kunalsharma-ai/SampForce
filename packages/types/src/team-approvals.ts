@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /*
- * Team approvals and deleted items (ADR 0097). An Executive Workspace asks its manager before it deletes anything;
+ * Team approvals and deleted items (ADR 0098). An Executive Workspace asks its manager before it deletes anything;
  * Super and Manager Workspaces delete directly. The Super Workspace can also require approval for edits to
  * companies, contacts and deals, and people can ask for other things (a task or target change) through the same
  * inbox. Every delete, by anyone, lands in Deleted items first and can be restored until it is purged.

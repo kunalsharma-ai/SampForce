@@ -18,7 +18,7 @@ import { TeamApprovalsService } from './team-approvals.service';
 const uuid = new ParseUUIDPipe();
 
 /**
- * The Approval section (ADR 0097). Open to every member: what each person sees and may decide follows their
+ * The Approval section (ADR 0098). Open to every member: what each person sees and may decide follows their
  * workspace (Super: everything; Manager: its team's requests; Executive: their own).
  */
 @Controller('team-approvals')

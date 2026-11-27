@@ -3,7 +3,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { beforeCommit } from './client';
 
 /*
- * Deleted items (ADR 0097). While a delete request runs inside `runInRecycleScope`, every record it removes is noted
+ * Deleted items (ADR 0098). While a delete request runs inside `runInRecycleScope`, every record it removes is noted
  * before it goes: a soft delete (deletedAt set) by its id, a hard delete by a copy of the document, together with
  * the records Prisma removes with it (onDelete: Cascade). The API stores the notes as one batch, so the whole delete
  * can be put back later. Only requests inside a scope are noted, so housekeeping deletes elsewhere cost nothing.

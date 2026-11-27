@@ -30,7 +30,7 @@ import { ConsoleHealthService } from '../operator/console-health.service';
 import { ConsoleOverviewService } from '../operator/console-overview.service';
 
 export interface WorkerTick {
-  /** Team approvals expired or escalated, and deleted items past their keep period removed (ADR 0097). */
+  /** Team approvals expired or escalated, and deleted items past their keep period removed (ADR 0098). */
   teamApprovals: number;
   deletedItemsPurged: number;
   events: number;

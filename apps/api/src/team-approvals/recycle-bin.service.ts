@@ -21,7 +21,7 @@ type Delegate = {
 const delegateOf = (tx: TenantTx, model: string) => (tx as unknown as Record<string, Delegate | undefined>)[model.charAt(0).toLowerCase() + model.slice(1)];
 
 /**
- * Deleted items (ADR 0097): every delete request, by anyone, is kept as one batch that can be restored until the
+ * Deleted items (ADR 0098): every delete request, by anyone, is kept as one batch that can be restored until the
  * organisation's keep period ends. Super sees every batch, a manager its team's, an executive their own.
  */
 @Injectable()

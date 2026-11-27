@@ -135,7 +135,7 @@ export class ApiClient {
     return this.authed<void>('DELETE', path, undefined, false, { 'x-password-confirmation': pass.token });
   }
   /**
-   * Carries out an action a manager approved (ADR 0097): the same method, path and body as asked for, with the
+   * Carries out an action a manager approved (ADR 0098): the same method, path and body as asked for, with the
    * approval's id, and the person's password when the action deletes.
    */
   async carryOut<T>(action: { method: Method; path: string; body?: unknown }, approvalId: string, password?: string): Promise<T> {

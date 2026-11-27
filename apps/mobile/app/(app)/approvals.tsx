@@ -10,7 +10,7 @@ import { useApi, useTheme } from '../../src/lib/session';
 type Box = 'decide' | 'mine';
 
 /**
- * Approvals on the phone (ADR 0097): requests waiting for this person's decision (Super and Manager Workspaces) and
+ * Approvals on the phone (ADR 0098): requests waiting for this person's decision (Super and Manager Workspaces) and
  * their own requests, which they finish here once approved. Deleted items and the rules stay on the web.
  */
 export default function Approvals() {

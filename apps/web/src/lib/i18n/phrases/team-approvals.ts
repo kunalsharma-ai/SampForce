@@ -1,6 +1,6 @@
 import type { PhraseTable } from './types';
 
-/** Team approvals and Deleted items (ADR 0097): asking a manager, deciding, finishing, restoring and the rules. */
+/** Team approvals and Deleted items (ADR 0098): asking a manager, deciding, finishing, restoring and the rules. */
 export const teamApprovals = {
   // The menu entry
   'Ask your manager before deleting, decide what your team asks for, and bring back deleted items.': [
@@ -203,6 +203,7 @@ export const teamApprovals = {
     'تحتاج مساحة عملك إلى موافقة مدير لحذف هذا.',
   ],
   'For example: a duplicate of another record': ['Por ejemplo: un duplicado de otro registro', 'Par exemple : un doublon d’une autre fiche', 'Zum Beispiel: ein Duplikat eines anderen Datensatzes', 'مثال: نسخة مكررة من سجل آخر'],
+  'Nothing was deleted.': ['No se eliminó nada.', 'Rien n’a été supprimé.', 'Es wurde nichts gelöscht.', 'لم يُحذف شيء.'],
   'Sent to your manager for approval. Nothing was deleted yet.': [
     'Enviado a tu gerente para su aprobación. Aún no se eliminó nada.',
     'Envoyé à votre manager pour approbation. Rien n’a encore été supprimé.',

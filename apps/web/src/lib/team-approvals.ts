@@ -14,7 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { useSession } from './session';
 
-/** Team approvals and Deleted items (ADR 0097). */
+/** Team approvals and Deleted items (ADR 0098). */
 
 export function useApprovalOverview() {
   const { data: me } = useSession();

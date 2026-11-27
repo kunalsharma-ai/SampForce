@@ -340,7 +340,7 @@ export const PHRASES: Readonly<Record<string, readonly [string, string, string, 
   'Unread': ['Sin leer', 'Non lues', 'Ungelesen', 'غير مقروءة'],
   'No unread notifications.': ['No hay notificaciones sin leer.', 'Aucune notification non lue.', 'Keine ungelesenen Benachrichtigungen.', 'لا توجد إشعارات غير مقروءة.'],
   'Nothing needs your action right now.': ['Nada requiere tu acción ahora mismo.', 'Rien ne demande votre action pour le moment.', 'Gerade ist nichts von Ihnen zu tun.', 'لا شيء يتطلب إجراءً منك الآن.'],
-  // Team approvals (ADR 0097): the Approvals screen and the "ask your manager" card. Same wording as the web.
+  // Team approvals (ADR 0098): the Approvals screen and the "ask your manager" card. Same wording as the web.
   'Approvals': ['Aprobaciones', 'Approbations', 'Freigaben', 'الموافقات'],
   'Ask your manager, and decide what your team asks for': ['Pide permiso a tu gerente y decide lo que pide tu equipo', 'Demandez à votre manager et décidez des demandes de votre équipe', 'Fragen Sie Ihren Manager und entscheiden Sie über Anfragen Ihres Teams', 'اطلب من مديرك، وقرّر في طلبات فريقك'],
   'My requests': ['Mis solicitudes', 'Mes demandes', 'Meine Anfragen', 'طلباتي'],

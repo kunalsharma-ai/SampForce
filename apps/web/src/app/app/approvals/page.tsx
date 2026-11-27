@@ -5,7 +5,7 @@ import { ApprovalCenter } from './approval-center';
 export const metadata: Metadata = { title: 'Approvals' };
 
 /*
- * Approvals (ADR 0097): requests between workspaces (deletes, record edits, task, target and data changes), the
+ * Approvals (ADR 0098): requests between workspaces (deletes, record edits, task, target and data changes), the
  * automation and quote approvals that were here before, Deleted items and the Super Workspace's rules.
  */
 export default function ApprovalsPage() {

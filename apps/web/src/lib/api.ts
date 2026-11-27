@@ -67,7 +67,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       if (!pass) throw new ApiError(0, 'CONFIRMATION_CANCELLED', 'Nothing was deleted.');
       return api<T>(path, { ...init, headers: { ...headers, [PASSWORD_CONFIRMATION_HEADER]: pass } }, retry);
     }
-    // An Executive Workspace's delete needs the manager's approval first (ADR 0097): offer to ask for it. Nothing is
+    // An Executive Workspace's delete needs the manager's approval first (ADR 0098): offer to ask for it. Nothing is
     // deleted either way; once approved, the Approvals page sends this same request again.
     const askApproval = approvalAsker();
     if (res.status === 403 && err?.code === APPROVAL_REQUIRED && askApproval) {

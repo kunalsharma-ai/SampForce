@@ -5,7 +5,7 @@ import { WorkerService } from '../src/worker/worker.service';
 import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
 /*
- * Delete approvals, the Approval section and Deleted items (ADR 0097): Super and Manager Workspaces delete directly,
+ * Delete approvals, the Approval section and Deleted items (ADR 0098): Super and Manager Workspaces delete directly,
  * an Executive Workspace asks its manager; the approval is tied to the exact record and action, runs once, lapses,
  * moves up when nobody decides, and every delete can be restored.
  */

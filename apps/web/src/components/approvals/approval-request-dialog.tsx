@@ -11,7 +11,7 @@ import { useT } from '@/lib/i18n';
 import { IconTile } from './approval-visuals';
 
 /*
- * Ask your manager (ADR 0097). Mounted once by the app shell: any delete (or guarded edit) an Executive Workspace
+ * Ask your manager (ADR 0098). Mounted once by the app shell: any delete (or guarded edit) an Executive Workspace
  * makes anywhere opens this dialog instead of failing. The person says why; the request goes to their manager with
  * the exact action, and the Approvals page carries it out once approved.
  */

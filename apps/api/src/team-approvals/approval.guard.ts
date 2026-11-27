@@ -1,7 +1,11 @@
 import { type CanActivate, type ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { APPROVAL_HEADER, APPROVAL_REQUIRED, type GuardedApprovalCategory } from '@dealflow/types';
+import { MOBILE_RECORD_MODULES, type MobileRecordModule } from '@dealflow/types';
 import type { AuthedRequest } from '../common/auth-context';
+import { PrismaService } from '../common/prisma.service';
+import { MobileConfigService } from '../mobile/mobile-config.service';
+import { moduleOf } from '../mobile/field-policy';
 import { CONFIRMS_PASSWORD, type ConfirmPasswordRule } from '../common/password-confirmation/password-confirmation.decorator';
 import { recordOfRoute } from './record-of-route';
 import { TeamApprovalsService } from './team-approvals.service';
@@ -23,7 +27,7 @@ export function deletesData(reflector: Reflector, ctx: ExecutionContext, req: Au
 const EDITED = new Set(['Company', 'Contact', 'Lead', 'Opportunity']);
 
 /**
- * Global guard after the workspace checks and before the password check (ADR 0097). An Executive Workspace may not
+ * Global guard after the workspace checks and before the password check (ADR 0098). An Executive Workspace may not
  * delete (and, when the Super Workspace says so, edit companies, contacts and deals) without its manager's approval:
  * the request must name an approved request for exactly this action in X-Approval-Id. Without one the answer is
  * 403 APPROVAL_REQUIRED, which the screens turn into "Ask your manager". The approval is claimed later, in
@@ -34,7 +38,22 @@ export class ApprovalGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly approvals: TeamApprovalsService,
+    private readonly prisma: PrismaService,
+    private readonly mobileConfigs: MobileConfigService,
   ) {}
+
+  /**
+   * The phone's own rules come first: when the Mobile Configuration does not let this level delete (or edit) the
+   * module at all, asking a manager would only lead to the same refusal, so the route refuses as it always has.
+   */
+  private async phoneForbids(req: ApprovalRequest, path: string, category: GuardedApprovalCategory): Promise<boolean> {
+    const m = /^\/mobile\/records\/([a-z_]+)\//.exec(path);
+    if (!m || !(MOBILE_RECORD_MODULES as readonly string[]).includes(m[1]!)) return false;
+    const auth = req.auth!;
+    const config = await this.prisma.run(auth, (tx) => this.mobileConfigs.resolvedFor(tx, auth));
+    const rule = moduleOf(config, m[1] as MobileRecordModule);
+    return category === 'delete' ? !rule.delete : !rule.edit;
+  }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     if (ctx.getType() !== 'http') return true;
@@ -51,6 +70,7 @@ export class ApprovalGuard implements CanActivate {
       if (rr?.model && rr.scope === 'single' && EDITED.has(rr.model)) category = 'record_edit';
     }
     if (!category || !(await this.approvals.requirement(auth, category))) return true;
+    if (await this.phoneForbids(req, path, category)) return true;
 
     const raw = req.headers[APPROVAL_HEADER];
     const id = Array.isArray(raw) ? raw[0] : raw;

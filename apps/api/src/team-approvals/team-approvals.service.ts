@@ -44,7 +44,7 @@ export function bodyHashOf(body: unknown): string {
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Approval request not found.' });
 
 /**
- * Team approvals (ADR 0097). Executives ask; the manager of their workspace (the workspace above) decides, and the
+ * Team approvals (ADR 0098). Executives ask; the manager of their workspace (the workspace above) decides, and the
  * Super Workspace can decide anything. A request nobody decided in time moves one level up. Guarded requests carry
  * the exact action; once approved, the requester carries it out themselves, once, before it lapses.
  */

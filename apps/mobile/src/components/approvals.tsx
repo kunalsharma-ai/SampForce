@@ -8,7 +8,7 @@ import { useController, useTheme } from '../lib/session';
 import { Body, Button, Card, ErrorNote, Field } from './ui';
 
 /*
- * Team approvals on the phone (ADR 0097): an Executive Workspace's delete goes to its manager first. These are the
+ * Team approvals on the phone (ADR 0098): an Executive Workspace's delete goes to its manager first. These are the
  * "ask your manager" card shown where a delete was refused, and one request as the Approvals screen shows it.
  */
 

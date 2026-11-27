@@ -144,7 +144,7 @@ export class WorkspacesService {
 
       const features = input.features ? this.grantableFeatures(parent, input.features) : parent.features;
       let actions = input.actions ? this.grantableActions(parent, input.actions) : defaultChildActions(input.level, parent.actions);
-      // The Super Workspace let Manager and Executive Workspaces delete (ADR 0097): a new one gets Delete with Edit.
+      // The Super Workspace let Manager and Executive Workspaces delete (ADR 0098): a new one gets Delete with Edit.
       if (!input.actions && readTeamApprovalSettings((await tx.teamApprovalSettings.findUnique({ where: { tenantId: auth.tenantId } }))?.settings).lowerLevelsDelete) {
         actions = this.grantableActions(parent, withDeleteWhereEdit(actions, true) as typeof actions);
       }

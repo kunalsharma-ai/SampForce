@@ -8,7 +8,7 @@ import { RecycleBinService } from './recycle-bin.service';
 import { TeamApprovalsService } from './team-approvals.service';
 
 /**
- * Runs every delete request (ADR 0097) so that what it removes is kept in Deleted items, and carries out an
+ * Runs every delete request (ADR 0098) so that what it removes is kept in Deleted items, and carries out an
  * approved request exactly once: the approval is claimed when the handler starts, completed when it succeeds (with
  * the Deleted items batch it made) and released again when it fails, so the person can try again.
  */

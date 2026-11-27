@@ -34,7 +34,7 @@ export const MOBILE_PUSH_TYPE_OF: Readonly<Record<string, MobileNotificationType
   'billing.trial_ended': 'account_status',
   'billing.subscription_ended': 'account_status',
   'billing.unpaid': 'account_status',
-  // Team approvals (ADR 0097): a request to decide, and the decision on one's own request.
+  // Team approvals (ADR 0098): a request to decide, and the decision on one's own request.
   'approval.requested': 'approval',
   'approval.escalated': 'approval',
   'approval.approved': 'approval',

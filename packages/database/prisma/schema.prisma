@@ -5677,7 +5677,7 @@ model PhoneCall {
   @@map("phone_calls")
 }
 
-/// Team approvals (ADR 0097): an Executive Workspace asks its manager before deleting (and, when the Super Workspace
+/// Team approvals (ADR 0098): an Executive Workspace asks its manager before deleting (and, when the Super Workspace
 /// switches them on, before other guarded changes); free-form requests about tasks, targets and data use the same
 /// inbox. A guarded request is tied to the exact action (method, path, body hash) and, for one record or a list of
 /// ids, to a fingerprint of the records as they were when the request was made.
@@ -5730,7 +5730,7 @@ model TeamApproval {
   @@map("team_approvals")
 }
 
-/// The Super Workspace's approval rules (ADR 0097). One row per organisation; missing = the defaults.
+/// The Super Workspace's approval rules (ADR 0098). One row per organisation; missing = the defaults.
 model TeamApprovalSettings {
   id          String   @id @default(uuid()) @map("_id")
   tenantId    String   @unique @map("tenant_id")
@@ -5741,7 +5741,7 @@ model TeamApprovalSettings {
   @@map("team_approval_settings")
 }
 
-/// Deleted items (ADR 0097): what one delete request removed, so it can be restored until purgeAfter.
+/// Deleted items (ADR 0098): what one delete request removed, so it can be restored until purgeAfter.
 model RecycleBatch {
   id           String    @id @default(uuid()) @map("_id")
   tenantId     String    @map("tenant_id")

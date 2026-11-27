@@ -3,7 +3,7 @@ import type { TenantTx } from '@dealflow/database';
 import { recordModelLabel } from '@dealflow/types';
 
 /*
- * Which record an action is about (ADR 0097): the kind, the id, a name to show and a fingerprint of the record as it
+ * Which record an action is about (ADR 0098): the kind, the id, a name to show and a fingerprint of the record as it
  * is now. An approval stores the fingerprint; if the record changes before the approved action runs, the
  * fingerprint differs and the action is refused until someone asks again.
  */

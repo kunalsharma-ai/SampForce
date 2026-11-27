@@ -1,5 +1,5 @@
 /*
- * Delete approvals (ADR 0097). The server answers an Executive Workspace's delete with 403 APPROVAL_REQUIRED; `api()`
+ * Delete approvals (ADR 0098). The server answers an Executive Workspace's delete with 403 APPROVAL_REQUIRED; `api()`
  * then asks whoever registered here (the dialog the app shell mounts) to send the request to the manager. Kept free of
  * React so `api()` can use it, like the password confirmation.
  */
