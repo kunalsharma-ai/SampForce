@@ -5,6 +5,7 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   notificationCategoryOf,
   notificationChimes,
+  notificationPopsUp,
   type NotificationFilter,
   type NotificationPage,
   type NotificationPreferences,
@@ -18,6 +19,7 @@ import { useEffect, useRef } from 'react';
 import { create } from 'zustand';
 import { api } from './api';
 import { playChime } from './notification-sound';
+import { BURST, type OnScreenCard, onScreenKindOf, onScreenTestsOptedOut, useOnScreen } from './on-screen';
 
 /*
  * The Notification Center in the browser (ADR 0075). One summary query feeds the bell, the home card and every
@@ -69,7 +71,8 @@ export function useNotificationList(p: ListParams, enabled = true) {
 
 export function useNotificationActions() {
   const qc = useQueryClient();
-  const refresh = () => qc.invalidateQueries({ queryKey: ['notifications'] });
+  // Reading notifications never changes the person's preferences, so those are left alone.
+  const refresh = () => qc.invalidateQueries({ queryKey: ['notifications'], predicate: (q) => q.queryKey[1] !== 'preferences' });
   // Mutation keys under ['notifications', ...] tell the workspace's mutation sounds to stay quiet for these.
   const read = useMutation({ mutationKey: ['notifications', 'read'], mutationFn: (ids: string[] | 'all') => api<{ updated: number }>('/notifications/read', { method: 'POST', json: { ids } }), onSuccess: refresh });
   const readSection = useMutation({ mutationKey: ['notifications', 'read-section'], mutationFn: (section: NotificationSectionKey) => api<{ updated: number }>('/notifications/read', { method: 'POST', json: { section } }), onSuccess: refresh });
@@ -83,11 +86,21 @@ export function useNotificationPreferences(enabled = true) {
 
 export function useSaveNotificationPreferences() {
   const qc = useQueryClient();
-  return useMutation({
+  const mutation = useMutation({
     mutationKey: ['notifications', 'preferences'],
     mutationFn: (prefs: NotificationPreferences) => api<NotificationPreferences>('/notifications/preferences', { method: 'PUT', json: prefs }),
     onSuccess: (saved) => qc.setQueryData(PREFS_KEY, saved),
   });
+  // The switch moves at once (a controlled checkbox must see its new value in the same click, so this is not left to
+  // the mutation's own onMutate, which runs a moment later); if saving fails it goes back to what is stored.
+  const mutate = (prefs: NotificationPreferences, opts?: { onSettled?: () => void }) => {
+    // A refresh already on its way would bring back the old choice over the new one.
+    void qc.cancelQueries({ queryKey: PREFS_KEY }, { revert: false });
+    const before = qc.getQueryData<NotificationPreferences>(PREFS_KEY);
+    qc.setQueryData(PREFS_KEY, prefs);
+    mutation.mutate(prefs, { onError: () => before && qc.setQueryData(PREFS_KEY, before), onSettled: opts?.onSettled });
+  };
+  return { ...mutation, mutate };
 }
 
 /** Opens a notification: marks it read and goes to its page. */
@@ -115,7 +128,33 @@ function writeHeard(ms: number) {
   }
 }
 
-type Message = { kind: 'summary'; summary: NotificationSummary } | { kind: 'arrived' };
+type Message = { kind: 'summary'; summary: NotificationSummary } | { kind: 'arrived' } | { kind: 'cards'; cards: OnScreenCard[] };
+
+/** The on-screen cards for notifications that just arrived, by the person's preferences (spec section 9). */
+export function cardsFor(fresh: CenterNotification[], prefs: NotificationPreferences): OnScreenCard[] {
+  const popping = fresh.filter((n) => notificationPopsUp(prefs, n.type, notificationCategoryOf));
+  const cards: OnScreenCard[] = popping.map((n) => ({
+    id: n.id,
+    notificationId: n.id,
+    kind: onScreenKindOf(n.type),
+    title: n.title,
+    body: n.body,
+    href: n.link,
+    from: n.sender?.name ?? null,
+    sticky: notificationTone(n) === 'action',
+  }));
+  // A burst (a day's recurring tasks, a teammate's busy minute) shows the newest few and one card for the rest, so
+  // nobody is buried in pop-ups. The rest are in the bell as always.
+  if (cards.length <= BURST) return cards;
+  const rest = cards.slice(0, cards.length - (BURST - 1));
+  return [{ id: `burst:${rest.map((c) => c.id).join(',').slice(0, 200)}`, kind: 'summary', title: '', count: rest.length, href: '/app/notifications' }, ...cards.slice(-(BURST - 1))];
+}
+
+/** Shows cards in this tab, when the tab is the one on screen (a hidden tab shows nothing, and never later). */
+function showCards(cards: OnScreenCard[]) {
+  if (!cards.length || document.visibilityState !== 'visible' || onScreenTestsOptedOut()) return;
+  useOnScreen.getState().push(cards);
+}
 
 /**
  * Keeps the summary live. Mounted once, in the header. The tab holding the lock waits on the server; when something
@@ -157,6 +196,12 @@ export function useNotificationLive(enabled: boolean) {
       bump();
       channel?.postMessage({ kind: 'arrived' } satisfies Message);
       const p = prefsRef.current;
+      // The on-screen cards: in this tab and in every other open tab, which each show them only if on screen.
+      const cards = cardsFor(fresh, p);
+      if (cards.length) {
+        showCards(cards);
+        channel?.postMessage({ kind: 'cards', cards } satisfies Message);
+      }
       const ringing = fresh.filter((n) => notificationChimes(p, n.type, notificationCategoryOf));
       if (ringing.length) playChime(ringing.some((n) => notificationTone(n) !== 'normal') ? 'bright' : 'soft', p.volume);
       if (p.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState === 'hidden') {
@@ -178,6 +223,7 @@ export function useNotificationLive(enabled: boolean) {
     if (channel) {
       channel.onmessage = (e: MessageEvent<Message>) => {
         if (e.data.kind === 'summary') apply(e.data.summary);
+        if (e.data.kind === 'cards') showCards(e.data.cards);
         if (e.data.kind === 'arrived') {
           heard = Math.max(heard, readHeard());
           bump();

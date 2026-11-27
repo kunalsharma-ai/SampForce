@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query
 import {
   type NotificationPageQuery,
   notificationPageQuerySchema,
-  type NotificationPreferences,
+  type NotificationPreferencesInput,
   notificationPreferencesSchema,
   type NotificationReadInput,
   notificationReadSchema,
@@ -65,7 +65,7 @@ export class NotificationsController {
   }
 
   @Put('preferences')
-  savePreferences(@Auth() auth: AuthContext, @Body(new ZodPipe(notificationPreferencesSchema)) body: NotificationPreferences) {
+  savePreferences(@Auth() auth: AuthContext, @Body(new ZodPipe(notificationPreferencesSchema)) body: NotificationPreferencesInput) {
     return this.notifications.savePreferences(auth, body);
   }
 }

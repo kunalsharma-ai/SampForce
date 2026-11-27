@@ -44,6 +44,7 @@ import { TwilioClient } from '../apps/twilio';
 import { CompanyLogosService } from '../crm/company-logos.service';
 import { CompanyWorkService } from '../crm/company-work.service';
 import { DealsService } from '../crm/deals.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { canSeeDetails, companyScope, contactScope, personRefs, reportingTree, scopeOf, visibility, type Visibility } from '../crm/visibility';
 import { ApiAdapter, configOf, controlName, DialerError } from './dialer-adapters';
 import { callError, DialersService, PHONE_APP } from './dialers.service';
@@ -73,6 +74,7 @@ export class CallsService {
     private readonly twilio: TwilioClient,
     private readonly dialers: DialersService,
     private readonly apiAdapter: ApiAdapter,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ─── Who is being called ───
@@ -589,6 +591,22 @@ export class CallsService {
         await tx.company.update({
           where: { id: call.companyId },
           data: { lastCallAt: call.startedAt, lastCallOutcome: outcome.key, callCount: { increment: 1 }, ...(flag && call.numberSource === 'COMPANY' ? { phoneFlaggedAt: new Date() } : {}) },
+        });
+      }
+      // The people above the caller see the finished call on screen and in the bell (spec section 9).
+      const watchers = await this.notifications.watchersOf(tx, auth.tenantId, auth.userId);
+      if (watchers.length) {
+        const caller = await tx.user.findUnique({ where: { id: auth.userId }, select: { name: true } });
+        await this.notifications.send(tx, auth.tenantId, watchers, {
+          type: 'call.completed',
+          title: `${caller?.name ?? 'Someone'} called ${who}: ${label}`.slice(0, 200),
+          body: input.remarks ?? null,
+          link: `/app/calls?call=${id}`,
+          eventId: `call:${id}:logged`,
+          senderId: auth.userId,
+          companyId: call.companyId,
+          contactId: call.contactId,
+          priority: 'LOW',
         });
       }
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'call.logged', entityType: 'phone_call', entityId: id, metadata: { outcome: outcome.key, activityId, followUpId, dealId, flagged: flag, notInterested: !!input.markNotInterested }, meta });

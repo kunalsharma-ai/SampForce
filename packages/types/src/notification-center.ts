@@ -131,6 +131,10 @@ export const notificationWaitQuerySchema = z.object({
 export const SOUND_CATEGORY_KEYS = [...NOTIFICATION_CATEGORIES.map((c) => c.key), 'other'] as unknown as [NotificationCategoryKey | 'other', ...(NotificationCategoryKey | 'other')[]];
 export type SoundCategoryKey = NotificationCategoryKey | 'other';
 
+/** How long an on-screen pop-up stays, in seconds (it pauses while the pointer or keyboard focus is on it). */
+export const POPUP_SECONDS_MIN = 3;
+export const POPUP_SECONDS_MAX = 20;
+
 export const notificationPreferencesSchema = z
   .object({
     /** Play the chime when a notification arrives. */
@@ -141,11 +145,36 @@ export const notificationPreferencesSchema = z
     mutedSound: z.array(z.enum(SOUND_CATEGORY_KEYS)).max(SOUND_CATEGORY_KEYS.length),
     /** Show the browser's or phone's own notification while SampForce is in the background. */
     desktop: z.boolean(),
+    /**
+     * Show an animated pop-up on screen when a notification arrives (check-ins, breaks, tasks, approvals, deals...).
+     * Optional so that older apps which do not know these fields keep the stored value when they save.
+     */
+    popups: z.boolean().optional(),
+    /** Seconds a pop-up stays on screen. */
+    popupSeconds: z.number().int().min(POPUP_SECONDS_MIN).max(POPUP_SECONDS_MAX).optional(),
+    /** Categories that never pop up (they still reach the bell). */
+    mutedPopups: z.array(z.enum(SOUND_CATEGORY_KEYS)).max(SOUND_CATEGORY_KEYS.length).optional(),
   })
   .strict();
-export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
+export type NotificationPreferencesInput = z.infer<typeof notificationPreferencesSchema>;
+/** Preferences as the API returns them: every field filled in. */
+export type NotificationPreferences = Required<NotificationPreferencesInput>;
 
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = { sound: true, volume: 40, mutedSound: [], desktop: false };
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  sound: true,
+  volume: 40,
+  mutedSound: [],
+  desktop: false,
+  popups: true,
+  popupSeconds: 6,
+  mutedPopups: [],
+};
+
+/** Whether a notification of this type pops up on screen for someone with these preferences. */
+export function notificationPopsUp(prefs: NotificationPreferences, type: string, categoryOf: (type: string) => NotificationCategoryKey | null): boolean {
+  if (!prefs.popups) return false;
+  return !prefs.mutedPopups.includes(categoryOf(type) ?? 'other');
+}
 
 /** Whether a notification of this type plays the chime for someone with these preferences. */
 export function notificationChimes(prefs: NotificationPreferences, type: string, categoryOf: (type: string) => NotificationCategoryKey | null): boolean {

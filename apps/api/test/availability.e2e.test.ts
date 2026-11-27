@@ -101,13 +101,16 @@ describe('working status', () => {
 
   it('tells the manager and the Super admins about each change, never the person themself', async () => {
     const managerNotes = (await api(manager).get('/notifications').expect(200)).body.items as { type: string; title: string; link: string }[];
-    const titles = managerNotes.filter((n) => n.type === 'team.status').map((n) => n.title);
+    const status = managerNotes.filter((n) => n.type.startsWith('team.status.'));
+    const titles = status.map((n) => n.title);
+    // The change is in the type too, so the on-screen card shows the right picture in any language (spec section 9).
+    expect(status.map((n) => n.type)).toEqual(expect.arrayContaining(['team.status.checked_in', 'team.status.on_break', 'team.status.back', 'team.status.checked_out']));
     expect(titles).toEqual(expect.arrayContaining(['Rahul Exec checked in', 'Rahul Exec is on a break', 'Rahul Exec is back at work', 'Rahul Exec checked out']));
-    expect(managerNotes.find((n) => n.type === 'team.status')!.link).toBe('/app/team-status');
+    expect(status[0]!.link).toBe('/app/team-status');
     const superNotes = (await api(superAdmin).get('/notifications').expect(200)).body.items as { type: string }[];
-    expect(superNotes.filter((n) => n.type === 'team.status')).toHaveLength(4);
+    expect(superNotes.filter((n) => n.type.startsWith('team.status.'))).toHaveLength(4);
     const own = (await api(executive).get('/notifications').expect(200)).body.items as { type: string }[];
-    expect(own.filter((n) => n.type === 'team.status')).toHaveLength(0);
+    expect(own.filter((n) => n.type.startsWith('team.status'))).toHaveLength(0);
   });
 
   it('lets a checked-in person choose Available or Away, and shows Away by itself after no open page', async () => {

@@ -115,7 +115,7 @@ export function HelpSettingsButton({ settings }: { settings: HelpSettingsView })
         <Settings2 aria-hidden /> {t('Help settings')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg" data-help-settings-dialog>
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto p-6" data-help-settings-dialog>
           <DialogTitle>{t('Help settings')}</DialogTitle>
           <DialogDescription>
             {t(

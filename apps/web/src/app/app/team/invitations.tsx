@@ -128,7 +128,7 @@ export function Invitations() {
           </p>
         )}
         {list.data && list.data.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <caption className="sr-only">{t('Invitations')}</caption>
               <thead className="text-start text-xs text-muted-foreground">

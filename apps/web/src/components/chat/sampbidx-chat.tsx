@@ -376,7 +376,7 @@ function NewRfqChatDialog({
   });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="flex items-center gap-2">
           <SampbidxAvatar className="size-8 rounded-lg [&_svg]:size-4" /> {t('Chat about an RFQ')}
         </DialogTitle>

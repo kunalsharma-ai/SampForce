@@ -726,7 +726,7 @@ function SyncLogDialog({
   });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Mailbox sync log')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Each sync of a connected mailbox, newest first. SampForce stores only messages that involve a known contact.')}

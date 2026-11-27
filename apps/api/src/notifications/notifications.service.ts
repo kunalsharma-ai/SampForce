@@ -10,6 +10,7 @@ import {
   type NotificationPage,
   type NotificationPageQuery,
   type NotificationPreferences,
+  type NotificationPreferencesInput,
   type NotificationReadInput,
   type NotificationRow,
   notificationSection,
@@ -22,6 +23,7 @@ import type { AuthContext } from '../common/auth-context';
 import { PrismaService } from '../common/prisma.service';
 import { localizeNotification } from '../common/request-language';
 import { personRefs } from '../crm/visibility';
+import { watchersOf } from './watchers';
 import { queueMobilePush } from '../mobile/push/push-queue';
 
 export interface NotificationDraft {
@@ -142,11 +144,30 @@ export class NotificationsService {
     const row = await this.prisma.notificationPreference.findUnique({ where: { userId: auth.userId } });
     if (!row) return { ...DEFAULT_NOTIFICATION_PREFERENCES };
     const known = new Set<string>(SOUND_CATEGORY_KEYS);
-    return { sound: row.sound, volume: row.volume, mutedSound: row.mutedSound.filter((k) => known.has(k)) as NotificationPreferences['mutedSound'], desktop: row.desktop };
+    const d = DEFAULT_NOTIFICATION_PREFERENCES;
+    return {
+      sound: row.sound,
+      volume: row.volume,
+      mutedSound: row.mutedSound.filter((k) => known.has(k)) as NotificationPreferences['mutedSound'],
+      desktop: row.desktop,
+      // Rows saved before on-screen pop-ups existed have none of these fields.
+      popups: row.popups ?? d.popups,
+      popupSeconds: row.popupSeconds ?? d.popupSeconds,
+      mutedPopups: (row.mutedPopups ?? []).filter((k) => known.has(k)) as NotificationPreferences['mutedPopups'],
+    };
   }
 
-  async savePreferences(auth: AuthContext, prefs: NotificationPreferences): Promise<NotificationPreferences> {
-    const data = { sound: prefs.sound, volume: prefs.volume, mutedSound: [...new Set(prefs.mutedSound)], desktop: prefs.desktop };
+  /** Saves the person's choices. Fields left out (an older app that does not know pop-ups) keep what is stored. */
+  async savePreferences(auth: AuthContext, prefs: NotificationPreferencesInput): Promise<NotificationPreferences> {
+    const data = {
+      sound: prefs.sound,
+      volume: prefs.volume,
+      mutedSound: [...new Set(prefs.mutedSound)],
+      desktop: prefs.desktop,
+      ...(prefs.popups === undefined ? {} : { popups: prefs.popups }),
+      ...(prefs.popupSeconds === undefined ? {} : { popupSeconds: prefs.popupSeconds }),
+      ...(prefs.mutedPopups === undefined ? {} : { mutedPopups: [...new Set(prefs.mutedPopups)] }),
+    };
     await this.prisma.notificationPreference.upsert({ where: { userId: auth.userId }, create: { userId: auth.userId, ...data }, update: data });
     return this.preferences(auth);
   }
@@ -212,6 +233,11 @@ export class NotificationsService {
     // The same notification on the person's phones, when it is one the phone app has (ADR 0072, M8).
     const push = MOBILE_PUSH_TYPE_OF[n.type];
     if (push) await queueMobilePush(tx, tenantId, users, { type: push, title: n.title, body: n.body ?? null, route: mobileRouteFor(n.link) });
+  }
+
+  /** The managers and Super Workspace people who are told about this person's work (see watchers.ts). */
+  watchersOf(tx: TenantTx, tenantId: string, userId: string | null | undefined): Promise<string[]> {
+    return watchersOf(tx, tenantId, userId, () => this.usersWithPermission(tx, tenantId, 'members:manage'));
   }
 
   /** Active members of the tenant whose role grants `permission`. */

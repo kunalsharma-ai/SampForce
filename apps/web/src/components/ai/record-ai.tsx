@@ -213,7 +213,7 @@ function ProposalButtonPanel({ dealId }: { dealId: string }) {
         <FileText aria-hidden /> {t('Draft proposal')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
+        <DialogContent className="top-[5%] max-h-[85vh] max-w-2xl overflow-y-auto p-6">
           <DialogTitle className="text-lg font-semibold">{t('Proposal draft')}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {t("Written from this deal's details and line items. Check every fact before you use it; nothing has been sent.")}

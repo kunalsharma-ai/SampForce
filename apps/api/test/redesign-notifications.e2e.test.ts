@@ -50,6 +50,11 @@ describe('redesign notifications', () => {
     expect(notificationCategoryOf('deal.lost')).toBe('deal_lost');
     for (const t of ['task.updated', 'task.commented', 'task.completed']) expect(notificationCategoryOf(t)).toBe('task_updates');
     expect(notificationCategoryOf('team.status')).toBe('team_status');
+    for (const t of ['team.status.checked_in', 'team.status.on_break', 'team.status.back', 'team.status.checked_out']) expect(notificationCategoryOf(t)).toBe('team_status');
+    for (const t of ['task.in_progress', 'task.blocked', 'task.half_completed']) expect(notificationCategoryOf(t)).toBe('task_updates');
+    for (const t of ['company.created', 'contact.created', 'deal.created']) expect(notificationCategoryOf(t)).toBe('records_created');
+    expect(notificationCategoryOf('call.completed')).toBe('calls');
+    expect(notificationCategoryOf('sampbidx.transfer_failed')).toBe('sampbidx');
     // No type is in two categories.
     const types = NOTIFICATION_CATEGORIES.flatMap((c) => c.types);
     expect(new Set(types).size).toBe(types.length);
