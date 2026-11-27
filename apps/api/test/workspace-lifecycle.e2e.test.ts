@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
+import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser, perWorkspaceDelete } from './helpers';
 
 /*
  * Workspace redesign W4: a Manager or Executive Workspace can be deactivated (reversible: its people and everyone
@@ -33,6 +33,8 @@ describe('deactivating and deleting workspaces', () => {
   beforeAll(async () => {
     app = await startApp();
     owner = await registerUser(app, 'Lifecycle Traders');
+    // These tests grant Delete workspace by workspace (W2), so the organisation-wide switch is off.
+    await perWorkspaceDelete(owner);
     await db.subscription.update({ where: { tenantId: owner.tenantId }, data: { maxManagerWorkspaces: 3, maxExecutiveWorkspaces: 3 } });
     north = await workspace(owner, 'MANAGER', 'North Team', 'Rahul North');
     south = await workspace(owner, 'MANAGER', 'South Team', 'Priya South');

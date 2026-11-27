@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { autoConfirmDeletion, signUp, workspaceAction } from './helpers';
+import { autoConfirmDeletion, signUp, workspaceAction, perWorkspaceDelete } from './helpers';
 
 const ORIGIN = { origin: 'http://localhost:3000' };
 /** Set PREVIEW_DIR to save screenshots of each screen (used for previews). */
@@ -20,6 +20,8 @@ async function shot(page: Page, name: string) {
 test('a new Manager Workspace cannot delete until the Super Workspace turns Delete on', async ({ page, browser }) => {
   test.setTimeout(150_000);
   await signUp(page, 'Delete Rights Ltd');
+  // Delete is given workspace by workspace here (W2), so the organisation-wide switch is off.
+  await perWorkspaceDelete(page);
   const created = await (
     await page.request.post('/api/v1/workspaces', { data: { level: 'MANAGER', name: 'North Sales', person: { inviteEmail: `north.${Date.now()}@example.com` } }, headers: ORIGIN })
   ).json();

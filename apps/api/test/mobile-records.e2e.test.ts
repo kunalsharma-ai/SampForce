@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { defaultMobileConfig, PASSWORD_CONFIRMATION_HEADER, type MobileAppConfig, type MobileRecord, type MobileRecordOptions, type MobileRecordPage } from '@dealflow/types';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
+import { api, asTenant, registerUser, startApp, type TestUser, workspacePerson, perWorkspaceDelete } from './helpers';
 
 /**
  * Records on the phone (ADR 0072, M4): leads, contacts, follow-ups and tasks through the web's own services, with
@@ -43,6 +43,8 @@ describe('mobile records', () => {
   beforeAll(async () => {
     app = await startApp();
     owner = await registerUser(app, 'Records Org');
+    // These tests grant Delete workspace by workspace (W2), so the organisation-wide switch is off.
+    await perWorkspaceDelete(owner);
     exec = await workspacePerson(app, owner, 'EXECUTIVE', 'Field Exec');
     await asTenant(owner.tenantId, (tx) => tx.mobileAccess.create({ data: { tenantId: owner.tenantId, status: 'APPROVED', decisionStatus: 'APPROVED', decidedAt: new Date(), activatedAt: new Date(), activatedById: null } }));
     ownerToken = (await signIn(owner).expect(200)).body.accessToken;

@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser } from './helpers';
+import { api, ORIGIN, ownerClient, registerUser, startApp, type TestUser, perWorkspaceDelete } from './helpers';
 
 /*
  * Workspace redesign W2: Delete is a permission like any other, off by default for every new Manager and Executive
@@ -28,6 +28,8 @@ describe('delete permission', () => {
   beforeAll(async () => {
     app = await startApp();
     owner = await registerUser(app, 'Delete Rights Ltd');
+    // These tests grant Delete workspace by workspace (W2), so the organisation-wide switch is off.
+    await perWorkspaceDelete(owner);
     await db.subscription.update({ where: { tenantId: owner.tenantId }, data: { maxManagerWorkspaces: 2, maxExecutiveWorkspaces: 2 } });
     const ws = (await api(owner).post('/workspaces', { level: 'MANAGER', name: 'North', person: { inviteEmail: 'north@delete-rights.test' } }).expect(201)).body;
     managerId = ws.id;

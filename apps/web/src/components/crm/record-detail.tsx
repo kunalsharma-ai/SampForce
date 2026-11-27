@@ -96,7 +96,9 @@ export function RecordHeader({
       await qc.invalidateQueries({ queryKey: [entity] });
       router.push(`/app/${entity}`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t('Could not delete.'));
+      // Sent to the manager for approval instead (ADR 0098): the "Ask your manager" dialog has said so.
+      if (e instanceof ApiError && (e.code === 'APPROVAL_REQUESTED' || e.code === 'APPROVAL_NOT_REQUESTED')) return setConfirm(false);
+      setError(e instanceof ApiError ? t.maybe(e.message) : t('Could not delete.'));
     }
   }
 

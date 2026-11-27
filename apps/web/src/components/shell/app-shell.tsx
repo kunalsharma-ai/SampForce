@@ -1,5 +1,6 @@
 'use client';
 
+import { ApprovalRequestProvider } from '@/components/approvals/approval-request-dialog';
 import {
   Button,
   Card,
@@ -55,6 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <PasswordConfirmationProvider>
+      <ApprovalRequestProvider>
       <div className="flex min-h-screen">
         <a
           href="#main"
@@ -136,6 +138,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* The level's welcome, once, right after signing in (ADR 0075). */}
         <WelcomeOverlay />
       </div>
+      </ApprovalRequestProvider>
     </PasswordConfirmationProvider>
   );
 }

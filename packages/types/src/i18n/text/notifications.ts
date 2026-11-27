@@ -268,4 +268,15 @@ export const notifications = {
   '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
   '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
   '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
+  // Team approvals (ADR 0098)
+  '{name} asks for approval: {request}': ['{name} pide aprobación: {request}', '{name} demande une approbation : {request}', '{name} bittet um Genehmigung: {request}', 'يطلب {name} الموافقة: {request}'],
+  'Approved: {request}': ['Aprobado: {request}', 'Approuvé : {request}', 'Genehmigt: {request}', 'تمت الموافقة: {request}'],
+  'Not approved: {request}': ['No aprobado: {request}', 'Non approuvé : {request}', 'Nicht genehmigt: {request}', 'لم تتم الموافقة: {request}'],
+  'Done: {request}': ['Hecho: {request}', 'Terminé : {request}', 'Erledigt: {request}', 'تم: {request}'],
+  'Expired: {request}': ['Caducado: {request}', 'Expiré : {request}', 'Abgelaufen: {request}', 'انتهت الصلاحية: {request}'],
+  'Waiting for a decision: {request}': ['Esperando una decisión: {request}', 'En attente d’une décision : {request}', 'Wartet auf eine Entscheidung: {request}', 'بانتظار قرار: {request}'],
+  'Not decided within {hours} hours, so it moved to you.': ['No se decidió en {hours} horas, así que pasó a ti.', 'Non décidé en {hours} heures, la demande vous a donc été transmise.', 'Nicht innerhalb von {hours} Stunden entschieden, daher liegt es jetzt bei Ihnen.', 'لم يُبتّ فيه خلال {hours} ساعة، لذا انتقل إليك.'],
+  'The approval was not used in time. Ask again if you still need it.': ['La aprobación no se usó a tiempo. Vuelve a pedirla si aún la necesitas.', 'L’approbation n’a pas été utilisée à temps. Redemandez-la si vous en avez encore besoin.', 'Die Genehmigung wurde nicht rechtzeitig verwendet. Fragen Sie erneut, falls Sie sie noch brauchen.', 'لم تُستخدم الموافقة في الوقت المحدد. اطلبها مجددًا إن كنت لا تزال بحاجة إليها.'],
+  'Nobody decided in time. Ask again if you still need it.': ['Nadie decidió a tiempo. Vuelve a pedirlo si aún lo necesitas.', 'Personne n’a décidé à temps. Redemandez si vous en avez encore besoin.', 'Niemand hat rechtzeitig entschieden. Fragen Sie erneut, falls Sie es noch brauchen.', 'لم يبتّ أحد في الوقت المحدد. اطلب مجددًا إن كنت لا تزال بحاجة إليه.'],
+  'Open Approvals to carry it out.': ['Abre Aprobaciones para llevarlo a cabo.', 'Ouvrez Approbations pour l’effectuer.', 'Öffnen Sie Genehmigungen, um es auszuführen.', 'افتح الموافقات لتنفيذه.'],
 } satisfies TextTable;

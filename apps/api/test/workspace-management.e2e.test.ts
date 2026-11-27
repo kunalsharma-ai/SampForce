@@ -4,7 +4,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PasswordService } from '../src/auth/password.service';
 import { TokenService } from '../src/auth/token.service';
-import { api, appClient, ORIGIN, ownerClient, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
+import { api, appClient, ORIGIN, ownerClient, registerUser, startApp, type TestUser, workspacePerson, perWorkspaceDelete } from './helpers';
 
 const OP_SECRET = 'operator-secret-that-is-at-least-32-chars';
 const tomorrowPlus = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
@@ -34,6 +34,8 @@ describe('workspace management', () => {
     process.env.OPERATOR_JWT_SECRET = OP_SECRET;
     app = await startApp();
     owner = await registerUser(app, `Blocking Traders ${randomUUID().slice(0, 4)}`);
+    // These tests grant Delete workspace by workspace (W2), so the organisation-wide switch is off.
+    await perWorkspaceDelete(owner);
     await db.subscription.update({ where: { tenantId: owner.tenantId }, data: { maxManagerWorkspaces: 3, maxExecutiveWorkspaces: 3 } });
     manager = await workspacePerson(app, owner, 'MANAGER', 'North Team');
     exec = await workspacePerson(app, owner, 'EXECUTIVE', 'Field Desk');

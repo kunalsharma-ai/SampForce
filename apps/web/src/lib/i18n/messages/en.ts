@@ -48,6 +48,7 @@ export const en = {
   'module.calls': 'Calls',
   'module.tasks': 'Tasks',
   'module.targets': 'Targets',
+  'module.approvals': 'Approvals',
   'module.rfqs': 'RFQs',
   'module.chat': 'Team chat',
   'module.achievements': 'My achievements',

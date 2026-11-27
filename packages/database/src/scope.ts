@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { rankOrderBy, withDerivedFields } from './derived';
 import { roundDecimals } from './money';
+import { noteRemoval } from './recycle';
 
 /**
  * Workspace isolation for MongoDB (ADR 0058).
@@ -95,6 +96,11 @@ export type LookupModel = keyof typeof LOOKUP_FIELDS;
 
 /** Queue collections the worker may read and write across workspaces (`worker_scan` FOR ALL). */
 const WORKER_ALL = new Set([
+  // Team approvals and deleted items (ADR 0098): the worker expires, escalates and purges across workspaces.
+  'TeamApproval',
+  'TeamApprovalSettings',
+  'RecycleBatch',
+  'RecycleEntry',
   'AiRun',
   // Company logo look-ups (ADR 0070): the worker claims PENDING logos across workspaces.
   'CompanyLogo',
@@ -571,6 +577,8 @@ export function workspaceGuard(base: PrismaClient) {
           }
           if (a.include) a.include = await scopeNested(model, a.include, ctx, lookups);
           if (a.select) a.select = await scopeNested(model, a.select, ctx, lookups);
+          // Deleted items (ADR 0098): inside a delete request, note what this write removes so it can be restored.
+          if (operation !== 'create' && operation !== 'createMany' && operation !== 'upsert') await noteRemoval(base, model, operation, a);
           return query(a);
         },
       },

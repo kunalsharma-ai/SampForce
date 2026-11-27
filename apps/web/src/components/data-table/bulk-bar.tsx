@@ -53,7 +53,8 @@ export function BulkBar({
     setResult(`${t(verb, { count: r.updated })}${failed}`);
     if (!r.failed.length) onClear();
   };
-  const onError = (e: Error) => setResult(e.message);
+  // The client's own messages (a delete sent to the manager for approval, a cancelled password) are phrases.
+  const onError = (e: Error) => setResult(t.maybe(e.message));
 
   return (
     <div role="region" aria-label={t('Bulk actions')} className="flex flex-wrap items-center gap-2 border-b border-border bg-primary/5 px-3 py-2 text-sm">

@@ -42,6 +42,7 @@ export const es: Messages = {
   'module.calls': 'Llamadas',
   'module.tasks': 'Tareas',
   'module.targets': 'Objetivos',
+  'module.approvals': 'Aprobaciones',
   'module.rfqs': 'RFQs',
   'module.chat': 'Chat del equipo',
   'module.achievements': 'Mis logros',

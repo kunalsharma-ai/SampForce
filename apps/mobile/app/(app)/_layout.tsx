@@ -112,6 +112,7 @@ function AppTabs() {
         }}
       />
       <Tabs.Screen name="help" options={{ ...NOT_A_TAB, headerShown: false, title: t('Help') }} />
+      <Tabs.Screen name="approvals" options={{ ...NOT_A_TAB, title: t('Approvals') }} />
     </Tabs>
   );
 }

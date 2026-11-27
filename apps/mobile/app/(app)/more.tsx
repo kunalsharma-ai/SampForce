@@ -22,6 +22,9 @@ export default function More() {
           {showProfile ? <Row icon={MODULE_ICON.profile.off} label={tMaybe(MOBILE_MODULE_BY_KEY.profile.label)} onPress={() => router.push('/profile')} last /> : null}
         </Card>
       ) : null}
+      <Card>
+        <Row icon="checkmark-done-circle-outline" label={t('Approvals')} detail={t('Ask your manager, and decide what your team asks for')} onPress={() => router.push('/approvals')} last />
+      </Card>
       <SectionLabel>{t('Help and support')}</SectionLabel>
       <Card>
         <Row icon="help-circle-outline" label={t('Help')} detail={t('Answers and guides for what you can use')} onPress={() => router.push('/help')} />
