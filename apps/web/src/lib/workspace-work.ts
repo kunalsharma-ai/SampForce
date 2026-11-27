@@ -10,6 +10,8 @@ import type {
   TargetRow,
   TargetsView,
   TargetUpdateInput,
+  TaskProgressInput,
+  TaskReaction,
 } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
@@ -52,5 +54,12 @@ export function useAssignedTaskMutations() {
     create: useMutation({ mutationFn: (input: AssignedTaskCreateInput) => api<AssignedTaskDetail>('/assigned-tasks', { method: 'POST', json: input }), onSuccess: refresh }),
     update: useMutation({ mutationFn: ({ id, input }: { id: string; input: AssignedTaskUpdateInput }) => api<AssignedTaskDetail>(`/assigned-tasks/${id}`, { method: 'PATCH', json: input }), onSuccess: refresh }),
     comment: useMutation({ mutationFn: ({ id, body }: { id: string; body: string }) => api<AssignedTaskDetail>(`/assigned-tasks/${id}/comments`, { method: 'POST', json: { body } }), onSuccess: refresh }),
+    /** The assignee says where the task stands (redesign R7). */
+    progress: useMutation({ mutationFn: ({ id, input }: { id: string; input: TaskProgressInput }) => api<AssignedTaskDetail>(`/assigned-tasks/${id}/progress`, { method: 'POST', json: input }), onSuccess: refresh }),
+    /** Adds or takes back a reaction on a comment. */
+    react: useMutation({
+      mutationFn: ({ id, commentId, emoji }: { id: string; commentId: string; emoji: TaskReaction }) => api<AssignedTaskDetail>(`/assigned-tasks/${id}/comments/${commentId}/reactions`, { method: 'POST', json: { emoji } }),
+      onSuccess: (t) => qc.setQueryData([...TASKS, t.id], t),
+    }),
   };
 }

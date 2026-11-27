@@ -12,6 +12,10 @@ import {
   targetUpdateSchema,
   type TaskCommentInput,
   taskCommentSchema,
+  type TaskProgressInput,
+  taskProgressSchema,
+  type TaskReactionInput,
+  taskReactionSchema,
   type WorkspaceDashboardQuery,
   workspaceDashboardQuerySchema,
 } from '@dealflow/types';
@@ -105,6 +109,22 @@ export class AssignedTasksController {
   @OwnHierarchyRules()
   comment(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(taskCommentSchema)) body: TaskCommentInput, @Meta() meta: RequestMeta) {
     return this.tasks.comment(auth, id, body, meta);
+  }
+
+  @Post(':id/progress')
+  @HttpCode(200)
+  @RequireFeature('task_management')
+  @OwnHierarchyRules()
+  progress(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(taskProgressSchema)) body: TaskProgressInput, @Meta() meta: RequestMeta) {
+    return this.tasks.progress(auth, id, body, meta);
+  }
+
+  @Post(':id/comments/:commentId/reactions')
+  @HttpCode(200)
+  @RequireFeature('task_management')
+  @OwnHierarchyRules()
+  react(@Auth() auth: AuthContext, @Param('id', new ParseUUIDPipe()) id: string, @Param('commentId', new ParseUUIDPipe()) commentId: string, @Body(new ZodPipe(taskReactionSchema)) body: TaskReactionInput) {
+    return this.tasks.react(auth, id, commentId, body);
   }
 }
 
