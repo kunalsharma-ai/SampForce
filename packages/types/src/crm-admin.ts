@@ -105,10 +105,7 @@ export const NOTIFICATION_CATEGORIES = [
   { key: 'follow_up_reminder', label: 'Follow-up reminder', types: ['followup.reminder', 'followup.daily', 'task.due_soon'] },
   { key: 'follow_up_overdue', label: 'Follow-up overdue', types: ['followup.overdue', 'task.overdue'] },
   // Redesign R10: the events added by the redesign get categories, so they can be muted and silenced like the rest.
-  { key: 'task_updates', label: 'Task progress and comments', types: ['task.updated', 'task.commented', 'task.completed'] },
-  // Recurring tasks (ADR 0096): what reaches the person doing it, and what reaches their manager.
-  { key: 'recurring_tasks', label: 'Recurring tasks: new, changed and reminders', types: ['daily_task.assigned', 'daily_task.updated', 'daily_task.today', 'daily_task.reminder', 'daily_task.half', 'daily_task.completed', 'daily_task.missed'] },
-  { key: 'team_task_results', label: 'Your team’s recurring task results', types: ['daily_task.team_'] },
+  { key: 'task_updates', label: 'Task progress and comments', types: ['task.updated', 'task.commented', 'task.completed', 'task.half_completed', 'task.not_completed', 'task.cancelled'] },
   { key: 'team_status', label: 'Team status: check-in, breaks and check-out', types: ['team.status'] },
   { key: 'manager_remarks', label: 'Manager remarks', types: ['remark.', 'manager_remark.'] },
   { key: 'instructions', label: 'Senior management instructions', types: ['instruction.'] },

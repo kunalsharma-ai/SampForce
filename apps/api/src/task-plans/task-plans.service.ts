@@ -218,7 +218,7 @@ export class TaskPlansService implements OnModuleInit {
         metadata: { title: plan.title, requirements: describe(v.requirements), startsOn: plan.startsOn, endsOn: plan.endsOn, assignees: assignees.length }, meta,
       });
       await this.notifications.send(tx, auth.tenantId, assignees.filter((u) => u !== auth.userId), {
-        type: 'daily_task.assigned', title: `New recurring task: ${plan.title}`, body: `From ${plan.startsOn} to ${plan.endsOn}.`, link: `/app/tasks?plan=${plan.id}`,
+        type: 'task.assigned', title: `New recurring task: ${plan.title}`, body: `From ${plan.startsOn} to ${plan.endsOn}.`, link: `/app/tasks?plan=${plan.id}`,
         eventId: `task-plan:${plan.id}:assigned`, senderId: auth.userId, actionRequired: true,
       });
       await engine.ensure([plan]);
@@ -302,15 +302,15 @@ export class TaskPlansService implements OnModuleInit {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task_plan.updated', entityType: 'task_plan', entityId: id, metadata: { title: updated.title, changes }, meta });
       const stay = assignees.filter((u) => !added.includes(u) && u !== auth.userId);
       await this.notifications.send(tx, auth.tenantId, stay, {
-        type: 'daily_task.updated', title: `Recurring task changed: ${updated.title}`, body: 'The change applies from now on. Finished days keep their numbers.', link: `/app/tasks?plan=${id}`,
+        type: 'task.updated', title: `Recurring task changed: ${updated.title}`, body: 'The change applies from now on. Finished days keep their numbers.', link: `/app/tasks?plan=${id}`,
         eventId: `task-plan:${id}:updated:${revisions.length}`, senderId: auth.userId,
       });
       await this.notifications.send(tx, auth.tenantId, added.filter((u) => u !== auth.userId), {
-        type: 'daily_task.assigned', title: `New recurring task: ${updated.title}`, body: `From ${updated.startsOn} to ${updated.endsOn}.`, link: `/app/tasks?plan=${id}`,
+        type: 'task.assigned', title: `New recurring task: ${updated.title}`, body: `From ${updated.startsOn} to ${updated.endsOn}.`, link: `/app/tasks?plan=${id}`,
         eventId: `task-plan:${id}:assigned:${revisions.length}`, senderId: auth.userId, actionRequired: true,
       });
       await this.notifications.send(tx, auth.tenantId, removed.filter((u) => u !== auth.userId), {
-        type: 'daily_task.updated', title: `Recurring task changed: ${updated.title}`, body: 'You are no longer on this task.', link: '/app/tasks', eventId: `task-plan:${id}:removed:${revisions.length}`, senderId: auth.userId,
+        type: 'task.updated', title: `Recurring task changed: ${updated.title}`, body: 'You are no longer on this task.', link: '/app/tasks', eventId: `task-plan:${id}:removed:${revisions.length}`, senderId: auth.userId,
       });
       if (updated.status === 'ACTIVE') await engine.ensure([updated]);
       return this.detailOf(tx, auth, org, me, updated);
@@ -341,7 +341,7 @@ export class TaskPlansService implements OnModuleInit {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: `task_plan.${kind}`, entityType: 'task_plan', entityId: id, metadata: { title: plan.title, ...(input.reason ? { reason: input.reason } : {}) }, meta });
       const title = to === 'PAUSED' ? `Recurring task paused: ${plan.title}` : to === 'ACTIVE' ? `Recurring task resumed: ${plan.title}` : `Recurring task cancelled: ${plan.title}`;
       await this.notifications.send(tx, auth.tenantId, plan.assigneeIds.filter((u) => u !== auth.userId), {
-        type: 'daily_task.updated', title, body: to === 'CANCELLED' ? input.reason || null : null, link: `/app/tasks?plan=${id}`, eventId: `task-plan:${id}:${kind}:${revisions.length}`, senderId: auth.userId,
+        type: to === 'CANCELLED' ? 'task.cancelled' : 'task.updated', title, body: to === 'CANCELLED' ? input.reason || null : null, link: `/app/tasks?plan=${id}`, eventId: `task-plan:${id}:${kind}:${revisions.length}`, senderId: auth.userId,
       });
       if (to === 'ACTIVE') {
         // A paused day was cancelled; resuming the same day brings it back.

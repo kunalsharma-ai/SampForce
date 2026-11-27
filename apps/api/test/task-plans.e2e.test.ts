@@ -75,7 +75,7 @@ describe('recurring tasks, targets and rankings', () => {
     expect(mine.today).toHaveLength(1);
     expect(mine.today[0]).toMatchObject({ title: 'Daily prospecting', cadence: 'DAY', status: 'NOT_STARTED', percent: 0 });
     const told = (await api(executive).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
-    expect(told.some((n) => n.type === 'daily_task.assigned' && n.title === 'New recurring task: Daily prospecting')).toBe(true);
+    expect(told.some((n) => n.type === 'task.assigned' && n.title === 'New recurring task: Daily prospecting')).toBe(true);
     // The manager sees it on the team's list.
     const team = (await api(manager).get('/task-plans').expect(200)).body as TaskPlansView;
     expect(team.teamToday.map((i) => i.person.name)).toContain('Kunal Verma');
@@ -110,10 +110,10 @@ describe('recurring tasks, targets and rankings', () => {
     expect(achievements.some((a) => a.kind === 'TASK_PLAN_HALF')).toBe(true);
     for (const who of [manager, superAdmin]) {
       const items = (await api(who).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
-      expect(items.some((n) => n.type === 'daily_task.team_completed' && n.title === 'Kunal Verma completed Daily prospecting')).toBe(true);
+      expect(items.some((n) => n.type === 'task.completed' && n.title === 'Kunal Verma completed Daily prospecting')).toBe(true);
     }
-    const own = (await api(executive).get('/notifications').expect(200)).body.items as { type: string }[];
-    expect(own.filter((n) => n.type === 'daily_task.completed')).toHaveLength(1);
+    const own = (await api(executive).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
+    expect(own.filter((n) => n.type === 'task.completed' && n.title === 'Completed: Daily prospecting')).toHaveLength(1);
   });
 
   it('applies a change from now on, keeps finished days, and tells the executive', async () => {
@@ -129,7 +129,7 @@ describe('recurring tasks, targets and rankings', () => {
     // The new weekly requirement starts this week.
     expect(changed.instances.find((i) => i.cadence === 'WEEK')).toMatchObject({ status: 'NOT_STARTED', requirements: [{ metric: 'MEETINGS', amount: 2 }] });
     const told = (await api(executive).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
-    expect(told.some((n) => n.type === 'daily_task.updated' && n.title === 'Recurring task changed: Daily prospecting')).toBe(true);
+    expect(told.some((n) => n.type === 'task.updated' && n.title === 'Recurring task changed: Daily prospecting')).toBe(true);
   });
 
   it('closes an ended period as partially or not completed and tells the manager', async () => {
@@ -145,7 +145,7 @@ describe('recurring tasks, targets and rankings', () => {
     await prisma.run({ tenantId: superAdmin.tenantId } as never, (tx) => svc.runTenant(tx, superAdmin.tenantId, new Date(instance.endsAt.getTime() + 3_600_000)));
     expect(await db.taskPlanInstance.findUniqueOrThrow({ where: { id: instance.id } })).toMatchObject({ status: 'PARTIALLY_COMPLETED', percent: 10 });
     const items = (await api(manager).get('/notifications').expect(200)).body.items as { type: string; title: string }[];
-    expect(items.some((n) => n.type === 'daily_task.team_missed' && n.title === 'Arjun Mehta did not complete Weekly calls (10%)')).toBe(true);
+    expect(items.some((n) => n.type === 'task.not_completed' && n.title === 'Arjun Mehta did not complete Weekly calls (10%)')).toBe(true);
     const detail = (await api(executive2).get(`/task-plans/${plan.id}`).expect(200)).body as TaskPlanDetail;
     expect(detail.totals).toMatchObject({ partial: 1 });
     // With history, the plan can be cancelled but not deleted.

@@ -234,11 +234,11 @@ export class TaskPlanEngine {
       },
     ]);
     await this.notifications.send(this.tx, this.tenantId, [instance.userId], {
-      type: 'daily_task.completed', title: `Completed: ${plan.title}`, body: 'Great work! Everything this task asked for is done.', link: this.link(instance), eventId: `task-plan:${instance.id}:done`,
+      type: 'task.completed', title: `Completed: ${plan.title}`, body: 'Great work! Everything this task asked for is done.', link: this.link(instance), eventId: `task-plan:${instance.id}:done`,
     });
     const name = await this.nameOf(instance.userId);
     await this.notifications.send(this.tx, this.tenantId, await this.watchers(plan, instance.userId, 'done'), {
-      type: 'daily_task.team_completed', title: `${name} completed ${plan.title}`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:done:team`, senderId: instance.userId,
+      type: 'task.completed', title: `${name} completed ${plan.title}`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:done:team`, senderId: instance.userId,
     });
   }
 
@@ -251,22 +251,22 @@ export class TaskPlanEngine {
       },
     ]);
     await this.notifications.send(this.tx, this.tenantId, [instance.userId], {
-      type: 'daily_task.half', title: `Halfway there: ${plan.title}`, body: 'Keep going. Every record you add counts by itself.', link: this.link(instance), eventId: `task-plan:${instance.id}:half`,
+      type: 'task.half_completed', title: `Halfway there: ${plan.title}`, body: 'Keep going. Every record you add counts by itself.', link: this.link(instance), eventId: `task-plan:${instance.id}:half`,
     });
     const name = await this.nameOf(instance.userId);
     await this.notifications.send(this.tx, this.tenantId, await this.watchers(plan, instance.userId, 'half'), {
-      type: 'daily_task.team_half', title: `${name} is halfway through ${plan.title}`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:half:team`, senderId: instance.userId,
+      type: 'task.half_completed', title: `${name} is halfway through ${plan.title}`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:half:team`, senderId: instance.userId,
     });
   }
 
   private async missed(instance: InstanceRow, plan: PlanRow, percent: number): Promise<void> {
     const p = String(Math.floor(percent));
     await this.notifications.send(this.tx, this.tenantId, [instance.userId], {
-      type: 'daily_task.missed', title: `Not completed: ${plan.title} (${p}%)`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:missed`,
+      type: 'task.not_completed', title: `Not completed: ${plan.title} (${p}%)`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:missed`,
     });
     const name = await this.nameOf(instance.userId);
     await this.notifications.send(this.tx, this.tenantId, await this.watchers(plan, instance.userId, 'missed'), {
-      type: 'daily_task.team_missed', title: `${name} did not complete ${plan.title} (${p}%)`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:missed:team`, senderId: instance.userId,
+      type: 'task.not_completed', title: `${name} did not complete ${plan.title} (${p}%)`, body: null, link: this.link(instance), eventId: `task-plan:${instance.id}:missed:team`, senderId: instance.userId,
     });
   }
 
@@ -278,7 +278,7 @@ export class TaskPlanEngine {
       : key === 'r16' ? `The day ends soon: ${plan.title} is ${p}% done`
       : `Last day for ${plan.title}: ${p}% done`;
     await this.notifications.send(this.tx, this.tenantId, [instance.userId], {
-      type: key === 'today' ? 'daily_task.today' : 'daily_task.reminder', title, body: 'Progress counts by itself from the records you add.', link: this.link(instance), eventId: `task-plan:${instance.id}:${key}`, actionRequired: key === 'today',
+      type: 'task.due_soon', title, body: 'Progress counts by itself from the records you add.', link: this.link(instance), eventId: `task-plan:${instance.id}:${key}`, actionRequired: key === 'today',
     });
   }
 }
