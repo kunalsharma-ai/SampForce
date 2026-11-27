@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { ChatNotices, useUnreadTitle } from '@/components/chat/chat-notices';
+import { QuickChatPanel, QuickChatTab } from '@/components/chat/quick-chat';
 import { useChatLive, useChatUnread, userRealm } from '@/lib/chat';
 import { useHasFeature } from '@/lib/features';
 import { useSession } from '@/lib/session';
@@ -23,7 +24,13 @@ export function ChatLive() {
   const unread = useChatUnread(realm).data?.total ?? 0;
   useUnreadTitle(realm ? unread : 0);
   if (!realm) return null;
-  return <ChatNotices />;
+  return (
+    <>
+      <ChatNotices />
+      <QuickChatTab realm={realm} />
+      <QuickChatPanel realm={realm} />
+    </>
+  );
 }
 
 /** The unread chat count for the sidebar's Team chat item. */

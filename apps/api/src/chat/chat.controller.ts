@@ -1,7 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
+  type ChatReactionInput,
+  chatReactionSchema,
   chatConversationInputSchema,
   chatConversationUpdateSchema,
   chatDeliveredSchema,
@@ -173,6 +175,12 @@ export class ChatController {
     return this.chat.edit(user(auth), id, body.body);
   }
 
+  /** Adds or takes back your emoji reaction (redesign R9). */
+  @Put('messages/:id/reactions')
+  react(@Auth() auth: AuthContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatReactionSchema)) body: ChatReactionInput) {
+    return this.chat.react(user(auth), id, body);
+  }
+
   @NoPasswordConfirmation('Leaving or tidying a conversation, or taking back your own message')
   @Delete('messages/:id')
   @HttpCode(204)
@@ -296,6 +304,12 @@ export class OperatorChatController {
     const message = await this.chat.edit(this.op(op), id, body.body, tenantId);
     await this.log(op, 'support_chat.message_edited', tenantId, { conversationId: (message as { conversationId?: string }).conversationId ?? null, messageId: id }, req);
     return message;
+  }
+
+  @Put('messages/:id/reactions')
+  @OperatorNoAudit()
+  async react(@Operator() op: OperatorContext, @Param('id', uuid) id: string, @Body(new ZodPipe(chatReactionSchema)) body: ChatReactionInput) {
+    return this.chat.react(this.op(op), id, body, await this.chat.tenantOfMessage(id));
   }
 
   @NoPasswordConfirmation('Leaving or tidying a conversation, or taking back your own message')

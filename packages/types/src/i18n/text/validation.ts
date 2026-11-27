@@ -327,5 +327,18 @@ export const validation = {
   'is not from this company': ['no es de esta empresa', 'ne provient pas de cette entreprise', 'stammt nicht von diesem Unternehmen', 'ليس من هذه الشركة'],
   'Pick a country': ['Elige un país', 'Choisissez un pays', 'Wählen Sie ein Land', 'اختر دولة'],
   'Enter the target group': ['Introduce el grupo objetivo', 'Saisissez le groupe cible', 'Geben Sie die Zielgruppe ein', 'أدخل الفئة المستهدفة'],
+  'Pick an emoji': ['Elige un emoji', 'Choisissez un emoji', 'Wählen Sie ein Emoji', 'اختر رمزًا تعبيريًا'],
+  'Team chat takes text and emoji only: files and record links are switched off.': [
+    'El chat del equipo admite solo texto y emojis: los archivos y los enlaces a registros están desactivados.',
+    'Le chat d’équipe accepte uniquement du texte et des emojis : les fichiers et les liens vers des fiches sont désactivés.',
+    'Der Team-Chat nimmt nur Text und Emojis an: Dateien und Verknüpfungen zu Datensätzen sind ausgeschaltet.',
+    'دردشة الفريق تقبل النص والرموز التعبيرية فقط: الملفات وروابط السجلات متوقفة.',
+  ],
+  'Messages in a SampBidx chat cannot take reactions, because SampBidx would not see them.': [
+    'Los mensajes de un chat de SampBidx no admiten reacciones, porque SampBidx no las vería.',
+    'Les messages d’un chat SampBidx ne prennent pas de réactions, car SampBidx ne les verrait pas.',
+    'Nachrichten in einem SampBidx-Chat nehmen keine Reaktionen an, weil SampBidx sie nicht sehen würde.',
+    'لا تقبل الرسائل في دردشة SampBidx التفاعلات، لأن SampBidx لن يراها.',
+  ],
   'Pick a time zone': ['Elige una zona horaria', 'Choisissez un fuseau horaire', 'Wählen Sie eine Zeitzone', 'اختر منطقة زمنية'],
 } as const satisfies TextTable;

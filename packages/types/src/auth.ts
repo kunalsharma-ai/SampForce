@@ -88,7 +88,17 @@ export interface MeResponse {
   role: string;
   permissions: string[];
   /** The caller's place in the workspace hierarchy (ADR 0071). */
-  workspace: { id: string; level: 'SUPER' | 'MANAGER' | 'EXECUTIVE'; name: string; designation: string; actions: Partial<Record<string, string[]>> };
+  workspace: {
+    id: string;
+    level: 'SUPER' | 'MANAGER' | 'EXECUTIVE';
+    name: string;
+    designation: string;
+    actions: Partial<Record<string, string[]>>;
+    /** Record fields the Console hides from this level (`company.primaryEmail`…; R8, ADR 0092). Empty for the Super Workspace. */
+    hiddenFields?: string[];
+    /** Sections the Console withholds from this level; left out of the menu, search and shortcuts like a switched-off page. */
+    hiddenSections?: string[];
+  };
   memberships: MembershipSummary[];
   /** How this session signed in. */
   authMethod: 'password' | 'mfa' | 'sso';

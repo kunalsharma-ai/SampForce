@@ -1,9 +1,9 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MeResponse, Permission } from '@dealflow/types';
+import { type FieldEntity, hiddenKeysByEntity, type MeResponse, type Permission } from '@dealflow/types';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { api, ApiError } from './api';
 
 export function useSession() {
@@ -18,6 +18,16 @@ export function useSession() {
 export function useCan(permission: Permission): boolean {
   const { data } = useSession();
   return !!data?.permissions.includes(permission);
+}
+
+/**
+ * The properties of a record type the Console hides from this workspace's level (R8, ADR 0092). The server already
+ * sends them empty and ignores changes; screens use this to leave the inputs out instead of showing blank ones.
+ */
+export function useHiddenKeys(entity: FieldEntity | null): Set<string> {
+  const { data } = useSession();
+  const hidden = data?.workspace?.hiddenFields;
+  return useMemo(() => new Set(entity ? (hiddenKeysByEntity(hidden ?? [])[entity] ?? []) : []), [hidden, entity]);
 }
 
 export function useSignOut() {

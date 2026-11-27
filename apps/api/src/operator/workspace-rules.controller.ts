@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
-import { type PutClientWorkspaceRules, putClientWorkspaceRulesSchema, type PutPlanWorkspaceRules, putPlanWorkspaceRulesSchema, z } from '@dealflow/types';
+import { type PutClientMenuSections, putClientMenuSectionsSchema, type PutClientWorkspaceRules, putClientWorkspaceRulesSchema, type PutPlanWorkspaceRules, putPlanWorkspaceRulesSchema, z } from '@dealflow/types';
 import { Public } from '../common/auth-context';
 import { ZodPipe } from '../common/zod.pipe';
 import { Operator, type OperatorContext, OperatorGuard, OperatorPermission } from './operator-auth';
@@ -41,5 +41,17 @@ export class WorkspaceRulesController {
   @OperatorPermission('workspaces.manage')
   setClient(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(putClientWorkspaceRulesSchema)) body: PutClientWorkspaceRules, @Req() req: Request) {
     return this.rules.setClient(op, id, body, ip(req));
+  }
+
+  @Get('clients/:id/menu-sections')
+  @OperatorPermission('workspaces.view')
+  menuSections(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.rules.menuSections(id);
+  }
+
+  @Put('clients/:id/menu-sections')
+  @OperatorPermission('workspaces.manage')
+  setMenuSections(@Operator() op: OperatorContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodPipe(putClientMenuSectionsSchema)) body: PutClientMenuSections, @Req() req: Request) {
+    return this.rules.setMenuSections(op, id, body, ip(req));
   }
 }
