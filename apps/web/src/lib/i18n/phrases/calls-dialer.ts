@@ -74,7 +74,6 @@ export const callsDialer = {
   'Oldest first': ['Más antiguas primero', 'Plus anciens d’abord', 'Älteste zuerst', 'الأقدم أولًا'],
   'Longest first': ['Más largas primero', 'Plus longs d’abord', 'Längste zuerst', 'الأطول أولًا'],
   'No calls match these filters.': ['Ninguna llamada coincide con estos filtros.', 'Aucun appel ne correspond à ces filtres.', 'Keine Anrufe passen zu diesen Filtern.', 'لا توجد مكالمات تطابق عوامل التصفية هذه.'],
-  'Show more': ['Mostrar más', 'Afficher plus', 'Mehr anzeigen', 'عرض المزيد'],
   'Called by': ['Llamó', 'Appelé par', 'Angerufen von', 'المتصل'],
   'from {number}': ['desde {number}', 'depuis {number}', 'von {number}', 'من {number}'],
   'Next follow-up {when}': ['Próximo seguimiento {when}', 'Prochain suivi {when}', 'Nächste Wiedervorlage {when}', 'المتابعة التالية {when}'],

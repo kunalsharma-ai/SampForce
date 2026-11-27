@@ -430,7 +430,7 @@ export const PROVIDER_CATALOGUE: CatalogueProvider[] = [
   },
   {
     key: 'website_enquiries', name: 'Website enquiries (company website)',
-    usedFor: "Website Enquiry (ADR 0095): every enquiry, download form, live chat lead, newsletter sign-up and review from the company website's Sampforce API, in one workspace",
+    usedFor: "Website Enquiry (ADR 0095): every enquiry, download form, live chat enquiry, newsletter sign-up and review from the company website's Sampforce API, in one workspace",
     fields: [
       { name: 'WEBSITE_API_BASE_URL', label: 'API address', required: true, help: 'The website super admin > System > Sampforce (sales) > API address, for example https://www.frequentresearch.com/api/v1/sampforce.', normalize: (v) => v.replace(/\/+$/, '') },
       { name: 'WEBSITE_API_KEY', label: 'API key (sfk_...)', required: true, help: 'Made under System > Sampforce (sales) > Make an API key. Shown there only once. Keep the default rights; leads:write lets SampForce send statuses back.', validate: (v) => (/^sfk_\S{8,}$/.test(v) ? null : 'The key starts with sfk_.') },

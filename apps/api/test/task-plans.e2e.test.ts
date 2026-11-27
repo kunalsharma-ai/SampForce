@@ -166,7 +166,9 @@ describe('recurring tasks, targets and rankings', () => {
     await api(other).get(`/task-plans/${plan.id}`).expect(404);
     // A task never starts in the past; a fresh task without history can be deleted.
     await api(manager).post('/task-plans', { title: 'Old', requirements: [{ metric: 'CALLS', amount: 3, per: 'DAY' }], duration: 'ONE_DAY', startsOn: '2020-01-01', assigneeIds: [executive.userId] }).expect(400);
-    await api(executive).del(`/task-plans/${self.id}`).expect(204);
+    // An Executive Workspace asks its manager before deleting (team approvals, ADR 0098); the Super Workspace deletes it.
+    expect((await api(executive).del(`/task-plans/${self.id}`).expect(403)).body.error.code).toBe('APPROVAL_REQUIRED');
+    await api(superAdmin).del(`/task-plans/${self.id}`).expect(204);
   });
 
   it('pausing stops today’s instance and resuming the same day brings it back', async () => {

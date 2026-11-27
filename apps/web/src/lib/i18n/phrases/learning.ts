@@ -360,7 +360,6 @@ export const learning = {
   'Learning time': ['Tiempo de aprendizaje', 'Temps de formation', 'Lernzeit', 'وقت التعلّم'],
   'By workspace': ['Por espacio de trabajo', 'Par espace de travail', 'Nach Workspace', 'حسب مساحة العمل'],
   '{people} people · average {avg} · {overdue} overdue': ['{people} personas · media {avg} · {overdue} vencidos', '{people} personnes · moyenne {avg} · {overdue} en retard', '{people} Personen · Schnitt {avg} · {overdue} überfällig', '{people} أشخاص · المتوسط {avg} · {overdue} متأخرة'],
-  'By category': ['Por categoría', 'Par catégorie', 'Nach Kategorie', 'حسب الفئة'],
   '{n} modules · average {avg}': ['{n} módulos · media {avg}', '{n} modules · moyenne {avg}', '{n} Module · Schnitt {avg}', '{n} وحدات · المتوسط {avg}'],
   'No modules yet.': ['Aún no hay módulos.', 'Pas encore de module.', 'Noch keine Module.', 'لا توجد وحدات بعد.'],
   'All modules': ['Todos los módulos', 'Tous les modules', 'Alle Module', 'كل الوحدات'],

@@ -3,7 +3,7 @@ import type { OrgActivityRow, OrgCredentialRow, OrgDocumentDetail, OrgDocumentRo
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { OrgExpiryRemindersService } from '../src/my-organization/org-expiry-reminders.service';
-import { api, asTenant, confirmationFor, ORIGIN, ownerClient, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
+import { api, asTenant, confirmationFor, ORIGIN, ownerClient, perWorkspaceDelete, registerUser, startApp, type TestUser, workspacePerson } from './helpers';
 
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n');
 const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000040000000400806000000aa6971de0000000049454e44ae426082', 'hex');
@@ -32,6 +32,8 @@ describe('my organization', () => {
     app = await startApp();
     owner = await registerUser(app, 'Frequent Research Fieldwork');
     await db.subscription.update({ where: { tenantId: owner.tenantId }, data: { maxManagerWorkspaces: 3, maxExecutiveWorkspaces: 3 } });
+    // Delete is handed down workspace by workspace here (W2), not with Edit as team approvals do by default (ADR 0098).
+    await perWorkspaceDelete(owner);
     manager = await workspacePerson(app, owner, 'MANAGER', 'Neha Manager');
     executive = await workspacePerson(app, owner, 'EXECUTIVE', 'Arun Executive');
   });

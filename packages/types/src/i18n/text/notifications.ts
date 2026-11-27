@@ -31,7 +31,7 @@ export const notifications = {
   'New website enquiry from {name}': ['Nueva consulta del sitio web de {name}', 'Nouvelle demande du site web de {name}', 'Neue Website-Anfrage von {name}', 'استفسار جديد من الموقع من {name}'],
   'New review from {name}': ['Nueva reseña de {name}', 'Nouvel avis de {name}', 'Neue Bewertung von {name}', 'مراجعة جديدة من {name}'],
   'New newsletter sign-up from {name}': ['Nueva suscripción al boletín de {name}', 'Nouvelle inscription à la newsletter de {name}', 'Neue Newsletter-Anmeldung von {name}', 'اشتراك جديد في النشرة من {name}'],
-  'New live chat lead from {name}': ['Nuevo lead del chat en vivo de {name}', 'Nouveau prospect du chat en direct de {name}', 'Neuer Live-Chat-Lead von {name}', 'عميل محتمل جديد من الدردشة المباشرة من {name}'],
+  'New live chat enquiry from {name}': ['Nueva consulta del chat en vivo de {name}', 'Nouvelle demande du chat en direct de {name}', 'Neue Live-Chat-Anfrage von {name}', 'استفسار جديد من الدردشة المباشرة من {name}'],
   'New download from {name}': ['Nueva descarga de {name}', 'Nouveau téléchargement de {name}', 'Neuer Download von {name}', 'تنزيل جديد من {name}'],
   // Card payments, quotes and proposals
   'Proposal {ref} was paid': ['La propuesta {ref} se ha pagado', 'La proposition {ref} a été payée', 'Angebot {ref} wurde bezahlt', 'تم دفع العرض {ref}'],

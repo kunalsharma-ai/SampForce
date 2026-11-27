@@ -131,5 +131,4 @@ export const dealsRedesign = {
   'Cold call': ['Llamada en frío', 'Appel à froid', 'Kaltakquise', 'اتصال بارد'],
   Event: ['Evento', 'Événement', 'Event', 'فعالية'],
   Partner: ['Socio', 'Partenaire', 'Partner', 'شريك'],
-  'Existing client': ['Cliente existente', 'Client existant', 'Bestandskunde', 'عميل حالي'],
 } as const satisfies PhraseTable;

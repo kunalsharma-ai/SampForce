@@ -811,7 +811,7 @@ export function buildOpenApiDocument(): object {
   action('get', '/website-enquiries/{id}', 'Website Enquiry', 'One enquiry with every form field, write-back state and matching CRM records; opening marks it seen (enquiries:read)');
   action('post', '/website-enquiries/seen', 'Website Enquiry', 'Mark every enquiry seen (enquiries:read)');
   action('post', '/website-enquiries/{id}/unread', 'Website Enquiry', 'Mark one enquiry unread again (enquiries:read)');
-  action('patch', '/website-enquiries/{id}', 'Website Enquiry', 'Change status, stage, owner, note or star; a lead change is sent back to the website (enquiries:write)', enquiryUpdateSchema);
+  action('patch', '/website-enquiries/{id}', 'Website Enquiry', 'Change status, stage, owner, note or star; a change is sent back to the website (enquiries:write)', enquiryUpdateSchema);
   action('post', '/website-enquiries/{id}/convert', 'Website Enquiry', 'Turn an enquiry into a company and employee, reusing ones that match (enquiries:write, companies:write, contacts:write)', enquiryConvertSchema);
   action('post', '/website-enquiries/sync', 'Website Enquiry', 'Pull from the website now instead of waiting for the next pass (enquiries:write)');
   r.registerPath({ method: 'post', path: '/hooks/website-enquiries', tags: ['Website Enquiry'], summary: 'The website\'s signed webhook (X-Sampforce-Signature, HMAC-SHA256 of "t.body"); 401 on a bad signature, 503 until a receiving workspace is set', responses: { 200: ok('Received'), ...errors } });

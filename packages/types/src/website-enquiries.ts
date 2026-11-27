@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /*
- * Website Enquiry (ADR 0095). Every enquiry form, download form, case study and resource download, live chat lead,
+ * Website Enquiry (ADR 0095). Every enquiry form, download form, case study and resource download, live chat enquiry,
  * newsletter sign-up and review sent on the company website reaches SampForce from the website's "Sampforce API":
  * a signed webhook within seconds, and a pull sync every few minutes as a safety net. Both carry the website's own id,
  * so a record arriving both ways is one row.
@@ -27,7 +27,7 @@ export const ENQUIRY_TYPE_LABELS: Record<EnquiryType, string> = {
   download: 'Download forms',
   'resource-download': 'Resource downloads',
   'case-study-download': 'Case study downloads',
-  chat: 'Live chat leads',
+  chat: 'Live chat enquiries',
   newsletter: 'Newsletter sign-ups',
   review: 'Reviews',
   careers: 'Job applications',

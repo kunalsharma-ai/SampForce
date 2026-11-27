@@ -221,10 +221,10 @@ export const engageHelp = {
   'page.websiteEnquiries': {
     title: 'Website Enquiry',
     what: [
-      'Every enquiry, download form, case study and resource download, live chat message, newsletter sign-up and review sent on your company website, here within seconds.',
-      'Cada consulta, formulario de descarga, descarga de casos y recursos, mensaje del chat, suscripción al boletín y reseña enviada en la web de tu empresa, aquí en segundos.',
-      'Chaque demande, formulaire de téléchargement, étude de cas, ressource, message du chat, inscription à la newsletter et avis envoyé sur le site de votre entreprise, ici en quelques secondes.',
-      'Jede Anfrage, jedes Download-Formular, jeder Fallstudien- und Ressourcen-Download, Live-Chat-Nachricht, Newsletter-Eintrag und jede Bewertung von Ihrer Firmenwebsite, hier in Sekunden.',
+      'Every enquiry, download form, case study and resource download, live chat enquiry, newsletter sign-up and review sent on your company website, here within seconds.',
+      'Cada consulta, formulario de descarga, descarga de casos y recursos, consulta del chat, suscripción al boletín y reseña enviada en la web de tu empresa, aquí en segundos.',
+      'Chaque demande, formulaire de téléchargement, étude de cas, ressource, demande du chat, inscription à la newsletter et avis envoyé sur le site de votre entreprise, ici en quelques secondes.',
+      'Jede Anfrage, jedes Download-Formular, jeder Fallstudien- und Ressourcen-Download, Live-Chat-Anfrage, Newsletter-Eintrag und jede Bewertung von Ihrer Firmenwebsite, hier in Sekunden.',
       'كل استفسار ونموذج تنزيل وتنزيل دراسة حالة أو مورد وعميل محتمل من الدردشة واشتراك في النشرة وتقييم يُرسل على موقع شركتك، هنا خلال ثوانٍ.',
     ],
     how: [

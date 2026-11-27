@@ -170,7 +170,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'campaigns', group: 'Engage', label: 'Campaigns', description: 'Campaign tracking with first-touch attribution.', defaultFrom: 'launch', paths: ['/app/campaigns'] },
   // ADR 0095: replaces Website visitors (ADR 0029, removed). The Console Admin switches it on for the organisation that
   // receives the company website's enquiries (Providers > Website enquiries does it when it names the workspace).
-  { key: 'website_enquiries', group: 'Engage', label: 'Website enquiries', description: 'Every enquiry, download form, live chat lead, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.', defaultFrom: 'free', paths: ['/app/website-enquiries'], since: 6, optIn: true },
+  { key: 'website_enquiries', group: 'Engage', label: 'Website enquiries', description: 'Every enquiry, download form, live chat enquiry, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.', defaultFrom: 'free', paths: ['/app/website-enquiries'], since: 6, optIn: true },
   { key: 'meeting_intelligence', group: 'Engage', label: 'Meeting recordings', description: 'Meeting recordings, transcripts and AI summaries.', defaultFrom: 'growth', paths: ['/app/meetings/records'] },
   { key: 'voice_notes', group: 'Engage', label: 'Voice to CRM', description: 'Voice notes turned into suggested CRM updates.', defaultFrom: 'professional', paths: [] },
 

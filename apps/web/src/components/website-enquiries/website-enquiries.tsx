@@ -60,7 +60,7 @@ function readFilters(p: URLSearchParams): EnquiryFilters {
 
 /**
  * The Website Enquiry section (ADR 0095): everything the company website receives (enquiry and download forms, live
- * chat leads, newsletter sign-ups and reviews) the moment it arrives, with counts by type, category and form, a list
+ * chat enquirys, newsletter sign-ups and reviews) the moment it arrives, with counts by type, category and form, a list
  * to work through, and a panel to follow each one up and convert it into a company and employee.
  */
 export function WebsiteEnquiryWorkspace() {
@@ -305,7 +305,7 @@ function Hero({ summary: s, onOpen }: { summary: EnquirySummary; onOpen: (id: st
         <Kpi label={t('Today')} value={s.today} icon={BellRing} glow={s.today > 0} />
         <Kpi label={t('This week')} value={s.week} icon={TrendingUp} />
         <Kpi label={t('All time')} value={s.total} icon={Inbox} />
-        <Kpi label={t('Converted')} value={s.converted} icon={Sparkles} hint={s.conversionRate !== null ? t('{rate}% of leads', { rate: s.conversionRate }) : undefined} />
+        <Kpi label={t('Converted')} value={s.converted} icon={Sparkles} hint={s.conversionRate !== null ? t('{rate}% of enquiries', { rate: s.conversionRate }) : undefined} />
         <Kpi label={t('Average rating')} value={s.averageRating !== null ? s.averageRating.toFixed(1) : '–'} icon={Star} hint={s.averageRating !== null ? '★'.repeat(Math.round(s.averageRating)) : t('No reviews yet')} />
       </dl>
 

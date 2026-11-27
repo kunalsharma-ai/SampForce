@@ -93,6 +93,7 @@ export const PAGE_HELP: Readonly<Record<string, HelpId>> = {
   '/app/my-organization': 'page.myOrganization',
   '/app/team': 'page.team',
   '/app/integrations': 'page.integrations',
+  '/app/integrations/sampbidx': 'page.integrations',
   '/app/billing': 'page.billing',
   '/app/settings': 'page.settings',
   '/app/settings/appearance': 'page.themeStudio',

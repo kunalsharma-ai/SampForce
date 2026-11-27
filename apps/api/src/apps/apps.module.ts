@@ -27,7 +27,7 @@ import { ChatModule } from '../chat/chat.module';
 @Module({
   imports: [CrmModule, ChatModule],
   controllers: [DocusignController, CardPaymentsController, WhatsappController, TwilioController, SampbidxChatController, SampbidxChatCallbackController, SampbidxController, AppsController],
-  providers: [AppsService, DocusignClient, DocusignService, CardPaymentsClient, CardPaymentsService, WhatsappClient, WhatsappService, TwilioClient, TwilioService, SampbidxClient, SampbidxService, SampbidxChatService, NotificationsService],
+  providers: [AppsService, DocusignClient, DocusignService, CardPaymentsClient, CardPaymentsService, WhatsappClient, WhatsappService, TwilioClient, TwilioService, SampbidxClient, SampbidxService, SampbidxBulkService, SampbidxChatService, NotificationsService],
   exports: [AppsService, TwilioClient, DocusignClient, DocusignService, CardPaymentsService, WhatsappService, TwilioService, SampbidxService, SampbidxChatService],
 })
 export class AppsModule {}

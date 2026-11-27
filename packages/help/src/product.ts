@@ -150,7 +150,7 @@ export const PRODUCT_BRIEFS: readonly ProductBrief[] = [
     [
       ['Send windows, tracking and reply detection', 'Ventanas de envío, seguimiento y detección de respuestas', 'Plages d’envoi, suivi et détection des réponses', 'Versandfenster, Tracking und Antworterkennung', 'نوافذ إرسال وتتبع واكتشاف الردود'],
       ['Hosted contact forms with recorded consent', 'Formularios de contacto alojados con consentimiento registrado', 'Formulaires de contact hébergés avec consentement enregistré', 'Gehostete Kontaktformulare mit erfasster Einwilligung', 'نماذج مستضافة مع تسجيل الموافقة'],
-      ['Every website enquiry, download and chat message in seconds', 'Cada consulta, descarga y mensaje del chat de la web en segundos', 'Chaque demande, téléchargement et message du chat du site en quelques secondes', 'Jede Website-Anfrage, jeder Download und Chat-Nachricht in Sekunden', 'كل استفسار وتنزيل وعميل دردشة من الموقع خلال ثوانٍ'],
+      ['Every website enquiry, download and chat enquiry in seconds', 'Cada consulta, descarga y consulta del chat de la web en segundos', 'Chaque demande, téléchargement et demande du chat du site en quelques secondes', 'Jede Website-Anfrage, jeder Download und Chat-Anfrage in Sekunden', 'كل استفسار وتنزيل وعميل دردشة من الموقع خلال ثوانٍ'],
     ]),
   b('documents', 'feature', 'documents', { icon: 'file-text', tone: 1 }, ['quotes', 'proposals', 'contracts'], ['page.quotes', 'page.quickBid', 'page.contracts'],
     ['Quotes, proposals and contracts', 'Cotizaciones, propuestas y contratos', 'Devis, propositions et contrats', 'Angebote, Vorschläge und Verträge', 'عروض الأسعار والمقترحات والعقود'],

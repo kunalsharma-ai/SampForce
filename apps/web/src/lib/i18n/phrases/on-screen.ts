@@ -64,6 +64,6 @@ export const onScreen = {
     'يستغرق هذا وقتًا أطول من المعتاد. قد يكون اتصالك أو الخادم بطيئًا.',
   ],
   'Part of this page did not load.': ['Parte de esta página no se cargó.', 'Une partie de cette page ne s’est pas chargée.', 'Ein Teil dieser Seite wurde nicht geladen.', 'لم يُحمَّل جزء من هذه الصفحة.'],
-  'Employee of the Month': ['Empleado del mes', 'Employé du mois', 'Mitarbeiter des Monats', 'موظف الشهر'],
+  'Employee of the Month': ['Empleado del Mes', 'Employé du mois', 'Mitarbeiter des Monats', 'موظف الشهر'],
   'Performance plan': ['Plan de mejora del rendimiento', 'Plan d’amélioration des performances', 'Leistungsverbesserungsplan', 'خطة تحسين الأداء'],
 } as const satisfies PhraseTable;

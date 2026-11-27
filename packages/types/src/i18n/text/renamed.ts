@@ -3,6 +3,7 @@
  * Notifications and other text stored before the change still read in the new wording and still translate.
  */
 export const RENAMED_TEXT: Readonly<Record<string, string>> = {
+  "New live chat lead from {name}": "New live chat enquiry from {name}",
   "A note needs a record. Make the voice note from a lead, contact, deal or company.": "A note needs a record. Make the voice note from a contact, deal or company.",
   "Assign inbound leads to an owner.": "Assign inbound contacts to an owner.",
   "Choose who takes the lead": "Choose who takes the company",

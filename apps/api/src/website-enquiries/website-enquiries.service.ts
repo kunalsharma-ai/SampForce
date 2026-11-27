@@ -58,7 +58,7 @@ export interface IngestOutcome {
 }
 
 /**
- * Website Enquiry (ADR 0095): receives the company website's enquiries, downloads, chat leads, newsletter sign-ups
+ * Website Enquiry (ADR 0095): receives the company website's enquiries, downloads, chat enquirys, newsletter sign-ups
  * and reviews (webhook and pull both land in `ingest`), and serves the section's pages: counts, the list, one
  * enquiry, its status (sent back to the website by WebsiteEnquirySync) and conversion into a company and employee.
  */
@@ -124,7 +124,7 @@ export class WebsiteEnquiriesService {
   private async notifyNew(tx: TenantTx, tenantId: string, row: WebsiteEnquiry): Promise<void> {
     const name = row.name || row.email || row.company || 'someone';
     const title =
-      row.record === 'review' ? `New review from ${name}` : row.record === 'contact' ? `New newsletter sign-up from ${name}` : row.type === 'chat' ? `New live chat lead from ${name}` : row.type.includes('download') ? `New download from ${name}` : `New website enquiry from ${name}`;
+      row.record === 'review' ? `New review from ${name}` : row.record === 'contact' ? `New newsletter sign-up from ${name}` : row.type === 'chat' ? `New live chat enquiry from ${name}` : row.type.includes('download') ? `New download from ${name}` : `New website enquiry from ${name}`;
     const body = [row.formName, row.company, row.service].filter(Boolean).join(' · ') || null;
     await this.notifications.send(tx, tenantId, await this.notifications.usersWithPermission(tx, tenantId, 'enquiries:write'), {
       type: `website_enquiry.${row.record === 'lead' ? 'received' : row.record === 'review' ? 'review' : 'signup'}`,

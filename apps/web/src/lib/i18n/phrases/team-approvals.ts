@@ -106,7 +106,6 @@ export const teamApprovals = {
   Restored: ['Recuperados', 'Restaurés', 'Wiederhergestellt', 'مستعادة'],
   'Nothing deleted here yet.': ['Aún no hay nada eliminado aquí.', 'Rien de supprimé ici pour l’instant.', 'Hier wurde noch nichts gelöscht.', 'لم يُحذف شيء هنا بعد.'],
   'Approved as {reference}': ['Aprobado como {reference}', 'Approuvé sous {reference}', 'Genehmigt als {reference}', 'تمت الموافقة برقم {reference}'],
-  'Kept until {date}': ['Se guarda hasta el {date}', 'Conservé jusqu’au {date}', 'Aufbewahrt bis {date}', 'محفوظ حتى {date}'],
   'Removed with it': ['Eliminado junto con él', 'Supprimé avec', 'Mit entfernt', 'حُذف معه'],
   'Deleted by {name} {when}': ['Eliminado por {name} {when}', 'Supprimé par {name} {when}', 'Gelöscht von {name} {when}', 'حذفه {name} {when}'],
   'Restored by {name} {when}': ['Recuperado por {name} {when}', 'Restauré par {name} {when}', 'Wiederhergestellt von {name} {when}', 'استعاده {name} {when}'],
@@ -123,7 +122,6 @@ export const teamApprovals = {
     'تمت استعادة {restored}. تعذّرت استعادة {failed}.',
   ],
   'Restored.': ['Recuperado.', 'Restauré.', 'Wiederhergestellt.', 'تمت الاستعادة.'],
-  Restore: ['Recuperar', 'Restaurer', 'Wiederherstellen', 'استعادة'],
   'Remove for good': ['Eliminar para siempre', 'Supprimer définitivement', 'Endgültig entfernen', 'إزالة نهائيًا'],
   // Rules (Super Workspace)
   'Manager and Executive Workspaces can delete': [

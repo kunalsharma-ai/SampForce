@@ -15,7 +15,6 @@ export const recognition = {
   ],
   'Employee of the Month – targets and winners': ['Empleado del Mes: objetivos y ganadores', 'Employé du mois : objectifs et lauréats', 'Mitarbeiter des Monats: Ziele und Gewinner', 'موظف الشهر: الأهداف والفائزون'],
   'Improvement plans': ['Planes de mejora', 'Plans d’amélioration', 'Verbesserungspläne', 'خطط التحسين'],
-  Rules: ['Reglas', 'Règles', 'Regeln', 'القواعد'],
   'Manage recognition and plans': ['Gestionar reconocimientos y planes', 'Gérer la reconnaissance et les plans', 'Anerkennung und Pläne verwalten', 'إدارة التقدير والخطط'],
 
   // ── Employee of the Month card ──
@@ -86,7 +85,6 @@ export const recognition = {
   '{percent}% of goals': ['{percent}% de las metas', '{percent} % des objectifs', '{percent} % der Ziele', '{percent}% من الأهداف'],
   'Score {score}': ['Puntuación {score}', 'Score {score}', 'Punktzahl {score}', 'النقاط {score}'],
   'Download certificate': ['Descargar certificado', 'Télécharger le certificat', 'Urkunde herunterladen', 'تنزيل الشهادة'],
-  Certificate: ['Certificado', 'Certificat', 'Urkunde', 'الشهادة'],
 
   // ── Goals ──
   Goals: ['Metas', 'Objectifs', 'Ziele', 'الأهداف'],
@@ -254,7 +252,6 @@ export const recognition = {
   'Current level (optional)': ['Nivel actual (opcional)', 'Niveau actuel (facultatif)', 'Aktuelles Niveau (optional)', 'المستوى الحالي (اختياري)'],
   'Required level (optional)': ['Nivel requerido (opcional)', 'Niveau requis (facultatif)', 'Erforderliches Niveau (optional)', 'المستوى المطلوب (اختياري)'],
   'Goals needed (%)': ['Metas necesarias (%)', 'Objectifs requis (%)', 'Benötigte Ziele (%)', 'الأهداف المطلوبة (%)'],
-  Reviews: ['Revisiones', 'Examens', 'Prüfungen', 'المراجعات'],
   'Review dates (YYYY-MM-DD, separate with commas)': ['Fechas de revisión (AAAA-MM-DD, separadas por comas)', 'Dates d’examen (AAAA-MM-JJ, séparées par des virgules)', 'Prüftermine (JJJJ-MM-TT, durch Kommas getrennt)', 'تواريخ المراجعة (YYYY-MM-DD، افصل بينها بفواصل)'],
   'Why it changed (shown to the person)': ['Por qué cambió (lo ve la persona)', 'Pourquoi il a changé (visible par la personne)', 'Warum er geändert wurde (für die Person sichtbar)', 'سبب التغيير (يظهر للشخص)'],
   'Manager comments (optional)': ['Comentarios del gerente (opcional)', 'Commentaires du manager (facultatif)', 'Kommentare des Managers (optional)', 'تعليقات المدير (اختياري)'],
@@ -280,7 +277,6 @@ export const recognition = {
   'Plan started': ['Plan iniciado', 'Plan démarré', 'Plan gestartet', 'بدأت الخطة'],
   'Plan changed': ['Plan cambiado', 'Plan modifié', 'Plan geändert', 'تغيرت الخطة'],
   Evaluation: ['Evaluación', 'Évaluation', 'Bewertung', 'التقييم'],
-  SampForce: ['SampForce', 'SampForce', 'SampForce', 'SampForce'],
 
   // ── Employee of the Month management ──
   'Targets this month': ['Objetivos de este mes', 'Objectifs de ce mois', 'Ziele in diesem Monat', 'أهداف هذا الشهر'],
@@ -308,7 +304,6 @@ export const recognition = {
     'Die Person und ihre Manager werden informiert, die Auszeichnung erscheint in den Dashboards und eine Urkunde steht zum Download bereit.',
     'يُبلَّغ الشخص ومديروه، وتظهر الجائزة في لوحات المعلومات، وتصبح الشهادة جاهزة للتنزيل.',
   ],
-  'Note (optional)': ['Nota (opcional)', 'Note (facultatif)', 'Notiz (optional)', 'ملاحظة (اختياري)'],
   'Withdraw this award?': ['¿Retirar este premio?', 'Retirer cette distinction ?', 'Diese Auszeichnung zurückziehen?', 'سحب هذه الجائزة؟'],
   'The award stays in the history as withdrawn, with your reason. You can then choose again.': [
     'El premio queda en el historial como retirado, con tu motivo. Después puedes volver a elegir.',

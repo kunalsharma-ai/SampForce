@@ -169,10 +169,10 @@ export const features = {
     'Kampagnen-Tracking mit Erstkontakt-Attribution.',
     'تتبّع الحملات مع الإسناد إلى أول تواصل.',
   ],
-  'Every enquiry, download form, live chat lead, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.': [
-    'Cada consulta, formulario de descarga, lead del chat, suscripción al boletín y reseña de tu sitio web, en tiempo real, con conversión en empresas y empleados.',
-    'Chaque demande, formulaire de téléchargement, prospect du chat, inscription à la newsletter et avis de votre site web, en temps réel, avec conversion en entreprises et employés.',
-    'Jede Anfrage, jedes Download-Formular, jeder Live-Chat-Lead, jede Newsletter-Anmeldung und Bewertung von Ihrer Unternehmenswebsite in Echtzeit, mit Umwandlung in Unternehmen und Mitarbeitende.',
+  'Every enquiry, download form, live chat enquiry, newsletter sign-up and review from your company website, in real time, with conversion into companies and employees.': [
+    'Cada consulta, formulario de descarga, consulta del chat, suscripción al boletín y reseña de tu sitio web, en tiempo real, con conversión en empresas y empleados.',
+    'Chaque demande, formulaire de téléchargement, demande du chat, inscription à la newsletter et avis de votre site web, en temps réel, avec conversion en entreprises et employés.',
+    'Jede Anfrage, jedes Download-Formular, jede Live-Chat-Anfrage, jede Newsletter-Anmeldung und Bewertung von Ihrer Unternehmenswebsite in Echtzeit, mit Umwandlung in Unternehmen und Mitarbeitende.',
     'كل استفسار ونموذج تنزيل وعميل محتمل من الدردشة المباشرة واشتراك في النشرة ومراجعة من موقع شركتك، لحظة بلحظة، مع تحويلها إلى شركات وموظفين.',
   ],
   'Meeting recordings, transcripts and AI summaries.': [
