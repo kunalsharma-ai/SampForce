@@ -7,6 +7,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { type ChatNotice, useChatNotices } from '@/lib/chat';
 import { useT } from '@/lib/i18n';
+import { useQuickChat } from './quick-chat';
 
 const SHOW_MS = 7000;
 
@@ -15,8 +16,10 @@ export function ChatNotices() {
   const notices = useChatNotices((s) => s.notices);
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  // While quick chat is open its list shows new messages; pop-ups would only cover its composer (R9).
+  const quickOpen = useQuickChat((s) => s.open);
   // In a portal: the top bar's backdrop blur would otherwise pin "fixed" pop-ups to the bar.
-  if (!mounted) return null;
+  if (!mounted || quickOpen) return null;
   return createPortal(
     <div className="pointer-events-none fixed bottom-4 end-4 z-50 flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2" aria-live="polite">
       {notices.map((n) => (

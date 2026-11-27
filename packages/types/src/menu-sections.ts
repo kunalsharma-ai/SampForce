@@ -10,3 +10,7 @@ export interface MenuSections {
   leads: boolean;
   accounts: boolean;
 }
+
+/** The Console's change of a client's Leads and Accounts pages (R8, ADR 0092): with a reason, as every Console change. */
+export const putClientMenuSectionsSchema = menuSectionsSchema.extend({ reason: z.string().trim().min(3, 'Give a reason').max(300) }).strict();
+export type PutClientMenuSections = z.infer<typeof putClientMenuSectionsSchema>;

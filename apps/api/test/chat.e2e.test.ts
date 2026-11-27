@@ -167,52 +167,66 @@ describe('team chat', () => {
     expect(ancient.writtenAt).toBeNull();
   });
 
-  it('sends files, which only people in the conversation can open', async () => {
+  it('keeps team chat to text and emoji: no files, no record links; the support line still takes files', async () => {
+    // Redesign R9: direct messages and channels refuse files and links, with a clear reason.
     const up = await rep.agent.post(`/api/v1/chat/conversations/${channelId}/attachments?name=${encodeURIComponent('Quota sheet.csv')}`).set('origin', ORIGIN).set('content-type', 'text/csv').send(Buffer.from('market,n\nIN,400\n'));
-    expect(up.status).toBe(201);
-    const file = up.body;
-    expect(file).toMatchObject({ name: 'Quota sheet.csv', contentType: 'text/csv', sizeBytes: 16 });
-    // Before it is sent, only the uploader can open it, and nobody else can send it.
-    await api(analyst).get(`/chat/attachments/${file.id}/download`).expect(404);
-    await api(analyst).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'mine now', attachmentIds: [file.id] }).expect(400);
-    const msg = (await api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: '', attachmentIds: [file.id] }).expect(201)).body;
-    expect(msg.attachments).toEqual([file]);
-    const dl = await api(analyst).get(`/chat/attachments/${file.id}/download`).expect(200);
-    expect(dl.headers['content-disposition']).toContain('Quota sheet.csv');
-    expect(dl.text ?? dl.body.toString()).toContain('IN,400');
-    await api(outsider).get(`/chat/attachments/${file.id}/download`).expect(404);
-    expect((await api(owner).get(`/chat/conversations/${channelId}`).expect(200)).body.lastMessagePreview).toBe('Quota sheet.csv');
-    await rep.agent.post(`/api/v1/chat/conversations/${channelId}/attachments?name=empty.txt`).set('origin', ORIGIN).set('content-type', 'text/plain').send(Buffer.alloc(0)).expect(400);
+    expect(up.status).toBe(400);
+    expect(up.body.error.code).toBe('CHAT_TEXT_ONLY');
+    const lead = (await api(owner).post('/company-leads', { company: { name: 'Acme Panels', country: 'IN' }, employees: [{ firstName: 'Priya' }] }).expect(201)).body;
+    const linked = await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'See this', link: { type: 'COMPANY', id: lead.company.id } }).expect(400);
+    expect(linked.body.error).toMatchObject({ code: 'CHAT_TEXT_ONLY', details: [{ path: 'link' }] });
+    await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'x', attachmentIds: [randomUUID()] }).expect(400);
+    expect((await api(owner).post('/chat/conversations', { kind: 'CHANNEL', name: 'Acme India', memberIds: [rep.userId], link: { type: 'COMPANY', id: lead.company.id } }).expect(400)).body.error.code).toBe('CHAT_TEXT_ONLY');
+    await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Priya asked for the feasibility.' }).expect(201);
 
+    // A file sent before R9 stays stored: workspace admins still see and open it, others no longer do.
+    const old = (await api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Old sheet' }).expect(201)).body;
+    const stored = await asTenant(owner.tenantId, (tx) =>
+      tx.chatAttachment.create({ data: { tenantId: owner.tenantId, conversationId: channelId, messageId: old.id, name: 'Old.csv', contentType: 'text/csv', sizeBytes: 3, data: new Uint8Array(Buffer.from('a,b')), sha256: 'x', uploadedByUserId: rep.userId } }),
+    );
+    const asAnalyst = (await api(analyst).get(`/chat/conversations/${channelId}/messages`).expect(200)).body.find((m: { id: string }) => m.id === old.id);
+    expect(asAnalyst.attachments).toEqual([]);
+    await api(analyst).get(`/chat/attachments/${stored.id}/download`).expect(404);
+    const asOwner = (await api(owner).get(`/chat/conversations/${channelId}/messages`).expect(200)).body.find((m: { id: string }) => m.id === old.id);
+    expect(asOwner.attachments.map((f: { name: string }) => f.name)).toEqual(['Old.csv']);
+    await api(owner).get(`/chat/attachments/${stored.id}/download`).expect(200);
+
+    // The support line (admins and SampForce support) still takes files.
+    const support = (await api(owner).get('/chat/conversations').expect(200)).body.find((c: { kind: string }) => c.kind === 'SUPPORT');
+    const file = (await owner.agent.post(`/api/v1/chat/conversations/${support.id}/attachments?name=${encodeURIComponent('Screen.png')}`).set('origin', ORIGIN).set('content-type', 'image/png').send(Buffer.from('png')).expect(201)).body;
+    const msg = (await api(owner).post(`/chat/conversations/${support.id}/messages`, { clientId: cid(), body: '', attachmentIds: [file.id] }).expect(201)).body;
+    expect(msg.attachments).toEqual([file]);
+    await api(rep).get(`/chat/attachments/${file.id}/download`).expect(404);
+    await owner.agent.post(`/api/v1/chat/conversations/${support.id}/attachments?name=empty.txt`).set('origin', ORIGIN).set('content-type', 'text/plain').send(Buffer.alloc(0)).expect(400);
     // Deleting the message deletes its file.
-    await api(rep).del(`/chat/messages/${msg.id}`).expect(204);
-    await api(analyst).get(`/chat/attachments/${file.id}/download`).expect(404);
-    const after = (await api(analyst).get(`/chat/conversations/${channelId}/messages`).expect(200)).body.find((m: { id: string }) => m.id === msg.id);
-    expect(after).toMatchObject({ deleted: true, body: '', attachments: [] });
+    await api(owner).del(`/chat/messages/${msg.id}`).expect(204);
+    await api(owner).get(`/chat/attachments/${file.id}/download`).expect(404);
   });
 
-  it('links messages and channels to companies, RFQs and deals people can see', async () => {
-    const lead = (await api(owner).post('/company-leads', { company: { name: 'Acme Panels', country: 'IN' }, employees: [{ firstName: 'Priya' }] }).expect(201)).body;
-    const companyId = lead.company.id as string;
-    const rfq = (await api(owner).post('/rfqs', { companyId, projectName: 'India B2B tracker', currency: 'USD' }).expect(201)).body;
-    const pipelines = (await api(owner).get('/pipelines').expect(200)).body;
-    const deal = (await api(owner).post('/deals', { name: 'Acme India tracker', pipelineId: pipelines[0].id, stageId: pipelines[0].stages[0].id, amount: 12000, currency: 'USD' }).expect(201)).body;
-
-    const options = (await api(owner).get('/chat/link-options?q=acme').expect(200)).body;
-    expect(options.map((o: { type: string }) => o.type).sort()).toEqual(['COMPANY', 'DEAL']);
-    expect((await api(owner).get('/chat/link-options?q=tracker').expect(200)).body.map((o: { type: string }) => o.type).sort()).toEqual(['DEAL', 'RFQ']);
-
-    const m1 = (await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Priya asked for the feasibility.', link: { type: 'COMPANY', id: companyId } }).expect(201)).body;
-    expect(m1.link).toEqual({ type: 'COMPANY', id: companyId, label: `${lead.company.leadNumber} Acme Panels`, href: `/app/companies/${companyId}` });
-    const m2 = (await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'RFQ is in.', link: { type: 'RFQ', id: rfq.id } }).expect(201)).body;
-    expect(m2.link).toMatchObject({ type: 'RFQ', label: `${rfq.number} India B2B tracker`, href: `/app/rfqs?open=${rfq.id}` });
-    const m3 = (await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: '', link: { type: 'DEAL', id: deal.id } }).expect(201)).body;
-    expect(m3.link).toMatchObject({ type: 'DEAL', label: 'Acme India tracker' });
-    const bad = await api(owner).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'x', link: { type: 'COMPANY', id: randomUUID() } }).expect(400);
-    expect(bad.body.error.details[0].path).toBe('link');
-
-    const linked = (await api(owner).post('/chat/conversations', { kind: 'CHANNEL', name: 'Acme India', memberIds: [rep.userId], link: { type: 'DEAL', id: deal.id } }).expect(201)).body;
-    expect(linked.link).toMatchObject({ type: 'DEAL', id: deal.id, label: 'Acme India tracker' });
+  it('takes emoji reactions: one per emoji per person, shown with who reacted, gone with a deleted message', async () => {
+    const m = (await api(rep).post(`/chat/conversations/${channelId}/messages`, { clientId: cid(), body: 'Quota done for IN' }).expect(201)).body;
+    expect(m.reactions).toEqual([]);
+    await api(analyst).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: true }).expect(200);
+    await api(analyst).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: true }).expect(200);
+    const both = (await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: true }).expect(200)).body;
+    expect(both.reactions).toEqual([{ emoji: '👍', count: 2, mine: true, names: expect.arrayContaining([expect.any(String)]) }]);
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '🎉', on: true }).expect(200);
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '🇮🇳', on: true }).expect(200);
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍🏽', on: true }).expect(200);
+    // Text is not an emoji; outsiders cannot react.
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: 'ok', on: true }).expect(400);
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍 ok', on: true }).expect(400);
+    await api(outsider).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: true }).expect(404);
+    const seen = (await api(rep).get(`/chat/conversations/${channelId}/messages`).expect(200)).body.find((x: { id: string }) => x.id === m.id);
+    expect(seen.reactions.map((r: { emoji: string; count: number; mine: boolean }) => [r.emoji, r.count, r.mine])).toEqual([['👍', 2, false], ['🎉', 1, false], ['🇮🇳', 1, false], ['👍🏽', 1, false]]);
+    // Taking one back.
+    const off = (await api(analyst).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: false }).expect(200)).body;
+    expect(off.reactions.find((r: { emoji: string }) => r.emoji === '👍')).toMatchObject({ count: 1, mine: false });
+    // Deleting the message clears its reactions and refuses new ones.
+    await api(rep).del(`/chat/messages/${m.id}`).expect(204);
+    const gone = (await api(rep).get(`/chat/conversations/${channelId}/messages`).expect(200)).body.find((x: { id: string }) => x.id === m.id);
+    expect(gone).toMatchObject({ deleted: true, body: '', reactions: [] });
+    await api(owner).put(`/chat/messages/${m.id}/reactions`, { emoji: '👍', on: true }).expect(400);
   });
 
   it('searches only the conversations you are in', async () => {
@@ -224,8 +238,6 @@ describe('team chat', () => {
     expect(repHits).toHaveLength(2);
     expect((await api(outsider).get('/chat/search?q=feasibility').expect(200)).body).toEqual([]);
     await api(rep).get('/chat/search?q=a').expect(400);
-    // A link's name is searchable too.
-    expect((await api(owner).get('/chat/search?q=Acme%20India').expect(200)).body.map((h: { message: { link: { type: string } } }) => h.message.link?.type)).toContain('DEAL');
   });
 
   it('lets authors edit their messages and channel owners manage the channel', async () => {

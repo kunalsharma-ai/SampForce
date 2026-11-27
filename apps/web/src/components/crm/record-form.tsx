@@ -17,6 +17,7 @@ import { relativeTime } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { CustomFieldInput, fieldDefault, fieldFormValue, fieldLogic, fieldPayloadValue } from './custom-field-input';
 import { type PickerValue, RecordPicker } from './record-picker';
+import { useHiddenKeys } from '@/lib/session';
 import { Select, Textarea } from './select';
 
 interface Props {
@@ -54,7 +55,9 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
   }, [open, initial]);
 
   const set = (name: string, v: unknown) => setValues((prev) => ({ ...prev, [name]: v }));
-  const fields = FIELDS[entity].filter((f) => !(f.createOnly && mode === 'edit'));
+  // Fields the Console hides from this level are left out (R8, ADR 0092); the server ignores them anyway.
+  const hiddenKeys = useHiddenKeys(entity === 'companies' ? 'company' : entity === 'contacts' ? 'contact' : entity === 'deals' ? 'deal' : null);
+  const fields = FIELDS[entity].filter((f) => !(f.createOnly && mode === 'edit') && !hiddenKeys.has(f.name));
   // Draft recovery for new records: what was typed survives a closed dialog or a reload on this device.
   const draft = useFormDraft<Record<string, unknown>>(open && mode === 'create' ? `create-${entity}` : null, values, (v) =>
     Object.entries(v).every(([, x]) => x === '' || x === null || x === undefined || (Array.isArray(x) && x.length === 0)),
@@ -145,7 +148,7 @@ export function RecordFormDialog({ entity, open, onOpenChange, recordId, initial
               <FieldControl spec={f} id={`${formId}-${f.name}`} values={values} set={set} error={errors[f.name] ?? (f.type === 'pipeline' ? errors.stageId : undefined)} />
             </div>
           ))}
-          {custom.data && custom.data.length > 0 && (
+          {custom.data && custom.data.length > 0 && !hiddenKeys.has('customFields') && (
             <fieldset className="grid gap-4 border-t border-border pt-4 sm:col-span-2 sm:grid-cols-2">
               <legend className="mb-2 text-sm font-medium text-muted-foreground">{t('Custom fields')}</legend>
               {custom.data.filter((d) => (mode === 'edit' || d.showInForms) && logic.shows(d)).map((d) => (

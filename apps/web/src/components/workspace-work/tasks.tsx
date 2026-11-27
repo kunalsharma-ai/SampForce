@@ -1,8 +1,8 @@
 'use client';
 
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Input, Skeleton } from '@dealflow/ui';
-import { ASSIGNED_TASK_PRIORITIES, type AssignedTaskPriority, type AssignedTaskRow, type AssignedTasksView, WORKSPACE_LEVEL_LABEL } from '@dealflow/types';
-import { AlertTriangle, CalendarClock, MessageSquare, Plus } from 'lucide-react';
+import { ASSIGNED_TASK_PRIORITIES, type AssignedTaskPriority, type AssignedTaskRow, type AssignedTasksView, TASK_PROGRESS_LABEL, TASK_REACTIONS, type TaskProgress, WORKSPACE_LEVEL_LABEL } from '@dealflow/types';
+import { AlertTriangle, CalendarClock, Eye, MessageSquare, OctagonAlert, Play, Plus, SmilePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Select, Textarea } from '@/components/crm/select';
@@ -12,6 +12,18 @@ import { useAssignedTask, useAssignedTaskMutations, useAssignedTasks } from '@/l
 
 const PRIORITY_LABEL: Record<AssignedTaskPriority, string> = { HIGH: 'High priority', NORMAL: 'Normal priority', LOW: 'Low priority' };
 const STATUS_LABEL = { OPEN: 'Open', DONE: 'Done', CANCELED: 'Cancelled' } as const;
+const PROGRESS_TONE: Record<TaskProgress, 'neutral' | 'primary' | 'success' | 'critical'> = { NEW: 'neutral', ACKNOWLEDGED: 'primary', IN_PROGRESS: 'success', BLOCKED: 'critical' };
+
+/** Where an open task stands (redesign R7): not acknowledged, acknowledged, in progress or blocked. */
+function ProgressBadge({ progress }: { progress: TaskProgress }) {
+  const t = useT();
+  return (
+    <Badge tone={PROGRESS_TONE[progress]} data-progress={progress}>
+      {progress === 'BLOCKED' && <OctagonAlert className="size-3" aria-hidden />}
+      {t.maybe(TASK_PROGRESS_LABEL[progress])}
+    </Badge>
+  );
+}
 
 function when(t: ReturnType<typeof useT>, iso: string, time = true): string {
   return new Date(iso).toLocaleString(t.formatLocale, time ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' });
@@ -40,8 +52,12 @@ export function TaskCard({ task, onOpen }: { task: AssignedTaskRow; onOpen: (id:
               {t('Overdue')}
             </Badge>
           )}
+          {task.status === 'OPEN' && <ProgressBadge progress={task.progress} />}
           {task.status !== 'OPEN' && <Badge tone={task.status === 'DONE' ? 'success' : 'neutral'}>{t.maybe(STATUS_LABEL[task.status])}</Badge>}
         </span>
+        {task.status === 'OPEN' && task.progress === 'BLOCKED' && task.blockedReason && (
+          <span className="mt-1 block text-xs text-critical">{t('Blocked: {reason}', { reason: task.blockedReason })}</span>
+        )}
         <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
           {task.dueAt && (
             <span className={task.overdue ? 'font-medium text-critical' : ''}>
@@ -234,7 +250,91 @@ function NewTaskDialog({ assignable, onClose, onCreated }: { assignable: Assigne
   );
 }
 
-const FIELD_LABEL: Record<string, string> = { title: 'Title', description: 'Description', priority: 'Priority', dueAt: 'Due', status: 'Status' };
+const FIELD_LABEL: Record<string, string> = { title: 'Title', description: 'Description', priority: 'Priority', dueAt: 'Due', status: 'Status', progress: 'Progress', blockedReason: 'Blocked because' };
+
+/** The assignee's buttons for where the task stands; blocking asks what is in the way. */
+function ProgressControls({ id, progress }: { id: string; progress: TaskProgress }) {
+  const t = useT();
+  const { progress: save } = useAssignedTaskMutations();
+  const [blocking, setBlocking] = useState(false);
+  const [reason, setReason] = useState('');
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3" data-task-progress>
+      <p className="text-xs font-medium text-muted-foreground">{t('Where does it stand?')}</p>
+      <div className="flex flex-wrap gap-2">
+        {progress === 'NEW' && (
+          <Button size="sm" variant="outline" onClick={() => save.mutate({ id, input: { progress: 'ACKNOWLEDGED' } })} disabled={save.isPending}>
+            <Eye className="size-4" aria-hidden />
+            {t('Acknowledge')}
+          </Button>
+        )}
+        {progress !== 'IN_PROGRESS' && (
+          <Button size="sm" variant="outline" onClick={() => save.mutate({ id, input: { progress: 'IN_PROGRESS' } })} disabled={save.isPending}>
+            <Play className="size-4" aria-hidden />
+            {t('Start working')}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => setBlocking((b) => !b)} aria-expanded={blocking}>
+          <OctagonAlert className="size-4" aria-hidden />
+          {t('I’m blocked')}
+        </Button>
+      </div>
+      {blocking && (
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (reason.trim()) save.mutate({ id, input: { progress: 'BLOCKED', reason } }, { onSuccess: () => { setBlocking(false); setReason(''); } });
+          }}
+        >
+          <Input aria-label={t('What is blocking it?')} placeholder={t('What is blocking it?')} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+          <Button type="submit" size="sm" disabled={save.isPending || !reason.trim()}>
+            {t('Tell them')}
+          </Button>
+        </form>
+      )}
+      <ErrorText error={save.error} />
+    </div>
+  );
+}
+
+/** Quick reactions under a comment: the ones given, with who gave them, and a picker for more. */
+function CommentReactions({ id, comment }: { id: string; comment: { id: string; reactions: { emoji: (typeof TASK_REACTIONS)[number]; count: number; mine: boolean; names: string[] }[] } }) {
+  const t = useT();
+  const { react } = useAssignedTaskMutations();
+  const [open, setOpen] = useState(false);
+  const toggle = (emoji: (typeof TASK_REACTIONS)[number]) => react.mutate({ id, commentId: comment.id, emoji });
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1" data-reactions>
+      {comment.reactions.map((r) => (
+        <button
+          key={r.emoji}
+          type="button"
+          onClick={() => toggle(r.emoji)}
+          aria-pressed={r.mine}
+          title={r.names.join(', ')}
+          aria-label={t('{emoji} by {names}', { emoji: r.emoji, names: r.names.join(', ') })}
+          className={`inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs transition-colors ${r.mine ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-surface hover:bg-muted'}`}
+        >
+          <span aria-hidden>{r.emoji}</span>
+          {r.count}
+        </button>
+      ))}
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={t('Add a reaction')} className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
+        <SmilePlus className="size-3.5" aria-hidden />
+      </button>
+      {open && (
+        <span role="group" aria-label={t('Reactions')} className="inline-flex gap-0.5 rounded-full border border-border bg-surface px-1 shadow-sm">
+          {TASK_REACTIONS.map((e) => (
+            <button key={e} type="button" className="size-7 rounded-full text-base hover:bg-muted" aria-label={t('React with {emoji}', { emoji: e })} onClick={() => { toggle(e); setOpen(false); }}>
+              {e}
+            </button>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
@@ -247,6 +347,7 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
     if (field === 'dueAt') return when(t, v);
     if (field === 'priority') return t.maybe(PRIORITY_LABEL[v as AssignedTaskPriority] ?? v);
     if (field === 'status') return t.maybe(STATUS_LABEL[v as keyof typeof STATUS_LABEL] ?? v);
+    if (field === 'progress') return t.maybe(TASK_PROGRESS_LABEL[v as TaskProgress] ?? v);
     return v;
   };
 
@@ -265,7 +366,11 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
               <DialogDescription className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <Badge tone={d.priority === 'HIGH' ? 'warning' : 'neutral'}>{t.maybe(PRIORITY_LABEL[d.priority])}</Badge>
                 <Badge tone={d.status === 'DONE' ? 'success' : d.overdue ? 'critical' : 'neutral'}>{d.overdue ? t('Overdue') : t.maybe(STATUS_LABEL[d.status])}</Badge>
+                {d.status === 'OPEN' && <ProgressBadge progress={d.progress} />}
               </DialogDescription>
+              {d.status === 'OPEN' && d.progress === 'BLOCKED' && d.blockedReason && (
+                <p className="mt-2 rounded-md border border-critical/40 bg-critical/10 p-2 text-sm">{t('Blocked: {reason}', { reason: d.blockedReason })}</p>
+              )}
             </div>
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
               <div><dt className="text-muted-foreground">{t('Workspace')}</dt><dd>{d.workspace.name}</dd></div>
@@ -274,9 +379,11 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
               <div><dt className="text-muted-foreground">{t('Created')}</dt><dd>{when(t, d.createdAt)}</dd></div>
               <div><dt className="text-muted-foreground">{t('Due')}</dt><dd className={d.overdue ? 'font-medium text-critical' : ''}>{d.dueAt ? when(t, d.dueAt) : '—'}</dd></div>
               <div><dt className="text-muted-foreground">{t('Completed')}</dt><dd>{d.completedAt ? when(t, d.completedAt) : '—'}</dd></div>
+              <div><dt className="text-muted-foreground">{t('Acknowledged')}</dt><dd>{d.acknowledgedAt ? when(t, d.acknowledgedAt) : '—'}</dd></div>
             </dl>
             {d.description && <p className="whitespace-pre-wrap text-sm">{d.description}</p>}
 
+            {d.canProgress && d.status === 'OPEN' && <ProgressControls id={id} progress={d.progress} />}
             {(d.canChangeStatus || d.canEdit) && (
               <div className="flex flex-wrap gap-2">
                 {d.status === 'OPEN' && d.canChangeStatus && (
@@ -318,6 +425,7 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
                     <li key={c.id} className="rounded-md bg-muted/40 p-2 text-sm">
                       <p className="text-xs text-muted-foreground">{c.author?.name ?? '—'} · {when(t, c.createdAt)}</p>
                       <p className="whitespace-pre-wrap">{c.body}</p>
+                      <CommentReactions id={id} comment={c} />
                     </li>
                   ))}
                 </ul>
@@ -347,6 +455,8 @@ function TaskDialog({ id, onClose }: { id: string; onClose: () => void }) {
                       ? t('created the task')
                       : h.kind === 'commented'
                         ? t('commented')
+                        : h.kind === 'progress'
+                          ? h.changes.map((c) => (c.field === 'progress' ? t('marked it {state}', { state: value('progress', c.to).toLowerCase() }) : t('Blocked: {reason}', { reason: c.to ?? '' }))).join('; ')
                         : h.changes.map((c) => t('{field}: {from} → {to}', { field: t.maybe(FIELD_LABEL[c.field] ?? c.field), from: value(c.field, c.from), to: value(c.field, c.to) })).join('; ')}
                   </li>
                 ))}

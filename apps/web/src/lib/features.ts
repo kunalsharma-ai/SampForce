@@ -35,10 +35,17 @@ export function useLockedFeature(pathname: string): FeatureKey | null {
  */
 export function useSwitchedOff(): (href: string) => boolean {
   const { has, ready } = useFeatures();
+  const { data } = useSession();
+  // Sections the Console withholds from this workspace's level (R8, ADR 0092) are left out the same way.
+  const consoleHidden = new Set(data?.workspace?.hiddenSections ?? []);
+  const withheld = (f: FeatureKey): boolean => {
+    for (let k: FeatureKey | undefined = f; k; k = FEATURE_BY_KEY[k]?.parent) if (consoleHidden.has(k)) return true;
+    return false;
+  };
   return (href) => {
     const f = featureForPath(href.split('?')[0]!);
     // Left out until the session loads too, so a switched-off section never flashes into the menu.
-    return !!f && FEATURE_BY_KEY[f].optIn === true && (!ready || !has(f));
+    return !!f && ((FEATURE_BY_KEY[f].optIn === true && (!ready || !has(f))) || withheld(f));
   };
 }
 

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { signUp } from './helpers';
+import { setFeatures, signUp } from './helpers';
 import { expectCleanLayout, LAYOUT_SIZES, setMode } from './layout-check';
 
 /** Set PREVIEW_DIR to save screenshots of each screen (redesign previews). */
@@ -39,24 +39,13 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await expect(nav.getByRole('link', { name: /^Accounts/ })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
 
-  // ── More holds everything else, and remembers that it is open ──
-  const more = nav.getByRole('button', { name: 'More' });
-  await expect(more).toHaveAttribute('aria-expanded', 'false');
-  await expect(nav.getByRole('link', { name: 'Reports & Analytics' })).toBeHidden();
-  await shot(page, '01-sidebar-short');
-  await more.click();
-  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  // ── Every other section shows directly too, with no More button ──
+  await expect(nav.getByRole('button', { name: 'More' })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Reports & Analytics' })).toBeVisible();
-  await shot(page, '02-sidebar-more-open', true);
+  await expect(nav.getByRole('link', { name: 'Team Management' })).toBeVisible();
+  await shot(page, '01-sidebar-all-sections', true);
   const a11y = await new AxeBuilder({ page }).include('[data-shell="sidebar"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(a11y.violations.map((v) => `${v.id} ${v.nodes[0]?.target}`)).toEqual([]);
-  await page.reload();
-  await expect(sidebar(page).getByRole('button', { name: 'More' })).toHaveAttribute('aria-expanded', 'true');
-  await sidebar(page).getByRole('button', { name: 'More' }).click();
-  await expect(sidebar(page).getByRole('link', { name: 'Reports & Analytics' })).toBeHidden();
-  // A page inside More opens it by itself.
-  await page.goto('/app/reports');
-  await expect(sidebar(page).getByRole('link', { name: 'Reports & Analytics' })).toBeVisible();
 
   // ── Search and shortcuts leave the switched-off pages out ──
   await page.goto('/app');
@@ -78,15 +67,11 @@ test('a new organisation sees a short menu without Leads or Accounts until they 
   await page.goto('/app/accounts');
   await expect(page.locator('[data-feature-locked="accounts_section"]')).toBeVisible();
 
-  // ── The Super Workspace shows them again from Settings: they come back ──
+  // ── Only the Console switches them on (R8, ADR 0092): the client's Settings has no switch; once on, they come back ──
   await page.goto('/app/settings');
-  const hidden = page.locator('[data-menu-sections]');
-  await expect(hidden.getByRole('switch', { name: /Show the Leads page/ })).not.toBeChecked();
-  await hidden.getByRole('switch', { name: /Show the Leads page/ }).click();
-  await expect(hidden.getByRole('switch', { name: /Show the Leads page/ })).toBeChecked();
-  await hidden.getByRole('switch', { name: /Show the Accounts page/ }).click();
-  await expect(hidden.getByRole('switch', { name: /Show the Accounts page/ })).toBeChecked();
-  await shot(page, '03b-settings-hidden-sections');
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect(page.locator('[data-menu-sections]')).toHaveCount(0);
+  await setFeatures(page, { leads_section: true, accounts_section: true });
   await page.goto('/app/leads');
   await expect(page.locator('[data-feature-locked]')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Leads' })).toBeVisible();

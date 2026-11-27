@@ -9,6 +9,7 @@ import {
   type ChatEventsPage,
   type ChatLinkOption,
   type ChatMessageRow,
+  type ChatReactionRow,
   type ChatPresenceRow,
   type ChatSearchHit,
   type ChatSocketTicket,
@@ -19,6 +20,8 @@ import * as React from 'react';
 import { create } from 'zustand';
 import { api, ApiError } from '@/lib/api';
 import { type OutboxItem, outboxList, outboxPut, outboxRemove } from './outbox';
+import { playMessageSound } from './sound';
+export { playMessageSound, useChatSound } from './sound';
 
 export type { OutboxItem } from './outbox';
 
@@ -227,6 +230,7 @@ export function useChatLive(realm: ChatRealm | null): void {
       const preview = c.lastMessagePreview ?? '';
       const href = `${realm.kind === 'user' ? '/app/chat' : '/operator/chat'}?c=${c.id}`;
       useChatNotices.getState().push({ id: `${c.id}:${c.lastMessageAt}`, conversationId: c.id, title, preview, href });
+      playMessageSound();
       if (document.visibilityState !== 'visible' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try {
           const n = new Notification(title, { body: preview, tag: `sampforce-chat-${c.id}` });
@@ -527,11 +531,31 @@ export function useChatMutations(realm: ChatRealm) {
   });
   const edit = useMutation({ mutationFn: (v: { id: string; body: string }) => api<ChatMessageRow>(`${realm.base}/messages/${v.id}`, { method: 'PATCH', json: { body: v.body } }), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (id: string) => api(`${realm.base}/messages/${id}`, { method: 'DELETE' }), onSuccess: refresh });
+  // Reactions (redesign R9): the message shows the change at once and the server's answer replaces it.
+  const react = useMutation({
+    mutationFn: (v: { message: ChatMessageRow; emoji: string; on: boolean }) => api<ChatMessageRow>(`${realm.base}/messages/${v.message.id}/reactions`, { method: 'PUT', json: { emoji: v.emoji, on: v.on } }),
+    onMutate: (v) => {
+      const k = key(realm, 'messages', v.message.conversationId);
+      qc.setQueriesData<InfiniteData<ChatMessageRow[]>>({ queryKey: k }, (data) =>
+        data ? { ...data, pages: data.pages.map((p) => p.map((m) => (m.id === v.message.id ? { ...m, reactions: toggleReaction(m.reactions ?? [], v.emoji, v.on) } : m))) } : data,
+      );
+    },
+    onSettled: (_r, _e, v) => qc.invalidateQueries({ queryKey: key(realm, 'messages', v.message.conversationId) }),
+  });
   const create = useMutation({ mutationFn: (input: object) => api<ChatConversationRow>('/chat/conversations', { method: 'POST', json: input }), onSuccess: refresh });
   const update = useMutation({ mutationFn: (v: { id: string; patch: object }) => api<ChatConversationRow>(`/chat/conversations/${v.id}`, { method: 'PATCH', json: v.patch }), onSuccess: refresh });
   const addMembers = useMutation({ mutationFn: (v: { id: string; userIds: string[] }) => api<ChatConversationRow>(`/chat/conversations/${v.id}/members`, { method: 'POST', json: { userIds: v.userIds } }), onSuccess: refresh });
   const removeMember = useMutation({ mutationFn: (v: { id: string; userId: string }) => api(`/chat/conversations/${v.id}/members/${v.userId}`, { method: 'DELETE' }), onSuccess: refresh });
-  return { markRead, edit, remove, create, update, addMembers, removeMember };
+  return { markRead, edit, remove, react, create, update, addMembers, removeMember };
+}
+
+/** A message's reactions with yours added or taken back, as the server will count them. */
+export function toggleReaction(list: ChatReactionRow[], emoji: string, on: boolean): ChatReactionRow[] {
+  const found = list.find((r) => r.emoji === emoji);
+  if (on && found?.mine) return list;
+  if (!on && !found?.mine) return list;
+  if (on) return found ? list.map((r) => (r === found ? { ...r, count: r.count + 1, mine: true } : r)) : [...list, { emoji, count: 1, mine: true, names: [] }];
+  return list.map((r) => (r === found ? { ...r, count: r.count - 1, mine: false } : r)).filter((r) => r.count > 0);
 }
 
 // ─── Outbox ───

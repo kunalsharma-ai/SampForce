@@ -30,6 +30,8 @@ import { API_ENV, type ApiEnv } from '../common/env';
 import { PrismaService } from '../common/prisma.service';
 import { MAIL_NOT_CONFIGURED, MailerService } from '../mail/mailer.service';
 import { inLanguage, requestLanguage, tr } from '../common/request-language';
+import { hiddenFieldsFor, hiddenSectionsFor } from '@dealflow/types';
+import { workspaceRulesFor } from '../workspaces/workspace-rules';
 import { type ChangePasswordInput, type ConfirmPasswordInput, type PasswordChanged, type LanguageCode, languageCodeSchema, type PasswordConfirmationIssued } from '@dealflow/types';
 import { authEvents } from '../observability/metrics';
 import { MfaService } from './mfa.service';
@@ -537,7 +539,7 @@ export class AuthService {
   }
 
   async me(auth: AuthContext): Promise<MeResponse> {
-    const [user, tenant, memberships, ent, access] = await Promise.all([
+    const [user, tenant, memberships, ent, access, rules] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: auth.userId }, include: { photo: { select: { updatedAt: true } } } }),
       this.prisma.run(auth, (tx) =>
         tx.tenant.findUniqueOrThrow({ where: { id: auth.tenantId }, include: { subscription: true } }),
@@ -545,6 +547,7 @@ export class AuthService {
       this.listMemberships(auth.userId, auth),
       this.prisma.run(auth, (tx) => entitlementsFor(tx, auth.tenantId)),
       this.prisma.run(auth, (tx) => resolveWorkspaceAccess(tx, auth.tenantId, auth.workspaceNodeId)),
+      this.prisma.run(auth, (tx) => workspaceRulesFor(tx, auth.tenantId)),
     ]);
     return {
       user: { id: user.id, name: user.name, email: user.email, photoUrl: photoUrl(user.id, user.photo?.updatedAt) },
@@ -561,7 +564,7 @@ export class AuthService {
       },
       role: auth.roleKey,
       permissions: auth.permissions,
-      workspace: { id: access.node.id, level: access.level, name: access.virtual || access.level === 'SUPER' ? tenant.name : access.node.name, designation: access.node.designation, actions: access.actions as Record<string, string[]> },
+      workspace: { id: access.node.id, level: access.level, name: access.virtual || access.level === 'SUPER' ? tenant.name : access.node.name, designation: access.node.designation, actions: access.actions as Record<string, string[]>, hiddenFields: hiddenFieldsFor(access.level, rules), hiddenSections: hiddenSectionsFor(access.level, rules) },
       memberships,
       authMethod: auth.authMethod,
       mfaEnabled: !!user.mfaEnabledAt,

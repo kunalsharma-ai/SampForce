@@ -3,6 +3,10 @@ import { BadRequestException, ForbiddenException, Injectable, PayloadTooLargeExc
 import { Prisma, type TenantTx } from '@dealflow/database';
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
+  CHAT_REACTIONS_MAX,
+  type ChatReactionInput,
+  type ChatReactionRow,
+  TEAM_CHAT_KINDS,
   CHAT_WRITTEN_AT_MAX_AGE_MS,
   type ChatAttachmentRow,
   type ChatConversationRow,
@@ -58,6 +62,18 @@ const PREVIEW_MAX = 140;
 const tenantOf = (a: ChatActor, tenantId?: string) => (a.kind === 'user' ? a.auth.tenantId : tenantId!);
 const personId = (a: ChatActor) => (a.kind === 'user' ? a.auth.userId : a.op.id);
 const isAdmin = (a: ChatActor) => a.kind === 'user' && hasPermission(a.auth.permissions, 'tenant:manage');
+/** Reaction keys tell users and operators apart, like the people map. */
+const reactorKey = (a: ChatActor) => (a.kind === 'user' ? `u:${a.auth.userId}` : `o:${a.op.id}`);
+const isTeamChat = (kind: string) => (TEAM_CHAT_KINDS as readonly string[]).includes(kind);
+/** Team chat takes text and emoji only (redesign R9). */
+const textOnly = (path: string) => badRequest('CHAT_TEXT_ONLY', 'Team chat takes text and emoji only: files and record links are switched off.', path);
+
+function readReactions(stored: unknown): Record<string, string[]> {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [e, ids] of Object.entries(stored as Record<string, unknown>)) if (Array.isArray(ids)) out[e] = ids.filter((x): x is string => typeof x === 'string');
+  return out;
+}
 
 function badRequest(code: string, message: string, path?: string): BadRequestException {
   return new BadRequestException({ code, message, ...(path ? { details: [{ path, message }] } : {}) });
@@ -294,22 +310,40 @@ export class ChatService {
 
   async messageRows(tx: TenantTx, actor: ChatActor, tenantId: string, rows: MessageRecord[]): Promise<ChatMessageRow[]> {
     const ids = rows.map((r) => r.id);
-    const [people, files] = await Promise.all([
-      this.people(tx, rows.map((r) => r.authorUserId), rows.map((r) => r.authorOperatorId)),
+    const reactions = new Map(rows.map((r) => [r.id, readReactions(r.reactions)]));
+    const reactors = [...new Set([...reactions.values()].flatMap((m) => Object.values(m).flat()))];
+    const convIds = [...new Set(rows.map((r) => r.conversationId))];
+    const [people, files, convKinds] = await Promise.all([
+      this.people(
+        tx,
+        [...rows.map((r) => r.authorUserId), ...reactors.filter((k) => k.startsWith('u:')).map((k) => k.slice(2))],
+        [...rows.map((r) => r.authorOperatorId), ...reactors.filter((k) => k.startsWith('o:')).map((k) => k.slice(2))],
+      ),
+      tx.chatConversation.findMany({ where: { tenantId, id: { in: convIds } }, select: { id: true, kind: true } }),
       ids.length ? tx.chatAttachment.findMany({ where: { tenantId, messageId: { in: ids } }, select: { id: true, messageId: true, name: true, contentType: true, sizeBytes: true }, orderBy: { createdAt: 'asc' } }) : [],
-    ]);
+    ]).then(([p, k, f]) => [p, f, k] as const);
+    // Files and links sent in team chat before R9 stay stored; only workspace admins still see them.
+    const kindOf = new Map(convKinds.map((c) => [c.id, c.kind]));
+    const self = reactorKey(actor);
+    const reactionRows = (id: string): ChatReactionRow[] =>
+      Object.entries(reactions.get(id) ?? {})
+        .filter(([, who]) => who.length > 0)
+        .map(([emoji, who]) => ({ emoji, count: who.length, mine: who.includes(self), names: who.slice(0, 10).map((k) => people.get(k)?.name ?? '').filter(Boolean) }))
+        .sort((a, b) => b.count - a.count);
     const byMessage = new Map<string, ChatAttachmentRow[]>();
     for (const f of files) byMessage.set(f.messageId!, [...(byMessage.get(f.messageId!) ?? []), { id: f.id, name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes }]);
     return rows.map((r) => {
       const deleted = !!r.deletedAt;
+      const hideExtras = isTeamChat(kindOf.get(r.conversationId) ?? '') && !isAdmin(actor);
       return {
         id: r.id,
         conversationId: r.conversationId,
         clientId: r.clientId,
         author: (r.authorUserId ? people.get(`u:${r.authorUserId}`) : r.authorOperatorId ? people.get(`o:${r.authorOperatorId}`) : null) ?? null,
         body: deleted ? '' : r.body,
-        link: deleted ? null : this.linkOf(r.linkType, r.linkId, r.linkLabel, actor),
-        attachments: deleted ? [] : (byMessage.get(r.id) ?? []),
+        link: deleted || hideExtras ? null : this.linkOf(r.linkType, r.linkId, r.linkLabel, actor),
+        attachments: deleted || hideExtras ? [] : (byMessage.get(r.id) ?? []),
+        reactions: deleted ? [] : reactionRows(r.id),
         createdAt: r.createdAt.toISOString(),
         writtenAt: r.writtenAt?.toISOString() ?? null,
         editedAt: r.editedAt?.toISOString() ?? null,
@@ -448,6 +482,7 @@ export class ChatService {
         const memberIds = [...new Set(input.memberIds.filter((id) => id !== auth.userId))];
         await this.assertMembers(tx, tid, memberIds, 'memberIds');
         (await ChatReach.load(tx, tid)).assert(auth.userId, memberIds);
+        if (input.link) throw textOnly('link');
         const link = await this.resolveLink(tx, actor, tid, input.link, 'link');
         conv = await tx.chatConversation.create({
           data: {
@@ -469,6 +504,7 @@ export class ChatService {
     return this.run(actor, undefined, async (tx, signals) => {
       const conv = await this.conversation(tx, actor, auth.tenantId, id);
       if (conv.kind !== 'CHANNEL' || !this.canManage(actor, conv)) throw forbidden('Only the channel owner or a workspace admin can change this channel.');
+      if (input.link) throw textOnly('link');
       const link = input.link === undefined ? undefined : await this.resolveLink(tx, actor, auth.tenantId, input.link, 'link');
       const data: Prisma.ChatConversationUpdateInput = {
         ...(input.name !== undefined ? { name: input.name } : {}),
@@ -589,6 +625,8 @@ export class ChatService {
         const other = conv.members.find((m) => m.userId && m.userId !== actor.auth.userId)?.userId;
         if (other && !(await ChatReach.load(tx, tid)).canTalk(actor.auth.userId, other)) throw chatNotAllowed();
       }
+      if (isTeamChat(conv.kind) && input.link) throw textOnly('link');
+      if (isTeamChat(conv.kind) && input.attachmentIds.length) throw textOnly('attachmentIds');
       if (conv.kind === 'SAMPBIDX' && input.link) throw badRequest('VALIDATION_FAILED', 'SampBidx cannot open SampForce records, so a SampBidx chat takes no record links.', 'link');
       const link = await this.resolveLink(tx, actor, tid, input.link, 'link');
       const files = input.attachmentIds.length
@@ -646,12 +684,40 @@ export class ChatService {
     });
   }
 
+  /** Adds or takes back the caller's emoji on a message (redesign R9). Anyone in the conversation may react. */
+  react(actor: ChatActor, messageId: string, input: ChatReactionInput, tenantId?: string): Promise<ChatMessageRow> {
+    const tid = tenantOf(actor, tenantId);
+    return this.run(actor, tid, async (tx, signals) => {
+      const msg = await tx.chatMessage.findFirst({ where: { id: messageId, tenantId: tid } });
+      if (!msg) throw notFound('Message');
+      const conv = await this.conversation(tx, actor, tid, msg.conversationId);
+      if (msg.deletedAt) throw badRequest('MESSAGE_DELETED', 'This message was deleted.');
+      if (conv.kind === 'SAMPBIDX') throw forbidden('Messages in a SampBidx chat cannot take reactions, because SampBidx would not see them.');
+      const all = readReactions(msg.reactions);
+      const me = reactorKey(actor);
+      const list = all[input.emoji] ?? [];
+      if (input.on && !list.includes(me)) {
+        if (!all[input.emoji] && Object.keys(all).length >= CHAT_REACTIONS_MAX) throw badRequest('TOO_MANY_REACTIONS', `A message can carry up to ${CHAT_REACTIONS_MAX} different emoji.`, 'emoji');
+        all[input.emoji] = [...list, me];
+      } else if (!input.on && list.includes(me)) {
+        const rest = list.filter((k) => k !== me);
+        if (rest.length) all[input.emoji] = rest;
+        else delete all[input.emoji];
+      } else {
+        return (await this.messageRows(tx, actor, tid, [msg]))[0]!;
+      }
+      const next = await tx.chatMessage.update({ where: { id: msg.id }, data: { reactions: Object.keys(all).length ? (all as Prisma.InputJsonValue) : null } });
+      signals.push(await this.bus.record(tx, this.audience(conv), { type: 'message_changed', conversationId: conv.id, messageId: msg.id }));
+      return (await this.messageRows(tx, actor, tid, [next]))[0]!;
+    });
+  }
+
   /** Deletes the text and files of a message; the conversation keeps a "message deleted" line. */
   remove(actor: ChatActor, messageId: string, meta: RequestMeta | undefined, tenantId?: string): Promise<void> {
     const tid = tenantOf(actor, tenantId);
     return this.run(actor, tid, async (tx, signals) => {
       const { msg, conv } = await this.ownMessage(tx, actor, tid, messageId, true);
-      await tx.chatMessage.update({ where: { id: msg.id }, data: { body: '', deletedAt: new Date(), linkType: null, linkId: null, linkLabel: null } });
+      await tx.chatMessage.update({ where: { id: msg.id }, data: { body: '', deletedAt: new Date(), linkType: null, linkId: null, linkLabel: null, reactions: null } });
       await tx.chatAttachment.deleteMany({ where: { tenantId: tid, messageId: msg.id } });
       const byOther = (actor.kind === 'user' ? msg.authorUserId : msg.authorOperatorId) !== personId(actor);
       if (byOther && actor.kind === 'user') {
@@ -693,6 +759,7 @@ export class ChatService {
     return this.run(actor, tid, async (tx) => {
       const conv = await this.conversation(tx, actor, tid, id);
       if (conv.archivedAt) throw forbidden('This channel is archived.');
+      if (isTeamChat(conv.kind)) throw textOnly('file');
       const row = await tx.chatAttachment.create({
         data: {
           tenantId: tid, conversationId: id, name: file.name, contentType: file.contentType || 'application/octet-stream', sizeBytes: file.data.length,
@@ -709,7 +776,8 @@ export class ChatService {
     return this.run(actor, tid, async (tx) => {
       const f = await tx.chatAttachment.findFirst({ where: { id: attachmentId, tenantId: tid, ...(conversationId ? { conversationId } : {}) } });
       if (!f) throw notFound('File');
-      await this.conversation(tx, actor, tid, f.conversationId);
+      const conv = await this.conversation(tx, actor, tid, f.conversationId);
+      if (isTeamChat(conv.kind) && !isAdmin(actor)) throw notFound('File');
       // Before it is sent, only the person who uploaded it can open it.
       if (!f.messageId && (actor.kind === 'user' ? f.uploadedByUserId : f.uploadedByOperatorId) !== personId(actor)) throw notFound('File');
       return { name: f.name, contentType: f.contentType, data: Buffer.from(f.data) };

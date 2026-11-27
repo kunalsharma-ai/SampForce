@@ -198,7 +198,39 @@ export interface ChatMessageRow {
   system?: boolean;
   /** Messages written in SampForce in a SampBidx conversation: whether SampBidx has it yet. */
   sampbidxDelivery?: { state: SampbidxChatDelivery; error: string | null; attempts: number } | null;
+  /** Emoji reactions (redesign R9), most used first. */
+  reactions?: ChatReactionRow[];
 }
+
+/** One emoji on a message: how many reacted with it, whether you did and who (first names, for the tooltip). */
+export interface ChatReactionRow {
+  emoji: string;
+  count: number;
+  mine: boolean;
+  names: string[];
+}
+
+/** Most different emoji one message can carry. */
+export const CHAT_REACTIONS_MAX = 20;
+
+/** Adds (on) or takes back (off) your reaction: one emoji, no text. */
+export const chatReactionSchema = z
+  .object({
+    emoji: z
+      .string()
+      .min(1)
+      .max(32)
+      .refine((e) => /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|\p{Emoji_Component}|\u200d|\ufe0f|[#*0-9]\ufe0f?\u20e3)+$/u.test(e) && /\p{Extended_Pictographic}|\p{Regional_Indicator}|\u20e3/u.test(e), 'Pick an emoji'),
+    on: z.boolean(),
+  })
+  .strict();
+export type ChatReactionInput = z.infer<typeof chatReactionSchema>;
+
+/**
+ * Team chat (direct messages and channels) takes text and emoji only since the redesign (R9): no files and no record
+ * links. The support line and SampBidx conversations keep them.
+ */
+export const TEAM_CHAT_KINDS = ['DIRECT', 'CHANNEL'] as const;
 
 export interface ChatSearchHit {
   message: ChatMessageRow;

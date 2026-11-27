@@ -1759,6 +1759,10 @@ model Task {
   /// Workspace hierarchy (ADR 0071): the workspace a task was handed down to, and the workspace it came from.
   workspaceNodeId   String?      @map("workspace_node_id")
   assignedByNodeId  String?      @map("assigned_by_node_id")
+  /// Redesign R7 (ADR 0087): ACKNOWLEDGED, IN_PROGRESS or BLOCKED once the assignee moves it; null = not acknowledged.
+  progress          String?
+  acknowledgedAt    DateTime?    @map("acknowledged_at")
+  blockedReason     String?      @map("blocked_reason")
   createdAt         DateTime     @default(now()) @map("created_at")
   updatedAt         DateTime     @updatedAt @map("updated_at")
   deletedAt         DateTime?    @map("deleted_at")
@@ -1784,6 +1788,8 @@ model TaskComment {
   taskId    String   @map("task_id")
   authorId  String?  @map("author_id")
   body      String
+  /// Redesign R7: quick reactions, { "👍": [userId, ...] }.
+  reactions Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, taskId, createdAt])
@@ -4814,6 +4820,8 @@ model ChatMessage {
   remoteId         String?       @map("remote_id")
   /// When the worker may try again.
   remoteRetryAt    DateTime?     @map("remote_retry_at")
+  /// Emoji reactions (redesign R9): { "👍": ["<user or operator id>", ...] }, at most CHAT_REACTIONS_MAX emoji.
+  reactions        Json?
   createdAt        DateTime      @default(now()) @map("created_at")
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)

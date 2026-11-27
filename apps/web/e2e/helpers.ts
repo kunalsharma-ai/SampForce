@@ -40,6 +40,8 @@ export async function signUp(page: Page, org = 'E2E Org', { plan = 'enterprise_p
     await page.reload();
     await expect(page.getByRole('heading', { name: 'What is happening across the organisation?', level: 1 })).toBeVisible();
   }
+  // Suites that work with the company page's lower panels find them open; company-page.spec.ts tests it closed.
+  await page.evaluate(() => localStorage.setItem('sf.companyMore', 'open'));
   if (autoConfirm) await autoConfirmDeletion(page, 'correcthorse1');
   return { email, password: 'correcthorse1' };
 }
