@@ -83,6 +83,7 @@ export * from './console-notifications';
 export * from './notification-center';
 export * from './availability';
 export * from './achievements';
+export * from './learning';
 export * from './calls';
 export * from './profile';
 export * from './client-time';

@@ -1,0 +1,25 @@
+# Sales Communication Essentials
+
+Active listening is the practice of giving the customer your full attention and confirming what you heard. Good sales conversations start with questions, not with a pitch. A discovery call should last about 30 minutes and end with an agreed next step.
+
+# The SPIN method
+
+SPIN Selling is a questioning method developed by Neil Rackham. It uses four kinds of questions in order:
+- Situation questions
+- Problem questions
+- Implication questions
+- Need-payoff questions
+
+Situation questions collect facts about the buyer's current process. Problem questions uncover difficulties the buyer has today. Implication questions explore the consequences of those problems. Need-payoff questions let the buyer describe the value of a solution in their own words.
+
+# Qualifying with BANT
+
+BANT stands for Budget, Authority, Need and Timeline. A lead is qualified when the rep has confirmed all four. Reps should always confirm the budget before scheduling a product demo. The decision maker is the person with authority to sign the contract.
+
+# Handling objections
+
+An objection is a concern the buyer raises before agreeing to buy. Price objections are the most common objection in B2B sales. When a buyer raises an objection, acknowledge it, ask a clarifying question and then respond with evidence. Never argue with the customer. Follow up within 24 hours after every discovery call, and send a written summary of the agreed next steps.
+
+# Writing follow-up emails
+
+A follow-up email should be short, specific and focused on one call to action. Personalisation means referring to something the buyer said in the conversation. Emails sent on Tuesday mornings receive the highest reply rate in our CRM data, about 18 percent.

@@ -79,6 +79,8 @@ export const apiEnvSchema = z.object({
   FINDER_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /** Tests only: company logo look-ups (ADR 0070) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
   LOGO_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  /** Tests only: learning video look-ups (ADR 0097) read https://<host>/<path> from <fixture>/site/<host>/<path>. */
+  LEARNING_FIXTURE_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
   /**
    * Company auto-fill (ADR 0076) also reads Wikidata (www.wikidata.org). Unset or true: on. False for a server that
    * should only reach the companies' own websites (an office network without general internet).
@@ -249,6 +251,9 @@ export function loadApiEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.LOGO_FIXTURE_URL) {
     throw new Error('LOGO_FIXTURE_URL is for tests only and cannot be used in production');
+  }
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.LEARNING_FIXTURE_URL) {
+    throw new Error('LEARNING_FIXTURE_URL is for tests only and cannot be used in production');
   }
   const d = parsed.data;
   if (d.STRIPE_SECRET_KEY && !d.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET is required when STRIPE_SECRET_KEY is set');
