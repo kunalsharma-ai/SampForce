@@ -13,6 +13,7 @@ import {
 } from '@dealflow/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogTitle, Field, Input } from '@dealflow/ui';
 import { useQueryClient } from '@tanstack/react-query';
+import { RemoveValue, useRemoveValue } from './remove-value';
 import {
   Activity,
   BadgeCheck,
@@ -93,7 +94,7 @@ function Section({ id, icon: I, tint, title, children }: { id: string; icon: Ico
 }
 
 /** A labelled value with a small icon, and the Auto mark when auto-fill found it. */
-function Item({ icon: I, label, source, wide, children }: { icon?: Icon; label: string; source?: FieldSource; wide?: boolean; children: React.ReactNode }) {
+function Item({ icon: I, label, source, wide, remove, children }: { icon?: Icon; label: string; source?: FieldSource; wide?: boolean; remove?: () => Promise<unknown>; children: React.ReactNode }) {
   const t = useT();
   return (
     <div className={wide ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
@@ -101,19 +102,21 @@ function Item({ icon: I, label, source, wide, children }: { icon?: Icon; label: 
         {I && <I aria-hidden className="size-3.5" />}
         {label}
         <SourceTag source={source} t={t} />
+        {remove && <RemoveValue label={label} onRemove={remove} />}
       </dt>
       <dd className="mt-1 break-words text-sm">{children}</dd>
     </div>
   );
 }
 
-function Chips({ items, tone, icon: I }: { items: string[]; tone: keyof typeof TINTS; icon?: Icon }) {
+function Chips({ items, tone, icon: I, onRemove }: { items: string[]; tone: keyof typeof TINTS; icon?: Icon; onRemove?: (item: string) => Promise<unknown> }) {
   return (
     <ul className="flex flex-wrap gap-1.5">
       {items.map((x) => (
         <li key={x} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${TINTS[tone]}`}>
           {I && <I aria-hidden className="size-3.5" />}
           {x}
+          {onRemove && <RemoveValue label={x} onRemove={() => onRemove(x)} className="-me-1 size-5" />}
         </li>
       ))}
     </ul>
@@ -121,7 +124,7 @@ function Chips({ items, tone, icon: I }: { items: string[]; tone: keyof typeof T
 }
 
 /** A big number with its label, for the key facts strip. */
-function Stat({ icon: I, tint, label, value, source }: { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }) {
+function Stat({ icon: I, tint, label, value, source, remove }: { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource; remove?: () => Promise<unknown> }) {
   const t = useT();
   return (
     <div className="flex min-w-[9.5rem] flex-1 basis-40 items-center gap-3 rounded-xl border border-border bg-background/60 p-3">
@@ -131,6 +134,7 @@ function Stat({ icon: I, tint, label, value, source }: { icon: Icon; tint: keyof
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
           {label} <SourceTag source={source} t={t} />
+          {remove && <RemoveValue label={label} onRemove={remove} />}
         </p>
         <p className="truncate text-base font-semibold">{value}</p>
       </div>
@@ -146,7 +150,7 @@ const initials = (name: string) =>
     .map((w) => w[0]!.toUpperCase())
     .join('');
 
-function Person({ name, role, icon: I }: { name: string; role?: string | null; icon?: Icon }) {
+function Person({ name, role, icon: I, remove }: { name: string; role?: string | null; icon?: Icon; remove?: () => Promise<unknown> }) {
   return (
     <li className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background/60 p-2.5">
       <span aria-hidden className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-accent/80 text-xs font-bold text-white">
@@ -159,6 +163,7 @@ function Person({ name, role, icon: I }: { name: string; role?: string | null; i
         </span>
         {role && <span className="block truncate text-xs text-muted-foreground">{role}</span>}
       </span>
+      {remove && <RemoveValue label={name} onRemove={remove} className="ms-auto" />}
     </li>
   );
 }
@@ -207,12 +212,12 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
   const profiles = profileLinks(c);
 
   const stats = [
-    c.foundedYear && { icon: CalendarDays, tint: 'primary' as const, label: label('foundedYear'), value: c.foundedYear, source: src.foundedYear },
-    c.employeeCount !== null && { icon: Users, tint: 'accent' as const, label: label('employeeCount'), value: c.employeeCount.toLocaleString(t.formatLocale), source: src.employeeCount },
-    c.companySize && { icon: UsersRound, tint: 'info' as const, label: label('companySize'), value: c.companySize, source: src.companySize },
-    c.branchCount !== null && { icon: Building, tint: 'success' as const, label: label('branchCount'), value: c.branchCount, source: src.branchCount },
-    c.operatingStatus && { icon: Activity, tint: 'warning' as const, label: label('operatingStatus'), value: t.maybe(c.operatingStatus), source: src.operatingStatus },
-  ].filter(Boolean) as { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource }[];
+    c.foundedYear && { icon: CalendarDays, tint: 'primary' as const, label: label('foundedYear'), value: c.foundedYear, source: src.foundedYear, field: 'foundedYear' },
+    c.employeeCount !== null && { icon: Users, tint: 'accent' as const, label: label('employeeCount'), value: c.employeeCount.toLocaleString(t.formatLocale), source: src.employeeCount, field: 'employeeCount' },
+    c.companySize && { icon: UsersRound, tint: 'info' as const, label: label('companySize'), value: c.companySize, source: src.companySize, field: 'companySize' },
+    c.branchCount !== null && { icon: Building, tint: 'success' as const, label: label('branchCount'), value: c.branchCount, source: src.branchCount, field: 'branchCount' },
+    c.operatingStatus && { icon: Activity, tint: 'warning' as const, label: label('operatingStatus'), value: t.maybe(c.operatingStatus), source: src.operatingStatus, field: 'operatingStatus' },
+  ].filter(Boolean) as { icon: Icon; tint: keyof typeof TINTS; label: string; value: React.ReactNode; source?: FieldSource; field: string }[];
 
   const overview = has(c.overview) || has(c.legalName) || has(c.industry) || has(c.businessCategory) || has(c.companyType) || has(c.specialties) || has(c.services) || has(c.products) || has(c.industriesServed);
   const locations = has(hqLine) || has(c.country) || has(c.headquarters) || has(c.timezone) || has(c.addresses);
@@ -221,6 +226,11 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
   const more = has(c.moreDetails) || has(c.notes);
   const empty = !stats.length && !overview && !locations && !contact && !people && !profiles.length && !has(c.certifications) && !more;
   const editable = canWrite && !c.restricted;
+  // Removing one value is an edit of that field (ADR 0097); auto-fill never writes a removed value back.
+  const remover = useRemoveValue('companies', c.id);
+  const rm = (patch: Record<string, unknown>) => (editable ? () => remover.mutateAsync(patch) : undefined);
+  const rmItem = <K extends 'services' | 'products' | 'industriesServed' | 'certifications' | 'founders'>(field: K) =>
+    editable ? (item: string) => remover.mutateAsync({ [field]: c[field].filter((x) => x !== item) }) : undefined;
   const pointLinks = (list: { value: string; primary?: boolean }[], kind: 'mailto' | 'tel') => (
     <ul className="space-y-1">
       {list.map((p) => (
@@ -229,6 +239,12 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
             {p.value}
           </a>
           {p.primary && list.length > 1 && <Badge className="px-1.5 py-0 text-[10px]">{t('primary')}</Badge>}
+          {editable && (
+            <RemoveValue
+              label={p.value}
+              onRemove={() => remover.mutateAsync(kind === 'mailto' ? { emails: emails.filter((e) => e.value !== p.value) } : { phones: phones.filter((e) => e.value !== p.value) })}
+            />
+          )}
         </li>
       ))}
     </ul>
@@ -252,8 +268,8 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
 
         {stats.length > 0 && (
           <div className="flex flex-wrap gap-2" role="group" aria-label={t('Company facts')}>
-            {stats.map((s) => (
-              <Stat key={s.label} {...s} />
+            {stats.map(({ field, ...s }) => (
+              <Stat key={s.label} {...s} remove={rm({ [field]: null })} />
             ))}
           </div>
         )}
@@ -264,19 +280,20 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
               <blockquote className="relative rounded-lg border-s-4 border-primary/60 bg-primary/5 py-2 pe-3 ps-4 text-sm leading-relaxed">
                 <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Quote aria-hidden className="size-3.5" /> {label('overview')} <SourceTag source={src.overview} t={t} />
+                  {editable && <RemoveValue label={label('overview')} onRemove={() => remover.mutateAsync({ overview: null })} />}
                 </span>
                 <span className="whitespace-pre-line">{c.overview}</span>
               </blockquote>
             )}
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {c.legalName && <Item icon={Landmark} label={label('legalName')} source={src.legalName}>{c.legalName}</Item>}
-              {c.industry && <Item icon={Factory} label={label('industry')} source={src.industry}>{c.industry}</Item>}
-              {c.businessCategory && <Item icon={Layers} label={label('businessCategory')} source={src.businessCategory}>{c.businessCategory}</Item>}
-              {c.companyType && <Item icon={Building2} label={label('companyType')} source={src.companyType}>{t.maybe(c.companyType)}</Item>}
-              {c.specialties && <Item icon={Sparkles} label={label('specialties')} source={src.specialties} wide>{c.specialties}</Item>}
-              {c.services.length > 0 && <Item icon={Briefcase} label={label('services')} source={src.services} wide><Chips items={c.services} tone="primary" /></Item>}
-              {c.products.length > 0 && <Item icon={Package} label={label('products')} source={src.products} wide><Chips items={c.products} tone="accent" /></Item>}
-              {c.industriesServed.length > 0 && <Item icon={Layers} label={label('industriesServed')} source={src.industriesServed} wide><Chips items={c.industriesServed} tone="info" /></Item>}
+              {c.legalName && <Item icon={Landmark} label={label('legalName')} source={src.legalName} remove={rm({ legalName: null })}>{c.legalName}</Item>}
+              {c.industry && <Item icon={Factory} label={label('industry')} source={src.industry} remove={rm({ industry: null })}>{c.industry}</Item>}
+              {c.businessCategory && <Item icon={Layers} label={label('businessCategory')} source={src.businessCategory} remove={rm({ businessCategory: null })}>{c.businessCategory}</Item>}
+              {c.companyType && <Item icon={Building2} label={label('companyType')} source={src.companyType} remove={rm({ companyType: null })}>{t.maybe(c.companyType)}</Item>}
+              {c.specialties && <Item icon={Sparkles} label={label('specialties')} source={src.specialties} remove={rm({ specialties: null })} wide>{c.specialties}</Item>}
+              {c.services.length > 0 && <Item icon={Briefcase} label={label('services')} source={src.services} wide><Chips items={c.services} tone="primary" onRemove={rmItem('services')} /></Item>}
+              {c.products.length > 0 && <Item icon={Package} label={label('products')} source={src.products} wide><Chips items={c.products} tone="accent" onRemove={rmItem('products')} /></Item>}
+              {c.industriesServed.length > 0 && <Item icon={Layers} label={label('industriesServed')} source={src.industriesServed} wide><Chips items={c.industriesServed} tone="info" onRemove={rmItem('industriesServed')} /></Item>}
             </dl>
           </Section>
         )}
@@ -289,6 +306,7 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
                     {t('Headquarters')} <SourceTag source={src.address ?? src.headquarters ?? src.country} t={t} />
+                    {editable && <RemoveValue label={t('Headquarters')} onRemove={() => remover.mutateAsync({ headquarters: null, address: null, city: null, state: null, postalCode: null })} />}
                   </p>
                   <p className="text-sm font-semibold">{c.headquarters || [c.city, c.country && countryName(c.country, t.formatLocale)].filter(Boolean).join(', ')}</p>
                   {hqLine && <p className="text-sm text-muted-foreground">{hqLine}</p>}
@@ -309,10 +327,11 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
                   {c.addresses.map((a, i) => (
                     <li key={i} className="flex min-w-0 items-start gap-2.5 rounded-xl border border-border bg-background/60 p-3">
                       {a.country ? <CountryFlag code={a.country} className="mt-0.5 text-lg" /> : <MapPin aria-hidden className="mt-0.5 size-4 text-muted-foreground" />}
-                      <div className="min-w-0 text-sm">
+                      <div className="min-w-0 flex-1 text-sm">
                         <p className="font-semibold">{a.label || [a.city, a.country && countryName(a.country, t.formatLocale)].filter(Boolean).join(', ')}</p>
                         <p className="text-muted-foreground">{[a.address, a.city, a.state, a.postalCode].filter(Boolean).join(', ')}</p>
                       </div>
+                      {editable && <RemoveValue label={a.label || a.city || label('addresses')} onRemove={() => remover.mutateAsync({ addresses: c.addresses.filter((_, j) => j !== i) })} />}
                     </li>
                   ))}
                 </ul>
@@ -325,14 +344,14 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
           <Section id="contact" icon={Contact} tint="success" title={t('Contact')}>
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {c.website && (
-                <Item icon={Globe} label={label('website')} source={src.website}>
+                <Item icon={Globe} label={label('website')} source={src.website} remove={rm({ websites: c.websites.filter((w) => w.value !== c.website) })}>
                   <a className="inline-flex min-h-6 items-center break-all font-medium text-primary hover:underline" href={c.website} target="_blank" rel="noopener noreferrer">
                     {short(c.website)}
                   </a>
                 </Item>
               )}
               {c.contactPageUrl && (
-                <Item icon={Link2} label={label('contactPageUrl')} source={src.contactPageUrl}>
+                <Item icon={Link2} label={label('contactPageUrl')} source={src.contactPageUrl} remove={rm({ contactPageUrl: null })}>
                   <a className="inline-flex min-h-6 items-center break-all font-medium text-primary hover:underline" href={c.contactPageUrl} target="_blank" rel="noopener noreferrer">
                     {short(c.contactPageUrl)}
                   </a>
@@ -348,16 +367,22 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
           <Section id="people" icon={Crown} tint="warning" title={t('Leadership & Ownership')}>
             {(c.ceo || c.leadership.length > 0) && (
               <ul className="grid gap-2 sm:grid-cols-2" aria-label={label('leadership')}>
-                {c.ceo && !c.leadership.some((l) => l.name === c.ceo) && <Person name={c.ceo} role={label('ceo')} icon={Crown} />}
+                {c.ceo && !c.leadership.some((l) => l.name === c.ceo) && <Person name={c.ceo} role={label('ceo')} icon={Crown} remove={rm({ ceo: null })} />}
                 {c.leadership.map((l, i) => (
-                  <Person key={i} name={l.name} role={l.title} icon={l.name === c.ceo ? Crown : undefined} />
+                  <Person
+                    key={i}
+                    name={l.name}
+                    role={l.title}
+                    icon={l.name === c.ceo ? Crown : undefined}
+                    remove={rm({ leadership: c.leadership.filter((_, j) => j !== i), ...(l.name === c.ceo ? { ceo: null } : {}) })}
+                  />
                 ))}
               </ul>
             )}
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {c.founders.length > 0 && <Item icon={UserRound} label={label('founders')} source={src.founders} wide><Chips items={c.founders} tone="warning" /></Item>}
-              {c.parentCompanyName && <Item icon={Network} label={label('parentCompanyName')} source={src.parentCompanyName}>{c.parentCompanyName}</Item>}
-              {c.ownership && <Item icon={Landmark} label={label('ownership')} source={src.ownership}>{c.ownership}</Item>}
+              {c.founders.length > 0 && <Item icon={UserRound} label={label('founders')} source={src.founders} wide><Chips items={c.founders} tone="warning" onRemove={rmItem('founders')} /></Item>}
+              {c.parentCompanyName && <Item icon={Network} label={label('parentCompanyName')} source={src.parentCompanyName} remove={rm({ parentCompanyName: null })}>{c.parentCompanyName}</Item>}
+              {c.ownership && <Item icon={Landmark} label={label('ownership')} source={src.ownership} remove={rm({ ownership: null })}>{c.ownership}</Item>}
             </dl>
           </Section>
         )}
@@ -369,8 +394,22 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
             </p>
             <ul className="flex flex-wrap gap-2" aria-label={t('Online profiles')}>
               {profiles.map((p) => (
-                <li key={p.platform}>
+                <li key={p.platform} className="inline-flex items-center gap-0.5">
                   <ProfilePill platform={p.platform} url={p.url} name={p.platform === 'website' ? t('Website') : SOCIAL_PLATFORM_LABELS[p.platform]} />
+                  {editable && (
+                    <RemoveValue
+                      label={p.platform === 'website' ? t('Website') : SOCIAL_PLATFORM_LABELS[p.platform]}
+                      onRemove={() =>
+                        remover.mutateAsync(
+                          p.platform === 'website'
+                            ? { websites: c.websites.filter((w) => w.value !== p.url) }
+                            : p.platform === 'linkedin'
+                              ? { linkedinUrls: c.linkedinUrls.filter((w) => w.value !== p.url), socialLinks: c.socialLinks.filter((x) => x.platform !== 'linkedin') }
+                              : { socialLinks: c.socialLinks.filter((x) => x.platform !== p.platform) },
+                        )
+                      }
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -382,7 +421,7 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {label('certifications')} <SourceTag source={src.certifications} t={t} />
             </p>
-            <Chips items={c.certifications} tone="success" icon={BadgeCheck} />
+            <Chips items={c.certifications} tone="success" icon={BadgeCheck} onRemove={rmItem('certifications')} />
           </Section>
         )}
 
@@ -390,12 +429,12 @@ export function BusinessInformation({ company: c }: { company: CompanyRow }) {
           <Section id="more" icon={Info} tint="accent" title={t('More details')}>
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {c.moreDetails.map((d, i) => (
-                <Item key={i} icon={ScrollText} label={d.label} source={i === 0 ? src.moreDetails : undefined}>
+                <Item key={i} icon={ScrollText} label={d.label} source={i === 0 ? src.moreDetails : undefined} remove={rm({ moreDetails: c.moreDetails.filter((_, j) => j !== i) })}>
                   <span className="whitespace-pre-line">{d.value}</span>
                 </Item>
               ))}
               {c.notes && (
-                <Item icon={StickyNote} label={t('Remarks')} wide>
+                <Item icon={StickyNote} label={t('Remarks')} wide remove={rm({ notes: null })}>
                   <span className="whitespace-pre-line">{c.notes}</span>
                 </Item>
               )}

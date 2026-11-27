@@ -82,8 +82,8 @@ export const BULK_ACTIONS = ['assign', 'status', 'delete'] as const;
 export const bulkActionSchema = z
   .object({
     entity: z.enum(TABLE_ENTITIES),
-    /** The rows ticked on screen (one page at most). */
-    ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+    /** The rows ticked on screen: one page of a table, or every employee ticked in a company's Employees list (ADR 0097). */
+    ids: z.array(z.string().uuid()).min(1).max(1_000).optional(),
     /**
      * Every record the list shows for these filters, on every page, with no limit: `query` is the list's own query
      * (search, owner, status, custom field filters…) and `expected` the total the person saw. When the list has changed

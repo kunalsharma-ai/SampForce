@@ -4,6 +4,7 @@ import type { ContactRow } from '@dealflow/types';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@dealflow/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import type * as React from 'react';
 import { InfoTip } from '@/components/info-tip';
 import { api } from '@/lib/api';
 import { useCrmStatuses } from '@/lib/company-crm';
@@ -12,6 +13,7 @@ import { formatDate } from '@/lib/crm';
 import { type MessageKey, useT } from '@/lib/i18n';
 import { useCan } from '@/lib/session';
 import { DetailList } from './record-detail';
+import { RemoveValue, useRemoveValue } from './remove-value';
 import { CountryFlag, StatusChip } from './status-chip';
 
 /** The employee's relationship with the team at a glance (section 3.2 of the specification). */
@@ -91,30 +93,72 @@ export function EmployeeRelationship({ contact: c }: { contact: ContactRow }) {
 /** Employee details from the "Add employee / POC" form, with the parent company. */
 export function EmployeeDetails({ contact: c }: { contact: ContactRow }) {
   const t = useT();
+  // Each saved value can be removed on its own (ADR 0097): an edit of that field, audited like one.
+  const editable = useCan('contacts:write') && !c.restricted;
+  const remover = useRemoveValue('contacts', c.id);
+  const rm = (patch: Record<string, unknown>) => (editable ? () => remover.mutateAsync(patch) : undefined);
+  const withRemove = (node: React.ReactNode, label: MessageKey, remove?: () => Promise<unknown>) =>
+    node && remove ? (
+      <span className="inline-flex max-w-full items-center gap-1">
+        <span className="min-w-0 truncate">{node}</span>
+        <RemoveValue label={t(label)} onRemove={remove} />
+      </span>
+    ) : (
+      node
+    );
+  const emails = c.emails.length ? c.emails : c.email ? [{ value: c.email, primary: true }] : [];
+  const phones = c.phones.length ? c.phones : c.phone ? [{ value: c.phone, primary: true }] : [];
   const points = (list: { value: string; primary?: boolean }[], scheme: 'mailto' | 'tel') =>
     list.length ? (
       <ul className="space-y-1">
         {list.map((p) => (
-          <li key={p.value}>
+          <li key={p.value} className="flex items-center gap-1">
             <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={`${scheme}:${p.value}`}>
               {p.value}
             </a>
             {p.primary && list.length > 1 && <span className="ms-1 text-xs text-muted-foreground">({t('primary')})</span>}
+            {editable && (
+              <RemoveValue
+                label={p.value}
+                onRemove={() =>
+                  remover.mutateAsync(
+                    scheme === 'mailto'
+                      ? { emails: emails.filter((e) => e.value !== p.value) }
+                      : { phones: phones.filter((e) => e.value !== p.value) },
+                  )
+                }
+              />
+            )}
           </li>
         ))}
       </ul>
     ) : null;
+  const place = c.country ? (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <CountryFlag code={c.country} withName />
+      {(c.city || c.state) && <span className="text-muted-foreground">· {[c.city, c.state].filter(Boolean).join(', ')}</span>}
+    </span>
+  ) : (
+    [c.city, c.state].filter(Boolean).join(', ') || null
+  );
   return (
     <DetailList
       items={[
         ['Company', c.company && <Link className="text-primary hover:underline" href={`/app/companies/${c.company.id}`}>{c.company.name}</Link>],
-        ['Designation', c.jobTitle],
-        ['Department', c.department],
-        ['Email', points(c.emails.length ? c.emails : c.email ? [{ value: c.email, primary: true }] : [], 'mailto')],
-        ['Phone', points(c.phones.length ? c.phones : c.phone ? [{ value: c.phone, primary: true }] : [], 'tel')],
-        ['LinkedIn', c.linkedinUrl && <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={c.linkedinUrl} target="_blank" rel="noopener noreferrer">{c.linkedinUrl.replace(/^https?:\/\/(www\.)?/, '')}</a>],
-        ['Location', c.country ? <span className="inline-flex flex-wrap items-center gap-1.5"><CountryFlag code={c.country} withName />{(c.city || c.state) && <span className="text-muted-foreground">· {[c.city, c.state].filter(Boolean).join(', ')}</span>}</span> : [c.city, c.state].filter(Boolean).join(', ') || null],
-        ['Employee remarks', c.remarks && <span className="whitespace-pre-line">{c.remarks}</span>],
+        ['Designation', withRemove(c.jobTitle, 'Designation', rm({ jobTitle: null }))],
+        ['Department', withRemove(c.department, 'Department', rm({ department: null }))],
+        ['Email', points(emails, 'mailto')],
+        ['Phone', points(phones, 'tel')],
+        [
+          'LinkedIn',
+          withRemove(
+            c.linkedinUrl && <a className="inline-flex min-h-6 items-center break-all text-primary hover:underline" href={c.linkedinUrl} target="_blank" rel="noopener noreferrer">{c.linkedinUrl.replace(/^https?:\/\/(www\.)?/, '')}</a>,
+            'LinkedIn',
+            rm({ linkedinUrl: null }),
+          ),
+        ],
+        ['Location', withRemove(place, 'Location', rm({ country: null, city: null, state: null }))],
+        ['Employee remarks', withRemove(c.remarks && <span className="whitespace-pre-line">{c.remarks}</span>, 'Employee remarks', rm({ remarks: null }))],
         ['Created by', personLabel(c.createdBy) || null],
       ]}
     />

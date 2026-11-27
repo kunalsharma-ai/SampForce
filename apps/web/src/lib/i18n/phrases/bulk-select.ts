@@ -26,4 +26,22 @@ export const bulkSelect = {
     'Damit werden alle {count} Datensätze gelöscht, die diese Liste mit ihren aktuellen Filtern zeigt, nicht nur die sichtbaren.',
     'سيؤدي هذا إلى حذف كل السجلات ({count}) التي تعرضها هذه القائمة بعوامل التصفية الحالية، وليس الظاهرة فقط.',
   ],
+  // Removing unwanted information from a company or contact (ADR 0097)
+  'Remove {item}': ['Quitar {item}', 'Retirer {item}', '{item} entfernen', 'إزالة {item}'],
+  'Could not delete this record.': ['No se pudo eliminar este registro.', "Impossible de supprimer cet enregistrement.", 'Dieser Datensatz konnte nicht gelöscht werden.', 'تعذّر حذف هذا السجل.'],
+  'Delete all employees': ['Eliminar todos los empleados', 'Supprimer tous les employés', 'Alle Mitarbeitenden löschen', 'حذف كل الموظفين'],
+  'Delete all {count} shown': ['Eliminar los {count} mostrados', 'Supprimer les {count} affichés', 'Alle {count} angezeigten löschen', 'حذف المعروضين ({count})'],
+  'Delete employees?': ['¿Eliminar empleados?', 'Supprimer des employés ?', 'Mitarbeitende löschen?', 'حذف الموظفين؟'],
+  'Delete selected ({count})': ['Eliminar seleccionados ({count})', 'Supprimer la sélection ({count})', 'Auswahl löschen ({count})', 'حذف المحدد ({count})'],
+  'Delete this employee?': ['¿Eliminar este empleado?', 'Supprimer cet employé ?', 'Diese Person löschen?', 'حذف هذا الموظف؟'],
+  'Delete {count} employees?': ['¿Eliminar {count} empleados?', 'Supprimer {count} employés ?', '{count} Mitarbeitende löschen?', 'حذف {count} من الموظفين؟'],
+  'Delete {count}': ['Eliminar {count}', 'Supprimer {count}', '{count} löschen', 'حذف {count}'],
+  'Deleting…': ['Eliminando…', 'Suppression…', 'Wird gelöscht…', 'جارٍ الحذف…'],
+  'Select all employees': ['Seleccionar todos los empleados', 'Sélectionner tous les employés', 'Alle Mitarbeitenden auswählen', 'تحديد كل الموظفين'],
+  'This deletes the contact records themselves, with their details. To keep a person but take them off this company, use Remove from company instead.': [
+    'Esto elimina los propios registros de contacto, con sus datos. Para conservar a una persona pero quitarla de esta empresa, usa Quitar de la empresa.',
+    "Cela supprime les fiches contact elles-mêmes, avec leurs informations. Pour garder une personne mais la retirer de cette entreprise, utilisez plutôt Retirer de l'entreprise.",
+    'Damit werden die Kontaktdatensätze selbst mit ihren Angaben gelöscht. Um eine Person zu behalten, sie aber von diesem Unternehmen zu lösen, nutzen Sie stattdessen „Vom Unternehmen entfernen“.',
+    'سيؤدي هذا إلى حذف سجلات جهات الاتصال نفسها مع بياناتها. للإبقاء على الشخص مع إزالته من هذه الشركة، استخدم الإزالة من الشركة بدلًا من ذلك.',
+  ],
 } as const satisfies PhraseTable;
