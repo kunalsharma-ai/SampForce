@@ -1,0 +1,64 @@
+/*
+ * The SampForce loader (spec section 3): the bolt at the centre of two orbits, a spark that circles it, a light that
+ * sweeps round the outer ring, and "SampForce" with a shine running across it. Transforms and opacity only. Under
+ * reduced motion the global rule in packages/ui/src/tokens.css ends every animation at once, so the loader is the still
+ * logo with its words; nothing flashes.
+ */
+
+.sfl-root .sfl-part {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.sfl-root .sfl-orbit-a { transform-origin: 50% 50%; animation: sfl-spin 2.4s linear infinite; }
+.sfl-root .sfl-orbit-b { transform-origin: 50% 50%; animation: sfl-spin 3.6s linear infinite reverse; }
+.sfl-root .sfl-sweep { transform-origin: 50% 50%; animation: sfl-spin 1.4s cubic-bezier(0.55, 0.1, 0.45, 0.9) infinite; }
+.sfl-root .sfl-bolt { animation: sfl-charge 1.8s ease-in-out infinite; }
+.sfl-root .sfl-halo { animation: sfl-halo 1.8s ease-in-out infinite; }
+.sfl-root .sfl-streak { transform-origin: right center; animation: sfl-dash 1.8s ease-in-out infinite; }
+.sfl-root .sfl-streak-1 { animation-delay: 0.15s; }
+.sfl-root .sfl-streak-2 { animation-delay: 0.3s; }
+.sfl-root .sfl-spark { animation: sfl-twinkle 1.8s ease-in-out infinite; }
+
+/* "Force" in the brand gradient with a shine that keeps sweeping across while loading. */
+.sfl-word {
+  background-image:
+    linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%),
+    linear-gradient(to right, #c81e1e, #f59e0b);
+  background-size: 250% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sfl-shine 2.2s ease-in-out infinite;
+}
+.dark .sfl-word {
+  background-image:
+    linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%),
+    linear-gradient(to right, #ff8a8a, #ffc857);
+}
+
+/* The thin bar under the header while a page's first data loads: a light that runs along it. */
+.sfl-bar {
+  background: linear-gradient(90deg, transparent, #e02424 30%, #ffc857 50%, #e02424 70%, transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: sfl-run 1.3s ease-in-out infinite;
+}
+[dir='rtl'] .sfl-bar { animation-direction: reverse; }
+
+/* Three dots after "Loading" that rise one after the other. */
+.sfl-dot { animation: sfl-dot 1.2s ease-in-out infinite; }
+.sfl-dot:nth-child(2) { animation-delay: 0.15s; }
+.sfl-dot:nth-child(3) { animation-delay: 0.3s; }
+
+.sfl-enter { animation: sfl-enter 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+@keyframes sfl-spin { to { transform: rotate(360deg); } }
+@keyframes sfl-charge { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(224, 36, 36, 0)); } 50% { transform: scale(1.06); filter: drop-shadow(0 0 6px rgba(255, 200, 87, 0.8)); } }
+@keyframes sfl-halo { 0%, 100% { opacity: 0.25; transform: scale(0.9); } 50% { opacity: 0.8; transform: scale(1.08); } }
+@keyframes sfl-dash { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(0.4) translateX(-6px); opacity: 0.45; } }
+@keyframes sfl-twinkle { 0%, 100% { transform: scale(0.7) rotate(0deg); opacity: 0.6; } 50% { transform: scale(1.25) rotate(45deg); opacity: 1; } }
+@keyframes sfl-shine { from { background-position: 120% 0, 0 0; } to { background-position: -120% 0, 0 0; } }
+@keyframes sfl-run { from { background-position: -60% 0; } to { background-position: 160% 0; } }
+@keyframes sfl-dot { 0%, 60%, 100% { transform: none; opacity: 0.4; } 30% { transform: translateY(-3px); opacity: 1; } }
+@keyframes sfl-enter { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }

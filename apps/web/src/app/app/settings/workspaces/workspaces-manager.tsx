@@ -399,7 +399,7 @@ function PermissionCenter({ row, parent, callerLevel, rules, onClose }: { row: W
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-4xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Permissions for {name}', { name: row.name })}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Choose what {name} may use and do. You can only hand down what {parent} has. Records it created stay; a feature you take away becomes unavailable to it at once.', { name: row.name, parent: parent.name })}
@@ -583,7 +583,7 @@ function EditDialog({ row, tree, onClose }: { row: WorkspaceRow; tree: Workspace
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Edit {name}', { name: row.name })}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">{t.maybe(WORKSPACE_LEVEL_LABEL[row.level])}</DialogDescription>
         <form

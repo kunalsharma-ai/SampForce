@@ -6,7 +6,11 @@ import { cn } from '../cn';
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
-export const DialogTitle = DialogPrimitive.Title;
+/** A dialog's title keeps clear of the close button in the top corner, however long it is. */
+export const DialogTitle = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Title>, React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>>(
+  ({ className, ...props }, ref) => <DialogPrimitive.Title ref={ref} className={cn('pe-8', className)} {...props} />,
+);
+DialogTitle.displayName = 'DialogTitle';
 export const DialogDescription = DialogPrimitive.Description;
 
 /** 'right' and 'left' are the end and start edges, so in right-to-left languages the panels swap sides. */
@@ -15,7 +19,8 @@ type Side = 'right' | 'left' | 'center';
 const sideClasses: Record<Side, string> = {
   right: 'inset-y-0 end-0 h-full w-full max-w-md border-s data-[state=open]:slide-in-from-right rtl:data-[state=open]:slide-in-from-left',
   left: 'inset-y-0 start-0 h-full w-72 border-e data-[state=open]:slide-in-from-left rtl:data-[state=open]:slide-in-from-right',
-  center: 'left-1/2 top-[15%] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border data-[state=open]:zoom-in-95',
+  // A centred dialog never runs off the bottom of the screen: it scrolls inside instead (spec section 14, no overlap).
+  center: 'left-1/2 top-[15%] max-h-[calc(85dvh-1rem)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-y-auto rounded-lg border data-[state=open]:zoom-in-95',
 };
 
 /** Dialog surface. `side` turns it into a slide-over sheet (mobile nav, Copilot panel). */

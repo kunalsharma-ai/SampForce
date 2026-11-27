@@ -162,7 +162,7 @@ function SetTargetDialog({ view, onClose }: { view: TargetsView; onClose: () => 
   const [f, setF] = useState({ workspaceId: view.assignable[0]?.id ?? '', metric: 'REVENUE' as TargetMetric, period: 'MONTHLY' as TargetPeriod, startsOn: `${today.slice(0, 7)}-01`, endsOn: '', amount: '', note: '' });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Set a target')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">{t('Progress counts the records of everyone in the workspace and the workspaces below it.')}</DialogDescription>
         <form
@@ -283,7 +283,7 @@ function SplitDialog({ row, view, onClose }: { row: TargetRow; view: TargetsView
   const over = total > row.amount;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{t('Split among team')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Give each Executive Workspace its part of {amount}. Each part becomes its own target, marked as handed down by the manager.', { amount: formatTarget(t, row.amount, row.currency) })}

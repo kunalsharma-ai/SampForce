@@ -129,7 +129,8 @@ describe('targets and tasks down the hierarchy', () => {
     expect(seen.history.map((h: { kind: string }) => h.kind)).toEqual(['created', 'commented', 'updated']);
     expect(seen.history[2].changes).toEqual([{ field: 'status', from: 'OPEN', to: 'DONE' }]);
     const managerTold = (await api(manager).get('/notifications').expect(200)).body.items;
-    expect(managerTold.some((n: { type: string }) => n.type === 'task.updated')).toBe(true);
+    // A finished task has its own type, so it pops up as "Task completed" on screen (spec section 9).
+    expect(managerTold.some((n: { type: string; title: string }) => n.type === 'task.completed' && n.title.startsWith('Task completed'))).toBe(true);
 
     // Isolation: the other executive and another organisation never see it; executives cannot assign tasks.
     await api(executive2).get(`/assigned-tasks/${created.id}`).expect(404);

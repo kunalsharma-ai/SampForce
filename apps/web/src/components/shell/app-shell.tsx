@@ -8,13 +8,12 @@ import {
   CardHeader,
   CardTitle,
   cn,
-  Skeleton,
 } from '@dealflow/ui';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { Minimize2 } from 'lucide-react';
+import { Minimize2, RefreshCw } from 'lucide-react';
 import { useAppearanceSync } from '@/lib/appearance-sync';
 import { useT } from '@/lib/i18n';
 import { fmtLocale } from '@/lib/i18n/locale';
@@ -25,7 +24,9 @@ import { useShell } from '@/stores/shell';
 import { CelebrationHost } from '../achievements/celebration-host';
 import { AmbientBackground } from '../ambient-background';
 import { QuickCreateHost } from '../crm/quick-create';
+import { PageLoading, SlowLoadWatcher } from '../loading/sampforce-loader';
 import { SectionNotices } from '../notifications/section-notices';
+import { OnScreenHost } from '../on-screen/on-screen-host';
 import { WelcomeOverlay } from '../sign-in/welcome-overlay';
 import { PasswordConfirmationProvider } from '../security/confirm-deletion-dialog';
 import { CustomizeMenuDialog } from './customize-menu';
@@ -37,7 +38,7 @@ import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { data, isPending, error } = useSession();
+  const { data, isPending, error, refetch, isFetching } = useSession();
   const chatRealm = useChatRealm();
   const pathname = usePathname();
   // The workspace brand colour goes through the theme engine, which keeps it readable in both modes.
@@ -58,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <a
           href="#main"
-          className="sr-only z-50 rounded-md bg-primary px-3 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:start-3 focus:top-3"
+          className="sr-only z-50 rounded-md bg-primary text-primary-foreground focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:px-3 focus:py-2"
         >
           {t('shell.skip')}
         </a>
@@ -92,19 +93,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* With team chat, the right edge keeps a gutter for the quick chat tab (R9), so it never covers the page. */}
           <main id="main" className={cn('flex-1 px-4 pb-24 pt-6 md:px-8 lg:pb-6', chatRealm && 'lg:pe-20')}>
             {isPending ? (
-              <div
-                role="status"
-                className="space-y-4"
-                aria-busy="true"
-                aria-label={t('shell.loading')}
-              >
-                <Skeleton className="h-8 w-64" />
-                <Skeleton className="h-32 w-full" />
-              </div>
+              // Skeletons at once, the animated SampForce logo when it takes a moment, Retry when it takes too long.
+              <PageLoading onRetry={() => void refetch()} />
             ) : error ? (
-              <p role="alert" className="text-sm text-critical">
-                {t('shell.loadError')}
-              </p>
+              <div role="alert" className="mx-auto mt-10 flex max-w-md flex-col items-center gap-3 rounded-2xl border border-critical/30 bg-critical/5 p-6 text-center" data-shell-error="">
+                <p className="text-sm text-critical">{t('shell.loadError')}</p>
+                <Button type="button" variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+                  <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} aria-hidden /> {t('Try again')}
+                </Button>
+              </div>
             ) : data?.restriction &&
               !(data.restriction === 'mfa_enrolment' && pathname === '/app/account/security') ? (
               <PolicyGate restriction={data.restriction} until={data.restrictionUntil} />
@@ -132,6 +129,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {data && !data.restriction && <CelebrationHost />}
         {data && !data.restriction && <MobileBottomNav />}
         {data && <CustomizeMenuDialog />}
+        {/* The bar and "loading 3 of 5" card while a page's data loads for the first time (spec section 3). */}
+        {data && <SlowLoadWatcher />}
+        {/* On-screen notifications and team chat pop-ups (spec section 9). */}
+        {data && <OnScreenHost />}
         <KeyboardShortcuts />
         {/* The level's welcome, once, right after signing in (ADR 0075). */}
         <WelcomeOverlay />

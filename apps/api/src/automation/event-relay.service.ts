@@ -161,6 +161,24 @@ export class EventRelay {
         await this.notifications.send(tx, event.tenantId, users, { type: 'deal.lost', title: `Deal lost: ${recordLabel(deal) ?? 'a deal'}`, link, eventId: event.id });
         return;
       }
+      // Spec section 9: the people above someone hear when they add a company, contact or deal (on screen and in the
+      // bell). Bulk imports publish no events, so an import never floods anyone.
+      case 'company.created':
+      case 'contact.created':
+      case 'deal.created': {
+        const users = await this.notifications.watchersOf(tx, event.tenantId, event.actorUserId);
+        if (users.length === 0) return;
+        const name = recordLabel(await loadRecord());
+        const actor = event.actorUserId ? await tx.user.findUnique({ where: { id: event.actorUserId }, select: { name: true } }) : null;
+        const who = actor?.name ?? 'Someone';
+        const title = {
+          'company.created': `${who} added the company ${name ?? 'without a name'}`,
+          'contact.created': `${who} added the contact ${name ?? 'without a name'}`,
+          'deal.created': `${who} created the deal ${name ?? 'without a name'}`,
+        }[event.type];
+        await this.notifications.send(tx, event.tenantId, users, { type: event.type, title, link, eventId: event.id, senderId: event.actorUserId, priority: 'LOW' });
+        return;
+      }
       default:
         return;
     }

@@ -7,10 +7,12 @@ import {
   type NotificationFilter,
   type NotificationPreferences,
   type NotificationSectionKey,
+  POPUP_SECONDS_MAX,
+  POPUP_SECONDS_MIN,
   type SoundCategoryKey,
 } from '@dealflow/types';
 import { Button, Card, cn } from '@dealflow/ui';
-import { BellRing, CheckCheck, Volume2 } from 'lucide-react';
+import { BellRing, CheckCheck, MonitorPlay, Volume2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { NotificationItem } from '@/components/notifications/notification-item';
@@ -26,6 +28,14 @@ import {
   useSaveNotificationPreferences,
 } from '@/lib/notification-center';
 import { playChime } from '@/lib/notification-sound';
+import { type OnScreenKind, useOnScreen } from '@/lib/on-screen';
+
+/** The examples "Show an example" plays: one of each family, so the person sees what each looks like. */
+const EXAMPLES: { kind: OnScreenKind; title: string; body: string }[] = [
+  { kind: 'check-in', title: 'Priya Nair checked in', body: 'Working from 9:02.' },
+  { kind: 'task-done', title: 'Task completed: Call back Acme Research', body: 'Finished on time.' },
+  { kind: 'deal-won', title: 'Deal won: Kantar tracker wave 3', body: 'Great work, team!' },
+];
 
 const FILTERS: { key: NotificationFilter; label: 'All' | 'Unread' | 'Action required' }[] = [
   { key: 'all', label: 'All' },
@@ -121,8 +131,103 @@ export function NotificationCenter() {
           )}
         </div>
       </Card>
+      <PopupsCard />
       <PreferencesCard />
     </div>
+  );
+}
+
+/** On-screen pop-ups (spec section 9): on or off, how long they stay, which kinds pop up, and a preview. */
+function PopupsCard() {
+  const t = useT();
+  const stored = useNotificationPreferences().data;
+  const save = useSaveNotificationPreferences();
+  const push = useOnScreen((s) => s.push);
+  // What was just chosen, shown in the same click while it saves (then the stored choice takes over again).
+  const [draft, setDraft] = useState<NotificationPreferences | null>(null);
+  const prefs = draft ?? stored;
+  if (!prefs) return null;
+  const update = (patch: Partial<NotificationPreferences>) => {
+    const next = { ...prefs, ...patch };
+    setDraft(next);
+    save.mutate(next, { onSettled: () => setDraft((d) => (d === next ? null : d)) });
+  };
+  const toggleMuted = (key: SoundCategoryKey, on: boolean) =>
+    update({ mutedPopups: on ? prefs.mutedPopups.filter((k) => k !== key) : [...prefs.mutedPopups, key] });
+  const categories: { key: SoundCategoryKey; label: string }[] = [...NOTIFICATION_CATEGORIES.map((c) => ({ key: c.key, label: c.label })), { key: 'other', label: 'Everything else' }];
+  const showExample = () => {
+    const at = Date.now();
+    push(EXAMPLES.map((e, i) => ({ id: `preview:${at}:${i}`, kind: e.kind, title: t.maybe(e.title), body: t.maybe(e.body), preview: true })));
+  };
+
+  return (
+    <Card id="popups" className="scroll-mt-24 space-y-5 p-5" data-popup-settings="">
+      <div className="flex flex-wrap items-center gap-3">
+        <span aria-hidden className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#e02424] to-[#ffc857] text-white shadow-md">
+          <MonitorPlay className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold">{t('On-screen pop-ups')}</h2>
+          <p className="text-xs text-muted-foreground">{t('A short animated card in the corner of the screen when something happens: check-ins, breaks, tasks, approvals, messages, new deals and more. Everything also stays in your notifications.')}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={showExample} disabled={!prefs.popups}>
+          <MonitorPlay className="size-4" aria-hidden /> {t('Show an example')}
+        </Button>
+      </div>
+
+      <label className="flex items-start gap-3">
+        <input type="checkbox" className="mt-1 size-4 accent-[hsl(var(--sf-red))]" checked={prefs.popups} onChange={(e) => update({ popups: e.target.checked })} data-popups-toggle="" />
+        <span>
+          <span className="block text-sm font-medium">{t('Show pop-ups on screen when a notification arrives')}</span>
+          <span className="block text-xs text-muted-foreground">{t('They close by themselves, wait while your pointer is on them, and ones that need you to act stay until you close them. Many at once become one card.')}</span>
+        </span>
+      </label>
+
+      <div className="flex flex-wrap items-center gap-3 ps-7">
+        <label htmlFor="popup-seconds" className="text-sm">
+          {t('Time on screen')}
+        </label>
+        <input
+          id="popup-seconds"
+          type="range"
+          min={POPUP_SECONDS_MIN}
+          max={POPUP_SECONDS_MAX}
+          step={1}
+          disabled={!prefs.popups}
+          defaultValue={prefs.popupSeconds}
+          onPointerUp={(e) => update({ popupSeconds: Number((e.target as HTMLInputElement).value) })}
+          onKeyUp={(e) => update({ popupSeconds: Number((e.target as HTMLInputElement).value) })}
+          className="w-48 accent-[hsl(var(--sf-red))]"
+          aria-valuetext={t('{count} seconds', { count: prefs.popupSeconds })}
+        />
+        <span className="text-sm tabular text-muted-foreground" data-popup-seconds={prefs.popupSeconds}>
+          {t('{count} seconds', { count: prefs.popupSeconds })}
+        </span>
+      </div>
+
+      <fieldset className="ps-7" disabled={!prefs.popups}>
+        <legend className="text-sm font-medium">{t('Pop up for')}</legend>
+        <div className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          {categories.map((c) => (
+            <label key={c.key} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-[hsl(var(--sf-red))]"
+                checked={!prefs.mutedPopups.includes(c.key)}
+                onChange={(e) => toggleMuted(c.key, e.target.checked)}
+                data-popup-category={c.key}
+              />
+              {t.maybe(c.label)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {save.isError && (
+        <p role="alert" className="text-sm text-critical">
+          {t('Could not save. Please try again.')}
+        </p>
+      )}
+    </Card>
   );
 }
 

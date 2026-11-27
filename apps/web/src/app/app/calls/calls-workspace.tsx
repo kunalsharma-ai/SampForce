@@ -717,7 +717,7 @@ function EditCallDialog({ call, onClose }: { call: CallRow | null; onClose: () =
   }, [call]);
   return (
     <Dialog open={!!call} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto p-6">
         <DialogTitle>{t('Edit call')}</DialogTitle>
         <DialogDescription>{t('The call on the company’s interactions changes too.')}</DialogDescription>
         <form

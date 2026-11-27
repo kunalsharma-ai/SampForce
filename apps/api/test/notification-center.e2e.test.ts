@@ -112,9 +112,9 @@ describe('notification center', () => {
   });
 
   it('keeps each person’s sound preferences, with safe defaults', async () => {
-    expect((await api(manager).get('/notifications/preferences').expect(200)).body).toEqual({ sound: true, volume: 40, mutedSound: [], desktop: false });
+    expect((await api(manager).get('/notifications/preferences').expect(200)).body).toEqual({ sound: true, volume: 40, mutedSound: [], desktop: false, popups: true, popupSeconds: 6, mutedPopups: [] });
     const saved = (await api(manager).put('/notifications/preferences', { sound: true, volume: 25, mutedSound: ['deal_won', 'other', 'deal_won'], desktop: true }).expect(200)).body;
-    expect(saved).toEqual({ sound: true, volume: 25, mutedSound: ['deal_won', 'other'], desktop: true });
+    expect(saved).toEqual({ sound: true, volume: 25, mutedSound: ['deal_won', 'other'], desktop: true, popups: true, popupSeconds: 6, mutedPopups: [] });
     // Personal: the executive keeps the defaults.
     expect((await api(executive).get('/notifications/preferences').expect(200)).body.volume).toBe(40);
     await api(manager).put('/notifications/preferences', { sound: true, volume: 250, mutedSound: [], desktop: false }).expect(400);

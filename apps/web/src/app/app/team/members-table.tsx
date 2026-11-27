@@ -51,7 +51,7 @@ export function MembersTable() {
             <InfoTip topic="team.members" />
           </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="relative overflow-x-auto">
           {error && (
             <p role="alert" className="mb-3 text-sm text-critical">
               {error}

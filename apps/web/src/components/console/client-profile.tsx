@@ -120,7 +120,7 @@ function ProfileDialog({ client, onClose }: { client: ConsoleClientDetail; onClo
   );
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">Company information</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">How SampForce knows this client. Every change is kept in the audit log with its old value.</DialogDescription>
         <form

@@ -73,7 +73,7 @@ export function JourneyBoardView() {
         )
       )}
       <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6">
+        <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6">
           <DialogTitle className="text-lg font-semibold">{open?.name}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">{t('Where this company is in its journey, and what comes next.')}</DialogDescription>
           {open && <CompanyJourneySteps companyId={open.companyId} />}

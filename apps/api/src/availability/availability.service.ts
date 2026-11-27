@@ -218,7 +218,9 @@ export class AvailabilityService {
       CHECKED_OUT: `${name} checked out`,
     };
     await this.notifications.send(tx, auth.tenantId, [...watchers], {
-      type: 'team.status',
+      // The change itself is in the type (team.status.checked_in, .on_break, .back...), so the on-screen pop-up can
+      // show the right picture in any language.
+      type: `team.status.${statusEvent(me.status, before)}`,
       title: title[me.status],
       link: '/app/team-status',
       senderId: auth.userId,
@@ -299,4 +301,10 @@ export class AvailabilityService {
       return { people: rows, counts, scope };
     });
   }
+}
+
+/** What a status change means for the people watching: the last part of its notification type. */
+export function statusEvent(now: AvailabilityStatus, before: AvailabilityStatus): string {
+  if (now === 'WORKING') return before === 'ON_BREAK' ? 'back' : before === 'CHECKED_OUT' ? 'checked_in' : 'working';
+  return { AVAILABLE: 'available', ON_BREAK: 'on_break', AWAY: 'away', CHECKED_OUT: 'checked_out' }[now];
 }

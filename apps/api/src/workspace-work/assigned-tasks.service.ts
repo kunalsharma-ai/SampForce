@@ -157,7 +157,7 @@ export class AssignedTasksService {
       // The assignee hears about changes to their task; the creator hears when it is finished or reopened.
       const recipients = [...(onlyStatus ? [] : workers), ...(status !== undefined ? [task.createdById] : [])].filter((u): u is string => !!u && u !== auth.userId);
       await this.notifications.send(tx, auth.tenantId, recipients, {
-        type: 'task.updated',
+        type: status === 'DONE' && onlyStatus ? 'task.completed' : 'task.updated',
         title: (status === 'DONE' && onlyStatus ? 'Task completed: {title}' : 'Task changed: {title}').replace('{title}', updated.title),
         body: null,
         link: `/app/tasks?task=${id}`,
@@ -213,7 +213,7 @@ export class AssignedTasksService {
       await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'task.progress', entityType: 'task', entityId: id, metadata: { title: task.title, progress: input.progress, reason }, meta });
       const title = { ACKNOWLEDGED: 'Task acknowledged: {title}', IN_PROGRESS: 'Task in progress: {title}', BLOCKED: 'Task blocked: {title}' }[input.progress];
       await this.notifications.send(tx, auth.tenantId, [task.createdById].filter((u): u is string => !!u && u !== auth.userId), {
-        type: 'task.updated',
+        type: ({ ACKNOWLEDGED: 'task.acknowledged', IN_PROGRESS: 'task.in_progress', BLOCKED: 'task.blocked' } as const)[input.progress],
         title: title.replace('{title}', task.title),
         body: reason,
         link: `/app/tasks?task=${id}`,

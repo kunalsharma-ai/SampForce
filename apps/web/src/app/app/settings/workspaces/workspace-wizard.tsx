@@ -154,7 +154,7 @@ export function CreateWorkspaceWizard({ tree, initialLevel, onClose }: { tree: W
 
   return (
     <Dialog open onOpenChange={(o) => !o && !create.isPending && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-6" data-workspace-wizard>
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-2xl overflow-y-auto p-6" data-workspace-wizard>
         <DialogTitle className="text-lg font-semibold">{created ? t('Workspace created') : t('Create a workspace')}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {t('Your organisation has its one Super Workspace. Here you add Manager and Executive Workspaces below it.')}

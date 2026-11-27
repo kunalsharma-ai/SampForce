@@ -143,14 +143,16 @@ test('a new notification arrives live in the bell, on the home dashboard and in 
   await shot(executive, '04-history-and-settings');
   await axe(executive);
 
-  // Sound settings are the person's own and stay after a reload; a muted category arrives silently.
-  await executive.getByRole('checkbox', { name: 'Follow-up assigned' }).click();
-  await expect(executive.getByRole('checkbox', { name: 'Follow-up assigned' })).not.toBeChecked();
+  // Sound settings are the person's own and stay after a reload; a muted category arrives silently. The same category
+  // names are also on the On-screen pop-ups card above, so these are found in the sound card.
+  const sound = executive.locator('#preferences');
+  await sound.getByRole('checkbox', { name: 'Follow-up assigned' }).click();
+  await expect(sound.getByRole('checkbox', { name: 'Follow-up assigned' })).not.toBeChecked();
   await executive.getByRole('checkbox', { name: 'Play a sound when a notification arrives' }).click();
   await expect(executive.getByRole('checkbox', { name: 'Play a sound when a notification arrives' })).not.toBeChecked();
   await executive.reload();
   await expect(executive.getByRole('checkbox', { name: 'Play a sound when a notification arrives' })).not.toBeChecked();
-  await expect(executive.getByRole('checkbox', { name: 'Follow-up assigned' })).not.toBeChecked();
+  await expect(sound.getByRole('checkbox', { name: 'Follow-up assigned' })).not.toBeChecked();
   await executive.waitForTimeout(1000);
   const before = await chimes(executive);
   await post(manager.request, '/assigned-tasks', { title: 'Quietly arriving task', workspaceId: e.id });

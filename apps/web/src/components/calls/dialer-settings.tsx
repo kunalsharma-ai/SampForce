@@ -187,7 +187,7 @@ export function DialerDialog({
   const busy = m.create.isPending || m.update.isPending;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent className="top-[5%] max-h-[90vh] max-w-xl overflow-y-auto p-6">
         <DialogTitle>{editing ? t('Edit dialer') : t('Add my dialer')}</DialogTitle>
         <DialogDescription>{t('Calls open in this dialer, with the company and employee details filled in.')}</DialogDescription>
         <form onSubmit={submit} className="space-y-4" noValidate>

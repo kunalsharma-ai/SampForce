@@ -388,7 +388,7 @@ function Shell({
 }) {
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto p-6">
+      <DialogContent className="top-[5%] max-h-[85vh] max-w-2xl overflow-y-auto p-6">
         <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {description}

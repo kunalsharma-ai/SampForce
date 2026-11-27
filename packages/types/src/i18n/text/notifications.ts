@@ -260,4 +260,9 @@ export const notifications = {
   '{name} is available': ['{name} está disponible', '{name} est disponible', '{name} ist verfügbar', '{name} متاح'],
   '{name} is away': ['{name} está ausente', '{name} est absent', '{name} ist abwesend', '{name} غير موجود حاليًا'],
   '{name} checked out': ['{name} ha fichado la salida', '{name} a pointé son départ', '{name} hat ausgecheckt', 'سجّل {name} الانصراف'],
+  // On-screen notifications (spec section 9): the team's new records and finished calls.
+  '{name} added the company {company}': ['{name} añadió la empresa {company}', '{name} a ajouté l’entreprise {company}', '{name} hat das Unternehmen {company} hinzugefügt', 'أضاف {name} الشركة {company}'],
+  '{name} added the contact {contact}': ['{name} añadió el contacto {contact}', '{name} a ajouté le contact {contact}', '{name} hat den Kontakt {contact} hinzugefügt', 'أضاف {name} جهة الاتصال {contact}'],
+  '{name} created the deal {deal}': ['{name} creó la oportunidad {deal}', '{name} a créé l’opportunité {deal}', '{name} hat die Verkaufschance {deal} erstellt', 'أنشأ {name} الصفقة {deal}'],
+  '{name} called {who}: {outcome}': ['{name} llamó a {who}: {outcome}', '{name} a appelé {who} : {outcome}', '{name} hat {who} angerufen: {outcome}', 'اتصل {name} بـ{who}: {outcome}'],
 } satisfies TextTable;
