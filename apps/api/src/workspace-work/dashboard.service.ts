@@ -1,5 +1,6 @@
 import type { TenantTx } from '@dealflow/database';
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import { TARGET_METRICS } from '@dealflow/types';
 import type {
   DashboardCompanyRef,
   DashboardDealRef,
@@ -374,7 +375,7 @@ function percentOf(rows: TargetRow[]): number | null {
 
 function totals_(rows: TargetRow[]): TargetTotal[] {
   const out: TargetTotal[] = [];
-  for (const metric of ['LEADS', 'CALLS', 'DEALS_WON', 'REVENUE'] as const) {
+  for (const metric of TARGET_METRICS) {
     const list = rows.filter((t) => t.metric === metric);
     if (!list.length) continue;
     const amount = r2(list.reduce((a, t) => a + t.amount, 0));
