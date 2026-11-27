@@ -127,7 +127,7 @@ describe('calls', () => {
 
     const d = (await r.get(`/calls/details?contactId=${priyaId}`).expect(200)).body as CallDetails;
     expect(d.company).toMatchObject({ id: companyId, name: 'Acme Panels', phone: '+91 22 4000 1000', timezone: 'Asia/Kolkata' });
-    expect(d.employee).toEqual({ id: priyaId, name: 'Priya Nair', designation: 'Procurement Lead', email: 'priya@acmepanels.example', phone: '+91 98200 12345', timezone: null });
+    expect(d.employee).toEqual({ id: priyaId, name: 'Priya Nair', designation: 'Procurement Lead', email: 'priya@acmepanels.example', phone: '+91 98200 12345', timezone: null, phoneFlagged: false, notInterested: false });
     expect(d.colleagues.map((c) => c.name)).toEqual(['Priya Nair', 'Ravi Kumar']);
     expect(d.localTime).toMatchObject({ timeZone: 'Asia/Kolkata', offsetMinutes: 330 });
     expect(['GOOD', 'LUNCH', 'EARLY', 'LATE', 'WEEKEND']).toContain(d.localTime!.kind);
@@ -185,7 +185,7 @@ describe('calls', () => {
     await r.post(`/calls/${firstCall.id}/log`, { outcome: 'CONNECTED' }).expect(400);
 
     const interactions = (await r.get(`/companies/${companyId}/interactions?kind=CALL_OUTGOING`).expect(200)).body as InteractionRow[];
-    expect(interactions[0]).toMatchObject({ id: logged.interactionId, kind: 'CALL_OUTGOING', subject: 'Call with Priya Nair: Connected', outcome: 'Connected', remarks: 'Wants India B2B feasibility by Friday.', recipient: '+91 98200 12345', sentiment: 'POSITIVE', contact: { id: priyaId } });
+    expect(interactions[0]).toMatchObject({ id: logged.interactionId, kind: 'CALL_OUTGOING', subject: 'Call with Priya Nair: Call completed successfully', outcome: 'Call completed successfully', remarks: 'Wants India B2B feasibility by Friday.', recipient: '+91 98200 12345', sentiment: 'POSITIVE', contact: { id: priyaId } });
     const calls = (await r.get(`/follow-ups?type=CALL&bucket=upcoming&contactId=${priyaId}`).expect(200)).body as FollowUpRow[];
     expect(calls.map((f) => [f.type, f.title])).toEqual([['CALL', 'Share feasibility']]);
     // A reached employee moves to "call done".
@@ -199,7 +199,7 @@ describe('calls', () => {
     // Editing the remarks changes the interaction too.
     await r.patch(`/calls/${firstCall.id}`, { remarks: 'Feasibility due Friday; send panel book.', outcome: 'CALL_BACK' }).expect(200);
     const again = (await r.get(`/companies/${companyId}/interactions?kind=CALL_OUTGOING`).expect(200)).body as InteractionRow[];
-    expect(again[0]).toMatchObject({ remarks: 'Feasibility due Friday; send panel book.', outcome: 'Asked to call back' });
+    expect(again[0]).toMatchObject({ remarks: 'Feasibility due Friday; send panel book.', outcome: 'Requested a callback' });
     // Nobody else can log or edit someone's call.
     await api(other).patch(`/calls/${firstCall.id}`, { remarks: 'x' }).expect(404);
   });
@@ -212,7 +212,7 @@ describe('calls', () => {
     expect(logged).toMatchObject({ outcome: 'NO_ANSWER', nextCall: null });
     expect(await asTenant(owner.tenantId, (tx) => tx.contactStageChange.count({ where: { contactId: raviId, source: 'INTERACTION' } }))).toBe(0);
     const list = (await r.get(`/companies/${companyId}/interactions?contactId=${raviId}`).expect(200)).body as InteractionRow[];
-    expect(list[0]).toMatchObject({ kind: 'CALL_OUTGOING', outcome: 'No answer' });
+    expect(list[0]).toMatchObject({ kind: 'CALL_OUTGOING', outcome: 'Call not answered' });
   });
 
   it('dials a typed number with the phone app, which cannot schedule a next call without a record', async () => {
@@ -257,7 +257,7 @@ describe('calls', () => {
 
     const started = (await r.post('/calls', { companyId, contactId: raviId, numberSource: 'EMPLOYEE', dialerId: dialer.id }).expect(201)).body as CallStarted;
     expect(started.launchUrl).toBeNull();
-    expect(started.call).toMatchObject({ status: 'RINGING', dialer: { kind: 'TWILIO' }, twilioStatus: 'queued' });
+    expect(started.call).toMatchObject({ status: 'RINGING', dialer: { kind: 'TWILIO' }, providerStatus: 'queued' });
     const placed = tw.placed.at(-1)!;
     expect(placed).toMatchObject({ to: '+447700900200', from: TW.number, statusCallbackEvents: ['initiated', 'ringing', 'answered', 'completed'] });
     expect(placed.twiml).toContain('<Number statusCallbackEvent="answered completed"');
@@ -270,7 +270,7 @@ describe('calls', () => {
       const u = new URL(url);
       return request(app.getHttpServer()).post(`${u.pathname}${u.search}`).set('content-type', 'application/x-www-form-urlencoded').set('x-twilio-signature', twSignature(token, url, params)).send(new URLSearchParams(params).toString());
     };
-    const sid = (await asTenant(owner.tenantId, (tx) => tx.phoneCall.findUniqueOrThrow({ where: { id: started.call.id } }))).twilioSid!;
+    const sid = (await asTenant(owner.tenantId, (tx) => tx.phoneCall.findUniqueOrThrow({ where: { id: started.call.id } }))).providerCallId!;
     await callback('party', { AccountSid: TW.sid, CallSid: 'CAchild', ParentCallSid: sid, CallStatus: 'in-progress' }, '0'.repeat(32)).expect(401);
     await callback('agent', { AccountSid: TW.sid, CallSid: sid, CallStatus: 'in-progress' }).expect(204);
     await callback('party', { AccountSid: TW.sid, CallSid: 'CAchild', ParentCallSid: sid, CallStatus: 'in-progress' }).expect(204);

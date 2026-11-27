@@ -86,6 +86,8 @@ export const LOOKUP_FIELDS = {
   LeadForm: { fields: ['publicToken'], extra: {} },
   ApiKey: { fields: ['keyHash'], extra: {} },
   AppConnection: { fields: ['provider', 'externalAccountId'], extra: {} },
+  // A cloud dialer's events address (ADR 0089): the provider posts to it without a session.
+  Dialer: { fields: ['eventsHookId'], extra: { deletedAt: null } },
   PortalSettings: { fields: ['slug'], extra: { enabled: true } },
   ScimToken: { fields: ['tokenHash'], extra: { revokedAt: null } },
   SsoConnection: { fields: ['loginSlug'], extra: { enabled: true } },

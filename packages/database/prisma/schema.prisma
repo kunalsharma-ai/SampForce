@@ -999,6 +999,11 @@ model Company {
   /// Normalised keys for duplicate checks, kept by the API: lower-case name without legal suffixes, domains,
   /// lower-case emails, last ten phone digits, LinkedIn paths.
   nameKey           String?   @map("name_key")
+  /// Calls (ADR 0089): the last call, how many, and the company number flagged for checking (wrong number).
+  lastCallAt        DateTime? @map("last_call_at")
+  lastCallOutcome   String?   @map("last_call_outcome")
+  callCount         Int       @default(0) @map("call_count")
+  phoneFlaggedAt    DateTime? @map("phone_flagged_at")
   matchKeys         String[]  @map("match_keys")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -1085,6 +1090,12 @@ model Contact {
   rfqContributorById String?         @map("rfq_contributor_by_id")
   /// The follow-up cadence (ADR 0083): when the first email reached the employee, and when and why it stopped.
   initialEmailAt     DateTime?       @map("initial_email_at")
+  /// Calls (ADR 0089): the last call, how many, a number flagged for checking (wrong number), and not interested from a call.
+  lastCallAt         DateTime?       @map("last_call_at")
+  lastCallOutcome    String?         @map("last_call_outcome")
+  callCount          Int             @default(0) @map("call_count")
+  phoneFlaggedAt     DateTime?       @map("phone_flagged_at")
+  notInterestedAt    DateTime?       @map("not_interested_at")
   cadenceStoppedAt   DateTime?       @map("cadence_stopped_at")
   cadenceStopReason  String?         @map("cadence_stop_reason")
   createdById       String?          @map("created_by_id")
@@ -5608,14 +5619,31 @@ model Dialer {
   tenantId               String    @map("tenant_id")
   userId                 String    @map("user_id")
   name                   String
-  /// LINK or TWILIO
+  /// LINK, API, TWILIO, SIP or SIM (ADR 0089)
   kind                   String
+  /// The DIALER_PROVIDERS key it was set up from (phone, exotel, api, sip-browser...).
+  provider               String?
   urlTemplate            String?   @map("url_template")
   webhookUrl             String?   @map("webhook_url")
   /// HMAC-SHA256 key for the webhook's X-SampForce-Signature, sealed with ENCRYPTION_KEY.
   webhookSecretEncrypted String?   @map("webhook_secret_encrypted")
-  /// TWILIO: the person's own phone, rung first.
+  /// TWILIO and API: the person's own phone, rung first.
   agentPhone             String?   @map("agent_phone")
+  /// The non-secret settings (DialerConfig in packages/types/src/calls.ts).
+  config                 Json      @default("{}")
+  /// The secret settings (API secret, client secret, tokens, SIP password) as JSON, sealed with ENCRYPTION_KEY.
+  secretsEncrypted       String?   @map("secrets_encrypted")
+  /// An OAuth access token fetched with the client id and secret, sealed, and when it runs out.
+  oauthTokenEncrypted    String?   @map("oauth_token_encrypted")
+  oauthExpiresAt         DateTime? @map("oauth_expires_at")
+  /// The public part of the events address the provider posts status and recordings to, and its secret part (sealed).
+  eventsHookId           String?   @map("events_hook_id")
+  eventsTokenEncrypted   String?   @map("events_token_encrypted")
+  /// UNTESTED, CONNECTED, FAILED or NOT_TESTABLE, from the last test or call.
+  status                 String    @default("UNTESTED")
+  statusAt               DateTime? @map("status_at")
+  statusMessage          String?   @map("status_message")
+  active                 Boolean   @default(true)
   isDefault              Boolean   @default(false) @map("is_default")
   lastUsedAt             DateTime? @map("last_used_at")
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -5623,6 +5651,7 @@ model Dialer {
   deletedAt              DateTime? @map("deleted_at")
 
   @@index([tenantId, userId])
+  @@index([eventsHookId])
   @@map("dialers")
 }
 
@@ -5635,15 +5664,20 @@ model PhoneCall {
   userId        String    @map("user_id")
   companyId     String?   @map("company_id")
   contactId     String?   @map("contact_id")
+  dealId        String?   @map("deal_id")
+  /// OUTGOING or INCOMING
+  direction     String    @default("OUTGOING")
   /// The number as dialled, and EMPLOYEE, COMPANY or OTHER (typed on the keypad).
   number        String
   numberSource  String    @map("number_source")
+  callerId      String?   @map("caller_id")
   dialerId      String?   @map("dialer_id")
   dialerName    String    @map("dialer_name")
   dialerKind    String    @map("dialer_kind")
-  /// OPEN, RINGING, IN_PROGRESS, ENDED, FAILED or LOGGED
+  dialerProvider String?  @map("dialer_provider")
+  /// CALL_STATUSES in packages/types/src/calls.ts
   status        String
-  /// CALL_OUTCOMES in packages/types/src/calls.ts; null until logged.
+  /// An outcome key (CALL_OUTCOMES or a workspace's CUSTOM_ one); null until logged.
   outcome       String?
   /// The details handed to the dialer: { companyName, companyPhone, employeeName, designation, email, employeePhone }.
   details       Json
@@ -5661,9 +5695,14 @@ model PhoneCall {
   webhookStatus String?   @map("webhook_status")
   webhookAt     DateTime? @map("webhook_at")
   webhookError  String?   @map("webhook_error")
-  /// Twilio's call SID and its last status (queued, ringing, in-progress, completed, busy, no-answer, failed, canceled).
-  twilioSid     String?   @map("twilio_sid")
-  twilioStatus  String?   @map("twilio_status")
+  /// The provider's call id (Twilio's call SID, Exotel's Sid...) and its last status as the provider wrote it.
+  providerCallId String?  @map("twilio_sid")
+  providerStatus String?  @map("twilio_status")
+  muted          Boolean  @default(false)
+  onHold         Boolean  @default(false) @map("on_hold")
+  recordingActive Boolean @default(false) @map("recording_active")
+  /// The caller confirmed the other person agreed to be recorded.
+  recordingConsent Boolean @default(false) @map("recording_consent")
   error         String?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -5673,6 +5712,101 @@ model PhoneCall {
   @@index([tenantId, startedAt(sort: Desc)])
   @@index([tenantId, contactId, startedAt(sort: Desc)])
   @@index([tenantId, companyId, startedAt(sort: Desc)])
-  @@index([tenantId, twilioSid])
+  @@index([tenantId, providerCallId])
   @@map("phone_calls")
+}
+
+/// A call's recording (ADR 0089): fetched from the provider, uploaded, or recorded in the browser. Audio is kept here
+/// (like company files) or, for a provider that keeps it, fetched from the provider when played.
+model CallRecording {
+  id           String    @id @default(uuid()) @map("_id")
+  tenantId     String    @map("tenant_id")
+  callId       String    @map("call_id")
+  /// The caller (the call's userId), for history visibility.
+  userId       String    @map("user_id")
+  /// PROVIDER, UPLOAD or BROWSER
+  source       String
+  /// PROVIDER: where the provider keeps it (fetched with the dialer's keys when played and stored on first play).
+  providerUrl  String?   @map("provider_url")
+  contentType  String?   @map("content_type")
+  sizeBytes    Int?      @map("size_bytes")
+  data         Bytes?
+  durationSec  Int?      @map("duration_sec")
+  notes        String?
+  createdById  String?   @map("created_by_id")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@index([tenantId, callId])
+  @@index([tenantId, userId, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("call_recordings")
+}
+
+/// A dialer's integration log: tests, calls placed and ended, events received, recordings fetched (ADR 0089).
+model DialerLog {
+  id          String   @id @default(uuid()) @map("_id")
+  tenantId    String   @map("tenant_id")
+  dialerId    String   @map("dialer_id")
+  callId      String?  @map("call_id")
+  /// TEST, PLACE, HANGUP, EVENT, RECORDING, WEBHOOK or TOKEN
+  action      String
+  ok          Boolean
+  httpStatus  Int?     @map("http_status")
+  message     String
+  attempt     Int      @default(1)
+  durationMs  Int?     @map("duration_ms")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, dialerId, createdAt(sort: Desc)])
+  @@map("dialer_logs")
+}
+
+/// A workspace's call outcomes: changes to SampForce's (by key) and its own (custom, CUSTOM_ keys).
+model CallOutcomeSetting {
+  id                String    @id @default(uuid()) @map("_id")
+  tenantId          String    @map("tenant_id")
+  key               String
+  label             String
+  icon              String
+  color             String
+  tone              String
+  reached           Boolean
+  action            String
+  followUpInMinutes Int?      @map("follow_up_in_minutes")
+  custom            Boolean   @default(false)
+  active            Boolean   @default(true)
+  sortOrder         Int       @default(0) @map("sort_order")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key])
+  @@map("call_outcome_settings")
+}
+
+/// A person's favourite numbers on the Calls page.
+model CallFavorite {
+  id        String   @id @default(uuid()) @map("_id")
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  companyId String?  @map("company_id")
+  contactId String?  @map("contact_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, userId])
+  @@map("call_favorites")
+}
+
+/// The workspace's call rules: the recording policy (RecordingPolicy in packages/types/src/calls.ts).
+model CallSettings {
+  id              String   @id @default(uuid()) @map("_id")
+  tenantId        String   @unique @map("tenant_id")
+  recordingPolicy Json     @default("{}") @map("recording_policy")
+  updatedById     String?  @map("updated_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("call_settings")
 }
