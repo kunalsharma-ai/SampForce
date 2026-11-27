@@ -10,7 +10,6 @@ import {
   type GuardedApprovalCategory,
   readTeamApprovalSettings,
   recordModelLabel,
-  TEAM_APPROVAL_CATEGORY_LABEL,
   type TeamApprovalCategory,
   type TeamApprovalCounts,
   type TeamApprovalOverview,
@@ -42,7 +41,6 @@ export function bodyHashOf(body: unknown): string {
   return sha256(empty ? 'null' : canonical(body));
 }
 
-const forbidden = (code: string, message: string) => new ForbiddenException({ code, message });
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Approval request not found.' });
 
 /**
@@ -97,7 +95,7 @@ export class TeamApprovalsService {
     const parsed = teamApprovalSettingsSchema.parse(input);
     return this.prisma.run(auth, async (tx) => {
       const org = await resolveOrganisation(tx, auth.tenantId);
-      if (callerOf(auth, org).level !== 'SUPER') throw forbidden('SUPER_WORKSPACE_ONLY', 'Only the Super Workspace changes approval rules.');
+      if (callerOf(auth, org).level !== 'SUPER') throw new ForbiddenException({ code: 'SUPER_WORKSPACE_ONLY', message: 'Only the Super Workspace changes approval rules.' });
       const before = await this.settingsOf(tx, auth.tenantId);
       let workspacesChanged = 0;
       if (before.lowerLevelsDelete !== parsed.lowerLevelsDelete) workspacesChanged = await this.setLowerLevelsDelete(tx, auth.tenantId, parsed.lowerLevelsDelete);
@@ -270,14 +268,14 @@ export class TeamApprovalsService {
     return this.prisma.run(auth, async (tx) => {
       const org = await resolveOrganisation(tx, auth.tenantId);
       const me = callerOf(auth, org);
-      if (me.level === 'SUPER') throw forbidden('NOBODY_ABOVE', 'The Super Workspace has nobody above it to ask. Go ahead directly.');
+      if (me.level === 'SUPER') throw new ForbiddenException({ code: 'NOBODY_ABOVE', message: 'The Super Workspace has nobody above it to ask. Go ahead directly.' });
       const settings = await this.settingsOf(tx, auth.tenantId);
       const guarded = (GUARDED_APPROVAL_CATEGORIES as readonly string[]).includes(input.category);
       if (guarded) {
         const needed = me.level === 'EXECUTIVE' && (input.category === 'delete' ? settings.deleteNeedsApproval : settings.editNeedsApproval);
         if (!needed) throw new BadRequestException({ code: 'APPROVAL_NOT_NEEDED', message: 'Your workspace can do this without approval.' });
       } else if (!settings.freeFormRequests) {
-        throw forbidden('REQUESTS_OFF', 'Your organisation has switched requests off.');
+        throw new ForbiddenException({ code: 'REQUESTS_OFF', message: 'Your organisation has switched requests off.' });
       }
 
       const action = guarded ? input.action! : null;
@@ -347,7 +345,8 @@ export class TeamApprovalsService {
       const me = callerOf(auth, org);
       const row = await this.visible(tx, auth, org, me, id);
       if (!this.mayDecide(auth, org, me, row)) {
-        throw forbidden(row.requesterId === auth.userId ? 'NO_SELF_APPROVAL' : 'NOT_YOUR_DECISION', row.requesterId === auth.userId ? 'You cannot decide your own request.' : 'This request is decided by another workspace.');
+        if (row.requesterId === auth.userId) throw new ForbiddenException({ code: 'NO_SELF_APPROVAL', message: 'You cannot decide your own request.' });
+        throw new ForbiddenException({ code: 'NOT_YOUR_DECISION', message: 'This request is decided by another workspace.' });
       }
       const settings = await this.settingsOf(tx, auth.tenantId);
       const now = new Date();
@@ -388,7 +387,7 @@ export class TeamApprovalsService {
       const org = await resolveOrganisation(tx, auth.tenantId);
       const me = callerOf(auth, org);
       const row = await this.visible(tx, auth, org, me, id);
-      if (row.requesterId !== auth.userId) throw forbidden('NOT_YOUR_REQUEST', 'Only the person who asked can cancel a request.');
+      if (row.requesterId !== auth.userId) throw new ForbiddenException({ code: 'NOT_YOUR_REQUEST', message: 'Only the person who asked can cancel a request.' });
       const { count } = await tx.teamApproval.updateMany({
         where: { id, status: { in: ['PENDING', 'APPROVED'] }, completedAt: null, claimedAt: null },
         data: { status: 'CANCELLED', cancelledAt: new Date() },
@@ -427,16 +426,15 @@ export class TeamApprovalsService {
   async assertUsable(auth: AuthContext, id: string, method: string, path: string, body: unknown): Promise<void> {
     await this.prisma.run(auth, async (tx) => {
       const row = await tx.teamApproval.findFirst({ where: { id, tenantId: auth.tenantId, requesterId: auth.userId } });
-      const invalid = (message: string) => forbidden('APPROVAL_NOT_VALID', message);
-      if (!row || !row.method) throw invalid('This approval was not found.');
-      if (row.status === 'COMPLETED') throw invalid('This approval was already used.');
-      if (row.status !== 'APPROVED') throw invalid('This request is not approved.');
-      if (!row.approvedUntil || row.approvedUntil <= new Date()) throw invalid('This approval has expired. Ask again.');
-      if (row.method !== method || row.path !== path || row.bodyHash !== bodyHashOf(body)) throw invalid('This approval is for a different action.');
+      if (!row || !row.method) throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'This approval was not found.' });
+      if (row.status === 'COMPLETED') throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'This approval was already used.' });
+      if (row.status !== 'APPROVED') throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'This request is not approved.' });
+      if (!row.approvedUntil || row.approvedUntil <= new Date()) throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'This approval has expired. Ask again.' });
+      if (row.method !== method || row.path !== path || row.bodyHash !== bodyHashOf(body)) throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'This approval is for a different action.' });
       if (row.recordFingerprint) {
         const rr = recordOfRoute(path, body);
         const now = rr ? (await lookAtRecords(tx, auth.tenantId, rr)).fingerprint : null;
-        if (now !== row.recordFingerprint) throw invalid('The record changed after it was approved. Ask again so your manager sees it as it is now.');
+        if (now !== row.recordFingerprint) throw new ForbiddenException({ code: 'APPROVAL_NOT_VALID', message: 'The record changed after it was approved. Ask again so your manager sees it as it is now.' });
       }
     });
   }
@@ -536,11 +534,9 @@ export class TeamApprovalsService {
   }
 }
 
-/** "Delete company Acme Ltd (APR-12)" in English; notifications are translated when read. */
-function describe(r: { number: number; category: string; recordName: string | null; recordType: string | null; recordCount: number | null; title: string | null }): string {
+/** "Acme Ltd (APR-12)": the record or request in a notification (the words around it are translated when read). */
+function describe(r: { number: number; recordName: string | null; recordCount: number | null; title: string | null }): string {
   const ref = approvalReference(r.number);
-  if (r.title) return `${r.title} (${ref})`;
-  const label = TEAM_APPROVAL_CATEGORY_LABEL[r.category as TeamApprovalCategory] ?? 'Request';
-  const what = r.recordName ?? (r.recordCount && r.recordCount > 1 ? `${r.recordCount} records` : (r.recordType ?? ''));
-  return `${label} ${what} (${ref})`.replace(/\s+/g, ' ');
+  const what = r.title ?? r.recordName ?? (r.recordCount && r.recordCount > 1 ? `${r.recordCount} records` : 'a record');
+  return `${what} (${ref})`;
 }

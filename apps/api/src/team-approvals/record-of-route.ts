@@ -75,13 +75,13 @@ const typeOf = (model: string) => model.replace(/([a-z])([A-Z])/g, '$1_$2').toLo
 export function recordOfRoute(path: string, body: unknown): RouteRecord | null {
   const bare = path.split('?')[0]!;
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const one = (model: string, id: string): RouteRecord => ({ model, recordType: typeOf(model), recordTypeLabel: recordModelLabel(model), scope: 'single', ids: [id], count: 1 });
+  const singleRecord = (model: string, id: string): RouteRecord => ({ model, recordType: typeOf(model), recordTypeLabel: recordModelLabel(model), scope: 'single', ids: [id], count: 1 });
   for (const [re, model] of SINGLE) {
     const m = re.exec(bare);
-    if (m) return one(model, m[m.length - 1]!);
+    if (m) return singleRecord(model, m[m.length - 1]!);
   }
   const mobile = new RegExp(`^/mobile/records/([a-z_]+)/${UUID}$`).exec(bare);
-  if (mobile && MOBILE_MODULE[mobile[1]!]) return one(MOBILE_MODULE[mobile[1]!]!, mobile[2]!);
+  if (mobile && MOBILE_MODULE[mobile[1]!]) return singleRecord(MOBILE_MODULE[mobile[1]!]!, mobile[2]!);
   if (bare === '/records/bulk' && typeof b.entity === 'string' && TABLE_MODEL[b.entity]) {
     const model = TABLE_MODEL[b.entity]!;
     const ids = Array.isArray(b.ids) ? b.ids.filter((x): x is string => typeof x === 'string') : [];
