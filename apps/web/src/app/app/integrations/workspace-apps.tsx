@@ -3,6 +3,7 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton } from '@dealflow/ui';
 import type { AppEventRow, AppStatus, PaymentsSettings, SampbidxSettings, TwilioSettings, WhatsappSettings } from '@dealflow/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Select } from '@/components/crm/select';
@@ -606,7 +607,8 @@ function SampbidxCard({ app }: { app: AppStatus }) {
   const [apiKey, setApiKey] = useState('');
   const [editing, setEditing] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
-  const s = app.state === 'error' ? { label: t('Needs a new API key'), tone: 'critical' as const } : STATE[app.state];
+  // A refused key needs a new one; any other failed test or call is a connection problem (ADR 0099).
+  const s = app.state === 'error' ? { label: c?.lastError?.includes('refused the API key') ? t('Needs a new API key') : t('Connection problem'), tone: 'critical' as const } : STATE[app.state];
   const events = useQuery({ enabled: !!c && canManage, queryKey: ['apps', 'sampbidx', 'events'], queryFn: () => api<AppEventRow[]>('/apps/sampbidx/events') });
   const secret = useQuery({ enabled: !!c && canManage && showSecret, queryKey: ['apps', 'sampbidx', 'secret'], queryFn: () => api<{ callbackUrl: string; secret: string }>('/apps/sampbidx/callback-secret') });
   const refresh = () => qc.invalidateQueries({ queryKey: ['apps'] });
@@ -726,6 +728,11 @@ function SampbidxCard({ app }: { app: AppStatus }) {
               {t('Disconnect')}
             </Button>
           </div>
+        )}
+        {canManage && (
+          <Link href="/app/integrations/sampbidx" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+            {t('SampBidx settings: test the connection, sync status, errors and field mapping')}
+          </Link>
         )}
         {!canManage && <p className="text-xs text-muted-foreground">{t('Workspace admins connect SampBidx.')}</p>}
         {error && (

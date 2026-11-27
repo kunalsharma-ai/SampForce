@@ -1,10 +1,12 @@
 'use client';
 
+import { SampbidxBulkButton } from '@/components/sampbidx/bulk-send';
+
 /**
- * Where the bulk "Send to SampBidx" action plugs into the deals bulk bar (Deals redesign, ADR 0096). The SampBidx
- * bulk transfer work fills this in with its button and review dialog; it fetches its own data from the ids. Until
- * then it renders nothing, so the bar never shows a button that does not work.
+ * "Send to SampBidx" for the selected deals (ADR 0099), in the deals bulk bars (board and table). It opens the check
+ * screen, then sends each deal with its company as the SampBidx client; hidden without SampBidx on the plan or the
+ * rights to change deals.
  */
-export function SampBidxBulkSlot(_props: { dealIds: string[]; onDone: () => void }): React.ReactNode {
-  return null;
+export function SampBidxBulkSlot({ dealIds, onDone }: { dealIds: string[]; onDone?: () => void }) {
+  return <SampbidxBulkButton kind="DEALS" ids={dealIds} onDone={onDone} />;
 }

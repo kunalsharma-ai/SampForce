@@ -17,6 +17,8 @@ export class SampbidxError extends Error {
     message: string,
     /** The key no longer works: the connection needs a new one. */
     readonly revoked = false,
+    /** The low-level cause when SampBidx could not be reached (refused, timed out, name not found), for Test connection. */
+    readonly detail: string | null = null,
   ) {
     super(message);
   }
@@ -53,8 +55,8 @@ export class SampbidxClient {
   constructor(@Inject(API_ENV) private readonly env: ApiEnv) {}
 
   /** GET /v1/ping: proves the address and the key. Sends nothing. */
-  async check(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>): Promise<{ accountName: string }> {
-    const body = await this.call<{ account?: { name?: string }; name?: string }>(keys, 'GET', '/v1/ping');
+  async check(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, timeoutMs = 60_000): Promise<{ accountName: string }> {
+    const body = await this.call<{ account?: { name?: string }; name?: string }>(keys, 'GET', '/v1/ping', undefined, {}, timeoutMs);
     return { accountName: body.account?.name ?? body.name ?? 'SampBidx' };
   }
 
@@ -97,6 +99,22 @@ export class SampbidxClient {
     return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null, contacts };
   }
 
+  /**
+   * PUT /v1/deals/{externalId} (ADR 0099): creates the deal or updates the one SampBidx already has for this SampForce
+   * deal, linked to its client. Answers SampBidx's id for the deal and optionally its page.
+   */
+  async upsertDeal(keys: SampbidxKeys, externalId: string, transferId: string, deal: unknown): Promise<SampbidxAccepted> {
+    const r = await this.call<{ id?: string | number; url?: string; status?: string }>(
+      keys,
+      'PUT',
+      `/v1/deals/${encodeURIComponent(externalId)}`,
+      Buffer.from(JSON.stringify(deal)),
+      { 'content-type': 'application/json', 'idempotency-key': transferId, 'x-sampforce-transfer-id': transferId },
+    );
+    if (r.id === undefined || r.id === null || r.id === '') throw new SampbidxError('no_id', 'SampBidx did not return an id for the deal.');
+    return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null };
+  }
+
   private async accept(keys: SampbidxKeys, path: string, transferId: string, parts: Part[]): Promise<SampbidxAccepted> {
     const { body, contentType } = multipart(parts);
     const r = await this.call<{ id?: string | number; url?: string; status?: string }>(keys, 'POST', path, body, {
@@ -109,7 +127,7 @@ export class SampbidxClient {
     return { id: String(r.id), url: typeof r.url === 'string' ? r.url : null, status: typeof r.status === 'string' ? r.status : null };
   }
 
-  private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST' | 'PUT', path: string, body?: Buffer, headers: Record<string, string> = {}): Promise<T> {
+  private async call<T>(keys: Pick<SampbidxKeys, 'baseUrl' | 'apiKey'>, method: 'GET' | 'POST' | 'PUT', path: string, body?: Buffer, headers: Record<string, string> = {}, timeoutMs = 60_000): Promise<T> {
     let res: Response;
     try {
       res = await workspaceFetch(this.env, `${keys.baseUrl.replace(/\/+$/, '')}${path}`, {
@@ -117,11 +135,11 @@ export class SampbidxClient {
         headers: { authorization: `Bearer ${keys.apiKey}`, accept: 'application/json', 'user-agent': 'SampForce', ...headers },
         body: body ? new Uint8Array(body) : undefined,
         redirect: 'error',
-        signal: AbortSignal.timeout(60_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) {
       if (e instanceof UnsafeTargetError) throw new SampbidxError('address', `SampForce cannot call that SampBidx address: ${e.message}.`);
-      throw new SampbidxError('unavailable', 'SampBidx could not be reached. Check the address, or try again shortly.');
+      throw new SampbidxError('unavailable', 'SampBidx could not be reached. Check the address, or try again shortly.', false, networkCause(e));
     }
     const data = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } | string; message?: string };
     if (res.ok) return data;
@@ -129,12 +147,26 @@ export class SampbidxClient {
     if (res.status === 401 || res.status === 403) throw new SampbidxError('auth', 'SampBidx refused the API key. Paste a current key from SampBidx.', true);
     if (res.status === 404) throw new SampbidxError('not_found', 'SampBidx has no API at that address. Check the address ends where the /v1 paths begin.');
     if (res.status === 413) throw new SampbidxError('too_large', 'SampBidx refused the files as too large. Send fewer or smaller attachments.');
-    const what = path.startsWith('/v1/clients') ? 'the client' : 'the RFQ';
+    const what = path.startsWith('/v1/clients') ? 'the client' : path.startsWith('/v1/deals') ? 'the deal' : 'the RFQ';
     if (res.status === 400 || res.status === 422) throw new SampbidxError('invalid', detail ? `SampBidx refused ${what}: ${String(detail).slice(0, 300)}` : `SampBidx refused ${what} as incomplete.`);
     if (res.status === 409) throw new SampbidxError('conflict', detail ? `SampBidx reported a duplicate: ${String(detail).slice(0, 300)}` : `SampBidx reported ${what} as a duplicate.`);
     if (res.status === 429) throw new SampbidxError('busy', 'SampBidx is busy. Try again in a minute.');
     throw new SampbidxError(`http_${res.status}`, `SampBidx answered with an error (${res.status}). Try again shortly.`);
   }
+}
+
+/** Why a request never got an answer, in plain words: the name, the port, the certificate or the time. */
+export function networkCause(e: unknown): string {
+  const err = e as { name?: string; cause?: { code?: string; message?: string; errors?: { code?: string }[] } };
+  const code = err.cause?.code ?? err.cause?.errors?.find((x) => x.code)?.code ?? '';
+  if (/bad port/i.test(err.cause?.message ?? '')) return 'that port is blocked for web requests: use the port SampBidx’s API listens on, such as 443';
+  if (err.name === 'TimeoutError' || err.name === 'AbortError') return 'no answer before the time limit';
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'the server name was not found (DNS)';
+  if (code === 'ECONNREFUSED') return 'the connection was refused: nothing is listening at that address and port';
+  if (code === 'ECONNRESET') return 'the connection was closed by the other side';
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return 'that network cannot be reached from the SampForce server';
+  if (/CERT|SSL|TLS/i.test(code) || /certificate/i.test(err.cause?.message ?? '')) return 'the https certificate was not accepted';
+  return code ? `network error ${code}` : 'network error';
 }
 
 /** Builds a multipart/form-data body by hand so the exact bytes are known (and the same on every retry). */

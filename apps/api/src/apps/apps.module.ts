@@ -18,6 +18,7 @@ import { TwilioService } from './twilio.service';
 import { SampbidxClient } from './sampbidx';
 import { SampbidxController } from './sampbidx.controller';
 import { SampbidxService } from './sampbidx.service';
+import { SampbidxBulkService } from './sampbidx-bulk.service';
 import { SampbidxChatCallbackController, SampbidxChatController } from './sampbidx-chat.controller';
 import { SampbidxChatService } from './sampbidx-chat.service';
 import { ChatModule } from '../chat/chat.module';
