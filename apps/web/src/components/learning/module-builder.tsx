@@ -136,7 +136,7 @@ export function ModuleBuilder({ id }: { id: string }) {
             </div>
             <h2 className="text-2xl font-extrabold tracking-tight">{m.title}</h2>
             <p className="text-sm text-white/85">
-              {t.plural('learning.lessons', m.lessonList.length)} · {t.plural('learning.questions', m.questionList.filter((x) => x.approved).length)} · {t('{n} marks', { n: m.totalMarks })} · {t('Pass mark {score}', { score: `${m.passingScore}%` })}
+              {t.plural('learning.lessons', m.lessonList.length)} · {t.plural('learning.questions', m.questionList.filter((x) => x.approved).length)} · {t.plural('learning.marks', m.totalMarks)} · {t('Pass mark {score}', { score: `${m.passingScore}%` })}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -731,7 +731,7 @@ function QuestionCard({ q, i, m, busy, onEdit, onDelete, onApprove, onReject, se
             <span className="font-bold">{i + 1}.</span>
             <Badge tone="primary">{t.maybe(QUESTION_TYPE_LABEL[q.type])}</Badge>
             <Badge>{t.maybe(QUESTION_DIFFICULTY_LABEL[q.difficulty])}</Badge>
-            <span className="text-muted-foreground">{t('{n} marks', { n: q.marks })}</span>
+            <span className="text-muted-foreground">{t.plural('learning.marks', q.marks)}</span>
             {q.manual && <Badge tone="accent">{t('Marked by a manager')}</Badge>}
             {q.source === 'GENERATED' && <Badge tone="warning"><Wand2 className="me-1 size-3" aria-hidden />{t('Drafted from the material')}</Badge>}
             {q.source === 'BANK' && <Badge><Library className="me-1 size-3" aria-hidden />{t('From the bank')}</Badge>}
@@ -824,7 +824,7 @@ function Questions({ m, busy, change, quiet }: { m: LearningModuleDetail; busy: 
       )}
 
       <section className="space-y-3">
-        <h3 className="font-semibold">{t('Assessment questions ({n})', { n: approved.length })} · {t('{n} marks', { n: approved.reduce((s, q) => s + q.marks, 0) })}</h3>
+        <h3 className="font-semibold">{t('Assessment questions ({n})', { n: approved.length })} · {t.plural('learning.marks', approved.reduce((s, q) => s + q.marks, 0))}</h3>
         {approved.length ? (
           approved.map((q, i) => (
             <QuestionCard key={q.id} q={q} i={i} m={m} busy={busy} selected={selected.has(q.id)} onSelect={(v) => toggle(q.id, v)} onEdit={() => setEditing(q)} onDelete={() => quiet(() => learningApi.removeQuestion(m.id, q.id))} onMove={(d) => move(i, d)} />
@@ -934,7 +934,7 @@ function BankDialog({ m, change, onClose }: { m: LearningModuleDetail; change: C
               <li key={q.id}>
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm">
                   <input type="checkbox" checked={chosen.has(q.id)} onChange={(e) => setChosen((s) => { const n = new Set(s); if (e.target.checked) n.add(q.id); else n.delete(q.id); return n; })} className="mt-0.5 size-4" />
-                  <span className="min-w-0"><span className="block font-medium">{q.text}</span><span className="text-xs text-muted-foreground">{t.maybe(QUESTION_TYPE_LABEL[q.type])} · {t('{n} marks', { n: q.marks })}</span></span>
+                  <span className="min-w-0"><span className="block font-medium">{q.text}</span><span className="text-xs text-muted-foreground">{t.maybe(QUESTION_TYPE_LABEL[q.type])} · {t.plural('learning.marks', q.marks)}</span></span>
                 </label>
               </li>
             ))}

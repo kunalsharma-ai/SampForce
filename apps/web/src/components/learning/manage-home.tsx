@@ -35,7 +35,7 @@ export function ManageHome() {
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/80">{v.level === 'SUPER' ? t('Super Workspace') : t('Manager Workspace')}</p>
             <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t('Learning management')}</h2>
-            <p className="max-w-xl text-sm text-white/85">{t('{people} people learning · {done} completed · {overdue} overdue · average score {avg}', { people: s.assignedPeople, done: s.completed, overdue: s.overdue, avg: pct(s.averageScore) })}</p>
+            <p className="max-w-xl text-sm text-white/85">{t('Learners: {people} · Completed: {done} · Overdue: {overdue} · Average score: {avg}', { people: s.assignedPeople, done: s.completed, overdue: s.overdue, avg: pct(s.averageScore) })}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {v.canCreate && (

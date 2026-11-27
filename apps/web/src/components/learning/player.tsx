@@ -216,7 +216,7 @@ function AssessmentCard({ v, busy, onStart }: { v: PlayerView; busy: boolean; on
       {v.module.questions ? (
         <>
           <ul className="space-y-1 text-xs text-muted-foreground">
-            <li>{t.plural('learning.questions', v.module.questions)} · {t('{n} marks', { n: v.module.totalMarks })}</li>
+            <li>{t.plural('learning.questions', v.module.questions)} · {t.plural('learning.marks', v.module.totalMarks)}</li>
             <li>{t('Pass mark {score}', { score: `${v.module.passingScore}%` })}</li>
             {v.module.timeLimitMinutes && <li>{t('Time limit {time}', { time: minutesText(v.module.timeLimitMinutes, t) })}</li>}
             <li>{t.plural('learning.attemptsLeft', left)}</li>
@@ -424,13 +424,27 @@ function ReadingView({ moduleId, lesson, onProgress }: { moduleId: string; lesso
 }
 
 /** Written text with headings ("# "), and reading progress from the scroll position. */
+/** A block with bullet lines: lines before the first bullet stay a paragraph, the bullets become a list. */
+function ReaderList({ block }: { block: string }) {
+  const lines = block.split('\n');
+  const first = lines.findIndex((x) => /^[-*] /.test(x));
+  const lead = lines.slice(0, first).join('\n').trim();
+  return (
+    <>
+      {lead && <p className="whitespace-pre-wrap">{lead}</p>}
+      <ul className="list-disc space-y-1 ps-6">{lines.slice(first).map((x, j) => <li key={j}>{x.replace(/^[-*]\s+/, '')}</li>)}</ul>
+    </>
+  );
+}
+
 function Reader({ text, onProgress }: { text: string; onProgress: (p: number) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const onScroll = () => {
     const el = box.current;
     if (!el) return;
     const max = el.scrollHeight - el.clientHeight;
-    onProgress(max <= 0 ? 100 : (el.scrollTop / max) * 100);
+    // Within a few pixels of the end counts as the end: browsers stop scrolling at fractions of a pixel.
+    onProgress(max <= 4 || el.scrollTop >= max - 4 ? 100 : (el.scrollTop / max) * 100);
   };
   useEffect(() => {
     const el = box.current;
@@ -447,7 +461,7 @@ function Reader({ text, onProgress }: { text: string; onProgress: (p: number) =>
           ) : b.startsWith('## ') ? (
             <h5 key={i} className="pt-1 font-semibold">{b.slice(3)}</h5>
           ) : /^[-*] /m.test(b) ? (
-            <ul key={i} className="list-disc space-y-1 ps-6">{b.split('\n').map((x, j) => <li key={j}>{x.replace(/^[-*]\s+/, '')}</li>)}</ul>
+            <ReaderList key={i} block={b} />
           ) : (
             <p key={i} className="whitespace-pre-wrap">{b}</p>
           ),

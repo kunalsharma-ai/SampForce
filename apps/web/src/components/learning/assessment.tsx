@@ -157,7 +157,7 @@ function Taker({ moduleId, a, title }: { moduleId: string; a: AttemptView; title
         <section className="rounded-2xl border bg-surface p-5 sm:p-7" data-question={question.position} data-question-type={question.type}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span className="font-semibold uppercase tracking-wide">{t('Question {n} of {all}', { n: index + 1, all: a.questions.length })} · {t.maybe(QUESTION_TYPE_LABEL[question.type])}</span>
-            <span>{t('{n} marks', { n: question.marks })}{question.required ? '' : ` · ${t('Optional')}`}</span>
+            <span>{t.plural('learning.marks', question.marks)}{question.required ? '' : ` · ${t('Optional')}`}</span>
           </div>
           {question.type !== 'FILL_BLANK' && <h3 className="whitespace-pre-wrap text-lg font-semibold leading-snug">{question.text}</h3>}
           {question.instructions && <p className="mt-1 text-sm text-muted-foreground">{question.instructions}</p>}
@@ -199,7 +199,7 @@ function Taker({ moduleId, a, title }: { moduleId: string; a: AttemptView; title
               })}
             </div>
           </div>
-          <Button className="w-full" variant="accent" onClick={() => setConfirm(true)}>
+          <Button className="w-full" variant="accent" onClick={() => setConfirm(true)} data-submit-answers>
             <Send className="size-4" aria-hidden /> {t('Submit answers')}
           </Button>
           <ErrorLine error={error} />

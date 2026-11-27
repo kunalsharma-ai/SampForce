@@ -121,7 +121,7 @@ export function CertificateView({ c }: { c: CertificateRow }) {
       <p className="mt-[1.5%] text-[clamp(0.6rem,1.3vw,0.9rem)] opacity-75">{t('has successfully completed')}</p>
       <p className="mt-[1%] text-[clamp(0.8rem,2vw,1.3rem)] font-bold">{c.moduleTitle}</p>
       <p className="mt-[1.5%] text-[clamp(0.6rem,1.3vw,0.9rem)]">{t('with a score of {score} on {date}', { score: pct(c.score), date: dateText(c.completedAt) })}</p>
-      <div className="absolute inset-x-[6%] bottom-[7%] flex items-end justify-between text-[clamp(0.5rem,1.1vw,0.75rem)]">
+      <div className="absolute inset-x-[6%] bottom-[7%] grid grid-cols-[1fr_auto_1fr] items-end gap-3 text-[clamp(0.5rem,1.1vw,0.75rem)]">
         <div className="text-start">
           <p className="font-mono">{c.number}</p>
           <p className="font-mono opacity-70">{t('Code {code}', { code: c.code })}</p>

@@ -347,6 +347,8 @@ export const en = {
   'learning.certificates_other': '{count} certificates',
   'learning.lessons_one': '{count} lesson',
   'learning.lessons_other': '{count} lessons',
+  'learning.marks_one': '{count} mark',
+  'learning.marks_other': '{count} marks',
   'learning.questions_one': '{count} question',
   'learning.questions_other': '{count} questions',
   'learning.attemptsLeft_one': '{count} attempt left',

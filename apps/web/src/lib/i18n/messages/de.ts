@@ -337,6 +337,8 @@ export const de: Messages = {
   'learning.certificates_other': '{count} Zertifikate',
   'learning.lessons_one': '{count} Lektion',
   'learning.lessons_other': '{count} Lektionen',
+  'learning.marks_one': '{count} Punkt',
+  'learning.marks_other': '{count} Punkte',
   'learning.questions_one': '{count} Frage',
   'learning.questions_other': '{count} Fragen',
   'learning.attemptsLeft_one': 'Noch {count} Versuch',

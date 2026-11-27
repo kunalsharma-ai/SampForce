@@ -106,7 +106,7 @@ export function MarkingSheet({ attemptId }: { attemptId: string }) {
           <article key={x.id} className="rounded-2xl border bg-surface p-4" data-mark-question={x.type}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <p className="text-sm font-medium">{i + 1}. {x.text}</p>
-              <span className="text-xs text-muted-foreground">{t.maybe(QUESTION_TYPE_LABEL[x.type])} · {t('{n} marks', { n: x.marks })}</span>
+              <span className="text-xs text-muted-foreground">{t.maybe(QUESTION_TYPE_LABEL[x.type])} · {t.plural('learning.marks', x.marks)}</span>
             </div>
             <div className="mt-2 rounded-lg bg-muted/60 p-3 text-sm">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('Answer')}</p>

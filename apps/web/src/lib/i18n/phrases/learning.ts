@@ -333,11 +333,11 @@ export const learning = {
   'Learning management is for Super and Manager Workspaces': ['La gestión del aprendizaje es para Super y Manager Workspaces', 'La gestion de la formation est réservée aux Super et Manager Workspaces', 'Die Lernverwaltung ist für Super- und Manager-Workspaces', 'إدارة التعلّم لمساحات العمل الرئيسية ومساحات المديرين'],
   'You can take your own learning on the My learning page.': ['Puedes hacer tu propia formación en la página Mi aprendizaje.', 'Vous pouvez suivre votre propre formation sur la page Ma formation.', 'Ihr eigenes Lernen finden Sie auf der Seite Mein Lernen.', 'يمكنك متابعة تعلّمك الخاص في صفحة تعلّمي.'],
   Completion: ['Finalización', 'Achèvement', 'Abschluss', 'الإنجاز'],
-  '{people} people learning · {done} completed · {overdue} overdue · average score {avg}': [
-    '{people} personas aprendiendo · {done} completados · {overdue} vencidos · puntuación media {avg}',
-    '{people} personnes en formation · {done} terminés · {overdue} en retard · score moyen {avg}',
-    '{people} Personen lernen · {done} abgeschlossen · {overdue} überfällig · Durchschnitt {avg}',
-    '{people} أشخاص يتعلّمون · {done} مكتملة · {overdue} متأخرة · متوسط الدرجة {avg}',
+  'Learners: {people} · Completed: {done} · Overdue: {overdue} · Average score: {avg}': [
+    'Personas aprendiendo: {people} · Completados: {done} · Vencidos: {overdue} · Puntuación media: {avg}',
+    'En formation : {people} · Terminés : {done} · En retard : {overdue} · Score moyen : {avg}',
+    'Lernende: {people} · Abgeschlossen: {done} · Überfällig: {overdue} · Durchschnitt: {avg}',
+    'المتعلّمون: {people} · المكتملة: {done} · المتأخرة: {overdue} · متوسط الدرجة: {avg}',
   ],
   'New module': ['Nuevo módulo', 'Nouveau module', 'Neues Modul', 'وحدة جديدة'],
   Marking: ['Calificación', 'Correction', 'Bewertung', 'التصحيح'],

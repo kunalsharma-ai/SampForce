@@ -51,7 +51,9 @@ Date: 2026-11-27. Status: accepted.
 `apps/api/test/learning.e2e.test.ts` covers the full pass and fail/retry flow: a module from a video's captions,
 assigning within a branch, failing with feedback, retrying and passing, one certificate with its PDF and public
 check, manual marking, an extra attempt, reminders sent once each, and uploads that cannot be read. Generator and
-scoring unit tests sit next to their code.
+scoring unit tests sit next to their code. `apps/web/e2e/learning.spec.ts` runs the same flow in the browser as the
+Super Workspace, a manager and an executive (build, draft and approve questions, publish, assign, read, fail, retry,
+pass, celebration, certificate, public check, reports and Excel export). With `PREVIEW_DIR` set it saves screenshots.
 
 ## Not covered
 
